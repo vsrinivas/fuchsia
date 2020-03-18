@@ -192,11 +192,9 @@ async fn test_channel_in_vbmeta_appears_in_inspect_state() {
     let served_repository = repo.server().start().unwrap();
     let repo_url = "fuchsia-pkg://test-repo".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
-    let mounts = lib::Mounts::new();
-    mounts.add_static_repository(config.clone());
     let env = TestEnvBuilder::new()
         .boot_arguments_service(lib::BootArgumentsService::new("test-repo"))
-        .mounts(mounts)
+        .mounts(lib::MountsBuilder::new().static_repository(config.clone()).build())
         .build();
     env.wait_for_pkg_resolver_to_start().await;
 
@@ -214,7 +212,7 @@ async fn test_channel_in_vbmeta_appears_in_inspect_state() {
                         host_replacement: "test-repo",
                     }
                 },
-                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("/data/rewrites.json"))),
+                dynamic_rules_path: "None",
                 static_rules: {},
                 generation: 0u64,
             },

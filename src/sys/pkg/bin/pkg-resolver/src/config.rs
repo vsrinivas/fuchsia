@@ -15,12 +15,12 @@ use {
 /// Static service configuration options.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Config {
-    disable_dynamic_configuration: bool,
+    enable_dynamic_configuration: bool,
 }
 
 impl Config {
-    pub fn disable_dynamic_configuration(&self) -> bool {
-        self.disable_dynamic_configuration
+    pub fn enable_dynamic_configuration(&self) -> bool {
+        self.enable_dynamic_configuration
     }
 
     pub fn load_from_config_data_or_default() -> Config {
@@ -42,12 +42,12 @@ impl Config {
         #[derive(Debug, Deserialize)]
         #[serde(deny_unknown_fields)]
         struct ParseConfig {
-            disable_dynamic_configuration: bool,
+            enable_dynamic_configuration: bool,
         }
 
         let parse_config = serde_json::from_reader::<_, ParseConfig>(r)?;
 
-        Ok(Config { disable_dynamic_configuration: parse_config.disable_dynamic_configuration })
+        Ok(Config { enable_dynamic_configuration: parse_config.enable_dynamic_configuration })
     }
 }
 
@@ -79,9 +79,9 @@ mod tests {
         for val in [true, false].iter() {
             verify_load(
                 json!({
-                    "disable_dynamic_configuration": *val,
+                    "enable_dynamic_configuration": *val,
                 }),
-                Config { disable_dynamic_configuration: *val },
+                Config { enable_dynamic_configuration: *val },
             );
         }
     }
@@ -91,7 +91,7 @@ mod tests {
         assert_matches!(
             Config::load(
                 json!({
-                    "disable_dynamic_configuration": false,
+                    "enable_dynamic_configuration": false,
                     "unknown_field": 3
                 })
                 .to_string()
@@ -107,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn test_default_does_not_disable_dynamic_configuraiton() {
-        assert_eq!(Config::default().disable_dynamic_configuration, false);
+    fn test_default_disables_dynamic_configuraiton() {
+        assert_eq!(Config::default().enable_dynamic_configuration, false);
     }
 }

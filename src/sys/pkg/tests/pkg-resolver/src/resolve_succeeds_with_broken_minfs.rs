@@ -17,8 +17,8 @@ use {
     futures::future::BoxFuture,
     futures::prelude::*,
     lib::{
-        get_repos, get_rules, mock_filesystem, DirOrProxy, Mounts, TestEnv, TestEnvBuilder,
-        EMPTY_REPO_PATH,
+        get_repos, get_rules, mock_filesystem, Config, DirOrProxy, MountsBuilder, TestEnv,
+        TestEnvBuilder, EMPTY_REPO_PATH,
     },
     std::sync::{
         atomic::{AtomicBool, AtomicU64},
@@ -132,11 +132,14 @@ async fn create_testenv_serves_repo(
     let (proxy, stream) =
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
     fasync::spawn(directory_handler.handle_stream(stream));
-    let mounts = Mounts {
-        pkg_resolver_data: DirOrProxy::Proxy(proxy),
-        pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-    };
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .config(Config { enable_dynamic_configuration: true })
+                .pkg_resolver_data(DirOrProxy::Proxy(proxy))
+                .build(),
+        )
+        .build();
 
     // Serve repo with package
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");

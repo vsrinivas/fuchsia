@@ -23,6 +23,7 @@ use {
     fuchsia_url::pkg_url::RepoUrl,
     futures::prelude::*,
     parking_lot::Mutex,
+    serde_derive::Serialize,
     std::sync::Arc,
     std::{convert::TryInto, fs::File},
 };
@@ -37,15 +38,17 @@ fn amberctl() -> AppBuilder {
 struct Mounts {
     _misc: tempfile::TempDir,
     pkgfs: tempfile::TempDir,
+    config_data: tempfile::TempDir,
 }
 
 impl Mounts {
     fn new() -> Self {
         let misc = tempfile::tempdir().expect("/tmp to exist");
+        let config_data = tempfile::tempdir().expect("/tmp to exist");
         let pkgfs = tempfile::tempdir().expect("/tmp to exist");
         std::fs::create_dir(pkgfs.path().join("install")).expect("mkdir pkgfs/install");
         std::fs::create_dir(pkgfs.path().join("needs")).expect("mkdir pkgfs/needs");
-        Self { _misc: misc, pkgfs }
+        Self { _misc: misc, pkgfs, config_data }
     }
 }
 
@@ -117,6 +120,11 @@ struct TestEnv {
     proxies: Proxies,
 }
 
+#[derive(Serialize)]
+struct Config {
+    enable_dynamic_configuration: bool,
+}
+
 impl TestEnv {
     fn new() -> Self {
         Self::new_with_mounts(Mounts::new())
@@ -133,7 +141,18 @@ impl TestEnv {
         )
         .expect("/pkgfs to mount")
         .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
-        .expect("/config/ssl to mount");
+        .expect("/config/ssl to mount")
+        .add_dir_to_namespace(
+            "/config/data".to_owned(),
+            File::open(mounts.config_data.path()).unwrap(),
+        )
+        .expect("/config/data to mount");
+        let f = File::create(mounts.config_data.path().join("config.json")).unwrap();
+        serde_json::to_writer(
+            std::io::BufWriter::new(f),
+            &Config { enable_dynamic_configuration: true },
+        )
+        .unwrap();
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service_to::<RepositoryManagerMarker, _>(

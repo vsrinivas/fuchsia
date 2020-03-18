@@ -229,7 +229,7 @@ fn load_repo_manager(
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
     let dynamic_repo_path =
-        if config.disable_dynamic_configuration() { None } else { Some(DYNAMIC_REPO_PATH) };
+        if config.enable_dynamic_configuration() { Some(DYNAMIC_REPO_PATH) } else { None };
     RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
@@ -260,7 +260,7 @@ async fn load_rewrite_manager(
     channel_inspect_state: &ChannelInspectState,
 ) -> RewriteManager {
     let dynamic_rules_path =
-        if config.disable_dynamic_configuration() { None } else { Some(DYNAMIC_RULES_PATH) };
+        if config.enable_dynamic_configuration() { Some(DYNAMIC_RULES_PATH) } else { None };
     let builder = RewriteManagerBuilder::new(dynamic_rules_path)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {

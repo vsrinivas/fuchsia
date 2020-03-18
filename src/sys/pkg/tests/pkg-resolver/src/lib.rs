@@ -53,23 +53,80 @@ impl PkgFs for PkgfsRamdisk {
 }
 
 pub struct Mounts {
-    pub pkg_resolver_data: DirOrProxy,
-    pub pkg_resolver_config_data: DirOrProxy,
+    pkg_resolver_data: DirOrProxy,
+    pkg_resolver_config_data: DirOrProxy,
 }
 
 #[derive(Serialize)]
 pub struct Config {
-    pub disable_dynamic_configuration: bool,
+    pub enable_dynamic_configuration: bool,
+}
+
+#[derive(Default)]
+pub struct MountsBuilder {
+    pkg_resolver_data: Option<DirOrProxy>,
+    pkg_resolver_config_data: Option<DirOrProxy>,
+    config: Option<Config>,
+    static_repository: Option<RepositoryConfig>,
+    dynamic_rewrite_rules: Option<RuleConfig>,
+    dynamic_repositories: Option<RepositoryConfigs>,
+}
+
+impl MountsBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn pkg_resolver_data(mut self, pkg_resolver_data: DirOrProxy) -> Self {
+        self.pkg_resolver_data = Some(pkg_resolver_data);
+        self
+    }
+    pub fn pkg_resolver_config_data(mut self, pkg_resolver_config_data: DirOrProxy) -> Self {
+        self.pkg_resolver_config_data = Some(pkg_resolver_config_data);
+        self
+    }
+    pub fn config(mut self, config: Config) -> Self {
+        self.config = Some(config);
+        self
+    }
+    pub fn static_repository(mut self, static_repository: RepositoryConfig) -> Self {
+        self.static_repository = Some(static_repository);
+        self
+    }
+    pub fn dynamic_rewrite_rules(mut self, dynamic_rewrite_rules: RuleConfig) -> Self {
+        self.dynamic_rewrite_rules = Some(dynamic_rewrite_rules);
+        self
+    }
+    pub fn dynamic_repositories(mut self, dynamic_repositories: RepositoryConfigs) -> Self {
+        self.dynamic_repositories = Some(dynamic_repositories);
+        self
+    }
+    pub fn build(self) -> Mounts {
+        let mounts = Mounts {
+            pkg_resolver_data: self
+                .pkg_resolver_data
+                .unwrap_or(DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
+            pkg_resolver_config_data: self
+                .pkg_resolver_config_data
+                .unwrap_or(DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
+        };
+        if let Some(config) = self.config {
+            mounts.add_config(&config);
+        }
+        if let Some(config) = self.static_repository {
+            mounts.add_static_repository(config);
+        }
+        if let Some(config) = self.dynamic_rewrite_rules {
+            mounts.add_dynamic_rewrite_rules(&config);
+        }
+        if let Some(config) = self.dynamic_repositories {
+            mounts.add_dynamic_repositories(&config);
+        }
+        mounts
+    }
 }
 
 impl Mounts {
-    pub fn new() -> Self {
-        Self {
-            pkg_resolver_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-            pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-        }
-    }
-    pub fn add_config(&self, config: &Config) {
+    fn add_config(&self, config: &Config) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
             let f = File::create(d.path().join("config.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), &config).unwrap();
@@ -78,7 +135,7 @@ impl Mounts {
         }
     }
 
-    pub fn add_static_repository(&self, config: RepositoryConfig) {
+    fn add_static_repository(&self, config: RepositoryConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
             let static_repo_path = d.path().join("repositories");
             if !static_repo_path.exists() {
@@ -94,7 +151,7 @@ impl Mounts {
         }
     }
 
-    pub fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
+    fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let f = File::create(d.path().join("rewrites.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), rule_config).unwrap();
@@ -102,7 +159,7 @@ impl Mounts {
             panic!("not supported");
         }
     }
-    pub fn add_dynamic_repositories(&self, repo_configs: &RepositoryConfigs) {
+    fn add_dynamic_repositories(&self, repo_configs: &RepositoryConfigs) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let f = File::create(d.path().join("repositories.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), repo_configs).unwrap();
@@ -161,7 +218,13 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
     pub fn new() -> Self {
         Self {
             pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
-            mounts: || Mounts::new(),
+            // If it's not overriden, the default state of the mounts allows for dynamic configuration.
+            // We do this because in the majority of tests, we'll want to use dynamic repos and rewrite rules.
+            // Note: this means that we'll produce different envs from TestEnvBuilder::new().build()
+            // vs TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build()
+            mounts: || {
+                MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build()
+            },
             boot_arguments_service: None,
         }
     }

@@ -8,17 +8,21 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
     lib::{
-        get_repos, make_repo, make_repo_config, mock_filesystem, Config, DirOrProxy, Mounts,
+        get_repos, make_repo, make_repo_config, mock_filesystem, Config, DirOrProxy, MountsBuilder,
         TestEnvBuilder,
     },
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn no_load_dynamic_repos_if_disabled() {
-    let mounts = Mounts::new();
-    mounts.add_dynamic_repositories(&make_repo_config(&make_repo()));
-    mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .dynamic_repositories(make_repo_config(&make_repo()))
+                .config(Config { enable_dynamic_configuration: false })
+                .build(),
+        )
+        .build();
 
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
 
@@ -27,9 +31,9 @@ async fn no_load_dynamic_repos_if_disabled() {
 
 #[fasync::run_singlethreaded(test)]
 async fn add_succeeds() {
-    let mounts = Mounts::new();
-    mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build())
+        .build();
     let repo = make_repo();
 
     Status::ok(env.proxies.repo_manager.add(repo.clone().into()).await.unwrap()).unwrap();
@@ -40,9 +44,9 @@ async fn add_succeeds() {
 
 #[fasync::run_singlethreaded(test)]
 async fn add_fails_if_disabled() {
-    let mounts = Mounts::new();
-    mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: false }).build())
+        .build();
     let repo = make_repo();
 
     assert_eq!(
@@ -56,9 +60,9 @@ async fn add_fails_if_disabled() {
 
 #[fasync::run_singlethreaded(test)]
 async fn remove_fails_with_not_found() {
-    let mounts = Mounts::new();
-    mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build())
+        .build();
 
     assert_eq!(
         env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap(),
@@ -70,9 +74,9 @@ async fn remove_fails_with_not_found() {
 
 #[fasync::run_singlethreaded(test)]
 async fn remove_fails_with_access_denied_if_disabled() {
-    let mounts = Mounts::new();
-    mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: false }).build())
+        .build();
 
     assert_eq!(
         env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap(),
@@ -85,12 +89,14 @@ async fn remove_fails_with_access_denied_if_disabled() {
 #[fasync::run_singlethreaded(test)]
 async fn attempt_to_open_persisted_dynamic_repos() {
     let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
-    let mounts = Mounts {
-        pkg_resolver_data: DirOrProxy::Proxy(proxy),
-        pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-    };
-    mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .config(Config { enable_dynamic_configuration: true })
+                .pkg_resolver_data(DirOrProxy::Proxy(proxy))
+                .build(),
+        )
+        .build();
 
     // Waits for pkg_resolver to be initialized
     get_repos(&env.proxies.repo_manager).await;
@@ -103,12 +109,14 @@ async fn attempt_to_open_persisted_dynamic_repos() {
 #[fasync::run_singlethreaded(test)]
 async fn no_attempt_to_open_persisted_dynamic_repos_if_disabled() {
     let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
-    let mounts = Mounts {
-        pkg_resolver_data: DirOrProxy::Proxy(proxy),
-        pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-    };
-    mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .config(Config { enable_dynamic_configuration: false })
+                .pkg_resolver_data(DirOrProxy::Proxy(proxy))
+                .build(),
+        )
+        .build();
 
     // Waits for pkg_resolver to be initialized
     get_repos(&env.proxies.repo_manager).await;
@@ -119,12 +127,30 @@ async fn no_attempt_to_open_persisted_dynamic_repos_if_disabled() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn load_dynamic_repos() {
-    let mounts = Mounts::new();
+async fn dynamic_repositories_disabled_if_missing_config() {
+    let env = TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build();
     let repo = make_repo();
-    mounts.add_dynamic_repositories(&make_repo_config(&repo));
-    mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnvBuilder::new().mounts(mounts).build();
+
+    assert_eq!(
+        env.proxies.repo_manager.add(repo.clone().into()).await.unwrap(),
+        Status::ACCESS_DENIED.into_raw()
+    );
+    assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn load_dynamic_repos() {
+    let repo = make_repo();
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .config(Config { enable_dynamic_configuration: true })
+                .dynamic_repositories(make_repo_config(&repo))
+                .build(),
+        )
+        .build();
 
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![repo]);
 

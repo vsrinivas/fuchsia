@@ -7,14 +7,14 @@ import("//build/config.gni")
 # Define pkg_resolver configuration data to be included in the
 # config-data package.
 #
-#   disable_dynamic_configuration
-#     [bool] Disable editing package URL rewrite rules and repository configs.
+#   enable_dynamic_configuration
+#     [bool] enable editing package URL rewrite rules and repository configs.
 #
 template("pkg_resolver_config") {
   cfg = {
-    forward_variables_from(invoker, [ "disable_dynamic_configuration" ])
-    assert(defined(disable_dynamic_configuration),
-           "disable_dynamic_configuration must be defined")
+    forward_variables_from(invoker, [ "enable_dynamic_configuration" ])
+    assert(defined(enable_dynamic_configuration),
+           "enable_dynamic_configuration must be defined")
   }
 
   config_path = "$target_gen_dir/pkg_resolver_config.json"
@@ -23,11 +23,7 @@ template("pkg_resolver_config") {
 
   config_data(target_name) {
     for_pkg = "pkg-resolver"
-    outputs = [
-      "config.json",
-    ]
-    sources = [
-      config_path,
-    ]
+    outputs = [ "config.json" ]
+    sources = [ config_path ]
   }
 }
