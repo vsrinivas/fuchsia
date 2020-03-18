@@ -4,33 +4,48 @@ The GN SDK frontend produces a [GN](https://gn.googlesource.com/gn/+/refs/heads/
 
 ## Directory structure
 
-- `generate.py`: the script that generates the SDK;
-- `templates`: Mako templates used to produce various SDK files;
-- `base`: SDK contents that are copied verbatim;
+### Generation files & folders
+- `generate.py`: the script that generates the SDK
+- `BUILD.gn`: GN build rules to build & test the GN SDK and generation process
+- `templates`: Mako templates used to produce various SDK files
+- `base`: SDK contents that are copied verbatim
+
+### Testing files & folders
+- `test_generate.py`: script to test the GN SDK generation process
+- `update_golden.py`: script to update the contents of the golden directory
+- `host_test.go`: Go script to run test defined in GN build rules
 - `testdata`: files used as input during tests
 - `golden`: files used to verify generator output during tests
+- `test_project`: GN project used to test building a projects with the GN SDK
+- `bash_tests`: contains test for bash scripts in base/bin
 
 ## Generating
 
-### Getting the latest Core SDK:
+1. Create the GN build rules to build the GN SDK:
+   `fx set core.x64 --with //scripts/sdk/gn:gn_sdk_test_workspace --args="build_sdk_archives=true"`
+1. Build the build rules to build the GN SDK:
+   `fx build`
 
-Generating the GN SDK requires the download of an existing Core SDK, e.g.:
+The built SDK will be in `//${ROOT_OUT_DIR}/sdk/gn/fuchsia-sdk` (usually `//out/default/sdk/gn/fuchsia-sdk`)
 
-```sh
-$ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)" &&
-    gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz my_sdk_archive.tar.gz
-```
+### Manual generation steps
 
-### Generating a SN SDK
+The above instructions is not what is run during testing and CQ. The GN build step performs the following steps which is run in CQ:
 
-Generate the GN SDK by pointing the `generate.py` script to an
-SDK archive, e.g.:
+1. Generate a IDK/core SDK:
 
-```sh
-$ scripts/sdk/gn/generate.py \
-    --archive my_sdk_archive.tar.gz \
-    --output gn_sdk_dir/
-```
+   ```
+   fx set core.x64 --with //sdk:core --args="build_sdk_archives=true"
+   fx build
+   ```
+
+1. Run the generate script:
+
+   ```sh
+   $ scripts/sdk/gn/generate.py \
+       --archive out/default/sdk/archive/core.tar.gz \
+       --output gn_sdk_dir
+   ```
 
 ### Testing
 

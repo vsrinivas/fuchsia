@@ -8,6 +8,99 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/test_spec.gni")
 
+# GN SDK inputs and outputs
+#
+# Parameters
+#
+#   output_dir (required)
+#     The directory where the GN SDK will be written.
+#
+#   archive (optional)
+#     Path to IDK/core SDK tar archive to be used as a base for the GN SDK.
+#     Defaults to ${root_out_dir}/sdk/archive/core.tar.gz
+#
+#   test_workspace (optional)
+#     The directory where the GN SDK's test workspace will be written.
+#     Defaults is to not write/generate a test workspace.
+#
+#   output_archive (optional)
+#     Path to the file where a tarball of the GN SDK will be written.
+#     Defaults to not write/generate a GN SDK tarball.
+#
+# Outputs
+#
+#   GN SDK
+#     Writes the contents of the GN SDK to the directory specified in
+#     the output_dir parameter above.
+#
+#   Test workspace
+#     Writes the contents of a GN SDK test workspace to the directory
+#     specified in the test_workspace parameter above. This workspace
+#     contains the GN SDK, test assets and tests which can be run by
+#     running the `run.py` script located in the root of the workspace.
+#
+#   GN SDK tarball
+#     Writes the contents of a GN SDK to a tarball to the path specified in
+#     the output_archive parameter above.
+
+
+# This template is for local building only and will not work in CQ
+template("gn_sdk") {
+  testonly = true
+  action("${target_name}") {
+    script = "//scripts/sdk/gn/generate.py"
+    outputs = [ "${invoker.output_dir}/BUILD.gn" ]
+    args = [
+      "--archive",
+
+      # This rule requires the`build_sdk_archives` GN arg to be set to `true`
+      # which will create a IDK/core SDK archive in
+      # `${root_out_dir}/sdk/archive/core.tar.gz`.
+      # to set the GN arg `build_sdk_archives` to true add
+      # `--args="build_sdk_archives=true"` to your `gn` or `fx set` command.
+      # for example:
+      #   `fx set core.x64 --with //scripts/sdk/gn:gn_sdk_test_workspace --args="build_sdk_archives=true"`
+      rebase_path("${root_out_dir}/sdk/archive/core.tar.gz"),
+      "--output",
+      rebase_path(invoker.output_dir),
+    ]
+    if (defined(invoker.test_workspace)) {
+      args += [
+        "--tests",
+        rebase_path(invoker.test_workspace),
+      ]
+    }
+    if (defined(invoker.output_archive)) {
+      args += [
+        "--output-archive",
+        rebase_path(invoker.output_archive),
+      ]
+    }
+    if (defined(invoker.archive)) {
+      args += [
+        "--archive",
+        rebase_path(invoker.archive),
+      ]
+    }
+    if (defined(invoker.directory)) {
+      args += [
+        "--directory",
+        rebase_path(invoker.directory),
+      ]
+    }
+    deps = [ "//sdk:core($target_toolchain)" ]
+  }
+}
+
+# This build rule will only work in a local checkout and will not work in CQ
+# To build this rule run
+#   fx set core.x64 --with //scripts/sdk/gn:gn_sdk_test_workspace --args="build_sdk_archives=true"
+#   fx build
+gn_sdk("gn_sdk_test_workspace") {
+  output_dir = "${root_out_dir}/sdk/gn/fuchsia-sdk"
+  test_workspace = "${root_out_dir}/test_sdk/gn/test_workspace"
+}
+
 group("tests") {
   testonly = true
   public_deps = [
