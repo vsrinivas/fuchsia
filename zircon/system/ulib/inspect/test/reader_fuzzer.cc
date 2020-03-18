@@ -9,9 +9,7 @@
 #include <vector>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-  std::vector<uint8_t> buf;
-  buf.resize(size);
-  memcpy(buf.data(), data, size);
+  std::vector<uint8_t> buf(data, data + size);
 
   inspect::ReadFromBuffer(std::move(buf));
 

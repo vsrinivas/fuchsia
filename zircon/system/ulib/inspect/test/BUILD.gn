@@ -12,6 +12,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
@@ -45,6 +46,11 @@ test("inspect") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+fuzzer("inspect-reader-fuzzer") {
+  sources = [ "reader_fuzzer.cc" ]
+  deps = [ "//zircon/public/lib/inspect" ]
 }
 
 migrated_manifest("inspect-manifest") {
