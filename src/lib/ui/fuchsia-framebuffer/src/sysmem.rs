@@ -192,6 +192,14 @@ impl BufferCollectionAllocator {
             collection_request,
         )?;
         let collection_client = collection_client.into_proxy()?;
+        self.allocate_buffers_proxy(collection_client, set_constraints).await
+    }
+
+    async fn allocate_buffers_proxy(
+        &mut self,
+        collection_client: fidl_fuchsia_sysmem::BufferCollectionProxy,
+        set_constraints: bool,
+    ) -> Result<fidl_fuchsia_sysmem::BufferCollectionInfo2, Error> {
         let mut buffer_collection_constraints = crate::sysmem::buffer_collection_constraints(
             self.width,
             self.height,
@@ -239,23 +247,161 @@ impl Drop for BufferCollectionAllocator {
 
 #[cfg(test)]
 mod test {
-    use crate::sysmem::BufferCollectionAllocator;
+    use super::*;
+    use fidl_fuchsia_sysmem::{
+        AllocatorMarker, AllocatorProxy, BufferCollectionInfo2, BufferCollectionMarker,
+        BufferCollectionProxy, BufferCollectionRequest, BufferMemorySettings, CoherencyDomain,
+        SingleBufferSettings, VmoBuffer,
+    };
     use fuchsia_async as fasync;
+    use futures::prelude::*;
 
     const BUFFER_COUNT: usize = 3;
 
-    #[test]
-    fn test_buffer_collection_allocator() -> std::result::Result<(), anyhow::Error> {
-        let mut executor = fasync::Executor::new()?;
-        let mut bca = BufferCollectionAllocator::new(
-            200,
-            200,
-            fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
-            BUFFER_COUNT,
-        )?;
+    fn spawn_allocator_server() -> Result<AllocatorProxy, Error> {
+        let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<AllocatorMarker>()?;
 
-        let allocate_future = bca.allocate_buffers();
-        let buffers = executor.run_singlethreaded(allocate_future)?;
+        fasync::spawn(async move {
+            while let Some(_) = stream.try_next().await.expect("Failed to get request") {}
+        });
+        Ok(proxy)
+    }
+
+    fn spawn_buffer_collection() -> Result<BufferCollectionProxy, Error> {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<BufferCollectionMarker>()?;
+
+        fasync::spawn(async move {
+            let mut stored_constraints = None;
+            while let Some(req) = stream.try_next().await.expect("Failed to get request") {
+                match req {
+                    BufferCollectionRequest::SetConstraints {
+                        has_constraints,
+                        constraints,
+                        control_handle: _,
+                    } => {
+                        if has_constraints {
+                            stored_constraints = Some(constraints);
+                        } else {
+                            stored_constraints = None;
+                        }
+                    }
+                    BufferCollectionRequest::WaitForBuffersAllocated { responder } => {
+                        let constraints =
+                            stored_constraints.expect("Expected a BufferCollectionRequest!");
+                        let mut response = BufferCollectionInfo2 {
+                            buffer_count: constraints.min_buffer_count,
+                            // Everything below here is unused
+                            settings: SingleBufferSettings {
+                                buffer_settings: BufferMemorySettings {
+                                    size_bytes: 0,
+                                    is_physically_contiguous: false,
+                                    is_secure: false,
+                                    coherency_domain: CoherencyDomain::Cpu,
+                                    heap: HeapType::SystemRam,
+                                },
+                                has_image_format_constraints: false,
+                                image_format_constraints: linear_image_format_constraints(
+                                    0,
+                                    0,
+                                    PixelFormatType::Invalid,
+                                ),
+                            },
+                            buffers: [
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                                VmoBuffer { vmo: None, vmo_usable_start: 0 },
+                            ],
+                        };
+                        responder.send(zx::sys::ZX_OK, &mut response).expect("Failed to send");
+                    }
+                    _ => panic!("Unexpected request"),
+                }
+            }
+        });
+
+        return Ok(proxy);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_buffer_collection_allocator() -> std::result::Result<(), anyhow::Error> {
+        let alloc_proxy = spawn_allocator_server()?;
+        let buf_proxy = spawn_buffer_collection()?;
+
+        // don't use new() as we want to inject alloc_proxy instead of discovering it.
+        let mut bca = BufferCollectionAllocator {
+            token: None,
+            width: 200,
+            height: 200,
+            pixel_type: PixelFormatType::Bgra32,
+            usage: FrameUsage::Cpu,
+            buffer_count: BUFFER_COUNT,
+            sysmem: alloc_proxy,
+            collection_client: None,
+        };
+
+        let buffers = bca.allocate_buffers_proxy(buf_proxy, true).await?;
         assert_eq!(buffers.buffer_count, BUFFER_COUNT as u32);
 
         Ok(())
