@@ -5,14 +5,20 @@
 //! UDP socket bindings.
 
 use std::convert::TryInto;
+use std::marker::PhantomData;
 use std::num::NonZeroU16;
 use std::ops::{Deref, DerefMut};
 
 use anyhow::{format_err, Error};
-use fidl_fuchsia_posix_socket::{self as psocket, DatagramSocketRequest};
+use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::AsyncChannel;
+use fidl_fuchsia_io::{self as fdio, NodeInfo, NodeMarker};
+use fidl_fuchsia_posix_socket::{
+    self as psocket, DatagramSocketRequest, DatagramSocketRequestStream,
+};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased, Peered};
-use futures::{FutureExt, TryFutureExt, TryStreamExt};
+use futures::{StreamExt, TryFutureExt};
 use log::{debug, error, trace, warn};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
@@ -134,7 +140,7 @@ impl<I: UdpSocketIpExt> UdpEventDispatcher<I> for BindingsDispatcher {
 struct UdpSocketWorker<I: UdpSocketIpExt, C: StackContext> {
     ctx: C,
     id: usize,
-    _marker: std::marker::PhantomData<I>,
+    _marker: PhantomData<I>,
 }
 
 #[derive(Debug)]
@@ -142,6 +148,13 @@ struct AvailableMessage<A> {
     source_addr: A,
     source_port: u16,
     data: Vec<u8>,
+}
+
+/// Whether we need to close the underlying channel.
+#[derive(Eq, PartialEq)]
+enum ChannelAction {
+    LeaveOpen,
+    Close,
 }
 
 /// Internal state of a [`UdpSocketWorker`].
@@ -254,24 +267,9 @@ where
                         .binding_data
                         .push(BindingData::<I>::new(local_event, peer_event, properties))
                 };
-                let worker = Self { ctx, id, _marker: std::marker::PhantomData };
+                let worker = Self { ctx, id, _marker: PhantomData };
 
-                let result = events.try_for_each(|req| worker.handle_request(req).map(Ok)).await;
-
-                let mut handler = worker.make_handler().await;
-                let inner = handler.get_state_mut();
-                if inner.ref_count == 1 {
-                    // always make sure the socket is closed with core.
-                    handler.close_core();
-                    I::get_collection_mut(handler.ctx.dispatcher_mut())
-                        .binding_data
-                        .remove(worker.id)
-                        .unwrap();
-                } else {
-                    inner.ref_count -= 1;
-                }
-
-                result
+                worker.handle_stream(events).await
             }
             // When the closure above finishes, that means `self` goes out
             // of scope and is dropped, meaning that the event stream's
@@ -283,15 +281,71 @@ where
         Ok(())
     }
 
+    async fn clone(&self) -> UdpSocketWorker<I, C> {
+        let mut handler = self.make_handler().await;
+        let state = handler.get_state_mut();
+        state.ref_count += 1;
+        Self { ctx: self.ctx.clone(), id: self.id, _marker: PhantomData }
+    }
+
+    // Starts servicing a [Clone request](psocket::DatagramSocketRequest::Clone).
+    fn clone_spawn(
+        &self,
+        flags: u32,
+        object: ServerEnd<NodeMarker>,
+        worker: UdpSocketWorker<I, C>,
+    ) {
+        fasync::spawn(
+            async move {
+                let channel = AsyncChannel::from_channel(object.into_channel())
+                    .expect("failed to create async channel");
+                let events = DatagramSocketRequestStream::from_channel(channel);
+                let control_handle = events.control_handle();
+                let send_on_open = |status: i32, info: Option<&mut NodeInfo>| {
+                    if let Err(e) = control_handle.send_on_open_(status, info) {
+                        error!("failed to send OnOpen event with status ({}): {}", status, e);
+                    }
+                };
+                // Datagram sockets don't understand the following flags.
+                let append_no_remote =
+                    flags & fdio::OPEN_FLAG_APPEND != 0 || flags & fdio::OPEN_FLAG_NO_REMOTE != 0;
+                // Datagram sockets are neither mountable nor executable.
+                let admin_executable =
+                    flags & fdio::OPEN_RIGHT_ADMIN != 0 || flags & fdio::OPEN_RIGHT_EXECUTABLE != 0;
+                // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with OPEN_RIGHT_* flags.
+                let conflicting_rights = flags & fdio::CLONE_FLAG_SAME_RIGHTS != 0
+                    && (flags & fdio::OPEN_RIGHT_READABLE != 0
+                        || flags & fdio::OPEN_RIGHT_WRITABLE != 0);
+                // TODO(zeling): currently only CLONE_FLAG_SAME_RIGHTS is supported, we should
+                // adjust rights if the user explicitly wants to reduce rights, but currently
+                // there are no readonly or writeonly dgram sockets.
+                let no_same_rights = flags & fdio::CLONE_FLAG_SAME_RIGHTS == 0;
+
+                if append_no_remote || admin_executable || conflicting_rights || no_same_rights {
+                    send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
+                    worker.make_handler().await.close().unwrap();
+                    return Ok(());
+                }
+
+                if flags & fdio::OPEN_FLAG_DESCRIBE != 0 {
+                    let mut info = worker.make_handler().await.describe();
+                    send_on_open(zx::sys::ZX_OK, info.as_mut());
+                }
+                worker.handle_stream(events).await
+            }
+            .unwrap_or_else(|e: fidl::Error| error!("UDP socket control request error: {:?}", e)),
+        );
+    }
+
     async fn make_handler(&self) -> RequestHandler<'_, I, C> {
         let ctx = self.ctx.lock().await;
-        RequestHandler { ctx, binding_id: self.id, _marker: std::marker::PhantomData }
+        RequestHandler { ctx, binding_id: self.id, _marker: PhantomData }
     }
 
     /// Handles a [POSIX socket request].
     ///
     /// [POSIX socket request]: psocket::DatagramSocketRequest
-    async fn handle_request(&self, req: psocket::DatagramSocketRequest) {
+    async fn handle_request(&self, req: psocket::DatagramSocketRequest) -> ChannelAction {
         match req {
             psocket::DatagramSocketRequest::Describe { responder } => {
                 // If the call to duplicate_handle fails, we have no choice but to drop the
@@ -303,11 +357,13 @@ where
             psocket::DatagramSocketRequest::Connect { addr, responder } => {
                 responder_send!(responder, &mut self.make_handler().await.connect(addr));
             }
-            psocket::DatagramSocketRequest::Clone { .. } => {
-                warn!("UDP socket Clone not implemented!");
+            psocket::DatagramSocketRequest::Clone { flags, object, .. } => {
+                let cloned_worker = self.clone().await;
+                self.clone_spawn(flags, object, cloned_worker);
             }
             psocket::DatagramSocketRequest::Close { responder } => {
                 responder_send!(responder, self.make_handler().await.close().err().unwrap_or(0i32));
+                return ChannelAction::Close;
             }
             psocket::DatagramSocketRequest::Sync { responder } => {
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
@@ -385,6 +441,39 @@ where
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
             }
         }
+        return ChannelAction::LeaveOpen;
+    }
+
+    /// Handles [a stream of POSIX socket requests].
+    ///
+    /// Returns when getting the first `Close` request.
+    ///
+    /// [a stream of POSIX socket requests]: psocket::DatagramSocketRequestStream
+    async fn handle_stream(
+        self,
+        mut events: DatagramSocketRequestStream,
+    ) -> Result<(), fidl::Error> {
+        // We need to early return here to avoid `Close` requests being received
+        // on the same channel twice causing the incorrect decrease of refcount
+        // as now the bindings data are potentially shared by several distinct
+        // control channels.
+        while let Some(event) = events.next().await {
+            match event {
+                Ok(req) => {
+                    if self.handle_request(req).await == ChannelAction::Close {
+                        return Ok(());
+                    }
+                }
+                Err(err) => {
+                    self.make_handler().await.close().unwrap();
+                    return Err(err);
+                }
+            }
+        }
+        // The loop breaks as the client side of the channel has been dropped, need
+        // to treat that as an implicit close request as well.
+        self.make_handler().await.close().unwrap();
+        Ok(())
     }
 }
 
@@ -409,7 +498,7 @@ impl<I: UdpSocketIpExt> BindingData<I> {
 struct RequestHandler<'a, I: UdpSocketIpExt, C: StackContext> {
     ctx: LockedStackContext<'a, C>,
     binding_id: usize,
-    _marker: std::marker::PhantomData<I>,
+    _marker: PhantomData<I>,
 }
 
 impl<'a, I, C> RequestHandler<'a, I, C>
@@ -575,7 +664,17 @@ where
     }
 
     fn close(mut self) -> Result<(), libc::c_int> {
-        self.close_core();
+        let inner = self.get_state_mut();
+        if inner.ref_count == 1 {
+            // always make sure the socket is closed with core.
+            self.close_core();
+            I::get_collection_mut(self.ctx.dispatcher_mut())
+                .binding_data
+                .remove(self.binding_id)
+                .unwrap();
+        } else {
+            inner.ref_count -= 1;
+        }
         Ok(())
     }
 
@@ -673,8 +772,11 @@ where
 mod tests {
     use super::*;
 
+    use fidl::{endpoints::ServerEnd, AsyncChannel};
+    use fidl_fuchsia_io as fdio;
     use fuchsia_async as fasync;
     use fuchsia_zircon::{self as zx, AsHandleRef};
+    use futures::StreamExt;
 
     use crate::bindings::integration_tests::{
         test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder, TestStack,
@@ -1016,5 +1118,311 @@ mod tests {
                 info
             ),
         }
+    }
+
+    async fn socket_clone(
+        socket: &psocket::DatagramSocketProxy,
+        flags: u32,
+    ) -> Result<psocket::DatagramSocketProxy, Error> {
+        let (server, client) = zx::Channel::create()?;
+        socket.clone(flags, ServerEnd::from(server))?;
+        let channel = AsyncChannel::from_channel(client)?;
+        Ok(psocket::DatagramSocketProxy::new(channel))
+    }
+
+    async fn test_udp_clone<A: TestSockAddr>()
+    where
+        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+    {
+        let mut t = TestSetupBuilder::new()
+            .add_endpoint()
+            .add_endpoint()
+            .add_stack(
+                StackSetupBuilder::new()
+                    .add_named_endpoint(test_ep_name(1), Some(A::config_addr_subnet())),
+            )
+            .add_stack(
+                StackSetupBuilder::new()
+                    .add_named_endpoint(test_ep_name(2), Some(A::config_addr_subnet_remote())),
+            )
+            .build()
+            .await
+            .unwrap();
+        let (alice_socket, alice_events) = get_socket_and_event::<A>(t.get(0)).await;
+        // Test for the OPEN_FLAG_DESCRIBE.
+        let alice_cloned =
+            socket_clone(&alice_socket, fdio::CLONE_FLAG_SAME_RIGHTS | fdio::OPEN_FLAG_DESCRIBE)
+                .await
+                .expect("cannot clone socket");
+        let mut events = alice_cloned.take_event_stream();
+        let psocket::DatagramSocketEvent::OnOpen_ { s, info } =
+            events.next().await.expect("stream closed").expect("failed to decode");
+        assert_eq!(s, zx::sys::ZX_OK);
+        let info = info.unwrap();
+        match *info {
+            fidl_fuchsia_io::NodeInfo::DatagramSocket(_) => (),
+            info => panic!(
+                "Socket Describe call did not return Node of type Socket, got {:?} instead",
+                info
+            ),
+        }
+        // describe() explicitly.
+        let info = alice_cloned.describe().await.expect("Describe call succeeds");
+        match info {
+            fidl_fuchsia_io::NodeInfo::DatagramSocket(_) => (),
+            info => panic!(
+                "Socket Describe call did not return Node of type Socket, got {:?} instead",
+                info
+            ),
+        }
+
+        let sockaddr = A::create(A::LOCAL_ADDR, 200);
+        alice_socket.bind(&sockaddr).await.unwrap().expect("failed to bind for alice");
+        // We should be able to read that back from the cloned socket.
+        assert_eq!(
+            alice_cloned.get_sock_name().await.unwrap().expect("failed to getsockname for alice"),
+            A::new(A::LOCAL_ADDR, 200).as_bytes().to_vec()
+        );
+
+        let (bob_socket, bob_events) = get_socket_and_event::<A>(t.get(1)).await;
+        let bob_cloned = socket_clone(&bob_socket, fdio::CLONE_FLAG_SAME_RIGHTS)
+            .await
+            .expect("failed to clone socket");
+        let sockaddr = A::create(A::REMOTE_ADDR, 200);
+        bob_cloned.bind(&sockaddr).await.unwrap().expect("failed to bind for bob");
+        // We should be able to read that back from the original socket.
+        assert_eq!(
+            bob_socket.get_sock_name().await.unwrap().expect("failed to getsockname for bob"),
+            A::new(A::REMOTE_ADDR, 200).as_bytes().to_vec()
+        );
+
+        let body = "Hello".as_bytes();
+        assert_eq!(
+            alice_socket
+                .send_msg(
+                    A::new(A::REMOTE_ADDR, 200).as_bytes(),
+                    &mut Some(body).into_iter(),
+                    &[],
+                    0
+                )
+                .await
+                .unwrap()
+                .expect("failed to send_msg"),
+            body.len() as i64
+        );
+
+        fasync::OnSignals::new(&bob_events, ZXSIO_SIGNAL_INCOMING)
+            .await
+            .expect("failed to wait for readable event on bob");
+
+        // Receive from the cloned socket.
+        let (from, data, _, truncated) = bob_cloned
+            .recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0)
+            .await
+            .unwrap()
+            .expect("failed to recv_msg");
+        assert_eq!(&data[..], body);
+        assert_eq!(truncated, 0);
+        assert_eq!(&from[..], A::new(A::LOCAL_ADDR, 200).as_bytes());
+        // The data have already been received on the cloned socket
+        assert_eq!(
+            bob_socket
+                .recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0)
+                .await
+                .unwrap()
+                .expect_err("Reading from bob should fail"),
+            libc::EWOULDBLOCK
+        );
+
+        // Close the socket should not invalidate the cloned socket.
+        bob_socket.close().await.expect("failed to close bob's socket");
+        assert_eq!(
+            bob_cloned
+                .send_msg(
+                    A::new(A::LOCAL_ADDR, 200).as_bytes(),
+                    &mut Some(body).into_iter(),
+                    &[],
+                    0
+                )
+                .await
+                .unwrap()
+                .expect("failed to send_msg"),
+            body.len() as i64
+        );
+
+        alice_cloned.close().await.expect("failed to close");
+        fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING)
+            .await
+            .expect("failed to wait for readable event on alice");
+
+        let (from, data, _, truncated) = alice_socket
+            .recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0)
+            .await
+            .unwrap()
+            .expect("failed to recv_msg");
+        assert_eq!(&data[..], body);
+        assert_eq!(truncated, 0);
+        assert_eq!(&from[..], A::new(A::REMOTE_ADDR, 200).as_bytes());
+
+        // Make sure the sockets are still in the stack.
+        for i in 0..2 {
+            t.get(i)
+                .with_ctx(|ctx| {
+                    let disp: &BindingsDispatcher = ctx.dispatcher().inner();
+                    let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
+                        UdpSocketIpExt::get_collection(disp);
+                    assert_eq!(udpsocks.binding_data.iter().count(), 1);
+                    assert_eq!(udpsocks.listeners.iter().count(), 1);
+                    assert!(udpsocks.conns.is_empty());
+                })
+                .await;
+        }
+
+        alice_socket.close().await.expect("failed to close");
+        bob_cloned.close().await.expect("failed to close");
+
+        // But the sockets should have gone here.
+        for i in 0..2 {
+            t.get(i)
+                .with_ctx(|ctx| {
+                    let disp: &BindingsDispatcher = ctx.dispatcher().inner();
+                    let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
+                        UdpSocketIpExt::get_collection(disp);
+                    assert!(udpsocks.binding_data.is_empty());
+                    assert!(udpsocks.listeners.is_empty());
+                    assert!(udpsocks.conns.is_empty());
+                })
+                .await;
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_clone_v4() {
+        test_udp_clone::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_clone_v6() {
+        test_udp_clone::<SockAddr6>().await;
+    }
+
+    async fn test_close_twice<A: TestSockAddr>()
+    where
+        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+    {
+        // Make sure we cannot close twice from the same channel so that
+        // we maintain the correct refcount.
+        let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
+        let test_stack = t.get(0);
+        let socket = get_socket::<A>(test_stack).await;
+        let cloned = socket_clone(&socket, fdio::CLONE_FLAG_SAME_RIGHTS).await.unwrap();
+        socket.close().await.expect("failed to close the socket");
+        socket
+            .close()
+            .await
+            .expect_err("should not be able to close the socket twice on the same channel");
+        assert!(socket.into_channel().unwrap().is_closed());
+        // Since we still hold the cloned socket, the binding_data shouldn't be empty
+        test_stack
+            .with_ctx(|ctx| {
+                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
+                let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
+                    UdpSocketIpExt::get_collection(disp);
+                assert!(!udpsocks.binding_data.is_empty());
+            })
+            .await;
+        cloned.close().await.expect("failed to close the socket");
+        // Now it should become empty
+        test_stack
+            .with_ctx(|ctx| {
+                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
+                let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
+                    UdpSocketIpExt::get_collection(disp);
+                assert!(udpsocks.binding_data.is_empty());
+            })
+            .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_close_twice_v4() {
+        test_close_twice::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_close_twice_v6() {
+        test_close_twice::<SockAddr6>().await;
+    }
+
+    async fn test_implicit_close<A: TestSockAddr>()
+    where
+        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+    {
+        let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
+        let test_stack = t.get(0);
+        let cloned = {
+            let socket = get_socket::<A>(test_stack).await;
+            socket_clone(&socket, fdio::CLONE_FLAG_SAME_RIGHTS).await.unwrap()
+            // socket goes out of scope indicating an implicit close.
+        };
+        // Using an explicit close here.
+        cloned.close().await.expect("failed to close");
+        // No socket should be there now.
+        test_stack
+            .with_ctx(|ctx| {
+                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
+                let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
+                    UdpSocketIpExt::get_collection(disp);
+                assert!(udpsocks.binding_data.is_empty());
+            })
+            .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_implicit_close_v4() {
+        test_implicit_close::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_implicit_close_v6() {
+        test_implicit_close::<SockAddr6>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_invalid_clone_args() {
+        let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
+        let test_stack = t.get(0);
+        let socket = get_socket::<SockAddr4>(test_stack).await;
+        async fn expect_invalid_args(socket: &psocket::DatagramSocketProxy, flags: u32) {
+            let cloned = socket_clone(&socket, flags).await.unwrap();
+            {
+                let mut events = cloned.take_event_stream();
+                let psocket::DatagramSocketEvent::OnOpen_ { s, .. } =
+                    events.next().await.expect("stream closed").expect("failed to decode");
+                assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
+            }
+            assert!(cloned.into_channel().unwrap().is_closed());
+        };
+        // conflicting flags
+        expect_invalid_args(&socket, fdio::CLONE_FLAG_SAME_RIGHTS | fdio::OPEN_RIGHT_READABLE)
+            .await;
+        // no remote
+        expect_invalid_args(&socket, fdio::OPEN_FLAG_NO_REMOTE).await;
+        // append
+        expect_invalid_args(&socket, fdio::OPEN_FLAG_APPEND).await;
+        // admin
+        expect_invalid_args(&socket, fdio::OPEN_RIGHT_ADMIN).await;
+        // executable
+        expect_invalid_args(&socket, fdio::OPEN_RIGHT_EXECUTABLE).await;
+        socket.close().await.expect("failed to close");
+
+        // make sure we don't leak anything.
+        test_stack
+            .with_ctx(|ctx| {
+                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
+                let udpsocks: &UdpSocketCollectionInner<net_types::ip::Ipv4> =
+                    UdpSocketIpExt::get_collection(disp);
+                assert!(udpsocks.binding_data.is_empty());
+            })
+            .await;
     }
 }
