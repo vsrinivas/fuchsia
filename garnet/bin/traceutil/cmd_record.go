@@ -22,7 +22,6 @@ type cmdRecord struct {
 	flags *flag.FlagSet
 
 	targetHostname string
-	targetPort     string
 	keyFile        string
 	filePrefix     string
 	reportType     string
@@ -50,7 +49,6 @@ func NewCmdRecord() *cmdRecord {
 	cmd.flags.StringVar(&cmd.filePrefix, "file-prefix", "",
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
 	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname.")
-	cmd.flags.StringVar(&cmd.targetPort, "target-port", "", "Target SSH port.")
 	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
 	cmd.flags.BoolVar(&cmd.stdout, "stdout", false,
 		"Send the report to stdout, in addition to writing to file.")
@@ -105,7 +103,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 
 	// Establish connection to runtime host.
-	conn, err := NewTargetConnection(cmd.targetHostname, cmd.targetPort, cmd.keyFile)
+	conn, err := NewTargetConnection(cmd.targetHostname, cmd.keyFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
