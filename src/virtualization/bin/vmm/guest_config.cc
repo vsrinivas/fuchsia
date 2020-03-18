@@ -16,8 +16,8 @@
 #include <rapidjson/document.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 namespace guest_config {
@@ -39,7 +39,7 @@ zx_status_t parse(const std::string& name, const std::string& value, bool* resul
   } else if (value == "false") {
     *result = false;
   } else {
-    FXL_LOG(ERROR) << "Option '" << name << "' expects either 'true' or 'false'; received '"
+    FX_LOGS(ERROR) << "Option '" << name << "' expects either 'true' or 'false'; received '"
                    << value << "'";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -55,7 +55,7 @@ template <typename NumberType, fxl::Base base = fxl::Base::k10,
           typename = std::enable_if<std::is_integral<NumberType>::value>>
 zx_status_t parse(const std::string& name, const std::string& value, NumberType* out) {
   if (!fxl::StringToNumberWithError(value, out, base)) {
-    FXL_LOG(ERROR) << "Option '" << name << "': Unable to convert '" << value << "' into a number";
+    FX_LOGS(ERROR) << "Option '" << name << "': Unable to convert '" << value << "' into a number";
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
@@ -101,7 +101,7 @@ zx_status_t parse_memory(const std::string& value, size_t* out) {
   size_t size;
   int ret = sscanf(value.c_str(), "%zd%c", &size, &modifier);
   if (ret < 1) {
-    FXL_LOG(ERROR) << "Value is not a size string: " << value;
+    FX_LOGS(ERROR) << "Value is not a size string: " << value;
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -118,7 +118,7 @@ zx_status_t parse_memory(const std::string& value, size_t* out) {
       size *= (1 << 30);
       break;
     default:
-      FXL_LOG(ERROR) << "Invalid size modifier " << modifier;
+      FX_LOGS(ERROR) << "Invalid size modifier " << modifier;
       return ZX_ERR_INVALID_ARGS;
   }
 
@@ -163,7 +163,7 @@ zx_status_t parse(const std::string& name, const std::string& value,
   int r = std::sscanf(value.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1],
                       &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
   if (r != 6) {
-    FXL_LOG(ERROR) << "Couldn't parse MAC address";
+    FX_LOGS(ERROR) << "Couldn't parse MAC address";
     return ZX_ERR_INVALID_ARGS;
   }
   for (size_t i = 0; i != 6; ++i) {
@@ -215,7 +215,7 @@ class OptionHandlerWithoutDefaultValue : public OptionHandler {
   zx_status_t SetInternal(GuestConfig* cfg, const std::string& name,
                           const std::string& value) override {
     if (require_value && value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
+      FX_LOGS(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     T result;
@@ -257,7 +257,7 @@ class NumCpusOptionHandler : public OptionHandlerWithDefaultValue<uint8_t> {
                           const std::string& value) override {
     zx_status_t status = OptionHandlerWithoutDefaultValue::SetInternal(cfg, name, value);
     if (status == ZX_OK && cfg->cpus() > Guest::kMaxVcpus) {
-      FXL_LOG(ERROR) << "Option: '" << name << "' expects a value <= " << Guest::kMaxVcpus;
+      FX_LOGS(ERROR) << "Option: '" << name << "' expects a value <= " << Guest::kMaxVcpus;
       return ZX_ERR_INVALID_ARGS;
     }
     return status;
@@ -302,7 +302,7 @@ class RepeatedOptionHandler : public OptionHandler {
   zx_status_t SetInternal(GuestConfig* cfg, const std::string& name,
                           const std::string& value) override {
     if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
+      FX_LOGS(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     T result;
@@ -445,7 +445,7 @@ zx_status_t ParseArguments(int argc, const char** argv, fuchsia::virtualization:
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (cl.positional_args().size() > 0) {
-    FXL_LOG(ERROR) << "Unknown positional option: " << cl.positional_args()[0];
+    FX_LOGS(ERROR) << "Unknown positional option: " << cl.positional_args()[0];
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -453,7 +453,7 @@ zx_status_t ParseArguments(int argc, const char** argv, fuchsia::virtualization:
   for (const fxl::CommandLine::Option& option : cl.options()) {
     auto entry = handlers.find(option.name);
     if (entry == handlers.end()) {
-      FXL_LOG(ERROR) << "Unknown option --" << option.name;
+      FX_LOGS(ERROR) << "Unknown option --" << option.name;
       return ZX_ERR_INVALID_ARGS;
     }
     auto status = entry->second->Set(cfg, option.name, option.value, /* override= */ true);
@@ -482,7 +482,7 @@ zx_status_t ParseConfig(const std::string& data, GuestConfig* cfg) {
   for (auto& member : document.GetObject()) {
     auto entry = opts.find(member.name.GetString());
     if (entry == opts.end()) {
-      FXL_LOG(ERROR) << "Unknown field in configuration object: " << member.name.GetString();
+      FX_LOGS(ERROR) << "Unknown field in configuration object: " << member.name.GetString();
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -500,7 +500,7 @@ zx_status_t ParseConfig(const std::string& data, GuestConfig* cfg) {
     if (member.value.IsArray()) {
       for (auto& array_member : member.value.GetArray()) {
         if (!array_member.IsString()) {
-          FXL_LOG(ERROR) << "Array entry has incorect type, expected string: "
+          FX_LOGS(ERROR) << "Array entry has incorect type, expected string: "
                          << member.name.GetString();
           return ZX_ERR_INVALID_ARGS;
         }
@@ -512,7 +512,7 @@ zx_status_t ParseConfig(const std::string& data, GuestConfig* cfg) {
       }
       continue;
     }
-    FXL_LOG(ERROR) << "Field has incorrect type, expected string or array: "
+    FX_LOGS(ERROR) << "Field has incorrect type, expected string or array: "
                    << member.name.GetString();
     return ZX_ERR_INVALID_ARGS;
   }

@@ -15,7 +15,7 @@ class RngStream : public StreamBase {
   void Notify() {
     for (; queue_.NextChain(&chain_); chain_.Return()) {
       while (chain_.NextDescriptor(&desc_)) {
-        FXL_CHECK(desc_.writable) << "Descriptor is not writable";
+        FX_CHECK(desc_.writable) << "Descriptor is not writable";
         zx_cprng_draw(desc_.addr, desc_.len);
         *chain_.Used() += desc_.len;
       }
@@ -31,7 +31,7 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
-    FXL_CHECK(queue == 0) << "Queue index " << queue << " out of range";
+    FX_CHECK(queue == 0) << "Queue index " << queue << " out of range";
     queue_.Notify();
   }
 
@@ -49,7 +49,7 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
                       zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
-    FXL_CHECK(queue == 0) << "Queue index " << queue << " out of range";
+    FX_CHECK(queue == 0) << "Queue index " << queue << " out of range";
     queue_.Configure(size, desc, avail, used);
   }
 
@@ -60,6 +60,8 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_rng"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

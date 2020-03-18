@@ -6,7 +6,7 @@
 
 #include <lib/images/cpp/images.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 GuestView::GuestView(
     scenic::ViewContext view_context,
@@ -48,16 +48,16 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
     zx::vmo scanout_vmo;
     auto vmo_size = images::ImageSize(image_info_);
     zx_status_t status = zx::vmo::create(vmo_size, 0, &scanout_vmo);
-    FXL_CHECK(status == ZX_OK) << "Scanout target VMO creation failed " << status;
+    FX_CHECK(status == ZX_OK) << "Scanout target VMO creation failed " << status;
     zx::vmo scenic_vmo;
     status = scanout_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &scenic_vmo);
-    FXL_CHECK(status == ZX_OK) << "Scanout target VMO duplication failed " << status;
+    FX_CHECK(status == ZX_OK) << "Scanout target VMO duplication failed " << status;
     memory_ = std::make_unique<scenic::Memory>(session(), std::move(scenic_vmo), vmo_size,
                                                fuchsia::images::MemoryType::HOST_MEMORY);
 
     status = scanout_.SetFlushTarget(std::move(scanout_vmo), vmo_size, image_info_.width,
                                      image_info_.height, image_info_.stride);
-    FXL_CHECK(status == ZX_OK) << "Scanout target VMO flush failed " << status;
+    FX_CHECK(status == ZX_OK) << "Scanout target VMO flush failed " << status;
   }
 
   const float width = logical_size().x;
@@ -90,5 +90,5 @@ void GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 }
 
 void GuestView::OnScenicError(std::string error) {
-  FXL_LOG(ERROR) << "Scenic session failed " << error;
+  FX_LOGS(ERROR) << "Scenic session failed " << error;
 }

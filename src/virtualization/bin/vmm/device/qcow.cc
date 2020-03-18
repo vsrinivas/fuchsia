@@ -12,7 +12,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 // Implementation based on the spec located at:
 //
@@ -54,7 +54,7 @@ class QcowFile::LookupTable {
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     uint32_t l1_size = header.l1_size;
     if (l1_size < l1_size_) {
-      FXL_LOG(ERROR) << "Invalid QCOW header: L1 table is too small. Image size requires "
+      FX_LOGS(ERROR) << "Invalid QCOW header: L1 table is too small. Image size requires "
                      << l1_size_ << " entries but the header specifies " << l1_size << ".";
       io_guard->SetStatus(ZX_ERR_INVALID_ARGS);
       return;
@@ -66,7 +66,7 @@ class QcowFile::LookupTable {
     auto load_l1 = [this, io_guard, l1_entries = std::move(l1_entries), l2_size,
                     disp](zx_status_t status) {
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to read L1 table " << status;
+        FX_LOGS(ERROR) << "Failed to read L1 table " << status;
         io_guard->SetStatus(status);
         return;
       }
@@ -79,7 +79,7 @@ class QcowFile::LookupTable {
         }
         auto load_l2 = [io_guard](zx_status_t status) {
           if (status != ZX_OK) {
-            FXL_LOG(ERROR) << "Failed to read L2 table " << status;
+            FX_LOGS(ERROR) << "Failed to read L2 table " << status;
             io_guard->SetStatus(status);
           }
         };
@@ -125,7 +125,7 @@ class QcowFile::LookupTable {
     }
     uint64_t l2_entry = BigToHostEndianTraits::Convert(l2[l2_offset]);
     if (l2_entry & kTableEntryCompressedBit) {
-      FXL_LOG(ERROR) << "Cluster compression not supported";
+      FX_LOGS(ERROR) << "Cluster compression not supported";
       return ZX_ERR_NOT_SUPPORTED;
     }
     uint64_t cluster = l2_entry & kTableOffsetMask;
@@ -155,7 +155,7 @@ void QcowFile::Load(BlockDispatcher* disp, BlockDispatcher::Callback callback) {
   auto load = [this, disp, callback = std::move(callback)](zx_status_t status) mutable {
     // Load QCOW header.
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read QCOW header";
+      FX_LOGS(ERROR) << "Failed to read QCOW header";
       callback(ZX_ERR_WRONG_TYPE);
       return;
     }
@@ -167,7 +167,7 @@ void QcowFile::Load(BlockDispatcher* disp, BlockDispatcher::Callback callback) {
 
 void QcowFile::LoadLookupTable(BlockDispatcher* disp, BlockDispatcher::Callback callback) {
   if (header_.magic != kQcowMagic) {
-    FXL_LOG(ERROR) << "Invalid QCOW image";
+    FX_LOGS(ERROR) << "Invalid QCOW image";
     callback(ZX_ERR_WRONG_TYPE);
     return;
   }
@@ -179,46 +179,46 @@ void QcowFile::LoadLookupTable(BlockDispatcher* disp, BlockDispatcher::Callback 
     header_.refcount_order = 4;
     header_.header_length = 72;
   } else if (header_.version != 3) {
-    FXL_LOG(ERROR) << "QCOW version " << header_.version << " is not supported";
+    FX_LOGS(ERROR) << "QCOW version " << header_.version << " is not supported";
     callback(ZX_ERR_NOT_SUPPORTED);
     return;
   }
   // We don't support any optional features so refuse to load an image that
   // requires any.
   if (header_.incompatible_features) {
-    FXL_LOG(ERROR) << "Rejecting QCOW image with incompatible features " << std::hex << "0x"
+    FX_LOGS(ERROR) << "Rejecting QCOW image with incompatible features " << std::hex << "0x"
                    << header_.incompatible_features;
     callback(ZX_ERR_NOT_SUPPORTED);
     return;
   }
   // No encryption is supported.
   if (header_.crypt_method) {
-    FXL_LOG(ERROR) << "Rejecting QCOW image with crypt method " << std::hex << "0x"
+    FX_LOGS(ERROR) << "Rejecting QCOW image with crypt method " << std::hex << "0x"
                    << header_.crypt_method;
     callback(ZX_ERR_NOT_SUPPORTED);
     return;
   }
 
   // clang-format off
-  FXL_VLOG(1) << "Found QCOW header:";
-  FXL_VLOG(1) << "\tmagic:                   0x" << std::hex << header_.magic;
-  FXL_VLOG(1) << "\tversion:                 " << std::hex << header_.version;
-  FXL_VLOG(1) << "\tbacking_file_offset:     0x" << std::hex << header_.backing_file_offset;
-  FXL_VLOG(1) << "\tbacking_file_size:       0x" << std::hex << header_.backing_file_size;
-  FXL_VLOG(1) << "\tcluster_bits:            " << header_.cluster_bits;
-  FXL_VLOG(1) << "\tsize:                    0x" << std::hex << header_.size;
-  FXL_VLOG(1) << "\tcrypt_method:            " << header_.crypt_method;
-  FXL_VLOG(1) << "\tl1_size:                 0x" << std::hex << header_.l1_size;
-  FXL_VLOG(1) << "\tl1_table_offset:         0x" << std::hex << header_.l1_table_offset;
-  FXL_VLOG(1) << "\trefcount_table_offset:   0x" << std::hex << header_.refcount_table_offset;
-  FXL_VLOG(1) << "\trefcount_table_clusters: " << header_.refcount_table_clusters;
-  FXL_VLOG(1) << "\tnb_snapshots:            " << header_.nb_snapshots;
-  FXL_VLOG(1) << "\tsnapshots_offset:        0x" << std::hex << header_.snapshots_offset;
-  FXL_VLOG(1) << "\tincompatible_features:   0x" << std::hex << header_.incompatible_features;
-  FXL_VLOG(1) << "\tcompatible_features:     0x" << std::hex << header_.compatible_features;
-  FXL_VLOG(1) << "\tautoclear_features:      0x" << std::hex << header_.autoclear_features;
-  FXL_VLOG(1) << "\trefcount_order:          " << header_.refcount_order;
-  FXL_VLOG(1) << "\theader_length:           " << header_.header_length;
+  FX_VLOGS(1) << "Found QCOW header:";
+  FX_VLOGS(1) << "\tmagic:                   0x" << std::hex << header_.magic;
+  FX_VLOGS(1) << "\tversion:                 " << std::hex << header_.version;
+  FX_VLOGS(1) << "\tbacking_file_offset:     0x" << std::hex << header_.backing_file_offset;
+  FX_VLOGS(1) << "\tbacking_file_size:       0x" << std::hex << header_.backing_file_size;
+  FX_VLOGS(1) << "\tcluster_bits:            " << header_.cluster_bits;
+  FX_VLOGS(1) << "\tsize:                    0x" << std::hex << header_.size;
+  FX_VLOGS(1) << "\tcrypt_method:            " << header_.crypt_method;
+  FX_VLOGS(1) << "\tl1_size:                 0x" << std::hex << header_.l1_size;
+  FX_VLOGS(1) << "\tl1_table_offset:         0x" << std::hex << header_.l1_table_offset;
+  FX_VLOGS(1) << "\trefcount_table_offset:   0x" << std::hex << header_.refcount_table_offset;
+  FX_VLOGS(1) << "\trefcount_table_clusters: " << header_.refcount_table_clusters;
+  FX_VLOGS(1) << "\tnb_snapshots:            " << header_.nb_snapshots;
+  FX_VLOGS(1) << "\tsnapshots_offset:        0x" << std::hex << header_.snapshots_offset;
+  FX_VLOGS(1) << "\tincompatible_features:   0x" << std::hex << header_.incompatible_features;
+  FX_VLOGS(1) << "\tcompatible_features:     0x" << std::hex << header_.compatible_features;
+  FX_VLOGS(1) << "\tautoclear_features:      0x" << std::hex << header_.autoclear_features;
+  FX_VLOGS(1) << "\trefcount_order:          " << header_.refcount_order;
+  FX_VLOGS(1) << "\theader_length:           " << header_.header_length;
   // clang-format on
 
   lookup_table_ = std::make_unique<LookupTable>(header_.cluster_bits, header_.size);

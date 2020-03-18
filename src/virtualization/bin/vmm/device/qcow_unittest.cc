@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/qcow_test_data.h"
 
 namespace {

@@ -13,7 +13,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 extern "C" {
 #include <acpica/acpi.h>
@@ -49,18 +49,18 @@ static zx_status_t load_file(const char* path, const PhysMem& phys_mem, uint32_t
                              uint32_t* actual) {
   fbl::unique_fd fd(open(path, O_RDONLY));
   if (!fd) {
-    FXL_LOG(ERROR) << "Failed to open ACPI table " << path;
+    FX_LOGS(ERROR) << "Failed to open ACPI table " << path;
     return ZX_ERR_IO;
   }
   struct stat stat;
   ssize_t ret = fstat(fd.get(), &stat);
   if (ret < 0) {
-    FXL_LOG(ERROR) << "Failed to stat ACPI table " << path;
+    FX_LOGS(ERROR) << "Failed to stat ACPI table " << path;
     return ZX_ERR_IO;
   }
   ret = read(fd.get(), phys_mem.as<void>(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
-    FXL_LOG(ERROR) << "Failed to read ACPI table " << path;
+    FX_LOGS(ERROR) << "Failed to read ACPI table " << path;
     return ZX_ERR_IO;
   }
   *actual = static_cast<uint32_t>(stat.st_size);

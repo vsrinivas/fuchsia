@@ -31,7 +31,7 @@ class ConsoleStream : public StreamBase {
 
   void WaitOnSocket(async_dispatcher_t* dispatcher) {
     zx_status_t status = wait_.Begin(dispatcher);
-    FXL_CHECK(status == ZX_OK || status == ZX_ERR_ALREADY_EXISTS)
+    FX_CHECK(status == ZX_OK || status == ZX_ERR_ALREADY_EXISTS)
         << "Failed to wait on socket " << status;
   }
 
@@ -54,10 +54,10 @@ class ConsoleStream : public StreamBase {
             chain_.Return();
           }
           status = wait->Begin(dispatcher);
-          FXL_CHECK(status == ZX_OK) << "Failed to wait on socket " << status;
+          FX_CHECK(status == ZX_OK) << "Failed to wait on socket " << status;
           return;
         }
-        FXL_CHECK(status == ZX_OK) << "Failed to operate on socket " << status;
+        FX_CHECK(status == ZX_OK) << "Failed to operate on socket " << status;
       }
     }
   }
@@ -82,7 +82,7 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
         tx_stream_.WaitOnSocket(async_get_default_dispatcher());
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -112,7 +112,7 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
         tx_stream_.Configure(size, desc, avail, used);
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -122,9 +122,9 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
 
   void OnSocketReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
-    FXL_CHECK(status == ZX_OK) << "Wait for socket readable failed " << status;
+    FX_CHECK(status == ZX_OK) << "Wait for socket readable failed " << status;
     rx_stream_.OnSocketReady(dispatcher, wait, [this](auto desc) {
-      FXL_CHECK(desc->writable) << "Descriptor is not writable";
+      FX_CHECK(desc->writable) << "Descriptor is not writable";
       size_t actual = 0;
       zx_status_t status = socket_.read(0, desc->addr, desc->len, &actual);
       *rx_stream_.Used() += actual;
@@ -134,9 +134,9 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
 
   void OnSocketWritable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
-    FXL_CHECK(status == ZX_OK) << "Wait for socket writable failed " << status;
+    FX_CHECK(status == ZX_OK) << "Wait for socket writable failed " << status;
     tx_stream_.OnSocketReady(dispatcher, wait, [this](auto desc) {
-      FXL_CHECK(!desc->writable) << "Descriptor is not readable";
+      FX_CHECK(!desc->writable) << "Descriptor is not readable";
       size_t actual = 0;
       zx_status_t status = socket_.write(0, desc->addr, desc->len, &actual);
       // It's possible only part of the descriptor has been written to the
@@ -157,6 +157,8 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_console"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

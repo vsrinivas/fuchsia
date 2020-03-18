@@ -227,7 +227,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
         request_stream_.DoRequest(read_only_);
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -279,7 +279,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
         request_stream_.Configure(size, desc, avail, used);
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -292,6 +292,8 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_block"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

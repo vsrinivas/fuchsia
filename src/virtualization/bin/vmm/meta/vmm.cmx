@@ -11,6 +11,7 @@
         ],
         "services": [
             "fuchsia.boot.RootResource",
+            "fuchsia.logger.LogSink",
             "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

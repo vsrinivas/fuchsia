@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 static constexpr const char* kDeviceDir = "/dev/class/gpu";
@@ -43,7 +43,7 @@ void VirtioMagma::Start(
 
   auto dir = opendir(kDeviceDir);
   if (!dir) {
-    FXL_LOG(ERROR) << "Failed to open device directory at " << kDeviceDir << ": "
+    FX_LOGS(ERROR) << "Failed to open device directory at " << kDeviceDir << ": "
                    << strerror(errno);
     deferred.cancel();
     callback(ZX_ERR_NOT_FOUND);
@@ -55,14 +55,14 @@ void VirtioMagma::Start(
     device_path_ = std::string(kDeviceDir) + "/" + entry->d_name;
     device_fd_ = fbl::unique_fd(open(device_path_.c_str(), O_RDONLY));
     if (!device_fd_.is_valid()) {
-      FXL_LOG(WARNING) << "Failed to open device at " << device_path_ << ": " << strerror(errno);
+      FX_LOGS(WARNING) << "Failed to open device at " << device_path_ << ": " << strerror(errno);
     }
   }
 
   closedir(dir);
 
   if (!device_fd_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open any devices in " << kDeviceDir << ".";
+    FX_LOGS(ERROR) << "Failed to open any devices in " << kDeviceDir << ".";
     deferred.cancel();
     callback(ZX_ERR_NOT_FOUND);
     return;
@@ -81,7 +81,7 @@ void VirtioMagma::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc
   TRACE_DURATION("machina", "VirtioMagma::ConfigureQueue");
   auto deferred = fit::defer(std::move(callback));
   if (queue != 0) {
-    FXL_LOG(ERROR) << "ConfigureQueue on non-existent queue " << queue;
+    FX_LOGS(ERROR) << "ConfigureQueue on non-existent queue " << queue;
     return;
   }
   out_queue_.Configure(size, desc, avail, used);
@@ -106,7 +106,7 @@ zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_c
     return status;
   status = fdio_service_connect(device_path_.c_str(), server_handle.release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "fdio_service_connect failed - " << status;
+    FX_LOGS(ERROR) << "fdio_service_connect failed - " << status;
     return status;
   }
 
@@ -129,7 +129,7 @@ zx_status_t VirtioMagma::Handle_create_buffer(const virtio_magma_create_buffer_c
   magma_status_t magma_status =
       magma_set_buffer_mapping_address_range(response->buffer_out, vmar.release());
   if (magma_status != MAGMA_STATUS_OK) {
-    FXL_LOG(ERROR) << "magma_set_buffer_mapping_address_range failed - " << magma_status;
+    FX_LOGS(ERROR) << "magma_set_buffer_mapping_address_range failed - " << magma_status;
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -137,13 +137,13 @@ zx_status_t VirtioMagma::Handle_create_buffer(const virtio_magma_create_buffer_c
 
 zx_status_t VirtioMagma::Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
                                             virtio_magma_map_aligned_resp_t* response) {
-  FXL_LOG(ERROR) << "Specialized map calls should be converted by the driver into generic ones";
+  FX_LOGS(ERROR) << "Specialized map calls should be converted by the driver into generic ones";
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t VirtioMagma::Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
                                              virtio_magma_map_specific_resp_t* response) {
-  FXL_LOG(ERROR) << "Specialized map calls should be converted by the driver into generic ones";
+  FX_LOGS(ERROR) << "Specialized map calls should be converted by the driver into generic ones";
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -167,7 +167,7 @@ zx_status_t VirtioMagma::Handle_read_notification_channel(
 zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request,
                                        virtio_magma_export_resp_t* response) {
   if (!wayland_importer_) {
-    FXL_LOG(INFO) << "driver attempted to export a buffer without wayland present";
+    FX_LOGS(INFO) << "driver attempted to export a buffer without wayland present";
     response->hdr.type = VIRTIO_MAGMA_RESP_EXPORT;
     response->buffer_handle_out = 0;
     response->result_return = MAGMA_STATUS_UNIMPLEMENTED;
@@ -216,6 +216,8 @@ zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources(
 }
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_magma"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

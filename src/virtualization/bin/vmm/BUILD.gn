@@ -22,7 +22,7 @@ source_set("guest_config") {
 
   deps = [
     "//sdk/fidl/fuchsia.virtualization",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/virtualization/bin/vmm/device",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
@@ -216,7 +216,7 @@ executable("vmm_unittests") {
     ":guest_config",
     ":lib",
     "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//third_party/googletest:gmock",
   ]
 

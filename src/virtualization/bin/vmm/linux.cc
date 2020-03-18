@@ -156,12 +156,12 @@ static zx_status_t read_fd(const int fd, const PhysMem& phys_mem, const uintptr_
   struct stat stat;
   ssize_t ret = fstat(fd, &stat);
   if (ret < 0) {
-    FXL_LOG(ERROR) << "Failed to stat file";
+    FX_LOGS(ERROR) << "Failed to stat file";
     return ZX_ERR_IO;
   }
   ret = read(fd, phys_mem.as<void>(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
-    FXL_LOG(ERROR) << "Failed to read file";
+    FX_LOGS(ERROR) << "Failed to read file";
     return ZX_ERR_IO;
   }
   *file_size = stat.st_size;
@@ -172,13 +172,13 @@ zx_status_t load_kernel(const std::string& kernel_path, const PhysMem& phys_mem,
                         const uintptr_t kernel_off) {
   fbl::unique_fd fd(open(kernel_path.c_str(), O_RDONLY));
   if (!fd) {
-    FXL_LOG(ERROR) << "Failed to open kernel image " << kernel_path;
+    FX_LOGS(ERROR) << "Failed to open kernel image " << kernel_path;
     return ZX_ERR_IO;
   }
   size_t kernel_size;
   read_fd(fd.get(), phys_mem, kernel_off, &kernel_size);
   if (is_within(kDtbOffset, kernel_off, kernel_size)) {
-    FXL_LOG(ERROR) << "Kernel location overlaps DTB location";
+    FX_LOGS(ERROR) << "Kernel location overlaps DTB location";
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_OK;
@@ -188,17 +188,17 @@ static zx_status_t read_device_tree(const int fd, const PhysMem& phys_mem, const
                                     const uintptr_t limit, void** dtb, size_t* dtb_size) {
   zx_status_t status = read_fd(fd, phys_mem, off, dtb_size);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read device tree";
+    FX_LOGS(ERROR) << "Failed to read device tree";
     return status;
   }
   if (off + *dtb_size > limit) {
-    FXL_LOG(ERROR) << "Device tree is too large";
+    FX_LOGS(ERROR) << "Device tree is too large";
     return ZX_ERR_OUT_OF_RANGE;
   }
   *dtb = phys_mem.as<void>(off, *dtb_size);
   int ret = fdt_check_header(*dtb);
   if (ret != 0) {
-    FXL_LOG(ERROR) << "Invalid device tree " << ret;
+    FX_LOGS(ERROR) << "Invalid device tree " << ret;
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   return ZX_OK;
@@ -208,22 +208,22 @@ static zx_status_t read_boot_params(const PhysMem& phys_mem, uintptr_t* guest_ip
   // Validate kernel configuration.
   uint16_t xloadflags = bp(phys_mem, XLOADFLAGS);
   if (~xloadflags & (KERNEL_64 | CAN_BE_LOADED_ABOVE_4G)) {
-    FXL_LOG(ERROR) << "Unsupported Linux kernel";
+    FX_LOGS(ERROR) << "Unsupported Linux kernel";
     return ZX_ERR_NOT_SUPPORTED;
   }
   uint16_t protocol = bp(phys_mem, VERSION);
   uint8_t loadflags = bp(phys_mem, LOADFLAGS);
   if (protocol < kMinBootProtocol || !(loadflags & LOAD_HIGH)) {
-    FXL_LOG(ERROR) << "Linux kernel is not a bzImage";
+    FX_LOGS(ERROR) << "Linux kernel is not a bzImage";
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (bp(phys_mem, RELOCATABLE) == 0) {
-    FXL_LOG(ERROR) << "Linux kernel is not relocatable";
+    FX_LOGS(ERROR) << "Linux kernel is not relocatable";
     return ZX_ERR_NOT_SUPPORTED;
   }
   uint64_t kernel_align = bp(phys_mem, KERNEL_ALIGN);
   if (kKernelOffset % kernel_align != 0) {
-    FXL_LOG(ERROR) << "Linux kernel has unsupported alignment";
+    FX_LOGS(ERROR) << "Linux kernel has unsupported alignment";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -258,7 +258,7 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
   // Copy the command line string.
   size_t cmdline_len = cmdline.size() + 1;
   if (phys_mem.size() < PAGE_SIZE || cmdline_len > PAGE_SIZE) {
-    FXL_LOG(ERROR) << "Command line is too long";
+    FX_LOGS(ERROR) << "Command line is too long";
     return ZX_ERR_OUT_OF_RANGE;
   }
   uint32_t cmdline_off = phys_mem.size() - PAGE_SIZE;
@@ -272,7 +272,7 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     zx_status_t status = read_device_tree(dtb_overlay_fd, phys_mem, kDtbBootParamsOffset,
                                           kRamdiskOffset, &dtb, &dtb_size);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read device tree";
+      FX_LOGS(ERROR) << "Failed to read device tree";
       return status;
     }
     auto setup_data = phys_mem.as<SetupData>(kDtbOffset);
@@ -289,7 +289,7 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
   }
   size_t e820_entries = e820_map.size();
   if (e820_entries > kMaxE820Entries) {
-    FXL_LOG(ERROR) << "Not enough space for e820 memory map";
+    FX_LOGS(ERROR) << "Not enough space for e820 memory map";
     return ZX_ERR_BAD_STATE;
   }
   bp(phys_mem, E820_COUNT) = static_cast<uint8_t>(e820_entries);
@@ -311,7 +311,7 @@ static zx_status_t read_mz(const PhysMem& phys_mem, uintptr_t* guest_ip) {
 }
 
 static void device_tree_error_msg(const char* property_name) {
-  FXL_LOG(ERROR) << "Failed to add \"" << property_name << "\" to device "
+  FX_LOGS(ERROR) << "Failed to add \"" << property_name << "\" to device "
                  << "tree, space must be reserved in the device tree";
 }
 
@@ -338,7 +338,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
   zx_status_t status =
       read_device_tree(dtb_fd, phys_mem, kDtbOffset, kRamdiskOffset, &dtb, &dtb_size);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read device tree";
+    FX_LOGS(ERROR) << "Failed to read device tree";
     return status;
   }
 
@@ -348,19 +348,19 @@ static zx_status_t load_device_tree(const int dtb_fd,
     status = read_device_tree(dtb_overlay_fd, phys_mem, kDtbOverlayOffset, kDtbOffset, &dtb_overlay,
                               &dtb_size);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read device tree overlay";
+      FX_LOGS(ERROR) << "Failed to read device tree overlay";
       return status;
     }
     int ret = fdt_overlay_apply(dtb, dtb_overlay);
     if (ret != 0) {
-      FXL_LOG(ERROR) << "Failed to apply device tree overlay " << ret;
+      FX_LOGS(ERROR) << "Failed to apply device tree overlay " << ret;
       return ZX_ERR_BAD_STATE;
     }
   }
 
   int off = fdt_path_offset(dtb, "/chosen");
   if (off < 0) {
-    FXL_LOG(ERROR) << "Failed to find \"/chosen\" in device tree";
+    FX_LOGS(ERROR) << "Failed to find \"/chosen\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
 
@@ -388,7 +388,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
   // Add CPUs to device tree.
   int cpus_off = fdt_path_offset(dtb, "/cpus");
   if (cpus_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find \"/cpus\" in device tree";
+    FX_LOGS(ERROR) << "Failed to find \"/cpus\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
   for (uint8_t cpu = 0; cpu != cfg.cpus(); ++cpu) {
@@ -423,7 +423,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
   // Add memory to device tree.
   int root_off = fdt_path_offset(dtb, "/");
   if (root_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find root node in device tree";
+    FX_LOGS(ERROR) << "Failed to find root node in device tree";
     return ZX_ERR_BAD_STATE;
   }
   auto yield = [&status, dtb, root_off](zx_gpaddr_t addr, size_t size) {
@@ -485,13 +485,13 @@ zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const P
   if (cfg.has_ramdisk_path()) {
     fbl::unique_fd initrd_fd(open(cfg.ramdisk_path().c_str(), O_RDONLY));
     if (!initrd_fd) {
-      FXL_LOG(ERROR) << "Failed to open initial RAM disk " << cfg.ramdisk_path();
+      FX_LOGS(ERROR) << "Failed to open initial RAM disk " << cfg.ramdisk_path();
       return ZX_ERR_IO;
     }
 
     status = read_fd(initrd_fd.get(), phys_mem, kRamdiskOffset, &initrd_size);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read initial RAM disk " << cfg.ramdisk_path();
+      FX_LOGS(ERROR) << "Failed to read initial RAM disk " << cfg.ramdisk_path();
       return status;
     }
   }
@@ -500,7 +500,7 @@ zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const P
   if (cfg.has_dtb_overlay_path()) {
     dtb_overlay_fd.reset(open(cfg.dtb_overlay_path().c_str(), O_RDONLY));
     if (!dtb_overlay_fd) {
-      FXL_LOG(ERROR) << "Failed to open device tree overlay " << cfg.dtb_overlay_path();
+      FX_LOGS(ERROR) << "Failed to open device tree overlay " << cfg.dtb_overlay_path();
       return ZX_ERR_IO;
     }
   }
@@ -523,7 +523,7 @@ zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const P
     }
     fbl::unique_fd dtb_fd(open(kDtbPath, O_RDONLY));
     if (!dtb_fd) {
-      FXL_LOG(ERROR) << "Failed to open device tree " << kDtbPath;
+      FX_LOGS(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
     status = load_device_tree(dtb_fd.get(), cfg, phys_mem, dev_mem, devices, cmdline,

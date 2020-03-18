@@ -4,18 +4,18 @@
 
 #include "src/virtualization/bin/vmm/guest_impl.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 static zx::socket duplicate(const zx::socket& socket) {
   zx::socket dup;
   zx_status_t status = socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  FXL_CHECK(status == ZX_OK) << "Failed to duplicate socket " << status;
+  FX_CHECK(status == ZX_OK) << "Failed to duplicate socket " << status;
   return dup;
 }
 
 GuestImpl::GuestImpl() {
   zx_status_t status = zx::socket::create(0, &socket_, &remote_socket_);
-  FXL_CHECK(status == ZX_OK) << "Failed to create socket";
+  FX_CHECK(status == ZX_OK) << "Failed to create socket";
 }
 
 zx_status_t GuestImpl::AddPublicService(sys::ComponentContext* context) {

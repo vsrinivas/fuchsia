@@ -7,7 +7,7 @@
 #include <endian.h>
 #include <stdio.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/rtc.h"
 
@@ -36,13 +36,13 @@ zx_status_t Pl031::Read(uint64_t addr, IoValue* value) const {
       value->u32 = rtc_time();
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled PL031 address read 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled PL031 address read 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
 
 zx_status_t Pl031::Write(uint64_t addr, const IoValue& value) {
-  FXL_LOG(ERROR) << "Unhandled PL031 address write 0x" << std::hex << addr;
+  FX_LOGS(ERROR) << "Unhandled PL031 address write 0x" << std::hex << addr;
   return ZX_ERR_IO;
 }
 
@@ -50,12 +50,12 @@ zx_status_t Pl031::ConfigureDtb(void* dtb) const {
   uint64_t reg_val[2] = {htobe64(kPl031PhysBase), htobe64(kPl031Size)};
   int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find PL031 in DTB";
+    FX_LOGS(ERROR) << "Failed to find PL031 in DTB";
     return ZX_ERR_INTERNAL;
   }
   int ret = fdt_node_check_compatible(dtb, node_off, "arm,pl031");
   if (ret != 0) {
-    FXL_LOG(ERROR) << "Device with PL031 registers is not PL031 compatible";
+    FX_LOGS(ERROR) << "Device with PL031 registers is not PL031 compatible";
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;

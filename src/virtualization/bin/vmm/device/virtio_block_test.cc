@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <unistd.h>
+
+#include <fbl/unique_fd.h>
 #include <virtio/block.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
@@ -78,7 +80,7 @@ class VirtioBlockTest : public TestWithDevice {
   fbl::unique_fd CreateBlockFile(char* path) {
     fbl::unique_fd fd(mkstemp(path));
     if (!fd) {
-      FXL_LOG(ERROR) << "Failed to create " << path << ": " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to create " << path << ": " << strerror(errno);
       return fd;
     }
     std::vector<uint8_t> buf(kBlockSectorSize * kNumSectors);
@@ -89,7 +91,7 @@ class VirtioBlockTest : public TestWithDevice {
     }
     ssize_t ret = pwrite(fd.get(), buf.data(), buf.size(), 0);
     if (ret < 0) {
-      FXL_LOG(ERROR) << "Failed to zero " << path << ": " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to zero " << path << ": " << strerror(errno);
       fd.reset();
     }
     return fd;

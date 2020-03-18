@@ -16,7 +16,7 @@
 #include <fbl/unique_fd.h>
 #include <libzbi/zbi.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
@@ -180,12 +180,12 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
   zx_status_t status = get_interrupt_controller_info(sysinfo, &info);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get GIC version " << status;
+    FX_LOGS(ERROR) << "Failed to get GIC version " << status;
     return status;
   }
   if (info->type != fuchsia::sysinfo::InterruptControllerType::GIC_V2 &&
       info->type != fuchsia::sysinfo::InterruptControllerType::GIC_V3) {
-    FXL_LOG(ERROR) << "Unsupported interrupt controller type " << static_cast<size_t>(info->type);
+    FX_LOGS(ERROR) << "Unsupported interrupt controller type " << static_cast<size_t>(info->type);
     return ZX_ERR_NOT_SUPPORTED;
   }
   type_ = info->type;
@@ -195,18 +195,18 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
     zx::resource resource;
     zx_status_t status = get_root_resource(&resource);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to get root resource " << status;
+      FX_LOGS(ERROR) << "Failed to get root resource " << status;
       return status;
     }
     for (const uint32_t& vector : interrupts) {
       if (vector < kSpiBase || vector >= kNumInterrupts) {
-        FXL_LOG(ERROR) << "Invalid interrupt " << vector;
+        FX_LOGS(ERROR) << "Invalid interrupt " << vector;
         return ZX_ERR_OUT_OF_RANGE;
       }
       zx::interrupt interrupt;
       status = zx::interrupt::create(resource, vector, ZX_INTERRUPT_MODE_DEFAULT, &interrupt);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to create interrupt " << vector << " " << status;
+        FX_LOGS(ERROR) << "Failed to create interrupt " << vector << " " << status;
         return status;
       }
       interrupts_.try_emplace(vector, std::move(interrupt));
@@ -289,7 +289,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
     }
     zx_status_t status = it->second.bind_vcpu(vcpus[i]->object(), 0);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to bind VCPU " << status;
+      FX_LOGS(ERROR) << "Failed to bind VCPU " << status;
       return status;
     }
   }
@@ -377,7 +377,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     default:
-      FXL_LOG(ERROR) << "Unhandled GIC distributor address read 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled GIC distributor address read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -390,7 +390,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   switch (static_cast<GicdRegister>(addr)) {
     case GicdRegister::ITARGETS0... GicdRegister::ITARGETS7: {
       // GIC Architecture Spec 4.3.12: ITARGETS0 to ITARGETS7 are read only.
-      FXL_LOG(ERROR) << "Write to read-only GIC distributor address 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Write to read-only GIC distributor address 0x" << std::hex << addr;
       return ZX_ERR_INVALID_ARGS;
     }
     case GicdRegister::ITARGETS8... GicdRegister::ITARGETS63: {
@@ -487,7 +487,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     case GicdRegister::IGRPMOD0... GicdRegister::IGRPMOD31:
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled GIC distributor address write 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled GIC distributor address write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -524,14 +524,14 @@ zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
 }
 
 static inline void gic_dtb_error(const char* reg) {
-  FXL_LOG(ERROR) << "Failed to add GiC property \"" << reg << "\" to device "
+  FX_LOGS(ERROR) << "Failed to add GiC property \"" << reg << "\" to device "
                  << "tree, space must be reserved in the device tree";
 }
 
 zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
   int gic_off = fdt_path_offset(dtb, "/interrupt-controller");
   if (gic_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
+    FX_LOGS(ERROR) << "Failed to find \"/interrupt-controller\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
   const char* compatible;
@@ -614,7 +614,7 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = pidr2_arch_rev(kGicv3Revision);
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled GIC redistributor address read 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled GIC redistributor address read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -641,7 +641,7 @@ zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
     case GicrRegister::ICFG1:
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled GIC redistributor address write 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled GIC redistributor address write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

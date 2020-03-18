@@ -6,7 +6,7 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 static constexpr char kVirtioBalloonUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
@@ -63,7 +63,7 @@ void VirtioBalloon::RequestNumPages(uint32_t num_pages) {
   // Send a config change interrupt to the guest.
   zx_status_t status = Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to generate configuration interrupt " << status;
+    FX_LOGS(ERROR) << "Failed to generate configuration interrupt " << status;
   }
 }
 

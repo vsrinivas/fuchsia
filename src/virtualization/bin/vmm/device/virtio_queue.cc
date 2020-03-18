@@ -6,9 +6,9 @@
 
 #include <virtio/virtio_ring.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
-VirtioQueue::VirtioQueue() { FXL_CHECK(zx::event::create(0, &event_) == ZX_OK); }
+VirtioQueue::VirtioQueue() { FX_CHECK(zx::event::create(0, &event_) == ZX_OK); }
 
 void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -157,7 +157,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
 VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
     : queue_(queue), head_(head), next_(head), has_next_(true) {}
 
-VirtioChain::~VirtioChain() { FXL_CHECK(!IsValid()) << "Descriptor chain leak."; }
+VirtioChain::~VirtioChain() { FX_CHECK(!IsValid()) << "Descriptor chain leak."; }
 
 VirtioChain::VirtioChain(VirtioChain&& o)
     : queue_(o.queue_), used_(o.used_), head_(o.head_), next_(o.next_), has_next_(o.has_next_) {
@@ -165,7 +165,7 @@ VirtioChain::VirtioChain(VirtioChain&& o)
 }
 
 VirtioChain& VirtioChain::operator=(VirtioChain&& o) {
-  FXL_CHECK(!IsValid()) << "Moving into valid chain. This would leak a descriptor chain.";
+  FX_CHECK(!IsValid()) << "Moving into valid chain. This would leak a descriptor chain.";
 
   queue_ = o.queue_;
   used_ = o.used_;
@@ -187,7 +187,7 @@ bool VirtioChain::NextDescriptor(VirtioDescriptor* desc) {
   }
   zx_status_t status = queue_->ReadDesc(next_, desc);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read queue " << status;
+    FX_LOGS(ERROR) << "Failed to read queue " << status;
     return false;
   }
   next_ = desc->next;
@@ -198,10 +198,10 @@ bool VirtioChain::NextDescriptor(VirtioDescriptor* desc) {
 uint32_t* VirtioChain::Used() { return &used_; }
 
 void VirtioChain::Return(uint8_t actions) {
-  FXL_CHECK(IsValid()) << "Attempting to return an invalid descriptor";
+  FX_CHECK(IsValid()) << "Attempting to return an invalid descriptor";
   zx_status_t status = queue_->Return(head_, used_, actions);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to return descriptor chain to queue " << status;
+    FX_LOGS(ERROR) << "Failed to return descriptor chain to queue " << status;
   }
   Reset();
 }

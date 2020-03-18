@@ -74,7 +74,7 @@ class TestConnectionBase {
       case ZX_OK:
         return observed & __ZX_OBJECT_PEER_CLOSED;
       default:
-        FXL_CHECK(false) << "Unexpected status " << status;
+        FX_CHECK(false) << "Unexpected status " << status;
         __UNREACHABLE;
     }
   }
@@ -92,7 +92,7 @@ struct TestSocketConnection : public TestConnectionBase<zx::socket> {
   zx::socket remote_socket;
 
   TestSocketConnection() : TestConnectionBase(&socket, &remote_socket) {
-    FXL_CHECK(zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket) == ZX_OK);
+    FX_CHECK(zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket) == ZX_OK);
   }
 
   zx_status_t write(const uint8_t* data, size_t size, size_t* actual) {
@@ -109,7 +109,7 @@ struct TestChannelConnection : public TestConnectionBase<zx::channel> {
   zx::channel remote_channel;
 
   TestChannelConnection() : TestConnectionBase(&channel, &remote_channel) {
-    FXL_CHECK(zx::channel::create(0, &channel, &remote_channel) == ZX_OK);
+    FX_CHECK(zx::channel::create(0, &channel, &remote_channel) == ZX_OK);
   }
 
   zx_status_t write(const uint8_t* data, size_t size, size_t* actual) {

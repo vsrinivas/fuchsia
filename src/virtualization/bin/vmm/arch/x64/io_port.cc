@@ -6,7 +6,7 @@
 
 #include <time.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/rtc.h"
@@ -271,7 +271,7 @@ zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) co
       *value = 0;
       break;
     default:
-      FXL_LOG(ERROR) << "Unsupported CMOS register read 0x" << std::hex
+      FX_LOGS(ERROR) << "Unsupported CMOS register read 0x" << std::hex
                      << static_cast<uint32_t>(cmos_index);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -298,7 +298,7 @@ zx_status_t CmosHandler::WriteCmosRegister(uint8_t cmos_index, uint8_t value) {
       // Ignore attempts to write to the RTC or shutdown status register.
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unsupported CMOS register write 0x" << std::hex
+      FX_LOGS(ERROR) << "Unsupported CMOS register write 0x" << std::hex
                      << static_cast<uint32_t>(cmos_index);
       return ZX_ERR_NOT_SUPPORTED;
   }

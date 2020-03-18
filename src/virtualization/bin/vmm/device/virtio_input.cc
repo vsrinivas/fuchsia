@@ -194,7 +194,7 @@ static uint32_t press_or_release(fuchsia::ui::input::PointerEventPhase phase) {
 // TODO(SCN-921): pointer event positions outside view boundaries.
 static uint32_t x_coordinate(float x, float width) {
   if (x < 0.0f || x > width) {
-    FXL_LOG(WARNING) << "PointerEvent::x out of range (" << std::fixed << std::setprecision(7) << x
+    FX_LOGS(WARNING) << "PointerEvent::x out of range (" << std::fixed << std::setprecision(7) << x
                      << ")";
     x = std::clamp(x, 0.0f, width);
   }
@@ -203,7 +203,7 @@ static uint32_t x_coordinate(float x, float width) {
 
 static uint32_t y_coordinate(float y, float height) {
   if (y < 0.0f || y > height) {
-    FXL_LOG(WARNING) << "PointerEvent::y out of range (" << std::fixed << std::setprecision(7) << y
+    FX_LOGS(WARNING) << "PointerEvent::y out of range (" << std::fixed << std::setprecision(7) << y
                      << ")";
     y = std::clamp(y, 0.0f, height);
   }
@@ -237,7 +237,7 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
   void OnKeyboard(const fuchsia::ui::input::KeyboardEvent& keyboard) {
     uint32_t hid_usage = keyboard.hid_usage;
     if (hid_usage >= kKeyMap.size()) {
-      FXL_LOG(WARNING) << "Unsupported keyboard event";
+      FX_LOGS(WARNING) << "Unsupported keyboard event";
       return;
     }
     virtio_input_event_t events[] = {
@@ -252,7 +252,7 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
     };
     bool enqueued = EnqueueEvents(events);
     if (!enqueued) {
-      FXL_LOG(WARNING) << "Dropped keyboard event";
+      FX_LOGS(WARNING) << "Dropped keyboard event";
     }
   }
 
@@ -276,7 +276,7 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
         };
         bool enqueued = EnqueueEvents(events);
         if (!enqueued) {
-          FXL_LOG(WARNING) << "Dropped pointer event";
+          FX_LOGS(WARNING) << "Dropped pointer event";
         }
         return;
       }
@@ -304,7 +304,7 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
         };
         bool enqueued = EnqueueEvents(events);
         if (!enqueued) {
-          FXL_LOG(WARNING) << "Dropped pointer event";
+          FX_LOGS(WARNING) << "Dropped pointer event";
         }
         return;
       }
@@ -371,7 +371,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
       case Queue::STATUS:
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -397,7 +397,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
       case Queue::STATUS:
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -409,6 +409,8 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_input"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

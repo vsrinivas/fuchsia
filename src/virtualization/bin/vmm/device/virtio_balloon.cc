@@ -35,7 +35,7 @@ class BalloonStream : public StreamBase {
     for (; queue_.NextChain(&chain_); chain_.Return()) {
       while (chain_.NextDescriptor(&desc_)) {
         zx_status_t status = DoOperation(vmo, op);
-        FXL_CHECK(status == ZX_OK) << "Operation failed " << status;
+        FX_CHECK(status == ZX_OK) << "Operation failed " << status;
       }
     }
   }
@@ -159,7 +159,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
         stats_stream_.DoStats();
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -203,7 +203,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
         stats_stream_.Configure(size, desc, avail, used);
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -221,6 +221,8 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_balloon"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

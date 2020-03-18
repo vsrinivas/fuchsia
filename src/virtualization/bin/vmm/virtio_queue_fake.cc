@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size)
     : queue_(queue),
@@ -79,7 +79,7 @@ bool VirtioQueueFake::HasUsed() const {
 }
 
 struct vring_used_elem VirtioQueueFake::NextUsed() {
-  FXL_DCHECK(HasUsed());
+  FX_DCHECK(HasUsed());
   std::lock_guard<std::mutex> lock(queue_->mutex_);
   return const_cast<struct vring_used_elem&>(ring_->used->ring[used_index_++ % queue_size_]);
 }

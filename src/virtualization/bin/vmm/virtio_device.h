@@ -187,7 +187,7 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
             phys_mem, device_features, std::move(config_queue), noop_notify_queue,
             std::move(config_device), std::move(ready_device)) {
     zx_status_t status = zx::event::create(0, &event_);
-    FXL_CHECK(status == ZX_OK) << "Failed to create event";
+    FX_CHECK(status == ZX_OK) << "Failed to create event";
     event_koid_ = fsl::GetKoid(event_.get());
     wait_.set_object(event_.get());
     wait_.set_trigger(ZX_USER_SIGNAL_ALL);
@@ -233,17 +233,17 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
     TRACE_FLOW_END("machina", "device:interrupt", event_koid_);
     status = event_.signal(signal->trigger, 0);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to clear interrupt signal " << status;
+      FX_LOGS(ERROR) << "Failed to clear interrupt signal " << status;
       return;
     }
     status = this->Interrupt(signal->observed >> kDeviceInterruptShift);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to raise device interrupt " << status;
+      FX_LOGS(ERROR) << "Failed to raise device interrupt " << status;
       return;
     }
     status = wait->Begin(dispatcher);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to wait for interrupt " << status;
+      FX_LOGS(ERROR) << "Failed to wait for interrupt " << status;
     }
   }
 

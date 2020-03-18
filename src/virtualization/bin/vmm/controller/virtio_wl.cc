@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 

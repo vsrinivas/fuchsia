@@ -58,18 +58,18 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
                              uintptr_t* guest_ip) {
   fbl::unique_fd fd(open(zbi_path.c_str(), O_RDONLY));
   if (!fd) {
-    FXL_LOG(ERROR) << "Failed to open kernel image " << zbi_path;
+    FX_LOGS(ERROR) << "Failed to open kernel image " << zbi_path;
     return ZX_ERR_IO;
   }
   struct stat stat;
   ssize_t ret = fstat(fd.get(), &stat);
   if (ret < 0) {
-    FXL_LOG(ERROR) << "Failed to stat kernel image " << zbi_path;
+    FX_LOGS(ERROR) << "Failed to stat kernel image " << zbi_path;
     return ZX_ERR_IO;
   }
 
   if (ZBI_ALIGN(kernel_off) != kernel_off) {
-    FXL_LOG(ERROR) << "Kernel offset has invalid alignment";
+    FX_LOGS(ERROR) << "Kernel offset has invalid alignment";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -77,21 +77,21 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
   ret = read(fd.get(), phys_mem.as<void>(kernel_off, sizeof(zircon_kernel_t)),
              sizeof(zircon_kernel_t));
   if (ret != sizeof(zircon_kernel_t)) {
-    FXL_LOG(ERROR) << "Failed to read kernel header";
+    FX_LOGS(ERROR) << "Failed to read kernel header";
     return ZX_ERR_IO;
   }
 
   // Check that the kernel ZBI is the correct type.
   auto kernel_hdr = phys_mem.as<zircon_kernel_t>(kernel_off);
   if (!ZBI_IS_KERNEL_BOOTITEM(kernel_hdr->hdr_kernel.type)) {
-    FXL_LOG(ERROR) << "Invalid Zircon container";
+    FX_LOGS(ERROR) << "Invalid Zircon container";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   // Check that the total size of the ZBI matches the file size.
   const uint32_t file_len = sizeof(zbi_header_t) + kernel_hdr->hdr_file.length;
   if (stat.st_size != file_len) {
-    FXL_LOG(ERROR) << "ZBI length does not match file size";
+    FX_LOGS(ERROR) << "ZBI length does not match file size";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -101,14 +101,14 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
                                  kernel_hdr->hdr_kernel.length +
                                  kernel_hdr->data_kernel.reserve_memory_size;
   if (kernel_off + reserved_size > phys_mem.size()) {
-    FXL_LOG(ERROR) << "Zircon kernel memory reservation exceeds guest physical memory";
+    FX_LOGS(ERROR) << "Zircon kernel memory reservation exceeds guest physical memory";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   // Check that the kernel's total memory reservation does not overlap the
   // ramdisk.
   if (is_within(zbi_off, kernel_off, reserved_size)) {
-    FXL_LOG(ERROR) << "Kernel reservation memory reservation overlaps RAM disk location";
+    FX_LOGS(ERROR) << "Kernel reservation memory reservation overlaps RAM disk location";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -119,7 +119,7 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
            phys_mem.as<void>(kernel_off + offsetof(zircon_kernel_t, contents), kernel_payload_len),
            kernel_payload_len);
   if (ret != kernel_payload_len) {
-    FXL_LOG(ERROR) << "Failed to read kernel payload";
+    FX_LOGS(ERROR) << "Failed to read kernel payload";
     return ZX_ERR_IO;
   }
 
@@ -128,14 +128,14 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
                                               static_cast<uint32_t>(sizeof(zbi_header_t)));
   zbi_result_t res = zbi_check(kernel_hdr, nullptr);
   if (res != ZBI_RESULT_OK) {
-    FXL_LOG(ERROR) << "Invalid kernel ZBI " << res;
+    FX_LOGS(ERROR) << "Invalid kernel ZBI " << res;
     return ZX_ERR_INTERNAL;
   }
 
   // Create a separate data ZBI.
 
   if (ZBI_ALIGN(zbi_off) != zbi_off) {
-    FXL_LOG(ERROR) << "ZBI offset has invalid alignment";
+    FX_LOGS(ERROR) << "ZBI offset has invalid alignment";
     return ZX_ERR_INVALID_ARGS;
   }
   auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
@@ -279,7 +279,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
 
   res = zbi_check(container_hdr, nullptr);
   if (res != ZBI_RESULT_OK) {
-    FXL_LOG(ERROR) << "Invalid Zircon container: " << res;
+    FX_LOGS(ERROR) << "Invalid Zircon container: " << res;
     return ZX_ERR_INTERNAL;
   }
 

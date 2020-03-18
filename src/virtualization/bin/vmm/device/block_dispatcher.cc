@@ -9,7 +9,7 @@
 #include <bitmap/rle-bitmap.h>
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
 
@@ -73,7 +73,7 @@ class RawBlockDispatcher : public BlockDispatcher {
 void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, NestedBlockDispatcherCallback callback) {
   file->GetAttr([file = std::move(file), callback = std::move(callback)](
                     zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
-    FXL_CHECK(status == ZX_OK) << "Failed to get attributes " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to get attributes " << status;
     auto disp = std::make_unique<RawBlockDispatcher>(std::move(file));
     callback(attrs.content_size, std::move(disp));
   });
@@ -129,7 +129,7 @@ void CreateVmoBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
     }
     uintptr_t addr;
     status = zx::vmar::root_self()->map(0, buffer->vmo, 0, buffer->size, vmo_flags, &addr);
-    FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
     auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
                                                      buffer->size, addr);
     callback(buffer->size, std::move(disp));
@@ -146,7 +146,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
   ~VolatileWriteBlockDispatcher() override {
     zx_status_t status = zx::vmar::root_self()->unmap(vmar_addr_, vmo_size_);
-    FXL_DCHECK(status == ZX_OK);
+    FX_DCHECK(status == ZX_OK);
   }
 
   void Sync(Callback callback) override {
@@ -193,7 +193,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
       off += read_size;
       addr += read_size;
-      FXL_DCHECK(size >= read_size);
+      FX_DCHECK(size >= read_size);
       size -= read_size;
     }
   }
@@ -235,18 +235,18 @@ void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDi
                                         NestedBlockDispatcherCallback callback) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
-  FXL_CHECK(status == ZX_OK) << "Failed to create VMO " << status;
+  FX_CHECK(status == ZX_OK) << "Failed to create VMO " << status;
 
   const char name[] = "volatile-block";
   status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to set name of VMO " << status;
+    FX_LOGS(ERROR) << "Failed to set name of VMO " << status;
   }
 
   uintptr_t addr;
   status = zx::vmar::root_self()->map(
       0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, &addr);
-  FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
+  FX_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
 
   auto disp = std::make_unique<VolatileWriteBlockDispatcher>(std::move(base), std::move(vmo),
                                                              vmo_size, addr);

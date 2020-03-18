@@ -19,6 +19,7 @@ source_set("device") {
   public_deps = [
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/virtio",
@@ -74,6 +75,7 @@ source_set("block") {
   ]
   public_deps = [
     ":device",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-io",
@@ -374,8 +376,8 @@ executable("device_unittests") {
 
   deps = [
     ":qcow_test_data",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
   ]
 }

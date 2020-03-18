@@ -47,7 +47,7 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
   if (status != ZX_OK) {
     return status;
   } else if (size % kBlockSectorSize != 0) {
-    FXL_LOG(ERROR) << "Virtio block device must be aligned to block sector size: " << id
+    FX_LOGS(ERROR) << "Virtio block device must be aligned to block sector size: " << id
                    << " has size " << size << ".";
     return ZX_ERR_INVALID_ARGS;
   }

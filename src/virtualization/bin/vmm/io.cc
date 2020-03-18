@@ -7,7 +7,7 @@
 #include <lib/zx/port.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 static constexpr IoValue kBellValue = {};
@@ -27,5 +27,5 @@ zx_status_t IoMapping::SetTrap(Guest* guest, async_dispatcher_t* dispatcher) {
 
 void IoMapping::CallIoHandlerAsync(async_dispatcher_t* dispatcher, async::GuestBellTrapBase* trap,
                                    zx_status_t status, const zx_packet_guest_bell_t* bell) {
-  FXL_CHECK(Write(bell->addr, kBellValue) == ZX_OK) << "Failed to handle async IO";
+  FX_CHECK(Write(bell->addr, kBellValue) == ZX_OK) << "Failed to handle async IO";
 }

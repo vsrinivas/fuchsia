@@ -5,9 +5,10 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <endian.h>
-#include <hw/pci.h>
 #include <stdio.h>
 #include <zircon/assert.h>
+
+#include <hw/pci.h>
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -198,7 +199,7 @@ void PciBus::set_config_addr(uint32_t addr) {
 
 zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, bool skip_bell) {
   if (next_open_slot_ >= kPciMaxDevices) {
-    FXL_LOG(ERROR) << "No PCI device slots available";
+    FX_LOGS(ERROR) << "No PCI device slots available";
     return ZX_ERR_OUT_OF_RANGE;
   }
   ZX_DEBUG_ASSERT(device_[next_open_slot_] == nullptr);
@@ -218,7 +219,7 @@ zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, b
     mmio_base_ += bar->size;
   }
   if (mmio_base_ >= kPciMmioBarPhysBase + kPciMmioBarSize) {
-    FXL_LOG(ERROR) << "No PCI MMIO address space available";
+    FX_LOGS(ERROR) << "No PCI MMIO address space available";
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -353,12 +354,12 @@ zx_status_t PciBus::ConfigureDtb(void* dtb) const {
   uint64_t reg_val[2] = {htobe64(kPciEcamPhysBase), htobe64(kPciEcamSize)};
   int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find PCI in DTB";
+    FX_LOGS(ERROR) << "Failed to find PCI in DTB";
     return ZX_ERR_INTERNAL;
   }
   int ret = fdt_node_check_compatible(dtb, node_off, "pci-host-ecam-generic");
   if (ret != 0) {
-    FXL_LOG(ERROR) << "Device with PCI registers is not PCI compatible";
+    FX_LOGS(ERROR) << "Device with PCI registers is not PCI compatible";
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;

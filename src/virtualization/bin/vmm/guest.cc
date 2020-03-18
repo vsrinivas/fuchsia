@@ -19,8 +19,8 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
 
 static constexpr uint32_t trap_kind(TrapType type) {
@@ -61,12 +61,12 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
   zx::resource hypervisor_resource;
   zx_status_t status = get_hypervisor_resource(sysinfo, &hypervisor_resource);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status;
+    FX_LOGS(ERROR) << "Failed to get hypervisor resource " << status;
     return status;
   }
   status = zx::guest::create(hypervisor_resource, 0, &guest_, &vmar_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create guest " << status;
+    FX_LOGS(ERROR) << "Failed to create guest " << status;
     return status;
   }
 
@@ -77,7 +77,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
       case fuchsia::virtualization::MemoryPolicy::GUEST_CACHED:
         status = zx::vmo::create(spec.size, 0, &vmo);
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to create VMO " << status;
+          FX_LOGS(ERROR) << "Failed to create VMO " << status;
           return status;
         }
         break;
@@ -86,29 +86,29 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         if (!root_resource) {
           status = get_root_resource(&root_resource);
           if (status != ZX_OK) {
-            FXL_LOG(ERROR) << "Failed to get root resource " << status;
+            FX_LOGS(ERROR) << "Failed to get root resource " << status;
             return status;
           }
         }
         status = zx::vmo::create_physical(root_resource, spec.base, spec.size, &vmo);
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
+          FX_LOGS(ERROR) << "Failed to create physical VMO " << status;
           return status;
         }
         status = vmo.set_cache_policy(cache_policy(spec.policy));
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to set cache policy on VMO " << status;
+          FX_LOGS(ERROR) << "Failed to set cache policy on VMO " << status;
           return status;
         }
         break;
       default:
-        FXL_LOG(ERROR) << "Unknown memory policy " << static_cast<uint32_t>(spec.policy);
+        FX_LOGS(ERROR) << "Unknown memory policy " << static_cast<uint32_t>(spec.policy);
         return ZX_ERR_INVALID_ARGS;
     }
 
     status = vmo.replace_as_executable(zx::handle(), &vmo);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to make VMO executable " << status;
+      FX_LOGS(ERROR) << "Failed to make VMO executable " << status;
       return status;
     }
 
@@ -118,13 +118,13 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
                            ZX_VM_REQUIRE_NON_RESIZABLE,
                        &addr);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
+      FX_LOGS(ERROR) << "Failed to map guest physical memory " << status;
       return status;
     }
     if (!phys_mem_.vmo() && spec.policy == fuchsia::virtualization::MemoryPolicy::GUEST_CACHED) {
       status = phys_mem_.Init(std::move(vmo));
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to initialize guest physical memory " << status;
+        FX_LOGS(ERROR) << "Failed to initialize guest physical memory " << status;
         return status;
       }
     }
@@ -153,14 +153,14 @@ zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
 
 zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr) {
   if (id >= kMaxVcpus) {
-    FXL_LOG(ERROR) << "Failed to start VCPU-" << id << ", up to " << kMaxVcpus
+    FX_LOGS(ERROR) << "Failed to start VCPU-" << id << ", up to " << kMaxVcpus
                    << " VCPUs are supported";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   std::lock_guard<std::shared_mutex> lock(mutex_);
   if (vcpus_[0] == nullptr && id != 0) {
-    FXL_LOG(ERROR) << "VCPU-0 must be started before other VCPUs";
+    FX_LOGS(ERROR) << "VCPU-0 must be started before other VCPUs";
     return ZX_ERR_BAD_STATE;
   }
   if (vcpus_[id] != nullptr) {

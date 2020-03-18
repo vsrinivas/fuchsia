@@ -9,7 +9,7 @@
 
 #include <libzbi/zbi.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 // I8250 state flags.
@@ -72,7 +72,7 @@ zx_status_t I8250::Read(uint64_t addr, IoValue* io) const {
       io->u8 = 0;
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled I8250 read 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled I8250 read 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
@@ -106,7 +106,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
     case I8250Register::MODEM_CONTROL... I8250Register::SCRATCH:
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled I8250 write 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled I8250 write 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
@@ -120,7 +120,7 @@ void I8250::Print(uint8_t ch) {
   size_t actual;
   zx_status_t status = socket_->write(0, tx_buffer_, tx_offset_, &actual);
   if (status != ZX_OK || actual != tx_offset_) {
-    FXL_LOG(WARNING) << "I8250 output partial or dropped";
+    FX_LOGS(WARNING) << "I8250 output partial or dropped";
   }
   tx_offset_ = 0;
 }

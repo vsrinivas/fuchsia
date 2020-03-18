@@ -92,6 +92,8 @@ static zx_gpaddr_t alloc_device_addr(size_t device_size) {
 }
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"vmm"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Loop device_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -105,7 +107,7 @@ int main(int argc, char** argv) {
   // LaunchInfoProvider service. This will become an error once we invert the
   // dependency between guest_runner and guest_manager.
   if (status != ZX_OK) {
-    FXL_LOG(INFO) << "No launch info provided.";
+    FX_LOGS(INFO) << "No launch info provided.";
   }
 
   GuestImpl guest_controller;
@@ -122,13 +124,13 @@ int main(int argc, char** argv) {
   for (const fuchsia::virtualization::MemorySpec& spec : cfg->memory()) {
     // Avoid a collision between static and dynamic address assignment.
     if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
-      FXL_LOG(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
+      FX_LOGS(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
       return ZX_ERR_INVALID_ARGS;
     }
     // Add device memory range.
     if (spec.policy == fuchsia::virtualization::MemoryPolicy::HOST_DEVICE &&
         !dev_mem.AddRange(spec.base, spec.size)) {
-      FXL_LOG(ERROR) << "Failed to add device memory at 0x" << std::hex << spec.base;
+      FX_LOGS(ERROR) << "Failed to add device memory at 0x" << std::hex << spec.base;
       return ZX_ERR_INTERNAL;
     }
   }
@@ -145,7 +147,7 @@ int main(int argc, char** argv) {
   Uart uart(guest_controller.SerialSocket());
   status = uart.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create UART at " << status;
+    FX_LOGS(ERROR) << "Failed to create UART at " << status;
     return status;
   }
   platform_devices.push_back(&uart);
@@ -157,7 +159,7 @@ int main(int argc, char** argv) {
   status = interrupt_controller.Init();
 #endif
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create interrupt controller " << status;
+    FX_LOGS(ERROR) << "Failed to create interrupt controller " << status;
     return status;
   }
   platform_devices.push_back(&interrupt_controller);
@@ -167,7 +169,7 @@ int main(int argc, char** argv) {
   Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create PL031 RTC " << status;
+    FX_LOGS(ERROR) << "Failed to create PL031 RTC " << status;
     return status;
   }
   platform_devices.push_back(&pl031);
@@ -176,7 +178,7 @@ int main(int argc, char** argv) {
   IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create IO ports " << status;
+    FX_LOGS(ERROR) << "Failed to create IO ports " << status;
     return status;
   }
 #endif
@@ -185,7 +187,7 @@ int main(int argc, char** argv) {
   PciBus bus(&guest, &interrupt_controller);
   status = bus.Init(device_loop.dispatcher());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create PCI bus " << status;
+    FX_LOGS(ERROR) << "Failed to create PCI bus " << status;
     return status;
   }
   platform_devices.push_back(&bus);
@@ -199,7 +201,7 @@ int main(int argc, char** argv) {
     }
     status = balloon.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start balloon device " << status;
+      FX_LOGS(ERROR) << "Failed to start balloon device " << status;
       return status;
     }
   }
@@ -212,7 +214,7 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < cfg->block_devices().size(); i++) {
     const auto& block_spec = cfg->block_devices()[i];
     if (block_spec.path.empty()) {
-      FXL_LOG(ERROR) << "Block spec missing path attribute " << status;
+      FX_LOGS(ERROR) << "Block spec missing path attribute " << status;
       return ZX_ERR_INVALID_ARGS;
     }
     uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE;
@@ -222,7 +224,7 @@ int main(int argc, char** argv) {
     fidl::InterfaceHandle<fuchsia::io::File> file;
     status = fdio_open(block_spec.path.c_str(), flags, file.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to open " << block_spec.path << " " << status;
+      FX_LOGS(ERROR) << "Failed to open " << block_spec.path << " " << status;
       return status;
     }
     block_infos.push_back({
@@ -249,7 +251,7 @@ int main(int argc, char** argv) {
     status = block->Start(guest.object(), std::move(block_device.id), block_device.format,
                           block_device.file.Bind(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start block device " << status;
+      FX_LOGS(ERROR) << "Failed to start block device " << status;
       return status;
     }
     block_devices.push_back(std::move(block));
@@ -265,7 +267,7 @@ int main(int argc, char** argv) {
     status = console.Start(guest.object(), guest_controller.SerialSocket(), launcher.get(),
                            device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start console device " << status;
+      FX_LOGS(ERROR) << "Failed to start console device " << status;
       return status;
     }
   }
@@ -308,7 +310,7 @@ int main(int argc, char** argv) {
     status = net->Start(guest.object(), net_device.mac_address, launcher.get(),
                         device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not open Ethernet device " << status;
+      FX_LOGS(INFO) << "Could not open Ethernet device " << status;
       return status;
     }
     net_devices.push_back(std::move(net));
@@ -323,7 +325,7 @@ int main(int argc, char** argv) {
     }
     status = rng.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start RNG device " << status;
+      FX_LOGS(ERROR) << "Failed to start RNG device " << status;
       return status;
     }
   }
@@ -339,7 +341,7 @@ int main(int argc, char** argv) {
     }
     status = vsock_loop.StartThread("vsock-handler");
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create vsock async worker " << status;
+      FX_LOGS(ERROR) << "Failed to create vsock async worker " << status;
       return status;
     }
   }
@@ -350,25 +352,25 @@ int main(int argc, char** argv) {
     size_t wl_dev_mem_size = launch_info.wayland_device->memory;
     zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
     if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
-      FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
+      FX_LOGS(INFO) << "Could not reserve device memory range for wayland device";
       return status;
     }
     zx::vmar wl_vmar;
     status = guest.CreateSubVmar(wl_dev_mem_offset, wl_dev_mem_size, &wl_vmar);
     if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not create VMAR for wayland device";
+      FX_LOGS(INFO) << "Could not create VMAR for wayland device";
       return status;
     }
     status = bus.Connect(wl.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not connect wayland device";
+      FX_LOGS(INFO) << "Could not connect wayland device";
       return status;
     }
     status = wl.Start(guest.object(), std::move(wl_vmar),
                       std::move(launch_info.wayland_device->dispatcher), launcher.get(),
                       device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not start wayland device";
+      FX_LOGS(INFO) << "Could not start wayland device";
       return status;
     }
   }
@@ -383,18 +385,18 @@ int main(int argc, char** argv) {
     }
     zx_gpaddr_t magma_dev_mem_offset = alloc_device_addr(magma_dev_mem_size);
     if (!dev_mem.AddRange(magma_dev_mem_offset, magma_dev_mem_size)) {
-      FXL_PLOG(INFO, status) << "Could not reserve device memory range for magma device";
+      FX_PLOGS(INFO, status) << "Could not reserve device memory range for magma device";
       return status;
     }
     zx::vmar magma_vmar;
     status = guest.CreateSubVmar(magma_dev_mem_offset, magma_dev_mem_size, &magma_vmar);
     if (status != ZX_OK) {
-      FXL_PLOG(INFO, status) << "Could not create VMAR for magma device";
+      FX_PLOGS(INFO, status) << "Could not create VMAR for magma device";
       return status;
     }
     status = bus.Connect(magma.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
-      FXL_PLOG(INFO, status) << "Could not connect magma device";
+      FX_PLOGS(INFO, status) << "Could not connect magma device";
       return status;
     }
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
@@ -402,16 +404,16 @@ int main(int argc, char** argv) {
     if (launch_info.wayland_device) {
       status = wl.GetImporter(wayland_importer_handle.NewRequest());
       if (status != ZX_OK) {
-        FXL_PLOG(INFO, status) << "Could not get wayland importer";
+        FX_PLOGS(INFO, status) << "Could not get wayland importer";
         return status;
       }
     }
     status = magma.Start(guest.object(), std::move(magma_vmar), std::move(wayland_importer_handle),
                          launcher.get(), device_loop.dispatcher());
     if (status == ZX_ERR_NOT_FOUND) {
-      FXL_LOG(INFO) << "Magma device not supported by host";
+      FX_LOGS(INFO) << "Magma device not supported by host";
     } else if (status != ZX_OK) {
-      FXL_PLOG(INFO, status) << "Could not start magma device";
+      FX_PLOGS(INFO, status) << "Could not start magma device";
       return status;
     }
   }
@@ -419,7 +421,7 @@ int main(int argc, char** argv) {
 #if __x86_64__
   status = create_page_table(guest.phys_mem());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create page table " << status;
+    FX_LOGS(ERROR) << "Failed to create page table " << status;
     return status;
   }
 
@@ -431,7 +433,7 @@ int main(int argc, char** argv) {
   };
   status = create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create ACPI table " << status;
+    FX_LOGS(ERROR) << "Failed to create ACPI table " << status;
     return status;
   }
 #endif  // __x86_64__
@@ -440,7 +442,7 @@ int main(int argc, char** argv) {
   for (const IoMapping& mapping : guest.mappings()) {
     if ((mapping.kind() == ZX_GUEST_TRAP_MEM || mapping.kind() == ZX_GUEST_TRAP_BELL) &&
         !dev_mem.AddRange(mapping.base(), mapping.size())) {
-      FXL_LOG(ERROR) << "Failed to add trap range as device memory";
+      FX_LOGS(ERROR) << "Failed to add trap range as device memory";
       return ZX_ERR_INTERNAL;
     }
   }
@@ -456,29 +458,29 @@ int main(int argc, char** argv) {
       status = setup_linux(*cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     default:
-      FXL_LOG(ERROR) << "Unknown kernel";
+      FX_LOGS(ERROR) << "Unknown kernel";
       return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel " << cfg->kernel_path() << " " << status;
+    FX_LOGS(ERROR) << "Failed to load kernel " << cfg->kernel_path() << " " << status;
     return status;
   }
 
   // Setup primary VCPU.
   status = guest.StartVcpu(0 /* id */, entry, boot_ptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
+    FX_LOGS(ERROR) << "Failed to start VCPU-0 " << status;
     loop.Quit();
   }
 
   status = guest_controller.AddPublicService(context.get());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to add public service " << status;
+    FX_LOGS(ERROR) << "Failed to add public service " << status;
     loop.Quit();
   }
   status = balloon.AddPublicService(context.get());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to add public service " << status;
+    FX_LOGS(ERROR) << "Failed to add public service " << status;
     loop.Quit();
   }
 
@@ -486,7 +488,7 @@ int main(int argc, char** argv) {
   // devices.
   status = device_loop.StartThread("device-worker");
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create async worker " << status;
+    FX_LOGS(ERROR) << "Failed to create async worker " << status;
     return status;
   }
 

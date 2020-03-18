@@ -47,7 +47,7 @@ class RxStream : public StreamBase {
       Packet pkt = packet_queue_.front();
       chain_.NextDescriptor(&desc_);
       if (desc_.len < sizeof(virtio_net_hdr_t)) {
-        FXL_LOG(ERROR) << "Malformed descriptor";
+        FX_LOGS(ERROR) << "Malformed descriptor";
         continue;
       }
       auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
@@ -76,7 +76,7 @@ class RxStream : public StreamBase {
 
         // If the descriptor is too small for the packet then the driver is
         // misbehaving (our MTU is 1500).
-        FXL_LOG(ERROR) << "Dropping packet that's too large for the descriptor";
+        FX_LOGS(ERROR) << "Dropping packet that's too large for the descriptor";
         continue;
       }
       memcpy(phys_mem_->as<void>(offset, length), reinterpret_cast<void*>(pkt.addr), pkt.length);
@@ -140,12 +140,12 @@ class TxStream : public StreamBase {
         static bool warned = false;
         if (!warned) {
           warned = true;
-          FXL_LOG(ERROR) << "Transmit packet and header must be on a single descriptor";
+          FX_LOGS(ERROR) << "Transmit packet and header must be on a single descriptor";
         }
         continue;
       }
       if (desc_.len < sizeof(virtio_net_hdr_t)) {
-        FXL_LOG(ERROR) << "Failed to read descriptor header";
+        FX_LOGS(ERROR) << "Failed to read descriptor header";
         continue;
       }
 
@@ -181,7 +181,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
         tx_stream_.Notify();
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -226,7 +226,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
             .and_then([this](const uint32_t& nic_id) mutable {
               netstack_->SetInterfaceStatus(nic_id, true);
             })
-            .or_else([]() mutable { FXL_CHECK(false) << "Failed to set ethernet IP address."; })
+            .or_else([]() mutable { FX_CHECK(false) << "Failed to set ethernet IP address."; })
             .and_then([this]() {
               rx_stream_.Init(
                   &guest_ethernet_, phys_mem_,
@@ -260,7 +260,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
           if (err.status == fuchsia::netstack::Status::OK) {
             completer.complete_ok(nic_id);
           } else {
-            FXL_LOG(ERROR) << "Failed to set interface address with "
+            FX_LOGS(ERROR) << "Failed to set interface address with "
                            << static_cast<uint32_t>(err.status) << " " << err.message;
             completer.complete_error();
           }
@@ -280,7 +280,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
         tx_stream_.Configure(size, desc, avail, used);
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -308,6 +308,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_net"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

@@ -5,11 +5,12 @@
 #include "src/virtualization/bin/vmm/arch/arm64/pl011.h"
 
 #include <endian.h>
-#include <libzbi/zbi.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 
-#include "src/lib/fxl/logging.h"
+#include <libzbi/zbi.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 __BEGIN_CDECLS;
@@ -54,7 +55,7 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
       value->u16 = 0;
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled PL011 address read 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled PL011 address read 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
@@ -77,7 +78,7 @@ zx_status_t Pl011::Write(uint64_t addr, const IoValue& value) {
     case Pl011Register::LCR:
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled PL011 address write 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled PL011 address write 0x" << std::hex << addr;
       return ZX_ERR_IO;
   }
 }
@@ -91,7 +92,7 @@ void Pl011::Print(uint8_t ch) {
   size_t actual;
   zx_status_t status = socket_.write(0, tx_buffer_, tx_offset_, &actual);
   if (status != ZX_OK || actual != tx_offset_) {
-    FXL_LOG(WARNING) << "PL011 output partial or dropped";
+    FX_LOGS(WARNING) << "PL011 output partial or dropped";
   }
   tx_offset_ = 0;
 }
@@ -110,12 +111,12 @@ zx_status_t Pl011::ConfigureDtb(void* dtb) const {
   uint64_t reg_val[2] = {htobe64(kPl011PhysBase), htobe64(kPl011Size)};
   int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
-    FXL_LOG(ERROR) << "Failed to find PL011 in DTB";
+    FX_LOGS(ERROR) << "Failed to find PL011 in DTB";
     return ZX_ERR_INTERNAL;
   }
   int ret = fdt_node_check_compatible(dtb, node_off, "arm,pl011");
   if (ret != 0) {
-    FXL_LOG(ERROR) << "Device with PL011 registers is not PL011 compatible";
+    FX_LOGS(ERROR) << "Device with PL011 registers is not PL011 compatible";
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;

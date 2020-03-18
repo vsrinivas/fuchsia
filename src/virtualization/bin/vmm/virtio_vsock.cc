@@ -98,7 +98,7 @@ void VirtioVsock::Connection::UpdateOp(uint16_t new_op) {
         // 'report available credit'.
         // Do not update the op_ field here, as we risk that side handling
         // RESPONSE will never accept the client.
-        FXL_LOG(INFO) << "Ignoring premature machine state change.";
+        FX_LOGS(INFO) << "Ignoring premature machine state change.";
         return;
       }
       break;
@@ -128,7 +128,7 @@ void VirtioVsock::Connection::UpdateOp(uint16_t new_op) {
     default:
       break;
   }
-  FXL_LOG(ERROR) << "Invalid state transition from " << op_ << " to " << new_op
+  FX_LOGS(ERROR) << "Invalid state transition from " << op_ << " to " << new_op
                  << "; resetting connection";
   op_ = VIRTIO_VSOCK_OP_RST;
 }
@@ -158,7 +158,7 @@ static zx_status_t wait(async_dispatcher_t* dispatcher, async::Wait* wait, zx_st
   }
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
-      FXL_LOG(ERROR) << "Failed to wait on socket " << status;
+      FX_LOGS(ERROR) << "Failed to wait on socket " << status;
     }
     if (status != ZX_ERR_ALREADY_EXISTS) {
       wait->Cancel();
@@ -205,7 +205,7 @@ zx_status_t VirtioVsock::SocketConnection::Init() {
 
 void VirtioVsock::SocketConnection::OnReady(zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed while waiting on socket " << status;
+    FX_LOGS(ERROR) << "Failed while waiting on socket " << status;
     return;
   }
 
@@ -371,7 +371,7 @@ zx_status_t VirtioVsock::ChannelConnection::Init() {
 
 void VirtioVsock::ChannelConnection::OnReady(zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed while waiting on channel " << status;
+    FX_LOGS(ERROR) << "Failed while waiting on channel " << status;
     return;
   }
 
@@ -429,7 +429,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsoc
           (status == ZX_ERR_BUFFER_TOO_SMALL && desc->len > PeerFree())) {
         status = ZX_OK;
       } else {
-        FXL_LOG(ERROR) << "Failed to read from channel " << status;
+        FX_LOGS(ERROR) << "Failed to read from channel " << status;
       }
       break;
     }
@@ -454,7 +454,7 @@ zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue, virtio_vso
     rx_cnt_ += desc->len;
     header->len -= desc->len;
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to write from channel " << status;
+      FX_LOGS(ERROR) << "Failed to write from channel " << status;
       UpdateOp(VIRTIO_VSOCK_OP_RST);
       return ZX_OK;
     }
@@ -511,7 +511,7 @@ void VirtioVsock::SetContextId(
     config_.guest_cid = cid;
   }
   acceptor_bindings_.AddBinding(this, std::move(acceptor), dispatcher_);
-  FXL_CHECK(connector_.Bind(std::move(connector), dispatcher_) == ZX_OK);
+  FX_CHECK(connector_.Bind(std::move(connector), dispatcher_) == ZX_OK);
   tx_stream_.WaitOnQueue();
 }
 
@@ -528,7 +528,7 @@ static std::unique_ptr<VirtioVsock::Connection> create_connection(
       return std::make_unique<VirtioVsock::ChannelConnection>(
           std::move(handle), dispatcher, std::move(accept_callback), std::move(queue_callback));
     default:
-      FXL_LOG(ERROR) << "Unexpected handle type " << type;
+      FX_LOGS(ERROR) << "Unexpected handle type " << type;
       return nullptr;
   }
 }
@@ -583,7 +583,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status, zx::han
   conn->UpdateOp(VIRTIO_VSOCK_OP_RESPONSE);
   status = conn->Init();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to setup connection " << status;
+    FX_LOGS(ERROR) << "Failed to setup connection " << status;
   }
   conn->SetCredit(buf_alloc, fwd_cnt);
 }
@@ -592,7 +592,7 @@ zx_status_t VirtioVsock::AddConnectionLocked(ConnectionKey key, std::unique_ptr<
   bool inserted;
   std::tie(std::ignore, inserted) = connections_.emplace(key, std::move(conn));
   if (!inserted) {
-    FXL_LOG(ERROR) << "Connection already exists";
+    FX_LOGS(ERROR) << "Connection already exists";
     return ZX_ERR_ALREADY_EXISTS;
   }
   WaitOnQueueLocked(key);
@@ -617,7 +617,7 @@ bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
 void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
   zx_status_t status = rx_stream_.WaitOnQueue();
   if (EraseOnErrorLocked(key, status)) {
-    FXL_LOG(ERROR) << "Failed to wait on queue " << status;
+    FX_LOGS(ERROR) << "Failed to wait on queue " << status;
     return;
   }
   readable_.insert(key);
@@ -627,15 +627,15 @@ static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index, Virtio
                                       bool writable) {
   zx_status_t status = queue->ReadDesc(index, desc);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read descriptor from queue " << status;
+    FX_LOGS(ERROR) << "Failed to read descriptor from queue " << status;
     return nullptr;
   }
   if (desc->writable != writable) {
-    FXL_LOG(ERROR) << "Descriptor is not " << (writable ? "writable" : "readable");
+    FX_LOGS(ERROR) << "Descriptor is not " << (writable ? "writable" : "readable");
     return nullptr;
   }
   if (desc->len < sizeof(virtio_vsock_hdr_t)) {
-    FXL_LOG(ERROR) << "Descriptor is too small";
+    FX_LOGS(ERROR) << "Descriptor is too small";
     return nullptr;
   }
   return static_cast<virtio_vsock_hdr_t*>(desc->addr);
@@ -699,7 +699,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
     }
     virtio_vsock_hdr_t* header = get_header(rx_queue(), index, &desc, true);
     if (header == nullptr) {
-      FXL_LOG(ERROR) << "Failed to get header from read queue";
+      FX_LOGS(ERROR) << "Failed to get header from read queue";
       continue;
     }
     *header = {
@@ -715,7 +715,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
     // a connection reset.
     if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
       conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
-      FXL_LOG(ERROR) << "Receive was shutdown";
+      FX_LOGS(ERROR) << "Receive was shutdown";
     }
 
     zx_status_t write_status = conn->WriteCredit(header);
@@ -730,7 +730,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
         break;
       default:
         conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
-        FXL_LOG(ERROR) << "Failed to write credit " << write_status;
+        FX_LOGS(ERROR) << "Failed to write credit " << write_status;
         break;
     }
 
@@ -745,7 +745,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
   // Release buffer if we did not have any readable connections to avoid a
   // descriptor leak.
   if (index_valid) {
-    FXL_LOG(ERROR) << "Mux called with no readable connections. Descriptor "
+    FX_LOGS(ERROR) << "Mux called with no readable connections. Descriptor "
                    << "will be returned with 0 length";
     rx_queue()->Return(index, 0);
   }
@@ -762,7 +762,7 @@ static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
     case VIRTIO_VSOCK_OP_RESPONSE: {
       zx_status_t status = conn->Init();
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup connection " << status;
+        FX_LOGS(ERROR) << "Failed to setup connection " << status;
         return status;
       }
       return conn->Accept();
@@ -792,7 +792,7 @@ static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
       } else if (header->flags != 0) {
         return conn->Shutdown(header->flags);
       } else {
-        FXL_LOG(ERROR) << "Connection shutdown with no shutdown flags set";
+        FX_LOGS(ERROR) << "Connection shutdown with no shutdown flags set";
         return ZX_ERR_BAD_STATE;
       }
   }
@@ -809,11 +809,11 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
     auto free_desc = fit::defer([this, index]() { tx_queue()->Return(index, 0); });
     auto header = get_header(tx_queue(), index, &desc, false);
     if (header == nullptr) {
-      FXL_LOG(ERROR) << "Failed to get header from write queue";
+      FX_LOGS(ERROR) << "Failed to get header from write queue";
       return;
     } else if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
       set_shutdown(header);
-      FXL_LOG(ERROR) << "Only stream sockets are supported";
+      FX_LOGS(ERROR) << "Only stream sockets are supported";
     }
     ConnectionKey key{
         static_cast<uint32_t>(header->dst_cid),
@@ -827,11 +827,11 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         // If a connection already exists, then the driver is in a bad state and
         // the connection should be shut down.
         set_shutdown(header);
-        FXL_LOG(ERROR) << "Connection request for an existing connection";
+        FX_LOGS(ERROR) << "Connection request for an existing connection";
       } else if (header->src_cid != guest_cid()) {
         // If the source CID does not match guest CID, then the driver is in a
         // bad state and the request should be ignored.
-        FXL_LOG(ERROR) << "Source CID does not match guest CID";
+        FX_LOGS(ERROR) << "Source CID does not match guest CID";
         continue;
       } else if (connector_) {
         // We received a request for the guest to connect to an external CID.
@@ -854,12 +854,12 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       conn = new_conn.get();
       status = AddConnectionLocked(key, std::move(new_conn));
       set_shutdown(header);
-      FXL_LOG(ERROR) << "Connection does not exist";
+      FX_LOGS(ERROR) << "Connection does not exist";
     } else if (conn->op() == VIRTIO_VSOCK_OP_RW &&
                conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
       // We are receiving a write, but send was shutdown.
       set_shutdown(header);
-      FXL_LOG(ERROR) << "Send was shutdown";
+      FX_LOGS(ERROR) << "Send was shutdown";
     }
 
     conn->ReadCredit(header);
@@ -878,6 +878,6 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
 
   status = tx_stream_.WaitOnQueue();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait on queue " << status;
+    FX_LOGS(ERROR) << "Failed to wait on queue " << status;
   }
 }

@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/device/gpu_resource.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height)
     : phys_mem_(&phys_mem),
@@ -31,7 +31,7 @@ void GpuResource::DetachBacking() { guest_backing_.clear(); }
 virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect, uint64_t off) {
   if (rect.x + rect.width > width_ || rect.y + rect.height > height_ ||
       (rect.y * width_ + rect.x) * kPixelSizeInBytes != off) {
-    FXL_LOG(WARNING) << "Driver requested transfer of invalid resource region";
+    FX_LOGS(WARNING) << "Driver requested transfer of invalid resource region";
     return VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
   }
   const size_t rect_row_bytes = rect.width * kPixelSizeInBytes;
@@ -71,7 +71,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect
     entry_off += entry.len;
   }
   if (transfer_bytes_remaining > 0) {
-    FXL_LOG(WARNING) << "Transfer requested from unbacked pages";
+    FX_LOGS(WARNING) << "Transfer requested from unbacked pages";
     memset(&host_backing_[off], 0, transfer_bytes_remaining);
     return VIRTIO_GPU_RESP_ERR_UNSPEC;
   }

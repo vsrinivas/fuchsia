@@ -6,7 +6,7 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/input.h"
 
 static constexpr char kVirtioInputUrl[] =
@@ -151,7 +151,7 @@ zx_status_t VirtioInput::ConfigureDevice(uint64_t addr, const IoValue& value) {
       config_.size = 0;
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unsupported select value " << config_.select;
+      FX_LOGS(ERROR) << "Unsupported select value " << config_.select;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

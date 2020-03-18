@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/virtio_queue_waiter.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher, VirtioQueue* queue,
                                      Handler handler)

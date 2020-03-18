@@ -13,7 +13,7 @@
 
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 
 static constexpr uint32_t DRM_FORMAT_ARGB8888 = 0x34325241;
@@ -38,7 +38,7 @@ class Memory : public VirtioWl::Vfd {
     uint64_t size;
     zx_status_t status = vmo.get_size(&size);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed get VMO size: " << status;
+      FX_LOGS(ERROR) << "Failed get VMO size: " << status;
       return nullptr;
     }
 
@@ -47,7 +47,7 @@ class Memory : public VirtioWl::Vfd {
     zx_gpaddr_t addr;
     status = vmar->map(0, vmo, 0, size, map_flags, &addr);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to map VMO into guest VMAR: " << status;
+      FX_LOGS(ERROR) << "Failed to map VMO into guest VMAR: " << status;
       return nullptr;
     }
 
@@ -216,7 +216,7 @@ void VirtioWl::Import(zx::vmo vmo, ImportCallback callback) {
   zx_status_t status = zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &handle_basic_info,
                                           sizeof(handle_basic_info), nullptr, nullptr);
   if (status != ZX_OK || handle_basic_info.type != ZX_OBJ_TYPE_VMO) {
-    FXL_LOG(ERROR) << "failed to import VMO";
+    FX_LOGS(ERROR) << "failed to import VMO";
     return;
   }
   uint32_t vfd_id = next_vfd_id_++;
@@ -245,7 +245,7 @@ void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, z
       queues_[queue].Configure(size, desc, avail, used);
       break;
     default:
-      FXL_LOG(ERROR) << "ConfigureQueue on non-existent queue " << queue;
+      FX_LOGS(ERROR) << "ConfigureQueue on non-existent queue " << queue;
       break;
   }
 }
@@ -267,7 +267,7 @@ void VirtioWl::NotifyQueue(uint16_t queue) {
 void VirtioWl::HandleCommand(VirtioChain* chain) {
   VirtioDescriptor request_desc;
   if (!chain->NextDescriptor(&request_desc)) {
-    FXL_LOG(ERROR) << "Failed to read descriptor";
+    FX_LOGS(ERROR) << "Failed to read descriptor";
     return;
   }
   const auto request_header = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(request_desc.addr);
@@ -275,7 +275,7 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
 
   TRACE_DURATION("machina", "VirtioWl::HandleCommand", "type", command_type);
   if (!chain->HasDescriptor()) {
-    FXL_LOG(ERROR) << "WL command "
+    FX_LOGS(ERROR) << "WL command "
                    << "(" << command_type << ") "
                    << "does not contain a response descriptor";
     return;
@@ -283,7 +283,7 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
 
   VirtioDescriptor response_desc;
   if (!chain->NextDescriptor(&response_desc)) {
-    FXL_LOG(ERROR) << "Failed to read response descriptor";
+    FX_LOGS(ERROR) << "Failed to read response descriptor";
     return;
   }
 
@@ -340,7 +340,7 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
       *chain->Used() = sizeof(*response);
     } break;
     default: {
-      FXL_LOG(ERROR) << "Unsupported WL command "
+      FX_LOGS(ERROR) << "Unsupported WL command "
                      << "(" << command_type << ")";
       auto response = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       response->type = VIRTIO_WL_RESP_INVALID_CMD;
@@ -364,7 +364,7 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(request->size, 0, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << request->size << "): " << status;
+    FX_LOGS(ERROR) << "Failed to allocate VMO (size=" << request->size << "): " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -423,14 +423,14 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint3
   }
   num_bytes -= request->vfd_count * sizeof(*vfds);
   if (num_bytes > ZX_CHANNEL_MAX_MSG_BYTES) {
-    FXL_LOG(ERROR) << "Message too large for channel (size=" << num_bytes << ")";
+    FX_LOGS(ERROR) << "Message too large for channel (size=" << num_bytes << ")";
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
   auto bytes = reinterpret_cast<const uint8_t*>(vfds + request->vfd_count);
 
   if (request->vfd_count > ZX_CHANNEL_MAX_MSG_HANDLES) {
-    FXL_LOG(ERROR) << "Too many VFDs for message (vfds=" << request->vfd_count << ")";
+    FX_LOGS(ERROR) << "Too many VFDs for message (vfds=" << request->vfd_count << ")";
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
@@ -446,7 +446,7 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint3
 
       zx_status_t status = it->second->Duplicate(&handles[i]);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to duplicate handle: " << status;
+        FX_LOGS(ERROR) << "Failed to duplicate handle: " << status;
         response->type = VIRTIO_WL_RESP_INVALID_ID;
         return ZX_OK;
       }
@@ -471,7 +471,7 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint3
       return ZX_ERR_SHOULD_WAIT;
     } else {
       if (status != ZX_ERR_PEER_CLOSED) {
-        FXL_LOG(ERROR) << "Failed to write message to VFD: " << status;
+        FX_LOGS(ERROR) << "Failed to write message to VFD: " << status;
         response->type = VIRTIO_WL_RESP_ERR;
         return ZX_OK;
       }
@@ -496,7 +496,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
   zx::channel channel, remote_channel;
   zx_status_t status = zx::channel::create(ZX_SOCKET_STREAM, &channel, &remote_channel);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create channel: " << status;
+    FX_LOGS(ERROR) << "Failed to create channel: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -514,7 +514,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
 
   status = vfd->BeginWaitOnData();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to begin waiting on connection: " << status;
+    FX_LOGS(ERROR) << "Failed to begin waiting on connection: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -548,7 +548,7 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
   zx::socket socket, remote_socket;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create socket: " << status;
+    FX_LOGS(ERROR) << "Failed to create socket: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -568,7 +568,7 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
 
   status = vfd->BeginWaitOnData();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to begin waiting on pipe: " << status;
+    FX_LOGS(ERROR) << "Failed to begin waiting on pipe: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -612,7 +612,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
       total_size = stride * align(request->dmabuf.height, 4);
     } break;
     default:
-      FXL_LOG(ERROR) << __FUNCTION__ << ": Invalid format";
+      FX_LOGS(ERROR) << __FUNCTION__ << ": Invalid format";
       response->hdr.type = VIRTIO_WL_RESP_ERR;
       return;
   }
@@ -620,7 +620,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(total_size, 0, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << total_size << "): " << status;
+    FX_LOGS(ERROR) << "Failed to allocate VMO (size=" << total_size << "): " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -628,7 +628,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   std::unique_ptr<Memory> vfd =
       Memory::Create(std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (!vfd) {
-    FXL_LOG(ERROR) << "Failed to create memory instance";
+    FX_LOGS(ERROR) << "Failed to create memory instance";
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -683,7 +683,7 @@ void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait, zx_status_t s
   TRACE_DURATION("machina", "VirtioWl::OnDataAvailable");
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed while waiting on VFD: " << status;
+    FX_LOGS(ERROR) << "Failed while waiting on VFD: " << status;
     return;
   }
 
@@ -700,7 +700,7 @@ void VirtioWl::OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait, zx_
   TRACE_DURATION("machina", "VirtioWl::OnCanWrite");
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed while waiting on VFD: " << status;
+    FX_LOGS(ERROR) << "Failed while waiting on VFD: " << status;
     return;
   }
 
@@ -742,7 +742,7 @@ void VirtioWl::DispatchPendingEvents() {
         break;
       }
       if (desc.len < sizeof(virtio_wl_ctrl_vfd_t)) {
-        FXL_LOG(ERROR) << "Descriptor is too small for HUP message";
+        FX_LOGS(ERROR) << "Descriptor is too small for HUP message";
         return;
       }
       auto header = static_cast<virtio_wl_ctrl_vfd_t*>(desc.addr);
@@ -756,14 +756,14 @@ void VirtioWl::DispatchPendingEvents() {
     }
 
     // VFD must be in READABLE state if not in PEER_CLOSED.
-    FXL_CHECK(it->second & __ZX_OBJECT_READABLE) << "VFD must be readable";
+    FX_CHECK(it->second & __ZX_OBJECT_READABLE) << "VFD must be readable";
 
     // Determine the number of handles in message.
     uint32_t actual_bytes, actual_handles;
     status = vfd_it->second->AvailableForRead(&actual_bytes, &actual_handles);
     if (status != ZX_OK) {
       if (status != ZX_ERR_PEER_CLOSED) {
-        FXL_LOG(ERROR) << "Failed to read size of message: " << status;
+        FX_LOGS(ERROR) << "Failed to read size of message: " << status;
         break;
       }
 
@@ -782,7 +782,7 @@ void VirtioWl::DispatchPendingEvents() {
       size_t message_size =
           sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) * actual_handles + actual_bytes;
       if (desc.len < message_size) {
-        FXL_LOG(ERROR) << "Descriptor is too small for message";
+        FX_LOGS(ERROR) << "Descriptor is too small for message";
         break;
       }
       *chain.Used() = message_size;
@@ -800,7 +800,7 @@ void VirtioWl::DispatchPendingEvents() {
       status = vfd_it->second->Read(vfd_ids + actual_handles, handle_infos, actual_bytes,
                                     actual_handles, &actual_bytes, &actual_handles);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to read message: " << status;
+        FX_LOGS(ERROR) << "Failed to read message: " << status;
         break;
       }
 
@@ -835,7 +835,7 @@ void VirtioWl::DispatchPendingEvents() {
       ready_vfds_.erase(it);
       status = vfd_it->second->BeginWaitOnData();
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to begin waiting on VFD: " << status;
+        FX_LOGS(ERROR) << "Failed to begin waiting on VFD: " << status;
       }
     }
   }
@@ -875,7 +875,7 @@ bool VirtioWl::CreatePendingVfds() {
         std::unique_ptr<Memory> vfd =
             Memory::Create(zx::vmo(it->handle_info.handle), &vmar_, map_flags);
         if (!vfd) {
-          FXL_LOG(ERROR) << "Failed to create memory instance for VMO";
+          FX_LOGS(ERROR) << "Failed to create memory instance for VMO";
           break;
         }
         new_vfd_cmd->hdr.type = VIRTIO_WL_CMD_VFD_NEW;
@@ -893,12 +893,12 @@ bool VirtioWl::CreatePendingVfds() {
             },
             fit::bind_member(this, &VirtioWl::OnCanWrite));
         if (!vfd) {
-          FXL_LOG(ERROR) << "Failed to create pipe instance for socket";
+          FX_LOGS(ERROR) << "Failed to create pipe instance for socket";
           break;
         }
         zx_status_t status = vfd->BeginWaitOnData();
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to begin waiting on pipe: " << status;
+          FX_LOGS(ERROR) << "Failed to begin waiting on pipe: " << status;
           break;
         }
         new_vfd_cmd->hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
@@ -906,7 +906,7 @@ bool VirtioWl::CreatePendingVfds() {
         vfds_[vfd_id] = std::move(vfd);
       } break;
       default:
-        FXL_LOG(ERROR) << "Invalid handle type";
+        FX_LOGS(ERROR) << "Invalid handle type";
         zx_handle_close(it->handle_info.handle);
         break;
     }
@@ -926,6 +926,8 @@ bool VirtioWl::AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
 }
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_wl"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

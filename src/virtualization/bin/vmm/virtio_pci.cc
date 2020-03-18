@@ -9,7 +9,7 @@
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
@@ -108,7 +108,7 @@ zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset, IoValue* value) con
     case kVirtioPciBar:
       return ConfigBarRead(offset, value);
   }
-  FXL_LOG(ERROR) << "Unhandled read of BAR " << bar;
+  FX_LOGS(ERROR) << "Unhandled read of BAR " << bar;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -121,7 +121,7 @@ zx_status_t VirtioPci::WriteBar(uint8_t bar, uint64_t offset, const IoValue& val
     case kVirtioPciNotifyBar:
       return NotifyBarWrite(offset, value);
   }
-  FXL_LOG(ERROR) << "Unhandled write to BAR " << bar;
+  FX_LOGS(ERROR) << "Unhandled write to BAR " << bar;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -244,7 +244,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       value->u32 = 0;
       return ZX_OK;
   }
-  FXL_LOG(ERROR) << "Unhandled common config read 0x" << std::hex << addr;
+  FX_LOGS(ERROR) << "Unhandled common config read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -287,7 +287,7 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
       }
     }
   }
-  FXL_LOG(ERROR) << "Unhandled config BAR read 0x" << std::hex << addr;
+  FX_LOGS(ERROR) << "Unhandled config BAR read 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -410,10 +410,10 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES:
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES:
-      FXL_LOG(ERROR) << "Unsupported write 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unsupported write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
-  FXL_LOG(ERROR) << "Unhandled common config write 0x" << std::hex << addr;
+  FX_LOGS(ERROR) << "Unhandled common config write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -458,7 +458,7 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
       return device_config_->config_device(cfg_addr, value);
     }
   }
-  FXL_LOG(ERROR) << "Unhandled config BAR write 0x" << std::hex << addr;
+  FX_LOGS(ERROR) << "Unhandled config BAR write 0x" << std::hex << addr;
   return ZX_ERR_NOT_SUPPORTED;
 }
 

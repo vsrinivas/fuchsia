@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"

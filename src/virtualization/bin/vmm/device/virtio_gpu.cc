@@ -24,7 +24,7 @@
 
 #define CHECK_LEN_OR_CONTINUE(request_type, response_type)                           \
   if (request_len < sizeof(request_type) || response_len < sizeof(response_type)) {  \
-    FXL_LOG(ERROR) << "Invalid GPU control command 0x" << std::hex << request->type; \
+    FX_LOGS(ERROR) << "Invalid GPU control command 0x" << std::hex << request->type; \
     continue;                                                                        \
   }                                                                                  \
   *Used() += sizeof(response_type)
@@ -58,13 +58,13 @@ class ControlStream : public StreamBase {
   void DoControl() {
     for (; queue_.NextChain(&chain_); chain_.Return()) {
       if (!chain_.NextDescriptor(&desc_)) {
-        FXL_LOG(ERROR) << "GPU control command is missing request";
+        FX_LOGS(ERROR) << "GPU control command is missing request";
         continue;
       }
       const auto request = static_cast<virtio_gpu_ctrl_hdr_t*>(desc_.addr);
       const uint32_t request_len = desc_.len;
       if (!chain_.NextDescriptor(&desc_)) {
-        FXL_LOG(ERROR) << "GPU control command is missing response";
+        FX_LOGS(ERROR) << "GPU control command is missing response";
         continue;
       }
       auto response = static_cast<virtio_gpu_ctrl_hdr_t*>(desc_.addr);
@@ -125,7 +125,7 @@ class ControlStream : public StreamBase {
               reinterpret_cast<const virtio_gpu_resource_detach_backing_t*>(request), response);
           break;
         default:
-          FXL_LOG(ERROR) << "Unknown GPU control command 0x" << std::hex << request->type;
+          FX_LOGS(ERROR) << "Unknown GPU control command 0x" << std::hex << request->type;
           *Used() += sizeof(*response);
           response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
           break;
@@ -206,7 +206,7 @@ class ControlStream : public StreamBase {
     } else if (extra_len >= request->nr_entries * sizeof(virtio_gpu_mem_entry_t)) {
       mem_entries = reinterpret_cast<const virtio_gpu_mem_entry_t*>(request + 1);
     } else {
-      FXL_LOG(ERROR) << "Invalid GPU memory entries command";
+      FX_LOGS(ERROR) << "Invalid GPU memory entries command";
       response->type = VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
       return;
     }
@@ -246,7 +246,7 @@ class CursorStream : public StreamBase {
           MoveCursor(reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
           break;
         default:
-          FXL_LOG(ERROR) << "Unknown GPU cursor command 0x" << std::hex << request->type;
+          FX_LOGS(ERROR) << "Unknown GPU cursor command 0x" << std::hex << request->type;
           break;
       }
     }
@@ -296,7 +296,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
         cursor_stream_.DoCursor();
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -348,7 +348,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
         cursor_stream_.Configure(size, desc, avail, used);
         break;
       default:
-        FXL_CHECK(false) << "Queue index " << queue << " out of range";
+        FX_CHECK(false) << "Queue index " << queue << " out of range";
         __UNREACHABLE;
     }
   }
@@ -371,6 +371,8 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 };
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"virtio_gpu"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();

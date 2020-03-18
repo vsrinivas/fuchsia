@@ -9,7 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
@@ -111,7 +111,7 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
       return ReadRegister(select_register, value);
     }
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC read 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled IO APIC read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -135,7 +135,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       return WriteRegister(select_register, value);
     }
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC write 0x" << std::hex << addr;
+      FX_LOGS(ERROR) << "Unhandled IO APIC write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -168,7 +168,7 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) const
       return ZX_OK;
     }
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC register read 0x" << std::hex << select_register;
+      FX_LOGS(ERROR) << "Unhandled IO APIC register read 0x" << std::hex << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -193,7 +193,7 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register, const IoValue& value
       // Read-only, ignore writes.
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC register write 0x" << std::hex << select_register;
+      FX_LOGS(ERROR) << "Unhandled IO APIC register write 0x" << std::hex << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
