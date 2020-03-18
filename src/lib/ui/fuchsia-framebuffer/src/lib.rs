@@ -797,14 +797,6 @@ mod test {
     use super::*;
     use fidl_fuchsia_hardware_display::ControllerRequest;
 
-    #[test]
-    fn test_async_new() -> std::result::Result<(), anyhow::Error> {
-        let mut executor = fasync::Executor::new()?;
-        let fb_future = FrameBuffer::new(FrameUsage::Cpu, None, None);
-        executor.run_singlethreaded(fb_future)?;
-        Ok(())
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_no_vsync() -> Result<(), anyhow::Error> {
         let (client, server) = fidl::endpoints::create_endpoints::<ControllerMarker>()?;
