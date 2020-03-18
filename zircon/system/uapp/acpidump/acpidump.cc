@@ -67,7 +67,7 @@ void PrintUsage(const char* prog_name) {
           prog_name);
 }
 
-bool ParseArgs(fbl::Span<const char*> args, Args* result) {
+bool ParseArgs(fbl::Span<const char* const> args, Args* result) {
   *result = Args{};
 
   // Parse the args.
