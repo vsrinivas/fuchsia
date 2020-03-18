@@ -14,8 +14,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
-    futures::TryStreamExt,
-    std::str,
+    futures::{self, TryStreamExt},
+    std::{str, task::Poll},
     structopt::StructOpt,
 };
 
@@ -135,6 +135,22 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     // message, and then exit.
     let mut eth_events = eth_client.get_stream();
     let mut sent_response = false;
+
+    // Before connecting to the message bus to notify the client of the server's existence, poll
+    // for events.  Buffers will not be allocated until polling is performed so this ensures that
+    // there will be buffers to receive the client's message.
+    loop {
+        match futures::poll!(eth_events.try_next()) {
+            Poll::Pending => break,
+            Poll::Ready(result) => match result {
+                Ok(result) => match result {
+                    Some(_) => continue,
+                    None => panic!("event stream produced empty event"),
+                },
+                Err(e) => panic!("event stream returned an error: {}", e),
+            },
+        }
+    }
 
     // get on bus to unlock mock_guest part of test
     let _bus = open_bus(&ep_name)?;
