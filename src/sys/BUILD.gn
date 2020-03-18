@@ -29,6 +29,7 @@ group("tests") {
     "locate:tests",
     "pkg:tests",
     "run_test_suite:tests",
+    "stash/tests",
     "test_adapters:tests",
     "test_manager:tests",
     "test_runners:tests",

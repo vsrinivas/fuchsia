@@ -10,6 +10,7 @@ use anyhow::{Context as _, Error};
 use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect::{self as inspect, health::Reporter};
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
@@ -75,12 +76,17 @@ fn main() -> Result<(), Error> {
                 Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(&opts.backing_file))?));
 
             let name = if opts.secure_mode { SecureStoreMarker::NAME } else { StoreMarker::NAME };
+            inspect::component::inspector().root().record_bool("secure_mode", opts.secure_mode);
 
             let mut fs = ServiceFs::new();
+            inspect::component::health().set_starting_up();
+            inspect::component::inspector().serve(&mut fs)?;
             fs.dir("svc").add_fidl_service_at(name, |stream| {
                 stash_server(store_manager.clone(), !opts.secure_mode, stream)
             });
+
             fs.take_and_serve_directory_handle()?;
+            inspect::component::health().set_ok();
             executor.run_singlethreaded(fs.collect::<()>());
         }
     }

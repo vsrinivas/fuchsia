@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/stash"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

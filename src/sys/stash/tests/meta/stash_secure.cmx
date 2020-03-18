@@ -1,0 +1,18 @@
+{
+    "program": {
+        "args": [
+            "--secure",
+            "--backing_file",
+            "/data/stash_secure.store"
+        ],
+        "binary": "bin/stash"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
