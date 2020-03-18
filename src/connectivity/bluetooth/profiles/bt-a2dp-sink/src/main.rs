@@ -68,7 +68,7 @@ fn make_profile_service_definition() -> ServiceDefinition {
         profile_descriptors: vec![ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
             major_version: 1,
-            minor_version: 3,
+            minor_version: 2,
         }],
         additional_protocol_descriptors: None,
         information: vec![Information {
