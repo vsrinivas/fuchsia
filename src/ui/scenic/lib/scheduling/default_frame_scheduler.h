@@ -222,9 +222,10 @@ class DefaultFrameScheduler : public FrameScheduler {
   FrameStats stats_;
 
   // For tracing.
-  uint64_t request_trace_id_begin_ = 0;
-  uint64_t request_trace_id_end_ = 0;
   uint64_t frame_render_trace_id_ = 0;
+  // Maps wakeup time to trace IDs, to properly match up renders for frames >1 vsyncs away.
+  uint64_t request_to_render_count_ = 0;
+  std::multimap<zx::time, uint64_t> render_wakeup_map_ = {};
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 

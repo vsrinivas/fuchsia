@@ -130,11 +130,6 @@ void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
   FXL_DCHECK(HaveUpdatableSessions() || render_continuously_ || render_pending_);
 
   // Output requested presentation time in milliseconds.
-  TRACE_DURATION("gfx", "DefaultFrameScheduler::RequestFrame", "requested presentation time",
-                 requested_presentation_time.get() / 1'000'000);
-  TRACE_FLOW_BEGIN("gfx", "request_to_render", request_trace_id_begin_);
-  ++request_trace_id_begin_;
-
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
     FXL_VLOG(1) << "RequestFrame";
@@ -143,6 +138,17 @@ void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
   auto next_times = ComputePresentationAndWakeupTimesForTargetTime(requested_presentation_time);
   auto new_target_presentation_time = next_times.first;
   auto new_wakeup_time = next_times.second;
+
+  TRACE_DURATION("gfx", "DefaultFrameScheduler::RequestFrame", "requested presentation time",
+                 requested_presentation_time.get() / 1'000'000, "target_presentation_time",
+                 new_target_presentation_time.get() / 1'000'000);
+
+  uint64_t trace_id = SESSION_TRACE_ID(request_to_render_count_, new_wakeup_time.get());
+
+  render_wakeup_map_.insert({new_wakeup_time, trace_id});
+  ++request_to_render_count_;
+
+  TRACE_FLOW_BEGIN("gfx", "request_to_render", trace_id);
 
   // If there is no render waiting we should schedule a frame. Likewise, if newly predicted wake up
   // time is earlier than the current one then we need to reschedule the next wake-up.
@@ -185,7 +191,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   const auto target_presentation_time = next_target_presentation_time_;
   TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "target_presentation_time",
-                 target_presentation_time.get());
+                 target_presentation_time.get() / 1'000'000);
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number < 3) {
@@ -196,6 +202,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   // Apply all updates
   const zx::time update_start_time = zx::time(async_now(dispatcher_));
 
+  // The second value, |wakeup_time_|, here is important for ensuring our flows stay connected.
+  // If you change it please ensure the "request_to_render" flow stays connected.
   bool needs_render = ApplyUpdates(target_presentation_time, wakeup_time_, frame_number);
 
   if (needs_render) {
@@ -308,7 +316,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
 void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presentation_time,
                                                      SchedulingIdPair id_pair) {
-  TRACE_DURATION("gfx", "DefaultFrameScheduler::ScheduleUpdateForSession");
+  TRACE_DURATION("gfx", "DefaultFrameScheduler::ScheduleUpdateForSession",
+                 "requested_presentation_time", requested_presentation_time.get() / 1'000'000);
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
@@ -556,13 +565,16 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
   }
 
   // NOTE: this name is used by scenic_processing_helpers.go
-  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", target_presentation_time.get(),
-                 "frame_number", frame_number);
+  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "target_presentation_time",
+                 target_presentation_time.get() / 1'000'000, "frame_number", frame_number);
 
-  while (request_trace_id_end_ < request_trace_id_begin_) {
-    TRACE_FLOW_END("gfx", "request_to_render", request_trace_id_end_);
-    ++request_trace_id_end_;
+  auto it = render_wakeup_map_.begin();
+  while (it != render_wakeup_map_.end() && it->first <= latched_time) {
+    TRACE_FLOW_END("gfx", "request_to_render", it->second);
+    ++it;
   }
+  render_wakeup_map_.erase(render_wakeup_map_.begin(), it);
+
   TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 
   const auto update_map = CollectUpdatesForThisFrame(target_presentation_time);

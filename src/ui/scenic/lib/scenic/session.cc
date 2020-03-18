@@ -242,7 +242,8 @@ void Session::ScheduleNextPresent() {
   auto& present_request = presents_to_schedule_.front();
   FXL_DCHECK(present_request.acquire_fences.empty());
   TRACE_DURATION("gfx", "scenic_impl::Session::ScheduleNextPresent", "session_id", id_,
-                 "requested time", present_request.requested_presentation_time.get());
+                 "requested_presentation_time",
+                 present_request.requested_presentation_time.get() / 1'000'000);
   TRACE_FLOW_END("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_request.present_id));
 
   for (auto& cmd : present_request.commands) {
