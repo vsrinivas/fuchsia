@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"time"
 
 	"syslog"
@@ -81,7 +82,7 @@ type stats struct {
 // Map from Cobalt metric ID to metric value.
 type nicStats map[uint32]uint64
 
-func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, stk *stack.Stack) error {
+func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, stats *stats, stk *stack.Stack) error {
 	// Metric                         | Sampling Interval | Aggregation Strategy
 	// SocketCountMax                 | socket creation   | max
 	// SocketsCreated                 | 1 minute          | delta
@@ -187,7 +188,7 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 					},
 				)
 			}
-			cobaltLogger.LogCobaltEvents(events)
+			cobaltLogger.LogCobaltEvents(fidl.Background(), events)
 			lastCreated = created
 			lastDestroyed = destroyed
 			lastTcpConnectionsClosed = tcpConnectionsClosed
@@ -240,7 +241,7 @@ func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
 	dnsClient       *dns.Client
-	nameProvider    *device.NameProviderInterface
+	nameProvider    *device.NameProviderWithCtxInterface
 	netstackService netstack.NetstackService
 
 	stack      *stack.Stack
@@ -248,7 +249,7 @@ type Netstack struct {
 
 	mu struct {
 		sync.Mutex
-		transactionRequest *netstack.RouteTableTransactionInterfaceRequest
+		transactionRequest *netstack.RouteTableTransactionWithCtxInterfaceRequest
 		countNIC           tcpip.NICID
 	}
 
@@ -723,7 +724,7 @@ func (ns *Netstack) getdnsServers() []tcpip.Address {
 var nameProviderErrorLogged uint32 = 0
 
 func (ns *Netstack) getDeviceName() string {
-	result, err := ns.nameProvider.GetDeviceName()
+	result, err := ns.nameProvider.GetDeviceName(fidl.Background())
 	if err != nil {
 		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
 			syslog.Warnf("getDeviceName: error accessing device name provider: %s", err)
@@ -824,7 +825,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	}, b, b, false, defaultInterfaceMetric, false /* enabled */)
 }
 
-func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
+func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.DeviceWithCtx) (*ifState, error) {
 	client, err := eth.NewClient("netstack", topological_path, config.Filepath, device)
 	if err != nil {
 		return nil, err

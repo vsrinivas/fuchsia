@@ -20,8 +20,8 @@ type UpdatePackage struct {
 }
 
 // NewUpdatePackage creates an UpdatePackage from a fidl interface
-func NewUpdatePackage(proxy *fuchsiaio.DirectoryInterface) (*UpdatePackage, error) {
-	updateDir := fdio.NewDirectory((*zxio.DirectoryAdminInterface)(proxy))
+func NewUpdatePackage(proxy *fuchsiaio.DirectoryWithCtxInterface) (*UpdatePackage, error) {
+	updateDir := fdio.NewDirectoryWithCtx((*zxio.DirectoryAdminWithCtxInterface)(proxy))
 	updateDirFile := os.NewFile(uintptr(syscall.OpenFDIO(updateDir)), "update")
 	return &UpdatePackage{dir: updateDirFile}, nil
 }

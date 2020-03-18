@@ -48,7 +48,7 @@ func NewServer(filesys fs.FileSystem, h zx.Handle) (*ThinVFS, error) {
 		dirs: make(map[fidl.BindingKey]*directoryWrapper),
 		fs:   filesys,
 	}
-	ireq := io.NodeInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(h)})
+	ireq := io.NodeWithCtxInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(h)})
 	if _, err := vfs.addDirectory(filesys.RootDirectory(), ireq); err != nil {
 		h.Close()
 		return nil, err
@@ -66,12 +66,12 @@ func (vfs *ThinVFS) Serve() {
 	fidl.Serve()
 }
 
-func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeInterfaceRequest) (fidl.BindingKey, error) {
+func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeWithCtxInterfaceRequest) (fidl.BindingKey, error) {
 	d := &directoryWrapper{vfs: vfs, dir: dir, cookies: make(map[uint64]uint64)}
 
 	vfs.Lock()
 	defer vfs.Unlock()
-	tok, err := d.vfs.DirectoryService.Add(
+	tok, err := d.vfs.DirectoryService.AddWithCtx(
 		d,
 		(fidl.InterfaceRequest(node)).Channel,
 		func(err error) {
@@ -88,12 +88,12 @@ func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeInterfaceRequest)
 	return tok, nil
 }
 
-func (vfs *ThinVFS) addFile(file fs.File, node io.NodeInterfaceRequest) (fidl.BindingKey, error) {
+func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) (fidl.BindingKey, error) {
 	f := &fileWrapper{vfs: vfs, file: file}
 
 	vfs.Lock()
 	defer vfs.Unlock()
-	tok, err := vfs.FileService.Add(
+	tok, err := vfs.FileService.AddWithCtx(
 		f,
 		(fidl.InterfaceRequest(node)).Channel,
 		nil,
@@ -107,7 +107,7 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeInterfaceRequest) (fidl.Bi
 
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type directoryWrapper struct {
-	*io.DirectoryTransitionalBase
+	*io.DirectoryWithCtxTransitionalBase
 	vfs     *ThinVFS
 	token   fidl.BindingKey
 	dir     fs.Directory
@@ -139,7 +139,7 @@ func (d *directoryWrapper) clearCookie() {
 	}
 }
 
-func (d *directoryWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) error {
+func (d *directoryWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {
 	newDir, err := d.dir.Dup()
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
@@ -159,7 +159,7 @@ func (d *directoryWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) err
 	return nil
 }
 
-func (d *directoryWrapper) Close() (int32, error) {
+func (d *directoryWrapper) Close(fidl.Context) (int32, error) {
 	err := d.dir.Close()
 
 	d.vfs.Lock()
@@ -171,21 +171,21 @@ func (d *directoryWrapper) Close() (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
-func (d *directoryWrapper) ListInterfaces() ([]string, error) {
+func (d *directoryWrapper) ListInterfaces(fidl.Context) ([]string, error) {
 	return nil, nil
 }
 
-func (d *directoryWrapper) Describe() (io.NodeInfo, error) {
+func (d *directoryWrapper) Describe(fidl.Context) (io.NodeInfo, error) {
 	var info io.NodeInfo
 	info.SetDirectory(io.DirectoryObject{})
 	return info, nil
 }
 
-func (d *directoryWrapper) Sync() (int32, error) {
+func (d *directoryWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(d.dir.Sync())), nil
 }
 
-func (d *directoryWrapper) GetAttr() (int32, io.NodeAttributes, error) {
+func (d *directoryWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	size, _, mtime, err := d.dir.Stat()
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
 		return int32(zxErr), io.NodeAttributes{}, nil
@@ -201,12 +201,12 @@ func (d *directoryWrapper) GetAttr() (int32, io.NodeAttributes, error) {
 	}, nil
 }
 
-func (d *directoryWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (int32, error) {
+func (d *directoryWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttributes) (int32, error) {
 	t := time.Unix(0, int64(attr.ModificationTime))
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
 }
 
-func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.NodeInterfaceRequest) error {
+func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path string, node io.NodeWithCtxInterfaceRequest) error {
 	flags := openFlagsFromFIDL(inFlags, inMode)
 	if flags.Path() {
 		flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagDescribe
@@ -215,12 +215,12 @@ func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.Nod
 
 	// Handle the case of a remote, and just forward.
 	if fsRemote != nil {
-		fwd := ((*io.DirectoryInterface)(&fidl.ChannelProxy{Channel: fsRemote.Channel}))
+		fwd := ((*io.DirectoryWithCtxInterface)(&fidl.ChannelProxy{Channel: fsRemote.Channel}))
 		flags, mode := openFlagsToFIDL(fsRemote.Flags)
 		if inFlags&io.OpenFlagDescribe != 0 {
 			flags |= io.OpenFlagDescribe
 		}
-		return fwd.Open(flags, mode, fsRemote.Path, node)
+		return fwd.Open(fidl.Background(), flags, mode, fsRemote.Path, node)
 	}
 
 	// Handle the file and directory cases. They're mostly the same, except where noted.
@@ -261,13 +261,13 @@ func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.Nod
 	return nil
 }
 
-func (d *directoryWrapper) Unlink(path string) (int32, error) {
+func (d *directoryWrapper) Unlink(_ fidl.Context, path string) (int32, error) {
 	return int32(errorToZx(d.dir.Unlink(path))), nil
 }
 
 const direntSize = int(unsafe.Offsetof(syscall.Dirent{}.Name))
 
-func (d *directoryWrapper) ReadDirents(maxOut uint64) (int32, []byte, error) {
+func (d *directoryWrapper) ReadDirents(_ fidl.Context, maxOut uint64) (int32, []byte, error) {
 	if maxOut > io.MaxBuf {
 		return int32(zx.ErrInvalidArgs), nil, nil
 	}
@@ -310,12 +310,12 @@ func (d *directoryWrapper) ReadDirents(maxOut uint64) (int32, []byte, error) {
 	return int32(zx.ErrOk), bytes[:written], nil
 }
 
-func (d *directoryWrapper) Rewind() (int32, error) {
+func (d *directoryWrapper) Rewind(fidl.Context) (int32, error) {
 	d.reading = false
 	return int32(zx.ErrOk), nil
 }
 
-func (d *directoryWrapper) GetToken() (int32, zx.Handle, error) {
+func (d *directoryWrapper) GetToken(fidl.Context) (int32, zx.Handle, error) {
 	d.vfs.Lock()
 	defer d.vfs.Unlock()
 	if d.e != 0 {
@@ -350,7 +350,7 @@ fail_event_created:
 	return int32(errorToZx(err)), zx.HandleInvalid, nil
 }
 
-func (d *directoryWrapper) Rename(src string, token zx.Handle, dst string) (int32, error) {
+func (d *directoryWrapper) Rename(_ fidl.Context, src string, token zx.Handle, dst string) (int32, error) {
 	if len(src) < 1 || len(dst) < 1 {
 		return int32(zx.ErrInvalidArgs), nil
 	}
@@ -367,26 +367,26 @@ func (d *directoryWrapper) Rename(src string, token zx.Handle, dst string) (int3
 	return int32(errorToZx(d.dir.Rename(dir.dir, src, dst))), nil
 }
 
-func (d *directoryWrapper) Link(src string, token zx.Handle, dst string) (int32, error) {
+func (d *directoryWrapper) Link(_ fidl.Context, src string, token zx.Handle, dst string) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (d *directoryWrapper) Watch(mask uint32, options uint32, watcher zx.Channel) (int32, error) {
+func (d *directoryWrapper) Watch(_ fidl.Context, mask uint32, options uint32, watcher zx.Channel) (int32, error) {
 	watcher.Close()
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (d *directoryWrapper) Mount(remote io.DirectoryInterfaceRequest) (int32, error) {
+func (d *directoryWrapper) Mount(_ fidl.Context, remote io.DirectoryWithCtxInterfaceRequest) (int32, error) {
 	remote.Close()
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (d *directoryWrapper) MountAndCreate(remote io.DirectoryInterfaceRequest, name string, flags uint32) (int32, error) {
+func (d *directoryWrapper) MountAndCreate(_ fidl.Context, remote io.DirectoryWithCtxInterfaceRequest, name string, flags uint32) (int32, error) {
 	remote.Close()
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (d *directoryWrapper) Unmount() (int32, error) {
+func (d *directoryWrapper) Unmount(fidl.Context) (int32, error) {
 	// Shut down filesystem
 	err := d.vfs.fs.Close()
 	if err != nil {
@@ -400,11 +400,11 @@ func (d *directoryWrapper) Unmount() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (d *directoryWrapper) UnmountNode() (int32, io.DirectoryInterfaceRequest, error) {
-	return int32(zx.ErrNotSupported), io.DirectoryInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(zx.HandleInvalid)}), nil
+func (d *directoryWrapper) UnmountNode(fidl.Context) (int32, io.DirectoryWithCtxInterfaceRequest, error) {
+	return int32(zx.ErrNotSupported), io.DirectoryWithCtxInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(zx.HandleInvalid)}), nil
 }
 
-func (d *directoryWrapper) QueryFilesystem() (int32, *io.FilesystemInfo, error) {
+func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
 	totalBytes := uint64(d.vfs.fs.Size())
 	usedBytes := totalBytes - uint64(d.vfs.fs.FreeSize())
 
@@ -428,13 +428,13 @@ func (d *directoryWrapper) QueryFilesystem() (int32, *io.FilesystemInfo, error) 
 
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type fileWrapper struct {
-	*io.FileTransitionalBase
+	*io.FileWithCtxTransitionalBase
 	vfs   *ThinVFS
 	token fidl.BindingKey
 	file  fs.File
 }
 
-func (f *fileWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) error {
+func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {
 	newFile, err := f.file.Dup()
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
@@ -456,7 +456,7 @@ func (f *fileWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) error {
 	return nil
 }
 
-func (f *fileWrapper) Close() (int32, error) {
+func (f *fileWrapper) Close(fidl.Context) (int32, error) {
 	err := f.file.Close()
 
 	f.vfs.Lock()
@@ -466,11 +466,11 @@ func (f *fileWrapper) Close() (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
-func (f *fileWrapper) ListInterfaces() ([]string, error) {
+func (f *fileWrapper) ListInterfaces(fidl.Context) ([]string, error) {
 	return nil, nil
 }
 
-func (f *fileWrapper) Describe() (io.NodeInfo, error) {
+func (f *fileWrapper) Describe(fidl.Context) (io.NodeInfo, error) {
 	var info io.NodeInfo
 	info.SetFile(io.FileObject{
 		Event: zx.Event(zx.HandleInvalid),
@@ -478,11 +478,11 @@ func (f *fileWrapper) Describe() (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (f *fileWrapper) Sync() (int32, error) {
+func (f *fileWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(f.file.Sync())), nil
 }
 
-func (f *fileWrapper) GetAttr() (int32, io.NodeAttributes, error) {
+func (f *fileWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	size, _, mtime, err := f.file.Stat()
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
 		return int32(zxErr), io.NodeAttributes{}, nil
@@ -498,7 +498,7 @@ func (f *fileWrapper) GetAttr() (int32, io.NodeAttributes, error) {
 	}, nil
 }
 
-func (f *fileWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (int32, error) {
+func (f *fileWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttributes) (int32, error) {
 	if f.file.GetOpenFlags().Path() {
 		return int32(zx.ErrBadHandle), nil
 	}
@@ -506,7 +506,7 @@ func (f *fileWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (int32, erro
 	return int32(errorToZx(f.file.Touch(t, t))), nil
 }
 
-func (f *fileWrapper) Read(count uint64) (int32, []uint8, error) {
+func (f *fileWrapper) Read(_ fidl.Context, count uint64) (int32, []uint8, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
@@ -515,7 +515,7 @@ func (f *fileWrapper) Read(count uint64) (int32, []uint8, error) {
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
-func (f *fileWrapper) ReadAt(count, offset uint64) (int32, []uint8, error) {
+func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
@@ -524,41 +524,41 @@ func (f *fileWrapper) ReadAt(count, offset uint64) (int32, []uint8, error) {
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
-func (f *fileWrapper) Write(data []uint8) (int32, uint64, error) {
+func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
 	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) WriteAt(data []uint8, offset uint64) (int32, uint64, error) {
+func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
 	r, err := f.file.Write(data, int64(offset), fs.WhenceFromStart)
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) Seek(offset int64, start io.SeekOrigin) (int32, uint64, error) {
+func (f *fileWrapper) Seek(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
 	r, err := f.file.Seek(offset, int(start))
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) Truncate(length uint64) (int32, error) {
+func (f *fileWrapper) Truncate(_ fidl.Context, length uint64) (int32, error) {
 	return int32(errorToZx(f.file.Truncate(length))), nil
 }
 
-func (f *fileWrapper) GetFlags() (int32, uint32, error) {
+func (f *fileWrapper) GetFlags(fidl.Context) (int32, uint32, error) {
 	oflags := uint32(f.file.GetOpenFlags())
 	return int32(zx.ErrOk), oflags & (rightFlags | statusFlags), nil
 }
 
-func (f *fileWrapper) SetFlags(inFlags uint32) (int32, error) {
+func (f *fileWrapper) SetFlags(_ fidl.Context, inFlags uint32) (int32, error) {
 	flags := uint32(openFlagsFromFIDL(inFlags, 0))
 	uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
 	return int32(errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags)))), nil
 }
 
-func (f *fileWrapper) GetVmo(flags uint32) (int32, zx.VMO, error) {
+func (f *fileWrapper) GetVmo(_ fidl.Context, flags uint32) (int32, zx.VMO, error) {
 	return int32(zx.ErrNotSupported), zx.VMO(zx.HandleInvalid), nil
 }
 
-func (f *fileWrapper) GetBuffer(flags uint32) (int32, *mem.Buffer, error) {
+func (f *fileWrapper) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }
 

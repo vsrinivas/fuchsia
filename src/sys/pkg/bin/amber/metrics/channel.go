@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"syscall/zx/fidl"
 	"time"
 
 	cobalt "fidl/fuchsia/cobalt"
@@ -75,7 +76,7 @@ func (u *releaseChannelUpdater) sendAsync(targetChannel string) (result chan err
 			fatal = fmt.Errorf("%v", r)
 		}
 	}()
-	r, proxy, err := cobalt.NewSystemDataUpdaterInterfaceRequest()
+	r, proxy, err := cobalt.NewSystemDataUpdaterWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, err
 	}
@@ -88,15 +89,15 @@ func (u *releaseChannelUpdater) sendAsync(targetChannel string) (result chan err
 	return
 }
 
-func (u *releaseChannelUpdater) sendSync(proxy *cobalt.SystemDataUpdaterInterface, targetChannel string) error {
+func (u *releaseChannelUpdater) sendSync(proxy *cobalt.SystemDataUpdaterWithCtxInterface, targetChannel string) error {
 	var result cobalt.Status
 	var err error
 	if u.currentChannel == nil {
 		log.Printf("calling cobalt.SetChannel(\"\")")
-		result, err = proxy.SetChannel("")
+		result, err = proxy.SetChannel(fidl.Background(), "")
 	} else {
 		log.Printf("calling cobalt.SetChannel(%q)", *u.currentChannel)
-		result, err = proxy.SetChannel(*u.currentChannel)
+		result, err = proxy.SetChannel(fidl.Background(), *u.currentChannel)
 	}
 
 	if err != nil {

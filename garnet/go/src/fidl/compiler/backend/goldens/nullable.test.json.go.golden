@@ -47,7 +47,7 @@ func (msg *StructWithNullableHandle) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableProtocol struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Val SimpleProtocolInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+	Val SimpleProtocolWithCtxInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
 }
 
 var _mStructWithNullableProtocol = _bindings.CreateLazyMarshaler(StructWithNullableProtocol{})
@@ -58,7 +58,7 @@ func (msg *StructWithNullableProtocol) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Val SimpleProtocolInterfaceRequest`fidl:"0,1" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+	Val SimpleProtocolWithCtxInterfaceRequest`fidl:"0,1" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
 }
 
 var _mStructWithNullableRequest = _bindings.CreateLazyMarshaler(StructWithNullableRequest{})
@@ -100,18 +100,6 @@ func (msg *StructWithNullableUnion) Marshaler() _bindings.Marshaler {
 	return _mStructWithNullableUnion
 }
 
-type simpleProtocolAddRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	A int32`fidl:"0" fidl_offset_v1:"0"`
-	B int32`fidl:"4" fidl_offset_v1:"4"`
-}
-
-var _msimpleProtocolAddRequest = _bindings.CreateLazyMarshaler(simpleProtocolAddRequest{})
-
-func (msg *simpleProtocolAddRequest) Marshaler() _bindings.Marshaler {
-	return _msimpleProtocolAddRequest
-}
-
 type simpleProtocolWithCtxAddRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	A int32`fidl:"0" fidl_offset_v1:"0"`
@@ -122,17 +110,6 @@ var _msimpleProtocolWithCtxAddRequest = _bindings.CreateLazyMarshaler(simpleProt
 
 func (msg *simpleProtocolWithCtxAddRequest) Marshaler() _bindings.Marshaler {
 	return _msimpleProtocolWithCtxAddRequest
-}
-
-type simpleProtocolAddResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Sum int32`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _msimpleProtocolAddResponse = _bindings.CreateLazyMarshaler(simpleProtocolAddResponse{})
-
-func (msg *simpleProtocolAddResponse) Marshaler() _bindings.Marshaler {
-	return _msimpleProtocolAddResponse
 }
 
 type simpleProtocolWithCtxAddResponse struct {
@@ -207,19 +184,6 @@ func (p *SimpleProtocolWithCtxInterface) Add(ctx_ _bindings.Context, a int32, b 
 	return resp_.Sum, err_
 }
 
-type SimpleProtocolInterface _bindings.ChannelProxy
-
-
-func (p *SimpleProtocolInterface) Add(a int32,b int32) (int32, error) {
-	req_ := &simpleProtocolAddRequest{
-		A: a,
-		B: b,
-	}
-	resp_ := &simpleProtocolAddResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(SimpleProtocolAddGenOrdinal, req_, resp_, SimpleProtocolAddOrdinal, SimpleProtocolAddGenOrdinal)
-	return resp_.Sum, err_
-}
-
 
 type SimpleProtocolWithCtx interface {
 	Add(ctx_ _bindings.Context, a int32, b int32) (int32, error)
@@ -230,56 +194,11 @@ type SimpleProtocolWithCtx interface {
 type SimpleProtocolWithCtxTransitionalBase struct {}
 
 
-
-
-type SimpleProtocol interface {
-	Add(a int32,b int32) (int32, error)
-}
-
-type SimpleProtocolTransitionalBase struct {}
-
-
 type SimpleProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewSimpleProtocolWithCtxInterfaceRequest() (SimpleProtocolWithCtxInterfaceRequest, *SimpleProtocolWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return SimpleProtocolWithCtxInterfaceRequest(req), (*SimpleProtocolWithCtxInterface)(cli), err
-}
-
-type SimpleProtocolInterfaceRequest _bindings.InterfaceRequest
-
-func NewSimpleProtocolInterfaceRequest() (SimpleProtocolInterfaceRequest, *SimpleProtocolInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return SimpleProtocolInterfaceRequest(req), (*SimpleProtocolInterface)(cli), err
-}
-
-type SimpleProtocolStub struct {
-	Impl SimpleProtocol
-}
-
-func (s_ *SimpleProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *SimpleProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case SimpleProtocolAddOrdinal:
-		fallthrough
-	case SimpleProtocolAddGenOrdinal:
-		in_ := simpleProtocolAddRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		sum, err_ := s_.Impl.Add(in_.A,in_.B)
-		out_ := simpleProtocolAddResponse{}
-		out_.Sum = sum
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type SimpleProtocolWithCtxStub struct {
@@ -308,10 +227,6 @@ func (s_ *SimpleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 }
 type SimpleProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *SimpleProtocolService) Add(impl SimpleProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&SimpleProtocolStub{Impl: impl}, c, onError)
 }
 
 func (s *SimpleProtocolService) AddWithCtx(impl SimpleProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {

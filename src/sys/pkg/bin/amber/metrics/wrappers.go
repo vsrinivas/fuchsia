@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"syscall/zx/fidl"
 	"time"
 
 	"fidl/fuchsia/cobalt"
@@ -18,7 +19,7 @@ const (
 
 var (
 	ctx              *context.Context
-	logger           cobalt.Logger
+	logger           *cobalt.LoggerWithCtxInterface
 	setTargetChannel chan string
 )
 
@@ -90,19 +91,19 @@ func newDoubleValue(name string, value float64) cobalt.CustomEventValue {
 
 func connect() error {
 
-	factoryRequest, factory, err := cobalt.NewLoggerFactoryInterfaceRequest()
+	factoryRequest, factory, err := cobalt.NewLoggerFactoryWithCtxInterfaceRequest()
 	if err != nil {
 		return err
 	}
 	ctx.ConnectToEnvService(factoryRequest)
 	defer factory.Close()
 
-	loggerRequest, proxy, err := cobalt.NewLoggerInterfaceRequest()
+	loggerRequest, proxy, err := cobalt.NewLoggerWithCtxInterfaceRequest()
 	if err != nil {
 		return err
 	}
 
-	status, err := factory.CreateLoggerFromProjectId(projectId, loggerRequest)
+	status, err := factory.CreateLoggerFromProjectId(fidl.Background(), projectId, loggerRequest)
 	if err != nil {
 		proxy.Close()
 		return err
@@ -152,7 +153,7 @@ func logEventCountMulti(metric metricID, periodDurationMicros int64, count int64
 		Component:  &component,
 		Payload:    eventPayload,
 	}
-	status, err := logger.LogCobaltEvent(event)
+	status, err := logger.LogCobaltEvent(fidl.Background(), event)
 	if err != nil {
 		log.Printf("logEventCountMulti: %s", err)
 	} else if err := mapErrCobalt(status); err != nil {
@@ -167,7 +168,7 @@ func logElapsedTime(metric metricID, duration time.Duration, index uint32, compo
 
 	durationInMicroseconds := duration.Nanoseconds() / time.Microsecond.Nanoseconds()
 
-	status, err := logger.LogElapsedTime(uint32(metric), index, component, durationInMicroseconds)
+	status, err := logger.LogElapsedTime(fidl.Background(), uint32(metric), index, component, durationInMicroseconds)
 	if err != nil {
 		log.Printf("logElapsedTime: %s", err)
 	} else if err := mapErrCobalt(status); err != nil {
@@ -189,7 +190,7 @@ func logElapsedTimeMulti(metric metricID, duration time.Duration, eventCodes []u
 		Component:  &component,
 		Payload:    eventPayload,
 	}
-	status, err := logger.LogCobaltEvent(event)
+	status, err := logger.LogCobaltEvent(fidl.Background(), event)
 	if err != nil {
 		log.Printf("logElapsedTimeMulti: %s", err)
 	} else if err := mapErrCobalt(status); err != nil {
@@ -223,7 +224,7 @@ func logCustomEvent(metric metricID, parts []cobalt.CustomEventValue) {
 	}
 	log.Printf("logCustomEvent(%d)\n%s", uint32(metric), strings.Join(partStrings, "\n"))
 
-	status, err := logger.LogCustomEvent(uint32(metric), parts)
+	status, err := logger.LogCustomEvent(fidl.Background(), uint32(metric), parts)
 	if err != nil {
 		log.Printf("logCustomEvent: %s", err)
 	} else if err := mapErrCobalt(status); err != nil {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 	"testing"
 	"time"
@@ -131,12 +132,12 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 				t.Fatalf("ifs.controller.Up(): %s", err)
 			}
 
-			req, cli, err := netstack.NewNetstackInterfaceRequest()
+			req, cli, err := netstack.NewNetstackWithCtxInterfaceRequest()
 			if err != nil {
-				t.Fatalf("netstack.NewNetstackInterfaceRequest(): %s", err)
+				t.Fatalf("netstack.NewNetstackWithCtxInterfaceRequest(): %s", err)
 			}
 			defer cli.Close()
-			if _, err := ns.netstackService.BindingSet.Add(&netstack.NetstackStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), nil); err != nil {
+			if _, err := ns.netstackService.BindingSet.Add(&netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), nil); err != nil {
 				t.Fatalf("netstackService.BindingSet.Add(_, _, nil): %s", err)
 			}
 
@@ -152,7 +153,7 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 			if signals&zx.SignalChannelReadable == 0 {
 				t.Fatalf("got zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s) = %b, want = %b", onInterfacesChangedEventTimeout, signals, zx.SignalChannelReadable)
 			}
-			interfaces, err := cli.ExpectOnInterfacesChanged()
+			interfaces, err := cli.ExpectOnInterfacesChanged(fidl.Background())
 			if err != nil {
 				t.Fatalf("cli.ExpectOnInterfacesChanged(): %s", err)
 			}

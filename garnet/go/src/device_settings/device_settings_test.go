@@ -5,6 +5,7 @@
 package main
 
 import (
+	"syscall/zx/fidl"
 	"testing"
 
 	"app/context"
@@ -17,18 +18,18 @@ const (
 
 func TestDeviceSettingsSimple(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	req, dm, err := devicesettings.NewDeviceSettingsManagerInterfaceRequest()
+	req, dm, err := devicesettings.NewDeviceSettingsManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx.ConnectToEnvService(req)
 
-	if s, err := dm.SetInteger(TestSettingKey, 10); err != nil {
+	if s, err := dm.SetInteger(fidl.Background(), TestSettingKey, 10); err != nil {
 		t.Fatal(err)
 	} else if !s {
 		t.Fatalf("Set Integer failed")
 	}
-	if i, s, err := dm.GetInteger(TestSettingKey); err != nil {
+	if i, s, err := dm.GetInteger(fidl.Background(), TestSettingKey); err != nil {
 		t.Fatal(err)
 	} else if s != devicesettings.StatusOk {
 		t.Fatalf("got err status: %s", s)
@@ -36,12 +37,12 @@ func TestDeviceSettingsSimple(t *testing.T) {
 		t.Fatalf("expected 10 got : %d", i)
 	}
 
-	if s, err := dm.SetString(TestSettingKey, "somestring"); err != nil {
+	if s, err := dm.SetString(fidl.Background(), TestSettingKey, "somestring"); err != nil {
 		t.Fatal(err)
 	} else if !s {
 		t.Fatalf("Set String failed")
 	}
-	if str, s, err := dm.GetString(TestSettingKey); err != nil {
+	if str, s, err := dm.GetString(fidl.Background(), TestSettingKey); err != nil {
 		t.Fatal(err)
 	} else if s != devicesettings.StatusOk {
 		t.Fatalf("got err status: %s", s)

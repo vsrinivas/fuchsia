@@ -6,45 +6,46 @@ package main
 
 import (
 	"fidl/fidl/test/after"
+	"syscall/zx/fidl"
 )
 
 type after_addMethodImpl struct{}
 
 // Assert that after_addMethodImpl implements the AddMethod interface
-var _ after.AddMethod = &after_addMethodImpl{}
+var _ after.AddMethodWithCtx = &after_addMethodImpl{}
 
-func (_ *after_addMethodImpl) ExistingMethod() error {
+func (_ *after_addMethodImpl) ExistingMethod(fidl.Context) error {
 	return nil
 }
-func (_ *after_addMethodImpl) NewMethod() error {
+func (_ *after_addMethodImpl) NewMethod(fidl.Context) error {
 	return nil
 }
 
 type after_removeMethodImpl struct {
-	after.RemoveMethodTransitionalBase
+	after.RemoveMethodWithCtxTransitionalBase
 }
 
 // Assert that after_removeMethodImpl implements the RemoveMethod interface
-var _ after.RemoveMethod = &after_removeMethodImpl{}
+var _ after.RemoveMethodWithCtx = &after_removeMethodImpl{}
 
-func (_ *after_removeMethodImpl) ExistingMethod() error {
+func (_ *after_removeMethodImpl) ExistingMethod(fidl.Context) error {
 	return nil
 }
 
 type after_addEventImpl struct{}
 
 // Assert that after_addEventImpl implements the AddEvent interface
-var _ after.AddEvent = &after_addEventImpl{}
+var _ after.AddEventWithCtx = &after_addEventImpl{}
 
-func (_ *after_addEventImpl) ExistingMethod() error {
+func (_ *after_addEventImpl) ExistingMethod(fidl.Context) error {
 	return nil
 }
 
 type after_removeEventImpl struct{}
 
 // Assert that after_removeEventImpl implements the RemoveEvent interface
-var _ after.RemoveEvent = &after_removeEventImpl{}
+var _ after.RemoveEventWithCtx = &after_removeEventImpl{}
 
-func (_ *after_removeEventImpl) ExistingMethod() error {
+func (_ *after_removeEventImpl) ExistingMethod(fidl.Context) error {
 	return nil
 }

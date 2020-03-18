@@ -35,12 +35,12 @@ func TestCookies(t *testing.T) {
 	}
 
 	for _, dir := range vfs.dirs {
-		res, h, err := dir.GetToken()
+		res, h, err := dir.GetToken(nil)
 		if err != nil {
-			t.Fatalf("GetToken() failed: %v", err)
+			t.Fatalf("GetToken(nil) failed: %v", err)
 		}
 		if zx.Status(res) != zx.ErrOk {
-			t.Fatalf("GetToken() returned wrong value. Want %v, got %v", zx.ErrOk, zx.Status(res))
+			t.Fatalf("GetToken(nil) returned wrong value. Want %v, got %v", zx.ErrOk, zx.Status(res))
 		}
 
 		dir.setCookie(32)

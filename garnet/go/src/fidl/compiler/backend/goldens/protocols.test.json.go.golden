@@ -60,17 +60,6 @@ func (msg *WithErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 	return _mWithErrorSyntaxErrorAsEnumResponse
 }
 
-type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Ret string`fidl:"0," fidl_offset_v1:"0"`
-}
-
-var _mwithAndWithoutRequestResponseNoRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseNoRequestWithResponseResponse{})
-
-func (msg *withAndWithoutRequestResponseNoRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mwithAndWithoutRequestResponseNoRequestWithResponseResponse
-}
-
 type withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	Ret string`fidl:"0," fidl_offset_v1:"0"`
@@ -80,17 +69,6 @@ var _mwithAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse = _bindi
 
 func (msg *withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
 	return _mwithAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse
-}
-
-type withAndWithoutRequestResponseWithRequestNoResponseRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Arg string`fidl:"0," fidl_offset_v1:"0"`
-}
-
-var _mwithAndWithoutRequestResponseWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestNoResponseRequest{})
-
-func (msg *withAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mwithAndWithoutRequestResponseWithRequestNoResponseRequest
 }
 
 type withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest struct {
@@ -104,17 +82,6 @@ func (msg *withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest) Mar
 	return _mwithAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest
 }
 
-type withAndWithoutRequestResponseWithRequestEmptyResponseRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Arg string`fidl:"0," fidl_offset_v1:"0"`
-}
-
-var _mwithAndWithoutRequestResponseWithRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestEmptyResponseRequest{})
-
-func (msg *withAndWithoutRequestResponseWithRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mwithAndWithoutRequestResponseWithRequestEmptyResponseRequest
-}
-
 type withAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	Arg string`fidl:"0," fidl_offset_v1:"0"`
@@ -124,17 +91,6 @@ var _mwithAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest = _bin
 
 func (msg *withAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
 	return _mwithAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest
-}
-
-type withAndWithoutRequestResponseWithRequestWithResponseRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Arg string`fidl:"0," fidl_offset_v1:"0"`
-}
-
-var _mwithAndWithoutRequestResponseWithRequestWithResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestWithResponseRequest{})
-
-func (msg *withAndWithoutRequestResponseWithRequestWithResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mwithAndWithoutRequestResponseWithRequestWithResponseRequest
 }
 
 type withAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest struct {
@@ -148,17 +104,6 @@ func (msg *withAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest) M
 	return _mwithAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest
 }
 
-type withAndWithoutRequestResponseWithRequestWithResponseResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Ret string`fidl:"0," fidl_offset_v1:"0"`
-}
-
-var _mwithAndWithoutRequestResponseWithRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestWithResponseResponse{})
-
-func (msg *withAndWithoutRequestResponseWithRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mwithAndWithoutRequestResponseWithRequestWithResponseResponse
-}
-
 type withAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	Ret string`fidl:"0," fidl_offset_v1:"0"`
@@ -168,17 +113,6 @@ var _mwithAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse = _bin
 
 func (msg *withAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
 	return _mwithAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse
-}
-
-type withAndWithoutRequestResponseOnWithResponseResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Ret string`fidl:"0," fidl_offset_v1:"0"`
-}
-
-var _mwithAndWithoutRequestResponseOnWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseOnWithResponseResponse{})
-
-func (msg *withAndWithoutRequestResponseOnWithResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mwithAndWithoutRequestResponseOnWithResponseResponse
 }
 
 type withAndWithoutRequestResponseWithCtxOnWithResponseResponse struct {
@@ -192,17 +126,6 @@ func (msg *withAndWithoutRequestResponseWithCtxOnWithResponseResponse) Marshaler
 	return _mwithAndWithoutRequestResponseWithCtxOnWithResponseResponse
 }
 
-type withErrorSyntaxResponseAsStructResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Result WithErrorSyntaxResponseAsStructResult`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mwithErrorSyntaxResponseAsStructResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxResponseAsStructResponse{})
-
-func (msg *withErrorSyntaxResponseAsStructResponse) Marshaler() _bindings.Marshaler {
-	return _mwithErrorSyntaxResponseAsStructResponse
-}
-
 type withErrorSyntaxWithCtxResponseAsStructResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Result WithErrorSyntaxResponseAsStructResult`fidl:"0" fidl_offset_v1:"0"`
@@ -212,17 +135,6 @@ var _mwithErrorSyntaxWithCtxResponseAsStructResponse = _bindings.CreateLazyMarsh
 
 func (msg *withErrorSyntaxWithCtxResponseAsStructResponse) Marshaler() _bindings.Marshaler {
 	return _mwithErrorSyntaxWithCtxResponseAsStructResponse
-}
-
-type withErrorSyntaxErrorAsPrimitiveResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Result WithErrorSyntaxErrorAsPrimitiveResult`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mwithErrorSyntaxErrorAsPrimitiveResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxErrorAsPrimitiveResponse{})
-
-func (msg *withErrorSyntaxErrorAsPrimitiveResponse) Marshaler() _bindings.Marshaler {
-	return _mwithErrorSyntaxErrorAsPrimitiveResponse
 }
 
 type withErrorSyntaxWithCtxErrorAsPrimitiveResponse struct {
@@ -236,17 +148,6 @@ func (msg *withErrorSyntaxWithCtxErrorAsPrimitiveResponse) Marshaler() _bindings
 	return _mwithErrorSyntaxWithCtxErrorAsPrimitiveResponse
 }
 
-type withErrorSyntaxErrorAsEnumResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Result WithErrorSyntaxErrorAsEnumResult`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mwithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxErrorAsEnumResponse{})
-
-func (msg *withErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
-	return _mwithErrorSyntaxErrorAsEnumResponse
-}
-
 type withErrorSyntaxWithCtxErrorAsEnumResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Result WithErrorSyntaxErrorAsEnumResult`fidl:"0" fidl_offset_v1:"0"`
@@ -256,18 +157,6 @@ var _mwithErrorSyntaxWithCtxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(
 
 func (msg *withErrorSyntaxWithCtxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 	return _mwithErrorSyntaxWithCtxErrorAsEnumResponse
-}
-
-type channelProtocolMethodARequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
-}
-
-var _mchannelProtocolMethodARequest = _bindings.CreateLazyMarshaler(channelProtocolMethodARequest{})
-
-func (msg *channelProtocolMethodARequest) Marshaler() _bindings.Marshaler {
-	return _mchannelProtocolMethodARequest
 }
 
 type channelProtocolWithCtxMethodARequest struct {
@@ -282,18 +171,6 @@ func (msg *channelProtocolWithCtxMethodARequest) Marshaler() _bindings.Marshaler
 	return _mchannelProtocolWithCtxMethodARequest
 }
 
-type channelProtocolEventAResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
-}
-
-var _mchannelProtocolEventAResponse = _bindings.CreateLazyMarshaler(channelProtocolEventAResponse{})
-
-func (msg *channelProtocolEventAResponse) Marshaler() _bindings.Marshaler {
-	return _mchannelProtocolEventAResponse
-}
-
 type channelProtocolWithCtxEventAResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	A int64`fidl:"0" fidl_offset_v1:"0"`
@@ -304,18 +181,6 @@ var _mchannelProtocolWithCtxEventAResponse = _bindings.CreateLazyMarshaler(chann
 
 func (msg *channelProtocolWithCtxEventAResponse) Marshaler() _bindings.Marshaler {
 	return _mchannelProtocolWithCtxEventAResponse
-}
-
-type channelProtocolMethodBRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
-}
-
-var _mchannelProtocolMethodBRequest = _bindings.CreateLazyMarshaler(channelProtocolMethodBRequest{})
-
-func (msg *channelProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _mchannelProtocolMethodBRequest
 }
 
 type channelProtocolWithCtxMethodBRequest struct {
@@ -330,17 +195,6 @@ func (msg *channelProtocolWithCtxMethodBRequest) Marshaler() _bindings.Marshaler
 	return _mchannelProtocolWithCtxMethodBRequest
 }
 
-type channelProtocolMethodBResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Result int64`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mchannelProtocolMethodBResponse = _bindings.CreateLazyMarshaler(channelProtocolMethodBResponse{})
-
-func (msg *channelProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _mchannelProtocolMethodBResponse
-}
-
 type channelProtocolWithCtxMethodBResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	Result int64`fidl:"0" fidl_offset_v1:"0"`
@@ -352,17 +206,6 @@ func (msg *channelProtocolWithCtxMethodBResponse) Marshaler() _bindings.Marshale
 	return _mchannelProtocolWithCtxMethodBResponse
 }
 
-type channelProtocolMutateSocketRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	A _zx.Socket`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648"`
-}
-
-var _mchannelProtocolMutateSocketRequest = _bindings.CreateLazyMarshaler(channelProtocolMutateSocketRequest{})
-
-func (msg *channelProtocolMutateSocketRequest) Marshaler() _bindings.Marshaler {
-	return _mchannelProtocolMutateSocketRequest
-}
-
 type channelProtocolWithCtxMutateSocketRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	A _zx.Socket`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648"`
@@ -372,17 +215,6 @@ var _mchannelProtocolWithCtxMutateSocketRequest = _bindings.CreateLazyMarshaler(
 
 func (msg *channelProtocolWithCtxMutateSocketRequest) Marshaler() _bindings.Marshaler {
 	return _mchannelProtocolWithCtxMutateSocketRequest
-}
-
-type channelProtocolMutateSocketResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	B _zx.Socket`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648"`
-}
-
-var _mchannelProtocolMutateSocketResponse = _bindings.CreateLazyMarshaler(channelProtocolMutateSocketResponse{})
-
-func (msg *channelProtocolMutateSocketResponse) Marshaler() _bindings.Marshaler {
-	return _mchannelProtocolMutateSocketResponse
 }
 
 type channelProtocolWithCtxMutateSocketResponse struct {
@@ -607,67 +439,6 @@ func (p *WithAndWithoutRequestResponseWithCtxInterface) ExpectOnWithResponse(ctx
 	return resp_.Ret, err_
 }
 
-type WithAndWithoutRequestResponseInterface _bindings.ChannelProxy
-
-
-func (p *WithAndWithoutRequestResponseInterface) NoRequestNoResponse() error {
-	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal, req_)
-	return err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) NoRequestEmptyResponse() error {
-	var req_ _bindings.Message
-	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal, WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal)
-	return err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) NoRequestWithResponse() (string, error) {
-	var req_ _bindings.Message
-	resp_ := &withAndWithoutRequestResponseNoRequestWithResponseResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseNoRequestWithResponseOrdinal, WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal)
-	return resp_.Ret, err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg string) error {
-	req_ := &withAndWithoutRequestResponseWithRequestNoResponseRequest{
-		Arg: arg,
-	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal, req_)
-	return err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) WithRequestEmptyResponse(arg string) error {
-	req_ := &withAndWithoutRequestResponseWithRequestEmptyResponseRequest{
-		Arg: arg,
-	}
-	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal, WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal)
-	return err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg string) (string, error) {
-	req_ := &withAndWithoutRequestResponseWithRequestWithResponseRequest{
-		Arg: arg,
-	}
-	resp_ := &withAndWithoutRequestResponseWithRequestWithResponseResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal, req_, resp_, WithAndWithoutRequestResponseWithRequestWithResponseOrdinal, WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal)
-	return resp_.Ret, err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) ExpectOnEmptyResponse() error {
-	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, resp_, WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal)
-	return err_
-}
-
-func (p *WithAndWithoutRequestResponseInterface) ExpectOnWithResponse() (string, error) {
-	resp_ := &withAndWithoutRequestResponseOnWithResponseResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_, WithAndWithoutRequestResponseOnWithResponseGenOrdinal)
-	return resp_.Ret, err_
-}
-
 
 type WithAndWithoutRequestResponseWithCtx interface {
 	NoRequestNoResponse(ctx_ _bindings.Context) error
@@ -683,96 +454,11 @@ type WithAndWithoutRequestResponseWithCtx interface {
 type WithAndWithoutRequestResponseWithCtxTransitionalBase struct {}
 
 
-
-
-type WithAndWithoutRequestResponse interface {
-	NoRequestNoResponse() error
-	NoRequestEmptyResponse() error
-	NoRequestWithResponse() (string, error)
-	WithRequestNoResponse(arg string) error
-	WithRequestEmptyResponse(arg string) error
-	WithRequestWithResponse(arg string) (string, error)
-}
-
-type WithAndWithoutRequestResponseTransitionalBase struct {}
-
-
 type WithAndWithoutRequestResponseWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewWithAndWithoutRequestResponseWithCtxInterfaceRequest() (WithAndWithoutRequestResponseWithCtxInterfaceRequest, *WithAndWithoutRequestResponseWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return WithAndWithoutRequestResponseWithCtxInterfaceRequest(req), (*WithAndWithoutRequestResponseWithCtxInterface)(cli), err
-}
-
-type WithAndWithoutRequestResponseInterfaceRequest _bindings.InterfaceRequest
-
-func NewWithAndWithoutRequestResponseInterfaceRequest() (WithAndWithoutRequestResponseInterfaceRequest, *WithAndWithoutRequestResponseInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return WithAndWithoutRequestResponseInterfaceRequest(req), (*WithAndWithoutRequestResponseInterface)(cli), err
-}
-
-type WithAndWithoutRequestResponseStub struct {
-	Impl WithAndWithoutRequestResponse
-}
-
-func (s_ *WithAndWithoutRequestResponseStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *WithAndWithoutRequestResponseStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
-		fallthrough
-	case WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal:
-		err_ := s_.Impl.NoRequestNoResponse()
-		return nil, false, err_
-	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
-		fallthrough
-	case WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal:
-		err_ := s_.Impl.NoRequestEmptyResponse()
-		return nil, true, err_
-	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
-		fallthrough
-	case WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal:
-		ret, err_ := s_.Impl.NoRequestWithResponse()
-		out_ := withAndWithoutRequestResponseNoRequestWithResponseResponse{}
-		out_.Ret = ret
-		return &out_, true, err_
-	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
-		fallthrough
-	case WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal:
-		in_ := withAndWithoutRequestResponseWithRequestNoResponseRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.WithRequestNoResponse(in_.Arg)
-		return nil, false, err_
-	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
-		fallthrough
-	case WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal:
-		in_ := withAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.WithRequestEmptyResponse(in_.Arg)
-		return nil, true, err_
-	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
-		fallthrough
-	case WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal:
-		in_ := withAndWithoutRequestResponseWithRequestWithResponseRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		ret, err_ := s_.Impl.WithRequestWithResponse(in_.Arg)
-		out_ := withAndWithoutRequestResponseWithRequestWithResponseResponse{}
-		out_.Ret = ret
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type WithAndWithoutRequestResponseWithCtxStub struct {
@@ -846,10 +532,6 @@ type WithAndWithoutRequestResponseService struct {
 	_bindings.BindingSet
 }
 
-func (s *WithAndWithoutRequestResponseService) Add(impl WithAndWithoutRequestResponse, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&WithAndWithoutRequestResponseStub{Impl: impl}, c, onError)
-}
-
 func (s *WithAndWithoutRequestResponseService) AddWithCtx(impl WithAndWithoutRequestResponseWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
 	return s.BindingSet.Add(&WithAndWithoutRequestResponseWithCtxStub{Impl: impl}, c, onError)
 }
@@ -866,7 +548,7 @@ func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
 	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal, event_)
 }
 func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) error {
-	event_ := &withAndWithoutRequestResponseOnWithResponseResponse{
+	event_ := &withAndWithoutRequestResponseWithCtxOnWithResponseResponse{
 		Ret: ret,
 	}
 	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseGenOrdinal, event_)
@@ -906,30 +588,6 @@ func (p *WithErrorSyntaxWithCtxInterface) ErrorAsEnum(ctx_ _bindings.Context) (W
 	return resp_.Result, err_
 }
 
-type WithErrorSyntaxInterface _bindings.ChannelProxy
-
-
-func (p *WithErrorSyntaxInterface) ResponseAsStruct() (WithErrorSyntaxResponseAsStructResult, error) {
-	var req_ _bindings.Message
-	resp_ := &withErrorSyntaxResponseAsStructResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxResponseAsStructGenOrdinal, req_, resp_, WithErrorSyntaxResponseAsStructOrdinal, WithErrorSyntaxResponseAsStructGenOrdinal)
-	return resp_.Result, err_
-}
-
-func (p *WithErrorSyntaxInterface) ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error) {
-	var req_ _bindings.Message
-	resp_ := &withErrorSyntaxErrorAsPrimitiveResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsPrimitiveGenOrdinal, req_, resp_, WithErrorSyntaxErrorAsPrimitiveOrdinal, WithErrorSyntaxErrorAsPrimitiveGenOrdinal)
-	return resp_.Result, err_
-}
-
-func (p *WithErrorSyntaxInterface) ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResult, error) {
-	var req_ _bindings.Message
-	resp_ := &withErrorSyntaxErrorAsEnumResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsEnumGenOrdinal, req_, resp_, WithErrorSyntaxErrorAsEnumOrdinal, WithErrorSyntaxErrorAsEnumGenOrdinal)
-	return resp_.Result, err_
-}
-
 
 type WithErrorSyntaxWithCtx interface {
 	ResponseAsStruct(ctx_ _bindings.Context) (WithErrorSyntaxResponseAsStructResult, error)
@@ -942,68 +600,11 @@ type WithErrorSyntaxWithCtx interface {
 type WithErrorSyntaxWithCtxTransitionalBase struct {}
 
 
-
-
-type WithErrorSyntax interface {
-	ResponseAsStruct() (WithErrorSyntaxResponseAsStructResult, error)
-	ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error)
-	ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResult, error)
-}
-
-type WithErrorSyntaxTransitionalBase struct {}
-
-
 type WithErrorSyntaxWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewWithErrorSyntaxWithCtxInterfaceRequest() (WithErrorSyntaxWithCtxInterfaceRequest, *WithErrorSyntaxWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return WithErrorSyntaxWithCtxInterfaceRequest(req), (*WithErrorSyntaxWithCtxInterface)(cli), err
-}
-
-type WithErrorSyntaxInterfaceRequest _bindings.InterfaceRequest
-
-func NewWithErrorSyntaxInterfaceRequest() (WithErrorSyntaxInterfaceRequest, *WithErrorSyntaxInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return WithErrorSyntaxInterfaceRequest(req), (*WithErrorSyntaxInterface)(cli), err
-}
-
-type WithErrorSyntaxStub struct {
-	Impl WithErrorSyntax
-}
-
-func (s_ *WithErrorSyntaxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *WithErrorSyntaxStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case WithErrorSyntaxResponseAsStructOrdinal:
-		fallthrough
-	case WithErrorSyntaxResponseAsStructGenOrdinal:
-		result, err_ := s_.Impl.ResponseAsStruct()
-		out_ := withErrorSyntaxResponseAsStructResponse{}
-		out_.Result = result
-		return &out_, true, err_
-	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
-		fallthrough
-	case WithErrorSyntaxErrorAsPrimitiveGenOrdinal:
-		result, err_ := s_.Impl.ErrorAsPrimitive()
-		out_ := withErrorSyntaxErrorAsPrimitiveResponse{}
-		out_.Result = result
-		return &out_, true, err_
-	case WithErrorSyntaxErrorAsEnumOrdinal:
-		fallthrough
-	case WithErrorSyntaxErrorAsEnumGenOrdinal:
-		result, err_ := s_.Impl.ErrorAsEnum()
-		out_ := withErrorSyntaxErrorAsEnumResponse{}
-		out_.Result = result
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type WithErrorSyntaxWithCtxStub struct {
@@ -1038,10 +639,6 @@ func (s_ *WithErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 }
 type WithErrorSyntaxService struct {
 	_bindings.BindingSet
-}
-
-func (s *WithErrorSyntaxService) Add(impl WithErrorSyntax, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&WithErrorSyntaxStub{Impl: impl}, c, onError)
 }
 
 func (s *WithErrorSyntaxService) AddWithCtx(impl WithErrorSyntaxWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
@@ -1105,43 +702,6 @@ func (p *ChannelProtocolWithCtxInterface) MutateSocket(ctx_ _bindings.Context, a
 	return resp_.B, err_
 }
 
-type ChannelProtocolInterface _bindings.ChannelProxy
-
-
-func (p *ChannelProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := &channelProtocolMethodARequest{
-		A: a,
-		B: b,
-	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolMethodAGenOrdinal, req_)
-	return err_
-}
-
-func (p *ChannelProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := &channelProtocolEventAResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, resp_, ChannelProtocolEventAGenOrdinal)
-	return resp_.A, resp_.B, err_
-}
-
-func (p *ChannelProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := &channelProtocolMethodBRequest{
-		A: a,
-		B: b,
-	}
-	resp_ := &channelProtocolMethodBResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBGenOrdinal, req_, resp_, ChannelProtocolMethodBOrdinal, ChannelProtocolMethodBGenOrdinal)
-	return resp_.Result, err_
-}
-
-func (p *ChannelProtocolInterface) MutateSocket(a _zx.Socket) (_zx.Socket, error) {
-	req_ := &channelProtocolMutateSocketRequest{
-		A: a,
-	}
-	resp_ := &channelProtocolMutateSocketResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMutateSocketGenOrdinal, req_, resp_, ChannelProtocolMutateSocketOrdinal, ChannelProtocolMutateSocketGenOrdinal)
-	return resp_.B, err_
-}
-
 
 type ChannelProtocolWithCtx interface {
 	MethodA(ctx_ _bindings.Context, a int64, b int64) error
@@ -1154,78 +714,11 @@ type ChannelProtocolWithCtx interface {
 type ChannelProtocolWithCtxTransitionalBase struct {}
 
 
-
-
-type ChannelProtocol interface {
-	MethodA(a int64,b int64) error
-	MethodB(a int64,b int64) (int64, error)
-	MutateSocket(a _zx.Socket) (_zx.Socket, error)
-}
-
-type ChannelProtocolTransitionalBase struct {}
-
-
 type ChannelProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewChannelProtocolWithCtxInterfaceRequest() (ChannelProtocolWithCtxInterfaceRequest, *ChannelProtocolWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return ChannelProtocolWithCtxInterfaceRequest(req), (*ChannelProtocolWithCtxInterface)(cli), err
-}
-
-type ChannelProtocolInterfaceRequest _bindings.InterfaceRequest
-
-func NewChannelProtocolInterfaceRequest() (ChannelProtocolInterfaceRequest, *ChannelProtocolInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return ChannelProtocolInterfaceRequest(req), (*ChannelProtocolInterface)(cli), err
-}
-
-type ChannelProtocolStub struct {
-	Impl ChannelProtocol
-}
-
-func (s_ *ChannelProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *ChannelProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case ChannelProtocolMethodAOrdinal:
-		fallthrough
-	case ChannelProtocolMethodAGenOrdinal:
-		in_ := channelProtocolMethodARequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.MethodA(in_.A,in_.B)
-		return nil, false, err_
-	case ChannelProtocolMethodBOrdinal:
-		fallthrough
-	case ChannelProtocolMethodBGenOrdinal:
-		in_ := channelProtocolMethodBRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
-		out_ := channelProtocolMethodBResponse{}
-		out_.Result = result
-		return &out_, true, err_
-	case ChannelProtocolMutateSocketOrdinal:
-		fallthrough
-	case ChannelProtocolMutateSocketGenOrdinal:
-		in_ := channelProtocolMutateSocketRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		b, err_ := s_.Impl.MutateSocket(in_.A)
-		out_ := channelProtocolMutateSocketResponse{}
-		out_.B = b
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type ChannelProtocolWithCtxStub struct {
@@ -1284,10 +777,6 @@ type ChannelProtocolService struct {
 	_bindings.BindingSet
 }
 
-func (s *ChannelProtocolService) Add(impl ChannelProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ChannelProtocolStub{Impl: impl}, c, onError)
-}
-
 func (s *ChannelProtocolService) AddWithCtx(impl ChannelProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
 	return s.BindingSet.Add(&ChannelProtocolWithCtxStub{Impl: impl}, c, onError)
 }
@@ -1300,7 +789,7 @@ func (s *ChannelProtocolService) EventProxyFor(key _bindings.BindingKey) (*Chann
 type ChannelProtocolEventProxy _bindings.ChannelProxy
 
 func (p *ChannelProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := &channelProtocolEventAResponse{
+	event_ := &channelProtocolWithCtxEventAResponse{
 		A: a,
 		B: b,
 	}

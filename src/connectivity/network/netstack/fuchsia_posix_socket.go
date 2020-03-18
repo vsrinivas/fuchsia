@@ -48,7 +48,7 @@ import "C"
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
 	// TODO(fxb/37419): Remove TransitionalBase after methods landed.
-	*io.NodeTransitionalBase
+	*io.NodeWithCtxTransitionalBase
 
 	wq *waiter.Queue
 	ep tcpip.Endpoint
@@ -80,25 +80,25 @@ func (ep *endpoint) close(cleanup func()) int64 {
 	return clones
 }
 
-func (ep *endpoint) Sync() (int32, error) {
+func (ep *endpoint) Sync(fidl.Context) (int32, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "Sync", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) GetAttr() (int32, io.NodeAttributes, error) {
+func (ep *endpoint) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "GetAttr", "%p", ep)
 
 	return 0, io.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, error) {
+func (ep *endpoint) SetAttr(_ fidl.Context, flags uint32, attributes io.NodeAttributes) (int32, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "SetAttr", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) Bind(sockaddr []uint8) (socket.BaseSocketBindResult, error) {
+func (ep *endpoint) Bind(_ fidl.Context, sockaddr []uint8) (socket.BaseSocketBindResult, error) {
 	addr, err := decodeAddr(sockaddr)
 	if err != nil {
 		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
@@ -118,7 +118,7 @@ func (ep *endpoint) Bind(sockaddr []uint8) (socket.BaseSocketBindResult, error) 
 	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
 }
 
-func (ep *endpoint) Connect(sockaddr []uint8) (socket.BaseSocketConnectResult, error) {
+func (ep *endpoint) Connect(_ fidl.Context, sockaddr []uint8) (socket.BaseSocketConnectResult, error) {
 	addr, err := decodeAddr(sockaddr)
 	if err != nil {
 		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
@@ -169,7 +169,7 @@ func (ep *endpoint) Connect(sockaddr []uint8) (socket.BaseSocketConnectResult, e
 	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
 }
 
-func (ep *endpoint) GetSockName() (socket.BaseSocketGetSockNameResult, error) {
+func (ep *endpoint) GetSockName(fidl.Context) (socket.BaseSocketGetSockNameResult, error) {
 	addr, err := ep.ep.GetLocalAddress()
 	if err != nil {
 		return socket.BaseSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
@@ -179,7 +179,7 @@ func (ep *endpoint) GetSockName() (socket.BaseSocketGetSockNameResult, error) {
 	}), nil
 }
 
-func (ep *endpoint) GetPeerName() (socket.BaseSocketGetPeerNameResult, error) {
+func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseSocketGetPeerNameResult, error) {
 	addr, err := ep.ep.GetRemoteAddress()
 	if err != nil {
 		return socket.BaseSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
@@ -189,7 +189,7 @@ func (ep *endpoint) GetPeerName() (socket.BaseSocketGetPeerNameResult, error) {
 	}), nil
 }
 
-func (ep *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
+func (ep *endpoint) SetSockOpt(_ fidl.Context, level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
 		if len(optVal) < sizeOfInt32 {
 			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(tcpip.ErrInvalidOptionValue)), nil
@@ -209,7 +209,7 @@ func (ep *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (socket.Bas
 	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
 }
 
-func (ep *endpoint) GetSockOpt(level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
+func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
 	var val interface{}
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
 		ep.mu.Lock()
@@ -371,7 +371,7 @@ func (epe *endpointWithEvent) close() int64 {
 	})
 }
 
-func (epe *endpointWithEvent) Describe() (io.NodeInfo, error) {
+func (epe *endpointWithEvent) Describe(fidl.Context) (io.NodeInfo, error) {
 	var info io.NodeInfo
 	event, err := epe.peer.Duplicate(zx.RightsBasic)
 	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", epe, err)
@@ -382,7 +382,7 @@ func (epe *endpointWithEvent) Describe() (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (epe *endpointWithEvent) Shutdown(how int16) (socket.DatagramSocketShutdownResult, error) {
+func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how int16) (socket.DatagramSocketShutdownResult, error) {
 	var signals zx.Signals
 	var flags tcpip.ShutdownFlags
 	switch how {
@@ -457,7 +457,7 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
 	})
 }
 
-func (eps *endpointWithSocket) Listen(backlog int16) (socket.StreamSocketListenResult, error) {
+func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.StreamSocketListenResult, error) {
 	if backlog < 0 {
 		backlog = 0
 	}
@@ -470,7 +470,7 @@ func (eps *endpointWithSocket) Listen(backlog int16) (socket.StreamSocketListenR
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
 
-func (eps *endpointWithSocket) Accept() (int32, *endpointWithSocket, error) {
+func (eps *endpointWithSocket) Accept(fidl.Context) (int32, *endpointWithSocket, error) {
 	ep, wq, err := eps.endpoint.ep.Accept()
 	if err != nil {
 		return tcpipErrorToCode(err), nil, nil
@@ -865,7 +865,7 @@ type datagramSocketImpl struct {
 	service    *socket.DatagramSocketService
 }
 
-var _ socket.DatagramSocket = (*datagramSocketImpl)(nil)
+var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
 
 func (s *datagramSocketImpl) close() {
 	clones := s.endpointWithEvent.close()
@@ -875,17 +875,17 @@ func (s *datagramSocketImpl) close() {
 	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithEvent, clones, s.bindingKey, removed)
 }
 
-func (s *datagramSocketImpl) Close() (int32, error) {
+func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
 	s.close()
 	return int32(zx.ErrOk), nil
 }
 
-func (s *datagramSocketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
+func (s *datagramSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
 	clones := atomic.AddInt64(&s.clones, 1)
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.service.Add(s, object.Channel, func(error) { s.close() })
+		bindingKey, err := s.service.AddWithCtx(s, object.Channel, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
 		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithEvent, clones, flags, bindingKey, err)
@@ -894,7 +894,7 @@ func (s *datagramSocketImpl) Clone(flags uint32, object io.NodeInterfaceRequest)
 	}
 }
 
-func (s *datagramSocketImpl) RecvMsg(addrLen, dataLen, controlLen uint32, flags int16) (socket.DatagramSocketRecvMsgResult, error) {
+func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, addrLen, dataLen, controlLen uint32, flags int16) (socket.DatagramSocketRecvMsgResult, error) {
 	s.mu.Lock()
 	var err *tcpip.Error
 	if len(s.mu.readView) == 0 {
@@ -943,7 +943,7 @@ func (s *datagramSocketImpl) RecvMsg(addrLen, dataLen, controlLen uint32, flags 
 	}), nil
 }
 
-func (s *datagramSocketImpl) SendMsg(addr []uint8, data [][]uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsgResult, error) {
+func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr []uint8, data [][]uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsgResult, error) {
 	var writeOpts tcpip.WriteOptions
 	if len(addr) != 0 {
 		addr, err := decodeAddr(addr)
@@ -986,22 +986,22 @@ type streamSocketImpl struct {
 	service    *socket.StreamSocketService
 }
 
-var _ socket.StreamSocket = (*streamSocketImpl)(nil)
+var _ socket.StreamSocketWithCtx = (*streamSocketImpl)(nil)
 
-func newStreamSocket(eps *endpointWithSocket, service *socket.StreamSocketService) (socket.StreamSocketInterface, error) {
+func newStreamSocket(eps *endpointWithSocket, service *socket.StreamSocketService) (socket.StreamSocketWithCtxInterface, error) {
 	localC, peerC, err := zx.NewChannel(0)
 	if err != nil {
-		return socket.StreamSocketInterface{}, err
+		return socket.StreamSocketWithCtxInterface{}, err
 	}
 	s := &streamSocketImpl{
 		endpointWithSocket: eps,
 		service:            service,
 	}
-	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
+	if err := s.Clone(nil, 0, io.NodeWithCtxInterfaceRequest{Channel: localC}); err != nil {
 		s.close()
-		return socket.StreamSocketInterface{}, err
+		return socket.StreamSocketWithCtxInterface{}, err
 	}
-	return socket.StreamSocketInterface{Channel: peerC}, nil
+	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
 func (s *streamSocketImpl) close() {
@@ -1012,17 +1012,17 @@ func (s *streamSocketImpl) close() {
 	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithSocket, clones, s.bindingKey, removed)
 }
 
-func (s *streamSocketImpl) Close() (int32, error) {
+func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
 	s.close()
 	return int32(zx.ErrOk), nil
 }
 
-func (s *streamSocketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
+func (s *streamSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
 	clones := atomic.AddInt64(&s.clones, 1)
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.service.Add(s, object.Channel, func(error) { s.close() })
+		bindingKey, err := s.service.AddWithCtx(s, object.Channel, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
 		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithSocket, clones, flags, bindingKey, err)
@@ -1031,7 +1031,7 @@ func (s *streamSocketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) e
 	}
 }
 
-func (s *streamSocketImpl) Describe() (io.NodeInfo, error) {
+func (s *streamSocketImpl) Describe(fidl.Context) (io.NodeInfo, error) {
 	var info io.NodeInfo
 	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
 	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
@@ -1042,8 +1042,8 @@ func (s *streamSocketImpl) Describe() (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (s *streamSocketImpl) Accept(flags int16) (socket.StreamSocketAcceptResult, error) {
-	code, eps, err := s.endpointWithSocket.Accept()
+func (s *streamSocketImpl) Accept(ctx fidl.Context, flags int16) (socket.StreamSocketAcceptResult, error) {
+	code, eps, err := s.endpointWithSocket.Accept(ctx)
 	if err != nil {
 		return socket.StreamSocketAcceptResult{}, err
 	}
@@ -1083,7 +1083,7 @@ type providerImpl struct {
 	ns                    *Netstack
 }
 
-var _ socket.Provider = (*providerImpl)(nil)
+var _ socket.ProviderWithCtx = (*providerImpl)(nil)
 
 // Highest two bits modify the socket type.
 const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
@@ -1127,7 +1127,7 @@ func (cb callback) Callback(e *waiter.Entry) {
 	cb(e)
 }
 
-func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSocket2Result, error) {
+func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (socket.ProviderSocket2Result, error) {
 	code, netProto := toNetProto(domain)
 	if code != 0 {
 		return socket.ProviderSocket2ResultWithErr(code), nil
@@ -1152,7 +1152,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 			return socket.ProviderSocket2Result{}, err
 		}
 		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
-			S: socket.BaseSocketInterface(streamSocketInterface),
+			S: socket.BaseSocketWithCtxInterface(streamSocketInterface),
 		}), nil
 	} else {
 		var localE, peerE zx.Handle
@@ -1193,11 +1193,11 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 
 		s.wq.EventRegister(&s.entry, waiter.EventIn)
 
-		if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
+		if err := s.Clone(ctx, 0, io.NodeWithCtxInterfaceRequest{Channel: localC}); err != nil {
 			s.close()
 			return socket.ProviderSocket2Result{}, err
 		}
-		datagramSocketInterface := socket.DatagramSocketInterface{Channel: peerC}
+		datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
 		sp.ns.onAddEndpoint(localE, ep)
 
@@ -1207,7 +1207,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 		}
 
 		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
-			S: socket.BaseSocketInterface(datagramSocketInterface),
+			S: socket.BaseSocketWithCtxInterface(datagramSocketInterface),
 		}), nil
 	}
 }

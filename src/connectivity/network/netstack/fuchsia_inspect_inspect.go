@@ -46,9 +46,9 @@ const (
 	txWrites   = "TxWrites"
 )
 
-// An adapter that implements fuchsia.inspect.Inspect using the above.
+// An adapter that implements fuchsia.inspect.InspectWithCtx using the above.
 
-var _ inspect.Inspect = (*inspectImpl)(nil)
+var _ inspect.InspectWithCtx = (*inspectImpl)(nil)
 
 type inspectImpl struct {
 	inner inspectInner
@@ -56,15 +56,15 @@ type inspectImpl struct {
 	service *inspect.InspectService
 }
 
-func (impl *inspectImpl) ReadData() (inspect.Object, error) {
+func (impl *inspectImpl) ReadData(fidl.Context) (inspect.Object, error) {
 	return impl.inner.ReadData(), nil
 }
 
-func (impl *inspectImpl) ListChildren() ([]string, error) {
+func (impl *inspectImpl) ListChildren(fidl.Context) ([]string, error) {
 	return impl.inner.ListChildren(), nil
 }
 
-func (impl *inspectImpl) OpenChild(childName string, childChannel inspect.InspectInterfaceRequest) (bool, error) {
+func (impl *inspectImpl) OpenChild(_ fidl.Context, childName string, childChannel inspect.InspectWithCtxInterfaceRequest) (bool, error) {
 	if child := impl.inner.GetChild(childName); child != nil {
 		svc := (&inspectImpl{
 			inner:   child,
@@ -77,7 +77,7 @@ func (impl *inspectImpl) OpenChild(childName string, childChannel inspect.Inspec
 
 func (impl *inspectImpl) asService() *context.Service {
 	return &context.Service{
-		Stub: &inspect.InspectStub{Impl: impl},
+		Stub: &inspect.InspectWithCtxStub{Impl: impl},
 		AddFn: func(s fidl.Stub, c zx.Channel) error {
 			_, err := impl.service.BindingSet.Add(s, c, nil)
 			return err

@@ -6,12 +6,13 @@ package ethernet
 
 import (
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"testing"
 
 	"fidl/fuchsia/hardware/ethernet"
 )
 
-var _ ethernet.Device = (*Device)(nil)
+var _ ethernet.DeviceWithCtx = (*Device)(nil)
 
 type Device struct {
 	testing.TB
@@ -33,7 +34,7 @@ type Device struct {
 	DumpRegistersImpl                     func() (int32, error)
 }
 
-func (d *Device) GetInfo() (ethernet.Info, error) {
+func (d *Device) GetInfo(fidl.Context) (ethernet.Info, error) {
 	fn := d.GetInfoImpl
 	if fn == nil {
 		d.Helper()
@@ -42,7 +43,7 @@ func (d *Device) GetInfo() (ethernet.Info, error) {
 	return fn()
 }
 
-func (d *Device) GetFifos() (int32, *ethernet.Fifos, error) {
+func (d *Device) GetFifos(fidl.Context) (int32, *ethernet.Fifos, error) {
 	fn := d.GetFifosImpl
 	if fn == nil {
 		d.Helper()
@@ -51,7 +52,7 @@ func (d *Device) GetFifos() (int32, *ethernet.Fifos, error) {
 	return fn()
 }
 
-func (d *Device) SetIoBuffer(h zx.VMO) (int32, error) {
+func (d *Device) SetIoBuffer(_ fidl.Context, h zx.VMO) (int32, error) {
 	fn := d.SetIoBufferImpl
 	if fn == nil {
 		d.Helper()
@@ -60,7 +61,7 @@ func (d *Device) SetIoBuffer(h zx.VMO) (int32, error) {
 	return fn(h)
 }
 
-func (d *Device) Start() (int32, error) {
+func (d *Device) Start(fidl.Context) (int32, error) {
 	fn := d.StartImpl
 	if fn == nil {
 		d.Helper()
@@ -69,7 +70,7 @@ func (d *Device) Start() (int32, error) {
 	return fn()
 }
 
-func (d *Device) Stop() error {
+func (d *Device) Stop(fidl.Context) error {
 	fn := d.StopImpl
 	if fn == nil {
 		d.Helper()
@@ -78,7 +79,7 @@ func (d *Device) Stop() error {
 	return fn()
 }
 
-func (d *Device) ListenStart() (int32, error) {
+func (d *Device) ListenStart(fidl.Context) (int32, error) {
 	fn := d.ListenStartImpl
 	if fn == nil {
 		d.Helper()
@@ -87,7 +88,7 @@ func (d *Device) ListenStart() (int32, error) {
 	return fn()
 }
 
-func (d *Device) ListenStop() error {
+func (d *Device) ListenStop(fidl.Context) error {
 	fn := d.ListenStopImpl
 	if fn == nil {
 		d.Helper()
@@ -96,7 +97,7 @@ func (d *Device) ListenStop() error {
 	return fn()
 }
 
-func (d *Device) SetClientName(name string) (int32, error) {
+func (d *Device) SetClientName(_ fidl.Context, name string) (int32, error) {
 	fn := d.SetClientNameImpl
 	if fn == nil {
 		d.Helper()
@@ -105,7 +106,7 @@ func (d *Device) SetClientName(name string) (int32, error) {
 	return fn(name)
 }
 
-func (d *Device) GetStatus() (uint32, error) {
+func (d *Device) GetStatus(fidl.Context) (uint32, error) {
 	fn := d.GetStatusImpl
 	if fn == nil {
 		d.Helper()
@@ -114,7 +115,7 @@ func (d *Device) GetStatus() (uint32, error) {
 	return fn()
 }
 
-func (d *Device) SetPromiscuousMode(enabled bool) (int32, error) {
+func (d *Device) SetPromiscuousMode(_ fidl.Context, enabled bool) (int32, error) {
 	fn := d.SetPromiscuousModeImpl
 	if fn == nil {
 		d.Helper()
@@ -123,7 +124,7 @@ func (d *Device) SetPromiscuousMode(enabled bool) (int32, error) {
 	return fn(enabled)
 }
 
-func (d *Device) ConfigMulticastAddMac(addr ethernet.MacAddress) (int32, error) {
+func (d *Device) ConfigMulticastAddMac(_ fidl.Context, addr ethernet.MacAddress) (int32, error) {
 	fn := d.ConfigMulticastAddMacImpl
 	if fn == nil {
 		d.Helper()
@@ -132,7 +133,7 @@ func (d *Device) ConfigMulticastAddMac(addr ethernet.MacAddress) (int32, error) 
 	return fn(addr)
 }
 
-func (d *Device) ConfigMulticastDeleteMac(addr ethernet.MacAddress) (int32, error) {
+func (d *Device) ConfigMulticastDeleteMac(_ fidl.Context, addr ethernet.MacAddress) (int32, error) {
 	fn := d.ConfigMulticastDeleteMacImpl
 	if fn == nil {
 		d.Helper()
@@ -141,7 +142,7 @@ func (d *Device) ConfigMulticastDeleteMac(addr ethernet.MacAddress) (int32, erro
 	return fn(addr)
 }
 
-func (d *Device) ConfigMulticastSetPromiscuousMode(enabled bool) (int32, error) {
+func (d *Device) ConfigMulticastSetPromiscuousMode(_ fidl.Context, enabled bool) (int32, error) {
 	fn := d.ConfigMulticastSetPromiscuousModeImpl
 	if fn == nil {
 		d.Helper()
@@ -150,7 +151,7 @@ func (d *Device) ConfigMulticastSetPromiscuousMode(enabled bool) (int32, error) 
 	return fn(enabled)
 }
 
-func (d *Device) ConfigMulticastTestFilter() (int32, error) {
+func (d *Device) ConfigMulticastTestFilter(fidl.Context) (int32, error) {
 	fn := d.ConfigMulticastTestFilterImpl
 	if fn == nil {
 		d.Helper()
@@ -159,7 +160,7 @@ func (d *Device) ConfigMulticastTestFilter() (int32, error) {
 	return fn()
 }
 
-func (d *Device) DumpRegisters() (int32, error) {
+func (d *Device) DumpRegisters(fidl.Context) (int32, error) {
 	fn := d.DumpRegistersImpl
 	if fn == nil {
 		d.Helper()

@@ -132,7 +132,7 @@ func (r *Ramdisk) StartBlobfs() error {
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mount"}
 	}
 
-	r.dir = fdio.NewDirectory(&zxio.DirectoryAdminInterface{Channel: pxy})
+	r.dir = fdio.NewDirectoryWithCtx(&zxio.DirectoryAdminWithCtxInterface{Channel: pxy})
 	return nil
 }
 

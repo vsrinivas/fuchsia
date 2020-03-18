@@ -16,28 +16,28 @@ import (
 )
 
 type ClientMock struct {
-	pm *power.BatteryManagerInterface
+	pm *power.BatteryManagerWithCtxInterface
 }
 
 type WatcherMock struct {
 	called uint32
 }
 
-func (pmw *WatcherMock) OnChangeBatteryInfo(bi power.BatteryInfo) error {
+func (pmw *WatcherMock) OnChangeBatteryInfo(_ fidl.Context, bi power.BatteryInfo) error {
 	atomic.AddUint32(&pmw.called, 1)
 	return nil
 }
 
 func TestPowerManager(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	req, iface, err := power.NewBatteryManagerInterfaceRequest()
+	req, iface, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
 	pmClient := &ClientMock{}
 	pmClient.pm = iface
 	ctx.ConnectToEnvService(req)
-	_, err = pmClient.pm.GetBatteryInfo()
+	_, err = pmClient.pm.GetBatteryInfo(fidl.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestPowerManager(t *testing.T) {
 
 func TestBatteryInfoWatcher(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	r, p, err := power.NewBatteryManagerInterfaceRequest()
+	r, p, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,18 +54,18 @@ func TestBatteryInfoWatcher(t *testing.T) {
 	pmClient.pm = p
 	ctx.ConnectToEnvService(r)
 
-	rw, pw, err := power.NewBatteryInfoWatcherInterfaceRequest()
+	rw, pw, err := power.NewBatteryInfoWatcherWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	pmWatcher := &WatcherMock{called: 0}
-	s := power.BatteryInfoWatcherStub{Impl: pmWatcher}
+	s := power.BatteryInfoWatcherWithCtxStub{Impl: pmWatcher}
 	bi := fidl.BindingSet{}
 	bi.Add(&s, rw.Channel, nil)
 	go fidl.Serve()
 
-	err = pmClient.pm.Watch(*pw)
+	err = pmClient.pm.Watch(fidl.Background(), *pw)
 	if err != nil {
 		t.Fatal(err)
 	}

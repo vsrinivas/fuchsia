@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall/zx"
+	"syscall/zx/fidl"
 
 	"app/context"
 	"netstack/fidlconv"
@@ -26,12 +27,12 @@ import (
 
 type netstackClientApp struct {
 	ctx      *context.Context
-	netstack *netstack.NetstackInterface
-	wlan     *service.WlanInterface
+	netstack *netstack.NetstackWithCtxInterface
+	wlan     *service.WlanWithCtxInterface
 }
 
 func (a *netstackClientApp) printAll() {
-	ifaces, err := a.netstack.GetInterfaces2()
+	ifaces, err := a.netstack.GetInterfaces2(fidl.Background())
 	if err != nil {
 		fmt.Print("ifconfig: failed to fetch interfaces\n")
 		return
@@ -80,12 +81,12 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
 }
 
 func (a *netstackClientApp) setStatus(iface netstack.NetInterface2, up bool) {
-	a.netstack.SetInterfaceStatus(iface.Id, up)
+	a.netstack.SetInterfaceStatus(fidl.Background(), iface.Id, up)
 }
 
 func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface2, cidr string) {
 	netAddr, prefixLen := validateCidr(os.Args[3])
-	result, _ := a.netstack.SetInterfaceAddress(iface.Id, netAddr, prefixLen)
+	result, _ := a.netstack.SetInterfaceAddress(fidl.Background(), iface.Id, netAddr, prefixLen)
 	if result.Status != netstack.StatusOk {
 		fmt.Printf("Error setting interface address: %s\n", result.Message)
 	}
@@ -93,7 +94,7 @@ func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface2, cidr s
 
 func (a *netstackClientApp) removeIfaceAddress(iface netstack.NetInterface2, cidr string) {
 	netAddr, prefixLen := validateCidr(os.Args[3])
-	result, _ := a.netstack.RemoveInterfaceAddress(iface.Id, netAddr, prefixLen)
+	result, _ := a.netstack.RemoveInterfaceAddress(fidl.Background(), iface.Id, netAddr, prefixLen)
 	if result.Status != netstack.StatusOk {
 		fmt.Printf("Error setting interface address: %s\n", result.Message)
 	}
@@ -115,7 +116,7 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry2, a
 		}
 		in.Metric = uint32(m)
 	case "iface":
-		ifaces, err := a.netstack.GetInterfaces2()
+		ifaces, err := a.netstack.GetInterfaces2(fidl.Background())
 		if err != nil {
 			return remaining, err
 		}
@@ -164,17 +165,17 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry2) error {
 		return fmt.Errorf("either gateway or iface must be provided when adding a route")
 	}
 
-	req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
+	req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 	if err != nil {
 		return fmt.Errorf("could not make a new route table transaction: %s", err)
 	}
 	defer req.Close()
-	status, err := a.netstack.StartRouteTableTransaction(req)
+	status, err := a.netstack.StartRouteTableTransaction(fidl.Background(), req)
 	if err != nil || zx.Status(status) != zx.ErrOk {
 		return fmt.Errorf("could not start a route table transaction: %s (%s)", err, zx.Status(status))
 	}
 
-	status, err = transactionInterface.AddRoute(r)
+	status, err = transactionInterface.AddRoute(fidl.Background(), r)
 	if err != nil {
 		return fmt.Errorf("could not add route due to transaction interface error: %s", err)
 	}
@@ -185,17 +186,17 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry2) error {
 }
 
 func (a *netstackClientApp) deleteRoute(r netstack.RouteTableEntry2) error {
-	req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
+	req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 	if err != nil {
 		return fmt.Errorf("could not make a new route table transaction: %s", err)
 	}
 	defer req.Close()
-	status, err := a.netstack.StartRouteTableTransaction(req)
+	status, err := a.netstack.StartRouteTableTransaction(fidl.Background(), req)
 	if err != nil || zx.Status(status) != zx.ErrOk {
 		return fmt.Errorf("could not start a route table transaction (maybe the route table is locked?): %s", err)
 	}
 
-	status, err = transactionInterface.DelRoute(r)
+	status, err = transactionInterface.DelRoute(fidl.Background(), r)
 	if err != nil {
 		return fmt.Errorf("could not delete route due to transaction interface error: %s", err)
 	}
@@ -227,11 +228,11 @@ func routeTableEntryToString(r netstack.RouteTableEntry2, ifaces []netstack.NetI
 }
 
 func (a *netstackClientApp) showRoutes() error {
-	rs, err := a.netstack.GetRouteTable2()
+	rs, err := a.netstack.GetRouteTable2(fidl.Background())
 	if err != nil {
 		return fmt.Errorf("Could not get route table from netstack: %s", err)
 	}
-	ifaces, err := a.netstack.GetInterfaces2()
+	ifaces, err := a.netstack.GetInterfaces2(fidl.Background())
 	if err != nil {
 		return err
 	}
@@ -245,7 +246,7 @@ func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
 	ifs := make([]*netstack.NetInterface2, len(ifNames))
 	nicIDs := make([]uint32, len(ifNames))
 	// first, validate that all interfaces exist
-	ifaces, err := a.netstack.GetInterfaces2()
+	ifaces, err := a.netstack.GetInterfaces2(fidl.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -258,7 +259,7 @@ func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
 		nicIDs[i] = iface.Id
 	}
 
-	result, nicid, _ := a.netstack.BridgeInterfaces(nicIDs)
+	result, nicid, _ := a.netstack.BridgeInterfaces(fidl.Background(), nicIDs)
 	if result.Status != netstack.StatusOk {
 		return 0, fmt.Errorf("error bridging interfaces: %s, result: %s", ifNames, result)
 	}
@@ -267,12 +268,12 @@ func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
 }
 
 func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop string) error {
-	req, client, err := dhcp.NewClientInterfaceRequest()
+	req, client, err := dhcp.NewClientWithCtxInterfaceRequest()
 	if err != nil {
 		return err
 	}
 
-	res, err := a.netstack.GetDhcpClient(iface.Id, req)
+	res, err := a.netstack.GetDhcpClient(fidl.Background(), iface.Id, req)
 	if err != nil {
 		return err
 	}
@@ -285,7 +286,7 @@ func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop stri
 
 	switch startStop {
 	case "start":
-		res, err := client.Start()
+		res, err := client.Start(fidl.Background())
 		if err != nil {
 			return fmt.Errorf("failed to start client: %w", err)
 		}
@@ -295,7 +296,7 @@ func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop stri
 		case dhcp.ClientStartResultResponse:
 		}
 	case "stop":
-		res, err := client.Stop()
+		res, err := client.Stop(fidl.Background())
 		if err != nil {
 			return fmt.Errorf("failed to stop client: %w", err)
 		}
@@ -315,7 +316,7 @@ func (a *netstackClientApp) wlanStatus() string {
 	if a.wlan == nil {
 		return "failed to query (FIDL service unintialized)"
 	}
-	res, err := a.wlan.Status()
+	res, err := a.wlan.Status(fidl.Background())
 	if err != nil {
 		return fmt.Sprintf("failed to query (error: %v)", err)
 	} else if res.Error.Code != service.ErrCodeOk {
@@ -443,7 +444,7 @@ func usage() {
 
 func main() {
 	a := &netstackClientApp{ctx: context.CreateFromStartupInfo()}
-	req, pxy, err := netstack.NewNetstackInterfaceRequest()
+	req, pxy, err := netstack.NewNetstackWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -451,7 +452,7 @@ func main() {
 	defer a.netstack.Close()
 	a.ctx.ConnectToEnvService(req)
 
-	reqWlan, pxyWlan, errWlan := service.NewWlanInterfaceRequest()
+	reqWlan, pxyWlan, errWlan := service.NewWlanWithCtxInterfaceRequest()
 	if errWlan == nil {
 		a.wlan = pxyWlan
 		defer a.wlan.Close()
@@ -509,7 +510,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("error creating bridge: %s\n", err)
 		} else {
-			interfaces, _ := a.netstack.GetInterfaces2()
+			interfaces, _ := a.netstack.GetInterfaces2(fidl.Background())
 			bridge := getIfaceByIdFromIfaces(uint32(nicid), interfaces)
 			fmt.Printf("Bridged interfaces %s.\nInterface '%s' created.\nPlease run `ifconfig %[2]s up` to enable it.\n", ifaces, bridge.Name)
 		}
@@ -518,7 +519,7 @@ func main() {
 		usage()
 		return
 	default:
-		ifaces, err := a.netstack.GetInterfaces2()
+		ifaces, err := a.netstack.GetInterfaces2(fidl.Background())
 		if err != nil {
 			fmt.Printf("Error finding interface name: %s\n", err)
 			return
@@ -562,7 +563,7 @@ func main() {
 				fmt.Printf("ifconfig: metric value '%s' is not uint32: %s\n", os.Args[3], err)
 				return
 			}
-			a.netstack.SetInterfaceMetric(iface.Id, uint32(metric))
+			a.netstack.SetInterfaceMetric(fidl.Background(), iface.Id, uint32(metric))
 		default:
 			usage()
 		}

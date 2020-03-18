@@ -55,7 +55,7 @@ func run(ctx *context.Context) (err error) {
 	var queryFreeSpace func() int64
 
 	if blobfs, err := OpenBlobfs(); err == nil {
-		defer blobfs.Close()
+		defer blobfs.Close(fidl.Background())
 		queryFreeSpace = func() int64 {
 			n, err := blobfs.QueryFreeSpace()
 			if err != nil {
@@ -201,23 +201,23 @@ func SendReboot() {
 		return
 	}
 
-	var administrator = devmgr.AdministratorInterface(
+	var administrator = devmgr.AdministratorWithCtxInterface(
 		fidl.ChannelProxy{Channel: zx.Channel(channel_local)})
 	var status int32
-	status, err = administrator.Suspend(devmgr.SuspendFlagReboot)
+	status, err = administrator.Suspend(fidl.Background(), devmgr.SuspendFlagReboot)
 	if err != nil || status != 0 {
 		syslog.Errorf("error sending restart to Administrator: %s status: %d", err, status)
 	}
 }
 
 func GcPackages(ctx *context.Context) {
-	req, pxy, err := space.NewManagerInterfaceRequest()
+	req, pxy, err := space.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Errorf("Error creating space Manager request: %s", err)
 		return
 	}
 	ctx.ConnectToEnvService(req)
-	res, err := pxy.Gc()
+	res, err := pxy.Gc(fidl.Background())
 	if err != nil {
 		syslog.Errorf("Error collecting garbage: %s", err)
 	}

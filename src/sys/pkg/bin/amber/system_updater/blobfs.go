@@ -15,7 +15,7 @@ import (
 
 // Blobfs exposes the admin interface of /blob.
 type Blobfs struct {
-	io.DirectoryAdminInterface
+	io.DirectoryAdminWithCtxInterface
 }
 
 // OpenBlobfs opens a handle to the directory admin interface at /blob.
@@ -35,14 +35,14 @@ func OpenBlobfs() (*Blobfs, error) {
 	}
 	channel := zx.Channel(handles[0])
 
-	blobfs := io.DirectoryAdminInterface(fidl.ChannelProxy{Channel: channel})
+	blobfs := io.DirectoryAdminWithCtxInterface(fidl.ChannelProxy{Channel: channel})
 
-	return &Blobfs{DirectoryAdminInterface: blobfs}, nil
+	return &Blobfs{DirectoryAdminWithCtxInterface: blobfs}, nil
 }
 
 // QueryFreeSpace returns the number of unused bytes allocated to blobfs.
 func (b *Blobfs) QueryFreeSpace() (int64, error) {
-	status, info, err := b.QueryFilesystem()
+	status, info, err := b.QueryFilesystem(fidl.Background())
 	if err != nil {
 		return 0, err
 	}

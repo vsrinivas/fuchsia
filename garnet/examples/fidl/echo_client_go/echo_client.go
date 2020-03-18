@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/fidl"
 	"syscall/zx/io"
 
 	"app/context"
@@ -25,7 +26,7 @@ func main() {
 
 	ctx := context.CreateFromStartupInfo()
 
-	directoryReq, directoryInterface, err := io.NewDirectoryInterfaceRequest()
+	directoryReq, directoryInterface, err := io.NewDirectoryWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -34,15 +35,15 @@ func main() {
 		DirectoryRequest: directoryReq.Channel,
 	}
 
-	componentControllerReq, _, err := sys.NewComponentControllerInterfaceRequest()
+	componentControllerReq, _, err := sys.NewComponentControllerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
-	if err := ctx.Launcher().CreateComponent(launchInfo, componentControllerReq); err != nil {
+	if err := ctx.Launcher().CreateComponent(fidl.Background(), launchInfo, componentControllerReq); err != nil {
 		panic(err)
 	}
 
-	echoReq, echoInterface, err := echo.NewEchoInterfaceRequest()
+	echoReq, echoInterface, err := echo.NewEchoWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +51,7 @@ func main() {
 		panic(err)
 	}
 
-	response, err := echoInterface.EchoString(msg)
+	response, err := echoInterface.EchoString(fidl.Background(), msg)
 	if err != nil {
 		panic(err)
 	}

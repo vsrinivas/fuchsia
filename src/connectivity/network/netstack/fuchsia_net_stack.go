@@ -7,6 +7,7 @@ package netstack
 import (
 	"fmt"
 	"sort"
+	"syscall/zx/fidl"
 
 	"syslog"
 
@@ -97,7 +98,7 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	return out
 }
 
-func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceInterface) stack.StackAddEthernetInterfaceResult {
+func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceWithCtxInterface) stack.StackAddEthernetInterfaceResult {
 	var result stack.StackAddEthernetInterfaceResult
 
 	ifs, err := ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device)
@@ -329,51 +330,51 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 	return result
 }
 
-func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (stack.StackAddEthernetInterfaceResult, error) {
+func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device ethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {
 	return ni.ns.addInterface(topologicalPath, device), nil
 }
 
-func (ni *stackImpl) DelEthernetInterface(id uint64) (stack.StackDelEthernetInterfaceResult, error) {
+func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.StackDelEthernetInterfaceResult, error) {
 	return ni.ns.delInterface(id), nil
 }
 
-func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {
+func (ni *stackImpl) ListInterfaces(fidl.Context) ([]stack.InterfaceInfo, error) {
 	return ni.ns.getNetInterfaces(), nil
 }
 
-func (ni *stackImpl) GetInterfaceInfo(id uint64) (stack.StackGetInterfaceInfoResult, error) {
+func (ni *stackImpl) GetInterfaceInfo(_ fidl.Context, id uint64) (stack.StackGetInterfaceInfoResult, error) {
 	return ni.ns.getInterface(id), nil
 }
 
-func (ni *stackImpl) EnableInterface(id uint64) (stack.StackEnableInterfaceResult, error) {
+func (ni *stackImpl) EnableInterface(_ fidl.Context, id uint64) (stack.StackEnableInterfaceResult, error) {
 	return ni.ns.enableInterface(id), nil
 }
 
-func (ni *stackImpl) DisableInterface(id uint64) (stack.StackDisableInterfaceResult, error) {
+func (ni *stackImpl) DisableInterface(_ fidl.Context, id uint64) (stack.StackDisableInterfaceResult, error) {
 	return ni.ns.disableInterface(id), nil
 }
 
-func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress) (stack.StackAddInterfaceAddressResult, error) {
+func (ni *stackImpl) AddInterfaceAddress(_ fidl.Context, id uint64, addr stack.InterfaceAddress) (stack.StackAddInterfaceAddressResult, error) {
 	return ni.ns.addInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) DelInterfaceAddress(id uint64, addr stack.InterfaceAddress) (stack.StackDelInterfaceAddressResult, error) {
+func (ni *stackImpl) DelInterfaceAddress(_ fidl.Context, id uint64, addr stack.InterfaceAddress) (stack.StackDelInterfaceAddressResult, error) {
 	return ni.ns.delInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) GetForwardingTable() ([]stack.ForwardingEntry, error) {
+func (ni *stackImpl) GetForwardingTable(fidl.Context) ([]stack.ForwardingEntry, error) {
 	return ni.ns.getForwardingTable(), nil
 }
 
-func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (stack.StackAddForwardingEntryResult, error) {
+func (ni *stackImpl) AddForwardingEntry(_ fidl.Context, entry stack.ForwardingEntry) (stack.StackAddForwardingEntryResult, error) {
 	return ni.ns.addForwardingEntry(entry), nil
 }
 
-func (ni *stackImpl) DelForwardingEntry(subnet net.Subnet) (stack.StackDelForwardingEntryResult, error) {
+func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, subnet net.Subnet) (stack.StackDelForwardingEntryResult, error) {
 	return ni.ns.delForwardingEntry(subnet), nil
 }
 
-func (ni *stackImpl) EnablePacketFilter(id uint64) (stack.StackEnablePacketFilterResult, error) {
+func (ni *stackImpl) EnablePacketFilter(_ fidl.Context, id uint64) (stack.StackEnablePacketFilterResult, error) {
 	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
 
 	var result stack.StackEnablePacketFilterResult
@@ -392,7 +393,7 @@ func (ni *stackImpl) EnablePacketFilter(id uint64) (stack.StackEnablePacketFilte
 	return result, nil
 }
 
-func (ni *stackImpl) DisablePacketFilter(id uint64) (stack.StackDisablePacketFilterResult, error) {
+func (ni *stackImpl) DisablePacketFilter(_ fidl.Context, id uint64) (stack.StackDisablePacketFilterResult, error) {
 	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
 
 	var result stack.StackDisablePacketFilterResult
@@ -411,12 +412,12 @@ func (ni *stackImpl) DisablePacketFilter(id uint64) (stack.StackDisablePacketFil
 	return result, nil
 }
 
-func (ni *stackImpl) EnableIpForwarding() error {
+func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {
 	ni.ns.stack.SetForwarding(true)
 	return nil
 }
 
-func (ni *stackImpl) DisableIpForwarding() error {
+func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
 	ni.ns.stack.SetForwarding(false)
 	return nil
 }
@@ -425,7 +426,7 @@ type logImpl struct {
 	logger *syslog.Logger
 }
 
-func (li *logImpl) SetLogLevel(level stack.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
+func (li *logImpl) SetLogLevel(_ fidl.Context, level stack.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
 	li.logger.SetSeverity(syslog.LogLevel(level))
 	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetSyslogLevel: %s", level)
 	return stack.LogSetLogLevelResultWithResponse(stack.LogSetLogLevelResponse{}), nil

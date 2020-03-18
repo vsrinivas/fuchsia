@@ -26,7 +26,7 @@ var mu sync.Mutex
 func AddOutgoingService(ctx *context.Context) error {
 	ctx.OutgoingService.AddService(
 		net.ConnectivityName,
-		&net.ConnectivityStub{Impl: struct{}{}},
+		&net.ConnectivityWithCtxStub{Impl: struct{}{}},
 		func(s fidl.Stub, c zx.Channel) error {
 			k, err := service.BindingSet.Add(s, c, nil)
 			// Let clients know the status of the network when they get added.

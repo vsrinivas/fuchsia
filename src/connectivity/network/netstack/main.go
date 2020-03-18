@@ -221,7 +221,7 @@ func Main() {
 		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.DelayEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
 	}
 
-	req, np, err := device.NewNameProviderInterfaceRequest()
+	req, np, err := device.NewNameProviderWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Fatalf("could not connect to device name provider service: %s", err)
 	}
@@ -285,7 +285,7 @@ func Main() {
 
 	appCtx.OutgoingService.AddService(
 		netstack.NetstackName,
-		&netstack.NetstackStub{Impl: &netstackImpl{
+		&netstack.NetstackWithCtxStub{Impl: &netstackImpl{
 			ns: ns,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
@@ -325,7 +325,7 @@ func Main() {
 	var dnsService netstack.ResolverAdminService
 	appCtx.OutgoingService.AddService(
 		netstack.ResolverAdminName,
-		&netstack.ResolverAdminStub{Impl: &dnsImpl{ns: ns}},
+		&netstack.ResolverAdminWithCtxStub{Impl: &dnsImpl{ns: ns}},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := dnsService.BindingSet.Add(s, c, nil)
 			return err
@@ -335,7 +335,7 @@ func Main() {
 	var stackService stack.StackService
 	appCtx.OutgoingService.AddService(
 		stack.StackName,
-		&stack.StackStub{Impl: &stackImpl{
+		&stack.StackWithCtxStub{Impl: &stackImpl{
 			ns: ns,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
@@ -347,7 +347,7 @@ func Main() {
 	var logService stack.LogService
 	appCtx.OutgoingService.AddService(
 		stack.LogName,
-		&stack.LogStub{Impl: &logImpl{logger: l}},
+		&stack.LogWithCtxStub{Impl: &logImpl{logger: l}},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := logService.BindingSet.Add(s, c, nil)
 			return err
@@ -356,7 +356,7 @@ func Main() {
 	var nameLookupService net.NameLookupService
 	appCtx.OutgoingService.AddService(
 		net.NameLookupName,
-		&net.NameLookupStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
+		&net.NameLookupWithCtxStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := nameLookupService.BindingSet.Add(s, c, nil)
 			return err
@@ -365,7 +365,7 @@ func Main() {
 
 	appCtx.OutgoingService.AddService(
 		socket.ProviderName,
-		&socket.ProviderStub{Impl: &socketProviderImpl},
+		&socket.ProviderWithCtxStub{Impl: &socketProviderImpl},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := posixSocketProviderService.BindingSet.Add(s, c, nil)
 			return err
@@ -424,7 +424,7 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 	syslog.VLogf(syslog.DebugVerbosity, "getting or creating secret key for opaque IID from secure stash store")
 
 	// Connect to the secure stash store service.
-	storeReq, store, err := stash.NewSecureStoreInterfaceRequest()
+	storeReq, store, err := stash.NewSecureStoreWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Errorf("could not create the request to connect to the %s service: %s", stash.SecureStoreName, err)
 		return newSecretKeyForOpaqueIID()
@@ -433,23 +433,23 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 	appCtx.ConnectToEnvService(storeReq)
 
 	// Use our secure stash.
-	if err := store.Identify(stashStoreIdentificationName); err != nil {
+	if err := store.Identify(fidl.Background(), stashStoreIdentificationName); err != nil {
 		syslog.Errorf("failed to identify as %s to the secure stash store: %s", stashStoreIdentificationName, err)
 		return newSecretKeyForOpaqueIID()
 	}
-	storeAccessorReq, storeAccessor, err := stash.NewStoreAccessorInterfaceRequest()
+	storeAccessorReq, storeAccessor, err := stash.NewStoreAccessorWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Errorf("could not create the secure stash store accessor request: %s", err)
 		return newSecretKeyForOpaqueIID()
 	}
 	defer storeAccessor.Close()
-	if err := store.CreateAccessor(false /* readOnly */, storeAccessorReq); err != nil {
+	if err := store.CreateAccessor(fidl.Background(), false /* readOnly */, storeAccessorReq); err != nil {
 		syslog.Errorf("failed to create accessor to the secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
 	}
 
 	// Attempt to get the existing secret key.
-	opaqueIIDSecretKeyValue, err := storeAccessor.GetValue(opaqueIIDSecretKeyName)
+	opaqueIIDSecretKeyValue, err := storeAccessor.GetValue(fidl.Background(), opaqueIIDSecretKeyName)
 	if err != nil {
 		syslog.Errorf("failed to get opaque IID secret key from secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
@@ -487,11 +487,11 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 
 	// Store the newly generated key to the secure stash store as a base64
 	// encoded string.
-	if err := storeAccessor.SetValue(opaqueIIDSecretKeyName, stash.ValueWithStringval(base64.StdEncoding.EncodeToString(secretKey))); err != nil {
+	if err := storeAccessor.SetValue(fidl.Background(), opaqueIIDSecretKeyName, stash.ValueWithStringval(base64.StdEncoding.EncodeToString(secretKey))); err != nil {
 		syslog.Errorf("failed to set newly created secret key for opaque IID to secure stash store: %s", err)
 		return secretKey, nil
 	}
-	flushResp, err := storeAccessor.Flush()
+	flushResp, err := storeAccessor.Flush(fidl.Background())
 	if err != nil {
 		syslog.Errorf("failed to flush secure stash store with updated secret key for opaque IID: %s", err)
 		return secretKey, nil
@@ -510,17 +510,17 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 	}
 }
 
-func connectCobaltLogger(ctx *appcontext.Context) (*cobalt.LoggerInterface, error) {
-	freq, cobaltLoggerFactory, err := cobalt.NewLoggerFactoryInterfaceRequest()
+func connectCobaltLogger(ctx *appcontext.Context) (*cobalt.LoggerWithCtxInterface, error) {
+	freq, cobaltLoggerFactory, err := cobalt.NewLoggerFactoryWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to cobalt logger factory service: %s", err)
 	}
 	ctx.ConnectToEnvService(freq)
-	lreq, cobaltLogger, err := cobalt.NewLoggerInterfaceRequest()
+	lreq, cobaltLogger, err := cobalt.NewLoggerWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to cobalt logger service: %s", err)
 	}
-	result, err := cobaltLoggerFactory.CreateLoggerFromProjectId(networking_metrics.ProjectId, lreq)
+	result, err := cobaltLoggerFactory.CreateLoggerFromProjectId(fidl.Background(), networking_metrics.ProjectId, lreq)
 	if err != nil {
 		return nil, fmt.Errorf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
 	}

@@ -23,7 +23,7 @@ var filterService filter.FilterService
 func AddOutgoingService(ctx *context.Context, f *Filter) error {
 	ctx.OutgoingService.AddService(
 		filter.FilterName,
-		&filter.FilterStub{Impl: &filterImpl{filter: f}},
+		&filter.FilterWithCtxStub{Impl: &filterImpl{filter: f}},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := filterService.BindingSet.Add(s, c, nil)
 			return err
@@ -32,16 +32,16 @@ func AddOutgoingService(ctx *context.Context, f *Filter) error {
 	return nil
 }
 
-func (fi *filterImpl) Enable(trueOrFalse bool) (filter.Status, error) {
+func (fi *filterImpl) Enable(_ fidl.Context, trueOrFalse bool) (filter.Status, error) {
 	fi.filter.Enable(trueOrFalse)
 	return 0, nil
 }
 
-func (fi *filterImpl) IsEnabled() (bool, error) {
+func (fi *filterImpl) IsEnabled(fidl.Context) (bool, error) {
 	return fi.filter.IsEnabled(), nil
 }
 
-func (fi *filterImpl) GetRules() ([]filter.Rule, uint32, filter.Status, error) {
+func (fi *filterImpl) GetRules(fidl.Context) ([]filter.Rule, uint32, filter.Status, error) {
 	fi.filter.rulesetMain.RLock()
 	nrs, err := fromRules(fi.filter.rulesetMain.v)
 	generation := fi.filter.rulesetMain.generation
@@ -53,7 +53,7 @@ func (fi *filterImpl) GetRules() ([]filter.Rule, uint32, filter.Status, error) {
 	return nrs, generation, filter.StatusOk, nil
 }
 
-func (fi *filterImpl) UpdateRules(nrs []filter.Rule, generation uint32) (filter.Status, error) {
+func (fi *filterImpl) UpdateRules(_ fidl.Context, nrs []filter.Rule, generation uint32) (filter.Status, error) {
 	// toRules validates rules during the conversion.
 	rs, err := toRules(nrs)
 	if err != nil {
@@ -70,7 +70,7 @@ func (fi *filterImpl) UpdateRules(nrs []filter.Rule, generation uint32) (filter.
 	return filter.StatusOk, nil
 }
 
-func (fi *filterImpl) GetNatRules() ([]filter.Nat, uint32, filter.Status, error) {
+func (fi *filterImpl) GetNatRules(fidl.Context) ([]filter.Nat, uint32, filter.Status, error) {
 	fi.filter.rulesetNAT.RLock()
 	nns, err := fromNATs(fi.filter.rulesetNAT.v)
 	generation := fi.filter.rulesetNAT.generation
@@ -82,7 +82,7 @@ func (fi *filterImpl) GetNatRules() ([]filter.Nat, uint32, filter.Status, error)
 	return nns, generation, filter.StatusOk, nil
 }
 
-func (fi *filterImpl) UpdateNatRules(nns []filter.Nat, generation uint32) (filter.Status, error) {
+func (fi *filterImpl) UpdateNatRules(_ fidl.Context, nns []filter.Nat, generation uint32) (filter.Status, error) {
 	ns, err := toNATs(nns)
 	if err != nil {
 		syslog.Errorf("UpdateNatRules: %s", err)
@@ -98,7 +98,7 @@ func (fi *filterImpl) UpdateNatRules(nns []filter.Nat, generation uint32) (filte
 	return filter.StatusOk, nil
 }
 
-func (fi *filterImpl) GetRdrRules() ([]filter.Rdr, uint32, filter.Status, error) {
+func (fi *filterImpl) GetRdrRules(fidl.Context) ([]filter.Rdr, uint32, filter.Status, error) {
 	fi.filter.rulesetRDR.RLock()
 	nrs, err := fromRDRs(fi.filter.rulesetRDR.v)
 	generation := fi.filter.rulesetRDR.generation
@@ -110,7 +110,7 @@ func (fi *filterImpl) GetRdrRules() ([]filter.Rdr, uint32, filter.Status, error)
 	return nrs, generation, filter.StatusOk, nil
 }
 
-func (fi *filterImpl) UpdateRdrRules(nrs []filter.Rdr, generation uint32) (filter.Status, error) {
+func (fi *filterImpl) UpdateRdrRules(_ fidl.Context, nrs []filter.Rdr, generation uint32) (filter.Status, error) {
 	// toRDRs validates rules during the conversion.
 	rs, err := toRDRs(nrs)
 	if err != nil {

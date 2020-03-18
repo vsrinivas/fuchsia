@@ -33,17 +33,6 @@ func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
 	return _mStructWithNullableXUnion
 }
 
-type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Xu StrictBoundedXUnion`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
-
-func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Marshaler() _bindings.Marshaler {
-	return _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse
-}
-
 type testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Xu StrictBoundedXUnion`fidl:"0" fidl_offset_v1:"0"`
@@ -53,17 +42,6 @@ var _mtestProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse = 
 
 func (msg *testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse) Marshaler() _bindings.Marshaler {
 	return _mtestProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse
-}
-
-type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Xu OlderSimpleUnion`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
-
-func (msg *testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) Marshaler() _bindings.Marshaler {
-	return _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
 }
 
 type testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
@@ -594,23 +572,6 @@ func (p *TestProtocolWithCtxInterface) FlexibleXUnionHenceResponseMustBeHeapAllo
 	return resp_.Xu, err_
 }
 
-type TestProtocolInterface _bindings.ChannelProxy
-
-
-func (p *TestProtocolInterface) StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error) {
-	var req_ _bindings.Message
-	resp_ := &testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal, req_, resp_, TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal, TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal)
-	return resp_.Xu, err_
-}
-
-func (p *TestProtocolInterface) FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error) {
-	var req_ _bindings.Message
-	resp_ := &testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal, req_, resp_, TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal, TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal)
-	return resp_.Xu, err_
-}
-
 
 type TestProtocolWithCtx interface {
 	StrictXUnionHenceResponseMayBeStackAllocated(ctx_ _bindings.Context) (StrictBoundedXUnion, error)
@@ -622,60 +583,11 @@ type TestProtocolWithCtx interface {
 type TestProtocolWithCtxTransitionalBase struct {}
 
 
-
-
-type TestProtocol interface {
-	StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error)
-	FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error)
-}
-
-type TestProtocolTransitionalBase struct {}
-
-
 type TestProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewTestProtocolWithCtxInterfaceRequest() (TestProtocolWithCtxInterfaceRequest, *TestProtocolWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return TestProtocolWithCtxInterfaceRequest(req), (*TestProtocolWithCtxInterface)(cli), err
-}
-
-type TestProtocolInterfaceRequest _bindings.InterfaceRequest
-
-func NewTestProtocolInterfaceRequest() (TestProtocolInterfaceRequest, *TestProtocolInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return TestProtocolInterfaceRequest(req), (*TestProtocolInterface)(cli), err
-}
-
-type TestProtocolStub struct {
-	Impl TestProtocol
-}
-
-func (s_ *TestProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *TestProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
-		fallthrough
-	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal:
-		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated()
-		out_ := testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
-		out_.Xu = xu
-		return &out_, true, err_
-	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal:
-		fallthrough
-	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal:
-		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated()
-		out_ := testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
-		out_.Xu = xu
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type TestProtocolWithCtxStub struct {
@@ -703,10 +615,6 @@ func (s_ *TestProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 }
 type TestProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *TestProtocolService) Add(impl TestProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&TestProtocolStub{Impl: impl}, c, onError)
 }
 
 func (s *TestProtocolService) AddWithCtx(impl TestProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {

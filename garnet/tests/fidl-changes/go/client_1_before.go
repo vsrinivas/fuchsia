@@ -5,18 +5,20 @@
 package main
 
 import (
+	"syscall/zx/fidl"
+
 	"fidl/fidl/test/before"
 )
 
 type client_before struct {
-	addMethod    *before.AddMethodInterface
-	removeMethod *before.RemoveMethodInterface
-	addEvent     *before.AddEventInterface
-	removeEvent  *before.RemoveEventInterface
+	addMethod    *before.AddMethodWithCtxInterface
+	removeMethod *before.RemoveMethodWithCtxInterface
+	addEvent     *before.AddEventWithCtxInterface
+	removeEvent  *before.RemoveEventWithCtxInterface
 }
 
 func (c client_before) callAllMethodsExpectAllEvents() {
-	c.addMethod.ExistingMethod()
-	c.removeMethod.ExistingMethod()
-	_ = c.removeEvent.ExpectOldEvent()
+	c.addMethod.ExistingMethod(fidl.Background())
+	c.removeMethod.ExistingMethod(fidl.Background())
+	_ = c.removeEvent.ExpectOldEvent(fidl.Background())
 }

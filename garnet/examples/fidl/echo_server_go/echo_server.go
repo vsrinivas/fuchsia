@@ -20,7 +20,7 @@ type echoImpl struct {
 	quiet bool
 }
 
-func (echo *echoImpl) EchoString(inValue *string) (outValue *string, err error) {
+func (echo *echoImpl) EchoString(_ fidl.Context, inValue *string) (outValue *string, err error) {
 	if !echo.quiet {
 		log.Printf("server: %s\n", *inValue)
 	}
@@ -33,7 +33,7 @@ func main() {
 	c := context.CreateFromStartupInfo()
 	c.OutgoingService.AddService(
 		echo.EchoName,
-		&echo.EchoStub{Impl: &echoImpl{quiet: quiet}},
+		&echo.EchoWithCtxStub{Impl: &echoImpl{quiet: quiet}},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := echoService.BindingSet.Add(s, c, nil)
 			return err

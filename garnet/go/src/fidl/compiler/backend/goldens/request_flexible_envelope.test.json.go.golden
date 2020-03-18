@@ -12,17 +12,6 @@ import (
 
 
 
-type protocolRequestStrictResponseFlexibleRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S StrictFoo`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mprotocolRequestStrictResponseFlexibleRequest = _bindings.CreateLazyMarshaler(protocolRequestStrictResponseFlexibleRequest{})
-
-func (msg *protocolRequestStrictResponseFlexibleRequest) Marshaler() _bindings.Marshaler {
-	return _mprotocolRequestStrictResponseFlexibleRequest
-}
-
 type protocolWithCtxRequestStrictResponseFlexibleRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	S StrictFoo`fidl:"0" fidl_offset_v1:"0"`
@@ -32,17 +21,6 @@ var _mprotocolWithCtxRequestStrictResponseFlexibleRequest = _bindings.CreateLazy
 
 func (msg *protocolWithCtxRequestStrictResponseFlexibleRequest) Marshaler() _bindings.Marshaler {
 	return _mprotocolWithCtxRequestStrictResponseFlexibleRequest
-}
-
-type protocolRequestStrictResponseFlexibleResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	F FlexibleFoo`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mprotocolRequestStrictResponseFlexibleResponse = _bindings.CreateLazyMarshaler(protocolRequestStrictResponseFlexibleResponse{})
-
-func (msg *protocolRequestStrictResponseFlexibleResponse) Marshaler() _bindings.Marshaler {
-	return _mprotocolRequestStrictResponseFlexibleResponse
 }
 
 type protocolWithCtxRequestStrictResponseFlexibleResponse struct {
@@ -56,17 +34,6 @@ func (msg *protocolWithCtxRequestStrictResponseFlexibleResponse) Marshaler() _bi
 	return _mprotocolWithCtxRequestStrictResponseFlexibleResponse
 }
 
-type protocolRequestFlexibleResponseStrictRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S FlexibleFoo`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mprotocolRequestFlexibleResponseStrictRequest = _bindings.CreateLazyMarshaler(protocolRequestFlexibleResponseStrictRequest{})
-
-func (msg *protocolRequestFlexibleResponseStrictRequest) Marshaler() _bindings.Marshaler {
-	return _mprotocolRequestFlexibleResponseStrictRequest
-}
-
 type protocolWithCtxRequestFlexibleResponseStrictRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	S FlexibleFoo`fidl:"0" fidl_offset_v1:"0"`
@@ -76,17 +43,6 @@ var _mprotocolWithCtxRequestFlexibleResponseStrictRequest = _bindings.CreateLazy
 
 func (msg *protocolWithCtxRequestFlexibleResponseStrictRequest) Marshaler() _bindings.Marshaler {
 	return _mprotocolWithCtxRequestFlexibleResponseStrictRequest
-}
-
-type protocolRequestFlexibleResponseStrictResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	F StrictFoo`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mprotocolRequestFlexibleResponseStrictResponse = _bindings.CreateLazyMarshaler(protocolRequestFlexibleResponseStrictResponse{})
-
-func (msg *protocolRequestFlexibleResponseStrictResponse) Marshaler() _bindings.Marshaler {
-	return _mprotocolRequestFlexibleResponseStrictResponse
 }
 
 type protocolWithCtxRequestFlexibleResponseStrictResponse struct {
@@ -224,27 +180,6 @@ func (p *ProtocolWithCtxInterface) RequestFlexibleResponseStrict(ctx_ _bindings.
 	return resp_.F, err_
 }
 
-type ProtocolInterface _bindings.ChannelProxy
-
-
-func (p *ProtocolInterface) RequestStrictResponseFlexible(s StrictFoo) (FlexibleFoo, error) {
-	req_ := &protocolRequestStrictResponseFlexibleRequest{
-		S: s,
-	}
-	resp_ := &protocolRequestStrictResponseFlexibleResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ProtocolRequestStrictResponseFlexibleGenOrdinal, req_, resp_, ProtocolRequestStrictResponseFlexibleOrdinal, ProtocolRequestStrictResponseFlexibleGenOrdinal)
-	return resp_.F, err_
-}
-
-func (p *ProtocolInterface) RequestFlexibleResponseStrict(s FlexibleFoo) (StrictFoo, error) {
-	req_ := &protocolRequestFlexibleResponseStrictRequest{
-		S: s,
-	}
-	resp_ := &protocolRequestFlexibleResponseStrictResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ProtocolRequestFlexibleResponseStrictGenOrdinal, req_, resp_, ProtocolRequestFlexibleResponseStrictOrdinal, ProtocolRequestFlexibleResponseStrictGenOrdinal)
-	return resp_.F, err_
-}
-
 
 type ProtocolWithCtx interface {
 	RequestStrictResponseFlexible(ctx_ _bindings.Context, s StrictFoo) (FlexibleFoo, error)
@@ -256,68 +191,11 @@ type ProtocolWithCtx interface {
 type ProtocolWithCtxTransitionalBase struct {}
 
 
-
-
-type Protocol interface {
-	RequestStrictResponseFlexible(s StrictFoo) (FlexibleFoo, error)
-	RequestFlexibleResponseStrict(s FlexibleFoo) (StrictFoo, error)
-}
-
-type ProtocolTransitionalBase struct {}
-
-
 type ProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewProtocolWithCtxInterfaceRequest() (ProtocolWithCtxInterfaceRequest, *ProtocolWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return ProtocolWithCtxInterfaceRequest(req), (*ProtocolWithCtxInterface)(cli), err
-}
-
-type ProtocolInterfaceRequest _bindings.InterfaceRequest
-
-func NewProtocolInterfaceRequest() (ProtocolInterfaceRequest, *ProtocolInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return ProtocolInterfaceRequest(req), (*ProtocolInterface)(cli), err
-}
-
-type ProtocolStub struct {
-	Impl Protocol
-}
-
-func (s_ *ProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *ProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case ProtocolRequestStrictResponseFlexibleOrdinal:
-		fallthrough
-	case ProtocolRequestStrictResponseFlexibleGenOrdinal:
-		in_ := protocolRequestStrictResponseFlexibleRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		f, err_ := s_.Impl.RequestStrictResponseFlexible(in_.S)
-		out_ := protocolRequestStrictResponseFlexibleResponse{}
-		out_.F = f
-		return &out_, true, err_
-	case ProtocolRequestFlexibleResponseStrictOrdinal:
-		fallthrough
-	case ProtocolRequestFlexibleResponseStrictGenOrdinal:
-		in_ := protocolRequestFlexibleResponseStrictRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		f, err_ := s_.Impl.RequestFlexibleResponseStrict(in_.S)
-		out_ := protocolRequestFlexibleResponseStrictResponse{}
-		out_.F = f
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type ProtocolWithCtxStub struct {
@@ -361,10 +239,6 @@ func (s_ *ProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings
 }
 type ProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *ProtocolService) Add(impl Protocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ProtocolStub{Impl: impl}, c, onError)
 }
 
 func (s *ProtocolService) AddWithCtx(impl ProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {

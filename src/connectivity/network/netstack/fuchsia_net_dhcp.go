@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"fmt"
+	"syscall/zx/fidl"
 
 	"fidl/fuchsia/net/dhcp"
 
@@ -17,9 +18,9 @@ type clientImpl struct {
 	nicid tcpip.NICID
 }
 
-var _ dhcp.Client = (*clientImpl)(nil)
+var _ dhcp.ClientWithCtx = (*clientImpl)(nil)
 
-func (di *clientImpl) Start() (dhcp.ClientStartResult, error) {
+func (di *clientImpl) Start(fidl.Context) (dhcp.ClientStartResult, error) {
 	var r dhcp.ClientStartResult
 
 	nicInfo, ok := di.ns.stack.NICInfo()[di.nicid]
@@ -35,7 +36,7 @@ func (di *clientImpl) Start() (dhcp.ClientStartResult, error) {
 	return r, nil
 }
 
-func (di *clientImpl) Stop() (dhcp.ClientStopResult, error) {
+func (di *clientImpl) Stop(fidl.Context) (dhcp.ClientStopResult, error) {
 	r := dhcp.ClientStopResult{}
 
 	nicInfo, ok := di.ns.stack.NICInfo()[di.nicid]

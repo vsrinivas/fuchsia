@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"net"
+	"syscall/zx/fidl"
 	"testing"
 
 	"netstack/dns"
@@ -34,7 +35,7 @@ func TestLookupHostname(t *testing.T) {
 	v4loopback.SetIpv4(fidlnet.Ipv4Address{
 		Addr: ipv4LoopbackBytes,
 	})
-	host, err := ni.LookupHostname(v4loopback)
+	host, err := ni.LookupHostname(fidl.Background(), v4loopback)
 	AssertNoError(t, err)
 	switch typ := host.Which(); typ {
 	case fidlnet.NameLookupLookupHostnameResultResponse:
@@ -50,7 +51,7 @@ func TestLookupHostname(t *testing.T) {
 
 	var v6loopback fidlnet.IpAddress
 	v6loopback.SetIpv6(fidlnet.Ipv6Address{Addr: ipv6LoopbackBytes})
-	host, err = ni.LookupHostname(v6loopback)
+	host, err = ni.LookupHostname(fidl.Background(), v6loopback)
 	AssertNoError(t, err)
 	switch typ := host.Which(); typ {
 	case fidlnet.NameLookupLookupHostnameResultResponse:
@@ -77,7 +78,7 @@ func TestLookupIpLocalhost(t *testing.T) {
 	ni := nameLookupImpl{dnsClient: dnsClient}
 
 	testHostname := "localhost"
-	ip, err := ni.LookupIp(testHostname, fidlnet.LookupIpOptionsV4Addrs)
+	ip, err := ni.LookupIp(fidl.Background(), testHostname, fidlnet.LookupIpOptionsV4Addrs)
 	AssertNoError(t, err)
 	switch typ := ip.Which(); typ {
 	case fidlnet.NameLookupLookupIpResultResponse:
@@ -135,7 +136,7 @@ func TestLookupIp(t *testing.T) {
 	ni := nameLookupImpl{dnsClient: dnsClient}
 
 	testHostname := "example.com"
-	ip, err := ni.LookupIp(testHostname, fidlnet.LookupIpOptionsV4Addrs)
+	ip, err := ni.LookupIp(fidl.Background(), testHostname, fidlnet.LookupIpOptionsV4Addrs)
 	AssertNoError(t, err)
 	switch typ := ip.Which(); typ {
 	case fidlnet.NameLookupLookupIpResultResponse:

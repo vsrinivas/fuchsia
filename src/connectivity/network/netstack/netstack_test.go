@@ -811,7 +811,7 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
 	t.Helper()
 
-	interfaces, err := ni.ListInterfaces()
+	interfaces, err := ni.ListInterfaces(fidl.Background())
 	if err != nil {
 		t.Fatalf("ni.ListInterfaces() failed: %s", err)
 	}
@@ -856,7 +856,7 @@ func TestNetstackImpl_GetInterfaces2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	interfaces, err := ni.GetInterfaces2()
+	interfaces, err := ni.GetInterfaces2(fidl.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -937,7 +937,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				result, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr)
+				result, err := ni.AddInterfaceAddress(fidl.Background(), uint64(ifState.nicid), ifAddr)
 				AssertNoError(t, err)
 				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
@@ -961,7 +961,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				result, err := ni.DelInterfaceAddress(uint64(ifState.nicid), ifAddr)
+				result, err := ni.DelInterfaceAddress(fidl.Background(), uint64(ifState.nicid), ifAddr)
 				AssertNoError(t, err)
 				if result != stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.DelInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
@@ -1003,7 +1003,7 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 		PrefixLen: uint8(addr.PrefixLen),
 	}
 
-	result, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr)
+	result, err := ni.AddInterfaceAddress(fidl.Background(), uint64(ifState.nicid), ifAddr)
 	AssertNoError(t, err)
 	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
@@ -1017,7 +1017,7 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 	addr.PrefixLen *= 2
 	ifAddr.PrefixLen *= 2
 
-	result, err = ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr)
+	result, err = ni.AddInterfaceAddress(fidl.Background(), uint64(ifState.nicid), ifAddr)
 	AssertNoError(t, err)
 	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)

@@ -7,6 +7,7 @@ package netstack
 import (
 	"fmt"
 	"net"
+	"syscall/zx/fidl"
 
 	"syslog"
 
@@ -21,9 +22,9 @@ type nameLookupImpl struct {
 	dnsClient *dns.Client
 }
 
-var _ fidlnet.NameLookup = (*nameLookupImpl)(nil)
+var _ fidlnet.NameLookupWithCtx = (*nameLookupImpl)(nil)
 
-func (sp *nameLookupImpl) LookupIp(hostname string, options fidlnet.LookupIpOptions) (fidlnet.NameLookupLookupIpResult, error) {
+func (sp *nameLookupImpl) LookupIp(_ fidl.Context, hostname string, options fidlnet.LookupIpOptions) (fidlnet.NameLookupLookupIpResult, error) {
 	var result fidlnet.NameLookupLookupIpResult
 	var response fidlnet.NameLookupLookupIpResponse
 
@@ -66,7 +67,7 @@ func (sp *nameLookupImpl) LookupIp(hostname string, options fidlnet.LookupIpOpti
 }
 
 // This only supports localhost right now, since the netstack DNS client doesn't support reverse DNS.
-func (sp *nameLookupImpl) LookupHostname(addr fidlnet.IpAddress) (fidlnet.NameLookupLookupHostnameResult, error) {
+func (sp *nameLookupImpl) LookupHostname(_ fidl.Context, addr fidlnet.IpAddress) (fidlnet.NameLookupLookupHostnameResult, error) {
 	var result fidlnet.NameLookupLookupHostnameResult
 	switch typ := addr.Which(); typ {
 	case fidlnet.IpAddressIpv4:

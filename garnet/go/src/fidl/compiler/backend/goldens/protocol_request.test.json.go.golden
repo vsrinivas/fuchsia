@@ -12,17 +12,6 @@ import (
 
 
 
-type parentGetChildResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	C ChildInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
-}
-
-var _mparentGetChildResponse = _bindings.CreateLazyMarshaler(parentGetChildResponse{})
-
-func (msg *parentGetChildResponse) Marshaler() _bindings.Marshaler {
-	return _mparentGetChildResponse
-}
-
 type parentWithCtxGetChildResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	C ChildWithCtxInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
@@ -32,17 +21,6 @@ var _mparentWithCtxGetChildResponse = _bindings.CreateLazyMarshaler(parentWithCt
 
 func (msg *parentWithCtxGetChildResponse) Marshaler() _bindings.Marshaler {
 	return _mparentWithCtxGetChildResponse
-}
-
-type parentGetChildRequestResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	R ChildInterfaceRequest`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
-}
-
-var _mparentGetChildRequestResponse = _bindings.CreateLazyMarshaler(parentGetChildRequestResponse{})
-
-func (msg *parentGetChildRequestResponse) Marshaler() _bindings.Marshaler {
-	return _mparentGetChildRequestResponse
 }
 
 type parentWithCtxGetChildRequestResponse struct {
@@ -56,17 +34,6 @@ func (msg *parentWithCtxGetChildRequestResponse) Marshaler() _bindings.Marshaler
 	return _mparentWithCtxGetChildRequestResponse
 }
 
-type parentTakeChildRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	C ChildInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
-}
-
-var _mparentTakeChildRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequest{})
-
-func (msg *parentTakeChildRequest) Marshaler() _bindings.Marshaler {
-	return _mparentTakeChildRequest
-}
-
 type parentWithCtxTakeChildRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	C ChildWithCtxInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
@@ -76,17 +43,6 @@ var _mparentWithCtxTakeChildRequest = _bindings.CreateLazyMarshaler(parentWithCt
 
 func (msg *parentWithCtxTakeChildRequest) Marshaler() _bindings.Marshaler {
 	return _mparentWithCtxTakeChildRequest
-}
-
-type parentTakeChildRequestRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	R ChildInterfaceRequest`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
-}
-
-var _mparentTakeChildRequestRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequestRequest{})
-
-func (msg *parentTakeChildRequestRequest) Marshaler() _bindings.Marshaler {
-	return _mparentTakeChildRequestRequest
 }
 
 type parentWithCtxTakeChildRequestRequest struct {
@@ -105,9 +61,6 @@ const (
 type ChildWithCtxInterface _bindings.ChannelProxy
 
 
-type ChildInterface _bindings.ChannelProxy
-
-
 
 type ChildWithCtx interface {
 }
@@ -117,44 +70,11 @@ type ChildWithCtx interface {
 type ChildWithCtxTransitionalBase struct {}
 
 
-
-
-type Child interface {
-}
-
-type ChildTransitionalBase struct {}
-
-
 type ChildWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewChildWithCtxInterfaceRequest() (ChildWithCtxInterfaceRequest, *ChildWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return ChildWithCtxInterfaceRequest(req), (*ChildWithCtxInterface)(cli), err
-}
-
-type ChildInterfaceRequest _bindings.InterfaceRequest
-
-func NewChildInterfaceRequest() (ChildInterfaceRequest, *ChildInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return ChildInterfaceRequest(req), (*ChildInterface)(cli), err
-}
-
-type ChildStub struct {
-	Impl Child
-}
-
-func (s_ *ChildStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *ChildStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type ChildWithCtxStub struct {
@@ -168,10 +88,6 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 }
 type ChildService struct {
 	_bindings.BindingSet
-}
-
-func (s *ChildService) Add(impl Child, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ChildStub{Impl: impl}, c, onError)
 }
 
 func (s *ChildService) AddWithCtx(impl ChildWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
@@ -231,39 +147,6 @@ func (p *ParentWithCtxInterface) TakeChildRequest(ctx_ _bindings.Context, r Chil
 	return err_
 }
 
-type ParentInterface _bindings.ChannelProxy
-
-
-func (p *ParentInterface) GetChild() (ChildInterface, error) {
-	var req_ _bindings.Message
-	resp_ := &parentGetChildResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildGenOrdinal, req_, resp_, ParentGetChildOrdinal, ParentGetChildGenOrdinal)
-	return resp_.C, err_
-}
-
-func (p *ParentInterface) GetChildRequest() (ChildInterfaceRequest, error) {
-	var req_ _bindings.Message
-	resp_ := &parentGetChildRequestResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestGenOrdinal, req_, resp_, ParentGetChildRequestOrdinal, ParentGetChildRequestGenOrdinal)
-	return resp_.R, err_
-}
-
-func (p *ParentInterface) TakeChild(c ChildInterface) error {
-	req_ := &parentTakeChildRequest{
-		C: c,
-	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildGenOrdinal, req_)
-	return err_
-}
-
-func (p *ParentInterface) TakeChildRequest(r ChildInterfaceRequest) error {
-	req_ := &parentTakeChildRequestRequest{
-		R: r,
-	}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestGenOrdinal, req_)
-	return err_
-}
-
 
 type ParentWithCtx interface {
 	GetChild(ctx_ _bindings.Context) (ChildWithCtxInterface, error)
@@ -277,80 +160,11 @@ type ParentWithCtx interface {
 type ParentWithCtxTransitionalBase struct {}
 
 
-
-
-type Parent interface {
-	GetChild() (ChildInterface, error)
-	GetChildRequest() (ChildInterfaceRequest, error)
-	TakeChild(c ChildInterface) error
-	TakeChildRequest(r ChildInterfaceRequest) error
-}
-
-type ParentTransitionalBase struct {}
-
-
 type ParentWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewParentWithCtxInterfaceRequest() (ParentWithCtxInterfaceRequest, *ParentWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return ParentWithCtxInterfaceRequest(req), (*ParentWithCtxInterface)(cli), err
-}
-
-type ParentInterfaceRequest _bindings.InterfaceRequest
-
-func NewParentInterfaceRequest() (ParentInterfaceRequest, *ParentInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return ParentInterfaceRequest(req), (*ParentInterface)(cli), err
-}
-
-type ParentStub struct {
-	Impl Parent
-}
-
-func (s_ *ParentStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *ParentStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case ParentGetChildOrdinal:
-		fallthrough
-	case ParentGetChildGenOrdinal:
-		c, err_ := s_.Impl.GetChild()
-		out_ := parentGetChildResponse{}
-		out_.C = c
-		return &out_, true, err_
-	case ParentGetChildRequestOrdinal:
-		fallthrough
-	case ParentGetChildRequestGenOrdinal:
-		r, err_ := s_.Impl.GetChildRequest()
-		out_ := parentGetChildRequestResponse{}
-		out_.R = r
-		return &out_, true, err_
-	case ParentTakeChildOrdinal:
-		fallthrough
-	case ParentTakeChildGenOrdinal:
-		in_ := parentTakeChildRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.TakeChild(in_.C)
-		return nil, false, err_
-	case ParentTakeChildRequestOrdinal:
-		fallthrough
-	case ParentTakeChildRequestGenOrdinal:
-		in_ := parentTakeChildRequestRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.TakeChildRequest(in_.R)
-		return nil, false, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type ParentWithCtxStub struct {
@@ -404,10 +218,6 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 }
 type ParentService struct {
 	_bindings.BindingSet
-}
-
-func (s *ParentService) Add(impl Parent, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ParentStub{Impl: impl}, c, onError)
 }
 
 func (s *ParentService) AddWithCtx(impl ParentWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {

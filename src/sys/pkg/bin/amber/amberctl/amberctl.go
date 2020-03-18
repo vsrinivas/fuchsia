@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"time"
 	"unicode"
 
@@ -93,15 +94,15 @@ func (e ErrGetFile) Error() string {
 }
 
 type Services struct {
-	resolver      *pkg.PackageResolverInterface
-	repoMgr       *pkg.RepositoryManagerInterface
-	rewriteEngine *rewrite.EngineInterface
-	space         *space.ManagerInterface
-	updateManager *update.ManagerInterface
+	resolver      *pkg.PackageResolverWithCtxInterface
+	repoMgr       *pkg.RepositoryManagerWithCtxInterface
+	rewriteEngine *rewrite.EngineWithCtxInterface
+	space         *space.ManagerWithCtxInterface
+	updateManager *update.ManagerWithCtxInterface
 }
 
-func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverInterface {
-	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
+func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverWithCtxInterface {
+	req, pxy, err := pkg.NewPackageResolverWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -109,8 +110,8 @@ func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverInterfac
 	return pxy
 }
 
-func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerInterface {
-	req, pxy, err := pkg.NewRepositoryManagerInterfaceRequest()
+func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerWithCtxInterface {
+	req, pxy, err := pkg.NewRepositoryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -118,8 +119,8 @@ func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerInte
 	return pxy
 }
 
-func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineInterface {
-	req, pxy, err := rewrite.NewEngineInterfaceRequest()
+func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineWithCtxInterface {
+	req, pxy, err := rewrite.NewEngineWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -127,8 +128,8 @@ func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineInterface {
 	return pxy
 }
 
-func connectToSpace(ctx *context.Context) *space.ManagerInterface {
-	req, pxy, err := space.NewManagerInterfaceRequest()
+func connectToSpace(ctx *context.Context) *space.ManagerWithCtxInterface {
+	req, pxy, err := space.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -136,8 +137,8 @@ func connectToSpace(ctx *context.Context) *space.ManagerInterface {
 	return pxy
 }
 
-func connectToUpdateManager(ctx *context.Context) *update.ManagerInterface {
-	req, pxy, err := update.NewManagerInterfaceRequest()
+func connectToUpdateManager(ctx *context.Context) *update.ManagerWithCtxInterface {
+	req, pxy, err := update.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -236,13 +237,13 @@ func rewriteRuleForId(id string) rewrite.Rule {
 	return rule
 }
 
-func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineInterface, rule rewrite.Rule) error {
-	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionInterface) error {
-		if err := transaction.ResetAll(); err != nil {
+func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface, rule rewrite.Rule) error {
+	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionWithCtxInterface) error {
+		if err := transaction.ResetAll(fidl.Background()); err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
 		}
 
-		s, err := transaction.Add(rule)
+		s, err := transaction.Add(fidl.Background(), rule)
 		if err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Add IPC encountered an error: %s", err)
 		}
@@ -255,9 +256,9 @@ func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineInterface, rule rew
 	})
 }
 
-func removeAllDynamicRewriteRules(rewriteEngine *rewrite.EngineInterface) error {
-	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionInterface) error {
-		if err := transaction.ResetAll(); err != nil {
+func removeAllDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface) error {
+	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionWithCtxInterface) error {
+		if err := transaction.ResetAll(fidl.Background()); err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
 		}
 
@@ -267,16 +268,16 @@ func removeAllDynamicRewriteRules(rewriteEngine *rewrite.EngineInterface) error 
 
 // doRewriteRuleEditTransaction executes a rewrite rule edit transaction using
 // the provided callback, retrying on data races a few times before giving up.
-func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineInterface, cb func(*rewrite.EditTransactionInterface) error) error {
+func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineWithCtxInterface, cb func(*rewrite.EditTransactionWithCtxInterface) error) error {
 	for i := 0; i < 10; i++ {
 		err, status := func() (error, zx.Status) {
 			var status zx.Status
-			req, transaction, err := rewrite.NewEditTransactionInterfaceRequest()
+			req, transaction, err := rewrite.NewEditTransactionWithCtxInterfaceRequest()
 			if err != nil {
 				return fmt.Errorf("creating edit transaction: %s", err), status
 			}
 			defer transaction.Close()
-			if err := rewriteEngine.StartEditTransaction(req); err != nil {
+			if err := rewriteEngine.StartEditTransaction(fidl.Background(), req); err != nil {
 				return fmt.Errorf("fuchsia.pkg.rewrite.Engine IPC encountered an error: %s", err), status
 			}
 
@@ -284,7 +285,7 @@ func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineInterface, cb fun
 				return err, status
 			}
 
-			s, err := transaction.Commit()
+			s, err := transaction.Commit(fidl.Background())
 			if err != nil {
 				return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Commit IPC encountered an error: %s", err), status
 			}
@@ -395,7 +396,7 @@ func addSource(services Services, repoOnly bool) error {
 	}
 
 	repoCfg := upgradeSourceConfig(cfg)
-	s, err := services.repoMgr.Add(repoCfg)
+	s, err := services.repoMgr.Add(fidl.Background(), repoCfg)
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
 	}
@@ -433,7 +434,7 @@ func rmSource(services Services) error {
 		return err
 	}
 
-	s, err := services.repoMgr.Remove(repoUrlForId(name))
+	s, err := services.repoMgr.Remove(fidl.Background(), repoUrlForId(name))
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
 	}
@@ -445,7 +446,7 @@ func rmSource(services Services) error {
 	return nil
 }
 
-func getUp(r *pkg.PackageResolverInterface) error {
+func getUp(r *pkg.PackageResolverWithCtxInterface) error {
 	if *name == "" {
 		return fmt.Errorf("no source id provided")
 	}
@@ -462,18 +463,18 @@ func getUp(r *pkg.PackageResolverInterface) error {
 	return err
 }
 
-func listSources(r *pkg.RepositoryManagerInterface) error {
-	req, iter, err := pkg.NewRepositoryIteratorInterfaceRequest()
+func listSources(r *pkg.RepositoryManagerWithCtxInterface) error {
+	req, iter, err := pkg.NewRepositoryIteratorWithCtxInterfaceRequest()
 	if err != nil {
 		return err
 	}
 	defer iter.Close()
-	if err := r.List(req); err != nil {
+	if err := r.List(fidl.Background(), req); err != nil {
 		return err
 	}
 
 	for {
-		repos, err := iter.Next()
+		repos, err := iter.Next(fidl.Background())
 		if err != nil {
 			return err
 		}
@@ -541,13 +542,14 @@ func do(services Services) int {
 		return 1
 	case "system_update":
 		result, err := services.updateManager.CheckNow(
+			fidl.Background(),
 			update.CheckOptions{
 				Initiator:                                  update.InitiatorUser,
 				InitiatorPresent:                           true,
 				AllowAttachingToExistingUpdateCheck:        false,
 				AllowAttachingToExistingUpdateCheckPresent: true,
 			},
-			update.MonitorInterface{Channel: zx.Channel(zx.HandleInvalid)})
+			update.MonitorWithCtxInterface{Channel: zx.Channel(zx.HandleInvalid)})
 		if err != nil {
 			log.Printf("error checking for system update: %s", err)
 			return 1
@@ -594,7 +596,7 @@ func do(services Services) int {
 		}
 		fmt.Printf("Source %q disabled\n", *name)
 	case "gc":
-		res, err := services.space.Gc()
+		res, err := services.space.Gc(fidl.Background())
 		if err != nil {
 			log.Printf("Error collecting garbage: %s", err)
 			return 1
@@ -697,7 +699,7 @@ type resolveResult struct {
 	err    error
 }
 
-func getUpdateComplete(r *pkg.PackageResolverInterface, name string, version *string, merkle *string) error {
+func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, version *string, merkle *string) error {
 	pkgUri := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s", name)
 	if *version != "" {
 		pkgUri = fmt.Sprintf("%s/%s", pkgUri, *version)
@@ -709,15 +711,15 @@ func getUpdateComplete(r *pkg.PackageResolverInterface, name string, version *st
 	selectors := []string{}
 	updatePolicy := pkg.UpdatePolicy{}
 
-	dirReq, dirPxy, err := fuchsiaio.NewDirectoryInterfaceRequest()
+	dirReq, dirPxy, err := fuchsiaio.NewDirectoryWithCtxInterfaceRequest()
 	if err != nil {
 		return err
 	}
-	defer dirPxy.Close()
+	defer dirPxy.Close(fidl.Background())
 
 	ch := make(chan resolveResult)
 	go func() {
-		status, err := r.Resolve(pkgUri, selectors, updatePolicy, dirReq)
+		status, err := r.Resolve(fidl.Background(), pkgUri, selectors, updatePolicy, dirReq)
 		ch <- resolveResult{
 			status: zx.Status(status),
 			err:    err,

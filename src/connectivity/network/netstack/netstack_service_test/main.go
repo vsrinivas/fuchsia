@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"syscall/zx/fidl"
 	"time"
 
 	"app/context"
@@ -20,7 +21,7 @@ import (
 
 type testApp struct {
 	ctx      *context.Context
-	netstack *netstack.NetstackInterface
+	netstack *netstack.NetstackWithCtxInterface
 }
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 	flag.StringVar(&getaddr, "getaddr", "", "Lookup the given address via DNS")
 	flag.Parse()
 
-	req, pxy, err := netstack.NewNetstackInterfaceRequest()
+	req, pxy, err := netstack.NewNetstackWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -55,8 +56,8 @@ func usage() {
 
 func (a *testApp) getAddr(name string) {
 	fmt.Printf("Looking up %v... ", name)
-	port, _ := a.netstack.GetPortForService("http", netstack.ProtocolTcp)
-	resp, netErr, _ := a.netstack.GetAddress(name, port)
+	port, _ := a.netstack.GetPortForService(fidl.Background(), "http", netstack.ProtocolTcp)
+	resp, netErr, _ := a.netstack.GetAddress(fidl.Background(), name, port)
 	if netErr.Status != netstack.StatusOk {
 		fmt.Fprintf(os.Stderr, "failed: %v\n", netErr)
 	} else {
@@ -70,7 +71,7 @@ func (a *testApp) getAddr(name string) {
 func (a *testApp) listen() {
 	fmt.Printf("Listening for changes...\n")
 	for {
-		interfaces, err := a.netstack.ExpectOnInterfacesChanged()
+		interfaces, err := a.netstack.ExpectOnInterfacesChanged(fidl.Background())
 		if err != nil {
 			fmt.Println("OnInterfacesChanged failed:", err)
 		}

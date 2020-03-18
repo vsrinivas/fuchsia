@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"unicode/utf8"
 
 	"app/context"
@@ -126,7 +127,7 @@ func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
 	if err != nil {
 		return zx.Socket(zx.HandleInvalid), err
 	}
-	req, logSink, err := logger.NewLogSinkInterfaceRequest()
+	req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
 	if err != nil {
 		_ = localS.Close()
 		_ = peerS.Close()
@@ -134,7 +135,7 @@ func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
 	}
 	c.ConnectToEnvService(req)
 	{
-		err := logSink.Connect(peerS)
+		err := logSink.Connect(fidl.Background(), peerS)
 		_ = logSink.Close()
 		if err != nil {
 			_ = localS.Close()

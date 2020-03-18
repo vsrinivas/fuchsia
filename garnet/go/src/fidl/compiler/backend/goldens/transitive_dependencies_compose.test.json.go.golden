@@ -13,17 +13,6 @@ import (
 
 
 
-type topGetFooResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Foo bottom.Foo`fidl:"0" fidl_offset_v1:"0"`
-}
-
-var _mtopGetFooResponse = _bindings.CreateLazyMarshaler(topGetFooResponse{})
-
-func (msg *topGetFooResponse) Marshaler() _bindings.Marshaler {
-	return _mtopGetFooResponse
-}
-
 type topWithCtxGetFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	Foo bottom.Foo`fidl:"0" fidl_offset_v1:"0"`
@@ -49,16 +38,6 @@ func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (bottom.Foo, error)
 	return resp_.Foo, err_
 }
 
-type TopInterface _bindings.ChannelProxy
-
-
-func (p *TopInterface) GetFoo() (bottom.Foo, error) {
-	var req_ _bindings.Message
-	resp_ := &topGetFooResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(TopGetFooGenOrdinal, req_, resp_, TopGetFooOrdinal, TopGetFooGenOrdinal)
-	return resp_.Foo, err_
-}
-
 
 type TopWithCtx interface {
 	GetFoo(ctx_ _bindings.Context) (bottom.Foo, error)
@@ -69,52 +48,11 @@ type TopWithCtx interface {
 type TopWithCtxTransitionalBase struct {}
 
 
-
-
-type Top interface {
-	GetFoo() (bottom.Foo, error)
-}
-
-type TopTransitionalBase struct {}
-
-
 type TopWithCtxInterfaceRequest _bindings.InterfaceRequest
 
 func NewTopWithCtxInterfaceRequest() (TopWithCtxInterfaceRequest, *TopWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
 	return TopWithCtxInterfaceRequest(req), (*TopWithCtxInterface)(cli), err
-}
-
-type TopInterfaceRequest _bindings.InterfaceRequest
-
-func NewTopInterfaceRequest() (TopInterfaceRequest, *TopInterface, error) {
-	req, cli, err := _bindings.NewInterfaceRequest()
-	return TopInterfaceRequest(req), (*TopInterface)(cli), err
-}
-
-type TopStub struct {
-	Impl Top
-}
-
-func (s_ *TopStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
-	if !ok {
-		return nil, false, _bindings.ErrMissingMarshalerContext
-	}
-	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
-}
-
-func (s_ *TopStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case TopGetFooOrdinal:
-		fallthrough
-	case TopGetFooGenOrdinal:
-		foo, err_ := s_.Impl.GetFoo()
-		out_ := topGetFooResponse{}
-		out_.Foo = foo
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 type TopWithCtxStub struct {
@@ -135,10 +73,6 @@ func (s_ *TopWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 }
 type TopService struct {
 	_bindings.BindingSet
-}
-
-func (s *TopService) Add(impl Top, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&TopStub{Impl: impl}, c, onError)
 }
 
 func (s *TopService) AddWithCtx(impl TopWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {

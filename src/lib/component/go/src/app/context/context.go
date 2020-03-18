@@ -79,11 +79,11 @@ type Context struct {
 	connector   Connector
 	environment struct {
 		sync.Once
-		*sys.EnvironmentInterface
+		*sys.EnvironmentWithCtxInterface
 	}
 	launcher struct {
 		sync.Once
-		*sys.LauncherInterface
+		*sys.LauncherWithCtxInterface
 	}
 	OutgoingService OutDirectory
 }
@@ -113,7 +113,7 @@ func CreateFromStartupInfo() *Context {
 	}); directoryRequest.IsValid() {
 		if err := (&DirectoryWrapper{
 			Directory: mapDirectory(c.OutgoingService),
-		}).addConnection(0, 0, io.NodeInterfaceRequest{
+		}).addConnection(fidl.Background(), 0, 0, io.NodeWithCtxInterfaceRequest{
 			Channel: zx.Channel(directoryRequest),
 		}); err != nil {
 			panic(err)
@@ -127,28 +127,28 @@ func (c *Context) Connector() *Connector {
 	return &c.connector
 }
 
-func (c *Context) Environment() *sys.EnvironmentInterface {
+func (c *Context) Environment() *sys.EnvironmentWithCtxInterface {
 	c.environment.Do(func() {
-		r, p, err := sys.NewEnvironmentInterfaceRequest()
+		r, p, err := sys.NewEnvironmentWithCtxInterfaceRequest()
 		if err != nil {
 			panic(err)
 		}
-		c.environment.EnvironmentInterface = p
+		c.environment.EnvironmentWithCtxInterface = p
 		c.Connector().ConnectToEnvService(r)
 	})
-	return c.environment.EnvironmentInterface
+	return c.environment.EnvironmentWithCtxInterface
 }
 
-func (c *Context) Launcher() *sys.LauncherInterface {
+func (c *Context) Launcher() *sys.LauncherWithCtxInterface {
 	c.launcher.Do(func() {
-		r, p, err := sys.NewLauncherInterfaceRequest()
+		r, p, err := sys.NewLauncherWithCtxInterfaceRequest()
 		if err != nil {
 			panic(err)
 		}
-		c.launcher.LauncherInterface = p
+		c.launcher.LauncherWithCtxInterface = p
 		c.Connector().ConnectToEnvService(r)
 	})
-	return c.launcher.LauncherInterface
+	return c.launcher.LauncherWithCtxInterface
 }
 
 func (c *Context) ConnectToEnvService(r fidl.ServiceRequest) {

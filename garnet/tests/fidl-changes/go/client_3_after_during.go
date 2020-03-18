@@ -6,18 +6,19 @@ package main
 
 import (
 	"fidl/fidl/test/during"
+	"syscall/zx/fidl"
 )
 
 type client_after_during struct {
-	addMethod    *during.AddMethodInterface
-	removeMethod *during.RemoveMethodInterface
-	addEvent     *during.AddEventInterface
-	removeEvent  *during.RemoveEventInterface
+	addMethod    *during.AddMethodWithCtxInterface
+	removeMethod *during.RemoveMethodWithCtxInterface
+	addEvent     *during.AddEventWithCtxInterface
+	removeEvent  *during.RemoveEventWithCtxInterface
 }
 
 func (c client_after_during) callAllMethodsExpectAllEvents() {
-	c.addMethod.ExistingMethod()
-	c.removeMethod.ExistingMethod()
-	c.addMethod.NewMethod()
-	_ = c.addEvent.ExpectNewEvent()
+	c.addMethod.ExistingMethod(fidl.Background())
+	c.removeMethod.ExistingMethod(fidl.Background())
+	c.addMethod.NewMethod(fidl.Background())
+	_ = c.addEvent.ExpectNewEvent(fidl.Background())
 }
