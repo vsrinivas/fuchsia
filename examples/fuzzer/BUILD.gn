@@ -29,6 +29,7 @@ fuzzers_package("fuzzing-examples") {
     # Each list of fuzzers can contain simple labels...
     ":overflow_fuzzer",
     ":trap_fuzzer",
+    ":baz_fuzzer",
     {
       # ... or scopes with additional fields, like a non-default output name.
       label = ":oom_fuzzer"
