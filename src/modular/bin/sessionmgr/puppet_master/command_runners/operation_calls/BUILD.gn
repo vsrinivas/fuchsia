@@ -22,7 +22,6 @@ source_set("add_mod_call") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
     "//src/modular/lib/entity/cpp:json",
-    "//src/modular/lib/module_manifest:module_facet_reader",
   ]
 
   public_deps = [

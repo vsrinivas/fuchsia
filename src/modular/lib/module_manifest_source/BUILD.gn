@@ -24,7 +24,6 @@ source_set("json") {
     ":module_manifest_source",
     "//src/lib/json_parser",
     "//src/modular/lib/fidl:json_xdr",
-    "//src/modular/lib/module_manifest:json_xdr",
     "//third_party/rapidjson",
   ]
 }

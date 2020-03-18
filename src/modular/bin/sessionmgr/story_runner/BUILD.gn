@@ -66,7 +66,6 @@ source_set("story_runner") {
     "//src/modular/lib/ledger_client:operations",
     "//src/modular/lib/ledger_client:page_client",
     "//src/modular/lib/ledger_client:types",
-    "//src/modular/lib/module_manifest:module_facet_reader",
     "//src/modular/lib/string_escape",
   ]
 

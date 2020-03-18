@@ -138,6 +138,5 @@ source_set("make_production_impl") {
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:no_op_command_runner",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:remove_mod_command_runner",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:set_focus_state_command_runner",
-    "//src/modular/lib/module_manifest:module_facet_reader",
   ]
 }

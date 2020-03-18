@@ -67,7 +67,6 @@ source_set("add_mod_command_runner") {
   deps = [
     "//src/lib/syslog/cpp",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
-    "//src/modular/lib/module_manifest:module_facet_reader",
   ]
 
   public_deps = [
@@ -88,7 +87,6 @@ executable("add_mod_command_runner_unittest") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:entity_resolver_fake",
-    "//src/modular/lib/testing:module_facet_reader_fake",
     "//src/modular/lib/testing:test_with_session_storage",
   ]
 }

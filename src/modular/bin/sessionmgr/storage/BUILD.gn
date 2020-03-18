@@ -145,7 +145,6 @@ source_set("story_storage_xdr") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/lib/fsl",
     "//src/modular/lib/fidl:json_xdr",
-    "//src/modular/lib/module_manifest:json_xdr",
   ]
 }
 
