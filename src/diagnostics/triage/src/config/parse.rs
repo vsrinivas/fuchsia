@@ -295,7 +295,7 @@ fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>
 fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
     let (remainder, (items, operators)) = items_and_separators(
         expression_primitive,
-        alt((function!("*", Mul), function!("/", Div))),
+        alt((function!("*", Mul), function!("//", IntDiv), function!("/", FloatDiv))),
         i,
     )?;
     Ok((remainder, build_expression(items, operators)))
@@ -533,6 +533,29 @@ mod test {
         assert_eq!(eval!("2.0+3"), MetricValue::Float(5.0));
         assert_eq!(eval!("2+3.0"), MetricValue::Float(5.0));
         assert_eq!(eval!("2.0+2.0"), MetricValue::Float(4.0));
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_div_operations() -> Result<(), Error> {
+        assert_eq!(eval!("5.0/2"), MetricValue::Float(2.5));
+        assert_eq!(eval!("-5.0/2"), MetricValue::Float(-2.5));
+        assert_eq!(eval!("5.0/2.0"), MetricValue::Float(2.5));
+        assert_eq!(eval!("-5.0/2.0"), MetricValue::Float(-2.5));
+        assert_eq!(eval!("5/2"), MetricValue::Float(2.5));
+        assert_eq!(eval!("-5/2"), MetricValue::Float(-2.5));
+
+        // int division should truncate towards zero
+        assert_eq!(eval!("5.0//2"), MetricValue::Float(2.0));
+        assert_eq!(eval!("-5.0//2"), MetricValue::Float(-2.0));
+        assert_eq!(eval!("5.0//2.0"), MetricValue::Float(2.0));
+        assert_eq!(eval!("-5.0//2.0"), MetricValue::Float(-2.0));
+        assert_eq!(eval!("5//2"), MetricValue::Int(2));
+        assert_eq!(eval!("-5//2"), MetricValue::Int(-2));
+
+        // test truncation happens after division
+        assert_eq!(eval!("5000//5.1"), MetricValue::Float(980.0));
         Ok(())
     }
 
@@ -542,7 +565,7 @@ mod test {
         assert_eq!(eval!("2+3*4>14-1*1"), MetricValue::Bool(true));
         assert_eq!(eval!("3*4+2"), MetricValue::Int(14));
         assert_eq!(eval!("2-3-4"), MetricValue::Int(-5));
-        assert_eq!(eval!("6/3*4"), MetricValue::Int(8));
+        assert_eq!(eval!("6//3*4"), MetricValue::Int(8));
         assert_eq!(eval!("2-3-4"), MetricValue::Int(-5));
         assert_eq!(eval!("(2+3)*4"), MetricValue::Int(20));
         assert_eq!(eval!("2++4"), MetricValue::Int(6));
@@ -554,7 +577,7 @@ mod test {
 
     #[test]
     fn parser_accepts_whitespace() -> Result<(), Error> {
-        assert_eq!(eval!(" 2 + +3 * 4 - 5 / ( -2 + Min ( -2 , 3 ) ) "), MetricValue::Int(15));
+        assert_eq!(eval!(" 2 + +3 * 4 - 5 // ( -2 + Min ( -2 , 3 ) ) "), MetricValue::Int(15));
         Ok(())
     }
 

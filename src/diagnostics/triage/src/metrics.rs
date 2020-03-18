@@ -47,12 +47,25 @@ pub enum MetricValue {
     Missing(String),
 }
 
+impl Into<MetricValue> for f64 {
+    fn into(self) -> MetricValue {
+        MetricValue::Float(self)
+    }
+}
+
+impl Into<MetricValue> for i64 {
+    fn into(self) -> MetricValue {
+        MetricValue::Int(self)
+    }
+}
+
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Function {
     Add,
     Sub,
     Mul,
-    Div,
+    FloatDiv,
+    IntDiv,
     Greater,
     Less,
     GreaterEq,
@@ -64,6 +77,42 @@ pub enum Function {
     And,
     Or,
     Not,
+}
+
+/// Macro which handles applying a function to 2 operands and returns a
+/// MetricValue.
+///
+/// The macro handles type promotion and promotion to the specified type.
+macro_rules! apply_math_operands {
+    ($left:expr, $right:expr, $function:expr, $ty:ty) => {
+        match ($left, $right) {
+            (MetricValue::Int(int1), MetricValue::Int(int2)) => {
+                // TODO(cphoenix): Instead of converting to float, use int functions.
+                ($function(int1 as f64, int2 as f64) as $ty).into()
+            }
+            (MetricValue::Int(int1), MetricValue::Float(float2)) => {
+                $function(int1 as f64, float2).into()
+            }
+            (MetricValue::Float(float1), MetricValue::Int(int2)) => {
+                $function(float1, int2 as f64).into()
+            }
+            (MetricValue::Float(float1), MetricValue::Float(float2)) => {
+                $function(float1, float2).into()
+            }
+            (bad1, bad2) => MetricValue::Missing(format!("{:?} or {:?} not numeric", bad1, bad2)),
+        }
+    };
+}
+
+/// A macro which extracts two binary operands from a vec of operands and
+/// applies the given function.
+macro_rules! extract_and_apply_math_operands {
+    ($self:ident, $namespace:expr, $function:expr, $operands:expr, $ty:ty) => {
+        match MetricState::extract_binary_operands($self, $namespace, $operands) {
+            Ok((left, right)) => apply_math_operands!(left, right, $function, $ty),
+            Err(value) => value,
+        }
+    };
 }
 
 /// Expression represents the parsed body of an Eval Metric. It applies
@@ -150,7 +199,8 @@ impl<'a> MetricState<'a> {
             Function::Add => self.fold_math(namespace, &|a, b| a + b, operands),
             Function::Sub => self.apply_math(namespace, &|a, b| a - b, operands),
             Function::Mul => self.fold_math(namespace, &|a, b| a * b, operands),
-            Function::Div => self.apply_math(namespace, &|a, b| a / b, operands),
+            Function::FloatDiv => self.apply_math_f(namespace, &|a, b| a / b, operands),
+            Function::IntDiv => self.apply_math(namespace, &|a, b| f64::trunc(a / b), operands),
             Function::Greater => self.apply_cmp(namespace, &|a, b| a > b, operands),
             Function::Less => self.apply_cmp(namespace, &|a, b| a < b, operands),
             Function::GreaterEq => self.apply_cmp(namespace, &|a, b| a >= b, operands),
@@ -196,34 +246,40 @@ impl<'a> MetricState<'a> {
     }
 
     // Applies a given function to two values, handling type-promotion.
+    // This function will return a MetricValue::Int if both values are ints
+    // and a MetricValue::Float if not.
     fn apply_math(
         &self,
         namespace: &String,
         function: &dyn (Fn(f64, f64) -> f64),
         operands: &Vec<Expression>,
     ) -> MetricValue {
+        extract_and_apply_math_operands!(self, namespace, function, operands, i64)
+    }
+
+    // Applies a given function to two values, handling type-promotion.
+    // This function will always return a MetricValue::Float
+    fn apply_math_f(
+        &self,
+        namespace: &String,
+        function: &dyn (Fn(f64, f64) -> f64),
+        operands: &Vec<Expression>,
+    ) -> MetricValue {
+        extract_and_apply_math_operands!(self, namespace, function, operands, f64)
+    }
+
+    fn extract_binary_operands(
+        &self,
+        namespace: &String,
+        operands: &Vec<Expression>,
+    ) -> Result<(MetricValue, MetricValue), MetricValue> {
         if operands.len() != 2 {
-            return MetricValue::Missing(format!(
+            return Err(MetricValue::Missing(format!(
                 "Bad arg list {:?} for binary operator",
                 operands
-            ));
+            )));
         }
-        match (self.evaluate(namespace, &operands[0]), self.evaluate(namespace, &operands[1])) {
-            (MetricValue::Int(int1), MetricValue::Int(int2)) => {
-                // TODO(cphoenix): Instead of converting to float, use int functions.
-                MetricValue::Int(function(int1 as f64, int2 as f64) as i64)
-            }
-            (MetricValue::Int(int1), MetricValue::Float(float2)) => {
-                MetricValue::Float(function(int1 as f64, float2))
-            }
-            (MetricValue::Float(float1), MetricValue::Int(int2)) => {
-                MetricValue::Float(function(float1, int2 as f64))
-            }
-            (MetricValue::Float(float1), MetricValue::Float(float2)) => {
-                MetricValue::Float(function(float1, float2))
-            }
-            (bad1, bad2) => MetricValue::Missing(format!("{:?} or {:?} not numeric", bad1, bad2)),
-        }
+        Ok((self.evaluate(namespace, &operands[0]), self.evaluate(namespace, &operands[1])))
     }
 
     // Applies a comparison operator to two numbers.
