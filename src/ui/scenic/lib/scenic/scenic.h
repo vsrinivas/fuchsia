@@ -16,9 +16,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lib/inspect/cpp/inspect.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/inspect_deprecated/inspect.h"
-#include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
@@ -40,7 +39,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
         fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
   };
 
-  explicit Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
+  explicit Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
                   fit::closure quit_callback);
   ~Scenic();
 
@@ -82,7 +81,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
                       fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
   sys::ComponentContext* app_context() const { return app_context_; }
-  inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
+  inspect::Node* inspect_node() { return &inspect_node_; }
 
   size_t num_sessions();
 
@@ -108,7 +107,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
-  inspect_deprecated::Node inspect_node_;
+  inspect::Node inspect_node_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.

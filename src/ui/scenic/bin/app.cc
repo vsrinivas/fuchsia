@@ -100,7 +100,7 @@ void DisplayInfoDelegate::GetDisplayOwnershipEvent(
   }
 }
 
-App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated::Node inspect_node,
+App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),

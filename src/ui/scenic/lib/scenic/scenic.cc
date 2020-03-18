@@ -11,7 +11,7 @@
 
 namespace scenic_impl {
 
-Scenic::Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
+Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
                fit::closure quit_callback)
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),

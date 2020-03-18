@@ -35,11 +35,12 @@ source_set("scenic") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/inspect_deprecated",
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/gfx:view_focuser_registry",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//zircon/public/lib/inspect",
+    "//zircon/public/lib/inspect",
     "//zircon/public/lib/trace",
   ]
 }

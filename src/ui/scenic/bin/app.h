@@ -39,8 +39,8 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
 
 class App {
  public:
-  explicit App(std::unique_ptr<sys::ComponentContext> app_context,
-               inspect_deprecated::Node inspect_node, fit::closure quit_callback);
+  explicit App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
+               fit::closure quit_callback);
 
  private:
   void InitializeServices(escher::EscherUniquePtr escher,

@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include "src/lib/inspect_deprecated/inspect.h"
+#include "lib/inspect/cpp/inspect.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
@@ -25,7 +25,7 @@ namespace gfx {
 // particular presentation time.
 class SessionManager {
  public:
-  explicit SessionManager(inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
+  explicit SessionManager(inspect::Node inspect_node = inspect::Node());
 
   virtual ~SessionManager() = default;
 
@@ -54,7 +54,7 @@ class SessionManager {
   // Map of all the sessions.
   std::unordered_map<scheduling::SessionId, Session*> session_map_;
 
-  inspect_deprecated::Node inspect_node_;
+  inspect::Node inspect_node_;
 };
 
 }  // namespace gfx

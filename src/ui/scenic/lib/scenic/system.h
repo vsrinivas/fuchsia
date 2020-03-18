@@ -9,9 +9,9 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
 
+#include "lib/inspect/cpp/inspect.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
@@ -29,12 +29,12 @@ class Clock;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(sys::ComponentContext* app_context,
-                         inspect_deprecated::Node inspect_object, fit::closure quit_callback);
+  explicit SystemContext(sys::ComponentContext* app_context, inspect::Node inspect_object,
+                         fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
   sys::ComponentContext* app_context() const { return app_context_; }
-  inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
+  inspect::Node* inspect_node() { return &inspect_node_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
@@ -42,7 +42,7 @@ class SystemContext final {
  private:
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
-  inspect_deprecated::Node inspect_node_;
+  inspect::Node inspect_node_;
 };
 
 // Systems are a composable way to add functionality to Scenic. A System creates

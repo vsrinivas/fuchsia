@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lib/inspect/cpp/inspect.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
@@ -47,7 +47,7 @@ class Session : public CommandDispatcher {
   Session(SessionId id, SessionContext context,
           std::shared_ptr<EventReporter> event_reporter = EventReporter::Default(),
           std::shared_ptr<ErrorReporter> error_reporter = ErrorReporter::Default(),
-          inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
+          inspect::Node inspect_node = inspect::Node());
   virtual ~Session();
 
   // |CommandDispatcher|
@@ -145,8 +145,8 @@ class Session : public CommandDispatcher {
 
   scheduling::PresentId last_traced_present_id_ = 0;
 
-  inspect_deprecated::Node inspect_node_;
-  inspect_deprecated::UIntMetric inspect_resource_count_;
+  inspect::Node inspect_node_;
+  inspect::UintProperty inspect_resource_count_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

@@ -10,8 +10,8 @@
 
 #include <deque>
 
+#include "lib/inspect/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "third_party/cobalt/src/registry/buckets_config.h"
 
@@ -21,8 +21,7 @@ namespace scheduling {
 // FrameTiming::Timestamps. Used for debug data, i.e. inspect.
 class FrameStats {
  public:
-  FrameStats(inspect_deprecated::Node inspect_node,
-             std::unique_ptr<cobalt::CobaltLogger> cobalt_logger);
+  FrameStats(inspect::Node inspect_node, std::unique_ptr<cobalt::CobaltLogger> cobalt_logger);
 
   void RecordFrame(FrameTimings::Timestamps timestamps, zx::duration display_vsync_interval);
 
@@ -73,8 +72,8 @@ class FrameStats {
   std::deque<const FrameTimings::Timestamps> dropped_frames_;
   std::deque<const FrameTimings::Timestamps> delayed_frames_;
 
-  inspect_deprecated::Node inspect_node_;
-  inspect_deprecated::LazyStringProperty inspect_frame_stats_dump_;
+  inspect::Node inspect_node_;
+  inspect::LazyNode inspect_frame_stats_dump_;
 
   // Histograms for collecting latch point to actual presentation times.
   CobaltFrameHistogram cobalt_on_time_frame_times_histogram_;

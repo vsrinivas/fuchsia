@@ -12,8 +12,7 @@ namespace test {
 void ScenicTest::SetUp() {
   sys::testing::ComponentContextProvider provider;
   context_ = provider.TakeContext();
-  scenic_ =
-      std::make_unique<Scenic>(context_.get(), inspect_deprecated::Node(), [this] { QuitLoop(); });
+  scenic_ = std::make_unique<Scenic>(context_.get(), inspect::Node(), [this] { QuitLoop(); });
   InitializeScenic(scenic_.get());
 }
 

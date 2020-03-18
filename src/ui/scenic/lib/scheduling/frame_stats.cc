@@ -5,15 +5,16 @@
 #include "src/ui/scenic/lib/scheduling/frame_stats.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/resource.h>
 #include <math.h>
-#include <trace/event.h>
 
 #include <chrono>
 #include <list>
 #include <string>
+
+#include <trace/event.h>
 
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 
@@ -27,14 +28,16 @@ using cobalt_registry::kScenicRenderTimeIntBucketsStepSize;
 
 namespace scheduling {
 
-FrameStats::FrameStats(inspect_deprecated::Node inspect_node,
+FrameStats::FrameStats(inspect::Node inspect_node,
                        std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : inspect_node_(std::move(inspect_node)), cobalt_logger_(std::move(cobalt_logger)) {
-  inspect_frame_stats_dump_ = inspect_node_.CreateLazyStringProperty("Aggregate Stats", [this] {
+  inspect_frame_stats_dump_ = inspect_node_.CreateLazyValues("Aggregate Stats", [this] {
+    inspect::Inspector insp;
     std::ostringstream output;
     output << std::endl;
     ReportStats(&output);
-    return output.str();
+    insp.GetRoot().CreateString("Aggregate Stats", output.str(), &insp);
+    return fit::make_ok_promise(std::move(insp));
   });
   InitializeFrameTimeBucketConfig();
   cobalt_logging_task_.PostDelayed(async_get_default_dispatcher(), kCobaltDataCollectionInterval);

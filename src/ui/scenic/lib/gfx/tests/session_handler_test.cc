@@ -38,7 +38,7 @@ void SessionHandlerTest::TearDown() {
 
 void SessionHandlerTest::InitializeScenic() {
   sys::testing::ComponentContextProvider context_provider;
-  scenic_ = std::make_unique<Scenic>(app_context_.context(), inspect_deprecated::Node(), [] {});
+  scenic_ = std::make_unique<Scenic>(app_context_.context(), inspect::Node(), [] {});
 }
 
 void SessionHandlerTest::InitializeCommandDispatcher() {

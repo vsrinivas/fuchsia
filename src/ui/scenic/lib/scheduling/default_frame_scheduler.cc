@@ -32,7 +32,7 @@ namespace scheduling {
 
 DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                              std::unique_ptr<FramePredictor> predictor,
-                                             inspect_deprecated::Node inspect_node,
+                                             inspect::Node inspect_node,
                                              std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : dispatcher_(async_get_default_dispatcher()),
       vsync_timing_(vsync_timing),
@@ -45,11 +45,11 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
 
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 
-  inspect_frame_number_ = inspect_node_.CreateUIntMetric("most_recent_frame_number", frame_number_);
+  inspect_frame_number_ = inspect_node_.CreateUint("most_recent_frame_number", frame_number_);
   inspect_last_successful_update_start_time_ =
-      inspect_node_.CreateUIntMetric("inspect_last_successful_update_start_time_", 0);
+      inspect_node_.CreateUint("inspect_last_successful_update_start_time_", 0);
   inspect_last_successful_render_start_time_ =
-      inspect_node_.CreateUIntMetric("inspect_last_successful_render_start_time_", 0);
+      inspect_node_.CreateUint("inspect_last_successful_render_start_time_", 0);
 }
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}

@@ -14,7 +14,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/inspect_deprecated/inspect.h"
+#include "lib/inspect/cpp/inspect.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/lib/escher/geometry/types.h"
@@ -97,7 +97,7 @@ class Engine : public scheduling::FrameRenderer {
  public:
   Engine(sys::ComponentContext* app_context,
          const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-         escher::EscherWeakPtr escher, inspect_deprecated::Node inspect_node);
+         escher::EscherWeakPtr escher, inspect::Node inspect_node);
 
   // Only used for testing.
   Engine(sys::ComponentContext* app_context,
@@ -155,7 +155,7 @@ class Engine : public scheduling::FrameRenderer {
   // Initialize annotation session and annotation manager.
   void InitializeAnnotationManager();
 
-  // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.
+  // Initialize all inspect::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
 
   // Takes care of cleanup between frames.
@@ -213,8 +213,8 @@ class Engine : public scheduling::FrameRenderer {
 
   std::unique_ptr<AnnotationManager> annotation_manager_;
 
-  inspect_deprecated::Node inspect_node_;
-  inspect_deprecated::LazyStringProperty inspect_scene_dump_;
+  inspect::Node inspect_node_;
+  inspect::LazyNode inspect_scene_dump_;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

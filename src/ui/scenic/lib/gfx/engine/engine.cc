@@ -34,7 +34,7 @@ namespace gfx {
 
 Engine::Engine(sys::ComponentContext* app_context,
                const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-               escher::EscherWeakPtr weak_escher, inspect_deprecated::Node inspect_node)
+               escher::EscherWeakPtr weak_escher, inspect::Node inspect_node)
     : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
           escher_,
@@ -79,20 +79,25 @@ void Engine::InitializeAnnotationManager() {
                                                             std::move(annotation_session));
 }
 
+constexpr char kSceneDump[] = "scene_dump";
+
 void Engine::InitializeInspectObjects() {
-  inspect_scene_dump_ = inspect_node_.CreateLazyStringProperty("scene_dump", [this] {
+  inspect_scene_dump_ = inspect_node_.CreateLazyValues(kSceneDump, [this] {
+    inspect::Inspector insp;
     if (scene_graph_.compositors().empty()) {
-      return std::string("(no compositors)");
+      insp.GetRoot().CreateString(kSceneDump, "(no compositors)", &insp);
+    } else {
+      std::ostringstream output;
+      output << std::endl;
+      for (auto& c : scene_graph_.compositors()) {
+        output << "========== BEGIN COMPOSITOR DUMP ======================" << std::endl;
+        DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
+        c->Accept(&visitor);
+        output << "============ END COMPOSITOR DUMP ======================";
+      }
+      insp.GetRoot().CreateString(kSceneDump, output.str(), &insp);
     }
-    std::ostringstream output;
-    output << std::endl;
-    for (auto& c : scene_graph_.compositors()) {
-      output << "========== BEGIN COMPOSITOR DUMP ======================" << std::endl;
-      DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
-      c->Accept(&visitor);
-      output << "============ END COMPOSITOR DUMP ======================";
-    }
-    return output.str();
+    return fit::make_ok_promise(std::move(insp));
   });
 }
 

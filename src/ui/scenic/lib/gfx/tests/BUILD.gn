@@ -52,11 +52,9 @@ source_set("testing_deps") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/inspect_deprecated",
-    "//src/lib/inspect_deprecated:reader",
-    "//src/lib/inspect_deprecated/testing",
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test:gtest_escher",
     "//src/ui/lib/glm_workaround",
@@ -69,6 +67,7 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/utils",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
   ]
 }

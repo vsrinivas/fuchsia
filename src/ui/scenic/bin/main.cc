@@ -11,11 +11,12 @@
 
 #include <trace-provider/provider.h>
 
+#include "lib/inspect/cpp/inspect.h"
+#include "lib/sys/inspect/cpp/component.h"
 #include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/bin/app.h"
 #include "src/ui/scenic/lib/scenic/util/scheduler_profile.h"
 
@@ -30,16 +31,9 @@ int main(int argc, const char** argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
 
-  // Set up an inspect_deprecated::Node to inject into the App.
-  auto object_dir = component::ObjectDir(component::Object::Make("diagnostics"));
-  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings;
-  app_context->outgoing()
-      ->GetOrCreateDirectory("diagnostics")
-      ->AddEntry(
-          fuchsia::inspect::deprecated::Inspect::Name_,
-          std::make_unique<vfs::Service>(inspect_bindings.GetHandler(object_dir.object().get())));
-
-  scenic_impl::App app(std::move(app_context), inspect_deprecated::Node(std::move(object_dir)),
+  // Set up an inspect::Node to inject into the App.
+  sys::ComponentInspector inspector(app_context.get());
+  scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),
                        [&loop] { loop.Quit(); });
 
   // TODO(40858): Migrate to the role-based scheduler API when available,

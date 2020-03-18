@@ -7,7 +7,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-SessionManager::SessionManager(inspect_deprecated::Node inspect_node)
+SessionManager::SessionManager(inspect::Node inspect_node)
     : inspect_node_(std::move(inspect_node)) {}
 
 Session* SessionManager::FindSession(SessionId id) const {

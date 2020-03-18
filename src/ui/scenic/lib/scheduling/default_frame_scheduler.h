@@ -11,10 +11,10 @@
 
 #include <list>
 
+#include "lib/inspect/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scheduling/frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/frame_stats.h"
@@ -30,7 +30,7 @@ class DefaultFrameScheduler : public FrameScheduler {
  public:
   explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                  std::unique_ptr<FramePredictor> predictor,
-                                 inspect_deprecated::Node inspect_node = inspect_deprecated::Node(),
+                                 inspect::Node inspect_node = inspect::Node(),
                                  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
   ~DefaultFrameScheduler();
 
@@ -214,10 +214,10 @@ class DefaultFrameScheduler : public FrameScheduler {
   async::TaskMethod<DefaultFrameScheduler, &DefaultFrameScheduler::MaybeRenderFrame>
       frame_render_task_{this};
 
-  inspect_deprecated::Node inspect_node_;
-  inspect_deprecated::UIntMetric inspect_frame_number_;
-  inspect_deprecated::UIntMetric inspect_last_successful_update_start_time_;
-  inspect_deprecated::UIntMetric inspect_last_successful_render_start_time_;
+  inspect::Node inspect_node_;
+  inspect::UintProperty inspect_frame_number_;
+  inspect::UintProperty inspect_last_successful_update_start_time_;
+  inspect::UintProperty inspect_last_successful_render_start_time_;
 
   FrameStats stats_;
 

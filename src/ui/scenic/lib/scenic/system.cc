@@ -6,8 +6,8 @@
 
 namespace scenic_impl {
 
-SystemContext::SystemContext(sys::ComponentContext* app_context,
-                             inspect_deprecated::Node inspect_node, fit::closure quit_callback)
+SystemContext::SystemContext(sys::ComponentContext* app_context, inspect::Node inspect_node,
+                             fit::closure quit_callback)
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
       inspect_node_(std::move(inspect_node)) {

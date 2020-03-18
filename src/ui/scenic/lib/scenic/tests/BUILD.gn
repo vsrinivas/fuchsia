@@ -18,7 +18,6 @@ source_set("testing_deps") {
   ]
   public_deps = [
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/inspect_deprecated",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
@@ -27,6 +26,7 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scheduling:id",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/inspect",
   ]
   deps = [ "//sdk/lib/sys/cpp/testing:unit" ]
 }
@@ -37,9 +37,9 @@ source_set("dummy_system") {
     "dummy_system.h",
   ]
   deps = [
-    "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/scenic/lib/scenic",
+    "//zircon/public/lib/inspect",
   ]
 }
 

@@ -19,10 +19,10 @@ source_set("util") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/inspect_deprecated",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
+    "//zircon/public/lib/inspect",
   ]
 }

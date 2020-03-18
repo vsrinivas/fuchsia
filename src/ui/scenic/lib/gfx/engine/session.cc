@@ -33,8 +33,7 @@ namespace gfx {
 
 Session::Session(SessionId id, SessionContext session_context,
                  std::shared_ptr<EventReporter> event_reporter,
-                 std::shared_ptr<ErrorReporter> error_reporter,
-                 inspect_deprecated::Node inspect_node)
+                 std::shared_ptr<ErrorReporter> error_reporter, inspect::Node inspect_node)
     : id_(id),
       error_reporter_(std::move(error_reporter)),
       event_reporter_(std::move(event_reporter)),
@@ -61,7 +60,7 @@ Session::Session(SessionId id, SessionContext session_context,
   FXL_DCHECK(error_reporter_);
   FXL_DCHECK(event_reporter_);
 
-  inspect_resource_count_ = inspect_node_.CreateUIntMetric("resource_count", 0);
+  inspect_resource_count_ = inspect_node_.CreateUint("resource_count", 0);
 }
 
 Session::~Session() {

@@ -23,14 +23,15 @@ executable("bin") {
 
   deps = [
     ":base_deps",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/cobalt/cpp:cobalt_logger",
-    "//src/lib/inspect_deprecated",
     "//src/ui/scenic/lib/annotation:annotation_registry",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
     "//src/ui/scenic/lib/shutdown",
     "//src/ui/scenic/lib/shutdown:lifecycle_controller",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/inspect",
   ]
   defines = []
 

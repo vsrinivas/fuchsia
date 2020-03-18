@@ -24,15 +24,16 @@ executable("unittests") {
     "present2_info_unittest.cc",
   ]
   deps = [
+    "//sdk/lib/inspect/service/cpp",
+    "//sdk/lib/inspect/testing/cpp",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
-    "//src/lib/inspect_deprecated:reader",
-    "//src/lib/inspect_deprecated/testing",
     "//src/ui/scenic/lib/gfx/tests/mocks:util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling:id",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/inspect",
   ]
 
   # TODO(46839): Fix the leaks and remove this.

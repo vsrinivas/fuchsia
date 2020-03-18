@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.D
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -27,7 +27,6 @@ executable("unittests") {
     ":util",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",

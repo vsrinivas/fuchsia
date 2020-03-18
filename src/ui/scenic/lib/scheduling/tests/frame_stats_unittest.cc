@@ -4,7 +4,6 @@
 
 #include "src/ui/scenic/lib/scheduling/frame_stats.h"
 
-#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
@@ -17,23 +16,25 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/inspect/cpp/inspect.h"
+#include "lib/inspect/cpp/reader.h"
+#include "lib/inspect/service/cpp/reader.h"
+#include "lib/inspect/service/cpp/service.h"
+#include "lib/inspect/testing/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/testing/mock_cobalt_logger.h"
-#include "src/lib/inspect_deprecated/inspect.h"
-#include "src/lib/inspect_deprecated/reader.h"
-#include "src/lib/inspect_deprecated/testing/inspect.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
 namespace scheduling {
 namespace test {
 
-using inspect_deprecated::Node;
-using inspect_deprecated::ObjectHierarchy;
+using inspect::Hierarchy;
+using inspect::Node;
 using testing::AllOf;
 using testing::IsEmpty;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
-using namespace inspect_deprecated::testing;
+using namespace inspect::testing;
 using cobalt::LogMethod::kLogIntHistogram;
 
 constexpr char kFrameStatsNodeName[] = "FrameStatsTest";
@@ -45,20 +46,14 @@ class FrameStatsTest : public gtest::RealLoopFixture {
   static constexpr char kObjectsName[] = "diagnostics";
 
   FrameStatsTest()
-      : object_(component::Object::Make(kObjectsName)),
-        root_object_(component::ObjectDir(object_)),
+      : inspector_(),
         executor_(dispatcher()),
         server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    fuchsia::inspect::deprecated::InspectSyncPtr ptr;
-    zx::channel server_channel = ptr.NewRequest().TakeChannel();
-    server_thread_ = std::thread([this, server_channel = std::move(server_channel)]() mutable {
+    handler_ = inspect::MakeTreeHandler(&inspector_, server_loop_.dispatcher());
+    server_thread_ = std::thread([this]() mutable {
       async_set_default_dispatcher(server_loop_.dispatcher());
-      fidl::Binding<fuchsia::inspect::deprecated::Inspect> binding(
-          object_.get(), std::move(server_channel), server_loop_.dispatcher());
-
       server_loop_.Run();
     });
-    client_ = ptr.Unbind();
   }
 
   ~FrameStatsTest() override {
@@ -69,43 +64,41 @@ class FrameStatsTest : public gtest::RealLoopFixture {
   void SchedulePromise(fit::pending_task promise) { executor_.schedule_task(std::move(promise)); }
 
   // Helper function for test boiler plate.
-  fit::result<fuchsia::inspect::deprecated::Object> ReadInspectVmo() {
-    inspect_deprecated::ObjectReader reader(std::move(client_));
-    fit::result<fuchsia::inspect::deprecated::Object> result;
-    SchedulePromise(reader.OpenChild(kFrameStatsNodeName)
-                        .and_then([](inspect_deprecated::ObjectReader& child_reader) {
-                          return child_reader.Read();
-                        })
-                        .then([&](fit::result<fuchsia::inspect::deprecated::Object>& res) {
-                          result = std::move(res);
-                        }));
-    RunLoopUntil([&] { return !!result; });
+  fit::result<Hierarchy> ReadInspectVmo() {
+    fuchsia::inspect::TreePtr ptr;
+    handler_(ptr.NewRequest());
+    fit::result<Hierarchy> ret;
+    SchedulePromise(inspect::ReadFromTree(std::move(ptr)).then([&](fit::result<Hierarchy>& val) {
+      ret = std::move(val);
+    }));
+    RunLoopUntil([&] { return ret.is_ok() || ret.is_error(); });
 
-    return result;
+    return ret;
   }
 
  protected:
-  std::shared_ptr<component::Object> object_;
-  inspect_deprecated::Node root_object_;
-  fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> client_;
+  inspect::Inspector inspector_;
 
  private:
   async::Executor executor_;
   std::thread server_thread_;
   async::Loop server_loop_;
+  fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> handler_;
 };
 
 TEST_F(FrameStatsTest, SmokeTest_TriggerLazyStringProperties) {
-  FrameStats stats(root_object_.CreateChild(kFrameStatsNodeName), nullptr);
+  FrameStats stats(inspector_.GetRoot().CreateChild(kFrameStatsNodeName), nullptr);
 
-  fit::result<fuchsia::inspect::deprecated::Object> result = ReadInspectVmo();
+  auto result = ReadInspectVmo();
 
-  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
-              NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), MetricList(IsEmpty()),
-                                PropertyList(SizeIs(1)))));
+  EXPECT_THAT(result.take_value(),
+              AllOf(NodeMatches(AllOf(NameMatches("root"))),
+                    ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                        AllOf(NameMatches(kFrameStatsNodeName), PropertyList(SizeIs(1))))))));
 }
+
 TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
-  FrameStats stats(root_object_.CreateChild(kFrameStatsNodeName), nullptr);
+  FrameStats stats(inspector_.GetRoot().CreateChild(kFrameStatsNodeName), nullptr);
 
   const zx::duration vsync_interval = zx::msec(16);
   FrameTimings::Timestamps frame_times = {
@@ -160,29 +153,18 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
     delayed_times.actual_presentation_time += zx::msec(32);
   }
 
-  fit::result<fuchsia::inspect::deprecated::Object> result = ReadInspectVmo();
+  auto result = ReadInspectVmo();
 
-  EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
-              NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), MetricList(IsEmpty()),
-                                PropertyList(SizeIs(1)))));
+  EXPECT_THAT(result.take_value(),
+              ChildrenMatch(UnorderedElementsAre(
+                  NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), PropertyList(SizeIs(1)))))));
 }
 
-class FrameStatsCobaltTest : public gtest::TestLoopFixture {
- public:
-  static constexpr char kObjectsName[] = "diagnostics";
-  FrameStatsCobaltTest()
-      : object_(component::Object::Make(kObjectsName)),
-        root_object_(component::ObjectDir(object_)) {}
-
- protected:
-  std::shared_ptr<component::Object> object_;
-  inspect_deprecated::Node root_object_;
-};
+class FrameStatsCobaltTest : public gtest::TestLoopFixture {};
 
 TEST_F(FrameStatsCobaltTest, LogFrameTimes) {
   cobalt::CallCountMap cobalt_call_counts;
-  FrameStats stats(root_object_.CreateChild(kFrameStatsNodeName),
-                   std::make_unique<cobalt::MockCobaltLogger>(&cobalt_call_counts));
+  FrameStats stats(Node(), std::make_unique<cobalt::MockCobaltLogger>(&cobalt_call_counts));
 
   const zx::duration vsync_interval = zx::msec(16);
   FrameTimings::Timestamps ontime_frame_times = {
