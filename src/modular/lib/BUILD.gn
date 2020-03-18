@@ -54,9 +54,6 @@ executable("modular_lib_unittests") {
     "//src/modular/lib/scoped_tmpfs:unittests",
     "//src/modular/lib/string_escape:unittests",
   ]
-
-  # TODO(46757): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fidl("maxwell_internal") {
