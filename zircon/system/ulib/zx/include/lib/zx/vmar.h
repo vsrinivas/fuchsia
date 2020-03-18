@@ -31,7 +31,7 @@ class vmar final : public object<vmar> {
   }
 
   zx_status_t map(size_t vmar_offset, const vmo& vmo_handle, uint64_t vmo_offset, size_t len,
-                  zx_vm_option_t options, uintptr_t* ptr) const {
+                  zx_vm_option_t options, zx_vaddr_t* ptr) const {
     return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
   }
 
@@ -43,8 +43,8 @@ class vmar final : public object<vmar> {
     return zx_vmar_protect(get(), prot, address, len);
   }
 
-  zx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size,
-                       void* buffer, size_t buffer_size) const {
+  zx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size, void* buffer,
+                       size_t buffer_size) const {
     return zx_vmar_op_range(get(), op, offset, size, buffer, buffer_size);
   }
 
