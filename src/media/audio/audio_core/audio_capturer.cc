@@ -29,34 +29,44 @@ AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configur
       mute_(false),
       stream_gain_db_(kInitialCaptureGainDb) {
   FX_DCHECK(context);
-  context->volume_manager().AddStream(this);
-  if (configuration.is_input() && configuration.input().has_usage()) {
-    usage_ = configuration.input().usage();
+  if (!loopback_) {
+    context->volume_manager().AddStream(this);
+    if (configuration.input().has_usage()) {
+      usage_ = configuration.input().usage();
+    }
   }
 }
 
-AudioCapturer::~AudioCapturer() { context().volume_manager().RemoveStream(this); }
+AudioCapturer::~AudioCapturer() {
+  if (!loopback_) {
+    context().volume_manager().RemoveStream(this);
+  }
+}
 
 void AudioCapturer::ReportStart() {
   BaseCapturer::ReportStart();
-  context().audio_admin().UpdateCapturerState(usage_, true, this);
+  if (!loopback_) {
+    context().audio_admin().UpdateCapturerState(usage_, true, this);
+  }
 }
 
 void AudioCapturer::ReportStop() {
   BaseCapturer::ReportStop();
-  context().audio_admin().UpdateCapturerState(usage_, false, this);
+  if (!loopback_) {
+    context().audio_admin().UpdateCapturerState(usage_, false, this);
+  }
 }
 
 void AudioCapturer::OnStateChanged(State old_state, State new_state) {
   BaseCapturer::OnStateChanged(old_state, new_state);
-  if (new_state == State::OperatingSync) {
+  if (!loopback_ && new_state == State::OperatingSync) {
     context().volume_manager().NotifyStreamChanged(this);
   }
 }
 
 void AudioCapturer::SetRoutingProfile(bool routable) {
   auto profile =
-      RoutingProfile{.routable = routable, .usage = StreamUsage::WithCaptureUsage(usage_)};
+      RoutingProfile{.routable = routable, .usage = StreamUsage::WithCaptureUsage(capture_usage())};
   if (loopback_) {
     context().route_graph().SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
   } else {
@@ -66,7 +76,9 @@ void AudioCapturer::SetRoutingProfile(bool routable) {
 
 void AudioCapturer::OnLinkAdded() {
   BaseCapturer::OnLinkAdded();
-  context().volume_manager().NotifyStreamChanged(this);
+  if (!loopback_) {
+    context().volume_manager().NotifyStreamChanged(this);
+  }
 }
 
 // If received clock is null, duplicate and use the optimal clock. Else, use this new clock as-is.
@@ -123,6 +135,10 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   if (usage == usage_) {
     return;
   }
+  if (loopback_) {
+    FX_LOGS(WARNING) << "SetUsage on loopback capturer is not allowed";
+    return;
+  }
 
   ReportStop();
   usage_ = usage;
@@ -142,6 +158,10 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
 bool AudioCapturer::GetStreamMute() const { return mute_; }
 
 fuchsia::media::Usage AudioCapturer::GetStreamUsage() const {
+  // We should only be calling these from the StreamVolumeManager. We don't register LOOPBACK
+  // capturers with the StreamVolumeManager since those capturers do not have a compatible
+  // usage.
+  FX_DCHECK(!loopback_);
   fuchsia::media::Usage usage;
   usage.set_capture_usage(usage_);
   return usage;
@@ -184,7 +204,9 @@ void AudioCapturer::SetGain(float gain_db) {
   REP(SettingCapturerGain(*this, gain_db));
 
   stream_gain_db_.store(gain_db);
-  context().volume_manager().NotifyStreamChanged(this);
+  if (!loopback_) {
+    context().volume_manager().NotifyStreamChanged(this);
+  }
 
   NotifyGainMuteChanged();
 }
@@ -200,7 +222,9 @@ void AudioCapturer::SetMute(bool mute) {
 
   mute_ = mute;
 
-  context().volume_manager().NotifyStreamChanged(this);
+  if (!loopback_) {
+    context().volume_manager().NotifyStreamChanged(this);
+  }
   NotifyGainMuteChanged();
 }
 
