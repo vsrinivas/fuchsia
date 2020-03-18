@@ -1,0 +1,3 @@
+fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
+#TODO(fxb/48113) - Remove system-update-checker
+fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx

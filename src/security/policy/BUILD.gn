@@ -57,6 +57,20 @@ config_data("appmgr_deprecated_shell_allowlist_eng") {
   outputs = [ "allowlist/deprecated_shell.txt" ]
 }
 
+config_data("appmgr_deprecated_shell_allowlist_userdebug") {
+  for_pkg = "appmgr"
+  sources = [ "deprecated_shell_allowlist_userdebug.txt" ]
+  outputs = [ "allowlist/deprecated_shell.txt" ]
+  # TODO(benwright) - Enable non-production tag after integration step.
+  #deps = [ "//build/images:non_production_tag" ]
+}
+
+config_data("appmgr_deprecated_shell_allowlist_user") {
+  for_pkg = "appmgr"
+  sources = [ "deprecated_shell_allowlist_user.txt" ]
+  outputs = [ "allowlist/deprecated_shell.txt" ]
+}
+
 config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "deprecated_ambient_replace_as_executable_allowlist_eng.txt" ]
