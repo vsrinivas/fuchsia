@@ -165,11 +165,15 @@ test_package("guest_interaction_tests") {
   tests = [
     {
       name = "client_operation_test"
-      environments = [ nuc_env ]
+
+      # TODO(48557): Reenable once gRPC leaks are fixed.
+      environments = nuc_env_fails_on_asan
     },
     {
       name = "server_operation_test"
-      environments = [ nuc_env ]
+
+      # TODO(48556): Reenable once gRPC leaks are fixed.
+      environments = nuc_env_fails_on_asan
     },
     {
       name = "server_daemon_test"
