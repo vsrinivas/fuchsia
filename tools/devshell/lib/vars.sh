@@ -142,26 +142,93 @@ function fx-build-dir-write {
   mv -f "${tempfile}" "${FUCHSIA_DIR}/.fx-build-dir"
 }
 
-function get-device-name {
+function get-device-raw {
   fx-config-read
+  local device=""
   # If DEVICE_NAME was passed in fx -d, use it
   if [[ "${FUCHSIA_DEVICE_NAME+isset}" == "isset" ]]; then
-    echo "${FUCHSIA_DEVICE_NAME}"
-    return
+    device="${FUCHSIA_DEVICE_NAME}"
+  else
+    # Uses a file outside the build dir so that it is not removed by `gn clean`
+    local pairfile="${FUCHSIA_BUILD_DIR}.device"
+    # If .device file exists, use that
+    if [[ -f "${pairfile}" ]]; then
+      device="$(<"${pairfile}")"
+    fi
   fi
-  # Uses a file outside the build dir so that it is not removed by `gn clean`
-  local pairfile="${FUCHSIA_BUILD_DIR}.device"
-  # If .device file exists, use that
-  if [[ -f "${pairfile}" ]]; then
-    echo "$(<"${pairfile}")"
-    return
+  if ! is-valid-device "${device}"; then
+    fx-error "Invalid device name or address: '${device}'. Some valid examples are:
+      strut-wind-ahead-turf, 192.168.3.1:8022, [fe80::7:8%eth0], [fe80::7:8%eth0]:5222, [::1]:22"
+    exit 1
   fi
-  echo ""
+  echo "${device}"
+}
+
+function is-valid-device {
+  local device="$1"
+  if [[ -n "${device}" ]] \
+      && ! _looks_like_ipv4 "${device}" \
+      && ! _looks_like_ipv6 "${device}" \
+      && ! _looks_like_hostname "${device}"; then
+    return 1
+  fi
+}
+
+function get-device-ssh-port {
+  local device
+  device="$(get-device-raw)" || exit $?
+  local port=""
+  # extract port, if present
+  if [[ "${device}" =~ :([0-9]+)$ ]]; then
+    port="${BASH_REMATCH[1]}"
+  fi
+  echo "${port}"
+}
+
+function get-device-name {
+  local device
+  device="$(get-device-raw)" || exit $?
+  # remove ssh port if present
+  if [[ "${device}" =~ ^(.*):[0-9]{1,5}$ ]]; then
+    device="${BASH_REMATCH[1]}"
+  fi
+  echo "${device}"
+}
+
+function _looks_like_hostname {
+  [[ "$1" =~ ^([a-z0-9][.a-z0-9-]*)?(:[0-9]{1,5})?$ ]] || return 1
+}
+
+function _looks_like_ipv4 {
+  [[ "$1" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?$ ]] || return 1
+}
+
+function _looks_like_ipv6 {
+  [[ "$1" =~ ^\[([0-9a-fA-F:]+(%[0-9a-zA-Z]{1,})?)\](:[0-9]{1,5})?$ ]] || return 1
+  local colons="${BASH_REMATCH[1]//[^:]}"
+  # validate that there are no more than 7 colons
+  [[ "${#colons}" -le 7 ]] || return 1
 }
 
 function get-fuchsia-device-addr {
   fx-config-read
-  local -r device="$(get-device-name)"
+  local device
+  device="$(get-device-name)" || exit $?
+
+  # Treat IPv4 addresses in the device name as an already resolved
+  # device address.
+  if _looks_like_ipv4 "${device}"; then
+    echo "${device}"
+    return
+  fi
+  if _looks_like_ipv6 "${device}"; then
+    # remove brackets
+    device="${device%]}"
+    device="${device#[}"
+    echo "${device}"
+    return
+  fi
+
   local -r finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
   if [[ ! -f "${finder}" ]]; then
     fx-error "Device finder binary not found."

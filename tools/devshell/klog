@@ -54,12 +54,13 @@ if (( is_raw )) && (( is_remote )); then
   exit 1
 fi
 
+device="$(get-device-name)" || exit $?
 if (( is_raw )); then
-  exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
+  exec "${ZIRCON_TOOLS_DIR}/loglistener" "${device}"
 else
   declare symbolizer=( "fx-command-run" "symbolize" )
   if (( is_remote )); then
     symbolizer+=("-r")
   fi
-  "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)" | "${symbolizer[@]}"
+  "${ZIRCON_TOOLS_DIR}/loglistener" "${device}" | "${symbolizer[@]}"
 fi

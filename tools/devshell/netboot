@@ -39,7 +39,7 @@ while [[ $# -ge 1 ]]; do
 done
 
 name_args=()
-name="$(get-device-name)"
+name="$(get-device-name)" || exit $?
 if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi

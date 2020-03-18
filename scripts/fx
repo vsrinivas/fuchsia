@@ -171,9 +171,16 @@ function help_global_options {
 
 Global fx options: fx [OPTION] ${cmd} ...
   --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
-  -d=DEVICE_NAME        Target a specific device. DEVICE_NAME may be a Fuchsia
-                        device name. Note: "fx set-device" can be used to set a
-                        default DEVICE_NAME for a BUILD_DIR.
+  -d=DEVICE[:SSH_PORT]  Target a specific device.
+                        DEVICE may be a Fuchsia device name to be resolved using
+                        device-finder or an IP address.
+                        An IPv4 address must be specified directly, while an IPv6
+                        need to be surrounded by brackets.
+                        SSH_PORT, if specified, will be used for all commands
+                        that rely on SSH to connect to the device instead of the
+                        default SSH port (22).
+                        Note: See "fx help set-device" for more help and to set
+                        the default device for a BUILD_DIR.
   -i                    Iterative mode.  Repeat the command whenever a file is
                         modified under your Fuchsia directory, not including
                         out/.
@@ -311,6 +318,10 @@ while [[ $# -ne 0 ]]; do
         exit 1
       fi
       shift # removes -d
+      if ! is-valid-device "$1"; then
+        fx-error "Invalid device: $1. See valid values in 'fx help set-device'"
+        exit 1
+      fi
       export FUCHSIA_DEVICE_NAME="$1"
       ;;
     -i)

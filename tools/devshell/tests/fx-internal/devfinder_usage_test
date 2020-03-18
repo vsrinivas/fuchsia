@@ -1,4 +1,3 @@
-
 #!/bin/bash
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -13,6 +12,7 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/prebuilt.sh"
   "tools/devshell/set-device"
   "tools/devshell/get-device-addr"
+  "tools/devshell/shell"
 )
 
 declare fx devfinder
@@ -47,10 +47,63 @@ expect_args() {
 
 # ensure that set-device invocations of device-finder use the proper network flags
 TEST_setdevice() {
-  ${fx} set-device
+  ${fx} set-device >/dev/null 2>&1
   expect_args "${devfinder}.mock_state" "-netboot" "-ipv4=false"
   not_expect_args "${devfinder}.mock_state" "-mdns=false"
-} 
+}
+
+# ensure that get-fuchsia-device-addr doesn't try to resolve IPv4 addresses
+TEST_getdeviceaddr_resolved_ipv4_addresses() {
+  local addrs=("127.0.0.1" "255.255.255.255" "1.0.0.1")
+  for addr in "${addrs[@]}"; do
+    BT_EXPECT_EQ "$(${fx} -d "${addr}" get-device-addr)" "${addr}"
+    BT_EXPECT_EQ "$(${fx} -d "${addr}:8022" get-device-addr)" "${addr}"
+    BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state"
+    BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state.1"
+  done
+}
+
+# ensure that get-fuchsia-device-addr doesn't try to resolve IPv6 addresses
+# using "fx set-device 'address'"
+TEST_getdeviceaddr_resolved_ipv6_addresses_setdevice() {
+  local addrs=("1:2:3:4" "1::" "b1::8" "1:2:3:4:5:6::8" \
+    "1:2:3:4:5:6::8" "1::7:f8" "1:a2:3:b4:5::7:8" "1:2:3:d4:5e::8" "a1::6:7:8" \
+    "1:2:c3:4a::6:7:8f" "1:2:3:4::8" "1::5:6:d7:8" "1:2:3::5:6:7:8" "d1:2:3::8" \
+    "1::4:5:6:7:8" "1:2::4:5:6:7:8" "1:2::8" "c1::e3:4:5:6:7:8" "1::3:4:5:6:7:8" \
+    "c1::8" "::8" "::" "fe80::7:8%eth0" "fe80::7:8%1" )
+  for addr in "${addrs[@]}"; do
+    # fx syntax requires that IPv6 address is surrounded by square brackets
+    BT_EXPECT ${fx} set-device "[${addr}]" >/dev/null
+    BT_EXPECT_EQ "$(${fx} get-device-addr)" "${addr}"
+    BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state"
+    BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state.1"
+  done
+}
+
+# ensure that get-fuchsia-device-addr doesn't try to resolve IPv6 addresses
+# using "fx -d 'address' ..."
+TEST_getdeviceaddr_resolved_ipv6_addresses() {
+  local addrs=("1:2:3:4" "1::" "b1::8" "1:2:3:4:5:6::8" \
+    "1:2:3:4:5:6::8" "1::7:f8" "1:a2:3:b4:5::7:8" "1:2:3:d4:5e::8" "a1::6:7:8" \
+    "1:2:c3:4a::6:7:8f" "1:2:3:4::8" "1::5:6:d7:8" "1:2:3::5:6:7:8" "d1:2:3::8" \
+    "1::4:5:6:7:8" "1:2::4:5:6:7:8" "1:2::8" "c1::e3:4:5:6:7:8" "1::3:4:5:6:7:8" \
+    "c1::8" "::8" "::" "fe80::7:8%eth0" "fe80::7:8%1" )
+  for addr in "${addrs[@]}"; do
+    # fx syntax requires that IPv6 address is surrounded by square brackets
+    BT_EXPECT_EQ "$(${fx} -d "[${addr}]" get-device-addr)" "${addr}"
+    # also test with ssh port
+    BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state"
+    BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state.1"
+  done
+}
+
+# test a name that looks like an ipv4 ip but is not
+TEST_getdeviceaddr_name_looks_like_ipv4() {
+  local name="1.1.244"
+  ip="127.0.0.1"
+  echo "${ip}" > "${devfinder}.mock_stdout"
+  BT_EXPECT_EQ "$(${fx} -d "${name}" get-device-addr)" "${ip}"
+}
 
 # ensure that get-fuchsia-device-addr invocations of device-finder use the proper network flags
 TEST_getdeviceaddr_singledevice() {

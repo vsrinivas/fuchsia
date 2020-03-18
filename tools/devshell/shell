@@ -27,14 +27,22 @@ if [[ ! -f "${FUCHSIA_DIR}/.ssh/pkey" ]]; then
   fx-warn "Remove ${FUCHSIA_DIR}/.ssh/authorized_keys and run jiri run-hooks to regenerate"
 fi
 
-device_addr="$(get-fuchsia-device-addr)"
+args=()
+device_port="$(get-device-ssh-port)" || exit $?
+if [[ -n "${device_port}" ]]; then
+  args+=( "-p" "${device_port}" )
+fi
+device_addr="$(get-fuchsia-device-addr)" || exit $?
 if [[ -z "${device_addr}" ]]; then
   # Error output is provided to stderr by get-fuchsia-device-addr
   exit 1
 fi
+args+=( "${device_addr}" )
+
+args+=( "$@" )
 # Note: I know there are people who don't like the host-key message, but DO NOT
 # apply -q here, it silences error messages and makes network and configuration
 # failures much harder to diagnose when helping people. The control master will
 # mean you only get one per TCP socket, which is once per newly booted host.
 # It's not a huge burden compared to end user support.
-fx-command-exec ssh "${device_addr}" "$@"
+fx-command-exec ssh "${args[@]}"

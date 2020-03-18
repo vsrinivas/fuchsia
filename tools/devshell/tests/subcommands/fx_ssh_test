@@ -1,0 +1,98 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected usage of device-finder in fx scripts
+
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/set-device"
+  "tools/devshell/shell"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/ssh"
+)
+
+declare fx devfinder ssh
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+  ssh="${BT_TEMP_DIR}/tools/devshell/ssh"
+}
+
+# ensure that "fx -d ipv4:port shell" calls ssh with expected address and port number
+TEST_ssh_ipv4_port() {
+  BT_EXPECT ${fx} -d "127.0.0.1:8022" shell
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "8022" "127.0.0.1"
+}
+
+# ensure that "fx -d [ipv6]:port shell" calls ssh with expected address and port number
+TEST_ssh_ipv6_port() {
+  BT_EXPECT ${fx} -d "[fe80::7:8%eth0]:222" shell
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "222" "fe80::7:8%eth0"
+}
+
+# ensure that fx shell fails because hostname has invalid character (_)
+TEST_ssh_invalid_hostname_port() {
+  BT_EXPECT_FAIL ${fx} -d "invalid_hostname" shell 2> /dev/null
+  BT_EXPECT_FAIL ${fx} -d "invalid_hostname:22" shell 2> /dev/null
+}
+
+# ensure that "fx -d ipv6:port shell" fails because of invalid formats
+TEST_ssh_invalid_ipv6_port() {
+  # no brackets
+  BT_EXPECT_FAIL ${fx} -d "::1" shell 2> /dev/null
+  BT_EXPECT_FAIL ${fx} -d "::1:22" shell 2> /dev/null
+  BT_EXPECT_FAIL ${fx} -d "fe80::7:8%eth0" shell 2> /dev/null
+  BT_EXPECT_FAIL ${fx} -d "fe80::7:8%eth0:222" shell 2> /dev/null
+  # more than 7 colons
+  BT_EXPECT_FAIL ${fx} -d "[2001:db8:aaaa:bbbb:cccc:dddd:0:1:0]" shell 2> /dev/null
+  BT_EXPECT_FAIL ${fx} -d "[2001:db8:aaaa:bbbb:cccc:dddd:0:1:44f%enx44070ba0044e]" shell 2> /dev/null
+}
+
+# ensure that "fx -d addr shell" calls ssh with expected address and no port number
+TEST_ssh_addr() {
+  BT_EXPECT ${fx} -d "127.0.0.1" shell
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "127.0.0.1"
+  BT_EXPECT btf::does-mock-args-not-contain "${ssh}.mock_state" "-p"
+}
+
+# ensure that "fx shell" calls ssh with address returned by devfinder and the proper port number
+TEST_ssh_resolve_addr_port() {
+  local ipv6="fe80::4607:bff:fea0:44f%enx44070ba0044e"
+  echo "${ipv6}" > "${devfinder}.mock_stdout"
+  BT_EXPECT ${fx} shell
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "${ipv6}"
+  BT_EXPECT btf::does-mock-args-not-contain "${ssh}.mock_state" "-p"
+}
+
+# ensure that "fx -d :port shell" calls ssh with address returned by devfinder and the proper port number
+TEST_ssh_only_port() {
+  local ipv6="fe80::4607:bff:fea0:44f%enx44070ba0044e"
+  echo "${ipv6}" > "${devfinder}.mock_stdout"
+  BT_EXPECT ${fx} -d :8123 shell
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "8123" "${ipv6}"
+}
+
+# ensure that "fx set-device ipv6; fx -d :port shell" does not use the device
+# specified in set-device, since "-d" takes precedence even when it only
+# specifies a port. The expected behavior is if "-d :port" is specified without
+# host name or address, "device-finder" will be used to find a device, even if
+# "fx set-device" was executed before.
+TEST_ssh_only_port_and_setdevice() {
+  local addr_from_setdevice="fe80::4607:bff:fea0:44f%enx44070ba0044e"
+  local addr_from_devfinder="127.0.0.1"
+  echo "${addr_from_devfinder}" > "${devfinder}.mock_stdout"
+  BT_EXPECT ${fx} set-device "[${addr_from_setdevice}]" >/dev/null
+  BT_EXPECT ${fx} -d :8123 shell
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "8123" "${addr_from_devfinder}"
+}
+
+BT_RUN_TESTS "$@"

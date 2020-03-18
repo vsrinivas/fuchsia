@@ -10,10 +10,14 @@ BT_FILE_DEPS=(
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../lib/vars.sh || exit $?
 
-# Replace fx-gen with a stub.
-unset -f fx-gen
+# Replace fx-gen and fx-config-read with stubs.
+unset -f fx-gen fx-config-read
 
 fx-gen() {
+  return 0
+}
+
+fx-config-read() {
   return 0
 }
 
@@ -89,6 +93,50 @@ TEST_fx-build-config-load() {
   # fx-build-config-load should have loaded testvar from fx.config.
   BT_EXPECT_EQ "${testvar}" "${TESTVAR_VALUE}" \
     "testvar has unexpected value (${testvar})"
+}
+
+
+# Test parsing valid and invalid device names passed to "fx -d"
+TEST_fx-getdeviceraw-and-isvaliddevice() {
+  # Use subshells (parenthesis) in calls to get-device-raw to avoid premature exit
+  local valids=(
+      "127.0.0.1" "127.0.0.1:8022"
+      ":8122"
+      "strut-wind-ahead-turf" "strut-wind-ahead-turf:8111"
+      "[::1]:22" "[fe80::7:8%eth0]:222" "[fe80::7:8%eth0]"
+    )
+  for valid in "${valids[@]}"; do
+    BT_EXPECT is-valid-device "${valid}"
+    BT_EXPECT "(" FUCHSIA_DEVICE_NAME="$valid" get-device-raw ")" > /dev/null
+  done
+  local invalids=(
+      # no brackets:
+      "::1" "::1:22" "fe80::7:8%eth0" "fe80::7:8%eth0:222"
+      # invalid host names:
+      "AAbbb" "aa_bbb" "xyz@bla.com"
+      # more than 7 colons:
+      "[2001:db8:aaaa:bbbb:cccc:dddd:0:1:0]" "[2001:db8:aaaa:bbbb:cccc:dddd:0:1:44f%enx44070ba0044e]"
+      # invalid port numbers:
+      ":122333" ":232a" ":-1"
+    )
+  for invalid in "${invalids[@]}"; do
+    BT_EXPECT_FAIL is-valid-device "${invalid}"
+    BT_EXPECT_FAIL "(" FUCHSIA_DEVICE_NAME="${invalid}" get-device-raw ")" 2> /dev/null
+  done
+}
+
+# Test extracting port from device name passed to "fx -d"
+TEST_fx-get-device-ssh-port() {
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="127.0.0.1" get-device-ssh-port)" ""
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="127.0.0.1:8811" get-device-ssh-port)" "8811"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME=":8812" get-device-ssh-port)" "8812"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[::1]" get-device-ssh-port)" ""
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[::1]:22" get-device-ssh-port)" "22"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="strut-wind-ahead-turf:822" get-device-ssh-port)" "822"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]" get-device-ssh-port)" ""
+
+  # seven colons inside the brackets plus the one prefixing the port, so 8 total
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]:22" get-device-ssh-port)" "22"
 }
 
 BT_RUN_TESTS "$@"

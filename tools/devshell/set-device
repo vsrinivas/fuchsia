@@ -6,17 +6,33 @@
 #### CATEGORY=Device discovery
 ### set the default device to interact with
 
-## usage: fx set-device [<device-name>]
+## usage: fx set-device DEVICE[:SSH_PORT]
 ##
-## fx set-device is used to specify the default device to target for various
-## fx commands, such as serve, syslog, and so on.
+## fx set-device is used to specify the default device to target for
+## fx commands that communicate with a Fuchsia device.
 ## A device is set within the scope of a build directory (i.e. out/arm64 may
-## have a different pair set than out/x64).
+## have a different default device than out/x64).
 ##
 ## If no device name is given, set-device will attempt to discover devices. If
 ## one device is found, that device is set as the default for the current build
 ## directory. If more than one device is found, the user must select one and
 ## provide it to a subsequent invocation of the command.
+##
+## If specified, DEVICE may be a Fuchsia device name that will be resolved
+## using device-finder or an IP address. An IPv4 address must be specified
+## directly, while IPv6 need to be surrounded by brackets.
+##
+## SSH_PORT, if specified, will be used for all commands that rely on SSH to
+## connect to the device, instead of the default SSH port (22).
+##
+## Examples:
+##   fx set-device strut-wind-ahead-turf
+##   fx set-device strut-wind-ahead-turf:222
+##   fx set-device 192.168.1.2
+##   fx set-device 192.168.3.1:8022
+##   fx set-device [fe80::7:8%eth0]
+##   fx set-device [fe80::7:8%eth0]:5222
+##   fx set-device
 ##
 ## To unset, use `fx unset-device`.
 
@@ -38,19 +54,23 @@ device="$1"
 if [[ -z "$device" ]]; then
   devices="$("${FUCHSIA_BUILD_DIR}/host-tools/device-finder" list -mdns -netboot -ipv4=false -full | cut -d ' ' -f 2)"
   if [[ -z "${devices}" ]]; then
-    echo 2>&1 "No devices discovered, please supply a device name"
+    fx-error "No devices discovered, please supply a device name"
     exit 1
   fi
   if [[ "$(echo "$devices" | wc -l)" -ge 2 ]]; then
-    echo 2>&1 "Multiple devices found, please pick one from the list:"
+    fx-error "Multiple devices found, please pick one from the list:"
     device=$(select_device "$devices")
   else
     device="${devices}"
   fi
+elif ! is-valid-device "${device}"; then
+  fx-error "Invalid device: ${device}"
+  fx-command-help
+  exit 1
 fi
 
 if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
-  echo 2>&1 "Build directory ${FUCHSIA_BUILD_DIR} does not exist, run \"fx set\" first."
+  fx-error "Build directory ${FUCHSIA_BUILD_DIR} does not exist, run \"fx set\" first."
   exit 1
 fi
 
