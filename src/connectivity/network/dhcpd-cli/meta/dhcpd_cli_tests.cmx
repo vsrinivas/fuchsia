@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
             }
         }
     },

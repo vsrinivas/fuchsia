@@ -10,7 +10,7 @@
                 "fuchsia.bluetooth.sys.Bootstrap": "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx",
                 "fuchsia.bluetooth.sys.HostWatcher": "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx",
                 "fuchsia.diagnostics.Archive": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx",
-                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
             }
         }
     },

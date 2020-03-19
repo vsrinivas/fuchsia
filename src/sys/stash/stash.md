@@ -44,10 +44,6 @@ When the [`test_package` GN template][test_package] is used to set up a hermetic
 environment for running tests, a standalone instance of Stash can be set up in
 this environment to run tests against.
 
-An instance of `fuchsia.stash.Store` that's been configured to use a temporary
-backing file is available at
-`fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx`.
-
 An example component manifest for setting up this environment is as follows:
 
 ```
@@ -64,7 +60,7 @@ An example component manifest for setting up this environment is as follows:
     "fuchsia.test": {
       "injected-services": {
         "fuchsia.stash.Store":
-          "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
+          "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
       }
     }
   }

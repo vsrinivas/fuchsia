@@ -6,7 +6,7 @@
                 "fuchsia.devicesettings.DeviceSettingsManager": "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
                 "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl_services#meta/intl_services.cmx",
                 "fuchsia.settings.Intl": "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
-                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
             }
         }
     },
