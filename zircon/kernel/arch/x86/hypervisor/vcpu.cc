@@ -40,10 +40,10 @@ static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
   uint8_t err;
   uint64_t descriptor[] = {eptp, 0};
 
-  __asm__ volatile("invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
-                   : [ err ] "=r"(err)
-                   : [ descriptor ] "m"(descriptor), [ invalidation ] "r"(invalidation)
-                   : "cc");
+  __asm__ __volatile__("invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
+                       : [ err ] "=r"(err)
+                       : [ descriptor ] "m"(descriptor), [ invalidation ] "r"(invalidation)
+                       : "cc");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
@@ -51,10 +51,10 @@ static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
 static zx_status_t vmptrld(paddr_t pa) {
   uint8_t err;
 
-  __asm__ volatile("vmptrld %[pa];" VMX_ERR_CHECK(err)
-                   : [ err ] "=r"(err)
-                   : [ pa ] "m"(pa)
-                   : "cc", "memory");
+  __asm__ __volatile__("vmptrld %[pa];" VMX_ERR_CHECK(err)
+                       : [ err ] "=r"(err)
+                       : [ pa ] "m"(pa)
+                       : "cc", "memory");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
@@ -62,10 +62,10 @@ static zx_status_t vmptrld(paddr_t pa) {
 static zx_status_t vmclear(paddr_t pa) {
   uint8_t err;
 
-  __asm__ volatile("vmclear %[pa];" VMX_ERR_CHECK(err)
-                   : [ err ] "=r"(err)
-                   : [ pa ] "m"(pa)
-                   : "cc", "memory");
+  __asm__ __volatile__("vmclear %[pa];" VMX_ERR_CHECK(err)
+                       : [ err ] "=r"(err)
+                       : [ pa ] "m"(pa)
+                       : "cc", "memory");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
@@ -74,10 +74,10 @@ static uint64_t vmread(uint64_t field) {
   uint8_t err;
   uint64_t val;
 
-  __asm__ volatile("vmread %[field], %[val];" VMX_ERR_CHECK(err)
-                   : [ err ] "=r"(err), [ val ] "=m"(val)
-                   : [ field ] "r"(field)
-                   : "cc");
+  __asm__ __volatile__("vmread %[field], %[val];" VMX_ERR_CHECK(err)
+                       : [ err ] "=r"(err), [ val ] "=m"(val)
+                       : [ field ] "r"(field)
+                       : "cc");
 
   DEBUG_ASSERT(err == ZX_OK);
   return val;
@@ -86,10 +86,10 @@ static uint64_t vmread(uint64_t field) {
 static void vmwrite(uint64_t field, uint64_t val) {
   uint8_t err;
 
-  __asm__ volatile("vmwrite %[val], %[field];" VMX_ERR_CHECK(err)
-                   : [ err ] "=r"(err)
-                   : [ val ] "r"(val), [ field ] "r"(field)
-                   : "cc");
+  __asm__ __volatile__("vmwrite %[val], %[field];" VMX_ERR_CHECK(err)
+                       : [ err ] "=r"(err)
+                       : [ val ] "r"(val), [ field ] "r"(field)
+                       : "cc");
 
   DEBUG_ASSERT(err == ZX_OK);
 }
@@ -280,8 +280,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                              paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                              VmxPage* host_msr_page, VmxPage* guest_msr_page) {
   zx_status_t status = vmclear(vmcs_address);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   AutoVmcs vmcs(vmcs_address);
   // Setup secondary processor-based VMCS controls.
@@ -299,8 +300,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                           // Enable unrestricted guest.
                           kProcbasedCtls2UnrestrictedGuest,
                       0);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Enable use of INVPCID instruction if available.
   vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
@@ -315,8 +317,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                           // Non-maskable interrupts cause a VM exit.
                           kPinbasedCtlsNmiExiting,
                       0);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup primary processor-based VMCS controls.
   status =
@@ -344,8 +347,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                           kProcbasedCtlsCr8LoadExiting |
                           // Disable VM exit on CR8 store.
                           kProcbasedCtlsCr8StoreExiting);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // We only enable interrupt-window exiting above to ensure that the
   // processor supports it for later use. So disable it for now.
@@ -369,8 +373,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                                // Acknowledge external interrupt on exit.
                                kExitCtlsAckIntOnExit,
                            0);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup VM-entry VMCS controls.
   // Load the guest IA32_PAT MSR and IA32_EFER MSR on entry.
@@ -381,8 +386,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
   }
   status = vmcs.SetControl(VmcsField32::ENTRY_CTLS, read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
                            read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), entry_ctls, 0);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field
   // that contains one bit for each exception. When an exception occurs,
@@ -617,8 +623,9 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
 // static
 zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
   hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
-  if (entry >= gpas->size())
+  if (entry >= gpas->size()) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   uint16_t vpid;
   zx_status_t status = guest->AllocVpid(&vpid);
@@ -811,10 +818,11 @@ void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
+  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
     return ZX_ERR_BAD_STATE;
-  zx_status_t status;
+  }
 
+  zx_status_t status;
   do {
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
     status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
