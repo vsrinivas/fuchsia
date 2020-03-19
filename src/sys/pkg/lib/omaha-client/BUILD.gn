@@ -13,6 +13,7 @@ rustc_library("omaha-client") {
   with_unit_tests = true
 
   deps = [
+    "//src/sys/pkg/lib/async-generator",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",

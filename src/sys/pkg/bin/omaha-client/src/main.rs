@@ -7,7 +7,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
 use log::{error, info};
-use omaha_client::state_machine::StateMachine;
+use omaha_client::state_machine::StateMachineBuilder;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -53,19 +53,18 @@ fn main() -> Result<(), Error> {
         let installer = temp_installer::FuchsiaInstaller::new()?;
         let stash = storage::Stash::new("omaha-client").await;
         let stash_ref = Rc::new(Mutex::new(stash));
-        let state_machine = StateMachine::new(
+        let (state_machine_control, state_machine) = StateMachineBuilder::new(
             policy::FuchsiaPolicyEngine,
             http,
             installer,
-            &config,
             timer::FuchsiaTimer,
             metrics_reporter,
             stash_ref.clone(),
+            config.clone(),
             app_set.clone(),
         )
+        .start()
         .await;
-        let state_machine_ref = Rc::new(RefCell::new(state_machine));
-        futures.push(StateMachine::start(state_machine_ref.clone()).boxed_local());
 
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
@@ -92,17 +91,35 @@ fn main() -> Result<(), Error> {
         }
 
         let fidl = fidl::FidlServer::new(
-            state_machine_ref,
+            state_machine_control,
             stash_ref,
-            app_set,
+            app_set.clone(),
             apps_node,
             state_node,
             channel_configs,
         );
-        futures.push(
-            fidl.start(fs, schedule_node, protocol_state_node, last_results_node, notify_cobalt)
-                .boxed_local(),
+        let fidl = Rc::new(RefCell::new(fidl));
+
+        let mut observer = observer::FuchsiaObserver::new(
+            Rc::clone(&fidl),
+            schedule_node,
+            protocol_state_node,
+            last_results_node,
+            app_set,
+            notify_cobalt,
         );
+
+        futures.push(
+            async move {
+                futures::pin_mut!(state_machine);
+
+                while let Some(event) = state_machine.next().await {
+                    observer.on_event(event).await;
+                }
+            }
+            .boxed_local(),
+        );
+        futures.push(fidl::FidlServer::run(fidl, fs).boxed_local());
 
         futures.push(check_and_set_system_health().boxed_local());
 

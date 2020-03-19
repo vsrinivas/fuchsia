@@ -4,8 +4,7 @@
 
 use crate::{
     channel::ChannelConfigs,
-    inspect::{AppsNode, LastResultsNode, ProtocolStateNode, ScheduleNode, StateNode},
-    observer::FuchsiaObserver,
+    inspect::{AppsNode, StateNode},
 };
 use anyhow::{Context as _, Error};
 use event_queue::{ClosedClient, ControlHandle, Event, EventQueue, Notify};
@@ -23,12 +22,8 @@ use futures::{future::BoxFuture, lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
     common::{AppSet, CheckOptions},
-    http_request::HttpRequest,
-    installer::Installer,
-    metrics::MetricsReporter,
-    policy::PolicyEngine,
     protocol::request::InstallSource,
-    state_machine::{self, StateMachine, Timer},
+    state_machine::{self, StartUpdateCheckResponse},
     storage::Storage,
 };
 use std::cell::RefCell;
@@ -134,16 +129,11 @@ impl Event for State {
     }
 }
 
-pub struct FidlServer<PE, HR, IN, TM, MR, ST>
+pub struct FidlServer<ST>
 where
-    PE: PolicyEngine,
-    HR: HttpRequest,
-    IN: Installer,
-    TM: Timer,
-    MR: MetricsReporter,
     ST: Storage,
 {
-    state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR, ST>>>,
+    state_machine_control: state_machine::ControlHandle,
 
     storage_ref: Rc<Mutex<ST>>,
 
@@ -167,17 +157,12 @@ pub enum IncomingServices {
     ChannelProvider(ProviderRequestStream),
 }
 
-impl<PE, HR, IN, TM, MR, ST> FidlServer<PE, HR, IN, TM, MR, ST>
+impl<ST> FidlServer<ST>
 where
-    PE: PolicyEngine + 'static,
-    HR: HttpRequest + 'static,
-    IN: Installer + 'static,
-    TM: Timer + 'static,
-    MR: MetricsReporter + 'static,
     ST: Storage + 'static,
 {
     pub fn new(
-        state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR, ST>>>,
+        state_machine_control: state_machine::ControlHandle,
         storage_ref: Rc<Mutex<ST>>,
         app_set: AppSet,
         apps_node: AppsNode,
@@ -189,7 +174,7 @@ where
         let (monitor_queue_fut, monitor_queue) = EventQueue::new();
         fasync::spawn_local(monitor_queue_fut);
         FidlServer {
-            state_machine_ref,
+            state_machine_control,
             storage_ref,
             app_set,
             apps_node,
@@ -200,54 +185,21 @@ where
         }
     }
 
-    /// Starts the FIDL Server and the StateMachine.
-    pub async fn start(
-        self,
+    /// Runs the FIDL Server and the StateMachine.
+    pub async fn run(
+        server: Rc<RefCell<Self>>,
         mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
-        schedule_node: ScheduleNode,
-        protocol_state_node: ProtocolStateNode,
-        last_results_node: LastResultsNode,
-        notified_cobalt: bool,
     ) {
         fs.dir("svc")
             .add_fidl_service(IncomingServices::Manager)
             .add_fidl_service(IncomingServices::ChannelControl)
             .add_fidl_service(IncomingServices::ChannelProvider);
         const MAX_CONCURRENT: usize = 1000;
-        let server = Rc::new(RefCell::new(self));
         // Handle each client connection concurrently.
-        let fs_fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
+        fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
             Self::handle_client(Rc::clone(&server), stream).unwrap_or_else(|e| error!("{:?}", e))
-        });
-        Self::setup_observer(
-            Rc::clone(&server),
-            schedule_node,
-            protocol_state_node,
-            last_results_node,
-            notified_cobalt,
-        );
-        fs_fut.await;
-    }
-
-    /// Setup the observer from state machine.
-    fn setup_observer(
-        server: Rc<RefCell<Self>>,
-        schedule_node: ScheduleNode,
-        protocol_state_node: ProtocolStateNode,
-        last_results_node: LastResultsNode,
-        notified_cobalt: bool,
-    ) {
-        let state_machine_ref = Rc::clone(&server.borrow().state_machine_ref);
-        let mut state_machine = state_machine_ref.borrow_mut();
-        let app_set = server.borrow().app_set.clone();
-        state_machine.set_observer(FuchsiaObserver::<PE, HR, IN, TM, MR, ST>::new(
-            server,
-            schedule_node,
-            protocol_state_node,
-            last_results_node,
-            app_set,
-            notified_cobalt,
-        ));
+        })
+        .await
     }
 
     /// Handle an incoming FIDL connection from a client.
@@ -312,29 +264,23 @@ where
                     }
                 }
 
-                match server.borrow().state.manager_state {
-                    state_machine::State::Idle => {
-                        let options = CheckOptions { source };
-                        let state_machine_ref = Rc::clone(&server.borrow().state_machine_ref);
-                        // TODO: Detect and return CheckNotStartedReason::Throttled.
-                        fasync::spawn_local(async move {
-                            // FIXME awaiting with runtime borrow!
-                            let mut state_machine = state_machine_ref.borrow_mut();
-                            state_machine.start_update_check(options).await;
-                        });
+                let mut state_machine_control = server.borrow().state_machine_control.clone();
 
-                        responder.send(&mut Ok(())).context("error sending response")?;
+                let check_options = CheckOptions { source };
+
+                let mut res = match state_machine_control.start_update_check(check_options).await {
+                    Ok(StartUpdateCheckResponse::Started) => Ok(()),
+                    Ok(StartUpdateCheckResponse::AlreadyRunning) => {
+                        if options.allow_attaching_to_existing_update_check == Some(true) {
+                            Ok(())
+                        } else {
+                            Err(CheckNotStartedReason::AlreadyInProgress)
+                        }
                     }
-                    _ => {
-                        let mut response =
-                            if options.allow_attaching_to_existing_update_check == Some(true) {
-                                Ok(())
-                            } else {
-                                Err(CheckNotStartedReason::AlreadyInProgress)
-                            };
-                        responder.send(&mut response).context("error sending response")?;
-                    }
-                }
+                    Err(state_machine::StateMachineGone) => Err(CheckNotStartedReason::Internal),
+                };
+
+                responder.send(&mut res).context("error sending response")?;
             }
         }
         Ok(())
@@ -490,33 +436,46 @@ pub use stub::{FidlServerBuilder, StubFidlServer};
 #[cfg(test)]
 mod stub {
     use super::*;
-    use crate::configuration;
-    use fuchsia_inspect::Inspector;
-    use omaha_client::{
-        common::App, http_request::StubHttpRequest, installer::stub::StubInstaller,
-        metrics::StubMetricsReporter, policy::StubPolicyEngine, protocol::Cohort,
-        state_machine::StubTimer, storage::MemStorage,
+    use crate::{
+        configuration,
+        inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
+        observer::FuchsiaObserver,
     };
+    use fuchsia_inspect::Inspector;
+    use futures::future::BoxFuture;
+    use omaha_client::{
+        clock,
+        common::{App, ProtocolState, UpdateCheckSchedule},
+        http_request::StubHttpRequest,
+        installer::{stub::StubInstaller, Plan},
+        metrics::StubMetricsReporter,
+        policy::{CheckDecision, PolicyEngine, UpdateDecision},
+        protocol::Cohort,
+        request_builder::RequestParams,
+        state_machine::{timer::InfiniteTimer, StateMachineBuilder},
+        storage::MemStorage,
+    };
+    use std::time::Duration;
 
-    pub type StubFidlServer = FidlServer<
-        StubPolicyEngine,
-        StubHttpRequest,
-        StubInstaller,
-        StubTimer,
-        StubMetricsReporter,
-        MemStorage,
-    >;
+    pub type StubFidlServer = FidlServer<MemStorage>;
 
     pub struct FidlServerBuilder {
         apps: Vec<App>,
         channel_configs: Option<ChannelConfigs>,
         apps_node: Option<AppsNode>,
         state_node: Option<StateNode>,
+        allow_update_check: bool,
     }
 
     impl FidlServerBuilder {
         pub fn new() -> Self {
-            Self { apps: Vec::new(), channel_configs: None, apps_node: None, state_node: None }
+            Self {
+                apps: Vec::new(),
+                channel_configs: None,
+                apps_node: None,
+                state_node: None,
+                allow_update_check: true,
+            }
         }
 
         pub fn with_apps(mut self, mut apps: Vec<App>) -> Self {
@@ -539,6 +498,11 @@ mod stub {
             self
         }
 
+        pub fn allow_update_check(mut self, allow_update_check: bool) -> Self {
+            self.allow_update_check = allow_update_check;
+            self
+        }
+
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
             let config = configuration::get_config("0.1.2");
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
@@ -547,29 +511,104 @@ mod stub {
             } else {
                 AppSet::new(self.apps)
             };
-            let state_machine = StateMachine::new(
-                StubPolicyEngine,
+            // A state machine with only stub implementations never yields from a poll.
+            // Configure the state machine to schedule automatic update checks in the future and
+            // block timers forever so we can control when update checks happen.
+            let (state_machine_control, state_machine) = StateMachineBuilder::new(
+                MockPolicyEngine { allow_update_check: self.allow_update_check },
                 StubHttpRequest,
                 StubInstaller::default(),
-                &config,
-                StubTimer,
+                InfiniteTimer,
                 StubMetricsReporter,
                 Rc::clone(&storage_ref),
+                config,
                 app_set.clone(),
             )
+            .start()
             .await;
             let inspector = Inspector::new();
             let root = inspector.root();
+
             let apps_node = self.apps_node.unwrap_or(AppsNode::new(root.create_child("apps")));
             let state_node = self.state_node.unwrap_or(StateNode::new(root.create_child("state")));
-            Rc::new(RefCell::new(FidlServer::new(
-                Rc::new(RefCell::new(state_machine)),
+            let fidl = Rc::new(RefCell::new(FidlServer::new(
+                state_machine_control,
                 storage_ref,
-                app_set,
+                app_set.clone(),
                 apps_node,
                 state_node,
                 self.channel_configs,
-            )))
+            )));
+
+            let schedule_node = ScheduleNode::new(root.create_child("schedule"));
+            let protocol_state_node = ProtocolStateNode::new(root.create_child("protocol_state"));
+            let last_results_node = LastResultsNode::new(root.create_child("last_results"));
+
+            let mut observer = FuchsiaObserver::new(
+                Rc::clone(&fidl),
+                schedule_node,
+                protocol_state_node,
+                last_results_node,
+                app_set,
+                true,
+            );
+            fasync::spawn_local(async move {
+                futures::pin_mut!(state_machine);
+
+                while let Some(event) = state_machine.next().await {
+                    observer.on_event(event).await;
+                }
+            });
+
+            fidl
+        }
+    }
+
+    /// A mock PolicyEngine implementation that allows update checks with an interval of a few
+    /// seconds.
+    #[derive(Debug)]
+    pub struct MockPolicyEngine {
+        allow_update_check: bool,
+    }
+
+    impl PolicyEngine for MockPolicyEngine {
+        fn compute_next_update_time(
+            &mut self,
+            _apps: &[App],
+            scheduling: &UpdateCheckSchedule,
+            _protocol_state: &ProtocolState,
+        ) -> BoxFuture<'_, UpdateCheckSchedule> {
+            let schedule = UpdateCheckSchedule {
+                last_update_time: scheduling.last_update_time,
+                next_update_window_start: clock::now() + Duration::from_secs(3),
+                next_update_time: clock::now() + Duration::from_secs(3),
+            };
+            future::ready(schedule).boxed()
+        }
+
+        fn update_check_allowed(
+            &mut self,
+            _apps: &[App],
+            _scheduling: &UpdateCheckSchedule,
+            _protocol_state: &ProtocolState,
+            check_options: &CheckOptions,
+        ) -> BoxFuture<'_, CheckDecision> {
+            if self.allow_update_check {
+                future::ready(CheckDecision::Ok(RequestParams {
+                    source: check_options.source.clone(),
+                    use_configured_proxies: true,
+                }))
+                .boxed()
+            } else {
+                future::pending().boxed()
+            }
+        }
+
+        fn update_can_start(
+            &mut self,
+            _proposed_install_plan: &impl Plan,
+        ) -> BoxFuture<'_, UpdateDecision> {
+            future::ready(UpdateDecision::Ok).boxed()
         }
     }
 }
@@ -633,10 +672,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_already_in_progress() {
-        let fidl = FidlServerBuilder::new().build().await;
-        FidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::CheckingForUpdates)
-            .await;
+        let fidl = FidlServerBuilder::new().allow_update_check(false).build().await;
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
+        let options = update::CheckOptions {
+            initiator: Some(Initiator::User),
+            allow_attaching_to_existing_update_check: None,
+        };
+        let result = proxy.check_now(options, None).await.unwrap();
+        assert_matches!(result, Ok(()));
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
@@ -648,18 +691,6 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_with_monitor() {
         let fidl = FidlServerBuilder::new().build().await;
-        let inspector = Inspector::new();
-        let schedule_node = ScheduleNode::new(inspector.root().create_child("schedule"));
-        let protocol_state_node =
-            ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
-        let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
-        FidlServer::setup_observer(
-            Rc::clone(&fidl),
-            schedule_node,
-            protocol_state_node,
-            last_results_node,
-            true,
-        );
         let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
         let (client_end, mut stream) = create_request_stream::<MonitorMarker>().unwrap();
         let options = update::CheckOptions {

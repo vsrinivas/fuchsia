@@ -7,31 +7,21 @@ use crate::{
     fidl::FidlServer,
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
 };
-use futures::{future::LocalBoxFuture, prelude::*};
 use omaha_client::{
     clock,
     common::{AppSet, ProtocolState, UpdateCheckSchedule},
-    http_request::HttpRequest,
-    installer::Installer,
-    metrics::MetricsReporter,
-    policy::PolicyEngine,
-    state_machine::{update_check, Observer, State, Timer, UpdateCheckError},
+    state_machine::{update_check, State, StateMachineEvent, UpdateCheckError},
     storage::Storage,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
 
-pub struct FuchsiaObserver<PE, HR, IN, TM, MR, ST>
+pub struct FuchsiaObserver<ST>
 where
-    PE: PolicyEngine,
-    HR: HttpRequest,
-    IN: Installer,
-    TM: Timer,
-    MR: MetricsReporter,
     ST: Storage,
 {
-    fidl_server: Rc<RefCell<FidlServer<PE, HR, IN, TM, MR, ST>>>,
+    fidl_server: Rc<RefCell<FidlServer<ST>>>,
     schedule_node: ScheduleNode,
     protocol_state_node: ProtocolStateNode,
     last_results_node: LastResultsNode,
@@ -40,17 +30,12 @@ where
     notified_cobalt: bool,
 }
 
-impl<PE, HR, IN, TM, MR, ST> FuchsiaObserver<PE, HR, IN, TM, MR, ST>
+impl<ST> FuchsiaObserver<ST>
 where
-    PE: PolicyEngine + 'static,
-    HR: HttpRequest + 'static,
-    IN: Installer + 'static,
-    TM: Timer + 'static,
-    MR: MetricsReporter + 'static,
     ST: Storage + 'static,
 {
     pub fn new(
-        fidl_server: Rc<RefCell<FidlServer<PE, HR, IN, TM, MR, ST>>>,
+        fidl_server: Rc<RefCell<FidlServer<ST>>>,
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
         last_results_node: LastResultsNode,
@@ -67,41 +52,37 @@ where
             notified_cobalt,
         }
     }
-}
 
-impl<PE, HR, IN, TM, MR, ST> Observer for FuchsiaObserver<PE, HR, IN, TM, MR, ST>
-where
-    PE: PolicyEngine + 'static,
-    HR: HttpRequest + 'static,
-    IN: Installer + 'static,
-    TM: Timer + 'static,
-    MR: MetricsReporter + 'static,
-    ST: Storage + 'static,
-{
-    fn on_state_change(&mut self, state: State) -> LocalBoxFuture<'_, ()> {
+    pub async fn on_event(&mut self, event: StateMachineEvent) {
+        match event {
+            StateMachineEvent::StateChange(state) => self.on_state_change(state).await,
+            StateMachineEvent::ScheduleChange(schedule) => self.on_schedule_change(&schedule),
+            StateMachineEvent::ProtocolStateChange(state) => self.on_protocol_state_change(&state),
+            StateMachineEvent::UpdateCheckResult(result) => {
+                self.on_update_check_result(&result).await
+            }
+        }
+    }
+
+    async fn on_state_change(&mut self, state: State) {
         if state == State::CheckingForUpdates {
             self.last_update_start_time = clock::now();
         }
-        FidlServer::on_state_change(Rc::clone(&self.fidl_server), state).boxed_local()
+        FidlServer::on_state_change(Rc::clone(&self.fidl_server), state).await
     }
 
-    fn on_schedule_change(&mut self, schedule: &UpdateCheckSchedule) -> LocalBoxFuture<'_, ()> {
+    fn on_schedule_change(&mut self, schedule: &UpdateCheckSchedule) {
         self.schedule_node.set(schedule);
-        future::ready(()).boxed_local()
     }
 
-    fn on_protocol_state_change(
-        &mut self,
-        protocol_state: &ProtocolState,
-    ) -> LocalBoxFuture<'_, ()> {
+    fn on_protocol_state_change(&mut self, protocol_state: &ProtocolState) {
         self.protocol_state_node.set(protocol_state);
-        future::ready(()).boxed_local()
     }
 
-    fn on_update_check_result(
+    async fn on_update_check_result(
         &mut self,
         result: &Result<update_check::Response, UpdateCheckError>,
-    ) -> LocalBoxFuture<'_, ()> {
+    ) {
         self.last_results_node.add_result(self.last_update_start_time, result);
 
         // TODO(senj): Remove once channel is in vbmeta.
@@ -114,13 +95,11 @@ where
                     .all(|app_response| app_response.result == update_check::Action::NoUpdate)
             })
             .unwrap_or(false);
-        async move {
-            if !self.notified_cobalt && no_update {
-                notify_cobalt_current_channel(self.app_set.clone()).await;
-                self.notified_cobalt = true;
-            }
+
+        if !self.notified_cobalt && no_update {
+            notify_cobalt_current_channel(self.app_set.clone()).await;
+            self.notified_cobalt = true;
         }
-        .boxed_local()
     }
 }
 

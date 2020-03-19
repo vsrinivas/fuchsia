@@ -52,15 +52,6 @@ mod mock {
         pub fn expect_range(&mut self, min_duration: Duration, max_duration: Duration) {
             self.expected_durations.push_back((min_duration, max_duration));
         }
-
-        /// Assert that the expected durations have all be waited on
-        pub fn assert_durations_waited(&self) {
-            assert_eq!(
-                self.expected_durations.len(),
-                0,
-                "Not all expected durations were waited for"
-            );
-        }
     }
 
     impl Timer for MockTimer {
@@ -148,5 +139,70 @@ mod mock {
         timer.expect(Duration::from_secs(6666));
 
         block_on(timer.wait(Duration::from_secs(5555)));
+    }
+}
+
+pub use blocking::{BlockedTimer, BlockingTimer, InfiniteTimer};
+
+mod blocking {
+    use super::*;
+    use futures::channel::{mpsc, oneshot};
+
+    /// A mock timer that will block forever.
+    #[derive(Debug)]
+    pub struct InfiniteTimer;
+
+    impl Timer for InfiniteTimer {
+        fn wait(&mut self, _duration: Duration) -> BoxFuture<'static, ()> {
+            future::pending().boxed()
+        }
+    }
+
+    /// A mock timer that will notify a channel when creating a timer.
+    #[derive(Debug)]
+    pub struct BlockingTimer {
+        chan: mpsc::Sender<BlockedTimer>,
+    }
+
+    /// An omaha state machine timer waiting to be unblocked. Dropping a BlockedTimer will cause
+    /// the timer to panic.
+    #[derive(Debug)]
+    pub struct BlockedTimer {
+        duration: Duration,
+        unblock: oneshot::Sender<()>,
+    }
+
+    impl BlockingTimer {
+        /// Returns a new BlockingTimer and a channel to receive BlockedTimer instances.
+        pub fn new() -> (Self, mpsc::Receiver<BlockedTimer>) {
+            let (send, recv) = mpsc::channel(0);
+            (Self { chan: send }, recv)
+        }
+    }
+
+    impl BlockedTimer {
+        /// The requested duration of this timer.
+        pub fn duration(&self) -> &Duration {
+            &self.duration
+        }
+
+        /// Unblock the timer, panicing if it no longer exists.
+        pub fn unblock(self) {
+            self.unblock.send(()).unwrap()
+        }
+    }
+
+    impl Timer for BlockingTimer {
+        fn wait(&mut self, duration: Duration) -> BoxFuture<'static, ()> {
+            let mut chan = self.chan.clone();
+
+            async move {
+                let (send, recv) = oneshot::channel();
+                chan.send(BlockedTimer { duration, unblock: send }).await.unwrap();
+
+                recv.await.unwrap();
+            }
+            .boxed()
+        }
     }
 }
