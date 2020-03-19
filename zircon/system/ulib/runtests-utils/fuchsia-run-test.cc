@@ -125,8 +125,8 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
     snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
   }
 
-  uint64_t size;
-  status = data.file_data.get_size(&size);
+  uint64_t vmo_size;
+  status = data.file_data.get_size(&vmo_size);
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n", name,
             data.sink_name.c_str(), zx_status_get_string(status));
@@ -134,8 +134,8 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   }
 
   fzl::VmoMapper mapper;
-  if (size > 0) {
-    zx_status_t status = mapper.Map(data.file_data, 0, size, ZX_VM_PERM_READ);
+  if (vmo_size > 0) {
+    zx_status_t status = mapper.Map(data.file_data, 0, vmo_size, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name,
               data.sink_name.c_str(), zx_status_get_string(status));
@@ -156,6 +156,9 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
 
   struct stat stat;
   if (data.sink_name == "llvm-profile" && fstatat(sink_dir_fd.get(), filename, &stat, 0) != -1) {
+    uint64_t file_size = static_cast<uint64_t>(stat.st_size);
+    ZX_ASSERT(vmo_size == file_size);
+
     fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_RDWR | O_EXCL, 0666)};
     if (!fd) {
       fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", dump_file.c_str(),
@@ -163,9 +166,8 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
       return {};
     }
 
-    auto* dst = new uint8_t[stat.st_size];
-    auto delete_data = fbl::MakeAutoCall([dst] { delete[] dst; });
-    if (!ReadFile(fd, dst, stat.st_size)) {
+    auto dst = std::make_unique<uint8_t[]>(file_size);
+    if (!ReadFile(fd, dst.get(), file_size)) {
       fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", dump_file.c_str(),
               strerror(errno));
       return {};
@@ -173,14 +175,14 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
 
     // Ensure that profiles are structuraly compatible.
     auto* src = reinterpret_cast<uint8_t*>(mapper.start());
-    if (!ProfilesCompatible(src, dst, size)) {
+    if (!ProfilesCompatible(src, dst.get(), file_size)) {
       fprintf(stderr, "FAILURE: Unable to merge profile data: %s\n",
               "source profile file is not compatible");
       return {};
     }
 
     // Write the merged profile.
-    if (!WriteFile(fd, MergeProfiles(src, dst, size), size)) {
+    if (!WriteFile(fd, MergeProfiles(src, dst.get(), file_size), file_size)) {
       fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", dump_file.c_str(),
               strerror(errno));
       return {};
@@ -193,7 +195,7 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
       return {};
     }
 
-    if (!WriteFile(fd, reinterpret_cast<uint8_t*>(mapper.start()), size)) {
+    if (!WriteFile(fd, reinterpret_cast<uint8_t*>(mapper.start()), vmo_size)) {
       fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", dump_file.c_str(),
               strerror(errno));
       return {};
