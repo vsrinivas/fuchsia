@@ -16,6 +16,11 @@ source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 # Specify a simulated CIPD instance id for aemu.version
 AEMU_VERSION="git_revision:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
+if is-mac; then
+  AEMU_PLATFORM="mac-amd64"
+else
+  AEMU_PLATFORM="linux-amd64"
+fi
 
 # Helpers.
 
@@ -66,7 +71,7 @@ TEST_femu_noargs() {
   # Create fake "curl" command to that creates a simulated zip file based on the mocked emulator script
   # femu.sh calls curl like this, so use $4 to write output: curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
   cat >"${PATH_DIR_FOR_TEST}/curl.mock_side_effects" <<INPUT
-zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator"
+zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator"
 INPUT
 
   # Run command.
@@ -94,7 +99,7 @@ INPUT
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090
-  source "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator.mock_state"
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
   check_mock_has_args -fuchsia
 
 }
@@ -114,7 +119,7 @@ INPUT
   # Create fake "curl" command to that creates a simulated zip file based on the mocked emulator script
   # femu.sh calls curl like this, so use $4 to write output: curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
   cat >"${PATH_DIR_FOR_TEST}/curl.mock_side_effects" <<INPUT
-zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator"
+zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator"
 INPUT
 
   if is-mac; then
@@ -157,7 +162,7 @@ INPUT
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090
-  source "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator.mock_state"
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
   # The mac address is computed with a hash function in fx emu but will not change if the device
   # is named qemu. We test the generated mac address here since our scripts use the mac for a
   # hard coded address to SSH into the device.
@@ -181,7 +186,7 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-"${AEMU_LABEL}"/emulator
+  scripts/sdk/gn/base/images/emulator/aemu-"${AEMU_PLATFORM}"-"${AEMU_LABEL}"/emulator
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi

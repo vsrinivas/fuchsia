@@ -120,8 +120,11 @@ LABEL_AEMU="$(echo "${VER_AEMU}" | tr ':/' '_')"
 
 # Download aemu binaries for the aemu.version if not already present
 DOWNLOADS_DIR="${FUCHSIA_IMAGE_WORK_DIR}/emulator"
-# TODO(fxb/41836): Replace hardcoded linux-amd64 with OS detection
-ARCH="linux-amd64"
+if is-mac; then
+  ARCH="mac-amd64"
+else
+  ARCH="linux-amd64"
+fi
 CIPD_FILE="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}.zip"
 if [ ! -f "${CIPD_FILE}" ]; then
   mkdir -p "${DOWNLOADS_DIR}"
