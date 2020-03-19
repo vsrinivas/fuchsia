@@ -454,8 +454,11 @@ uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
     return fuchsia::hardware::display::INVALID_DISP_ID;
   }
 
+  auto before = zx::clock::get_monotonic();
   if ((*display_controller_)->ImportEvent(std::move(dup), event_id) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to import display controller event.";
+    auto after = zx::clock::get_monotonic();
+    FXL_LOG(ERROR) << "Failed to import display controller event. Waited "
+                   << (after - before).to_msecs() << "msecs";
     return fuchsia::hardware::display::INVALID_DISP_ID;
   }
   return event_id;
@@ -469,9 +472,11 @@ void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_
   // TODO(SCN-244): handle this more robustly.
   FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 
+  auto before = zx::clock::get_monotonic();
   status = (*display_controller_)->ApplyConfig();
   // TODO(SCN-244): handle this more robustly.
-  FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
+  FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
+                             << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
 }
 
 }  // namespace gfx
