@@ -16,8 +16,8 @@
 //!
 //! [std::range]: https://doc.rust-lang.org/core/ops/struct.Range.html
 
-use iter::plumbing::*;
-use iter::*;
+use crate::iter::plumbing::*;
+use crate::iter::*;
 use std::ops::Range;
 use std::usize;
 
@@ -156,11 +156,16 @@ macro_rules! unindexed_range_impl {
             where
                 C: UnindexedConsumer<Self::Item>,
             {
+                #[inline]
+                fn offset(start: $t) -> impl Fn(usize) -> $t {
+                    move |i| start.wrapping_add(i as $t)
+                }
+
                 if let Some(len) = self.opt_len() {
                     // Drive this in indexed mode for better `collect`.
                     (0..len)
                         .into_par_iter()
-                        .map(|i| self.range.start.wrapping_add(i as $t))
+                        .map(offset(self.range.start))
                         .drive(consumer)
                 } else {
                     bridge_unindexed(IterProducer { range: self.range }, consumer)
@@ -281,8 +286,8 @@ fn test_u128_opt_len() {
 #[test]
 #[cfg(target_pointer_width = "64")]
 fn test_usize_i64_overflow() {
+    use crate::ThreadPoolBuilder;
     use std::i64;
-    use ThreadPoolBuilder;
 
     let iter = (-2..i64::MAX).into_par_iter();
     assert_eq!(iter.opt_len(), Some(i64::MAX as usize + 2));

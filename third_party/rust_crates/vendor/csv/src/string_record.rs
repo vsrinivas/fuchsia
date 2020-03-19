@@ -7,47 +7,10 @@ use std::str;
 
 use serde::de::Deserialize;
 
-use deserializer::deserialize_string_record;
-use error::{ErrorKind, FromUtf8Error, Result, new_error, new_from_utf8_error};
-use reader::Reader;
-use byte_record::{self, ByteRecord, ByteRecordIter, Position};
-
-/// A safe function for reading CSV data into a `StringRecord`.
-///
-/// This relies on the internal representation of `StringRecord`.
-#[inline(always)]
-pub fn read<R: io::Read>(
-    rdr: &mut Reader<R>,
-    record: &mut StringRecord,
-) -> Result<bool> {
-    // TODO(burntsushi): Define this as a method using `pub(crate)` when that
-    // stabilizes.
-
-    // SAFETY: Note that despite the absence of `unsafe` in this function, this
-    // code is critical to upholding the safety of other `unsafe` blocks in
-    // this module. Namely, after calling `read_byte_record`, it is possible
-    // for `record` to contain invalid UTF-8. We check for this in the
-    // `validate` method, and if it does have invalid UTF-8, we clear the
-    // record. (It is bad for `record` to contain invalid UTF-8 because other
-    // accessor methods, like `get`, assume that every field is valid UTF-8.)
-    let pos = rdr.position().clone();
-    let read_res = rdr.read_byte_record(&mut record.0);
-    let utf8_res = match byte_record::validate(&record.0) {
-        Ok(()) => Ok(()),
-        Err(err) => {
-            // If this record isn't valid UTF-8, then completely wipe it.
-            record.0.clear();
-            Err(err)
-        }
-    };
-    match (read_res, utf8_res) {
-        (Err(err), _) => Err(err),
-        (Ok(_), Err(err)) => {
-            Err(new_error(ErrorKind::Utf8 { pos: Some(pos), err: err }))
-        }
-        (Ok(eof), Ok(())) => Ok(eof),
-    }
-}
+use crate::byte_record::{ByteRecord, ByteRecordIter, Position};
+use crate::deserializer::deserialize_string_record;
+use crate::error::{Error, ErrorKind, FromUtf8Error, Result};
+use crate::reader::Reader;
 
 /// A single CSV record stored as valid UTF-8 bytes.
 ///
@@ -74,31 +37,31 @@ pub struct StringRecord(ByteRecord);
 
 impl PartialEq for StringRecord {
     fn eq(&self, other: &StringRecord) -> bool {
-        byte_record::eq(&self.0, &other.0)
+        self.0.iter_eq(&other.0)
     }
 }
 
 impl<T: AsRef<[u8]>> PartialEq<Vec<T>> for StringRecord {
     fn eq(&self, other: &Vec<T>) -> bool {
-        byte_record::eq(&self.0, other)
+        self.0.iter_eq(other)
     }
 }
 
 impl<'a, T: AsRef<[u8]>> PartialEq<Vec<T>> for &'a StringRecord {
     fn eq(&self, other: &Vec<T>) -> bool {
-        byte_record::eq(&self.0, other)
+        self.0.iter_eq(other)
     }
 }
 
 impl<T: AsRef<[u8]>> PartialEq<[T]> for StringRecord {
     fn eq(&self, other: &[T]) -> bool {
-        byte_record::eq(&self.0, other)
+        self.0.iter_eq(other)
     }
 }
 
 impl<'a, T: AsRef<[u8]>> PartialEq<[T]> for &'a StringRecord {
     fn eq(&self, other: &[T]) -> bool {
-        byte_record::eq(&self.0, other)
+        self.0.iter_eq(other)
     }
 }
 
@@ -163,13 +126,11 @@ impl StringRecord {
     /// # Example: valid UTF-8
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ByteRecord, StringRecord};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let byte_record = ByteRecord::from(vec!["a", "b", "c"]);
     ///     let str_record = StringRecord::from_byte_record(byte_record)?;
     ///     assert_eq!(str_record.len(), 3);
@@ -193,9 +154,9 @@ impl StringRecord {
     pub fn from_byte_record(
         record: ByteRecord,
     ) -> result::Result<StringRecord, FromUtf8Error> {
-        match byte_record::validate(&record) {
+        match record.validate() {
             Ok(()) => Ok(StringRecord(record)),
-            Err(err) => Err(new_from_utf8_error(record, err)),
+            Err(err) => Err(FromUtf8Error::new(record, err)),
         }
     }
 
@@ -231,12 +192,12 @@ impl StringRecord {
     #[inline]
     pub fn from_byte_record_lossy(record: ByteRecord) -> StringRecord {
         // If the record is valid UTF-8, then take the easy path.
-        if let Ok(()) = byte_record::validate(&record) {
+        if let Ok(()) = record.validate() {
             return StringRecord(record);
         }
         // TODO: We can be faster here. Not sure if it's worth it.
-        let mut str_record = StringRecord::with_capacity(
-            record.as_slice().len(), record.len());
+        let mut str_record =
+            StringRecord::with_capacity(record.as_slice().len(), record.len());
         for field in &record {
             str_record.push_field(&String::from_utf8_lossy(field));
         }
@@ -262,12 +223,10 @@ impl StringRecord {
     /// deserialization.
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::StringRecord;
+    /// use serde::Deserialize;
     ///
     /// #[derive(Deserialize)]
     /// struct Row<'a> {
@@ -277,7 +236,7 @@ impl StringRecord {
     /// }
     ///
     /// # fn main() { example().unwrap() }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let record = StringRecord::from(vec![
     ///         "Boston", "United States", "4628910",
     ///     ]);
@@ -300,12 +259,10 @@ impl StringRecord {
     /// types (e.g., `String`) instead of borrowed data types (e.g., `&str`).
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::StringRecord;
+    /// use serde::Deserialize;
     ///
     /// #[derive(Deserialize)]
     /// struct Row {
@@ -315,7 +272,7 @@ impl StringRecord {
     /// }
     ///
     /// # fn main() { example().unwrap() }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     // Notice that the fields are not in the same order
     ///     // as the fields in the struct!
     ///     let header = StringRecord::from(vec![
@@ -374,6 +331,7 @@ impl StringRecord {
     #[inline]
     pub fn get(&self, i: usize) -> Option<&str> {
         self.0.get(i).map(|bytes| {
+            debug_assert!(str::from_utf8(bytes).is_ok());
             // This is safe because we guarantee that all string records
             // have a valid UTF-8 buffer. It's also safe because we
             // individually check each field for valid UTF-8.
@@ -473,8 +431,9 @@ impl StringRecord {
             return;
         }
         // TODO: We could likely do this in place, but for now, we allocate.
-        let mut trimmed = StringRecord::with_capacity(
-            self.as_slice().len(), self.len());
+        let mut trimmed =
+            StringRecord::with_capacity(self.as_slice().len(), self.len());
+        trimmed.set_position(self.position().cloned());
         for field in &*self {
             trimmed.push_field(field.trim());
         }
@@ -502,13 +461,11 @@ impl StringRecord {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{StringRecord, ReaderBuilder};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut record = StringRecord::new();
     ///     let mut rdr = ReaderBuilder::new()
     ///         .has_headers(false)
@@ -597,6 +554,7 @@ impl StringRecord {
     /// ```
     #[inline]
     pub fn as_slice(&self) -> &str {
+        debug_assert!(str::from_utf8(self.0.as_slice()).is_ok());
         // This is safe because we guarantee that each field is valid UTF-8.
         // If each field is valid UTF-8, then the entire buffer (up to the end
         // of the last field) must also be valid UTF-8.
@@ -651,12 +609,48 @@ impl StringRecord {
     pub fn into_byte_record(self) -> ByteRecord {
         self.0
     }
+
+    /// A safe function for reading CSV data into a `StringRecord`.
+    ///
+    /// This relies on the internal representation of `StringRecord`.
+    #[inline(always)]
+    pub(crate) fn read<R: io::Read>(
+        &mut self,
+        rdr: &mut Reader<R>,
+    ) -> Result<bool> {
+        // SAFETY: This code is critical to upholding the safety of other code
+        // blocks in this module. Namely, after calling `read_byte_record`,
+        // it is possible for `record` to contain invalid UTF-8. We check for
+        // this in the `validate` method, and if it does have invalid UTF-8, we
+        // clear the record. (It is bad for `record` to contain invalid UTF-8
+        // because other accessor methods, like `get`, assume that every field
+        // is valid UTF-8.)
+        let pos = rdr.position().clone();
+        let read_res = rdr.read_byte_record(&mut self.0);
+        let utf8_res = match self.0.validate() {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                // If this record isn't valid UTF-8, then completely wipe it.
+                self.0.clear();
+                Err(err)
+            }
+        };
+        match (read_res, utf8_res) {
+            (Err(err), _) => Err(err),
+            (Ok(_), Err(err)) => {
+                Err(Error::new(ErrorKind::Utf8 { pos: Some(pos), err: err }))
+            }
+            (Ok(eof), Ok(())) => Ok(eof),
+        }
+    }
 }
 
 impl ops::Index<usize> for StringRecord {
     type Output = str;
     #[inline]
-    fn index(&self, i: usize) -> &str { self.get(i).unwrap() }
+    fn index(&self, i: usize) -> &str {
+        self.get(i).unwrap()
+    }
 }
 
 impl<T: AsRef<str>> From<Vec<T>> for StringRecord {
@@ -675,7 +669,7 @@ impl<'a, T: AsRef<str>> From<&'a [T]> for StringRecord {
 
 impl<T: AsRef<str>> FromIterator<T> for StringRecord {
     #[inline]
-    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> StringRecord {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> StringRecord {
         let mut record = StringRecord::new();
         record.extend(iter);
         record
@@ -684,7 +678,7 @@ impl<T: AsRef<str>> FromIterator<T> for StringRecord {
 
 impl<T: AsRef<str>> Extend<T> for StringRecord {
     #[inline]
-    fn extend<I: IntoIterator<Item=T>>(&mut self, iter: I) {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         for x in iter {
             self.push_field(x.as_ref());
         }
@@ -713,6 +707,7 @@ impl<'r> Iterator for StringRecordIter<'r> {
     #[inline]
     fn next(&mut self) -> Option<&'r str> {
         self.0.next().map(|bytes| {
+            debug_assert!(str::from_utf8(bytes).is_ok());
             // See StringRecord::get for safety argument.
             unsafe { str::from_utf8_unchecked(bytes) }
         })
@@ -733,6 +728,7 @@ impl<'r> DoubleEndedIterator for StringRecordIter<'r> {
     #[inline]
     fn next_back(&mut self) -> Option<&'r str> {
         self.0.next_back().map(|bytes| {
+            debug_assert!(str::from_utf8(bytes).is_ok());
             // See StringRecord::get for safety argument.
             unsafe { str::from_utf8_unchecked(bytes) }
         })
@@ -741,7 +737,7 @@ impl<'r> DoubleEndedIterator for StringRecordIter<'r> {
 
 #[cfg(test)]
 mod tests {
-    use string_record::StringRecord;
+    use crate::string_record::StringRecord;
 
     #[test]
     fn trim_front() {
@@ -815,8 +811,8 @@ mod tests {
     // Regression test for #138.
     #[test]
     fn eq_field_boundaries() {
-        let test1 = StringRecord::from(vec!["12","34"]);
-        let test2 = StringRecord::from(vec!["123","4"]);
+        let test1 = StringRecord::from(vec!["12", "34"]);
+        let test2 = StringRecord::from(vec!["123", "4"]);
 
         assert_ne!(test1, test2);
     }
@@ -826,8 +822,8 @@ mod tests {
     // Regression test for #138.
     #[test]
     fn eq_record_len() {
-        let test1 = StringRecord::from(vec!["12","34", "56"]);
-        let test2 = StringRecord::from(vec!["12","34"]);
+        let test1 = StringRecord::from(vec!["12", "34", "56"]);
+        let test2 = StringRecord::from(vec!["12", "34"]);
         assert_ne!(test1, test2);
     }
 }

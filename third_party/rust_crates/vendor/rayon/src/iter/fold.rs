@@ -60,7 +60,7 @@ where
     }
 }
 
-struct FoldConsumer<'c, C, ID: 'c, F: 'c> {
+struct FoldConsumer<'c, C, ID, F> {
     base: C,
     fold_op: &'c F,
     identity: &'c ID,
@@ -121,7 +121,7 @@ where
     }
 }
 
-struct FoldFolder<'r, C, ID, F: 'r> {
+struct FoldFolder<'r, C, ID, F> {
     base: C,
     fold_op: &'r F,
     item: ID,
@@ -147,11 +147,18 @@ where
     where
         I: IntoIterator<Item = T>,
     {
+        fn not_full<C, ID, T>(base: &C) -> impl Fn(&T) -> bool + '_
+        where
+            C: Folder<ID>,
+        {
+            move |_| !base.full()
+        }
+
         let base = self.base;
         let item = iter
             .into_iter()
             // stop iterating if another thread has finished
-            .take_while(|_| !base.full())
+            .take_while(not_full(&base))
             .fold(self.item, self.fold_op);
 
         FoldFolder {
@@ -230,7 +237,7 @@ where
     }
 }
 
-struct FoldWithConsumer<'c, C, U, F: 'c> {
+struct FoldWithConsumer<'c, C, U, F> {
     base: C,
     item: U,
     fold_op: &'c F,

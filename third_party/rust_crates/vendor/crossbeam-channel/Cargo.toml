@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,7 +12,7 @@
 
 [package]
 name = "crossbeam-channel"
-version = "0.3.8"
+version = "0.4.2"
 authors = ["The Crossbeam Project Developers"]
 description = "Multi-producer multi-consumer channels for message passing"
 homepage = "https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-channel"
@@ -20,13 +20,16 @@ documentation = "https://docs.rs/crossbeam-channel"
 readme = "README.md"
 keywords = ["channel", "mpmc", "select", "golang", "message"]
 categories = ["algorithms", "concurrency", "data-structures"]
-license = "MIT/Apache-2.0"
+license = "MIT/Apache-2.0 AND BSD-2-Clause"
 repository = "https://github.com/crossbeam-rs/crossbeam"
 [dependencies.crossbeam-utils]
-version = "0.6.5"
+version = "0.7"
 
-[dependencies.smallvec]
-version = "0.6.2"
+[dependencies.maybe-uninit]
+version = "2.0.0"
+[dev-dependencies.num_cpus]
+version = "1.10.0"
+
 [dev-dependencies.rand]
 version = "0.6"
 

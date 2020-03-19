@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-extern crate csv;
-
 use std::env;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -9,12 +7,17 @@ use std::process::{self, Command};
 
 static STRANGE: &'static str = include_str!("../examples/data/strange.csv");
 static USPOP: &'static str = include_str!("../examples/data/uspop.csv");
-static USPOP_NULL: &'static str = include_str!("../examples/data/uspop-null.csv");
-static USPOP_LATIN1: &'static [u8] = include_bytes!("../examples/data/uspop-latin1.csv");
-static WORLDPOP: &'static str = include_str!("../examples/data/bench/worldcitiespop.csv");
+static USPOP_NULL: &'static str =
+    include_str!("../examples/data/uspop-null.csv");
+static USPOP_LATIN1: &'static [u8] =
+    include_bytes!("../examples/data/uspop-latin1.csv");
+static WORLDPOP: &'static str =
+    include_str!("../examples/data/bench/worldcitiespop.csv");
 static SMALLPOP: &'static str = include_str!("../examples/data/smallpop.csv");
-static SMALLPOP_COLON: &'static str = include_str!("../examples/data/smallpop-colon.csv");
-static SMALLPOP_NO_HEADERS: &'static str = include_str!("../examples/data/smallpop-no-headers.csv");
+static SMALLPOP_COLON: &'static str =
+    include_str!("../examples/data/smallpop-colon.csv");
+static SMALLPOP_NO_HEADERS: &'static str =
+    include_str!("../examples/data/smallpop-no-headers.csv");
 
 #[test]
 fn cookbook_read_basic() {
@@ -355,12 +358,7 @@ fn example_bin_dir() -> PathBuf {
 
 /// Return the repo root directory path.
 fn repo_dir() -> PathBuf {
-    debug_dir()
-        .parent()
-        .expect("target directory")
-        .parent()
-        .expect("repo directory")
-        .to_path_buf()
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 /// Return the directory containing the example data.
@@ -412,12 +410,11 @@ impl Output {
     ///
     /// If the command has a non-zero exit code, then this function panics.
     fn new(cmd: &mut Command, child: process::Child) -> Output {
-        let out = child.wait_with_output()
-            .expect("command runs successfully");
-        let stdout = String::from_utf8(out.stdout)
-            .expect("valid utf-8 (stdout)");
-        let stderr = String::from_utf8(out.stderr)
-            .expect("valid utf-8 (stderr)");
+        let out = child.wait_with_output().expect("command runs successfully");
+        let stdout =
+            String::from_utf8(out.stdout).expect("valid utf-8 (stdout)");
+        let stderr =
+            String::from_utf8(out.stderr).expect("valid utf-8 (stderr)");
         Output {
             stdout: stdout,
             stderr: stderr,
@@ -436,8 +433,12 @@ impl Output {
                  \n\nstdout: {}\
                  \n\nstderr: {}\
                  \n\n=====\n",
-                self.command, repo_dir().display(),
-                self.status, self.stdout, self.stderr);
+                self.command,
+                repo_dir().display(),
+                self.status,
+                self.stdout,
+                self.stderr
+            );
         }
         &self.stdout
     }
@@ -452,8 +453,12 @@ impl Output {
                  \n\nstdout: {}\
                  \n\nstderr: {}\
                  \n\n=====\n",
-                self.command, repo_dir().display(),
-                self.status, self.stdout, self.stderr);
+                self.command,
+                repo_dir().display(),
+                self.status,
+                self.stdout,
+                self.stderr
+            );
         }
         &self.stdout
     }
@@ -468,8 +473,12 @@ impl Output {
                  \n\nstdout: {}\
                  \n\nstderr: {}\
                  \n\n=====\n",
-                self.command, repo_dir().display(),
-                self.status, self.stdout, self.stderr);
+                self.command,
+                repo_dir().display(),
+                self.status,
+                self.stdout,
+                self.stderr
+            );
         }
         &self.stderr
     }

@@ -1,10 +1,8 @@
-extern crate csv;
-
 use std::error::Error;
 use std::io;
 use std::process;
 
-fn example() -> Result<(), Box<Error>> {
+fn example() -> Result<(), Box<dyn Error>> {
     // Build the CSV reader and iterate over each record.
     let mut rdr = csv::Reader::from_reader(io::stdin());
     for result in rdr.records() {

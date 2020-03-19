@@ -58,10 +58,6 @@ pub fn unbounded<T>() -> (Sender<T>, Receiver<T>) {
 /// A special case is zero-capacity channel, which cannot hold any messages. Instead, send and
 /// receive operations must appear at the same time in order to pair up and pass the message over.
 ///
-/// # Panics
-///
-/// Panics if the capacity is greater than `usize::max_value() / 4`.
-///
 /// # Examples
 ///
 /// A channel of capacity 1:
@@ -390,7 +386,8 @@ impl<T> Sender<T> {
             SenderFlavor::Array(chan) => chan.send(msg, None),
             SenderFlavor::List(chan) => chan.send(msg, None),
             SenderFlavor::Zero(chan) => chan.send(msg, None),
-        }.map_err(|err| match err {
+        }
+        .map_err(|err| match err {
             SendTimeoutError::Disconnected(msg) => SendError(msg),
             SendTimeoutError::Timeout(_) => unreachable!(),
         })
@@ -532,6 +529,30 @@ impl<T> Sender<T> {
             SenderFlavor::Array(chan) => chan.capacity(),
             SenderFlavor::List(chan) => chan.capacity(),
             SenderFlavor::Zero(chan) => chan.capacity(),
+        }
+    }
+
+    /// Returns `true` if senders belong to the same channel.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use crossbeam_channel::unbounded;
+    ///
+    /// let (s, _) = unbounded::<usize>();
+    ///
+    /// let s2 = s.clone();
+    /// assert!(s.same_channel(&s2));
+    ///
+    /// let (s3, _) = unbounded();
+    /// assert!(!s.same_channel(&s3));
+    /// ```
+    pub fn same_channel(&self, other: &Sender<T>) -> bool {
+        match (&self.flavor, &other.flavor) {
+            (SenderFlavor::Array(ref a), SenderFlavor::Array(ref b)) => a == b,
+            (SenderFlavor::List(ref a), SenderFlavor::List(ref b)) => a == b,
+            (SenderFlavor::Zero(ref a), SenderFlavor::Zero(ref b)) => a == b,
+            _ => false,
         }
     }
 }
@@ -717,7 +738,8 @@ impl<T> Receiver<T> {
                 }
             }
             ReceiverFlavor::Never(chan) => chan.recv(None),
-        }.map_err(|_| RecvError)
+        }
+        .map_err(|_| RecvError)
     }
 
     /// Waits for a message to be received from the channel, but only for a limited time.
@@ -958,6 +980,33 @@ impl<T> Receiver<T> {
     pub fn try_iter(&self) -> TryIter<T> {
         TryIter { receiver: self }
     }
+
+    /// Returns `true` if receivers belong to the same channel.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use crossbeam_channel::unbounded;
+    ///
+    /// let (_, r) = unbounded::<usize>();
+    ///
+    /// let r2 = r.clone();
+    /// assert!(r.same_channel(&r2));
+    ///
+    /// let (_, r3) = unbounded();
+    /// assert!(!r.same_channel(&r3));
+    /// ```
+    pub fn same_channel(&self, other: &Receiver<T>) -> bool {
+        match (&self.flavor, &other.flavor) {
+            (ReceiverFlavor::Array(a), ReceiverFlavor::Array(b)) => a == b,
+            (ReceiverFlavor::List(a), ReceiverFlavor::List(b)) => a == b,
+            (ReceiverFlavor::Zero(a), ReceiverFlavor::Zero(b)) => a == b,
+            (ReceiverFlavor::After(a), ReceiverFlavor::After(b)) => Arc::ptr_eq(a, b),
+            (ReceiverFlavor::Tick(a), ReceiverFlavor::Tick(b)) => Arc::ptr_eq(a, b),
+            (ReceiverFlavor::Never(_), ReceiverFlavor::Never(_)) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<T> Drop for Receiver<T> {
@@ -967,9 +1016,9 @@ impl<T> Drop for Receiver<T> {
                 ReceiverFlavor::Array(chan) => chan.release(|c| c.disconnect()),
                 ReceiverFlavor::List(chan) => chan.release(|c| c.disconnect()),
                 ReceiverFlavor::Zero(chan) => chan.release(|c| c.disconnect()),
-                ReceiverFlavor::After(_) => {},
-                ReceiverFlavor::Tick(_) => {},
-                ReceiverFlavor::Never(_) => {},
+                ReceiverFlavor::After(_) => {}
+                ReceiverFlavor::Tick(_) => {}
+                ReceiverFlavor::Never(_) => {}
             }
         }
     }

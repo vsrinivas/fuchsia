@@ -8,8 +8,9 @@ https://github.com/crossbeam-rs/crossbeam-queue/tree/master/src)
 https://crates.io/crates/crossbeam-queue)
 [![Documentation](https://docs.rs/crossbeam-queue/badge.svg)](
 https://docs.rs/crossbeam-queue)
-[![Rust 1.26+](https://img.shields.io/badge/rust-1.26+-lightgray.svg)](
+[![Rust 1.28+](https://img.shields.io/badge/rust-1.28+-lightgray.svg)](
 https://www.rust-lang.org)
+[![chat](https://img.shields.io/discord/569610676205781012.svg?logo=discord)](https://discord.gg/BBYwKq)
 
 This crate provides concurrent queues that can be shared among threads:
 
@@ -25,7 +26,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-crossbeam-queue = "0.1"
+crossbeam-queue = "0.2"
 ```
 
 Next, add this to your crate:
@@ -36,7 +37,7 @@ extern crate crossbeam_queue;
 
 ## Compatibility
 
-The minimum supported Rust version is 1.26.
+The minimum supported Rust version is 1.28. Any change to this is considered a breaking change.
 
 ## License
 

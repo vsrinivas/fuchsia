@@ -5,12 +5,13 @@ extern crate crossbeam_channel;
 extern crate crossbeam_utils;
 extern crate rand;
 
+use std::any::Any;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::Duration;
 
-use crossbeam_channel::bounded;
+use crossbeam_channel::{bounded, Receiver};
 use crossbeam_channel::{RecvError, RecvTimeoutError, TryRecvError};
 use crossbeam_channel::{SendError, SendTimeoutError, TrySendError};
 use crossbeam_utils::thread::scope;
@@ -97,7 +98,8 @@ fn try_recv() {
             thread::sleep(ms(1000));
             s.send(7).unwrap();
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -119,7 +121,8 @@ fn recv() {
             s.send(8).unwrap();
             s.send(9).unwrap();
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -139,7 +142,8 @@ fn recv_timeout() {
             thread::sleep(ms(1500));
             s.send(7).unwrap();
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -161,7 +165,8 @@ fn try_send() {
             assert_eq!(r.try_recv(), Err(TryRecvError::Empty));
             assert_eq!(r.recv(), Ok(3));
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -184,7 +189,8 @@ fn send() {
             assert_eq!(r.recv(), Ok(8));
             assert_eq!(r.recv(), Ok(9));
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -211,7 +217,8 @@ fn send_timeout() {
             assert_eq!(r.recv(), Ok(2));
             assert_eq!(r.recv(), Ok(4));
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -301,7 +308,8 @@ fn len() {
                 assert!(len <= CAP);
             }
         });
-    }).unwrap();
+    })
+    .unwrap();
 
     assert_eq!(s.len(), 0);
     assert_eq!(r.len(), 0);
@@ -320,7 +328,8 @@ fn disconnect_wakes_sender() {
             thread::sleep(ms(1000));
             drop(r);
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -335,7 +344,8 @@ fn disconnect_wakes_receiver() {
             thread::sleep(ms(1000));
             drop(s);
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -356,7 +366,8 @@ fn spsc() {
                 s.send(i).unwrap();
             }
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -383,7 +394,8 @@ fn mpmc() {
                 }
             });
         }
-    }).unwrap();
+    })
+    .unwrap();
 
     for c in v {
         assert_eq!(c.load(Ordering::SeqCst), THREADS);
@@ -400,7 +412,8 @@ fn stress_oneshot() {
         scope(|scope| {
             scope.spawn(|_| r.recv().unwrap());
             scope.spawn(|_| s.send(0).unwrap());
-        }).unwrap();
+        })
+        .unwrap();
     }
 }
 
@@ -430,7 +443,8 @@ fn stress_iter() {
                 break;
             }
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -466,7 +480,8 @@ fn stress_timeout_two_threads() {
                 }
             }
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -505,7 +520,8 @@ fn drops() {
                     s.send(DropCounter).unwrap();
                 }
             });
-        }).unwrap();
+        })
+        .unwrap();
 
         for _ in 0..additional {
             s.send(DropCounter).unwrap();
@@ -534,7 +550,8 @@ fn linearizable() {
                 }
             });
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -601,4 +618,42 @@ fn recv_in_send() {
     select! {
         send(s, assert_eq!(r.recv(), Ok(()))) -> _ => {}
     }
+}
+
+#[test]
+fn channel_through_channel() {
+    const COUNT: usize = 1000;
+
+    type T = Box<dyn Any + Send>;
+
+    let (s, r) = bounded::<T>(1);
+
+    scope(|scope| {
+        scope.spawn(move |_| {
+            let mut s = s;
+
+            for _ in 0..COUNT {
+                let (new_s, new_r) = bounded(1);
+                let new_r: T = Box::new(Some(new_r));
+
+                s.send(new_r).unwrap();
+                s = new_s;
+            }
+        });
+
+        scope.spawn(move |_| {
+            let mut r = r;
+
+            for _ in 0..COUNT {
+                r = r
+                    .recv()
+                    .unwrap()
+                    .downcast_mut::<Option<Receiver<T>>>()
+                    .unwrap()
+                    .take()
+                    .unwrap()
+            }
+        });
+    })
+    .unwrap();
 }

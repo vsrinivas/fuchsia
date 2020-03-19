@@ -2,12 +2,13 @@
 
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
-use std::mem::{self, ManuallyDrop};
 use std::ptr;
 use std::sync::atomic::{self, AtomicPtr, AtomicUsize, Ordering};
 use std::time::Instant;
 
 use crossbeam_utils::{Backoff, CachePadded};
+
+use maybe_uninit::MaybeUninit;
 
 use context::Context;
 use err::{RecvTimeoutError, SendTimeoutError, TryRecvError, TrySendError};
@@ -42,7 +43,7 @@ const MARK_BIT: usize = 1;
 /// A slot in a block.
 struct Slot<T> {
     /// The message.
-    msg: UnsafeCell<ManuallyDrop<T>>,
+    msg: UnsafeCell<MaybeUninit<T>>,
 
     /// The state of the slot.
     state: AtomicUsize,
@@ -72,7 +73,13 @@ struct Block<T> {
 impl<T> Block<T> {
     /// Creates an empty block.
     fn new() -> Block<T> {
-        unsafe { mem::zeroed() }
+        // SAFETY: This is safe because:
+        //  [1] `Block::next` (AtomicPtr) may be safely zero initialized.
+        //  [2] `Block::slots` (Array) may be safely zero initialized because of [3, 4].
+        //  [3] `Slot::msg` (UnsafeCell) may be safely zero initialized because it
+        //       holds a MaybeUninit.
+        //  [4] `Slot::state` (AtomicUsize) may be safely zero initialized.
+        unsafe { MaybeUninit::zeroed().assume_init() }
     }
 
     /// Waits until the next pointer is set.
@@ -119,6 +126,7 @@ struct Position<T> {
 }
 
 /// The token type for the list flavor.
+#[derive(Debug)]
 pub struct ListToken {
     /// The block of slots.
     block: *const u8,
@@ -221,7 +229,12 @@ impl<T> Channel<T> {
             if block.is_null() {
                 let new = Box::into_raw(Box::new(Block::<T>::new()));
 
-                if self.tail.block.compare_and_swap(block, new, Ordering::Release) == block {
+                if self
+                    .tail
+                    .block
+                    .compare_and_swap(block, new, Ordering::Release)
+                    == block
+                {
                     self.head.block.store(new, Ordering::Release);
                     block = new;
                 } else {
@@ -235,14 +248,12 @@ impl<T> Channel<T> {
             let new_tail = tail + (1 << SHIFT);
 
             // Try advancing the tail forward.
-            match self.tail.index
-                .compare_exchange_weak(
-                    tail,
-                    new_tail,
-                    Ordering::SeqCst,
-                    Ordering::Acquire,
-                )
-            {
+            match self.tail.index.compare_exchange_weak(
+                tail,
+                new_tail,
+                Ordering::SeqCst,
+                Ordering::Acquire,
+            ) {
                 Ok(_) => unsafe {
                     // If we've reached the end of the block, install the next one.
                     if offset + 1 == BLOCK_CAP {
@@ -255,7 +266,7 @@ impl<T> Channel<T> {
                     token.list.block = block as *const u8;
                     token.list.offset = offset;
                     return true;
-                }
+                },
                 Err(t) => {
                     tail = t;
                     block = self.tail.block.load(Ordering::Acquire);
@@ -276,7 +287,7 @@ impl<T> Channel<T> {
         let block = token.list.block as *mut Block<T>;
         let offset = token.list.offset;
         let slot = (*block).slots.get_unchecked(offset);
-        slot.msg.get().write(ManuallyDrop::new(msg));
+        slot.msg.get().write(MaybeUninit::new(msg));
         slot.state.fetch_or(WRITE, Ordering::Release);
 
         // Wake a sleeping receiver.
@@ -337,14 +348,12 @@ impl<T> Channel<T> {
             }
 
             // Try moving the head index forward.
-            match self.head.index
-                .compare_exchange_weak(
-                    head,
-                    new_head,
-                    Ordering::SeqCst,
-                    Ordering::Acquire,
-                )
-            {
+            match self.head.index.compare_exchange_weak(
+                head,
+                new_head,
+                Ordering::SeqCst,
+                Ordering::Acquire,
+            ) {
                 Ok(_) => unsafe {
                     // If we've reached the end of the block, move to the next one.
                     if offset + 1 == BLOCK_CAP {
@@ -361,7 +370,7 @@ impl<T> Channel<T> {
                     token.list.block = block as *const u8;
                     token.list.offset = offset;
                     return true;
-                }
+                },
                 Err(h) => {
                     head = h;
                     block = self.head.block.load(Ordering::Acquire);
@@ -383,8 +392,7 @@ impl<T> Channel<T> {
         let offset = token.list.offset;
         let slot = (*block).slots.get_unchecked(offset);
         slot.wait_write();
-        let m = slot.msg.get().read();
-        let msg = ManuallyDrop::into_inner(m);
+        let msg = slot.msg.get().read().assume_init();
 
         // Destroy the block if we've reached the end, or if another thread wanted to destroy but
         // couldn't because we were busy reading from the slot.
@@ -446,6 +454,12 @@ impl<T> Channel<T> {
                 }
             }
 
+            if let Some(d) = deadline {
+                if Instant::now() >= d {
+                    return Err(RecvTimeoutError::Timeout);
+                }
+            }
+
             // Prepare for blocking until a sender wakes us up.
             Context::with(|cx| {
                 let oper = Operation::hook(token);
@@ -469,12 +483,6 @@ impl<T> Channel<T> {
                     Selected::Operation(_) => {}
                 }
             });
-
-            if let Some(d) = deadline {
-                if Instant::now() >= d {
-                    return Err(RecvTimeoutError::Timeout);
-                }
-            }
         }
     }
 
@@ -521,11 +529,16 @@ impl<T> Channel<T> {
     }
 
     /// Disconnects the channel and wakes up all blocked receivers.
-    pub fn disconnect(&self) {
+    ///
+    /// Returns `true` if this call disconnected the channel.
+    pub fn disconnect(&self) -> bool {
         let tail = self.tail.index.fetch_or(MARK_BIT, Ordering::SeqCst);
 
         if tail & MARK_BIT == 0 {
             self.receivers.disconnect();
+            true
+        } else {
+            false
         }
     }
 
@@ -565,7 +578,8 @@ impl<T> Drop for Channel<T> {
                 if offset < BLOCK_CAP {
                     // Drop the message in the slot.
                     let slot = (*block).slots.get_unchecked(offset);
-                    ManuallyDrop::drop(&mut *(*slot).msg.get());
+                    let p = &mut *slot.msg.get();
+                    p.as_mut_ptr().drop_in_place();
                 } else {
                     // Deallocate the block and move to the next one.
                     let next = (*block).next.load(Ordering::Relaxed);

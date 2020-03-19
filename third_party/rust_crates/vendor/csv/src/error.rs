@@ -2,16 +2,9 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 use std::result;
-use std::str;
 
-use byte_record::{ByteRecord, Position};
-use deserializer::DeserializeError;
-
-/// A crate private constructor for `Error`.
-pub fn new_error(kind: ErrorKind) -> Error {
-    // TODO(burntsushi): Use `pub(crate)` when it stabilizes.
-    Error(Box::new(kind))
-}
+use crate::byte_record::{ByteRecord, Position};
+use crate::deserializer::DeserializeError;
 
 /// A type alias for `Result<T, csv::Error>`.
 pub type Result<T> = result::Result<T, Error>;
@@ -28,6 +21,11 @@ pub type Result<T> = result::Result<T, Error>;
 pub struct Error(Box<ErrorKind>);
 
 impl Error {
+    /// A crate private constructor for `Error`.
+    pub(crate) fn new(kind: ErrorKind) -> Error {
+        Error(Box::new(kind))
+    }
+
     /// Return the specific type of this error.
     pub fn kind(&self) -> &ErrorKind {
         &self.0
@@ -47,6 +45,14 @@ impl Error {
             ErrorKind::Io(_) => true,
             _ => false,
         }
+    }
+
+    /// Return the position for this error, if one exists.
+    ///
+    /// This is a convenience function that permits callers to easily access
+    /// the position on an error without doing case analysis on `ErrorKind`.
+    pub fn position(&self) -> Option<&Position> {
+        self.0.position()
     }
 }
 
@@ -101,9 +107,24 @@ pub enum ErrorKind {
     __Nonexhaustive,
 }
 
+impl ErrorKind {
+    /// Return the position for this error, if one exists.
+    ///
+    /// This is a convenience function that permits callers to easily access
+    /// the position on an error without doing case analysis on `ErrorKind`.
+    pub fn position(&self) -> Option<&Position> {
+        match *self {
+            ErrorKind::Utf8 { ref pos, .. } => pos.as_ref(),
+            ErrorKind::UnequalLengths { ref pos, .. } => pos.as_ref(),
+            ErrorKind::Deserialize { ref pos, .. } => pos.as_ref(),
+            _ => None,
+        }
+    }
+}
+
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
-        new_error(ErrorKind::Io(err))
+        Error::new(ErrorKind::Io(err))
     }
 }
 
@@ -114,25 +135,11 @@ impl From<Error> for io::Error {
 }
 
 impl StdError for Error {
-    fn description(&self) -> &str {
-        match *self.0 {
-            ErrorKind::Io(ref err) => err.description(),
-            ErrorKind::Utf8 { ref err, .. } => err.description(),
-            ErrorKind::UnequalLengths{..} => {
-                "record of different length found"
-            }
-            ErrorKind::Seek => "headers unavailable on seeked CSV reader",
-            ErrorKind::Serialize(ref err) => err,
-            ErrorKind::Deserialize { ref err, .. } => err.description(),
-            _ => unreachable!(),
-        }
-    }
-
-    fn cause(&self) -> Option<&StdError> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match *self.0 {
             ErrorKind::Io(ref err) => Some(err),
             ErrorKind::Utf8 { ref err, .. } => Some(err),
-            ErrorKind::UnequalLengths{..} => None,
+            ErrorKind::UnequalLengths { .. } => None,
             ErrorKind::Seek => None,
             ErrorKind::Serialize(_) => None,
             ErrorKind::Deserialize { ref err, .. } => Some(err),
@@ -148,47 +155,61 @@ impl fmt::Display for Error {
             ErrorKind::Utf8 { pos: None, ref err } => {
                 write!(f, "CSV parse error: field {}: {}", err.field(), err)
             }
-            ErrorKind::Utf8 { pos: Some(ref pos), ref err } => {
-                write!(
-                    f,
-                    "CSV parse error: record {} \
-                     (line {}, field: {}, byte: {}): {}",
-                    pos.record(), pos.line(), err.field(), pos.byte(), err)
-            }
+            ErrorKind::Utf8 { pos: Some(ref pos), ref err } => write!(
+                f,
+                "CSV parse error: record {} \
+                 (line {}, field: {}, byte: {}): {}",
+                pos.record(),
+                pos.line(),
+                err.field(),
+                pos.byte(),
+                err
+            ),
             ErrorKind::UnequalLengths { pos: None, expected_len, len } => {
                 write!(
-                    f, "CSV error: \
-                        found record with {} fields, but the previous record \
-                        has {} fields",
-                    len, expected_len)
+                    f,
+                    "CSV error: \
+                     found record with {} fields, but the previous record \
+                     has {} fields",
+                    len, expected_len
+                )
             }
             ErrorKind::UnequalLengths {
-                pos: Some(ref pos), expected_len, len
-            } => {
-                write!(
-                    f, "CSV error: record {} (line: {}, byte: {}): \
-                        found record with {} fields, but the previous record \
-                        has {} fields",
-                    pos.record(), pos.line(), pos.byte(), len, expected_len)
-            }
-            ErrorKind::Seek => {
-                write!(f, "CSV error: cannot access headers of CSV data \
-                           when the parser was seeked before the first record \
-                           could be read")
-            }
+                pos: Some(ref pos),
+                expected_len,
+                len,
+            } => write!(
+                f,
+                "CSV error: record {} (line: {}, byte: {}): \
+                 found record with {} fields, but the previous record \
+                 has {} fields",
+                pos.record(),
+                pos.line(),
+                pos.byte(),
+                len,
+                expected_len
+            ),
+            ErrorKind::Seek => write!(
+                f,
+                "CSV error: cannot access headers of CSV data \
+                 when the parser was seeked before the first record \
+                 could be read"
+            ),
             ErrorKind::Serialize(ref err) => {
                 write!(f, "CSV write error: {}", err)
             }
             ErrorKind::Deserialize { pos: None, ref err } => {
                 write!(f, "CSV deserialize error: {}", err)
             }
-            ErrorKind::Deserialize { pos: Some(ref pos), ref err } => {
-                write!(
-                    f,
-                    "CSV deserialize error: record {} \
-                     (line: {}, byte: {}): {}",
-                    pos.record(), pos.line(), pos.byte(), err)
-            }
+            ErrorKind::Deserialize { pos: Some(ref pos), ref err } => write!(
+                f,
+                "CSV deserialize error: record {} \
+                 (line: {}, byte: {}): {}",
+                pos.record(),
+                pos.line(),
+                pos.byte(),
+                err
+            ),
             _ => unreachable!(),
         }
     }
@@ -204,12 +225,12 @@ pub struct FromUtf8Error {
     err: Utf8Error,
 }
 
-/// Create a new FromUtf8Error.
-pub fn new_from_utf8_error(rec: ByteRecord, err: Utf8Error) -> FromUtf8Error {
-    FromUtf8Error { record: rec, err: err }
-}
-
 impl FromUtf8Error {
+    /// Create a new FromUtf8Error.
+    pub(crate) fn new(rec: ByteRecord, err: Utf8Error) -> FromUtf8Error {
+        FromUtf8Error { record: rec, err: err }
+    }
+
     /// Access the underlying `ByteRecord` that failed UTF-8 validation.
     pub fn into_byte_record(self) -> ByteRecord {
         self.record
@@ -228,8 +249,9 @@ impl fmt::Display for FromUtf8Error {
 }
 
 impl StdError for FromUtf8Error {
-    fn description(&self) -> &str { self.err.description() }
-    fn cause(&self) -> Option<&StdError> { Some(&self.err) }
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        Some(&self.err)
+    }
 }
 
 /// A UTF-8 validation error.
@@ -254,22 +276,24 @@ pub fn new_utf8_error(field: usize, valid_up_to: usize) -> Utf8Error {
 
 impl Utf8Error {
     /// The field index of a byte record in which UTF-8 validation failed.
-    pub fn field(&self) -> usize { self.field }
+    pub fn field(&self) -> usize {
+        self.field
+    }
     /// The index into the given field up to which valid UTF-8 was verified.
-    pub fn valid_up_to(&self) -> usize { self.valid_up_to }
+    pub fn valid_up_to(&self) -> usize {
+        self.valid_up_to
+    }
 }
 
-impl StdError for Utf8Error {
-    fn description(&self) -> &str { "invalid utf-8 in CSV record" }
-}
+impl StdError for Utf8Error {}
 
 impl fmt::Display for Utf8Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "invalid utf-8: invalid UTF-8 in field {} near byte index {}",
-            self.field,
-            self.valid_up_to)
+            self.field, self.valid_up_to
+        )
     }
 }
 
@@ -285,15 +309,15 @@ pub struct IntoInnerError<W> {
     err: io::Error,
 }
 
-/// Creates a new `IntoInnerError`.
-///
-/// (This is a visibility hack. It's public in this module, but not in the
-/// crate.)
-pub fn new_into_inner_error<W>(wtr: W, err: io::Error) -> IntoInnerError<W> {
-    IntoInnerError { wtr: wtr, err: err }
-}
-
 impl<W> IntoInnerError<W> {
+    /// Creates a new `IntoInnerError`.
+    ///
+    /// (This is a visibility hack. It's public in this module, but not in the
+    /// crate.)
+    pub(crate) fn new(wtr: W, err: io::Error) -> IntoInnerError<W> {
+        IntoInnerError { wtr: wtr, err: err }
+    }
+
     /// Returns the error which caused the call to `into_inner` to fail.
     ///
     /// This error was returned when attempting to flush the internal buffer.
@@ -310,14 +334,9 @@ impl<W> IntoInnerError<W> {
     }
 }
 
-impl<W: ::std::any::Any> StdError for IntoInnerError<W> {
-    fn description(&self) -> &str {
-        self.err.description()
-    }
-
-    #[allow(deprecated)]
-    fn cause(&self) -> Option<&StdError> {
-        self.err.cause()
+impl<W: std::any::Any> StdError for IntoInnerError<W> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.err.source()
     }
 }
 

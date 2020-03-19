@@ -15,7 +15,7 @@ as well as anything that requires non-const function calls to be computed.
 
 ## Minimum supported `rustc`
 
-`1.24.1+`
+`1.27.2+`
 
 This version is explicitly tested in CI and may only be bumped in new minor versions. Any changes to the supported minimum version will be called out in the release notes.
 
@@ -31,7 +31,7 @@ Add the following dependency to your Cargo manifest...
 
 ```toml
 [dependencies]
-lazy_static = "1.3.0"
+lazy_static = "1.4.0"
 ```
 
 ...and see the [docs](https://docs.rs/lazy_static) for how to use it.

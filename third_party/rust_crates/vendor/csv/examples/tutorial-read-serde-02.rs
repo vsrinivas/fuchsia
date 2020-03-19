@@ -1,5 +1,3 @@
-extern crate csv;
-
 use std::error::Error;
 use std::io;
 use std::process;
@@ -8,7 +6,7 @@ use std::process;
 // record type.
 type Record = (String, String, Option<u64>, f64, f64);
 
-fn run() -> Result<(), Box<Error>> {
+fn run() -> Result<(), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_reader(io::stdin());
     // Instead of creating an iterator with the `records` method, we create
     // an iterator with the `deserialize` method.
@@ -21,8 +19,8 @@ fn run() -> Result<(), Box<Error>> {
 }
 
 fn main() {
-if let Err(err) = run() {
-println!("{}", err);
-process::exit(1);
-}
+    if let Err(err) = run() {
+        println!("{}", err);
+        process::exit(1);
+    }
 }

@@ -12,7 +12,7 @@ where
     pi.drive_unindexed(consumer)
 }
 
-struct ForEachConsumer<'f, F: 'f> {
+struct ForEachConsumer<'f, F> {
     op: &'f F,
 }
 
@@ -52,7 +52,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        iter.into_iter().fold((), |_, item| (self.op)(item));
+        iter.into_iter().for_each(self.op);
         self
     }
 

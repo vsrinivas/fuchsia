@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::*;
-use prelude::*;
+use crate::prelude::*;
 use rayon_core::*;
 
 use rand::distributions::Standard;
@@ -399,6 +399,7 @@ fn check_cmp_to_seq() {
 #[test]
 fn check_cmp_rng_to_seq() {
     let mut rng = seeded_rng();
+    let rng = &mut rng;
     let a: Vec<i32> = rng.sample_iter(&Standard).take(1024).collect();
     let b: Vec<i32> = rng.sample_iter(&Standard).take(1024).collect();
     for i in 0..a.len() {
@@ -447,53 +448,89 @@ fn check_cmp_gt_to_seq() {
 
 #[test]
 fn check_cmp_short_circuit() {
+    // We only use a single thread in order to make the short-circuit behavior deterministic.
+    let pool = ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+
     let a = vec![0; 1024];
     let mut b = a.clone();
     b[42] = 1;
 
-    let counter = AtomicUsize::new(0);
-    let result = a
-        .par_iter()
-        .inspect(|_| {
-            counter.fetch_add(1, Ordering::SeqCst);
-        })
-        .cmp(&b);
-    assert!(result == ::std::cmp::Ordering::Less);
-    assert!(counter.load(Ordering::SeqCst) < a.len()); // should not have visited every single one
+    pool.install(|| {
+        let expected = ::std::cmp::Ordering::Less;
+        assert_eq!(a.par_iter().cmp(&b), expected);
+
+        for len in 1..10 {
+            let counter = AtomicUsize::new(0);
+            let result = a
+                .par_iter()
+                .with_max_len(len)
+                .inspect(|_| {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                })
+                .cmp(&b);
+            assert_eq!(result, expected);
+            // should not have visited every single one
+            assert!(counter.into_inner() < a.len());
+        }
+    });
 }
 
 #[test]
 fn check_partial_cmp_short_circuit() {
+    // We only use a single thread to make the short-circuit behavior deterministic.
+    let pool = ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+
     let a = vec![0; 1024];
     let mut b = a.clone();
     b[42] = 1;
 
-    let counter = AtomicUsize::new(0);
-    let result = a
-        .par_iter()
-        .inspect(|_| {
-            counter.fetch_add(1, Ordering::SeqCst);
-        })
-        .partial_cmp(&b);
-    assert!(result == Some(::std::cmp::Ordering::Less));
-    assert!(counter.load(Ordering::SeqCst) < a.len()); // should not have visited every single one
+    pool.install(|| {
+        let expected = Some(::std::cmp::Ordering::Less);
+        assert_eq!(a.par_iter().partial_cmp(&b), expected);
+
+        for len in 1..10 {
+            let counter = AtomicUsize::new(0);
+            let result = a
+                .par_iter()
+                .with_max_len(len)
+                .inspect(|_| {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                })
+                .partial_cmp(&b);
+            assert_eq!(result, expected);
+            // should not have visited every single one
+            assert!(counter.into_inner() < a.len());
+        }
+    });
 }
 
 #[test]
 fn check_partial_cmp_nan_short_circuit() {
+    // We only use a single thread to make the short-circuit behavior deterministic.
+    let pool = ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+
     let a = vec![0.0; 1024];
     let mut b = a.clone();
     b[42] = f64::NAN;
 
-    let counter = AtomicUsize::new(0);
-    let result = a
-        .par_iter()
-        .inspect(|_| {
-            counter.fetch_add(1, Ordering::SeqCst);
-        })
-        .partial_cmp(&b);
-    assert!(result == None);
-    assert!(counter.load(Ordering::SeqCst) < a.len()); // should not have visited every single one
+    pool.install(|| {
+        let expected = None;
+        assert_eq!(a.par_iter().partial_cmp(&b), expected);
+
+        for len in 1..10 {
+            let counter = AtomicUsize::new(0);
+            let result = a
+                .par_iter()
+                .with_max_len(len)
+                .inspect(|_| {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                })
+                .partial_cmp(&b);
+            assert_eq!(result, expected);
+            // should not have visited every single one
+            assert!(counter.into_inner() < a.len());
+        }
+    });
 }
 
 #[test]
@@ -516,6 +553,7 @@ fn check_partial_cmp_to_seq() {
 #[test]
 fn check_partial_cmp_rng_to_seq() {
     let mut rng = seeded_rng();
+    let rng = &mut rng;
     let a: Vec<i32> = rng.sample_iter(&Standard).take(1024).collect();
     let b: Vec<i32> = rng.sample_iter(&Standard).take(1024).collect();
     for i in 0..a.len() {
@@ -949,7 +987,7 @@ fn check_chunks() {
 
     let par_sum_product_triples: i32 = a.par_chunks(3).map(|c| c.iter().product::<i32>()).sum();
     let seq_sum_product_triples = a.chunks(3).map(|c| c.iter().product::<i32>()).sum();
-    assert_eq!(par_sum_product_triples, 5_0 + 12_00 + 2_000_0000 + 1);
+    assert_eq!(par_sum_product_triples, 5_0 + 12_00 + 20_000_000 + 1);
     assert_eq!(par_sum_product_triples, seq_sum_product_triples);
 }
 
@@ -1486,7 +1524,7 @@ fn par_iter_unindexed_flat_map() {
 
 #[test]
 fn min_max() {
-    let mut rng = seeded_rng();
+    let rng = seeded_rng();
     let a: Vec<i32> = rng.sample_iter(&Standard).take(1024).collect();
     for i in 0..=a.len() {
         let slice = &a[..i];
@@ -1497,7 +1535,7 @@ fn min_max() {
 
 #[test]
 fn min_max_by() {
-    let mut rng = seeded_rng();
+    let rng = seeded_rng();
     // Make sure there are duplicate keys, for testing sort stability
     let r: Vec<i32> = rng.sample_iter(&Standard).take(512).collect();
     let a: Vec<(i32, u16)> = r.iter().chain(&r).cloned().zip(0..).collect();
@@ -1516,7 +1554,7 @@ fn min_max_by() {
 
 #[test]
 fn min_max_by_key() {
-    let mut rng = seeded_rng();
+    let rng = seeded_rng();
     // Make sure there are duplicate keys, for testing sort stability
     let r: Vec<i32> = rng.sample_iter(&Standard).take(512).collect();
     let a: Vec<(i32, u16)> = r.iter().chain(&r).cloned().zip(0..).collect();
@@ -1815,7 +1853,7 @@ fn check_partition_map() {
 
 #[test]
 fn check_either() {
-    type I = ::vec::IntoIter<i32>;
+    type I = crate::vec::IntoIter<i32>;
     type E = Either<I, I>;
 
     let v: Vec<i32> = (0..1024).collect();

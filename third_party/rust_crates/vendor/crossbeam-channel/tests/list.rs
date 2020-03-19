@@ -5,12 +5,13 @@ extern crate crossbeam_channel;
 extern crate crossbeam_utils;
 extern crate rand;
 
+use std::any::Any;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::Duration;
 
-use crossbeam_channel::unbounded;
+use crossbeam_channel::{unbounded, Receiver};
 use crossbeam_channel::{RecvError, RecvTimeoutError, TryRecvError};
 use crossbeam_channel::{SendError, SendTimeoutError, TrySendError};
 use crossbeam_utils::thread::scope;
@@ -86,7 +87,8 @@ fn try_recv() {
             thread::sleep(ms(1000));
             s.send(7).unwrap();
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -108,7 +110,8 @@ fn recv() {
             s.send(8).unwrap();
             s.send(9).unwrap();
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -128,7 +131,8 @@ fn recv_timeout() {
             thread::sleep(ms(1500));
             s.send(7).unwrap();
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -234,7 +238,8 @@ fn disconnect_wakes_receiver() {
             thread::sleep(ms(1000));
             drop(s);
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -255,7 +260,8 @@ fn spsc() {
                 s.send(i).unwrap();
             }
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -282,7 +288,8 @@ fn mpmc() {
                 }
             });
         }
-    }).unwrap();
+    })
+    .unwrap();
 
     assert_eq!(r.try_recv(), Err(TryRecvError::Empty));
 
@@ -301,7 +308,8 @@ fn stress_oneshot() {
         scope(|scope| {
             scope.spawn(|_| r.recv().unwrap());
             scope.spawn(|_| s.send(0).unwrap());
-        }).unwrap();
+        })
+        .unwrap();
     }
 }
 
@@ -331,7 +339,8 @@ fn stress_iter() {
                 break;
             }
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -363,7 +372,8 @@ fn stress_timeout_two_threads() {
                 }
             }
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -400,7 +410,8 @@ fn drops() {
                     s.send(DropCounter).unwrap();
                 }
             });
-        }).unwrap();
+        })
+        .unwrap();
 
         for _ in 0..additional {
             s.try_send(DropCounter).unwrap();
@@ -429,7 +440,8 @@ fn linearizable() {
                 }
             });
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -485,4 +497,42 @@ fn recv_in_send() {
     select! {
         send(s, assert_eq!(r.recv(), Ok(()))) -> _ => {}
     }
+}
+
+#[test]
+fn channel_through_channel() {
+    const COUNT: usize = 1000;
+
+    type T = Box<dyn Any + Send>;
+
+    let (s, r) = unbounded::<T>();
+
+    scope(|scope| {
+        scope.spawn(move |_| {
+            let mut s = s;
+
+            for _ in 0..COUNT {
+                let (new_s, new_r) = unbounded();
+                let new_r: T = Box::new(Some(new_r));
+
+                s.send(new_r).unwrap();
+                s = new_s;
+            }
+        });
+
+        scope.spawn(move |_| {
+            let mut r = r;
+
+            for _ in 0..COUNT {
+                r = r
+                    .recv()
+                    .unwrap()
+                    .downcast_mut::<Option<Receiver<T>>>()
+                    .unwrap()
+                    .take()
+                    .unwrap()
+            }
+        });
+    })
+    .unwrap();
 }

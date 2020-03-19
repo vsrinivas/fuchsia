@@ -1,11 +1,8 @@
-extern crate csv;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-
 use std::error::Error;
 use std::io;
 use std::process;
+
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -19,7 +16,7 @@ struct Record<'a> {
     longitude: f64,
 }
 
-fn run() -> Result<u64, Box<Error>> {
+fn run() -> Result<u64, Box<dyn Error>> {
     let mut rdr = csv::Reader::from_reader(io::stdin());
     let mut raw_record = csv::ByteRecord::new();
     let headers = rdr.byte_headers()?.clone();
@@ -35,13 +32,13 @@ fn run() -> Result<u64, Box<Error>> {
 }
 
 fn main() {
-match run() {
-Ok(count) => {
-println!("{}", count);
-}
-Err(err) => {
-println!("{}", err);
-process::exit(1);
-}
-}
+    match run() {
+        Ok(count) => {
+            println!("{}", count);
+        }
+        Err(err) => {
+            println!("{}", err);
+            process::exit(1);
+        }
+    }
 }

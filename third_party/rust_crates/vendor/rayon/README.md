@@ -74,12 +74,6 @@ as:
 rayon = "1.1"
 ```
 
-and then add the following to your `lib.rs`:
-
-```rust
-extern crate rayon;
-```
-
 To use the Parallel Iterator APIs, a number of traits have to be in
 scope. The easiest way to bring those things into scope is to use the
 [Rayon prelude](https://docs.rs/rayon/*/rayon/prelude/index.html).  In
@@ -90,7 +84,7 @@ just add:
 use rayon::prelude::*;
 ```
 
-Rayon currently requires `rustc 1.26.0` or greater.
+Rayon currently requires `rustc 1.31.0` or greater.
 
 ## Contribution
 

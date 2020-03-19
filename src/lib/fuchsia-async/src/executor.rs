@@ -500,7 +500,7 @@ impl Executor {
         match packet.key() {
             EMPTY_WAKEUP_ID => self.poll_main_future(main_future),
             TASK_READY_WAKEUP_ID => {
-                if let Some(task) = self.inner.ready_tasks.try_pop() {
+                if let Ok(task) = self.inner.ready_tasks.pop() {
                     let lw = waker_ref(&task);
                     task.future.try_poll(&mut Context::from_waker(&lw));
                 };
@@ -772,7 +772,7 @@ impl Drop for Executor {
         self.inner.receivers.lock().clear();
 
         // Drop all of the uncompleted tasks
-        while let Some(_) = self.inner.ready_tasks.try_pop() {}
+        while let Ok(_) = self.inner.ready_tasks.pop() {}
 
         // Remove the thread-local executor set in `new`.
         EHandle::rm_local();
@@ -996,7 +996,7 @@ impl PartialEq for TimeWaker {
 impl Inner {
     fn poll_ready_tasks(&self) {
         // TODO: loop but don't starve
-        if let Some(task) = self.ready_tasks.try_pop() {
+        if let Ok(task) = self.ready_tasks.pop() {
             let w = waker_ref(&task);
             task.future.try_poll(&mut Context::from_waker(&w));
         }

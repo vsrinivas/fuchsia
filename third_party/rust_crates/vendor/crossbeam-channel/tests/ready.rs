@@ -79,7 +79,8 @@ fn disconnected() {
         }
 
         r2.recv().unwrap();
-    }).unwrap();
+    })
+    .unwrap();
 
     let mut sel = Select::new();
     sel.recv(&r1);
@@ -101,7 +102,8 @@ fn disconnected() {
             Ok(0) => assert_eq!(r2.try_recv(), Err(TryRecvError::Disconnected)),
             _ => panic!(),
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -164,7 +166,8 @@ fn timeout() {
             Ok(1) => assert_eq!(r2.try_recv(), Ok(2)),
             _ => panic!(),
         }
-    }).unwrap();
+    })
+    .unwrap();
 
     scope(|scope| {
         let (s, r) = unbounded::<i32>();
@@ -183,7 +186,8 @@ fn timeout() {
             Ok(0) => assert_eq!(r.try_recv(), Err(TryRecvError::Disconnected)),
             _ => panic!(),
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -260,7 +264,8 @@ fn unblocks() {
             Ok(1) => assert_eq!(r2.try_recv(), Ok(2)),
             _ => panic!(),
         }
-    }).unwrap();
+    })
+    .unwrap();
 
     scope(|scope| {
         scope.spawn(|_| {
@@ -280,7 +285,8 @@ fn unblocks() {
                 _ => unreachable!(),
             },
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -305,7 +311,8 @@ fn both_ready() {
                 _ => panic!(),
             }
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -335,7 +342,8 @@ fn cloning1() {
         }
 
         s3.send(()).unwrap();
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -359,7 +367,8 @@ fn cloning2() {
         thread::sleep(ms(500));
         drop(s1.clone());
         s2.send(()).unwrap();
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -515,7 +524,8 @@ fn stress_recv() {
                 s3.send(()).unwrap();
             }
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -548,7 +558,8 @@ fn stress_send() {
             }
             s3.send(()).unwrap();
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -581,7 +592,8 @@ fn stress_mixed() {
             }
             s3.send(()).unwrap();
         }
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -597,7 +609,7 @@ fn stress_timeout_two_threads() {
                     thread::sleep(ms(500));
                 }
 
-                let mut done = false;
+                let done = false;
                 while !done {
                     let mut sel = Select::new();
                     sel.send(&s);
@@ -606,7 +618,7 @@ fn stress_timeout_two_threads() {
                         Ok(0) => {
                             assert!(s.try_send(i).is_ok());
                             break;
-                        },
+                        }
                         Ok(_) => panic!(),
                     }
                 }
@@ -628,13 +640,14 @@ fn stress_timeout_two_threads() {
                         Ok(0) => {
                             assert_eq!(r.try_recv(), Ok(i));
                             done = true;
-                        },
+                        }
                         Ok(_) => panic!(),
                     }
                 }
             }
         });
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[test]
@@ -660,7 +673,7 @@ fn send_recv_same_channel() {
 fn channel_through_channel() {
     const COUNT: usize = 1000;
 
-    type T = Box<Any + Send>;
+    type T = Box<dyn Any + Send>;
 
     for cap in 1..4 {
         let (s, r) = bounded::<T>(cap);
@@ -671,7 +684,7 @@ fn channel_through_channel() {
 
                 for _ in 0..COUNT {
                     let (new_s, new_r) = bounded(cap);
-                    let mut new_r: T = Box::new(Some(new_r));
+                    let new_r: T = Box::new(Some(new_r));
 
                     {
                         let mut sel = Select::new();
@@ -707,7 +720,8 @@ fn channel_through_channel() {
                     r = new;
                 }
             });
-        }).unwrap();
+        })
+        .unwrap();
     }
 }
 
@@ -818,5 +832,6 @@ fn fairness2() {
             }
         }
         assert!(hits.iter().all(|x| x.get() >= COUNT / hits.len() / 10));
-    }).unwrap();
+    })
+    .unwrap();
 }

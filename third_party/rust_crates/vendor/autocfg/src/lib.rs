@@ -9,7 +9,7 @@
 //!
 //! ```toml
 //! [build-dependencies]
-//! autocfg = "0.1"
+//! autocfg = "1"
 //! ```
 //!
 //! Then use it in your `build.rs` script to detect compiler features.  For
@@ -25,7 +25,7 @@
 //!     ac.emit_has_type("i128");
 //!
 //!     // (optional) We don't need to rerun for anything external.
-//!     autocfg::rerun_path(file!());
+//!     autocfg::rerun_path("build.rs");
 //! }
 //! ```
 //!
@@ -33,6 +33,14 @@
 //! for Cargo, which translates to Rust arguments `--cfg has_i128`.  Then in the
 //! rest of your Rust code, you can add `#[cfg(has_i128)]` conditions on code that
 //! should only be used when the compiler supports it.
+//!
+//! ## Caution
+//!
+//! Many of the probing methods of `AutoCfg` document the particular template they
+//! use, **subject to change**. The inputs are not validated to make sure they are
+//! semantically correct for their expected use, so it's _possible_ to escape and
+//! inject something unintended. However, such abuse is unsupported and will not
+//! be considered when making changes to the templates.
 
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
@@ -351,6 +359,44 @@ impl AutoCfg {
     /// Emits the given `cfg` value if `probe_type` returns true.
     pub fn emit_type_cfg(&self, name: &str, cfg: &str) {
         if self.probe_type(name) {
+            emit(cfg);
+        }
+    }
+
+    /// Tests whether the given expression can be used.
+    ///
+    /// The test code is subject to change, but currently looks like:
+    ///
+    /// ```ignore
+    /// pub fn probe() { let _ = EXPR; }
+    /// ```
+    pub fn probe_expression(&self, expr: &str) -> bool {
+        self.probe(format!("pub fn probe() {{ let _ = {}; }}", expr))
+            .unwrap_or(false)
+    }
+
+    /// Emits the given `cfg` value if `probe_expression` returns true.
+    pub fn emit_expression_cfg(&self, expr: &str, cfg: &str) {
+        if self.probe_expression(expr) {
+            emit(cfg);
+        }
+    }
+
+    /// Tests whether the given constant expression can be used.
+    ///
+    /// The test code is subject to change, but currently looks like:
+    ///
+    /// ```ignore
+    /// pub const PROBE: () = ((), EXPR).0;
+    /// ```
+    pub fn probe_constant(&self, expr: &str) -> bool {
+        self.probe(format!("pub const PROBE: () = ((), {}).0;", expr))
+            .unwrap_or(false)
+    }
+
+    /// Emits the given `cfg` value if `probe_constant` returns true.
+    pub fn emit_constant_cfg(&self, expr: &str, cfg: &str) {
+        if self.probe_constant(expr) {
             emit(cfg);
         }
     }

@@ -4,20 +4,15 @@ use std::path::Path;
 use std::result;
 
 use csv_core::{
-    self,
-    Writer as CoreWriter,
+    self, WriteResult, Writer as CoreWriter,
     WriterBuilder as CoreWriterBuilder,
-    WriteResult,
 };
 use serde::Serialize;
 
-use byte_record::ByteRecord;
-use error::{
-    ErrorKind, Result, IntoInnerError,
-    new_error, new_into_inner_error,
-};
-use serializer::{serialize, serialize_header};
-use {QuoteStyle, Terminator};
+use crate::byte_record::ByteRecord;
+use crate::error::{Error, ErrorKind, IntoInnerError, Result};
+use crate::serializer::{serialize, serialize_header};
+use crate::{QuoteStyle, Terminator};
 
 /// Builds a CSV writer with various configuration knobs.
 ///
@@ -36,7 +31,7 @@ impl Default for WriterBuilder {
     fn default() -> WriterBuilder {
         WriterBuilder {
             builder: CoreWriterBuilder::default(),
-            capacity: 8 * (1<<10),
+            capacity: 8 * (1 << 10),
             flexible: false,
             has_headers: true,
         }
@@ -52,13 +47,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new().from_writer(vec![]);
     ///     wtr.write_record(&["a", "b", "c"])?;
     ///     wtr.write_record(&["x", "y", "z"])?;
@@ -81,13 +74,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```no_run
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new().from_path("foo.csv")?;
     ///     wtr.write_record(&["a", "b", "c"])?;
     ///     wtr.write_record(&["x", "y", "z"])?;
@@ -107,13 +98,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new().from_writer(vec![]);
     ///     wtr.write_record(&["a", "b", "c"])?;
     ///     wtr.write_record(&["x", "y", "z"])?;
@@ -134,13 +123,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .delimiter(b';')
     ///         .from_writer(vec![]);
@@ -176,12 +163,10 @@ impl WriterBuilder {
     /// names of a struct.
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::WriterBuilder;
+    /// use serde::Serialize;
     ///
     /// #[derive(Serialize)]
     /// struct Row<'a> {
@@ -194,7 +179,7 @@ impl WriterBuilder {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new().from_writer(vec![]);
     ///     wtr.serialize(Row {
     ///         city: "Boston",
@@ -225,13 +210,11 @@ impl WriterBuilder {
     /// explicitly want to both write custom headers and serialize structs.
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new().from_writer(vec![]);
     ///     wtr.serialize(("Boston", "United States", 4628910))?;
     ///     wtr.serialize(("Concord", "United States", 42695))?;
@@ -260,13 +243,11 @@ impl WriterBuilder {
     /// # Example: writing flexible records
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .flexible(true)
     ///         .from_writer(vec![]);
@@ -282,13 +263,11 @@ impl WriterBuilder {
     /// # Example: error when `flexible` is disabled
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .flexible(false)
     ///         .from_writer(vec![]);
@@ -323,13 +302,11 @@ impl WriterBuilder {
     /// This shows how to use RFC 4180 compliant record terminators.
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{Terminator, WriterBuilder};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .terminator(Terminator::CRLF)
     ///         .from_writer(vec![]);
@@ -341,10 +318,7 @@ impl WriterBuilder {
     ///     Ok(())
     /// }
     /// ```
-    pub fn terminator(
-        &mut self,
-        term: Terminator,
-    ) -> &mut WriterBuilder {
+    pub fn terminator(&mut self, term: Terminator) -> &mut WriterBuilder {
         self.builder.terminator(term.to_core());
         self
     }
@@ -362,13 +336,11 @@ impl WriterBuilder {
     /// This shows how to quote non-numeric fields only.
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{QuoteStyle, WriterBuilder};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .quote_style(QuoteStyle::NonNumeric)
     ///         .from_writer(vec![]);
@@ -387,13 +359,11 @@ impl WriterBuilder {
     /// if it sacrifices the integrity of the data.
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{QuoteStyle, WriterBuilder};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .quote_style(QuoteStyle::Never)
     ///         .from_writer(vec![]);
@@ -417,13 +387,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .quote(b'\'')
     ///         .from_writer(vec![]);
@@ -448,13 +416,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .double_quote(false)
     ///         .from_writer(vec![]);
@@ -482,13 +448,11 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::WriterBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .double_quote(false)
     ///         .escape(b'$')
@@ -612,13 +576,11 @@ impl Writer<File> {
     /// # Example
     ///
     /// ```no_run
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Writer;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_path("foo.csv")?;
     ///     wtr.write_record(&["a", "b", "c"])?;
     ///     wtr.write_record(&["x", "y", "z"])?;
@@ -633,19 +595,15 @@ impl Writer<File> {
 
 impl<W: io::Write> Writer<W> {
     fn new(builder: &WriterBuilder, wtr: W) -> Writer<W> {
-        let header_state =
-            if builder.has_headers {
-                HeaderState::Write
-            } else {
-                HeaderState::None
-            };
+        let header_state = if builder.has_headers {
+            HeaderState::Write
+        } else {
+            HeaderState::None
+        };
         Writer {
             core: builder.builder.build(),
             wtr: Some(wtr),
-            buf: Buffer {
-                buf: vec![0; builder.capacity],
-                len: 0,
-            },
+            buf: Buffer { buf: vec![0; builder.capacity], len: 0 },
             state: WriterState {
                 header: header_state,
                 flexible: builder.flexible,
@@ -665,13 +623,11 @@ impl<W: io::Write> Writer<W> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Writer;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_writer(vec![]);
     ///     wtr.write_record(&["a", "b", "c"])?;
     ///     wtr.write_record(&["x", "y", "z"])?;
@@ -696,12 +652,10 @@ impl<W: io::Write> Writer<W> {
     /// calling the `has_headers` method.)
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::Writer;
+    /// use serde::Serialize;
     ///
     /// #[derive(Serialize)]
     /// struct Row<'a> {
@@ -714,7 +668,7 @@ impl<W: io::Write> Writer<W> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_writer(vec![]);
     ///     wtr.serialize(Row {
     ///         city: "Boston",
@@ -763,7 +717,7 @@ impl<W: io::Write> Writer<W> {
     /// | Name | Example Type | Example Value | Output |
     /// | ---- | ---- | ---- | ---- |
     /// | boolean | `bool` | `true` | `true` |
-    /// | integers | `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64` | `5` | `5` |
+    /// | integers | `i8`, `i16`, `i32`, `i64`, `i128`, `u8`, `u16`, `u32`, `u64`, `u128` | `5` | `5` |
     /// | floats | `f32`, `f64` | `3.14` | `3.14` |
     /// | character | `char` | `'☃'` | `☃` |
     /// | string | `&str` | `"hi"` | `hi` |
@@ -781,12 +735,10 @@ impl<W: io::Write> Writer<W> {
     /// this:
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::Writer;
+    /// use serde::Serialize;
     ///
     /// #[derive(Serialize)]
     /// struct Row {
@@ -801,7 +753,7 @@ impl<W: io::Write> Writer<W> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_writer(vec![]);
     ///     wtr.serialize(Row {
     ///         label: "foo".to_string(),
@@ -849,12 +801,10 @@ impl<W: io::Write> Writer<W> {
     /// types can be nested arbitrarily. For example:
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::WriterBuilder;
+    /// use serde::Serialize;
     ///
     /// #[derive(Serialize)]
     /// struct Row {
@@ -863,7 +813,7 @@ impl<W: io::Write> Writer<W> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = WriterBuilder::new()
     ///         .has_headers(false)
     ///         .from_writer(vec![]);
@@ -926,13 +876,11 @@ impl<W: io::Write> Writer<W> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Writer;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_writer(vec![]);
     ///     wtr.write_record(&["a", "b", "c"])?;
     ///     wtr.write_record(&["x", "y", "z"])?;
@@ -943,7 +891,9 @@ impl<W: io::Write> Writer<W> {
     /// }
     /// ```
     pub fn write_record<I, T>(&mut self, record: I) -> Result<()>
-        where I: IntoIterator<Item=T>, T: AsRef<[u8]>
+    where
+        I: IntoIterator<Item = T>,
+        T: AsRef<[u8]>,
     {
         for field in record.into_iter() {
             self.write_field_impl(field)?;
@@ -967,13 +917,11 @@ impl<W: io::Write> Writer<W> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ByteRecord, Writer};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_writer(vec![]);
     ///     wtr.write_byte_record(&ByteRecord::from(&["a", "b", "c"][..]))?;
     ///     wtr.write_byte_record(&ByteRecord::from(&["x", "y", "z"][..]))?;
@@ -1027,7 +975,8 @@ impl<W: io::Write> Writer<W> {
                     self.buf.writable(),
                     self.core.get_quote(),
                     self.core.get_escape(),
-                    self.core.get_double_quote());
+                    self.core.get_double_quote(),
+                );
                 debug_assert!(res == WriteResult::InputEmpty);
                 debug_assert!(nin == field.len());
                 self.buf.written(nout);
@@ -1051,13 +1000,11 @@ impl<W: io::Write> Writer<W> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Writer;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut wtr = Writer::from_writer(vec![]);
     ///     wtr.write_field("a")?;
     ///     wtr.write_field("b")?;
@@ -1096,7 +1043,7 @@ impl<W: io::Write> Writer<W> {
                     self.state.fields_written += 1;
                     return Ok(());
                 }
-                WriteResult::OutputFull => self.flush()?,
+                WriteResult::OutputFull => self.flush_buf()?,
             }
         }
     }
@@ -1108,12 +1055,19 @@ impl<W: io::Write> Writer<W> {
     ///
     /// Note that this also flushes the underlying writer.
     pub fn flush(&mut self) -> io::Result<()> {
+        self.flush_buf()?;
+        self.wtr.as_mut().unwrap().flush()?;
+        Ok(())
+    }
+
+    /// Flush the contents of the internal buffer to the underlying writer,
+    /// without flushing the underlying writer.
+    fn flush_buf(&mut self) -> io::Result<()> {
         self.state.panicked = true;
         let result = self.wtr.as_mut().unwrap().write_all(self.buf.readable());
         self.state.panicked = false;
         result?;
         self.buf.clear();
-        self.wtr.as_mut().unwrap().flush()?;
         Ok(())
     }
 
@@ -1124,7 +1078,7 @@ impl<W: io::Write> Writer<W> {
     ) -> result::Result<W, IntoInnerError<Writer<W>>> {
         match self.flush() {
             Ok(()) => Ok(self.wtr.take().unwrap()),
-            Err(err) => Err(new_into_inner_error(self, err)),
+            Err(err) => Err(IntoInnerError::new(self, err)),
         }
     }
 
@@ -1135,7 +1089,7 @@ impl<W: io::Write> Writer<W> {
             self.buf.written(nout);
             match res {
                 WriteResult::InputEmpty => return Ok(()),
-                WriteResult::OutputFull => self.flush()?,
+                WriteResult::OutputFull => self.flush_buf()?,
             }
         }
     }
@@ -1151,7 +1105,7 @@ impl<W: io::Write> Writer<W> {
                     self.state.fields_written = 0;
                     return Ok(());
                 }
-                WriteResult::OutputFull => self.flush()?,
+                WriteResult::OutputFull => self.flush_buf()?,
             }
         }
     }
@@ -1185,7 +1139,7 @@ impl<W: io::Write> Writer<W> {
                         Some(self.state.fields_written);
                 }
                 Some(expected) if expected != self.state.fields_written => {
-                    return Err(new_error(ErrorKind::UnequalLengths {
+                    return Err(Error::new(ErrorKind::UnequalLengths {
                         pos: None,
                         expected_len: expected,
                         len: self.state.fields_written,
@@ -1230,9 +1184,13 @@ impl Buffer {
 
 #[cfg(test)]
 mod tests {
-    use byte_record::ByteRecord;
-    use error::ErrorKind;
-    use string_record::StringRecord;
+    use serde::{serde_if_integer128, Serialize};
+
+    use std::io::{self, Write};
+
+    use crate::byte_record::ByteRecord;
+    use crate::error::ErrorKind;
+    use crate::string_record::StringRecord;
 
     use super::{Writer, WriterBuilder};
 
@@ -1327,8 +1285,8 @@ mod tests {
     fn raw_unequal_records_bad() {
         let mut wtr = WriterBuilder::new().from_writer(vec![]);
         wtr.write_byte_record(&ByteRecord::from(vec!["a", "b", "c"])).unwrap();
-        let err = wtr.write_byte_record(
-            &ByteRecord::from(vec!["a"])).unwrap_err();
+        let err =
+            wtr.write_byte_record(&ByteRecord::from(vec!["a"])).unwrap_err();
         match *err.kind() {
             ErrorKind::UnequalLengths { ref pos, expected_len, len } => {
                 assert!(pos.is_none());
@@ -1358,6 +1316,47 @@ mod tests {
     }
 
     #[test]
+    fn full_buffer_should_not_flush_underlying() {
+        struct MarkWriteAndFlush(Vec<u8>);
+
+        impl MarkWriteAndFlush {
+            fn to_str(self) -> String {
+                String::from_utf8(self.0).unwrap()
+            }
+        }
+
+        impl Write for MarkWriteAndFlush {
+            fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+                self.0.write(b">")?;
+                let written = self.0.write(data)?;
+                self.0.write(b"<")?;
+
+                Ok(written)
+            }
+
+            fn flush(&mut self) -> io::Result<()> {
+                self.0.write(b"!")?;
+                Ok(())
+            }
+        }
+
+        let underlying = MarkWriteAndFlush(vec![]);
+        let mut wtr =
+            WriterBuilder::new().buffer_capacity(4).from_writer(underlying);
+
+        wtr.write_byte_record(&ByteRecord::from(vec!["a", "b"])).unwrap();
+        wtr.write_byte_record(&ByteRecord::from(vec!["c", "d"])).unwrap();
+        wtr.flush().unwrap();
+        wtr.write_byte_record(&ByteRecord::from(vec!["e", "f"])).unwrap();
+
+        let got = wtr.into_inner().unwrap().to_str();
+
+        // As the buffer size is 4 we should write each record separately, and
+        // flush when explicitly called and implictly in into_inner.
+        assert_eq!(got, ">a,b\n<>c,d\n<!>e,f\n<!");
+    }
+
+    #[test]
     fn serialize_with_headers() {
         #[derive(Serialize)]
         struct Row {
@@ -1380,11 +1379,31 @@ mod tests {
             baz: bool,
         }
 
-        let mut wtr = WriterBuilder::new()
-            .has_headers(false)
-            .from_writer(vec![]);
+        let mut wtr =
+            WriterBuilder::new().has_headers(false).from_writer(vec![]);
         wtr.serialize(Row { foo: 42, bar: 42.5, baz: true }).unwrap();
         assert_eq!(wtr_as_string(wtr), "42,42.5,true\n");
+    }
+
+    serde_if_integer128! {
+        #[test]
+        fn serialize_no_headers_128() {
+            #[derive(Serialize)]
+            struct Row {
+                foo: i128,
+                bar: f64,
+                baz: bool,
+            }
+
+            let mut wtr =
+                WriterBuilder::new().has_headers(false).from_writer(vec![]);
+            wtr.serialize(Row {
+                foo: 9_223_372_036_854_775_808,
+                bar: 42.5,
+                baz: true,
+            }).unwrap();
+            assert_eq!(wtr_as_string(wtr), "9223372036854775808,42.5,true\n");
+        }
     }
 
     #[test]

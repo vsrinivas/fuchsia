@@ -13,9 +13,9 @@
 //!
 //! [std::str]: https://doc.rust-lang.org/stable/std/str/
 
-use iter::plumbing::*;
-use iter::*;
-use split_producer::*;
+use crate::iter::plumbing::*;
+use crate::iter::*;
+use crate::split_producer::*;
 
 /// Test if a byte is the start of a UTF-8 character.
 /// (extracted from `str::is_char_boundary`)
@@ -274,7 +274,7 @@ impl ParallelString for str {
 /// would be nicer to have its basic existence and implementors public while
 /// keeping all of the methods private.
 mod private {
-    use iter::plumbing::Folder;
+    use crate::iter::plumbing::Folder;
 
     /// Pattern-matching trait for `ParallelString`, somewhat like a mix of
     /// `std::str::pattern::{Pattern, Searcher}`.
@@ -297,6 +297,11 @@ mod private {
     }
 }
 use self::private::Pattern;
+
+#[inline]
+fn offset<T>(base: usize) -> impl Fn((usize, T)) -> (usize, T) {
+    move |(i, x)| (base + i, x)
+}
 
 impl Pattern for char {
     private_impl! {}
@@ -338,7 +343,7 @@ impl Pattern for char {
     where
         F: Folder<(usize, &'ch str)>,
     {
-        folder.consume_iter(chars.match_indices(*self).map(move |(i, s)| (base + i, s)))
+        folder.consume_iter(chars.match_indices(*self).map(offset(base)))
     }
 }
 
@@ -379,7 +384,7 @@ impl<FN: Sync + Send + Fn(char) -> bool> Pattern for FN {
     where
         F: Folder<(usize, &'ch str)>,
     {
-        folder.consume_iter(chars.match_indices(self).map(move |(i, s)| (base + i, s)))
+        folder.consume_iter(chars.match_indices(self).map(offset(base)))
     }
 }
 
@@ -479,7 +484,7 @@ impl<'ch> UnindexedProducer for CharIndicesProducer<'ch> {
         F: Folder<Self::Item>,
     {
         let base = self.index;
-        folder.consume_iter(self.chars.char_indices().map(move |(i, c)| (base + i, c)))
+        folder.consume_iter(self.chars.char_indices().map(offset(base)))
     }
 }
 
@@ -641,7 +646,7 @@ pub struct SplitTerminator<'ch, P: Pattern> {
     terminator: P,
 }
 
-struct SplitTerminatorProducer<'ch, 'sep, P: Pattern + 'sep> {
+struct SplitTerminatorProducer<'ch, 'sep, P: Pattern> {
     splitter: SplitProducer<'sep, P, &'ch str>,
     skip_last: bool,
 }
@@ -704,6 +709,15 @@ impl<'ch, 'sep, P: Pattern + 'sep> UnindexedProducer for SplitTerminatorProducer
 #[derive(Debug, Clone)]
 pub struct Lines<'ch>(&'ch str);
 
+#[inline]
+fn no_carriage_return(line: &str) -> &str {
+    if line.ends_with('\r') {
+        &line[..line.len() - 1]
+    } else {
+        line
+    }
+}
+
 impl<'ch> ParallelIterator for Lines<'ch> {
     type Item = &'ch str;
 
@@ -713,13 +727,7 @@ impl<'ch> ParallelIterator for Lines<'ch> {
     {
         self.0
             .par_split_terminator('\n')
-            .map(|line| {
-                if line.ends_with('\r') {
-                    &line[..line.len() - 1]
-                } else {
-                    line
-                }
-            })
+            .map(no_carriage_return)
             .drive_unindexed(consumer)
     }
 }
@@ -730,6 +738,11 @@ impl<'ch> ParallelIterator for Lines<'ch> {
 #[derive(Debug, Clone)]
 pub struct SplitWhitespace<'ch>(&'ch str);
 
+#[inline]
+fn not_empty(s: &&str) -> bool {
+    !s.is_empty()
+}
+
 impl<'ch> ParallelIterator for SplitWhitespace<'ch> {
     type Item = &'ch str;
 
@@ -739,7 +752,7 @@ impl<'ch> ParallelIterator for SplitWhitespace<'ch> {
     {
         self.0
             .par_split(char::is_whitespace)
-            .filter(|string| !string.is_empty())
+            .filter(not_empty)
             .drive_unindexed(consumer)
     }
 }
@@ -753,7 +766,7 @@ pub struct Matches<'ch, P: Pattern> {
     pattern: P,
 }
 
-struct MatchesProducer<'ch, 'pat, P: Pattern + 'pat> {
+struct MatchesProducer<'ch, 'pat, P: Pattern> {
     chars: &'ch str,
     pattern: &'pat P,
 }
@@ -809,7 +822,7 @@ pub struct MatchIndices<'ch, P: Pattern> {
     pattern: P,
 }
 
-struct MatchIndicesProducer<'ch, 'pat, P: Pattern + 'pat> {
+struct MatchIndicesProducer<'ch, 'pat, P: Pattern> {
     index: usize,
     chars: &'ch str,
     pattern: &'pat P,

@@ -4,15 +4,13 @@ use std::marker::PhantomData;
 use std::path::Path;
 use std::result;
 
-use csv_core::{
-    Reader as CoreReader, ReaderBuilder as CoreReaderBuilder,
-};
+use csv_core::{Reader as CoreReader, ReaderBuilder as CoreReaderBuilder};
 use serde::de::DeserializeOwned;
 
-use byte_record::{self, ByteRecord, Position};
-use error::{ErrorKind, Result, Utf8Error, new_error};
-use string_record::{self, StringRecord};
-use {Terminator, Trim};
+use crate::byte_record::{ByteRecord, Position};
+use crate::error::{Error, ErrorKind, Result, Utf8Error};
+use crate::string_record::StringRecord;
+use crate::{Terminator, Trim};
 
 /// Builds a CSV reader with various configuration knobs.
 ///
@@ -36,7 +34,7 @@ pub struct ReaderBuilder {
 impl Default for ReaderBuilder {
     fn default() -> ReaderBuilder {
         ReaderBuilder {
-            capacity: 8 * (1<<10),
+            capacity: 8 * (1 << 10),
             flexible: false,
             has_headers: true,
             trim: Trim::default(),
@@ -54,13 +52,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ReaderBuilder, StringRecord};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -91,13 +87,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```no_run
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut rdr = ReaderBuilder::new().from_path("foo.csv")?;
     ///     for result in rdr.records() {
     ///         let record = result?;
@@ -118,13 +112,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -149,13 +141,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city;country;pop
     /// Boston;United States;4628910
@@ -194,13 +184,11 @@ impl ReaderBuilder {
     /// Namely, the first row is treated just like any other row.
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -246,13 +234,11 @@ impl ReaderBuilder {
     /// # Example: flexible records enabled
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     // Notice that the first row is missing the population count.
     ///     let data = "\
     /// city,country,pop
@@ -279,13 +265,11 @@ impl ReaderBuilder {
     /// default).
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ErrorKind, ReaderBuilder};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     // Notice that the first row is missing the population count.
     ///     let data = "\
     /// city,country,pop
@@ -343,13 +327,11 @@ impl ReaderBuilder {
     /// This example shows what happens when all values are trimmed.
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ReaderBuilder, StringRecord, Trim};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city ,   country ,  pop
     /// Boston,\"
@@ -383,13 +365,11 @@ impl ReaderBuilder {
     /// # Example: `$` as a record terminator
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ReaderBuilder, Terminator};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "city,country,pop$Boston,United States,4628910";
     ///     let mut rdr = ReaderBuilder::new()
     ///         .terminator(Terminator::Any(b'$'))
@@ -404,10 +384,7 @@ impl ReaderBuilder {
     ///     }
     /// }
     /// ```
-    pub fn terminator(
-        &mut self,
-        term: Terminator,
-    ) -> &mut ReaderBuilder {
+    pub fn terminator(&mut self, term: Terminator) -> &mut ReaderBuilder {
         self.builder.terminator(term.to_core());
         self
     }
@@ -419,13 +396,11 @@ impl ReaderBuilder {
     /// # Example: single quotes instead of double quotes
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,'United States',4628910
@@ -458,13 +433,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,\"The \\\"United\\\" States\",4628910
@@ -497,13 +470,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,\"The \"\"United\"\" States\",4628910
@@ -536,13 +507,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,\"The United States,4628910
@@ -577,13 +546,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// #Concord,United States,42695
@@ -616,13 +583,11 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::ReaderBuilder;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city\x1Fcountry\x1Fpop\x1EBoston\x1FUnited States\x1F4628910";
     ///     let mut rdr = ReaderBuilder::new()
@@ -679,13 +644,11 @@ impl ReaderBuilder {
 /// a `Reader`. For example, to change the field delimiter:
 ///
 /// ```
-/// extern crate csv;
-///
 /// use std::error::Error;
 /// use csv::ReaderBuilder;
 ///
 /// # fn main() { example().unwrap(); }
-/// fn example() -> Result<(), Box<Error>> {
+/// fn example() -> Result<(), Box<dyn Error>> {
 ///     let data = "\
 /// city;country;pop
 /// Boston;United States;4628910
@@ -801,13 +764,11 @@ impl Reader<Reader<File>> {
     /// # Example
     ///
     /// ```no_run
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let mut rdr = Reader::from_path("foo.csv")?;
     ///     for result in rdr.records() {
     ///         let record = result?;
@@ -850,13 +811,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -893,12 +852,10 @@ impl<R: io::Read> Reader<R> {
     /// to the fields of the struct.
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::Reader;
+    /// use serde::Deserialize;
     ///
     /// #[derive(Debug, Deserialize, Eq, PartialEq)]
     /// struct Row {
@@ -909,7 +866,7 @@ impl<R: io::Read> Reader<R> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,popcount
     /// Boston,United States,4628910
@@ -952,12 +909,10 @@ impl<R: io::Read> Reader<R> {
     /// a "tail" of fields in a record:
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::ReaderBuilder;
+    /// use serde::Deserialize;
     ///
     /// #[derive(Debug, Deserialize, Eq, PartialEq)]
     /// struct Row {
@@ -966,7 +921,7 @@ impl<R: io::Read> Reader<R> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "foo,1,2,3";
     ///     let mut rdr = ReaderBuilder::new()
     ///         .has_headers(false)
@@ -1001,12 +956,10 @@ impl<R: io::Read> Reader<R> {
     /// following example shows both forms in action:
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::Reader;
+    /// use serde::Deserialize;
     ///
     /// #[derive(Debug, Deserialize, PartialEq)]
     /// struct Row {
@@ -1029,7 +982,7 @@ impl<R: io::Read> Reader<R> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// label,value
     /// celsius,22.2222
@@ -1065,7 +1018,8 @@ impl<R: io::Read> Reader<R> {
     /// }
     /// ```
     pub fn deserialize<D>(&mut self) -> DeserializeRecordsIter<R, D>
-            where D: DeserializeOwned
+    where
+        D: DeserializeOwned,
     {
         DeserializeRecordsIter::new(self)
     }
@@ -1091,12 +1045,10 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    ///
     /// use std::error::Error;
+    ///
     /// use csv::Reader;
+    /// use serde::Deserialize;
     ///
     /// #[derive(Debug, Deserialize, Eq, PartialEq)]
     /// struct Row {
@@ -1107,7 +1059,7 @@ impl<R: io::Read> Reader<R> {
     /// }
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,popcount
     /// Boston,United States,4628910
@@ -1129,7 +1081,8 @@ impl<R: io::Read> Reader<R> {
     /// }
     /// ```
     pub fn into_deserialize<D>(self) -> DeserializeRecordsIntoIter<R, D>
-            where D: DeserializeOwned
+    where
+        D: DeserializeOwned,
     {
         DeserializeRecordsIntoIter::new(self)
     }
@@ -1146,13 +1099,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1188,13 +1139,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1227,13 +1176,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1269,13 +1216,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1316,13 +1261,11 @@ impl<R: io::Read> Reader<R> {
     /// the header row does not appear as a record in the iterator!
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1361,7 +1304,7 @@ impl<R: io::Read> Reader<R> {
         let headers = self.state.headers.as_ref().unwrap();
         match headers.string_record {
             Ok(ref record) => Ok(record),
-            Err(ref err) => Err(new_error(ErrorKind::Utf8 {
+            Err(ref err) => Err(Error::new(ErrorKind::Utf8 {
                 pos: headers.byte_record.position().map(Clone::clone),
                 err: err.clone(),
             })),
@@ -1387,13 +1330,11 @@ impl<R: io::Read> Reader<R> {
     /// the header row does not appear as a record in the iterator!
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::Reader;
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1441,13 +1382,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{Reader, StringRecord};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1474,13 +1413,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{Reader, ByteRecord};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1545,13 +1482,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{Reader, StringRecord};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1568,7 +1503,7 @@ impl<R: io::Read> Reader<R> {
     /// }
     /// ```
     pub fn read_record(&mut self, record: &mut StringRecord) -> Result<bool> {
-        let result = string_record::read(self, record);
+        let result = record.read(self);
         // We need to trim again because trimming string records includes
         // Unicode whitespace. (ByteRecord trimming only includes ASCII
         // whitespace.)
@@ -1595,13 +1530,11 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use csv::{ByteRecord, Reader};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,pop
     /// Boston,United States,4628910
@@ -1672,13 +1605,17 @@ impl<R: io::Read> Reader<R> {
         loop {
             let (res, nin, nout, nend) = {
                 let input = self.rdr.fill_buf()?;
-                let (fields, ends) = byte_record::as_parts(record);
+                let (fields, ends) = record.as_parts();
                 self.core.read_record(
-                    input, &mut fields[outlen..], &mut ends[endlen..])
+                    input,
+                    &mut fields[outlen..],
+                    &mut ends[endlen..],
+                )
             };
             self.rdr.consume(nin);
             let byte = self.state.cur_pos.byte();
-            self.state.cur_pos
+            self.state
+                .cur_pos
                 .set_byte(byte + nin as u64)
                 .set_line(self.core.line());
             outlen += nout;
@@ -1686,15 +1623,15 @@ impl<R: io::Read> Reader<R> {
             match res {
                 InputEmpty => continue,
                 OutputFull => {
-                    byte_record::expand_fields(record);
+                    record.expand_fields();
                     continue;
                 }
                 OutputEndsFull => {
-                    byte_record::expand_ends(record);
+                    record.expand_ends();
                     continue;
                 }
                 Record => {
-                    byte_record::set_len(record, endlen);
+                    record.set_len(endlen);
                     self.state.add_record(record)?;
                     return Ok(true);
                 }
@@ -1715,14 +1652,12 @@ impl<R: io::Read> Reader<R> {
     /// # Example: reading the position
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use std::io;
     /// use csv::{Reader, Position};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,popcount
     /// Boston,United States,4628910
@@ -1760,14 +1695,12 @@ impl<R: io::Read> Reader<R> {
     /// # Example
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use std::io;
     /// use csv::{Reader, Position};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,popcount
     /// Boston,United States,4628910
@@ -1838,14 +1771,12 @@ impl<R: io::Read + io::Seek> Reader<R> {
     /// # Example: seek to parse a record twice
     ///
     /// ```
-    /// extern crate csv;
-    ///
     /// use std::error::Error;
     /// use std::io;
     /// use csv::{Reader, Position};
     ///
     /// # fn main() { example().unwrap(); }
-    /// fn example() -> Result<(), Box<Error>> {
+    /// fn example() -> Result<(), Box<dyn Error>> {
     ///     let data = "\
     /// city,country,popcount
     /// Boston,United States,4628910
@@ -1929,7 +1860,7 @@ impl ReaderState {
                 None => self.first_field_count = Some(record.len() as u64),
                 Some(expected) => {
                     if record.len() as u64 != expected {
-                        return Err(new_error(ErrorKind::UnequalLengths {
+                        return Err(Error::new(ErrorKind::UnequalLengths {
                             pos: record.position().map(Clone::clone),
                             expected_len: expected,
                             len: record.len() as u64,
@@ -1955,12 +1886,11 @@ pub struct DeserializeRecordsIntoIter<R, D> {
 
 impl<R: io::Read, D: DeserializeOwned> DeserializeRecordsIntoIter<R, D> {
     fn new(mut rdr: Reader<R>) -> DeserializeRecordsIntoIter<R, D> {
-        let headers =
-            if !rdr.state.has_headers {
-                None
-            } else {
-                rdr.headers().ok().map(Clone::clone)
-            };
+        let headers = if !rdr.state.has_headers {
+            None
+        } else {
+            rdr.headers().ok().map(Clone::clone)
+        };
         DeserializeRecordsIntoIter {
             rdr: rdr,
             rec: StringRecord::new(),
@@ -1985,8 +1915,8 @@ impl<R: io::Read, D: DeserializeOwned> DeserializeRecordsIntoIter<R, D> {
     }
 }
 
-impl<R: io::Read, D: DeserializeOwned>
-    Iterator for DeserializeRecordsIntoIter<R, D>
+impl<R: io::Read, D: DeserializeOwned> Iterator
+    for DeserializeRecordsIntoIter<R, D>
 {
     type Item = Result<D>;
 
@@ -2014,12 +1944,11 @@ pub struct DeserializeRecordsIter<'r, R: 'r, D> {
 
 impl<'r, R: io::Read, D: DeserializeOwned> DeserializeRecordsIter<'r, R, D> {
     fn new(rdr: &'r mut Reader<R>) -> DeserializeRecordsIter<'r, R, D> {
-        let headers =
-            if !rdr.state.has_headers {
-                None
-            } else {
-                rdr.headers().ok().map(Clone::clone)
-            };
+        let headers = if !rdr.state.has_headers {
+            None
+        } else {
+            rdr.headers().ok().map(Clone::clone)
+        };
         DeserializeRecordsIter {
             rdr: rdr,
             rec: StringRecord::new(),
@@ -2039,8 +1968,8 @@ impl<'r, R: io::Read, D: DeserializeOwned> DeserializeRecordsIter<'r, R, D> {
     }
 }
 
-impl<'r, R: io::Read, D: DeserializeOwned>
-    Iterator for DeserializeRecordsIter<'r, R, D>
+impl<'r, R: io::Read, D: DeserializeOwned> Iterator
+    for DeserializeRecordsIter<'r, R, D>
 {
     type Item = Result<D>;
 
@@ -2209,14 +2138,18 @@ impl<'r, R: io::Read> Iterator for ByteRecordsIter<'r, R> {
 mod tests {
     use std::io;
 
-    use byte_record::ByteRecord;
-    use error::ErrorKind;
-    use string_record::StringRecord;
+    use crate::byte_record::ByteRecord;
+    use crate::error::ErrorKind;
+    use crate::string_record::StringRecord;
 
-    use super::{ReaderBuilder, Position, Trim};
+    use super::{Position, ReaderBuilder, Trim};
 
-    fn b(s: &str) -> &[u8] { s.as_bytes() }
-    fn s(b: &[u8]) -> &str { ::std::str::from_utf8(b).unwrap() }
+    fn b(s: &str) -> &[u8] {
+        s.as_bytes()
+    }
+    fn s(b: &[u8]) -> &str {
+        ::std::str::from_utf8(b).unwrap()
+    }
 
     fn newpos(byte: u64, line: u64, record: u64) -> Position {
         let mut p = Position::new();
@@ -2227,9 +2160,8 @@ mod tests {
     #[test]
     fn read_byte_record() {
         let data = b("foo,\"b,ar\",baz\nabc,mno,xyz");
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader(data);
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader(data);
         let mut rec = ByteRecord::new();
 
         assert!(rdr.read_byte_record(&mut rec).unwrap());
@@ -2347,9 +2279,8 @@ mod tests {
     #[test]
     fn read_record_unequal_fails() {
         let data = b("foo\nbar,baz");
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader(data);
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader(data);
         let mut rec = ByteRecord::new();
 
         assert!(rdr.read_byte_record(&mut rec).unwrap());
@@ -2357,18 +2288,16 @@ mod tests {
         assert_eq!("foo", s(&rec[0]));
 
         match rdr.read_byte_record(&mut rec) {
-            Err(err) => {
-                match *err.kind() {
-                    ErrorKind::UnequalLengths {
-                        expected_len: 1,
-                        ref pos,
-                        len: 2,
-                    } => {
-                        assert_eq!(pos, &Some(newpos(4, 2, 1)));
-                    }
-                    ref wrong => panic!("match failed, got {:?}", wrong),
+            Err(err) => match *err.kind() {
+                ErrorKind::UnequalLengths {
+                    expected_len: 1,
+                    ref pos,
+                    len: 2,
+                } => {
+                    assert_eq!(pos, &Some(newpos(4, 2, 1)));
                 }
-            }
+                ref wrong => panic!("match failed, got {:?}", wrong),
+            },
             wrong => panic!("match failed, got {:?}", wrong),
         }
     }
@@ -2399,9 +2328,8 @@ mod tests {
     #[test]
     fn read_record_unequal_continue() {
         let data = b("foo\nbar,baz\nquux");
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader(data);
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader(data);
         let mut rec = ByteRecord::new();
 
         assert!(rdr.read_byte_record(&mut rec).unwrap());
@@ -2409,18 +2337,16 @@ mod tests {
         assert_eq!("foo", s(&rec[0]));
 
         match rdr.read_byte_record(&mut rec) {
-            Err(err) => {
-                match err.kind() {
-                    &ErrorKind::UnequalLengths {
-                        expected_len: 1,
-                        ref pos,
-                        len: 2,
-                    } => {
-                        assert_eq!(pos, &Some(newpos(4, 2, 1)));
-                    }
-                    wrong => panic!("match failed, got {:?}", wrong),
+            Err(err) => match err.kind() {
+                &ErrorKind::UnequalLengths {
+                    expected_len: 1,
+                    ref pos,
+                    len: 2,
+                } => {
+                    assert_eq!(pos, &Some(newpos(4, 2, 1)));
                 }
-            }
+                wrong => panic!("match failed, got {:?}", wrong),
+            },
             wrong => panic!("match failed, got {:?}", wrong),
         }
 
@@ -2501,9 +2427,8 @@ mod tests {
     #[test]
     fn read_record_no_headers_before() {
         let data = b("foo,bar,baz\na,b,c\nd,e,f");
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader(data);
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader(data);
         let mut rec = StringRecord::new();
 
         {
@@ -2532,9 +2457,8 @@ mod tests {
     #[test]
     fn read_record_no_headers_after() {
         let data = b("foo,bar,baz\na,b,c\nd,e,f");
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader(data);
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader(data);
         let mut rec = StringRecord::new();
 
         assert!(rdr.read_record(&mut rec).unwrap());
@@ -2561,8 +2485,7 @@ mod tests {
     #[test]
     fn seek() {
         let data = b("foo,bar,baz\na,b,c\nd,e,f\ng,h,i");
-        let mut rdr = ReaderBuilder::new()
-            .from_reader(io::Cursor::new(data));
+        let mut rdr = ReaderBuilder::new().from_reader(io::Cursor::new(data));
         rdr.seek(newpos(18, 3, 2)).unwrap();
 
         let mut rec = StringRecord::new();
@@ -2587,8 +2510,7 @@ mod tests {
     #[test]
     fn seek_headers_after() {
         let data = b("foo,bar,baz\na,b,c\nd,e,f\ng,h,i");
-        let mut rdr = ReaderBuilder::new()
-            .from_reader(io::Cursor::new(data));
+        let mut rdr = ReaderBuilder::new().from_reader(io::Cursor::new(data));
         rdr.seek(newpos(18, 3, 2)).unwrap();
         assert_eq!(rdr.headers().unwrap(), vec!["foo", "bar", "baz"]);
     }
@@ -2598,8 +2520,7 @@ mod tests {
     #[test]
     fn seek_headers_before_after() {
         let data = b("foo,bar,baz\na,b,c\nd,e,f\ng,h,i");
-        let mut rdr = ReaderBuilder::new()
-            .from_reader(io::Cursor::new(data));
+        let mut rdr = ReaderBuilder::new().from_reader(io::Cursor::new(data));
         let headers = rdr.headers().unwrap().clone();
         rdr.seek(newpos(18, 3, 2)).unwrap();
         assert_eq!(&headers, rdr.headers().unwrap());
@@ -2611,8 +2532,7 @@ mod tests {
     #[test]
     fn seek_headers_no_actual_seek() {
         let data = b("foo,bar,baz\na,b,c\nd,e,f\ng,h,i");
-        let mut rdr = ReaderBuilder::new()
-            .from_reader(io::Cursor::new(data));
+        let mut rdr = ReaderBuilder::new().from_reader(io::Cursor::new(data));
         rdr.seek(Position::new()).unwrap();
         assert_eq!("foo", &rdr.headers().unwrap()[0]);
     }
@@ -2661,9 +2581,8 @@ mod tests {
     // Test that reading the first record on empty data works.
     #[test]
     fn no_headers_on_empty_data() {
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader("".as_bytes());
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader("".as_bytes());
         assert_eq!(rdr.records().count(), 0);
     }
 
@@ -2671,9 +2590,8 @@ mod tests {
     // we've tried to read headers before hand.
     #[test]
     fn no_headers_on_empty_data_after_headers() {
-        let mut rdr = ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader("".as_bytes());
+        let mut rdr =
+            ReaderBuilder::new().has_headers(false).from_reader("".as_bytes());
         assert_eq!(rdr.headers().unwrap().len(), 0);
         assert_eq!(rdr.records().count(), 0);
     }

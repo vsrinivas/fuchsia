@@ -1,3 +1,24 @@
+# Version 0.4.2
+
+- Fix bug in release (yanking 0.4.1)
+
+# Version 0.4.1
+
+- Avoid time drift in `channel::tick`. (#456)
+- Fix unsoundness issues by adopting `MaybeUninit`. (#458)
+
+# Version 0.4.0
+
+- Bump the minimum required version to 1.28.
+- Bump `crossbeam-utils` to `0.7`.
+
+# Version 0.3.9
+
+- Fix a bug in reference counting.
+- Optimize `recv_timeout()`.
+- Add `Select::remove()`.
+- Various small improvements, code cleanup, more tests.
+
 # Version 0.3.8
 
 - Bump the minimum required version of `crossbeam-utils`.

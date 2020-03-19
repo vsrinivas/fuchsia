@@ -3,7 +3,7 @@ use core::str;
 
 use memchr::memchr;
 
-use {QuoteStyle, Terminator};
+use crate::{QuoteStyle, Terminator};
 
 /// A builder for configuring a CSV writer.
 ///
@@ -32,7 +32,7 @@ impl WriterBuilder {
 
     /// Builder a CSV writer from this configuration.
     pub fn build(&self) -> Writer {
-        use Terminator::*;
+        use crate::Terminator::*;
 
         let mut wtr = self.wtr.clone();
         wtr.requires_quotes[self.wtr.delimiter as usize] = true;
@@ -296,14 +296,11 @@ impl Writer {
             }
             self.state.in_field = true;
         }
-        let (res, i, o) =
-            if self.state.quoting {
-                quote(
-                    input, output,
-                    self.quote, self.escape, self.double_quote)
-            } else {
-                write_optimistic(input, output)
-            };
+        let (res, i, o) = if self.state.quoting {
+            quote(input, output, self.quote, self.escape, self.double_quote)
+        } else {
+            write_optimistic(input, output)
+        };
         nin += i;
         nout += o;
         self.state.record_bytes += o as u64;
@@ -316,7 +313,8 @@ impl Writer {
     /// a field delimiter, then nothing is written to `output`
     /// and `WriteResult::OutputFull` is returned. Otherwise,
     /// `WriteResult::InputEmpty` is returned along with the number of bytes
-    /// written to `output` (which is always `1`).
+    /// written to `output` (which is `1` in case of an unquoted
+    /// field, or `2` in case of an end quote and a field separator).
     pub fn delimiter(
         &mut self,
         mut output: &mut [u8],
@@ -395,8 +393,7 @@ impl Writer {
     fn needs_quotes(&self, mut input: &[u8]) -> bool {
         let mut needs = false;
         while !needs && input.len() >= 8 {
-            needs =
-                self.requires_quotes[input[0] as usize]
+            needs = self.requires_quotes[input[0] as usize]
                 || self.requires_quotes[input[1] as usize]
                 || self.requires_quotes[input[2] as usize]
                 || self.requires_quotes[input[3] as usize]
@@ -487,11 +484,7 @@ impl Default for Writer {
 
 impl Default for WriterState {
     fn default() -> WriterState {
-        WriterState {
-            in_field: false,
-            quoting: false,
-            record_bytes: 0,
-        }
+        WriterState { in_field: false, quoting: false, record_bytes: 0 }
     }
 }
 
@@ -504,7 +497,7 @@ pub fn is_non_numeric(input: &[u8]) -> bool {
     // I suppose this could be faster if we wrote validators of numbers instead
     // of using the actual parser, but that's probably a lot of work for a bit
     // of a niche feature.
-    !s.parse::<f64>().is_ok() && !s.parse::<i64>().is_ok()
+    !s.parse::<f64>().is_ok() && !s.parse::<i128>().is_ok()
 }
 
 /// Escape quotes `input` and writes the result to `output`.
@@ -548,8 +541,8 @@ pub fn quote(
                 return (res, nin, nout);
             }
             Some(next_quote) => {
-                let (res, i, o) = write_optimistic(
-                    &input[..next_quote], output);
+                let (res, i, o) =
+                    write_optimistic(&input[..next_quote], output);
                 input = &input[i..];
                 output = &mut moving(output)[o..];
                 nin += i;
@@ -609,10 +602,7 @@ fn write_optimistic(
 /// `WriteResult::OutputFull` and copy nothing into `output`. Otherwise,
 /// return `WriteResult::InputEmpty` and the number of bytes copied into
 /// `output`.
-fn write_pessimistic(
-    input: &[u8],
-    output: &mut [u8],
-) -> (WriteResult, usize) {
+fn write_pessimistic(input: &[u8], output: &mut [u8]) -> (WriteResult, usize) {
     if input.len() > output.len() {
         (WriteResult::OutputFull, 0)
     } else {
@@ -623,16 +613,22 @@ fn write_pessimistic(
 
 /// This avoids reborrowing.
 /// See: https://bluss.github.io/rust/fun/2015/10/11/stuff-the-identity-function-does/
-fn moving<T>(x: T) -> T { x }
+fn moving<T>(x: T) -> T {
+    x
+}
 
 #[cfg(test)]
 mod tests {
-    use writer::{Writer, WriterBuilder, QuoteStyle, quote};
-    use writer::WriteResult::*;
+    use crate::writer::WriteResult::*;
+    use crate::writer::{quote, QuoteStyle, Writer, WriterBuilder};
 
     // OMG I HATE BYTE STRING LITERALS SO MUCH.
-    fn b(s: &str) -> &[u8] { s.as_bytes() }
-    fn s(b: &[u8]) -> &str { ::core::str::from_utf8(b).unwrap() }
+    fn b(s: &str) -> &[u8] {
+        s.as_bytes()
+    }
+    fn s(b: &[u8]) -> &str {
+        ::core::str::from_utf8(b).unwrap()
+    }
 
     macro_rules! assert_field {
         (
@@ -645,7 +641,7 @@ mod tests {
             assert_eq!($expect_in, i, "input");
             assert_eq!($expect_out, o, "output");
             assert_eq!($expect_data, s(&$out[..o]), "data");
-        }}
+        }};
     }
 
     macro_rules! assert_write {
@@ -657,7 +653,7 @@ mod tests {
             assert_eq!($expect_res, res, "result");
             assert_eq!($expect_out, o, "output");
             assert_eq!($expect_data, s(&$out[..o]), "data");
-        }}
+        }};
     }
 
     #[test]
@@ -721,7 +717,14 @@ mod tests {
         let mut n = 0;
 
         assert_field!(
-            wtr, b("a\"bc"), &mut out[n..], 4, 6, InputEmpty, "\"a\"\"bc");
+            wtr,
+            b("a\"bc"),
+            &mut out[n..],
+            4,
+            6,
+            InputEmpty,
+            "\"a\"\"bc"
+        );
         n += 6;
 
         assert_write!(wtr, finish, &mut out[n..], 1, InputEmpty, "\"");
@@ -748,7 +751,14 @@ mod tests {
         let mut n = 0;
 
         assert_field!(
-            wtr, b("abc\""), &mut out[n..], 4, 6, InputEmpty, "\"abc\"\"");
+            wtr,
+            b("abc\""),
+            &mut out[n..],
+            4,
+            6,
+            InputEmpty,
+            "\"abc\"\""
+        );
         n += 6;
         assert_field!(wtr, b("x"), &mut out[n..], 1, 1, InputEmpty, "x");
         n += 1;
@@ -787,9 +797,8 @@ mod tests {
 
     #[test]
     fn writer_two_fields_non_numeric() {
-        let mut wtr = WriterBuilder::new()
-            .quote_style(QuoteStyle::NonNumeric)
-            .build();
+        let mut wtr =
+            WriterBuilder::new().quote_style(QuoteStyle::NonNumeric).build();
         let out = &mut [0; 1024];
         let mut n = 0;
 
@@ -816,7 +825,14 @@ mod tests {
         let mut n = 0;
 
         assert_field!(
-            wtr, b("a,bc"), &mut out[n..], 4, 5, InputEmpty, "\"a,bc");
+            wtr,
+            b("a,bc"),
+            &mut out[n..],
+            4,
+            5,
+            InputEmpty,
+            "\"a,bc"
+        );
         n += 5;
         assert_write!(wtr, delimiter, &mut out[n..], 2, InputEmpty, "\",");
         n += 2;
@@ -862,7 +878,14 @@ mod tests {
         let mut n = 0;
 
         assert_field!(
-            wtr, b("a,bc"), &mut out[n..], 4, 5, InputEmpty, "\"a,bc");
+            wtr,
+            b("a,bc"),
+            &mut out[n..],
+            4,
+            5,
+            InputEmpty,
+            "\"a,bc"
+        );
         n += 5;
         assert_write!(wtr, delimiter, &mut out[n..], 2, InputEmpty, "\",");
         n += 2;
@@ -871,12 +894,26 @@ mod tests {
         assert_write!(wtr, terminator, &mut out[n..], 2, InputEmpty, "\"\n");
         n += 2;
         assert_field!(
-            wtr, b("f\"oo"), &mut out[n..], 4, 6, InputEmpty, "\"f\"\"oo");
+            wtr,
+            b("f\"oo"),
+            &mut out[n..],
+            4,
+            6,
+            InputEmpty,
+            "\"f\"\"oo"
+        );
         n += 6;
         assert_write!(wtr, delimiter, &mut out[n..], 2, InputEmpty, "\",");
         n += 2;
         assert_field!(
-            wtr, b("quux,"), &mut out[n..], 5, 6, InputEmpty, "\"quux,");
+            wtr,
+            b("quux,"),
+            &mut out[n..],
+            5,
+            6,
+            InputEmpty,
+            "\"quux,"
+        );
         n += 6;
 
         assert_write!(wtr, finish, &mut out[n..], 1, InputEmpty, "\"");
@@ -892,9 +929,14 @@ mod tests {
             $expect_res:expr, $expect_data:expr
         ) => {
             assert_quote!(
-                $inp, $out,
-                $expect_in, $expect_out, $expect_res, $expect_data,
-                true);
+                $inp,
+                $out,
+                $expect_in,
+                $expect_out,
+                $expect_res,
+                $expect_data,
+                true
+            );
         };
         (
             $inp:expr, $out:expr,
@@ -907,7 +949,7 @@ mod tests {
             assert_eq!($expect_in, i, "input");
             assert_eq!($expect_out, o, "output");
             assert_eq!(b($expect_data), &$out[..o], "data");
-        }}
+        }};
     }
 
     #[test]
@@ -964,8 +1006,13 @@ mod tests {
         let out = &mut [0; 1024];
 
         assert_quote!(
-            inp, out, 21, 25, InputEmpty,
-            r#"foo ""bar"" baz ""quux""?"#);
+            inp,
+            out,
+            21,
+            25,
+            InputEmpty,
+            r#"foo ""bar"" baz ""quux""?"#
+        );
     }
 
     #[test]

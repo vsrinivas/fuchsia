@@ -1,5 +1,3 @@
-extern crate rayon;
-
 use rayon::iter::plumbing::*;
 use rayon::prelude::*;
 
@@ -212,6 +210,12 @@ fn chain() {
 fn cloned() {
     let v: Vec<_> = (0..10).collect();
     check(&v, || v.par_iter().cloned());
+}
+
+#[test]
+fn copied() {
+    let v: Vec<_> = (0..10).collect();
+    check(&v, || v.par_iter().copied());
 }
 
 #[test]

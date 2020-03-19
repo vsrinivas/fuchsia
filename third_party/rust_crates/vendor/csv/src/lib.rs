@@ -46,13 +46,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-csv = "1"
-```
-
-and this to your crate root:
-
-```rust
-extern crate csv;
+csv = "1.1"
 ```
 
 If you want to use Serde's custom derive functionality on your custom structs,
@@ -60,16 +54,7 @@ then add this to your `[dependencies]` section of `Cargo.toml`:
 
 ```toml
 [dependencies]
-serde = "1"
-serde_derive = "1"
-```
-
-and this to your crate root:
-
-```ignore
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
+serde = { version = "1", features = ["derive"] }
 ```
 
 # Example
@@ -80,13 +65,11 @@ stdout.
 There are more examples in the [cookbook](cookbook/index.html).
 
 ```no_run
-extern crate csv;
-
 use std::error::Error;
 use std::io;
 use std::process;
 
-fn example() -> Result<(), Box<Error>> {
+fn example() -> Result<(), Box<dyn Error>> {
     // Build the CSV reader and iterate over each record.
     let mut rdr = csv::Reader::from_reader(io::stdin());
     for result in rdr.records() {
@@ -121,15 +104,13 @@ By default, the member names of the struct are matched with the values in the
 header record of your CSV data.
 
 ```no_run
-extern crate csv;
-#[macro_use]
-extern crate serde_derive;
-
 use std::error::Error;
 use std::io;
 use std::process;
 
-#[derive(Debug,Deserialize)]
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
 struct Record {
     city: String,
     region: String,
@@ -137,7 +118,7 @@ struct Record {
     population: Option<u64>,
 }
 
-fn example() -> Result<(), Box<Error>> {
+fn example() -> Result<(), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_reader(io::stdin());
     for result in rdr.deserialize() {
         // Notice that we need to provide a type hint for automatic
@@ -168,38 +149,27 @@ $ cargo run --example cookbook-read-serde < examples/data/smallpop.csv
 
 #![deny(missing_docs)]
 
-extern crate csv_core;
-extern crate itoa;
-extern crate ryu;
-extern crate serde;
-#[cfg(test)]
-extern crate serde_bytes;
-#[cfg(test)]
-#[macro_use]
-extern crate serde_derive;
-
 use std::result;
 
 use serde::{Deserialize, Deserializer};
 
-pub use byte_record::{ByteRecord, ByteRecordIter, Position};
-pub use deserializer::{DeserializeError, DeserializeErrorKind};
-pub use error::{
+pub use crate::byte_record::{ByteRecord, ByteRecordIter, Position};
+pub use crate::deserializer::{DeserializeError, DeserializeErrorKind};
+pub use crate::error::{
     Error, ErrorKind, FromUtf8Error, IntoInnerError, Result, Utf8Error,
 };
-pub use reader::{
-    Reader, ReaderBuilder,
-    DeserializeRecordsIntoIter, DeserializeRecordsIter,
-    StringRecordsIntoIter, StringRecordsIter,
-    ByteRecordsIntoIter, ByteRecordsIter,
+pub use crate::reader::{
+    ByteRecordsIntoIter, ByteRecordsIter, DeserializeRecordsIntoIter,
+    DeserializeRecordsIter, Reader, ReaderBuilder, StringRecordsIntoIter,
+    StringRecordsIter,
 };
-pub use string_record::{StringRecord, StringRecordIter};
-pub use writer::{Writer, WriterBuilder};
+pub use crate::string_record::{StringRecord, StringRecordIter};
+pub use crate::writer::{Writer, WriterBuilder};
 
 mod byte_record;
+pub mod cookbook;
 mod deserializer;
 mod error;
-pub mod cookbook;
 mod reader;
 mod serializer;
 mod string_record;
@@ -349,12 +319,10 @@ impl Default for Trim {
 /// an error.
 ///
 /// ```
-/// extern crate csv;
-/// #[macro_use]
-/// extern crate serde_derive;
-///
 /// use std::error::Error;
+///
 /// use csv::Reader;
+/// use serde::Deserialize;
 ///
 /// #[derive(Debug, Deserialize, Eq, PartialEq)]
 /// struct Row {
@@ -367,7 +335,7 @@ impl Default for Trim {
 /// }
 ///
 /// # fn main() { example().unwrap(); }
-/// fn example() -> Result<(), Box<Error>> {
+/// fn example() -> Result<(), Box<dyn Error>> {
 ///     let data = "\
 /// a,b,c
 /// 5,\"\",xyz
@@ -383,7 +351,9 @@ impl Default for Trim {
 /// }
 /// ```
 pub fn invalid_option<'de, D, T>(de: D) -> result::Result<Option<T>, D::Error>
-    where D: Deserializer<'de>, Option<T>: Deserialize<'de>
+where
+    D: Deserializer<'de>,
+    Option<T>: Deserialize<'de>,
 {
     Option::<T>::deserialize(de).or_else(|_| Ok(None))
 }

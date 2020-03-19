@@ -1,5 +1,3 @@
-extern crate rayon;
-
 use rayon::prelude::*;
 
 fn check<I>(iter: I)
@@ -113,6 +111,7 @@ fn clone_adaptors() {
     let v: Vec<_> = (0..1000).map(Some).collect();
     check(v.par_iter().chain(&v));
     check(v.par_iter().cloned());
+    check(v.par_iter().copied());
     check(v.par_iter().enumerate());
     check(v.par_iter().filter(|_| true));
     check(v.par_iter().filter_map(|x| *x));
@@ -162,4 +161,21 @@ fn clone_repeat() {
 #[test]
 fn clone_splitter() {
     check(rayon::iter::split(0..1000, |x| (x, None)));
+}
+
+#[test]
+fn clone_multizip() {
+    let v: &Vec<_> = &(0..1000).collect();
+    check((v,).into_par_iter());
+    check((v, v).into_par_iter());
+    check((v, v, v).into_par_iter());
+    check((v, v, v, v).into_par_iter());
+    check((v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v, v, v, v).into_par_iter());
 }

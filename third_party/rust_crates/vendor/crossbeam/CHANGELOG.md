@@ -1,3 +1,35 @@
+# Version 0.7.3
+
+- Fix breakage with nightly feature due to rust-lang/rust#65214.
+- Bump `crossbeam-channel` to `0.4`.
+- Bump `crossbeam-epoch` to `0.8`.
+- Bump `crossbeam-queue` to `0.2`.
+- Bump `crossbeam-utils` to `0.7`.
+
+# Version 0.7.2
+
+- Bump `crossbeam-channel` to `0.3.9`.
+- Bump `crossbeam-epoch` to `0.7.2`.
+- Bump `crossbeam-utils` to `0.6.6`.
+
+# Version 0.7.1
+
+- Bump `crossbeam-utils` to `0.6.5`.
+
+# Version 0.7.0
+
+- Remove `ArcCell`, `MsQueue`, and `TreiberStack`.
+- Change the interface of `ShardedLock` to match `RwLock`.
+- Add `SegQueue::len()`.
+- Rename `SegQueue::try_pop()` to `SegQueue::pop()`.
+- Change the return type of `SegQueue::pop()` to `Result`.
+- Introduce `ArrayQueue`.
+- Update dependencies.
+
+# Version 0.6.0
+
+- Update dependencies.
+
 # Version 0.5.0
 
 - Update `crossbeam-channel` to 0.3.

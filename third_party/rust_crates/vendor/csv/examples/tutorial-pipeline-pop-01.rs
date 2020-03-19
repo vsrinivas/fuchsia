@@ -1,12 +1,9 @@
-extern crate csv;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-
 use std::env;
 use std::error::Error;
 use std::io;
 use std::process;
+
+use serde::{Deserialize, Serialize};
 
 // Unlike previous examples, we derive both Deserialize and Serialize. This
 // means we'll be able to automatically deserialize and serialize this type.
@@ -20,7 +17,7 @@ struct Record {
     longitude: f64,
 }
 
-fn run() -> Result<(), Box<Error>> {
+fn run() -> Result<(), Box<dyn Error>> {
     // Get the query from the positional arguments.
     // If one doesn't exist or isn't an integer, return an error.
     let minimum_pop: u64 = match env::args().nth(1) {

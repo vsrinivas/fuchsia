@@ -1,13 +1,14 @@
-use crossbeam_deque::{self as deque, Pop, Steal, Stealer, Worker};
+use crate::job::{JobFifo, JobRef, StackJob};
+use crate::latch::{CountLatch, Latch, LatchProbe, LockLatch, SpinLatch, TickleLatch};
+use crate::log::Event::*;
+use crate::sleep::Sleep;
+use crate::unwind;
+use crate::util::leak;
+use crate::{
+    ErrorKind, ExitHandler, PanicHandler, StartHandler, ThreadPoolBuildError, ThreadPoolBuilder,
+};
+use crossbeam_deque::{Steal, Stealer, Worker};
 use crossbeam_queue::SegQueue;
-#[cfg(rayon_unstable)]
-use internal::task::Task;
-#[cfg(rayon_unstable)]
-use job::Job;
-use job::{JobFifo, JobRef, StackJob};
-use latch::{CountLatch, Latch, LatchProbe, LockLatch, SpinLatch, TickleLatch};
-use log::Event::*;
-use sleep::Sleep;
 use std::any::Any;
 use std::cell::Cell;
 use std::collections::hash_map::DefaultHasher;
@@ -19,12 +20,9 @@ use std::ptr;
 #[allow(deprecated)]
 use std::sync::atomic::ATOMIC_USIZE_INIT;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Once, ONCE_INIT};
+use std::sync::{Arc, Once};
 use std::thread;
 use std::usize;
-use unwind;
-use util::leak;
-use {ErrorKind, ExitHandler, PanicHandler, StartHandler, ThreadPoolBuildError, ThreadPoolBuilder};
 
 /// Thread builder used for customization via
 /// [`ThreadPoolBuilder::spawn_handler`](struct.ThreadPoolBuilder.html#method.spawn_handler).
@@ -60,7 +58,7 @@ impl ThreadBuilder {
 }
 
 impl fmt::Debug for ThreadBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ThreadBuilder")
             .field("pool", &self.registry.id())
             .field("index", &self.index)
@@ -79,7 +77,7 @@ pub trait ThreadSpawn {
 
     /// Spawn a thread with the `ThreadBuilder` parameters, and then
     /// call `ThreadBuilder::run()`.
-    fn spawn(&mut self, ThreadBuilder) -> io::Result<()>;
+    fn spawn(&mut self, thread: ThreadBuilder) -> io::Result<()>;
 }
 
 /// Spawns a thread in the "normal" way with `std::thread::Builder`.
@@ -161,7 +159,7 @@ pub(super) struct Registry {
 /// Initialization
 
 static mut THE_REGISTRY: Option<&'static Arc<Registry>> = None;
-static THE_REGISTRY_SET: Once = ONCE_INIT;
+static THE_REGISTRY_SET: Once = Once::new();
 
 /// Starts the worker threads (if that has not already happened). If
 /// initialization has not already occurred, use the default
@@ -224,11 +222,14 @@ impl Registry {
 
         let (workers, stealers): (Vec<_>, Vec<_>) = (0..n_threads)
             .map(|_| {
-                if breadth_first {
-                    deque::fifo()
+                let worker = if breadth_first {
+                    Worker::new_fifo()
                 } else {
-                    deque::lifo()
-                }
+                    Worker::new_lifo()
+                };
+
+                let stealer = worker.stealer();
+                (worker, stealer)
             })
             .unzip();
 
@@ -262,11 +263,6 @@ impl Registry {
         mem::forget(t1000);
 
         Ok(registry.clone())
-    }
-
-    #[cfg(rayon_unstable)]
-    pub(super) fn global() -> Arc<Registry> {
-        global_registry().clone()
     }
 
     pub(super) fn current() -> Arc<Registry> {
@@ -319,7 +315,7 @@ impl Registry {
         self.thread_infos.len()
     }
 
-    pub(super) fn handle_panic(&self, err: Box<Any + Send>) {
+    pub(super) fn handle_panic(&self, err: Box<dyn Any + Send>) {
         match self.panic_handler {
             Some(ref handler) => {
                 // If the customizable panic handler itself panics,
@@ -370,53 +366,6 @@ impl Registry {
                 (*worker_thread).push(job_ref);
             } else {
                 self.inject(&[job_ref]);
-            }
-        }
-    }
-
-    /// Unsafe: the caller must guarantee that `task` will stay valid
-    /// until it executes.
-    #[cfg(rayon_unstable)]
-    pub(super) unsafe fn submit_task<T>(&self, task: Arc<T>)
-    where
-        T: Task,
-    {
-        let task_job = TaskJob::new(task);
-        let task_job_ref = TaskJob::into_job_ref(task_job);
-        return self.inject_or_push(task_job_ref);
-
-        /// A little newtype wrapper for `T`, just because I did not
-        /// want to implement `Job` for all `T: Task`.
-        struct TaskJob<T: Task> {
-            _data: T,
-        }
-
-        impl<T: Task> TaskJob<T> {
-            fn new(arc: Arc<T>) -> Arc<Self> {
-                // `TaskJob<T>` has the same layout as `T`, so we can safely
-                // tranmsute this `T` into a `TaskJob<T>`. This lets us write our
-                // impls of `Job` for `TaskJob<T>`, making them more restricted.
-                // Since `Job` is a private trait, this is not strictly necessary,
-                // I don't think, but makes me feel better.
-                unsafe { mem::transmute(arc) }
-            }
-
-            fn into_task(this: Arc<TaskJob<T>>) -> Arc<T> {
-                // Same logic as `new()`
-                unsafe { mem::transmute(this) }
-            }
-
-            unsafe fn into_job_ref(this: Arc<Self>) -> JobRef {
-                let this: *const Self = mem::transmute(this);
-                JobRef::new(this)
-            }
-        }
-
-        impl<T: Task> Job for TaskJob<T> {
-            unsafe fn execute(this: *const Self) {
-                let this: Arc<Self> = mem::transmute(this);
-                let task: Arc<T> = TaskJob::into_task(this);
-                Task::execute(task);
             }
         }
     }
@@ -486,19 +435,23 @@ impl Registry {
         OP: FnOnce(&WorkerThread, bool) -> R + Send,
         R: Send,
     {
-        // This thread isn't a member of *any* thread pool, so just block.
-        debug_assert!(WorkerThread::current().is_null());
-        let job = StackJob::new(
-            |injected| {
-                let worker_thread = WorkerThread::current();
-                assert!(injected && !worker_thread.is_null());
-                op(&*worker_thread, true)
-            },
-            LockLatch::new(),
-        );
-        self.inject(&[job.as_job_ref()]);
-        job.latch.wait();
-        job.into_result()
+        thread_local!(static LOCK_LATCH: LockLatch = LockLatch::new());
+
+        LOCK_LATCH.with(|l| {
+            // This thread isn't a member of *any* thread pool, so just block.
+            debug_assert!(WorkerThread::current().is_null());
+            let job = StackJob::new(
+                |injected| {
+                    let worker_thread = WorkerThread::current();
+                    assert!(injected && !worker_thread.is_null());
+                    op(&*worker_thread, true)
+                },
+                l,
+            );
+            self.inject(&[job.as_job_ref()]);
+            job.latch.wait_and_reset(); // Make sure we can use the same latch again next time.
+            job.into_result()
+        })
     }
 
     #[cold]
@@ -674,13 +627,7 @@ impl WorkerThread {
     /// bottom.
     #[inline]
     pub(super) unsafe fn take_local_job(&self) -> Option<JobRef> {
-        loop {
-            match self.worker.pop() {
-                Pop::Empty => return None,
-                Pop::Data(d) => return Some(d),
-                Pop::Retry => {}
-            }
-        }
+        self.worker.pop()
     }
 
     /// Wait until the latch is set. Try to keep busy by popping and
@@ -763,7 +710,7 @@ impl WorkerThread {
                 loop {
                     match victim.stealer.steal() {
                         Steal::Empty => return None,
-                        Steal::Data(d) => {
+                        Steal::Success(d) => {
                             log!(StoleWork {
                                 worker: self.index,
                                 victim: victim_index

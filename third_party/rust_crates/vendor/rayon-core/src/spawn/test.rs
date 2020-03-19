@@ -1,10 +1,10 @@
-use scope;
+use crate::scope;
 use std::any::Any;
 use std::sync::mpsc::channel;
 use std::sync::Mutex;
 
 use super::{spawn, spawn_fifo};
-use ThreadPoolBuilder;
+use crate::ThreadPoolBuilder;
 
 #[test]
 fn spawn_then_join_in_worker() {
@@ -27,7 +27,7 @@ fn panic_fwd() {
     let (tx, rx) = channel();
 
     let tx = Mutex::new(tx);
-    let panic_handler = move |err: Box<Any + Send>| {
+    let panic_handler = move |err: Box<dyn Any + Send>| {
         let tx = tx.lock().unwrap();
         if let Some(&msg) = err.downcast_ref::<&str>() {
             if msg == "Hello, world!" {
@@ -87,7 +87,7 @@ fn custom_panic_handler_and_spawn() {
     // channel; since the closure is potentially executed in parallel
     // with itself, we have to wrap `tx` in a mutex.
     let tx = Mutex::new(tx);
-    let panic_handler = move |e: Box<Any + Send>| {
+    let panic_handler = move |e: Box<dyn Any + Send>| {
         tx.lock().unwrap().send(e).unwrap();
     };
 

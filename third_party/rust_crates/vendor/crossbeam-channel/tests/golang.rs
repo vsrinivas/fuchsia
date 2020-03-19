@@ -13,12 +13,13 @@
 extern crate crossbeam_channel;
 
 use std::any::Any;
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use crossbeam_channel::{bounded, Receiver, Select, Sender};
+use crossbeam_channel::{bounded, tick, Receiver, Select, Sender};
 
 fn ms(ms: u64) -> Duration {
     Duration::from_millis(ms)
@@ -55,22 +56,12 @@ impl<T> Chan<T> {
     }
 
     fn try_recv(&self) -> Option<T> {
-        let r = self
-            .inner
-            .lock()
-            .unwrap()
-            .r
-            .clone();
+        let r = self.inner.lock().unwrap().r.clone();
         r.try_recv().ok()
     }
 
     fn recv(&self) -> Option<T> {
-        let r = self
-            .inner
-            .lock()
-            .unwrap()
-            .r
-            .clone();
+        let r = self.inner.lock().unwrap().r.clone();
         r.recv().ok()
     }
 
@@ -84,21 +75,11 @@ impl<T> Chan<T> {
     }
 
     fn rx(&self) -> Receiver<T> {
-        self.inner
-            .lock()
-            .unwrap()
-            .r
-            .clone()
+        self.inner.lock().unwrap().r.clone()
     }
 
     fn tx(&self) -> Sender<T> {
-        match self
-            .inner
-            .lock()
-            .unwrap()
-            .s
-            .as_ref()
-        {
+        match self.inner.lock().unwrap().s.as_ref() {
             None => {
                 let (s, r) = bounded(0);
                 std::mem::forget(r);
@@ -333,14 +314,351 @@ mod fifo {
     }
 }
 
+// https://github.com/golang/go/blob/master/test/chan/goroutines.go
+mod goroutines {
+    use super::*;
+
+    fn f(left: Chan<i32>, right: Chan<i32>) {
+        left.send(right.recv().unwrap());
+    }
+
+    #[test]
+    fn main() {
+        let n = 100i32;
+
+        let leftmost = make::<i32>(0);
+        let mut right = leftmost.clone();
+        let mut left = leftmost.clone();
+
+        for _ in 0..n {
+            right = make::<i32>(0);
+            go!(left, right, f(left, right));
+            left = right.clone();
+        }
+
+        go!(right, right.send(1));
+        leftmost.recv().unwrap();
+    }
+}
+
 // https://github.com/golang/go/blob/master/test/chan/nonblock.go
 mod nonblock {
-    // TODO
+    use super::*;
+
+    fn i32receiver(c: Chan<i32>, strobe: Chan<bool>) {
+        if c.recv().unwrap() != 123 {
+            panic!("i32 value");
+        }
+        strobe.send(true);
+    }
+
+    fn i32sender(c: Chan<i32>, strobe: Chan<bool>) {
+        c.send(234);
+        strobe.send(true);
+    }
+
+    fn i64receiver(c: Chan<i64>, strobe: Chan<bool>) {
+        if c.recv().unwrap() != 123456 {
+            panic!("i64 value");
+        }
+        strobe.send(true);
+    }
+
+    fn i64sender(c: Chan<i64>, strobe: Chan<bool>) {
+        c.send(234567);
+        strobe.send(true);
+    }
+
+    fn breceiver(c: Chan<bool>, strobe: Chan<bool>) {
+        if !c.recv().unwrap() {
+            panic!("b value");
+        }
+        strobe.send(true);
+    }
+
+    fn bsender(c: Chan<bool>, strobe: Chan<bool>) {
+        c.send(true);
+        strobe.send(true);
+    }
+
+    fn sreceiver(c: Chan<String>, strobe: Chan<bool>) {
+        if c.recv().unwrap() != "hello" {
+            panic!("x value");
+        }
+        strobe.send(true);
+    }
+
+    fn ssender(c: Chan<String>, strobe: Chan<bool>) {
+        c.send("hello again".to_string());
+        strobe.send(true);
+    }
+
+    const MAX_TRIES: usize = 10000; // Up to 100ms per test.
+
+    #[test]
+    fn main() {
+        let ticker = tick(Duration::new(0, 10_000)); // 10 us
+        let sleep = || {
+            ticker.recv().unwrap();
+            ticker.recv().unwrap();
+            thread::yield_now();
+            thread::yield_now();
+            thread::yield_now();
+        };
+
+        let sync = make::<bool>(0);
+
+        for buffer in 0..2 {
+            let c32 = make::<i32>(buffer);
+            let c64 = make::<i64>(buffer);
+            let cb = make::<bool>(buffer);
+            let cs = make::<String>(buffer);
+
+            select! {
+                recv(c32.rx()) -> _ => panic!("blocked i32sender"),
+                default => {}
+            }
+
+            select! {
+                recv(c64.rx()) -> _ => panic!("blocked i64sender"),
+                default => {}
+            }
+
+            select! {
+                recv(cb.rx()) -> _ => panic!("blocked bsender"),
+                default => {}
+            }
+
+            select! {
+                recv(cs.rx()) -> _ => panic!("blocked ssender"),
+                default => {}
+            }
+
+            go!(c32, sync, i32receiver(c32, sync));
+            let mut try = 0;
+            loop {
+                select! {
+                    send(c32.tx(), 123) -> _ => break,
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("i32receiver buffer={}", buffer);
+                            panic!("fail")
+                        }
+                        sleep();
+                    }
+                }
+            }
+            sync.recv();
+            go!(c32, sync, i32sender(c32, sync));
+            if buffer > 0 {
+                sync.recv();
+            }
+            let mut try = 0;
+            loop {
+                select! {
+                    recv(c32.rx()) -> v => {
+                        if v != Ok(234) {
+                            panic!("i32sender value");
+                        }
+                        break;
+                    }
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("i32sender buffer={}", buffer);
+                            panic!("fail");
+                        }
+                        sleep();
+                    }
+                }
+            }
+            if buffer == 0 {
+                sync.recv();
+            }
+
+            go!(c64, sync, i64receiver(c64, sync));
+            let mut try = 0;
+            loop {
+                select! {
+                    send(c64.tx(), 123456) -> _ => break,
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("i64receiver buffer={}", buffer);
+                            panic!("fail")
+                        }
+                        sleep();
+                    }
+                }
+            }
+            sync.recv();
+            go!(c64, sync, i64sender(c64, sync));
+            if buffer > 0 {
+                sync.recv();
+            }
+            let mut try = 0;
+            loop {
+                select! {
+                    recv(c64.rx()) -> v => {
+                        if v != Ok(234567) {
+                            panic!("i64sender value");
+                        }
+                        break;
+                    }
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("i64sender buffer={}", buffer);
+                            panic!("fail");
+                        }
+                        sleep();
+                    }
+                }
+            }
+            if buffer == 0 {
+                sync.recv();
+            }
+
+            go!(cb, sync, breceiver(cb, sync));
+            let mut try = 0;
+            loop {
+                select! {
+                    send(cb.tx(), true) -> _ => break,
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("breceiver buffer={}", buffer);
+                            panic!("fail")
+                        }
+                        sleep();
+                    }
+                }
+            }
+            sync.recv();
+            go!(cb, sync, bsender(cb, sync));
+            if buffer > 0 {
+                sync.recv();
+            }
+            let mut try = 0;
+            loop {
+                select! {
+                    recv(cb.rx()) -> v => {
+                        if v != Ok(true) {
+                            panic!("bsender value");
+                        }
+                        break;
+                    }
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("bsender buffer={}", buffer);
+                            panic!("fail");
+                        }
+                        sleep();
+                    }
+                }
+            }
+            if buffer == 0 {
+                sync.recv();
+            }
+
+            go!(cs, sync, sreceiver(cs, sync));
+            let mut try = 0;
+            loop {
+                select! {
+                    send(cs.tx(), "hello".to_string()) -> _ => break,
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("sreceiver buffer={}", buffer);
+                            panic!("fail")
+                        }
+                        sleep();
+                    }
+                }
+            }
+            sync.recv();
+            go!(cs, sync, ssender(cs, sync));
+            if buffer > 0 {
+                sync.recv();
+            }
+            let mut try = 0;
+            loop {
+                select! {
+                    recv(cs.rx()) -> v => {
+                        if v != Ok("hello again".to_string()) {
+                            panic!("ssender value");
+                        }
+                        break;
+                    }
+                    default => {
+                        try += 1;
+                        if try > MAX_TRIES {
+                            println!("ssender buffer={}", buffer);
+                            panic!("fail");
+                        }
+                        sleep();
+                    }
+                }
+            }
+            if buffer == 0 {
+                sync.recv();
+            }
+        }
+    }
 }
 
 // https://github.com/golang/go/blob/master/test/chan/select.go
 mod select {
-    // TODO
+    use super::*;
+
+    #[test]
+    fn main() {
+        let shift = Cell::new(0);
+        let counter = Cell::new(0);
+
+        let get_value = || {
+            counter.set(counter.get() + 1);
+            1 << shift.get()
+        };
+
+        let send = |mut a: Option<&Chan<u32>>, mut b: Option<&Chan<u32>>| {
+            let mut i = 0;
+            let never = make::<u32>(0);
+            loop {
+                let nil1 = never.tx();
+                let nil2 = never.tx();
+                let v1 = get_value();
+                let v2 = get_value();
+                select! {
+                    send(a.map(|c| c.tx()).unwrap_or(nil1), v1) -> _ => {
+                        i += 1;
+                        a = None;
+                    }
+                    send(b.map(|c| c.tx()).unwrap_or(nil2), v2) -> _ => {
+                        i += 1;
+                        b = None;
+                    }
+                    default => break,
+                }
+                shift.set(shift.get() + 1);
+            }
+            i
+        };
+
+        let a = make::<u32>(1);
+        let b = make::<u32>(1);
+
+        assert_eq!(send(Some(&a), Some(&b)), 2);
+
+        let av = a.recv().unwrap();
+        let bv = b.recv().unwrap();
+        assert_eq!(av | bv, 3);
+
+        assert_eq!(send(Some(&a), None), 1);
+        assert_eq!(counter.get(), 10);
+    }
 }
 
 // https://github.com/golang/go/blob/master/test/chan/select2.go
@@ -355,17 +673,22 @@ mod select3 {
 
 // https://github.com/golang/go/blob/master/test/chan/select4.go
 mod select4 {
-    // TODO
-}
+    use super::*;
 
-// https://github.com/golang/go/blob/master/test/chan/select5.go
-mod select5 {
-    // TODO
+    #[test]
+    fn main() {
+        let c = make::<i32>(1);
+        let c1 = make::<i32>(0);
+        c.send(42);
+        select! {
+            recv(c1.rx()) -> _ => panic!("BUG"),
+            recv(c.rx()) -> v => assert_eq!(v, Ok(42)),
+        }
+    }
 }
 
 // https://github.com/golang/go/blob/master/test/chan/select6.go
 mod select6 {
-    // TODO
     use super::*;
 
     #[test]
@@ -392,17 +715,117 @@ mod select6 {
 
 // https://github.com/golang/go/blob/master/test/chan/select7.go
 mod select7 {
-    // TODO
+    use super::*;
+
+    fn recv1(c: Chan<i32>) {
+        c.recv().unwrap();
+    }
+
+    fn recv2(c: Chan<i32>) {
+        select! {
+            recv(c.rx()) -> _ => ()
+        }
+    }
+
+    fn recv3(c: Chan<i32>) {
+        let c2 = make::<i32>(1);
+        select! {
+            recv(c.rx()) -> _ => (),
+            recv(c2.rx()) -> _ => ()
+        }
+    }
+
+    fn send1(recv: fn(Chan<i32>)) {
+        let c = make::<i32>(1);
+        go!(c, recv(c));
+        thread::yield_now();
+        c.send(1);
+    }
+
+    fn send2(recv: fn(Chan<i32>)) {
+        let c = make::<i32>(1);
+        go!(c, recv(c));
+        thread::yield_now();
+        select! {
+            send(c.tx(), 1) -> _ => ()
+        }
+    }
+
+    fn send3(recv: fn(Chan<i32>)) {
+        let c = make::<i32>(1);
+        go!(c, recv(c));
+        thread::yield_now();
+        let c2 = make::<i32>(1);
+        select! {
+            send(c.tx(), 1) -> _ => (),
+            send(c2.tx(), 1) -> _ => ()
+        }
+    }
+
+    #[test]
+    fn main() {
+        send1(recv1);
+        send2(recv1);
+        send3(recv1);
+        send1(recv2);
+        send2(recv2);
+        send3(recv2);
+        send1(recv3);
+        send2(recv3);
+        send3(recv3);
+    }
 }
 
 // https://github.com/golang/go/blob/master/test/chan/sieve1.go
 mod sieve1 {
-    // TODO
-}
+    use super::*;
 
-// https://github.com/golang/go/blob/master/test/chan/sieve2.go
-mod sieve2 {
-    // TODO
+    fn generate(ch: Chan<i32>) {
+        let mut i = 2;
+        loop {
+            ch.send(i);
+            i += 1;
+        }
+    }
+
+    fn filter(in_ch: Chan<i32>, out_ch: Chan<i32>, prime: i32) {
+        for i in in_ch {
+            if i % prime != 0 {
+                out_ch.send(i);
+            }
+        }
+    }
+
+    fn sieve(primes: Chan<i32>) {
+        let mut ch = make::<i32>(1);
+        go!(ch, generate(ch));
+        loop {
+            let prime = ch.recv().unwrap();
+            primes.send(prime);
+
+            let ch1 = make::<i32>(1);
+            go!(ch, ch1, prime, filter(ch, ch1, prime));
+            ch = ch1;
+        }
+    }
+
+    #[test]
+    fn main() {
+        let primes = make::<i32>(1);
+        go!(primes, sieve(primes));
+
+        let a = [
+            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83,
+            89, 97,
+        ];
+        for item in a.iter() {
+            let x = primes.recv().unwrap();
+            if x != *item {
+                println!("{} != {}", x, item);
+                panic!("fail");
+            }
+        }
+    }
 }
 
 // https://github.com/golang/go/blob/master/test/chan/zerosize.go
@@ -866,7 +1289,7 @@ mod chan_test {
     fn test_chan_send_interface() {
         struct Mt;
 
-        let c = make::<Box<Any>>(1);
+        let c = make::<Box<dyn Any>>(1);
         c.send(Box::new(Mt));
 
         select! {

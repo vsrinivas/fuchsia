@@ -3,19 +3,18 @@
 //!
 //! [`ThreadPool`]: struct.ThreadPool.html
 
-use join;
-use registry::{Registry, ThreadSpawn, WorkerThread};
-use spawn;
+use crate::join;
+use crate::registry::{Registry, ThreadSpawn, WorkerThread};
+use crate::spawn;
+#[allow(deprecated)]
+use crate::Configuration;
+use crate::{scope, Scope};
+use crate::{scope_fifo, ScopeFifo};
+use crate::{ThreadPoolBuildError, ThreadPoolBuilder};
 use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
-#[allow(deprecated)]
-use Configuration;
-use {scope, Scope};
-use {scope_fifo, ScopeFifo};
-use {ThreadPoolBuildError, ThreadPoolBuilder};
 
-mod internal;
 mod test;
 
 /// Represents a user created [thread-pool].
@@ -57,7 +56,7 @@ impl ThreadPool {
     #[deprecated(note = "Use `ThreadPoolBuilder::build`")]
     #[allow(deprecated)]
     /// Deprecated in favor of `ThreadPoolBuilder::build`.
-    pub fn new(configuration: Configuration) -> Result<ThreadPool, Box<Error>> {
+    pub fn new(configuration: Configuration) -> Result<ThreadPool, Box<dyn Error>> {
         Self::build(configuration.into_builder()).map_err(Box::from)
     }
 
@@ -69,27 +68,6 @@ impl ThreadPool {
     {
         let registry = Registry::new(builder)?;
         Ok(ThreadPool { registry })
-    }
-
-    /// Returns a handle to the global thread pool. This is the pool
-    /// that Rayon will use by default when you perform a `join()` or
-    /// `scope()` operation, if no other thread-pool is installed. If
-    /// no global thread-pool has yet been started when this function
-    /// is called, then the global thread-pool will be created (with
-    /// the default configuration). If you wish to configure the
-    /// global thread-pool differently, then you can use [the
-    /// `rayon::initialize()` function][f] to do so.
-    ///
-    /// [f]: fn.initialize.html
-    #[cfg(rayon_unstable)]
-    pub fn global() -> &'static Arc<ThreadPool> {
-        lazy_static! {
-            static ref DEFAULT_THREAD_POOL: Arc<ThreadPool> = Arc::new(ThreadPool {
-                registry: Registry::global()
-            });
-        }
-
-        &DEFAULT_THREAD_POOL
     }
 
     /// Executes `op` within the threadpool. Any attempts to use
@@ -283,7 +261,7 @@ impl Drop for ThreadPool {
 }
 
 impl fmt::Debug for ThreadPool {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("ThreadPool")
             .field("num_threads", &self.current_num_threads())
             .field("id", &self.registry.id())

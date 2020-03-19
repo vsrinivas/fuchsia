@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex};
 use std::usize;
 
-use sleep::Sleep;
+use crate::sleep::Sleep;
 
 /// We define various kinds of latches, which are all a primitive signaling
 /// mechanism. A latch starts as false. Eventually someone calls `set()` and
@@ -84,6 +84,15 @@ impl LockLatch {
             m: Mutex::new(false),
             v: Condvar::new(),
         }
+    }
+
+    /// Block until latch is set, then resets this lock latch so it can be reused again.
+    pub(super) fn wait_and_reset(&self) {
+        let mut guard = self.m.lock().unwrap();
+        while !*guard {
+            guard = self.v.wait(guard).unwrap();
+        }
+        *guard = false;
     }
 
     /// Block until latch is set.
@@ -184,5 +193,23 @@ impl<'a, L: Latch> Latch for TickleLatch<'a, L> {
     fn set(&self) {
         self.inner.set();
         self.sleep.tickle(usize::MAX);
+    }
+}
+
+impl<'a, L> LatchProbe for &'a L
+where
+    L: LatchProbe,
+{
+    fn probe(&self) -> bool {
+        L::probe(self)
+    }
+}
+
+impl<'a, L> Latch for &'a L
+where
+    L: Latch,
+{
+    fn set(&self) {
+        L::set(self);
     }
 }

@@ -1,7 +1,5 @@
-#![deny(missing_docs, missing_debug_implementations, warnings)]
-#![doc(html_root_url = "https://docs.rs/tokio-executor/0.1.8")]
-// Our MSRV doesn't allow us to fix these warnings yet
-#![allow(rust_2018_idioms)]
+#![deny(missing_docs, missing_debug_implementations)]
+#![doc(html_root_url = "https://docs.rs/tokio-executor/0.1.10")]
 
 //! Task execution related traits and utilities.
 //!
@@ -66,5 +64,5 @@ mod typed;
 pub use enter::{enter, exit, Enter, EnterError};
 pub use error::SpawnError;
 pub use executor::Executor;
-pub use global::{spawn, with_default, DefaultExecutor};
+pub use global::{set_default, spawn, with_default, DefaultExecutor, DefaultGuard};
 pub use typed::TypedExecutor;

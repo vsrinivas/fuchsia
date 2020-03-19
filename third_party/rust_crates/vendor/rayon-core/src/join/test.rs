@@ -1,11 +1,11 @@
 //! Tests for the join code.
 
-use join::*;
+use crate::join::*;
+use crate::unwind;
+use crate::ThreadPoolBuilder;
 use rand::distributions::Standard;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
-use unwind;
-use ThreadPoolBuilder;
 
 fn quick_sort<T: PartialOrd + Send>(v: &mut [T]) {
     if v.len() <= 1 {
@@ -38,7 +38,7 @@ fn seeded_rng() -> XorShiftRng {
 
 #[test]
 fn sort() {
-    let mut rng = seeded_rng();
+    let rng = seeded_rng();
     let mut data: Vec<u32> = rng.sample_iter(&Standard).take(6 * 1024).collect();
     let mut sorted_data = data.clone();
     sorted_data.sort();
@@ -48,7 +48,7 @@ fn sort() {
 
 #[test]
 fn sort_in_pool() {
-    let mut rng = seeded_rng();
+    let rng = seeded_rng();
     let mut data: Vec<u32> = rng.sample_iter(&Standard).take(12 * 1024).collect();
 
     let pool = ThreadPoolBuilder::new().build().unwrap();

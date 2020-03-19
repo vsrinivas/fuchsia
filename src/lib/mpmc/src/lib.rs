@@ -6,7 +6,7 @@
 
 //! A library with futures-aware mpmc channels.
 
-use crossbeam::queue::MsQueue;
+use crossbeam::queue::SegQueue;
 use futures::{channel::mpsc, lock::Mutex, sink::SinkExt, stream::FusedStream, Stream};
 use std::{
     pin::Pin,
@@ -22,7 +22,7 @@ pub const DEFAULT_CHANNEL_BUFFER_SIZE: usize = 100;
 #[derive(Clone)]
 pub struct Sender<T> {
     inner: Arc<Mutex<Vec<mpsc::Sender<T>>>>,
-    enqueued_senders: Arc<MsQueue<mpsc::Sender<T>>>,
+    enqueued_senders: Arc<SegQueue<mpsc::Sender<T>>>,
     buffer_size: usize,
 }
 
@@ -47,7 +47,7 @@ impl<T: Clone> Sender<T> {
     /// Sending is never an error, even if there are no receivers.
     pub async fn send(&self, payload: T) {
         let mut inner = self.inner.lock().await;
-        while let Some(new_sender) = self.enqueued_senders.try_pop() {
+        while let Ok(new_sender) = self.enqueued_senders.pop() {
             inner.push(new_sender);
         }
 
@@ -89,7 +89,7 @@ impl<T: Clone> Sender<T> {
 /// instance's lifetime; messages sent before the receiver is added to the
 /// channel are not duplicated.
 pub struct Receiver<T> {
-    sources: Weak<MsQueue<mpsc::Sender<T>>>,
+    sources: Weak<SegQueue<mpsc::Sender<T>>>,
     inner: mpsc::Receiver<T>,
     buffer_size: usize,
 }

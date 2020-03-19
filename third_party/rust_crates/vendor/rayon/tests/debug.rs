@@ -1,5 +1,3 @@
-extern crate rayon;
-
 use rayon::prelude::*;
 use std::fmt::Debug;
 
@@ -124,6 +122,7 @@ fn debug_adaptors() {
     let v: Vec<_> = (0..10).collect();
     check(v.par_iter().chain(&v));
     check(v.par_iter().cloned());
+    check(v.par_iter().copied());
     check(v.par_iter().enumerate());
     check(v.par_iter().filter(|_| true));
     check(v.par_iter().filter_map(Some));
@@ -173,4 +172,21 @@ fn debug_repeat() {
 #[test]
 fn debug_splitter() {
     check(rayon::iter::split(0..10, |x| (x, None)));
+}
+
+#[test]
+fn debug_multizip() {
+    let v: &Vec<_> = &(0..10).collect();
+    check((v,).into_par_iter());
+    check((v, v).into_par_iter());
+    check((v, v, v).into_par_iter());
+    check((v, v, v, v).into_par_iter());
+    check((v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v, v, v).into_par_iter());
+    check((v, v, v, v, v, v, v, v, v, v, v, v).into_par_iter());
 }

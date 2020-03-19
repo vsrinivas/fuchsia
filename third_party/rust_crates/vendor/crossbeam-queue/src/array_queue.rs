@@ -8,12 +8,13 @@
 //!   - Simplified BSD License and Apache License, Version 2.0
 //!   - http://www.1024cores.net/home/code-license
 
-use std::cell::UnsafeCell;
-use std::fmt;
-use std::marker::PhantomData;
-use std::mem;
-use std::ptr;
-use std::sync::atomic::{self, AtomicUsize, Ordering};
+use alloc::vec::Vec;
+use core::cell::UnsafeCell;
+use core::fmt;
+use core::marker::PhantomData;
+use core::mem;
+use core::ptr;
+use core::sync::atomic::{self, AtomicUsize, Ordering};
 
 use crossbeam_utils::{Backoff, CachePadded};
 
@@ -23,7 +24,7 @@ use err::{PopError, PushError};
 struct Slot<T> {
     /// The current stamp.
     ///
-    /// If the stamp equals the tail, this node will be next written to. If it equals the head,
+    /// If the stamp equals the tail, this node will be next written to. If it equals head + 1,
     /// this node will be next read from.
     stamp: AtomicUsize,
 
@@ -34,7 +35,7 @@ struct Slot<T> {
 /// A bounded multi-producer multi-consumer queue.
 ///
 /// This queue allocates a fixed-capacity buffer on construction, which is used to store pushed
-/// elements. The queue cannot hold more elements that the buffer allows. Attempting to push an
+/// elements. The queue cannot hold more elements than the buffer allows. Attempting to push an
 /// element into a full queue will fail. Having a buffer allocated upfront makes this queue a bit
 /// faster than [`SegQueue`].
 ///
@@ -177,13 +178,17 @@ impl<T> ArrayQueue<T> {
                 };
 
                 // Try moving the tail.
-                match self
-                    .tail
-                    .compare_exchange_weak(tail, new_tail, Ordering::SeqCst, Ordering::Relaxed)
-                {
+                match self.tail.compare_exchange_weak(
+                    tail,
+                    new_tail,
+                    Ordering::SeqCst,
+                    Ordering::Relaxed,
+                ) {
                     Ok(_) => {
                         // Write the value into the slot and update the stamp.
-                        unsafe { slot.value.get().write(value); }
+                        unsafe {
+                            slot.value.get().write(value);
+                        }
                         slot.stamp.store(tail + 1, Ordering::Release);
                         return Ok(());
                     }
@@ -253,14 +258,17 @@ impl<T> ArrayQueue<T> {
                 };
 
                 // Try moving the head.
-                match self
-                    .head
-                    .compare_exchange_weak(head, new, Ordering::SeqCst, Ordering::Relaxed)
-                {
+                match self.head.compare_exchange_weak(
+                    head,
+                    new,
+                    Ordering::SeqCst,
+                    Ordering::Relaxed,
+                ) {
                     Ok(_) => {
                         // Read the value from the slot and update the stamp.
                         let msg = unsafe { slot.value.get().read() };
-                        slot.stamp.store(head.wrapping_add(self.one_lap), Ordering::Release);
+                        slot.stamp
+                            .store(head.wrapping_add(self.one_lap), Ordering::Release);
                         return Ok(msg);
                     }
                     Err(h) => {

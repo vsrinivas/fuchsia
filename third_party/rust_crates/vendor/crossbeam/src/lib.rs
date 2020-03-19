@@ -1,40 +1,51 @@
-//! Crossbeam supports concurrent programming, especially focusing on memory
-//! management, synchronization, and non-blocking data structures.
+//! Tools for concurrent programming.
 //!
-//! Crossbeam consists of several submodules:
+//! ## Atomics
 //!
-//!  - `atomic` for **enhancing `std::sync` API**. `AtomicConsume` provides
-//!    C/C++11-style "consume" atomic operations (re-exported from
-//!    [`crossbeam-utils`]). `ArcCell` provides atomic storage and retrieval of
-//!    `Arc`.
+//! * [`AtomicCell`], a thread-safe mutable memory location.
+//! * [`AtomicConsume`], for reading from primitive atomic types with "consume" ordering.
 //!
-//!  - `utils` and `thread` for **utilities**, re-exported from [`crossbeam-utils`].
-//!    The "scoped" thread API in `thread` makes it possible to spawn threads that
-//!    share stack data with their parents. The `utils::CachePadded` struct inserts
-//!    padding to align data with the size of a cacheline. This crate also seeks to
-//!    expand the standard library's few synchronization primitives (locks,
-//!    barriers, etc) to include advanced/niche primitives, as well as userspace
-//!    alternatives.
+//! ## Data structures
 //!
-//!  - `epoch` for **memory management**, re-exported from [`crossbeam-epoch`].
-//!    Because non-blocking data structures avoid global synchronization, it is not
-//!    easy to tell when internal data can be safely freed. The crate provides
-//!    generic, easy to use, and high-performance APIs for managing memory in these
-//!    cases. We plan to support other memory management schemes, e.g. hazard
-//!    pointers (HP) and quiescent state-based reclamation (QSBR).
+//! * [`deque`], work-stealing deques for building task schedulers.
+//! * [`ArrayQueue`], a bounded MPMC queue that allocates a fixed-capacity buffer on construction.
+//! * [`SegQueue`], an unbounded MPMC queue that allocates small buffers, segments, on demand.
 //!
-//!  - **Concurrent data structures** which are non-blocking and much superior to
-//!    wrapping sequential ones with a `Mutex`. Crossbeam currently provides
-//!    channels (re-exported from [`crossbeam-channel`]), deques
-//!    (re-exported from [`crossbeam-deque`]), queues, and stacks. Ultimately the
-//!    goal is to also include bags, sets and maps.
+//! ## Memory management
+//!
+//! * [`epoch`], an epoch-based garbage collector.
+//!
+//! ## Thread synchronization
+//!
+//! * [`channel`], multi-producer multi-consumer channels for message passing.
+//! * [`Parker`], a thread parking primitive.
+//! * [`ShardedLock`], a sharded reader-writer lock with fast concurrent reads.
+//! * [`WaitGroup`], for synchronizing the beginning or end of some computation.
+//!
+//! ## Utilities
+//!
+//! * [`Backoff`], for exponential backoff in spin loops.
+//! * [`CachePadded`], for padding and aligning a value to the length of a cache line.
+//! * [`scope`], for spawning threads that borrow local variables from the stack.
+//!
+//! [`AtomicCell`]: atomic/struct.AtomicCell.html
+//! [`AtomicConsume`]: atomic/trait.AtomicConsume.html
+//! [`deque`]: deque/index.html
+//! [`ArrayQueue`]: queue/struct.ArrayQueue.html
+//! [`SegQueue`]: queue/struct.SegQueue.html
+//! [`channel`]: channel/index.html
+//! [`Parker`]: sync/struct.Parker.html
+//! [`ShardedLock`]: sync/struct.ShardedLock.html
+//! [`WaitGroup`]: sync/struct.WaitGroup.html
+//! [`epoch`]: epoch/index.html
+//! [`Backoff`]: utils/struct.Backoff.html
+//! [`CachePadded`]: utils/struct.CachePadded.html
+//! [`scope`]: fn.scope.html
 
 #![warn(missing_docs)]
-// #![warn(missing_debug_implementations)] // TODO: Uncomment this.
+#![warn(missing_debug_implementations)]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "nightly", feature(alloc))]
 #![cfg_attr(feature = "nightly", feature(cfg_target_has_atomic))]
-#![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
 #[macro_use]
 extern crate cfg_if;
@@ -42,90 +53,57 @@ extern crate cfg_if;
 extern crate core;
 
 cfg_if! {
-    if #[cfg(feature = "nightly")] {
+    if #[cfg(feature = "alloc")] {
         extern crate alloc;
-    } else {
-        mod alloc {
-            extern crate std;
-            pub use self::std::*;
-        }
+    } else if #[cfg(feature = "std")] {
+        extern crate std as alloc;
     }
 }
 
 mod _epoch {
     pub extern crate crossbeam_epoch;
 }
+#[doc(inline)]
 pub use _epoch::crossbeam_epoch as epoch;
-
-mod arc_cell;
-mod atomic_cell;
 
 extern crate crossbeam_utils;
 
-/// Additional utilities for atomics.
-pub mod atomic {
-    pub use arc_cell::ArcCell;
-    pub use atomic_cell::AtomicCell;
-    pub use crossbeam_utils::atomic::AtomicConsume;
-}
+#[cfg_attr(feature = "nightly", cfg(target_has_atomic = "ptr"))]
+pub use crossbeam_utils::atomic;
 
-/// Utilities for concurrent programming.
-///
-/// See [the `crossbeam-utils` crate](https://github.com/crossbeam-rs/crossbeam-utils) for more
-/// information.
+/// Miscellaneous utilities.
 pub mod utils {
+    pub use crossbeam_utils::Backoff;
     pub use crossbeam_utils::CachePadded;
 }
 
 cfg_if! {
     if #[cfg(feature = "std")] {
-        pub use crossbeam_utils::thread;
-
-        // Export `crossbeam_utils::thread::scope` into the crate root because it's become an
-        // established pattern.
-        pub use crossbeam_utils::thread::scope;
-
         mod _deque {
             pub extern crate crossbeam_deque;
         }
+        #[doc(inline)]
         pub use _deque::crossbeam_deque as deque;
 
         mod _channel {
             pub extern crate crossbeam_channel;
             pub use self::crossbeam_channel::*;
         }
+        #[doc(inline)]
         pub use _channel::crossbeam_channel as channel;
 
         // HACK(stjepang): This is the only way to reexport `select!` in Rust older than 1.30.0
         #[doc(hidden)]
         pub use _channel::*;
 
-        #[macro_use]
-        extern crate lazy_static;
-        extern crate num_cpus;
-        extern crate parking_lot;
-
-        mod ms_queue;
-        mod seg_queue;
-        mod sharded_lock;
-        mod treiber_stack;
-        mod wait_group;
-
-        /// Concurrent queues.
-        pub mod queue {
-            pub use ms_queue::MsQueue;
-            pub use seg_queue::SegQueue;
+        mod _queue {
+            pub extern crate crossbeam_queue;
         }
+        #[doc(inline)]
+        pub use _queue::crossbeam_queue as queue;
 
-        /// Concurrent stacks.
-        pub mod stack {
-            pub use treiber_stack::TreiberStack;
-        }
-
-        /// Utilities for thread synchronization.
-        pub mod sync {
-            pub use sharded_lock::{ShardedLock, ShardedLockReadGuard, ShardedLockWriteGuard};
-            pub use wait_group::WaitGroup;
-        }
+        pub use crossbeam_utils::sync;
+        pub use crossbeam_utils::thread;
+        pub use crossbeam_utils::thread::scope;
     }
 }

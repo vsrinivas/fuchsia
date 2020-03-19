@@ -76,7 +76,7 @@ proptest-derive = "0.1.1"
 rand = "0.6"
 rand_core = "0.4.0"
 rand_os = "0.1.2"
-rayon = "1.1"
+rayon = "1.2.1"
 regex = "1.0.6"
 regex-syntax = "0.6.5"
 ring = "0.16"
@@ -119,7 +119,7 @@ features = ["chrono", "tracing-log"]
 async-trait = "0.1.11"
 bincode = "1"
 bytes = "0.5.4"
-crossbeam = "0.5"
+crossbeam = "0.7.3"
 ct-logs = "0.6"
 data-encoding = "2.1.2"
 derivative = "1.0.2"
@@ -202,6 +202,7 @@ cmake = { path = "tiny_mirrors/cmake"}
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
 nom_locate = { path = "tiny_mirrors/nom_locate" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
+regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 web-sys = { path = "tiny_mirrors/web-sys" }

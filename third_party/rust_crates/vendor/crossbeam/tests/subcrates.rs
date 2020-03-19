@@ -1,4 +1,4 @@
-//! Makes sure subcrates are properly reexported.
+//! Makes sure subcrates are properly re-exported.
 
 #[macro_use]
 extern crate crossbeam;
@@ -15,10 +15,9 @@ fn channel() {
 
 #[test]
 fn deque() {
-    let (w, s) = crossbeam::deque::fifo();
+    let w = crossbeam::deque::Worker::new_fifo();
     w.push(1);
     let _ = w.pop();
-    let _ = s.steal();
 }
 
 #[test]
@@ -27,14 +26,23 @@ fn epoch() {
 }
 
 #[test]
+fn queue() {
+    let a = crossbeam::queue::ArrayQueue::new(10);
+    let _ = a.push(1);
+    let _ = a.pop();
+}
+
+#[test]
 fn utils() {
     crossbeam::utils::CachePadded::new(7);
 
     crossbeam::scope(|scope| {
         scope.spawn(|_| ());
-    }).unwrap();
+    })
+    .unwrap();
 
     crossbeam::thread::scope(|scope| {
         scope.spawn(|_| ());
-    }).unwrap();
+    })
+    .unwrap();
 }

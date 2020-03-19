@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/rayon/1.1")]
+#![doc(html_root_url = "https://docs.rs/rayon/1.3")]
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unreachable_pub)]
@@ -18,6 +18,9 @@
 //!   typically the most efficient.
 //!   - [Parallel iterators][iter module] make it easy to convert a sequential iterator to
 //!     execute in parallel.
+//!     - The [`ParallelIterator`] trait defines general methods for all parallel iterators.
+//!     - The [`IndexedParallelIterator`] trait adds methods for iterators that support random
+//!       access.
 //!   - The [`par_sort`] method sorts `&mut [T]` slices (or vectors) in parallel.
 //!   - [`par_extend`] can be used to efficiently grow collections with items produced
 //!     by a parallel iterator.
@@ -36,8 +39,7 @@
 //!
 //! # Basic usage and the Rayon prelude
 //!
-//! First, you will need to add `rayon` to your `Cargo.toml` and put
-//! `extern crate rayon` in your main file (`lib.rs`, `main.rs`).
+//! First, you will need to add `rayon` to your `Cargo.toml`.
 //!
 //! Next, to use parallel iterators or the other high-level methods,
 //! you need to import several traits. Those traits are bundled into
@@ -55,6 +57,8 @@
 //! [`filter`]: iter/trait.ParallelIterator.html#method.filter
 //! [`fold`]: iter/trait.ParallelIterator.html#method.fold
 //! [more]: iter/trait.ParallelIterator.html#provided-methods
+//! [`ParallelIterator`]: iter/trait.ParallelIterator.html
+//! [`IndexedParallelIterator`]: iter/trait.IndexedParallelIterator.html
 //!
 //! # Crate Layout
 //!
@@ -78,20 +82,8 @@
 //!
 //! [faq]: https://github.com/rayon-rs/rayon/blob/master/FAQ.md
 
-extern crate crossbeam_deque;
-extern crate either;
-extern crate rayon_core;
-
 #[cfg(test)]
-extern crate rand;
-#[cfg(test)]
-extern crate rand_xorshift;
-#[cfg(test)]
-#[macro_use]
-extern crate doc_comment;
-
-#[cfg(test)]
-doctest!("../README.md");
+doc_comment::doctest!("../README.md");
 
 #[macro_use]
 mod delegate;

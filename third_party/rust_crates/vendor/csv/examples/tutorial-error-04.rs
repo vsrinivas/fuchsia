@@ -1,5 +1,3 @@
-extern crate csv;
-
 use std::error::Error;
 use std::io;
 use std::process;
@@ -11,7 +9,7 @@ fn main() {
     }
 }
 
-fn run() -> Result<(), Box<Error>> {
+fn run() -> Result<(), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_reader(io::stdin());
     for result in rdr.records() {
         // This is effectively the same code as our `match` in the

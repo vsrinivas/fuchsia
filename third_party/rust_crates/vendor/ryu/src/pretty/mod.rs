@@ -5,16 +5,15 @@ use core::{mem, ptr};
 
 use self::exponent::*;
 use self::mantissa::*;
+use common;
 use d2s;
 use d2s::*;
-use f2s;
 use f2s::*;
 
 #[cfg(feature = "no-panic")]
 use no_panic::no_panic;
 
-/// Print f64 to the given buffer and return number of bytes written. Human
-/// readable formatting.
+/// Print f64 to the given buffer and return number of bytes written.
 ///
 /// At most 24 bytes will be written.
 ///
@@ -38,19 +37,22 @@ use no_panic::no_panic;
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```edition2018
+/// use std::{mem::MaybeUninit, slice, str};
+///
 /// let f = 1.234f64;
 ///
 /// unsafe {
-///     let mut buffer: [u8; 24] = std::mem::uninitialized();
-///     let n = ryu::raw::pretty_d2s_buffered_n(f, &mut buffer[0]);
-///     let s = std::str::from_utf8_unchecked(&buffer[..n]);
-///     assert_eq!(s, "1.234");
+///     let mut buffer = [MaybeUninit::<u8>::uninit(); 24];
+///     let len = ryu::raw::format64(f, buffer.as_mut_ptr() as *mut u8);
+///     let slice = slice::from_raw_parts(buffer.as_ptr() as *const u8, len);
+///     let print = str::from_utf8_unchecked(slice);
+///     assert_eq!(print, "1.234");
 /// }
 /// ```
 #[cfg_attr(must_use_return, must_use)]
 #[cfg_attr(feature = "no-panic", no_panic)]
-pub unsafe fn d2s_buffered_n(f: f64, result: *mut u8) -> usize {
+pub unsafe fn format64(f: f64, result: *mut u8) -> usize {
     let bits = mem::transmute::<f64, u64>(f);
     let sign = ((bits >> (DOUBLE_MANTISSA_BITS + DOUBLE_EXPONENT_BITS)) & 1) != 0;
     let ieee_mantissa = bits & ((1u64 << DOUBLE_MANTISSA_BITS) - 1);
@@ -70,7 +72,7 @@ pub unsafe fn d2s_buffered_n(f: f64, result: *mut u8) -> usize {
 
     let v = d2d(ieee_mantissa, ieee_exponent);
 
-    let length = d2s::decimal_length(v.mantissa) as isize;
+    let length = d2s::decimal_length17(v.mantissa) as isize;
     let k = v.exponent as isize;
     let kk = length + k; // 10^(kk-1) <= v < 10^kk
     debug_assert!(k >= -324);
@@ -118,8 +120,7 @@ pub unsafe fn d2s_buffered_n(f: f64, result: *mut u8) -> usize {
     }
 }
 
-/// Print f32 to the given buffer and return number of bytes written. Human
-/// readable formatting.
+/// Print f32 to the given buffer and return number of bytes written.
 ///
 /// At most 16 bytes will be written.
 ///
@@ -143,19 +144,22 @@ pub unsafe fn d2s_buffered_n(f: f64, result: *mut u8) -> usize {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```edition2018
+/// use std::{mem::MaybeUninit, slice, str};
+///
 /// let f = 1.234f32;
 ///
 /// unsafe {
-///     let mut buffer: [u8; 16] = std::mem::uninitialized();
-///     let n = ryu::raw::pretty_f2s_buffered_n(f, &mut buffer[0]);
-///     let s = std::str::from_utf8_unchecked(&buffer[..n]);
-///     assert_eq!(s, "1.234");
+///     let mut buffer = [MaybeUninit::<u8>::uninit(); 16];
+///     let len = ryu::raw::format32(f, buffer.as_mut_ptr() as *mut u8);
+///     let slice = slice::from_raw_parts(buffer.as_ptr() as *const u8, len);
+///     let print = str::from_utf8_unchecked(slice);
+///     assert_eq!(print, "1.234");
 /// }
 /// ```
 #[cfg_attr(must_use_return, must_use)]
 #[cfg_attr(feature = "no-panic", no_panic)]
-pub unsafe fn f2s_buffered_n(f: f32, result: *mut u8) -> usize {
+pub unsafe fn format32(f: f32, result: *mut u8) -> usize {
     let bits = mem::transmute::<f32, u32>(f);
     let sign = ((bits >> (FLOAT_MANTISSA_BITS + FLOAT_EXPONENT_BITS)) & 1) != 0;
     let ieee_mantissa = bits & ((1u32 << FLOAT_MANTISSA_BITS) - 1);
@@ -175,7 +179,7 @@ pub unsafe fn f2s_buffered_n(f: f32, result: *mut u8) -> usize {
 
     let v = f2d(ieee_mantissa, ieee_exponent);
 
-    let length = f2s::decimal_length(v.mantissa) as isize;
+    let length = common::decimal_length9(v.mantissa) as isize;
     let k = v.exponent as isize;
     let kk = length + k; // 10^(kk-1) <= v < 10^kk
     debug_assert!(k >= -45);

@@ -6,7 +6,6 @@ use std::mem;
 use std::time::{Duration, Instant};
 
 use crossbeam_utils::Backoff;
-use smallvec::SmallVec;
 
 use channel::{self, Receiver, Sender};
 use context::Context;
@@ -20,7 +19,7 @@ use utils;
 /// `read` or `write`.
 ///
 /// Each field contains data associated with a specific channel flavor.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Token {
     pub after: flavors::after::AfterToken,
     pub array: flavors::array::ArrayToken,
@@ -172,7 +171,7 @@ enum Timeout {
 /// Successful receive operations will have to be followed up by `channel::read()` and successful
 /// send operations by `channel::write()`.
 fn run_select(
-    handles: &mut [(&SelectHandle, usize, *const u8)],
+    handles: &mut [(&dyn SelectHandle, usize, *const u8)],
     timeout: Timeout,
 ) -> Option<(Token, usize, *const u8)> {
     if handles.is_empty() {
@@ -221,7 +220,7 @@ fn run_select(
                 registered_count += 1;
 
                 // If registration returns `false`, that means the operation has just become ready.
-                if handle.register(Operation::hook::<&SelectHandle>(handle), cx) {
+                if handle.register(Operation::hook::<&dyn SelectHandle>(handle), cx) {
                     // Try aborting select.
                     sel = match cx.try_select(Selected::Aborted) {
                         Ok(()) => {
@@ -260,7 +259,7 @@ fn run_select(
 
             // Unregister all registered operations.
             for (handle, _, _) in handles.iter_mut().take(registered_count) {
-                handle.unregister(Operation::hook::<&SelectHandle>(handle));
+                handle.unregister(Operation::hook::<&dyn SelectHandle>(handle));
             }
 
             match sel {
@@ -280,7 +279,8 @@ fn run_select(
                     // Find the selected operation.
                     for (handle, i, ptr) in handles.iter_mut() {
                         // Is this the selected operation?
-                        if sel == Selected::Operation(Operation::hook::<&SelectHandle>(handle)) {
+                        if sel == Selected::Operation(Operation::hook::<&dyn SelectHandle>(handle))
+                        {
                             // Try selecting this operation.
                             if handle.accept(&mut token, cx) {
                                 return Some((*i, *ptr));
@@ -319,7 +319,7 @@ fn run_select(
 
 /// Runs until one of the operations becomes ready, potentially blocking the current thread.
 fn run_ready(
-    handles: &mut [(&SelectHandle, usize, *const u8)],
+    handles: &mut [(&dyn SelectHandle, usize, *const u8)],
     timeout: Timeout,
 ) -> Option<usize> {
     if handles.is_empty() {
@@ -376,7 +376,7 @@ fn run_ready(
             // Begin watching all operations.
             for (handle, _, _) in handles.iter_mut() {
                 registered_count += 1;
-                let oper = Operation::hook::<&SelectHandle>(handle);
+                let oper = Operation::hook::<&dyn SelectHandle>(handle);
 
                 // If registration returns `false`, that means the operation has just become ready.
                 if handle.watch(oper, cx) {
@@ -414,7 +414,7 @@ fn run_ready(
 
             // Unwatch all operations.
             for (handle, _, _) in handles.iter_mut().take(registered_count) {
-                handle.unwatch(Operation::hook::<&SelectHandle>(handle));
+                handle.unwatch(Operation::hook::<&dyn SelectHandle>(handle));
             }
 
             match sel {
@@ -423,7 +423,7 @@ fn run_ready(
                 Selected::Disconnected => {}
                 Selected::Operation(_) => {
                     for (handle, i, _) in handles.iter_mut() {
-                        let oper = Operation::hook::<&SelectHandle>(handle);
+                        let oper = Operation::hook::<&dyn SelectHandle>(handle);
                         if sel == Selected::Operation(oper) {
                             return Some(*i);
                         }
@@ -438,6 +438,59 @@ fn run_ready(
         if res.is_some() {
             return res;
         }
+    }
+}
+
+/// Attempts to select one of the operations without blocking.
+#[inline]
+pub fn try_select<'a>(
+    handles: &mut [(&'a dyn SelectHandle, usize, *const u8)],
+) -> Result<SelectedOperation<'a>, TrySelectError> {
+    match run_select(handles, Timeout::Now) {
+        None => Err(TrySelectError),
+        Some((token, index, ptr)) => Ok(SelectedOperation {
+            token,
+            index,
+            ptr,
+            _marker: PhantomData,
+        }),
+    }
+}
+
+/// Blocks until one of the operations becomes ready and selects it.
+#[inline]
+pub fn select<'a>(
+    handles: &mut [(&'a dyn SelectHandle, usize, *const u8)],
+) -> SelectedOperation<'a> {
+    if handles.is_empty() {
+        panic!("no operations have been added to `Select`");
+    }
+
+    let (token, index, ptr) = run_select(handles, Timeout::Never).unwrap();
+    SelectedOperation {
+        token,
+        index,
+        ptr,
+        _marker: PhantomData,
+    }
+}
+
+/// Blocks for a limited time until one of the operations becomes ready and selects it.
+#[inline]
+pub fn select_timeout<'a>(
+    handles: &mut [(&'a dyn SelectHandle, usize, *const u8)],
+    timeout: Duration,
+) -> Result<SelectedOperation<'a>, SelectTimeoutError> {
+    let timeout = Timeout::At(Instant::now() + timeout);
+
+    match run_select(handles, timeout) {
+        None => Err(SelectTimeoutError),
+        Some((token, index, ptr)) => Ok(SelectedOperation {
+            token,
+            index,
+            ptr,
+            _marker: PhantomData,
+        }),
     }
 }
 
@@ -526,7 +579,10 @@ fn run_ready(
 /// [`ready_timeout`]: struct.Select.html#method.ready_timeout
 pub struct Select<'a> {
     /// A list of senders and receivers participating in selection.
-    handles: SmallVec<[(&'a SelectHandle, usize, *const u8); 4]>,
+    handles: Vec<(&'a dyn SelectHandle, usize, *const u8)>,
+
+    /// The next index to assign to an operation.
+    next_index: usize,
 }
 
 unsafe impl<'a> Send for Select<'a> {}
@@ -547,7 +603,8 @@ impl<'a> Select<'a> {
     /// ```
     pub fn new() -> Select<'a> {
         Select {
-            handles: SmallVec::new(),
+            handles: Vec::with_capacity(4),
+            next_index: 0,
         }
     }
 
@@ -567,9 +624,10 @@ impl<'a> Select<'a> {
     /// let index = sel.send(&s);
     /// ```
     pub fn send<T>(&mut self, s: &'a Sender<T>) -> usize {
-        let i = self.handles.len();
+        let i = self.next_index;
         let ptr = s as *const Sender<_> as *const u8;
         self.handles.push((s, i, ptr));
+        self.next_index += 1;
         i
     }
 
@@ -589,10 +647,67 @@ impl<'a> Select<'a> {
     /// let index = sel.recv(&r);
     /// ```
     pub fn recv<T>(&mut self, r: &'a Receiver<T>) -> usize {
-        let i = self.handles.len();
+        let i = self.next_index;
         let ptr = r as *const Receiver<_> as *const u8;
         self.handles.push((r, i, ptr));
+        self.next_index += 1;
         i
+    }
+
+    /// Removes a previously added operation.
+    ///
+    /// This is useful when an operation is selected because the channel got disconnected and we
+    /// want to try again to select a different operation instead.
+    ///
+    /// If new operations are added after removing some, the indices of removed operations will not
+    /// be reused.
+    ///
+    /// # Panics
+    ///
+    /// An attempt to remove a non-existing or already removed operation will panic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::thread;
+    /// use crossbeam_channel::{unbounded, Select};
+    ///
+    /// let (s1, r1) = unbounded::<i32>();
+    /// let (_, r2) = unbounded::<i32>();
+    ///
+    /// let mut sel = Select::new();
+    /// let oper1 = sel.recv(&r1);
+    /// let oper2 = sel.recv(&r2);
+    ///
+    /// // Both operations are initially ready, so a random one will be executed.
+    /// let oper = sel.select();
+    /// assert_eq!(oper.index(), oper2);
+    /// assert!(oper.recv(&r2).is_err());
+    /// sel.remove(oper2);
+    ///
+    /// s1.send(10).unwrap();
+    ///
+    /// let oper = sel.select();
+    /// assert_eq!(oper.index(), oper1);
+    /// assert_eq!(oper.recv(&r1), Ok(10));
+    /// ```
+    pub fn remove(&mut self, index: usize) {
+        assert!(
+            index < self.next_index,
+            "index out of bounds; {} >= {}",
+            index,
+            self.next_index,
+        );
+
+        let i = self
+            .handles
+            .iter()
+            .enumerate()
+            .find(|(_, (_, i, _))| *i == index)
+            .expect("no operation with this index")
+            .0;
+
+        self.handles.swap_remove(i);
     }
 
     /// Attempts to select one of the operations without blocking.
@@ -638,15 +753,7 @@ impl<'a> Select<'a> {
     /// }
     /// ```
     pub fn try_select(&mut self) -> Result<SelectedOperation<'a>, TrySelectError> {
-        match run_select(&mut self.handles, Timeout::Now) {
-            None => Err(TrySelectError),
-            Some((token, index, ptr)) => Ok(SelectedOperation {
-                token,
-                index,
-                ptr,
-                _marker: PhantomData,
-            }),
-        }
+        try_select(&mut self.handles)
     }
 
     /// Blocks until one of the operations becomes ready and selects it.
@@ -696,17 +803,7 @@ impl<'a> Select<'a> {
     /// }
     /// ```
     pub fn select(&mut self) -> SelectedOperation<'a> {
-        if self.handles.is_empty() {
-            panic!("no operations have been added to `Select`");
-        }
-
-        let (token, index, ptr) = run_select(&mut self.handles, Timeout::Never).unwrap();
-        SelectedOperation {
-            token,
-            index,
-            ptr,
-            _marker: PhantomData,
-        }
+        select(&mut self.handles)
     }
 
     /// Blocks for a limited time until one of the operations becomes ready and selects it.
@@ -759,17 +856,7 @@ impl<'a> Select<'a> {
         &mut self,
         timeout: Duration,
     ) -> Result<SelectedOperation<'a>, SelectTimeoutError> {
-        let timeout = Timeout::At(Instant::now() + timeout);
-
-        match run_select(&mut self.handles, timeout) {
-            None => Err(SelectTimeoutError),
-            Some((token, index, ptr)) => Ok(SelectedOperation {
-                token,
-                index,
-                ptr,
-                _marker: PhantomData,
-            }),
-        }
+        select_timeout(&mut self.handles, timeout)
     }
 
     /// Attempts to find a ready operation without blocking.
@@ -919,6 +1006,7 @@ impl<'a> Clone for Select<'a> {
     fn clone(&self) -> Select<'a> {
         Select {
             handles: self.handles.clone(),
+            next_index: self.next_index,
         }
     }
 }
