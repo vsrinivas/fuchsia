@@ -429,7 +429,11 @@ impl App {
         Ok(())
     }
 
-    async fn app_init_common_async(&mut self, assistant: AppAssistantPtr) -> Result<bool, Error> {
+    async fn app_init_common_async(
+        &mut self,
+        mut assistant: AppAssistantPtr,
+    ) -> Result<bool, Error> {
+        assistant.setup().context("app setup")?;
         let strat = create_app_strategy(&assistant, self.sender.as_ref().expect("sender")).await?;
         let supports_scenic = strat.supports_scenic();
         if assistant.get_mode() == ViewMode::Scenic && !supports_scenic {
@@ -439,7 +443,6 @@ impl App {
         }
         self.strategy.replace(strat);
         self.set_assistant(assistant);
-        self.assistant.as_mut().expect("assistant").setup().context("app setup")?;
         self.start_services_async()?;
         Ok(supports_scenic)
     }

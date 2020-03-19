@@ -219,7 +219,7 @@ impl Flower {
 #[derive(Debug, FromArgs)]
 #[argh(name = "ink_rs")]
 struct Args {
-    /// use mold (software rendering back-end)
+    /// use spinel (GPU rendering back-end)
     #[argh(switch, short = 's')]
     use_spinel: bool,
 }

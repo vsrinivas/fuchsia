@@ -24,7 +24,7 @@ const BACKGROUND_COLOR: Color = Color { r: 235, g: 213, b: 179, a: 255 };
 #[derive(Debug, FromArgs)]
 #[argh(name = "clockface_rs")]
 struct Args {
-    /// use mold (software rendering back-end)
+    /// use spinel (GPU rendering back-end)
     #[argh(switch, short = 's')]
     use_spinel: bool,
 }
