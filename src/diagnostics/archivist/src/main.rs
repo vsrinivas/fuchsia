@@ -21,7 +21,10 @@ use {
     futures::{future, stream, FutureExt, StreamExt},
     io_util,
     parking_lot::RwLock,
-    std::{path::PathBuf, sync::Arc},
+    std::{
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
 };
 
 /// Monitor, collect, and store diagnostics from components.
@@ -80,6 +83,17 @@ fn main() -> Result<(), Error> {
     // This should not be used for production services.
     let all_inspect_repository = Arc::new(RwLock::new(inspect::InspectDataRepository::new(None)));
 
+    // Set up loading feedback pipeline configs.
+    let pipelines_node = diagnostics::root().create_child("pipelines");
+    let feedback_pipeline = pipelines_node.create_child("feedback");
+
+    let feedback_config = configs::PipelineConfig::from_directory("/config/data/feedback");
+    feedback_config.record_to_inspect(&feedback_pipeline);
+
+    // Do not set the state to error if the feedback pipeline simply doesn't exist.
+    let has_pipeline_error =
+        Path::new("/config/data/feedback").is_dir() && feedback_config.has_error();
+
     if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
         data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
     }
@@ -105,10 +119,14 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let running_archivist = events_stream_fut.then(|events_result| {
+    let running_archivist = events_stream_fut.then(move |events_result| {
         let events = match events_result {
             Ok(events) => {
-                component::health().set_ok();
+                if has_pipeline_error {
+                    component::health().set_unhealthy("Pipeline config has an error");
+                } else {
+                    component::health().set_ok();
+                }
                 events
             }
             Err(e) => {
