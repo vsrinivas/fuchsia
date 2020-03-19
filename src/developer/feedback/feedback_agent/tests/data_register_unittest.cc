@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/datastore.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -74,7 +75,7 @@ TEST_F(DataRegisterTest, Upsert_DefaultNamespaceIfNoNamespaceProvided) {
                                                 }));
 }
 
-TEST_F(DataRegisterTest, Upsert_EmptyAnnotationsOnNewEmptyAnnotations) {
+TEST_F(DataRegisterTest, Upsert_NoInsertionsOnEmptyAnnotations) {
   ComponentData data;
 
   Upsert(std::move(data));
@@ -83,7 +84,20 @@ TEST_F(DataRegisterTest, Upsert_EmptyAnnotationsOnNewEmptyAnnotations) {
   EXPECT_THAT(datastore_.GetExtraAnnotations(), testing::IsEmpty());
 }
 
-TEST_F(DataRegisterTest, Upsert_AnnotationsNotClearedOnNewEmptyAnnotations) {
+TEST_F(DataRegisterTest, Upsert_NoInsertionsOnReservedNamespace) {
+  ComponentData data;
+  data.set_namespace_(*kReservedAnnotationNamespaces.begin());
+  data.set_annotations({
+      {"k", "v"},
+  });
+
+  Upsert(std::move(data));
+
+  EXPECT_THAT(data_register_.GetNamespacedAnnotations(), testing::IsEmpty());
+  EXPECT_THAT(datastore_.GetExtraAnnotations(), testing::IsEmpty());
+}
+
+TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
   ComponentData data;
   data.set_namespace_("namespace");
   data.set_annotations({

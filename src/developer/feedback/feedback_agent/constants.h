@@ -8,6 +8,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 
 #include <cstdint>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,18 @@ constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
 constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
 constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
 constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
+
+// Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
+// when supplying extra annotations.
+const std::set<const std::string> kReservedAnnotationNamespaces({
+    "build",
+    "device",
+    "hardware",
+    "hardware.board",
+    "hardware.product",
+    "misc",
+    "system",
+});
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Attachments
@@ -82,7 +95,6 @@ const std::vector<const std::string> kCurrentLogsFilePaths({
     "/cache/current_system_log_1.txt",
     "/cache/current_system_log_2.txt",
     "/cache/current_system_log_3.txt",
-
 });
 
 }  // namespace feedback
