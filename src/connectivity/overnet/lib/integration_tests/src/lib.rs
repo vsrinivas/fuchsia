@@ -316,7 +316,7 @@ pub fn connect_with_interspersed_log_messages(
 // Run an asynchronous test body (portably across host & Fuchsia)
 
 // Max test time: one day by default... but can be tuned down at need.
-const MAX_TEST_TIME_MS: u32 = 10000; //24 * 60 * 60 * 1000;
+const MAX_TEST_TIME_MS: u32 = 24 * 60 * 60 * 1000;
 
 #[cfg(target_os = "fuchsia")]
 pub use fuchsia_runner::*;
