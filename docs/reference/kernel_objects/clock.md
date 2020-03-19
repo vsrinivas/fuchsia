@@ -204,7 +204,7 @@ fail with a return code of **ZX_ERR_INVALID_ARGS**
 ## SYSCALLS
 
  - [clock transformations](/docs/concepts/kernel/clock_transformations.md)
- - [`zx_clock_create()`] - create a clock
- - [`zx_clock_read()`] - read the time of the clock
- - [`zx_clock_get_details()`] - fetch the details of a clock's relationship to clock monotonic
- - [`zx_clock_update()`] - adjust the current relationship of a clock to the clock monotonic reference.
+ - [`zx_clock_create()`](/docs/reference/syscalls/clock_create.md) - create a clock
+ - [`zx_clock_read()`](/docs/reference/syscalls/clock_read.md) - read the time of the clock
+ - [`zx_clock_get_details()`](/docs/reference/syscalls/clock_get_details.md) - fetch the details of a clock's relationship to clock monotonic
+ - [`zx_clock_update()`](/docs/reference/syscalls/clock_update.md) - adjust the current relationship of a clock to the clock monotonic reference.
