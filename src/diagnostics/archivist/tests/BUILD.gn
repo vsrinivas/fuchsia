@@ -70,6 +70,9 @@ test_package("archivist_integration_tests") {
     {
       name = "logger_integration_go_tests"
       environments = basic_envs
+
+      # BUG(48594): Disabling flaky test for now.
+      disabled = true
     },
     {
       name = "logger_integration_bin_test"

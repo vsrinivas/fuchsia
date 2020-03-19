@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/logger_integration_go_tests"
+        "binary": "test/disabled/logger_integration_go_tests"
     },
     "sandbox": {
         "dev": [
