@@ -93,6 +93,7 @@ func computePercentile(array []float64, targetPercentile int) float64 {
 	if len(array) == 0 {
 		panic("Cannot compute the percentile of an empty array")
 	}
+	array = append([]float64(nil), array...)
 	sort.Float64s(array)
 	if targetPercentile == 100 {
 		return array[len(array)-1]
