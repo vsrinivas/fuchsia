@@ -224,7 +224,7 @@ See the instructions on
 ### More information:
 
 *   [Package overview](/docs/development/sdk/documentation/packages.md)
-*   [Package updates](/docs/development/workflows/package_update.md)
-*   [Package metadata](/docs/concepts/storage/package_metadata.md)
-*   [Package URLs](/docs/concepts/storage/package_url.md)
+*   [Package updates](/docs/concepts/packages/package_update.md)
+*   [Package metadata](/docs/concepts/packages/package.md)
+*   [Package URLs](/docs/concepts/packages/package_url.md)
 *   [Software updates](/docs/concepts/system/software_update_system.md)
