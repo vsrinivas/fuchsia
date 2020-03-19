@@ -7,8 +7,10 @@
 mod asset;
 mod cache;
 mod collection;
+mod loader;
 
 pub use {
-    asset::AssetId,
+    asset::{Asset, AssetId},
     collection::{AssetCollection, AssetCollectionBuilder, AssetCollectionError},
+    loader::{AssetLoader, AssetLoaderImpl},
 };

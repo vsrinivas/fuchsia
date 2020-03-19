@@ -2,28 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use manifest::v2::PackageLocator;
 use {
-    super::{
-        asset::{Asset, AssetId},
-        cache::Cache,
-    },
-    anyhow::{format_err, Error},
-    clonable_error::ClonableError,
-    fidl::endpoints::create_proxy,
+    super::{cache::Cache, Asset, AssetId, AssetLoader},
+    anyhow::Error,
     fidl_fuchsia_fonts::CacheMissPolicy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
-    fidl_fuchsia_pkg::{FontResolverMarker, UpdatePolicy},
-    fuchsia_component::client::connect_to_service,
-    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    io_util,
     manifest::v2,
-    std::{
-        collections::BTreeMap,
-        fs::File,
-        path::{Path, PathBuf},
-    },
+    std::{collections::BTreeMap, hash::Hash, path::PathBuf},
     thiserror::Error,
 };
 
@@ -57,7 +43,12 @@ impl FullAssetLocation {
 /// [`add_or_get_asset_id()`](AssetCollectionBuilder::add_or_get_asset_id), and finally construct
 /// an `AssetCollection` using [`build()`](AssetCollectionBuilder::build).
 #[derive(Debug)]
-pub struct AssetCollectionBuilder {
+pub struct AssetCollectionBuilder<L>
+where
+    L: AssetLoader,
+{
+    asset_loader: L,
+    cache_capacity_bytes: u64,
     id_to_location_map: BTreeMap<AssetId, FullAssetLocation>,
     /// Used for quickly looking up assets that have already been added.
     location_to_id_map: BTreeMap<FullAssetLocation, AssetId>,
@@ -66,12 +57,16 @@ pub struct AssetCollectionBuilder {
     next_id: u32,
 }
 
-impl AssetCollectionBuilder {
-    const CACHE_SIZE_BYTES: u64 = 4_000_000;
-
-    /// Creates a new, empty `AssetCollectionBuilder`.
-    pub fn new() -> AssetCollectionBuilder {
+impl<L> AssetCollectionBuilder<L>
+where
+    L: AssetLoader,
+{
+    /// Creates a new, empty `AssetCollectionBuilder` with the given asset loader, cache capacity,
+    /// and parent Inspect node.
+    pub fn new(asset_loader: L, cache_capacity_bytes: u64) -> AssetCollectionBuilder<L> {
         AssetCollectionBuilder {
+            asset_loader,
+            cache_capacity_bytes,
             id_to_location_map: BTreeMap::new(),
             location_to_id_map: BTreeMap::new(),
             file_name_to_id_map: BTreeMap::new(),
@@ -103,11 +98,12 @@ impl AssetCollectionBuilder {
     }
 
     /// Build an [`AssetCollection`].
-    pub fn build(self) -> AssetCollection {
+    pub fn build(self) -> AssetCollection<L> {
         AssetCollection {
+            asset_loader: self.asset_loader,
             id_to_location_map: self.id_to_location_map,
             id_to_dir_map: Mutex::new(BTreeMap::new()),
-            cache: Mutex::new(Cache::new(Self::CACHE_SIZE_BYTES)),
+            cache: Mutex::new(Cache::new(self.cache_capacity_bytes)),
         }
     }
 }
@@ -117,7 +113,9 @@ impl AssetCollectionBuilder {
 /// Assets can be retrieved by [`AssetId`] (which are assigned at service startup). The collection
 /// knows the location (local file or Fuchsia package) of every `AssetId`.
 #[derive(Debug)]
-pub struct AssetCollection {
+pub struct AssetCollection<L: AssetLoader> {
+    asset_loader: L,
+
     /// Maps asset ID to its location. Immutable over the lifetime of the collection.
     id_to_location_map: BTreeMap<AssetId, FullAssetLocation>,
 
@@ -133,7 +131,7 @@ pub struct AssetCollection {
     cache: Mutex<Cache>,
 }
 
-impl AssetCollection {
+impl<L: AssetLoader> AssetCollection<L> {
     /// Gets a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`, using the cache
     /// if possible. If the `Buffer` is not cached, this may involve reading a file on disk or even
     /// resolving an ephemeral package.
@@ -157,7 +155,7 @@ impl AssetCollection {
                 let buffer = match &location.location {
                     v2::AssetLocation::LocalFile(_) => {
                         let file_path = location.local_path().unwrap();
-                        Self::load_asset_to_vmo(&file_path)
+                        self.asset_loader.load_vmo_from_path(&file_path)
                     }
                     v2::AssetLocation::Package(package_locator) => {
                         self.get_package_asset(
@@ -215,7 +213,9 @@ impl AssetCollection {
             }
         }?;
 
-        Self::load_buffer_from_directory_proxy(directory_proxy, package_locator, file_name).await
+        self.asset_loader
+            .load_vmo_from_directory_proxy(directory_proxy, package_locator, file_name)
+            .await
     }
 
     /// Resolves the requested package and adds its `Directory` to our cache.
@@ -224,34 +224,7 @@ impl AssetCollection {
         asset_id: AssetId,
         package_locator: &v2::PackageLocator,
     ) -> Result<io::DirectoryProxy, AssetCollectionError> {
-        let package_url = package_locator.url.to_string();
-        trace::duration!(
-            "fonts",
-            "asset:collection:fetch_and_cache_package_directory",
-            "package_url" => &package_url[..]);
-
-        // Get directory handle from FontResolver
-        let font_resolver = connect_to_service::<FontResolverMarker>()
-            .map_err(|e| AssetCollectionError::ServiceConnectionError(Error::from(e).into()))?;
-        let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
-        let (dir_proxy, dir_request) = create_proxy::<io::DirectoryMarker>()
-            .map_err(|e| AssetCollectionError::ServiceConnectionError(Error::from(e).into()))?;
-
-        let status = font_resolver
-            .resolve(&package_url, &mut update_policy, dir_request)
-            .await
-            .map_err(|e| {
-                AssetCollectionError::PackageResolverError(
-                    package_locator.clone(),
-                    Error::from(e).into(),
-                )
-            })?;
-        zx::Status::ok(status).map_err(|e| {
-            AssetCollectionError::PackageResolverError(
-                package_locator.clone(),
-                Error::from(e).into(),
-            )
-        })?;
+        let dir_proxy = self.asset_loader.fetch_package_directory(package_locator).await?;
 
         // Cache directory handle
         let mut directory_cache = self.id_to_dir_map.lock().await;
@@ -259,65 +232,6 @@ impl AssetCollection {
         // TODO(8904): For "universe" fonts, send event to clients.
 
         Ok(dir_proxy)
-    }
-
-    async fn load_buffer_from_directory_proxy(
-        directory_proxy: io::DirectoryProxy,
-        package_locator: &v2::PackageLocator,
-        file_name: &str,
-    ) -> Result<mem::Buffer, AssetCollectionError> {
-        trace::duration!(
-            "fonts",
-            "asset:collection:load_buffer_from_directory_proxy",
-            "file_name" => file_name);
-
-        let packaged_file_error = |cause: ClonableError| AssetCollectionError::PackagedFileError {
-            file_name: file_name.to_string(),
-            package_locator: package_locator.clone(),
-            cause,
-        };
-
-        let file_proxy =
-            io_util::open_file(&directory_proxy, Path::new(&file_name), io::OPEN_RIGHT_READABLE)
-                .map_err(|e| packaged_file_error(e.into()))?;
-
-        let (status, buffer) = file_proxy
-            .get_buffer(io::VMO_FLAG_READ)
-            .await
-            .map_err(|e| packaged_file_error(Error::from(e).into()))?;
-
-        zx::Status::ok(status).map_err(|e| packaged_file_error(Error::from(e).into()))?;
-
-        buffer.map(|b| *b).ok_or_else(|| {
-            packaged_file_error(
-                format_err!(
-                    "Inexplicably failed to access buffer after opening the file successfully"
-                )
-                .into(),
-            )
-        })
-    }
-
-    /// Gets `VMO` handle to the [`Asset`] at `path`.
-    pub(crate) fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, AssetCollectionError> {
-        let path_string = path.to_str().unwrap_or_default();
-        trace::duration!(
-                "fonts",
-                "asset:collection:load_asset_to_vmo",
-                "path" => path_string);
-        let file = File::open(path).map_err(|e| {
-            AssetCollectionError::LocalFileNotAccessible(path.to_owned(), Error::from(e).into())
-        })?;
-        let vmo = fdio::get_vmo_copy_from_file(&file).map_err(|e| {
-            AssetCollectionError::LocalFileNotAccessible(path.to_owned(), Error::from(e).into())
-        })?;
-        let size = file
-            .metadata()
-            .map_err(|e| {
-                AssetCollectionError::LocalFileNotAccessible(path.to_owned(), Error::from(e).into())
-            })?
-            .len();
-        Ok(mem::Buffer { vmo, size })
     }
 }
 
@@ -330,15 +244,15 @@ pub enum AssetCollectionError {
 
     /// A file within the font service's namespace could not be accessed
     #[error("Local file not accessible: {:?}", _0)]
-    LocalFileNotAccessible(PathBuf, #[source] ClonableError),
+    LocalFileNotAccessible(PathBuf, #[source] Error),
 
     /// Failed to connect to the Font Resolver service
     #[error("Service connection error: {:?}", _0)]
-    ServiceConnectionError(#[source] ClonableError),
+    ServiceConnectionError(#[source] Error),
 
     /// The Font Resolver could not resolve the requested package
     #[error("Package resolver error when resolving {:?}: {:?}", _0, _1)]
-    PackageResolverError(PackageLocator, #[source] ClonableError),
+    PackageResolverError(v2::PackageLocator, #[source] Error),
 
     /// The requested package was resolved, but its font file could not be read
     #[error("Error when reading file {:?} from {:?}: {:?}", file_name, package_locator, cause)]
@@ -346,9 +260,9 @@ pub enum AssetCollectionError {
         /// Name of the file
         file_name: String,
         /// Package that we're trying to read
-        package_locator: PackageLocator,
+        package_locator: v2::PackageLocator,
         #[source]
-        cause: ClonableError,
+        cause: Error,
     },
 
     /// The client requested an empty response if the asset wasn't cached, and the asset is indeed
@@ -359,6 +273,6 @@ pub enum AssetCollectionError {
         /// Name of the file
         file_name: String,
         /// Package that we want to read
-        package_locator: PackageLocator,
+        package_locator: v2::PackageLocator,
     },
 }

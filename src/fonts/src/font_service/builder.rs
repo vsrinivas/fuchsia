@@ -4,13 +4,12 @@
 
 use {
     super::{
-        asset::{AssetCollection, AssetCollectionBuilder},
+        asset::{AssetCollectionBuilder, AssetLoader, AssetLoaderImpl},
         family::{FamilyOrAliasBuilder, FontFamilyBuilder},
         typeface::{Typeface, TypefaceCollectionBuilder, TypefaceId},
         FontService,
     },
     anyhow::{format_err, Error},
-    clonable_error::ClonableError,
     font_info::FontInfoLoaderImpl,
     fuchsia_syslog::fx_vlog,
     fuchsia_trace as trace,
@@ -32,20 +31,35 @@ use {
 /// [`load_manifest()`](FontServiceBuilder::load_manifest), and finally construct a `FontService`
 /// using [`build()`](FontServiceBuilder::build).
 #[derive(Debug)]
-pub struct FontServiceBuilder {
+pub struct FontServiceBuilder<L>
+where
+    L: AssetLoader,
+{
     manifests: Vec<ManifestOrPath>,
-    assets: AssetCollectionBuilder,
+    assets: AssetCollectionBuilder<L>,
     /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAliasBuilder>,
     fallback_collection: TypefaceCollectionBuilder,
 }
 
-impl FontServiceBuilder {
+impl FontServiceBuilder<AssetLoaderImpl> {
+    /// Creates a new, empty builder with a real asset loader.
+    pub fn with_default_asset_loader(
+        cache_capacity_bytes: u64,
+    ) -> FontServiceBuilder<AssetLoaderImpl> {
+        FontServiceBuilder::<AssetLoaderImpl>::new(AssetLoaderImpl::new(), cache_capacity_bytes)
+    }
+}
+
+impl<L> FontServiceBuilder<L>
+where
+    L: AssetLoader,
+{
     /// Creates a new, empty builder.
-    pub fn new() -> Self {
+    pub fn new(asset_loader: L, cache_capacity_bytes: u64) -> FontServiceBuilder<L> {
         FontServiceBuilder {
             manifests: vec![],
-            assets: AssetCollectionBuilder::new(),
+            assets: AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes),
             families: BTreeMap::new(),
             fallback_collection: TypefaceCollectionBuilder::new(),
         }
@@ -67,7 +81,7 @@ impl FontServiceBuilder {
 
     /// Tries to build a [`FontService`] from the provided manifests, with some additional error
     /// checking.
-    pub async fn build(mut self) -> Result<FontService, Error> {
+    pub async fn build(mut self) -> Result<FontService<L>, Error> {
         let manifests: Result<Vec<(FontManifestWrapper, Option<PathBuf>)>, Error> = self
             .manifests
             .drain(..)
@@ -239,7 +253,7 @@ impl FontServiceBuilder {
         let manifest_v2 = self.convert_manifest_v1_to_v2(manifest_v1).await.map_err(|e| {
             FontServiceBuilderError::ConversionFromV1 {
                 manifest_path: manifest_path.clone(),
-                cause: Error::from(e).into(),
+                cause: e.into(),
             }
         })?;
         self.add_fonts_from_manifest_v2(manifest_v2, manifest_path).await
@@ -252,6 +266,7 @@ impl FontServiceBuilder {
         manifest_v1: FontsManifest,
     ) -> Result<v2::FontsManifest, Error> {
         let mut manifest_v2 = v2::FontsManifest::try_from(manifest_v1)?;
+        let asset_loader = AssetLoaderImpl::new();
         let font_info_loader = FontInfoLoaderImpl::new()?;
 
         for manifest_family in &mut manifest_v2.families {
@@ -261,7 +276,7 @@ impl FontServiceBuilder {
                         match &manifest_asset.location {
                             v2::AssetLocation::LocalFile(v2::LocalFileLocator { directory }) => {
                                 let asset_path = directory.join(&manifest_asset.file_name);
-                                let buffer = AssetCollection::load_asset_to_vmo(&asset_path)?;
+                                let buffer = asset_loader.load_vmo_from_path(&asset_path)?;
                                 let font_info = {
                                     trace::duration!("fonts", "FontInfoLoaderImpl:load_font_info");
                                     font_info_loader
@@ -323,7 +338,7 @@ pub enum FontServiceBuilderError {
     ConversionFromV1 {
         manifest_path: Option<PathBuf>,
         #[source]
-        cause: ClonableError,
+        cause: Error,
     },
 
     /// The font manifest's fallback chain referenced an undeclared typeface.
@@ -364,7 +379,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_multiple_overlapping_manifests() -> Result<(), Error> {
-        let mut builder = FontServiceBuilder::new();
+        let mut builder = FontServiceBuilder::with_default_asset_loader(5000);
         builder
             .add_manifest(FontManifestWrapper::Version2(v2::FontsManifest {
                 families: vec![v2::Family {
@@ -522,7 +537,7 @@ mod tests {
             families: vec![],
             fallback_chain: vec![],
         });
-        let mut builder = FontServiceBuilder::new();
+        let mut builder = FontServiceBuilder::with_default_asset_loader(5000);
         builder.add_manifest(manifest);
         builder.build().await?; // Should succeed
         Ok(())

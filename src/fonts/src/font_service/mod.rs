@@ -33,7 +33,10 @@ use {
     unicase::UniCase,
 };
 
-pub use {asset::AssetId, builder::FontServiceBuilder};
+pub use {
+    asset::{AssetId, AssetLoader, AssetLoaderImpl},
+    builder::FontServiceBuilder,
+};
 
 /// Get a field out of a `TypefaceRequest`'s `query` field as a reference, or returns early with a
 /// `anyhow::Error` if the query is missing.
@@ -58,14 +61,20 @@ struct FontFamilyMatch<'a> {
 
 /// Maintains state and handles request streams for the font server.
 #[derive(Debug)]
-pub struct FontService {
-    assets: AssetCollection,
+pub struct FontService<L>
+where
+    L: AssetLoader,
+{
+    assets: AssetCollection<L>,
     /// Maps the font family name from the manifest (`families[x].name`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
 }
 
-impl FontService {
+impl<L> FontService<L>
+where
+    L: AssetLoader,
+{
     /// Resolves a font family or alias either to itself (if it's a family), or to the canonical
     /// family. If it's an alias and contains `TypefaceQueryOverrides`, then the resulting
     /// `FontFamilyMatch` will contain those overrides.
