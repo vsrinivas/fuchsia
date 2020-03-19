@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.castwindow;
+
+enum Interaction : uint32 {
+    GO_BACK = 1;
+};
+
+/// Routes interaction requests to the application instance identified
+/// by |session_id|.
+[Discoverable]
+protocol InteractionHandler {
+    SendInteraction(string:MAX session_id, Interaction interaction);
+};
