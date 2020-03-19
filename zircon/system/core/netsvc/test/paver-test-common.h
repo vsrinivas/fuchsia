@@ -203,10 +203,10 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     // Reply varies depending on whether we support |type| or not.
     if (supported_firmware_type_ == std::string_view(type.data(), type.size())) {
       auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-      completer.Reply(WriteFirmwareResult::WithStatus(fidl::unowned(&status)));
+      completer.Reply(WriteFirmwareResult::WithStatus(fidl::unowned_ptr(&status)));
     } else {
       fidl::aligned<bool> unsupported = true;
-      completer.Reply(WriteFirmwareResult::WithUnsupportedType(fidl::unowned(&unsupported)));
+      completer.Reply(WriteFirmwareResult::WithUnsupportedType(fidl::unowned_ptr(&unsupported)));
     }
   }
 

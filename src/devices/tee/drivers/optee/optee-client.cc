@@ -1227,7 +1227,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
 
     auto result = fuchsia_io::File::Call::WriteAt(
         zx::unowned_channel(file_channel),
-        fidl::VectorView(fidl::unowned(buffer), write_chunk_request), offset);
+        fidl::VectorView(fidl::unowned_ptr(buffer), write_chunk_request), offset);
     status = result.status();
     io_status = result->s;
     buffer += result->actual;

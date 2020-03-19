@@ -75,7 +75,7 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     id_ = builder_->AddIntegerLiteral(node.value());
     llcpp::fuchsia::shell::BuiltinType type = llcpp::fuchsia::shell::BuiltinType::INTEGER;
     llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&type);
-    type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
+    type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
   }
 
   void VisitIdentifier(const parser::ast::Identifier& node) override {
@@ -95,7 +95,7 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     id_ = builder_->AddStringLiteral(node.value());
     llcpp::fuchsia::shell::BuiltinType type = llcpp::fuchsia::shell::BuiltinType::STRING;
     llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&type);
-    type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
+    type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
   }
 
   void VisitObject(const parser::ast::Object& node) override {
@@ -111,7 +111,7 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     llcpp::fuchsia::shell::NodeId id;
     id = result.schema_node;
     llcpp::fuchsia::shell::NodeId* id_ptr = builder_->ManageCopyOf(&id);
-    type_ = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned(id_ptr));
+    type_ = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(id_ptr));
   }
 
   void VisitField(const parser::ast::Field& node) override {

@@ -153,7 +153,7 @@ public:
     {{ if eq (len .Members) 0 -}}
     return {{ .Name }}(max_ordinal_, nullptr);
     {{- else -}}
-    return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr<{{ .Name }}::Frame>(&frame_));
+    return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr(&frame_));
     {{- end }}
   }
 

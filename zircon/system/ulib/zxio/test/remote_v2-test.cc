@@ -115,9 +115,9 @@ TEST_F(RemoteV2, GetAttributes) {
       uint64_t id = kId;
       fio2::NodeProtocols protocols = fio2::NodeProtocols::FILE;
       auto builder = fio2::NodeAttributes::UnownedBuilder()
-                         .set_content_size(fidl::unowned(&content_size))
-                         .set_protocols(fidl::unowned(&protocols))
-                         .set_id(fidl::unowned(&id));
+                         .set_content_size(fidl::unowned_ptr(&content_size))
+                         .set_protocols(fidl::unowned_ptr(&protocols))
+                         .set_id(fidl::unowned_ptr(&id));
       completer.ReplySuccess(builder.build());
     }
   };

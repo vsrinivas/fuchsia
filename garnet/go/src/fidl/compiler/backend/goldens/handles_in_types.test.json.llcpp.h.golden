@@ -224,7 +224,7 @@ public:
   }
 
   TableWithHandle build() {
-    return TableWithHandle(max_ordinal_, ::fidl::unowned_ptr<TableWithHandle::Frame>(&frame_));
+    return TableWithHandle(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:

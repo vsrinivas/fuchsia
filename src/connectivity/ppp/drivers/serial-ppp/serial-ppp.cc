@@ -281,16 +281,16 @@ void SerialPpp::FrameDeviceServer::Rx(fppp::ProtocolType protocol, RxCompleter::
     if (frame.is_ok()) {
       fppp::Device_Rx_Response response;
       auto [protocol, data] = frame.take_value();
-      response.data = fidl::VectorView<uint8_t>(fidl::unowned(data.data()), data.size());
-      result.set_response(fidl::unowned(&response));
+      response.data = fidl::VectorView<uint8_t>(fidl::unowned_ptr(data.data()), data.size());
+      result.set_response(fidl::unowned_ptr(&response));
       completer.Reply(std::move(result));
     } else if (frame.is_error()) {
       zx_status_t status = frame.take_error();
-      result.set_err(fidl::unowned(&status));
+      result.set_err(fidl::unowned_ptr(&status));
       completer.Reply(std::move(result));
     } else {
       zx_status_t status = ZX_ERR_INTERNAL;
-      result.set_err(fidl::unowned(&status));
+      result.set_err(fidl::unowned_ptr(&status));
       completer.Reply(std::move(result));
     }
   };
@@ -304,9 +304,9 @@ void SerialPpp::FrameDeviceServer::Tx(fppp::ProtocolType protocol, fidl::VectorV
 
   fidl::aligned<fppp::Device_Tx_Response> response;
   if (status == ZX_OK) {
-    result.set_response(fidl::unowned(&response));
+    result.set_response(fidl::unowned_ptr(&response));
   } else {
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
   }
 
   completer.Reply(std::move(result));
@@ -332,9 +332,9 @@ void SerialPpp::FrameDeviceServer::Enable(bool up, EnableCompleter::Sync complet
 
   fidl::aligned<fppp::Device_Enable_Response> response;
   if (status == ZX_OK) {
-    result.set_response(fidl::unowned(&response));
+    result.set_response(fidl::unowned_ptr(&response));
   } else {
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
   }
 
   completer.Reply(std::move(result));

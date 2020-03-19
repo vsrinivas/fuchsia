@@ -54,7 +54,7 @@ gen::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
     },
 };
 
-auto golden_dirents() { return fidl::VectorView{fidl::unowned(golden_dirents_array), 3}; }
+auto golden_dirents() { return fidl::VectorView{fidl::unowned_ptr(golden_dirents_array), 3}; }
 
 }  // namespace
 

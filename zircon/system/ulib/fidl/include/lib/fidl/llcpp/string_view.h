@@ -29,7 +29,7 @@ class StringView final : private VectorView<const char> {
   //
   template <size_t N>
   constexpr StringView(const char (&literal)[N], uint64_t size = N - 1)
-      : VectorView(fidl::unowned_ptr<const char>(literal), size) {
+      : VectorView(fidl::unowned_ptr_t<const char>(literal), size) {
     static_assert(N > 0, "String should not be empty");
   }
 

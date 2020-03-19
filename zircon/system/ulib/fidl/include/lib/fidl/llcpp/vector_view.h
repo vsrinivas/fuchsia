@@ -54,9 +54,9 @@ class VectorView {
 
   // Ideally these constructors wouldn't be needed, but automatic deduction into the tracking_ptr
   // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
-  VectorView(unowned_ptr<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
+  VectorView(unowned_ptr_t<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  VectorView(unowned_ptr<std::remove_const_t<U>> data, uint64_t count)
+  VectorView(unowned_ptr_t<std::remove_const_t<U>> data, uint64_t count)
       : VectorView(tracking_ptr<T[]>(data), count) {}
   VectorView(std::unique_ptr<T[]>&& data, uint64_t count)
       : VectorView(tracking_ptr<T[]>(std::move(data)), count) {}

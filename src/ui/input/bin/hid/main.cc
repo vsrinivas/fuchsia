@@ -441,7 +441,7 @@ int set_report(input_args_t* args) {
   }
 
   fidl::VectorView<uint8_t> report_view =
-      fidl::VectorView<uint8_t>(fidl::unowned(report.get()), args->data_size);
+      fidl::VectorView<uint8_t>(fidl::unowned_ptr(report.get()), args->data_size);
   auto res =
       args->sync_client->SetReport(args->report_type, args->report_id, std::move(report_view));
   if (res.status() != ZX_OK || res->status != ZX_OK) {

@@ -45,12 +45,12 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   ::llcpp::fuchsia::paver::ReadResult result = {};
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(result));
     return;
   }
   if (eof_reached_) {
-    result.set_eof(fidl::unowned(&eof_reached_));
+    result.set_eof(fidl::unowned_ptr(&eof_reached_));
     completer.Reply(std::move(result));
     return;
   }
@@ -58,17 +58,17 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   ssize_t n = read(payload_.get(), mapper_.start(), mapper_.size());
   if (n == 0) {
     eof_reached_ = true;
-    result.set_eof(fidl::unowned(&eof_reached_));
+    result.set_eof(fidl::unowned_ptr(&eof_reached_));
     completer.Reply(std::move(result));
   } else if (n < 0) {
     zx_status_t status = ZX_ERR_IO;
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(result));
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
     ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
-    result.set_info(fidl::unowned(&info));
+    result.set_info(fidl::unowned_ptr(&info));
     completer.Reply(std::move(result));
   }
 }

@@ -247,9 +247,9 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
   }
 
   info.rx_types.set_count(device_info_.rx_types_count);
-  info.rx_types.set_data(fidl::unowned(rx.data()));
+  info.rx_types.set_data(fidl::unowned_ptr(rx.data()));
   info.tx_types.set_count(device_info_.tx_types_count);
-  info.tx_types.set_data(fidl::unowned(tx.data()));
+  info.tx_types.set_data(fidl::unowned_ptr(tx.data()));
 
   std::array<netdev::RxAcceleration, netdev::MAX_ACCEL_FLAGS> rx_accel;
   std::array<netdev::TxAcceleration, netdev::MAX_ACCEL_FLAGS> tx_accel;
@@ -260,9 +260,9 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
     tx_accel[i] = static_cast<netdev::TxAcceleration>(device_info_.tx_accel_list[i]);
   }
   info.rx_accel.set_count(device_info_.rx_accel_count);
-  info.rx_accel.set_data(fidl::unowned(rx_accel.data()));
+  info.rx_accel.set_data(fidl::unowned_ptr(rx_accel.data()));
   info.tx_accel.set_count(device_info_.tx_accel_count);
-  info.tx_accel.set_data(fidl::unowned(tx_accel.data()));
+  info.tx_accel.set_data(fidl::unowned_ptr(tx_accel.data()));
 
   completer.Reply(std::move(info));
 }
@@ -279,9 +279,9 @@ void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::Sessi
   zx_status_t status = OpenSession(session_name.data(), std::move(session_info), &rsp);
   netdev::Device_OpenSession_Result result;
   if (status != ZX_OK) {
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
   } else {
-    result.set_response(fidl::unowned(&rsp));
+    result.set_response(fidl::unowned_ptr(&rsp));
   }
   completer.Reply(std::move(result));
 }

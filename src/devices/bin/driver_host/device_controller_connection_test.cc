@@ -183,7 +183,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
       dev->flags = DEV_FLAG_DEAD;
       llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
       fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_Unbind_Response> response;
-      result.set_response(fidl::unowned(&response));
+      result.set_response(fidl::unowned_ptr(&response));
       completer.Reply(std::move(result));
     }
   };

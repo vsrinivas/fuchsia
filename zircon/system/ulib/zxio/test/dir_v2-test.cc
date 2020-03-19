@@ -148,23 +148,23 @@ TEST_F(DirV2, Enumerate) {
           switch (count_) {
             case 0:
               name = fidl::StringView("zero");
-              builder.set_name(fidl::unowned(&name));
+              builder.set_name(fidl::unowned_ptr(&name));
               protocols = fio2::NodeProtocols::DIRECTORY;
-              builder.set_protocols(fidl::unowned(&protocols));
+              builder.set_protocols(fidl::unowned_ptr(&protocols));
               abilities = fio2::Operations::ENUMERATE;
-              builder.set_abilities(fidl::unowned(&abilities));
+              builder.set_abilities(fidl::unowned_ptr(&abilities));
               id = 0;
-              builder.set_id(fidl::unowned(&id));
+              builder.set_id(fidl::unowned_ptr(&id));
               break;
             case 1:
               name = fidl::StringView("one");
-              builder.set_name(fidl::unowned(&name));
+              builder.set_name(fidl::unowned_ptr(&name));
               protocols = fio2::NodeProtocols::FILE;
-              builder.set_protocols(fidl::unowned(&protocols));
+              builder.set_protocols(fidl::unowned_ptr(&protocols));
               abilities = fio2::Operations::READ_BYTES;
-              builder.set_abilities(fidl::unowned(&abilities));
+              builder.set_abilities(fidl::unowned_ptr(&abilities));
               id = 1;
-              builder.set_id(fidl::unowned(&id));
+              builder.set_id(fidl::unowned_ptr(&id));
               break;
             default:
               return completer.ReplySuccess(fidl::VectorView<fio2::DirectoryEntry>());

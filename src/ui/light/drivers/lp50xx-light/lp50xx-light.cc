@@ -301,7 +301,7 @@ void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
     completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::FAILED);
   } else {
     completer.ReplySuccess(::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(
-        fidl::unowned(out.data()), out.size()));
+        fidl::unowned_ptr(out.data()), out.size()));
   }
 }
 

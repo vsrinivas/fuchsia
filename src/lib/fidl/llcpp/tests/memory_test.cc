@@ -11,7 +11,7 @@
 
 TEST(Memory, TrackingPointerUnowned) {
   uint32_t obj;
-  fidl::unowned_ptr<uint32_t> ptr = fidl::unowned(&obj);
+  fidl::unowned_ptr_t<uint32_t> ptr = fidl::unowned_ptr(&obj);
   EXPECT_EQ(ptr.get(), &obj);
 }
 

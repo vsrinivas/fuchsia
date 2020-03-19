@@ -796,12 +796,12 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result response;
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response resp{.local_device_id =
                                                                              local_id};
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -817,11 +817,11 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
                                                          static_cast<uint32_t>(data.count()));
   llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result response;
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response> resp;
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -845,12 +845,12 @@ void Device::AddDeviceInvisible(
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response resp{.local_device_id =
                                                                                       local_id};
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -877,7 +877,7 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {
   if (dev->coordinator->InSuspend()) {
     log(ERROR, "driver_manager: rpc: make-visible '%s' forbidden in suspend\n", dev->name().data());
     zx_status_t status = ZX_ERR_BAD_STATE;
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
@@ -886,7 +886,7 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {
   // act on it, but the existing code being migrated does not.
   dev->coordinator->MakeVisible(dev);
   fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response> resp;
-  response.set_response(fidl::unowned(&resp));
+  response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
 
@@ -898,7 +898,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
   if (dev->coordinator->InSuspend()) {
     log(ERROR, "driver_manager: rpc: bind-device '%s' forbidden in suspend\n", dev->name().data());
     zx_status_t status = ZX_ERR_BAD_STATE;
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
@@ -908,11 +908,11 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
   log(ERROR, "driver_manager: rpc: bind-device '%s'\n", dev->name().data());
   zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response> resp;
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -923,14 +923,14 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
   zx_status_t status;
   llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result response;
   if ((status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path))) != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
   auto path_view = ::fidl::unowned_str(path, strlen(path));
   llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response resp{
       .path = std::move(path_view)};
-  response.set_response(fidl::unowned(&resp));
+  response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
 
@@ -946,7 +946,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
   uint64_t size = 0;
   zx_status_t status;
   if ((status = dev->coordinator->LoadFirmware(dev, fw_path, &vmo, &size)) != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
@@ -955,7 +955,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
       .vmo = std::move(vmo),
       .size = size,
   };
-  response.set_response(fidl::unowned(&resp));
+  response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
 
@@ -966,14 +966,14 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync completer) {
   llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result response;
   zx_status_t status = dev->coordinator->GetMetadata(dev, key, data, sizeof(data), &actual);
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
-  auto data_view = ::fidl::VectorView<uint8_t>(fidl::unowned(data), actual);
+  auto data_view = ::fidl::VectorView<uint8_t>(fidl::unowned_ptr(data), actual);
   llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response resp{.data =
                                                                              std::move(data_view)};
-  response.set_response(fidl::unowned(&resp));
+  response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
 
@@ -983,12 +983,12 @@ void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync comple
   llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result response;
   zx_status_t status = dev->coordinator->GetMetadataSize(dev, key, &size);
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
   llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response resp{.size = size};
-  response.set_response(fidl::unowned(&resp));
+  response.set_response(fidl::unowned_ptr(&resp));
   completer.Reply(std::move(response));
 }
 
@@ -999,11 +999,11 @@ void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
       dev->coordinator->AddMetadata(dev, key, data.data(), static_cast<uint32_t>(data.count()));
   llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result response;
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response> resp;
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -1021,11 +1021,11 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   status = real_parent->DriverCompatibiltyTest();
   llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result response;
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response> resp;
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -1035,18 +1035,18 @@ void Device::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watch
   llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result response;
   if (mask & (~fuchsia_io_WATCH_MASK_ALL) || options != 0) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
     return;
   }
 
   zx_status_t status = devfs_watch(this->self, std::move(watcher), mask);
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response> resp;
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -1060,11 +1060,11 @@ void Device::AddCompositeDevice(
   zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));
   llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result response;
   if (status != ZX_OK) {
-    response.set_err(fidl::unowned(&status));
+    response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   } else {
     fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response> resp;
-    response.set_response(fidl::unowned(&resp));
+    response.set_response(fidl::unowned_ptr(&resp));
     completer.Reply(std::move(response));
   }
 }

@@ -206,7 +206,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
         unbind_children_conn(status);
       }
     }
-    result.set_response(fidl::unowned(&response));
+    result.set_response(fidl::unowned_ptr(&response));
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());
@@ -219,7 +219,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
     llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result;
     fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>
         response;
-    result.set_response(fidl::unowned(&response));
+    result.set_response(fidl::unowned_ptr(&response));
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());

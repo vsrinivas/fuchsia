@@ -42,7 +42,7 @@ class TestServerBase : public fio::File::Interface {
 
   void Describe(DescribeCompleter::Sync completer) override {
     fio::FileObject file_object;
-    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned(&file_object)));
+    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
   void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
@@ -170,7 +170,7 @@ class TestServerEvent final : public TestServerBase {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned(&file_object)));
+    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
  private:
@@ -260,7 +260,7 @@ class TestServerChannel final : public TestServerBase {
       completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
     }
-    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned(buffer), actual));
+    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer), actual));
   }
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) override {
@@ -279,7 +279,7 @@ class TestServerChannel final : public TestServerBase {
       completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
     }
-    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned(buffer), actual));
+    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer), actual));
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) override {
@@ -343,7 +343,7 @@ class TestServerStream final : public TestServerBase {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned(&file_object)));
+    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
  private:

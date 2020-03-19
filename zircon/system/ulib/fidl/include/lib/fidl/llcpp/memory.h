@@ -16,25 +16,24 @@
 
 #include "allocator.h"
 #include "string_view.h"
-#include "unowned_ptr.h"
 #include "vector_view.h"
 
 namespace fidl {
 
-// Create a unowned_ptr from a raw pointer, which can be used to construct a tracking_ptr.
+// Create a unowned_ptr_t from a raw pointer, which can be used to construct a tracking_ptr.
 //
-// This makes code less verbose by inferring the unowned_ptr type. Better type inference directly
+// This makes code less verbose by inferring the unowned_ptr_t type. Better type inference directly
 // on unique_ptr depends on C++17 features like class type deduction and deduction rules.
 //
 // Example:
 // uint32_t x;
-// tracking_ptr<uint32_t> ptr = fidl::unowned(x);
+// tracking_ptr<uint32_t> ptr = fidl::unowned_ptr(x);
 template <typename T, typename ElemType = std::remove_extent_t<T>>
-unowned_ptr<ElemType> unowned(T* ptr) {
-  return unowned_ptr<T>(ptr);
+unowned_ptr_t<ElemType> unowned_ptr(T* ptr) {
+  return unowned_ptr_t<T>(ptr);
 }
 
-// Construct a VectorView from a container supporting std::size and std::data using an unowned_ptr
+// Construct a VectorView from a container supporting std::size and std::data using an unowned_ptr_t
 // to the internal container data.
 //
 // Example:
@@ -45,10 +44,10 @@ template <
     typename = decltype(std::size(std::declval<T&>())),
     typename ElemType = typename std::remove_pointer<decltype(std::data(std::declval<T&>()))>::type>
 VectorView<ElemType> unowned_vec(T& container) {
-  return VectorView(fidl::unowned(std::data(container)), std::size(container));
+  return VectorView(fidl::unowned_ptr(std::data(container)), std::size(container));
 }
 
-// Construct a StringView from a container supporting std::size and std::data using an unowned_ptr
+// Construct a StringView from a container supporting std::size and std::data using an unowned_ptr_t
 // to the internal container data.
 //
 // Example:
@@ -58,17 +57,17 @@ template <typename T, typename = decltype(std::data(std::declval<T&>())),
           typename = decltype(std::size(std::declval<T&>())),
           typename = std::enable_if_t<!std::is_array<T>::value>>
 StringView unowned_str(const T& container) {
-  return StringView(fidl::unowned(std::data(container)), std::size(container));
+  return StringView(fidl::unowned_ptr(std::data(container)), std::size(container));
 }
 
-// Construct a StringView from a c-string using an unowned_ptr to the data.
+// Construct a StringView from a c-string using an unowned_ptr_t to the data.
 //
 // Example:
 // char * str = "hello world";
 // StringView sv = fidl::unowned_str(str, 2);
 template <typename = std::enable_if_t<true>>  // avoid symbol-redefinition
 StringView unowned_str(const char* str, size_t len) {
-  return StringView(fidl::unowned(str), len);
+  return StringView(fidl::unowned_ptr(str), len);
 }
 
 }  // namespace fidl

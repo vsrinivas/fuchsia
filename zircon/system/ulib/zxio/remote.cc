@@ -607,7 +607,7 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
         fidl::Buffer<fio::File::WriteRequest> request_buffer;
         fidl::Buffer<fio::File::WriteResponse> response_buffer;
         auto result = fio::File::Call::Write(std::move(control), request_buffer.view(),
-                                             fidl::VectorView(fidl::unowned(buffer), capacity),
+                                             fidl::VectorView(fidl::unowned_ptr(buffer), capacity),
                                              response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
@@ -642,9 +642,9 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio::File::WriteAtRequest> request_buffer;
         fidl::Buffer<fio::File::WriteAtResponse> response_buffer;
-        auto result = fio::File::Call::WriteAt(std::move(control), request_buffer.view(),
-                                               fidl::VectorView(fidl::unowned(buffer), capacity),
-                                               offset, response_buffer.view());
+        auto result = fio::File::Call::WriteAt(
+            std::move(control), request_buffer.view(),
+            fidl::VectorView(fidl::unowned_ptr(buffer), capacity), offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;

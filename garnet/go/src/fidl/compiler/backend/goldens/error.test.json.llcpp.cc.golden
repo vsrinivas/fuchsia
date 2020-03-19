@@ -157,10 +157,10 @@ void Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
   ::fidl::aligned<Example_foo_Response> response;
   response.value.y = std::move(y);
 
-  Reply(Example_foo_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 void Example::Interface::fooCompleterBase::ReplyError(uint32_t error) {
-  Reply(Example_foo_Result::WithErr(::fidl::unowned(&error)));
+  Reply(Example_foo_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
 void Example::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Example_foo_Result result) {
@@ -186,7 +186,7 @@ void Example::Interface::fooCompleterBase::ReplySuccess(::fidl::BytePart _buffer
   ::fidl::aligned<Example_foo_Response> response;
   response.value.y = std::move(y);
 
-  Reply(std::move(_buffer), Example_foo_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(std::move(_buffer), Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 
 void Example::Interface::fooCompleterBase::Reply(::fidl::DecodedMessage<fooResponse> params) {

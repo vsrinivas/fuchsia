@@ -294,7 +294,7 @@ zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t len
   if (power_status_ == OT_SPINEL_DEVICE_ON) {
     ::fidl::VectorView<uint8_t> data;
     data.set_count(length);
-    data.set_data(fidl::unowned(frameBuffer));
+    data.set_data(fidl::unowned_ptr(frameBuffer));
     zx_status_t res = lowpan_spinel_fidl::Device::SendOnReceiveFrameEvent(fidl_channel_->borrow(),
                                                                           std::move(data));
     if (res != ZX_OK) {

@@ -48,7 +48,7 @@ namespace fidl {
 //
 // Example:
 // int i = 1;
-// tracking_ptr<int> ptr = unowned_ptr<int>(&i); // Unowned pointer.
+// tracking_ptr<int> ptr = unowned_ptr_t<int>(&i); // Unowned pointer.
 // ptr = std::make_unique<int>(2); // Owned pointer.
 //
 // tracking_ptr<int[]> array_ptr = std::make_unique<int[]>(2);
@@ -80,8 +80,8 @@ class tracking_ptr final {
     static_assert(!U,
                   "fidl::tracking_ptr cannot be constructed directly from a raw pointer. "
                   "If tracking_ptr should not own the memory, indicate this by constructing a "
-                  "fidl::unowned_ptr "
-                  "using the fidl::unowned(&val) helper. "
+                  "fidl::unowned_ptr_t "
+                  "using the fidl::unowned_ptr(&val) helper. "
                   "As an alternative, consider using a fidl::Allocator."
                   " For heap allocator values, construct with unique_ptr<T>.");
   }
@@ -103,21 +103,21 @@ class tracking_ptr final {
   tracking_ptr(std::unique_ptr<U>&& other) {
     set_owned(other.release());
   }
-  tracking_ptr(unowned_ptr<T> other) {
+  tracking_ptr(unowned_ptr_t<T> other) {
     static_assert(std::alignment_of<T>::value >= kMinAlignment,
-                  "unowned_ptr must point to an aligned value. "
+                  "unowned_ptr_t must point to an aligned value. "
                   "An insufficiently aligned value can be aligned with fidl::aligned");
     set_unowned(other.get());
   }
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  tracking_ptr(unowned_ptr<std::remove_const_t<U>> other) {
+  tracking_ptr(unowned_ptr_t<std::remove_const_t<U>> other) {
     static_assert(std::alignment_of<T>::value >= kMinAlignment,
-                  "unowned_ptr must point to an aligned value. "
+                  "unowned_ptr_t must point to an aligned value. "
                   "An insufficiently aligned value can be aligned with fidl::aligned");
     set_unowned(other.get());
   }
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
-  tracking_ptr(unowned_ptr<aligned<T>> other) { set_unowned(&other->value); }
+  tracking_ptr(unowned_ptr_t<aligned<T>> other) { set_unowned(&other->value); }
   tracking_ptr(const tracking_ptr&) = delete;
 
   ~tracking_ptr() { reset_marked(kNullMarkedPtr); }
@@ -201,8 +201,8 @@ class tracking_ptr<T[]> final {
     static_assert(!U,
                   "fidl::tracking_ptr cannot be constructed directly from a raw pointer. "
                   "If tracking_ptr should not own the memory, indicate this by constructing a "
-                  "fidl::unowned_ptr "
-                  "using the fidl::unowned(&val) helper. "
+                  "fidl::unowned_ptr_t "
+                  "using the fidl::unowned_ptr(&val) helper. "
                   "As an alternative, consider using a fidl::Allocator."
                   " For heap allocator values, construct with unique_ptr<T>.");
   }
@@ -222,9 +222,9 @@ class tracking_ptr<T[]> final {
   tracking_ptr(std::unique_ptr<U>&& other) {
     reset(true, other.release());
   }
-  tracking_ptr(unowned_ptr<T> other) { reset(false, other.get()); }
+  tracking_ptr(unowned_ptr_t<T> other) { reset(false, other.get()); }
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  tracking_ptr(unowned_ptr<std::remove_const_t<U>> other) {
+  tracking_ptr(unowned_ptr_t<std::remove_const_t<U>> other) {
     reset(false, other.get());
   }
   tracking_ptr(const tracking_ptr&) = delete;

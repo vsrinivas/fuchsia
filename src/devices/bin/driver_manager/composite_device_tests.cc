@@ -110,7 +110,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
     auto meta = llcpp::fuchsia::device::manager::DeviceMetadata{
         .key = metadata[i].type,
         .data = ::fidl::VectorView(
-            fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data))),
+            fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data))),
             metadata[i].length)};
     metadata_list.emplace_back(std::move(meta));
   }

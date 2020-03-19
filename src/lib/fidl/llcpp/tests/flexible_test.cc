@@ -184,14 +184,14 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
   void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync completer) override {
     test::FlexibleXUnion xunion;
     fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
-    xunion.set_want_more_than_30_bytes(fidl::unowned(&array));
+    xunion.set_want_more_than_30_bytes(fidl::unowned_ptr(&array));
     completer.Reply(std::move(xunion));
   }
 
   void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync completer) override {
     test::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
-    xunion.set_want_more_than_4_handles(fidl::unowned(&array));
+    xunion.set_want_more_than_4_handles(fidl::unowned_ptr(&array));
     completer.Reply(std::move(xunion));
   }
 
@@ -199,7 +199,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
     auto table_builder =
         test::FlexibleTable::UnownedBuilder().set_want_more_than_30_bytes_at_ordinal_3(
-            fidl::unowned(&array));
+            fidl::unowned_ptr(&array));
     completer.Reply(table_builder.build());
   }
 
@@ -207,7 +207,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     fidl::aligned<fidl::Array<zx::handle, 4>> array = {};
     auto table_builder =
         test::FlexibleTable::UnownedBuilder().set_want_more_than_4_handles_at_ordinal_4(
-            fidl::unowned(&array));
+            fidl::unowned_ptr(&array));
     completer.Reply(table_builder.build());
   }
 

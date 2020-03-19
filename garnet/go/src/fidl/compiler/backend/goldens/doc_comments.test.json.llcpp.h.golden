@@ -312,7 +312,7 @@ public:
   }
 
   Table build() {
-    return Table(max_ordinal_, ::fidl::unowned_ptr<Table::Frame>(&frame_));
+    return Table(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:

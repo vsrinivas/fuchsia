@@ -44,9 +44,9 @@ TEST(InlineXUnionInStruct, Success) {
     llcpp_misc::InlineXUnionInStruct input;
     llcpp_misc::SimpleUnion simple_union;
     int64_t i64 = 0xdeadbeef;
-    simple_union.set_i64(fidl::unowned(&i64));
+    simple_union.set_i64(fidl::unowned_ptr(&i64));
     input.before = fidl::unowned_str(before);
-    input.xu.set_su(fidl::unowned(&simple_union));
+    input.xu.set_su(fidl::unowned_ptr(&simple_union));
     input.after = fidl::unowned_str(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
@@ -104,7 +104,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   {
     llcpp_misc::InlineXUnionInStruct input;
     input.before = fidl::unowned_str(before);
-    input.xu.set_i(fidl::unowned(&integer));
+    input.xu.set_i(fidl::unowned_ptr(&integer));
     input.after = fidl::unowned_str(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
@@ -326,20 +326,20 @@ TEST(ComplexTable, Success) {
   // encode
   {
     auto simple_builder = llcpp_misc::SimpleTable::UnownedBuilder()
-                              .set_x(fidl::unowned(&table_x))
-                              .set_y(fidl::unowned(&table_y));
+                              .set_x(fidl::unowned_ptr(&table_x))
+                              .set_y(fidl::unowned_ptr(&table_y));
     auto simple_table = simple_builder.build();
     llcpp_misc::SampleXUnion xu;
-    xu.set_i(fidl::unowned(&xunion_i));
+    xu.set_i(fidl::unowned_ptr(&xunion_i));
     fidl::StringView strings_vector[]{
         fidl::unowned_str(before),
         fidl::unowned_str(after),
     };
     fidl::VectorView<fidl::StringView> strings = fidl::unowned_vec(strings_vector);
     auto builder = llcpp_misc::ComplexTable::UnownedBuilder()
-                       .set_simple(fidl::unowned(&simple_table))
-                       .set_u(fidl::unowned(&xu))
-                       .set_strings(fidl::unowned(&strings));
+                       .set_simple(fidl::unowned_ptr(&simple_table))
+                       .set_u(fidl::unowned_ptr(&xu))
+                       .set_strings(fidl::unowned_ptr(&strings));
     auto input = builder.build();
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));

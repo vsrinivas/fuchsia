@@ -22,10 +22,10 @@ class OsRevision {
  public:
   fuchsia_tee::OsRevision to_llcpp() {
     if (major_.has_value()) {
-      llcpp_builder_.set_major(fidl::unowned(&major_.value()));
+      llcpp_builder_.set_major(fidl::unowned_ptr(&major_.value()));
     }
     if (minor_.has_value()) {
-      llcpp_builder_.set_minor(fidl::unowned(&minor_.value()));
+      llcpp_builder_.set_minor(fidl::unowned_ptr(&minor_.value()));
     }
 
     return llcpp_builder_.build();
@@ -46,15 +46,15 @@ class OsInfo {
  public:
   fuchsia_tee::OsInfo to_llcpp() {
     if (uuid_.has_value()) {
-      llcpp_builder_.set_uuid(fidl::unowned(&uuid_.value()));
+      llcpp_builder_.set_uuid(fidl::unowned_ptr(&uuid_.value()));
     }
     if (revision_.has_value()) {
       llcpp_revision_ = revision_->to_llcpp();
-      llcpp_builder_.set_revision(fidl::unowned(&llcpp_revision_));
+      llcpp_builder_.set_revision(fidl::unowned_ptr(&llcpp_revision_));
     }
     if (is_global_platform_compliant_.has_value()) {
       llcpp_builder_.set_is_global_platform_compliant(
-          fidl::unowned(&is_global_platform_compliant_.value()));
+          fidl::unowned_ptr(&is_global_platform_compliant_.value()));
     }
 
     return llcpp_builder_.build();
@@ -81,16 +81,16 @@ class Value {
  public:
   fuchsia_tee::Value to_llcpp() {
     if (direction_.has_value()) {
-      llcpp_builder_.set_direction(fidl::unowned(&direction_.value()));
+      llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
     }
     if (a_.has_value()) {
-      llcpp_builder_.set_a(fidl::unowned(&a_.value()));
+      llcpp_builder_.set_a(fidl::unowned_ptr(&a_.value()));
     }
     if (b_.has_value()) {
-      llcpp_builder_.set_b(fidl::unowned(&b_.value()));
+      llcpp_builder_.set_b(fidl::unowned_ptr(&b_.value()));
     }
     if (c_.has_value()) {
-      llcpp_builder_.set_c(fidl::unowned(&c_.value()));
+      llcpp_builder_.set_c(fidl::unowned_ptr(&c_.value()));
     }
 
     return llcpp_builder_.build();
@@ -117,16 +117,16 @@ class Buffer {
  public:
   fuchsia_tee::Buffer to_llcpp() {
     if (direction_.has_value()) {
-      llcpp_builder_.set_direction(fidl::unowned(&direction_.value()));
+      llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
     }
     if (vmo_.has_value()) {
-      llcpp_builder_.set_vmo(fidl::unowned(&vmo_.value()));
+      llcpp_builder_.set_vmo(fidl::unowned_ptr(&vmo_.value()));
     }
     if (offset_.has_value()) {
-      llcpp_builder_.set_offset(fidl::unowned(&offset_.value()));
+      llcpp_builder_.set_offset(fidl::unowned_ptr(&offset_.value()));
     }
     if (size_.has_value()) {
-      llcpp_builder_.set_size(fidl::unowned(&size_.value()));
+      llcpp_builder_.set_size(fidl::unowned_ptr(&size_.value()));
     }
 
     return llcpp_builder_.build();
@@ -155,17 +155,17 @@ class Parameter {
     if (std::holds_alternative<fidl::aligned<fuchsia_tee::None>>(data_)) {
       llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::None>>(data_);
       return fuchsia_tee::Parameter::WithNone(
-          fidl::unowned(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
     }
     if (std::holds_alternative<Value>(data_)) {
       llcpp_data_ = std::get<Value>(data_).to_llcpp();
       return fuchsia_tee::Parameter::WithValue(
-          fidl::unowned(&std::get<fuchsia_tee::Value>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fuchsia_tee::Value>(llcpp_data_)));
     }
     if (std::holds_alternative<Buffer>(data_)) {
       llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
       return fuchsia_tee::Parameter::WithBuffer(
-          fidl::unowned(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
+          fidl::unowned_ptr(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
     }
 
     return fuchsia_tee::Parameter();
@@ -211,16 +211,16 @@ class OpResult {
  public:
   fuchsia_tee::OpResult to_llcpp() {
     if (return_code_.has_value()) {
-      llcpp_builder_.set_return_code(fidl::unowned(&return_code_.value()));
+      llcpp_builder_.set_return_code(fidl::unowned_ptr(&return_code_.value()));
     }
 
     if (return_origin_.has_value()) {
-      llcpp_builder_.set_return_origin(fidl::unowned(&return_origin_.value()));
+      llcpp_builder_.set_return_origin(fidl::unowned_ptr(&return_origin_.value()));
     }
 
     if (parameter_set_.has_value()) {
       llcpp_parameter_set_ = parameter_set_->to_llcpp();
-      llcpp_builder_.set_parameter_set(fidl::unowned(&llcpp_parameter_set_));
+      llcpp_builder_.set_parameter_set(fidl::unowned_ptr(&llcpp_parameter_set_));
     }
 
     return llcpp_builder_.build();

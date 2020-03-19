@@ -98,7 +98,7 @@ TEST(LoaderServiceTest, Create) {
       fuchsia::mem::Buffer buffer = {};
       buffer.size = 0;
       buffer.vmo = std::move(vmo);
-      completer.Reply(ZX_OK, fidl::unowned(&buffer));
+      completer.Reply(ZX_OK, fidl::unowned_ptr(&buffer));
     }
     uint32_t* get_buffer_flags_ptr_;
   };
@@ -117,7 +117,7 @@ TEST(LoaderServiceTest, Create) {
 
     void Describe(DescribeCompleter::Sync completer) override {
       fidl::aligned<fuchsia::io::DirectoryObject> obj;
-      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithDirectory(fidl::unowned(&obj));
+      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithDirectory(fidl::unowned_ptr(&obj));
       completer.Reply(std::move(info));
     }
     void Close(CloseCompleter::Sync completer) override { completer.Reply(ZX_OK); }
@@ -131,7 +131,7 @@ TEST(LoaderServiceTest, Create) {
 
       // Send the OnOpen event on the channel
       fuchsia::io::FileObject obj;
-      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithFile(fidl::unowned(&obj));
+      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithFile(fidl::unowned_ptr(&obj));
       fuchsia::io::File::SendOnOpenEvent(zx::unowned_channel{object}, ZX_OK, std::move(info));
 
       // Wire object up to a new TestFile instance

@@ -131,15 +131,15 @@ void KernelStatsImpl::GetMemoryStats(GetMemoryStatsCompleter::Sync completer) {
     return;
   }
   llcpp::fuchsia::kernel::MemoryStats::UnownedBuilder builder;
-  builder.set_total_bytes(fidl::unowned(&mem_stats.total_bytes));
-  builder.set_free_bytes(fidl::unowned(&mem_stats.free_bytes));
-  builder.set_wired_bytes(fidl::unowned(&mem_stats.wired_bytes));
-  builder.set_total_heap_bytes(fidl::unowned(&mem_stats.total_heap_bytes));
-  builder.set_free_heap_bytes(fidl::unowned(&mem_stats.free_heap_bytes));
-  builder.set_vmo_bytes(fidl::unowned(&mem_stats.vmo_bytes));
-  builder.set_mmu_overhead_bytes(fidl::unowned(&mem_stats.mmu_overhead_bytes));
-  builder.set_ipc_bytes(fidl::unowned(&mem_stats.ipc_bytes));
-  builder.set_other_bytes(fidl::unowned(&mem_stats.other_bytes));
+  builder.set_total_bytes(fidl::unowned_ptr(&mem_stats.total_bytes));
+  builder.set_free_bytes(fidl::unowned_ptr(&mem_stats.free_bytes));
+  builder.set_wired_bytes(fidl::unowned_ptr(&mem_stats.wired_bytes));
+  builder.set_total_heap_bytes(fidl::unowned_ptr(&mem_stats.total_heap_bytes));
+  builder.set_free_heap_bytes(fidl::unowned_ptr(&mem_stats.free_heap_bytes));
+  builder.set_vmo_bytes(fidl::unowned_ptr(&mem_stats.vmo_bytes));
+  builder.set_mmu_overhead_bytes(fidl::unowned_ptr(&mem_stats.mmu_overhead_bytes));
+  builder.set_ipc_bytes(fidl::unowned_ptr(&mem_stats.ipc_bytes));
+  builder.set_other_bytes(fidl::unowned_ptr(&mem_stats.other_bytes));
   completer.Reply(builder.build());
 }
 
@@ -158,27 +158,27 @@ void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
   stats.actual_num_cpus = actual;
   llcpp::fuchsia::kernel::PerCpuStats per_cpu_stats[available];
   fbl::Vector<std::unique_ptr<llcpp::fuchsia::kernel::PerCpuStats::UnownedBuilder>> builders;
-  stats.per_cpu_stats = fidl::VectorView(fidl::unowned(per_cpu_stats), available);
+  stats.per_cpu_stats = fidl::VectorView(fidl::unowned_ptr(per_cpu_stats), available);
   for (uint32_t cpu_num = 0; cpu_num < available; ++cpu_num) {
     // TODO(fxb/42059) Switch to using owned heap allocated builders.
     builders.push_back(std::make_unique<llcpp::fuchsia::kernel::PerCpuStats::UnownedBuilder>());
     auto& builder = builders[cpu_num];
     auto& cpu_stat = cpu_stats[cpu_num];
-    builder->set_cpu_number(fidl::unowned(&cpu_stat.cpu_number));
-    builder->set_flags(fidl::unowned(&cpu_stat.flags));
-    builder->set_idle_time(fidl::unowned(&cpu_stat.idle_time));
-    builder->set_reschedules(fidl::unowned(&cpu_stat.reschedules));
-    builder->set_context_switches(fidl::unowned(&cpu_stat.context_switches));
-    builder->set_irq_preempts(fidl::unowned(&cpu_stat.irq_preempts));
-    builder->set_yields(fidl::unowned(&cpu_stat.yields));
-    builder->set_ints(fidl::unowned(&cpu_stat.ints));
-    builder->set_timer_ints(fidl::unowned(&cpu_stat.timer_ints));
-    builder->set_timers(fidl::unowned(&cpu_stat.timers));
-    builder->set_page_faults(fidl::unowned(&cpu_stat.page_faults));
-    builder->set_exceptions(fidl::unowned(&cpu_stat.exceptions));
-    builder->set_syscalls(fidl::unowned(&cpu_stat.syscalls));
-    builder->set_reschedule_ipis(fidl::unowned(&cpu_stat.reschedule_ipis));
-    builder->set_generic_ipis(fidl::unowned(&cpu_stat.generic_ipis));
+    builder->set_cpu_number(fidl::unowned_ptr(&cpu_stat.cpu_number));
+    builder->set_flags(fidl::unowned_ptr(&cpu_stat.flags));
+    builder->set_idle_time(fidl::unowned_ptr(&cpu_stat.idle_time));
+    builder->set_reschedules(fidl::unowned_ptr(&cpu_stat.reschedules));
+    builder->set_context_switches(fidl::unowned_ptr(&cpu_stat.context_switches));
+    builder->set_irq_preempts(fidl::unowned_ptr(&cpu_stat.irq_preempts));
+    builder->set_yields(fidl::unowned_ptr(&cpu_stat.yields));
+    builder->set_ints(fidl::unowned_ptr(&cpu_stat.ints));
+    builder->set_timer_ints(fidl::unowned_ptr(&cpu_stat.timer_ints));
+    builder->set_timers(fidl::unowned_ptr(&cpu_stat.timers));
+    builder->set_page_faults(fidl::unowned_ptr(&cpu_stat.page_faults));
+    builder->set_exceptions(fidl::unowned_ptr(&cpu_stat.exceptions));
+    builder->set_syscalls(fidl::unowned_ptr(&cpu_stat.syscalls));
+    builder->set_reschedule_ipis(fidl::unowned_ptr(&cpu_stat.reschedule_ipis));
+    builder->set_generic_ipis(fidl::unowned_ptr(&cpu_stat.generic_ipis));
     per_cpu_stats[cpu_num] = builder->build();
   }
   completer.Reply(std::move(stats));

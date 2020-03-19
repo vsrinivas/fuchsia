@@ -368,7 +368,7 @@ public:
   }
 
   ExampleTable build() {
-    return ExampleTable(max_ordinal_, ::fidl::unowned_ptr<ExampleTable::Frame>(&frame_));
+    return ExampleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:

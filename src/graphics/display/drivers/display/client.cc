@@ -1416,7 +1416,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
                   "Bad struct");
     static_assert(sizeof(cursor_info_t) <= sizeof(fhd::CursorInfo), "Bad size");
     info.cursor_configs = fidl::VectorView<fhd::CursorInfo>(
-        fidl::unowned((fhd::CursorInfo*)config->cursor_infos_.data()),
+        fidl::unowned_ptr((fhd::CursorInfo*)config->cursor_infos_.data()),
         config->cursor_infos_.size());
 
     const char* manufacturer_name = "";
@@ -1752,7 +1752,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 
   zx_status_t status =
       fhd::Controller::SendOnVsyncEvent(zx::unowned_channel(server_channel_), display_id, timestamp,
-                                        fidl::VectorView(fidl::unowned(image_ids), count));
+                                        fidl::VectorView(fidl::unowned_ptr(image_ids), count));
   // Make sure status is not ZX_ERR_BAD_HANDLE, otherwise, depending on policy setting
   // the above will crash
   ZX_DEBUG_ASSERT(status != ZX_ERR_BAD_HANDLE);

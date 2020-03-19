@@ -717,9 +717,10 @@ void UsbDevice::GetConfigurationDescriptor(uint8_t config,
 
   size_t length = le16toh(descriptor->wTotalLength);
   return completer.Reply(
-      ZX_OK, fidl::VectorView<uint8_t>(
-                 fidl::unowned(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor))),
-                 length));
+      ZX_OK,
+      fidl::VectorView<uint8_t>(
+          fidl::unowned_ptr(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor))),
+          length));
 }
 
 void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,

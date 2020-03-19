@@ -214,11 +214,11 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   // Build the FIDL table.
   auto led_view = fidl::unowned_vec(led_array);
   hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder keyboard_builder;
-  keyboard_builder.set_enabled_leds(fidl::unowned(&led_view));
+  keyboard_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
   hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
       keyboard_builder.build();
   hid_input_report::fuchsia_input_report::OutputReport::UnownedBuilder builder;
-  builder.set_keyboard(fidl::unowned(&fidl_keyboard));
+  builder.set_keyboard(fidl::unowned_ptr(&fidl_keyboard));
   hid_input_report::fuchsia_input_report::OutputReport fidl_report = builder.build();
   uint8_t report_data;
   size_t out_report_size;

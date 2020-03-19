@@ -408,9 +408,9 @@ WriteFirmwareResult CreateWriteFirmwareResult(
     std::variant<zx_status_t, fidl::aligned<bool>>* variant) {
   WriteFirmwareResult result;
   if (std::holds_alternative<zx_status_t>(*variant)) {
-    result.set_status(fidl::unowned(&std::get<zx_status_t>(*variant)));
+    result.set_status(fidl::unowned_ptr(&std::get<zx_status_t>(*variant)));
   } else {
-    result.set_unsupported_type(fidl::unowned(&std::get<fidl::aligned<bool>>(*variant)));
+    result.set_unsupported_type(fidl::unowned_ptr(&std::get<fidl::aligned<bool>>(*variant)));
   }
   return result;
 }

@@ -22,7 +22,7 @@ bool string_view_test() {
   EXPECT_TRUE(view->is_null());
 
   char* data = builder.NewArray<char>(3);
-  view->set_data(fidl::unowned(data));
+  view->set_data(fidl::unowned_ptr(data));
   view->set_size(3);
 
   EXPECT_FALSE(view->empty());
@@ -45,7 +45,7 @@ bool vector_view_test() {
   EXPECT_TRUE(view->data() == nullptr);
 
   int* data = builder.NewArray<int>(3);
-  view->set_data(fidl::unowned(data));
+  view->set_data(fidl::unowned_ptr(data));
   view->set_count(3);
 
   EXPECT_EQ(view->count(), 3);

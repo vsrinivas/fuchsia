@@ -250,7 +250,7 @@ zx_status_t import_vmo(zx_handle_t vmo, fhd::ImageConfig* config, uint64_t* id) 
 zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
   RETURN_IF_ERROR(
       dc_client->SetDisplayLayers(
-          display_id, fidl::VectorView<uint64_t>(fidl::unowned(&layer_id), layer_id ? 1 : 0)),
+          display_id, fidl::VectorView<uint64_t>(fidl::unowned_ptr(&layer_id), layer_id ? 1 : 0)),
       "vc: Failed to set display layers");
   return ZX_OK;
 }

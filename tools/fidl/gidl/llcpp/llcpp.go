@@ -337,7 +337,7 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 		alignedVar := b.newVar()
 		b.Builder.WriteString(fmt.Sprintf("fidl::aligned<%s> %s = std::move(%s);\n", typeNameIgnoreNullable(decl), alignedVar, containerVar))
 		unownedVar := b.newVar()
-		b.Builder.WriteString(fmt.Sprintf("%s %s = fidl::unowned(&%s);\n", typeName(decl), unownedVar, alignedVar))
+		b.Builder.WriteString(fmt.Sprintf("%s %s = fidl::unowned_ptr(&%s);\n", typeName(decl), unownedVar, alignedVar))
 		b.lastVar = unownedVar
 	} else {
 		b.lastVar = containerVar
@@ -353,7 +353,7 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 	builderVar := b.newVar()
 
 	b.Builder.WriteString(fmt.Sprintf(
-		"auto %s = llcpp::conformance::%s::Builder(fidl::unowned(&%s));\n", builderVar, value.Name, frameVar))
+		"auto %s = llcpp::conformance::%s::Builder(fidl::unowned_ptr(&%s));\n", builderVar, value.Name, frameVar))
 
 	for _, field := range value.Fields {
 		if field.Key.Name == "" {
@@ -365,7 +365,7 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		alignedVar := b.newVar()
 		b.Builder.WriteString(fmt.Sprintf("fidl::aligned<%s> %s = std::move(%s);\n", typeName(fieldDecl), alignedVar, fieldVar))
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(fidl::unowned(&%s));\n", builderVar, field.Key.Name, alignedVar))
+			"%s.set_%s(fidl::unowned_ptr(&%s));\n", builderVar, field.Key.Name, alignedVar))
 
 	}
 	tableVar := b.newVar()
@@ -391,7 +391,7 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		alignedVar := b.newVar()
 		b.Builder.WriteString(fmt.Sprintf("fidl::aligned<%s> %s = std::move(%s);\n", typeName(fieldDecl), alignedVar, fieldVar))
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(fidl::unowned(&%s));\n", containerVar, field.Key.Name, alignedVar))
+			"%s.set_%s(fidl::unowned_ptr(&%s));\n", containerVar, field.Key.Name, alignedVar))
 	}
 	b.lastVar = containerVar
 }
@@ -428,7 +428,7 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
 		arrayVar, elemName(decl), len(elements), strings.Join(elements, ", ")))
 	sliceVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(fidl::unowned(%s.data()), %d);\n",
+	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(fidl::unowned_ptr(%s.data()), %d);\n",
 		sliceVar, typeName(decl), arrayVar, len(elements)))
 	b.lastVar = sliceVar
 }

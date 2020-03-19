@@ -1800,9 +1800,9 @@ void Coordinator::Suspend(
     power_fidl::statecontrol::Admin_Suspend_Result result;
     fidl::aligned<power_fidl::statecontrol::Admin_Suspend_Response> response;
     if (status != ZX_OK) {
-      result.set_err(fidl::unowned(&status));
+      result.set_err(fidl::unowned_ptr(&status));
     } else {
-      result.set_response(fidl::unowned(&response));
+      result.set_response(fidl::unowned_ptr(&response));
     }
     completer.Reply(std::move(result));
   };

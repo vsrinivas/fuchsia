@@ -83,7 +83,7 @@ zx_status_t TestDevhostDriverChild::Init() {
 void TestDevhostDriverChild::AddChildDevice(AddChildDeviceCompleter::Sync completer) {
   ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result response;
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  response.set_err(fidl::unowned(&status));
+  response.set_err(fidl::unowned_ptr(&status));
   completer.Reply(std::move(response));
 }
 

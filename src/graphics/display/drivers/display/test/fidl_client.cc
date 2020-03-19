@@ -187,7 +187,8 @@ zx_status_t TestFidlClient::PresentImage() {
   EXPECT_NE(0, layer_id_);
   EXPECT_NE(0, image_id_);
   uint64_t layers[] = {layer_id_};
-  if (auto reply = dc_->SetDisplayLayers(display_id(), {fidl::unowned(layers), 1}); !reply.ok()) {
+  if (auto reply = dc_->SetDisplayLayers(display_id(), {fidl::unowned_ptr(layers), 1});
+      !reply.ok()) {
     return reply.status();
   }
   if (auto reply = dc_->SetLayerImage(layer_id_, image_id_, 0, 0); !reply.ok()) {

@@ -518,11 +518,11 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   auto led_view = fidl::unowned_vec(led_array);
   auto keyboard_builder =
       hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder();
-  keyboard_builder.set_enabled_leds(fidl::unowned(&led_view));
+  keyboard_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
   hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
       keyboard_builder.build();
   auto builder = hid_input_report::fuchsia_input_report::OutputReport::UnownedBuilder();
-  builder.set_keyboard(fidl::unowned(&fidl_keyboard));
+  builder.set_keyboard(fidl::unowned_ptr(&fidl_keyboard));
   // Send the report.
   fuchsia_input_report::InputDevice::ResultOf::SendOutputReport response =
       sync_client.SendOutputReport(builder.build());

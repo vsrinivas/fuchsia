@@ -35,7 +35,7 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
       return completer.Close(status);
     }
     llcpp::fuchsia::io::NodeInfo info;
-    info.set_stream_socket(fidl::unowned(&stream_socket));
+    info.set_stream_socket(fidl::unowned_ptr(&stream_socket));
     return completer.Reply(std::move(info));
   }
 

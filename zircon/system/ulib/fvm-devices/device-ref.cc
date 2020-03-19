@@ -63,7 +63,8 @@ zx_status_t RebindBlockDevice(DeviceRef* device) {
 }
 
 fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
-  return fidl::VectorView<uint8_t>(fidl::unowned(const_cast<uint8_t*>(data.data())), data.size());
+  return fidl::VectorView<uint8_t>(fidl::unowned_ptr(const_cast<uint8_t*>(data.data())),
+                                   data.size());
 }
 
 using FidlGuid = fuchsia_hardware_block_partition_GUID;

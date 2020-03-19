@@ -200,7 +200,7 @@ void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sy
   uint8_t data[max_out];
   size_t actual = 0;
   zx_status_t status = vfs()->Readdir(vnode().get(), &dircookie_, data, max_out, &actual);
-  completer.Reply(status, fidl::VectorView(fidl::unowned(data), actual));
+  completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
 }
 
 void DirectoryConnection::Rewind(RewindCompleter::Sync completer) {
@@ -333,7 +333,7 @@ void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync complet
 
   fio::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
-  completer.Reply(status, status == ZX_OK ? fidl::unowned(&info) : nullptr);
+  completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&info) : nullptr);
 }
 
 void DirectoryConnection::GetDevicePath(GetDevicePathCompleter::Sync completer) {

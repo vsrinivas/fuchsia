@@ -40,7 +40,8 @@ void FakeInputDevice::GetReports(GetReportsCompleter::Sync completer) {
 
   fuchsia_input_report::InputReport report = fidl.builder.build();
   reports_event_.signal(ZX_USER_SIGNAL_0, 0);
-  completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(fidl::unowned(&report), 1));
+  completer.Reply(
+      fidl::VectorView<fuchsia_input_report::InputReport>(fidl::unowned_ptr(&report), 1));
 }
 
 void FakeInputDevice::SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,

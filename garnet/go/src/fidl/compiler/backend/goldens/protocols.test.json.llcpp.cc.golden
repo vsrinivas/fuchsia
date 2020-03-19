@@ -1654,10 +1654,10 @@ void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(int
   response.value.b = std::move(b);
   response.value.c = std::move(c);
 
-  Reply(WithErrorSyntax_ResponseAsStruct_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(WithErrorSyntax_ResponseAsStruct_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(uint32_t error) {
-  Reply(WithErrorSyntax_ResponseAsStruct_Result::WithErr(::fidl::unowned(&error)));
+  Reply(WithErrorSyntax_ResponseAsStruct_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
@@ -1685,7 +1685,7 @@ void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(::f
   response.value.b = std::move(b);
   response.value.c = std::move(c);
 
-  Reply(std::move(_buffer), WithErrorSyntax_ResponseAsStruct_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(std::move(_buffer), WithErrorSyntax_ResponseAsStruct_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(::fidl::DecodedMessage<ResponseAsStructResponse> params) {
@@ -1715,10 +1715,10 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::llcpp::t
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
   ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
 
-  Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(uint32_t error) {
-  Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(::fidl::unowned(&error)));
+  Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
@@ -1743,7 +1743,7 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::By
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
 
-  Reply(std::move(_buffer), WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(std::move(_buffer), WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params) {
@@ -1773,10 +1773,10 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::llcpp::test::
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
   ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
 
-  Reply(WithErrorSyntax_ErrorAsEnum_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(WithErrorSyntax_ErrorAsEnum_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplyError(ErrorEnun error) {
-  Reply(WithErrorSyntax_ErrorAsEnum_Result::WithErr(::fidl::unowned(&error)));
+  Reply(WithErrorSyntax_ErrorAsEnum_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
@@ -1801,7 +1801,7 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::BytePar
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
 
-  Reply(std::move(_buffer), WithErrorSyntax_ErrorAsEnum_Result::WithResponse(::fidl::unowned(&response)));
+  Reply(std::move(_buffer), WithErrorSyntax_ErrorAsEnum_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params) {

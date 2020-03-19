@@ -144,8 +144,8 @@ void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
   std::vector<llcpp::fuchsia::shell::Location> locations;
   llcpp::fuchsia::shell::NodeId fidl_node_id{.file_id = node_id.file_id,
                                              .node_id = node_id.node_id};
-  auto builder =
-      llcpp::fuchsia::shell::Location::UnownedBuilder().set_node_id(fidl::unowned(&fidl_node_id));
+  auto builder = llcpp::fuchsia::shell::Location::UnownedBuilder().set_node_id(
+      fidl::unowned_ptr(&fidl_node_id));
   locations.emplace_back(builder.build());
   service_->OnError(context->id(), locations, std::move(error_message));
   context->set_has_errors();
@@ -422,7 +422,7 @@ class LoadGlobalHelper {
 
   llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
     llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_.ManageCopyOf(&type);
-    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
   }
 
  private:

@@ -20,7 +20,7 @@ namespace fidl {
 // tracking_ptr<MyObj> obj = allocator.make<MyObj>(arg1, arg2);
 // tracking_ptr<int[]> arr = allocator.make<int[]>(10);
 //
-// Allocator is intended to work with fidl::tracking_ptr, fidl::unowned_ptr and fidl::aligned
+// Allocator is intended to work with fidl::tracking_ptr, fidl::unowned_ptr_t and fidl::aligned
 // and can be used to build LLCPP objects. Example of building tables:
 // BufferAllocator<2048> allocator;
 // MyTable table = MyTable::Builder(allocator.make<MyTable::Frame)
@@ -52,7 +52,7 @@ class Allocator {
       return std::unique_ptr<T>(&ptr->value);
     } else {
 #endif
-      return fidl::unowned_ptr<fidl::aligned<T>>(ptr);
+      return fidl::unowned_ptr_t<fidl::aligned<T>>(ptr);
 #if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
     }
 #endif
@@ -73,7 +73,7 @@ class Allocator {
       return std::unique_ptr<T>(&ptr->value);
     } else {
 #endif
-      return fidl::unowned_ptr<ArraylessT>(ptr);
+      return fidl::unowned_ptr_t<ArraylessT>(ptr);
 #if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
     }
 #endif

@@ -1013,7 +1013,7 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   log_rpc(dev, "add-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::AddMetadata(
       zx::unowned_channel(rpc.get()), type,
-      ::fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
+      ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
                          length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
@@ -1039,7 +1039,7 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
   log_rpc(dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
       zx::unowned_channel(rpc.get()), ::fidl::unowned_str(path, strlen(path)), type,
-      ::fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
+      ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
                          length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
@@ -1098,7 +1098,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   for (size_t i = 0; i < comp_desc->metadata_count; i++) {
     auto meta = fuchsia::device::manager::DeviceMetadata{
         .key = comp_desc->metadata_list[i].type,
-        .data = fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(
+        .data = fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(
                                      const_cast<void*>(comp_desc->metadata_list[i].data))),
                                  comp_desc->metadata_list[i].length)};
     metadata.emplace_back(std::move(meta));

@@ -149,7 +149,7 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync complete
 
   ::llcpp::fuchsia::mem::Buffer buffer;
   zx_status_t status = vnode()->GetVmo(flags, &buffer.vmo, &buffer.size);
-  completer.Reply(status, status == ZX_OK ? fidl::unowned(&buffer) : nullptr);
+  completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&buffer) : nullptr);
 }
 
 }  // namespace internal

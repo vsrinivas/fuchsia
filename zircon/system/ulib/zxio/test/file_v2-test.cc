@@ -41,9 +41,9 @@ class TestServerBase : public fio2::File::Interface {
     if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
       auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       fio2::FileInfo file_info = file_info_builder.build();
-      auto representation = fio2::Representation::WithFile(fidl::unowned(&file_info));
+      auto representation = fio2::Representation::WithFile(fidl::unowned_ptr(&file_info));
       auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
-      info_builder.set_representation(fidl::unowned(&representation));
+      info_builder.set_representation(fidl::unowned_ptr(&representation));
       completer.Reply(info_builder.build());
       return;
     }
@@ -179,11 +179,11 @@ class TestServerEvent final : public TestServerBase {
         completer.Close(ZX_ERR_INTERNAL);
         return;
       }
-      file_info_builder.set_observer(fidl::unowned(&client_observer));
+      file_info_builder.set_observer(fidl::unowned_ptr(&client_observer));
       fio2::FileInfo file_info = file_info_builder.build();
-      auto representation = fio2::Representation::WithFile(fidl::unowned(&file_info));
+      auto representation = fio2::Representation::WithFile(fidl::unowned_ptr(&file_info));
       auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
-      info_builder.set_representation(fidl::unowned(&representation));
+      info_builder.set_representation(fidl::unowned_ptr(&representation));
       completer.Reply(info_builder.build());
       return;
     }
@@ -251,7 +251,7 @@ class TestServerChannel final : public TestServerBase {
       completer.ReplyError(status);
       return;
     }
-    completer.ReplySuccess(fidl::VectorView(fidl::unowned(buffer), actual));
+    completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(buffer), actual));
   }
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) override {
@@ -270,7 +270,7 @@ class TestServerChannel final : public TestServerBase {
       completer.ReplyError(status);
       return;
     }
-    completer.ReplySuccess(fidl::VectorView(fidl::unowned(buffer), actual));
+    completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(buffer), actual));
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) override {
@@ -348,11 +348,11 @@ class TestServerStream final : public TestServerBase {
         completer.Close(ZX_ERR_INTERNAL);
         return;
       }
-      file_info_builder.set_stream(fidl::unowned(&client_stream));
+      file_info_builder.set_stream(fidl::unowned_ptr(&client_stream));
       fio2::FileInfo file_info = file_info_builder.build();
-      auto representation = fio2::Representation::WithFile(fidl::unowned(&file_info));
+      auto representation = fio2::Representation::WithFile(fidl::unowned_ptr(&file_info));
       auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
-      info_builder.set_representation(fidl::unowned(&representation));
+      info_builder.set_representation(fidl::unowned_ptr(&representation));
       completer.Reply(info_builder.build());
       return;
     }

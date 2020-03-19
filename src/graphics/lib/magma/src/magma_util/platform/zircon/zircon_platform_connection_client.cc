@@ -121,9 +121,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
         magma_fidl_
             .ExecuteCommandBufferWithResources(
                 context_id, std::move(fidl_command_buffer), fidl::unowned_vec(fidl_resources),
-                fidl::VectorView<uint64_t>(fidl::unowned(wait_semaphores),
+                fidl::VectorView<uint64_t>(fidl::unowned_ptr(wait_semaphores),
                                            command_buffer->wait_semaphore_count),
-                fidl::VectorView<uint64_t>(fidl::unowned(signal_semaphores),
+                fidl::VectorView<uint64_t>(fidl::unowned_ptr(signal_semaphores),
                                            command_buffer->signal_semaphore_count))
             .status());
     if (result != MAGMA_STATUS_OK)

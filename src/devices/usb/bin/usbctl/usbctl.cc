@@ -161,7 +161,7 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
 
   peripheral::FunctionDescriptor func_descs[config->descs_count];
   memcpy(func_descs, config->descs, sizeof(peripheral::FunctionDescriptor) * config->descs_count);
-  fidl::VectorView<peripheral::FunctionDescriptor> function_descs(fidl::unowned(func_descs),
+  fidl::VectorView<peripheral::FunctionDescriptor> function_descs(fidl::unowned_ptr(func_descs),
                                                                   config->descs_count);
 
   auto resp = peripheral::Device::Call::SetConfiguration(

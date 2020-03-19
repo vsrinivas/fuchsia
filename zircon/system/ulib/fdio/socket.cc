@@ -20,7 +20,7 @@ zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, 
                       int16_t* out_code) {
   auto response = fsocket::BaseSocket::Call::Bind(
       std::move(channel),
-      fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
+      fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
                        addrlen));
   zx_status_t status = response.status();
   if (status != ZX_OK) {
@@ -39,7 +39,7 @@ zx_status_t base_connect(zx::unowned_channel channel, const struct sockaddr* add
                          socklen_t addrlen, int16_t* out_code) {
   auto response = fsocket::BaseSocket::Call::Connect(
       std::move(channel),
-      fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
+      fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
                        addrlen));
   zx_status_t status = response.status();
   if (status != ZX_OK) {
@@ -156,7 +156,8 @@ zx_status_t base_setsockopt(zx::unowned_channel channel, int level, int optname,
                             socklen_t optlen, int16_t* out_code) {
   auto response = fsocket::BaseSocket::Call::SetSockOpt(
       std::move(channel), static_cast<int16_t>(level), static_cast<int16_t>(optname),
-      fidl::VectorView(fidl::unowned(static_cast<uint8_t*>(const_cast<void*>(optval))), optlen));
+      fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(const_cast<void*>(optval))),
+                       optlen));
   zx_status_t status = response.status();
   if (status != ZX_OK) {
     return status;
@@ -465,15 +466,15 @@ static fdio_ops_t fdio_datagram_socket_ops = {
 
           for (int i = 0; i < msg->msg_iovlen; ++i) {
             data.push_back(fidl::VectorView(
-                fidl::unowned(reinterpret_cast<uint8_t*>(msg->msg_iov[i].iov_base)),
+                fidl::unowned_ptr(reinterpret_cast<uint8_t*>(msg->msg_iov[i].iov_base)),
                 msg->msg_iov[i].iov_len));
           }
 
           auto response = sio->client.SendMsg(
-              fidl::VectorView(fidl::unowned(static_cast<uint8_t*>(msg->msg_name)),
+              fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(msg->msg_name)),
                                msg->msg_namelen),
               fidl::unowned_vec(data),
-              fidl::VectorView(fidl::unowned(static_cast<uint8_t*>(msg->msg_control)),
+              fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(msg->msg_control)),
                                msg->msg_controllen),
               static_cast<int16_t>(flags));
           zx_status_t status = response.status();

@@ -182,7 +182,7 @@ public:
   }
 
   SimpleTable build() {
-    return SimpleTable(max_ordinal_, ::fidl::unowned_ptr<SimpleTable::Frame>(&frame_));
+    return SimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:
@@ -369,7 +369,7 @@ public:
   }
 
   ReverseOrdinalTable build() {
-    return ReverseOrdinalTable(max_ordinal_, ::fidl::unowned_ptr<ReverseOrdinalTable::Frame>(&frame_));
+    return ReverseOrdinalTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:
@@ -492,7 +492,7 @@ public:
   }
 
   OlderSimpleTable build() {
-    return OlderSimpleTable(max_ordinal_, ::fidl::unowned_ptr<OlderSimpleTable::Frame>(&frame_));
+    return OlderSimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:
@@ -682,7 +682,7 @@ public:
   }
 
   NewerSimpleTable build() {
-    return NewerSimpleTable(max_ordinal_, ::fidl::unowned_ptr<NewerSimpleTable::Frame>(&frame_));
+    return NewerSimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
 private:

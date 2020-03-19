@@ -28,7 +28,7 @@ class AstBuilder {
 
   // The undefined type.  Useful when your node isn't typed.
   llcpp::fuchsia::shell::ShellType undef() {
-    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned(&undef_));
+    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(&undef_));
   }
 
   // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for sending to
@@ -112,7 +112,7 @@ class AstBuilder {
   llcpp::fuchsia::shell::ShellType TypeUndef() {
     fidl::aligned<bool> undef = false;
     fidl::aligned<bool>* undef_ptr = ManageCopyOf(&undef);
-    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned(undef_ptr));
+    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(undef_ptr));
   }
 
   llcpp::fuchsia::shell::ShellType TypeBool() {
@@ -189,7 +189,7 @@ class AstBuilder {
 
   llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
     llcpp::fuchsia::shell::BuiltinType* type_ptr = ManageCopyOf(&type);
-    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
   }
 
   llcpp::fuchsia::shell::NodeId* ManagedNodeId(NodeId node_id) { return ManageCopyOf(&node_id); }

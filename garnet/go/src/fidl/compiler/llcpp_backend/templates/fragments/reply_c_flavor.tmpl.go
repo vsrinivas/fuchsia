@@ -54,7 +54,7 @@ void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ templ
   response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned(&response)));
+  Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
 }
 {{- end }}
 
@@ -64,7 +64,7 @@ ReplyError({{ .Result.ErrorDecl }} error)
 
 {{- define "ReplyCFlavorResultErrorMethodDefinition" }}
 void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
-  Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned(&error)));
+  Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
 }
 {{- end }}
 `

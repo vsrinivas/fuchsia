@@ -188,7 +188,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
   if (layer_change) {
     current_layers->swap(new_layers);
     if (!dc->SetDisplayLayers(display.id(),
-                              {fidl::unowned(current_layers->data()), current_layers->size()})
+                              {fidl::unowned_ptr(current_layers->data()), current_layers->size()})
              .ok()) {
       printf("Failed to set layers\n");
       return false;

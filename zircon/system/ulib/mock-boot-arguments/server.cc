@@ -76,7 +76,7 @@ void Server::GetBools(fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
   for (uint64_t i = 0; i < keys.count(); i++) {
     ret[i] = StrToBool(keys.data()[i].key, keys.data()[i].defaultval);
   }
-  completer.Reply(fidl::VectorView{fidl::unowned(ret.get()), keys.count()});
+  completer.Reply(fidl::VectorView{fidl::unowned_ptr(ret.get()), keys.count()});
 }
 
 void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync completer) {

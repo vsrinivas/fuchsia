@@ -11,7 +11,7 @@ TEST(Table, UnownedBuilderBuildTablePrimitive) {
   fidl::aligned<uint8_t> x = 3;
   fidl::aligned<uint8_t> y = 100;
   auto builder =
-      test::SampleTable::UnownedBuilder().set_x(fidl::unowned(&x)).set_y(fidl::unowned(&y));
+      test::SampleTable::UnownedBuilder().set_x(fidl::unowned_ptr(&x)).set_y(fidl::unowned_ptr(&y));
   const auto& table = builder.build();
 
   ASSERT_TRUE(table.has_x());
@@ -26,9 +26,9 @@ TEST(Table, BuilderBuildTablePrimitive) {
   fidl::aligned<uint8_t> x = 3;
   fidl::aligned<uint8_t> y = 100;
   test::SampleTable::Frame frame;
-  auto builder = test::SampleTable::Builder(fidl::unowned(&frame))
-                     .set_x(fidl::unowned(&x))
-                     .set_y(fidl::unowned(&y));
+  auto builder = test::SampleTable::Builder(fidl::unowned_ptr(&frame))
+                     .set_x(fidl::unowned_ptr(&x))
+                     .set_y(fidl::unowned_ptr(&y));
   const auto& table = builder.build();
 
   ASSERT_TRUE(table.has_x());
@@ -46,7 +46,7 @@ TEST(Table, UnownedBuilderBuildTableVectorOfStruct) {
   };
   fidl::VectorView<test::CopyableStruct> vector_view = fidl::unowned_vec(structs);
   auto builder =
-      test::SampleTable::UnownedBuilder().set_vector_of_struct(fidl::unowned(&vector_view));
+      test::SampleTable::UnownedBuilder().set_vector_of_struct(fidl::unowned_ptr(&vector_view));
   const auto& table = builder.build();
 
   ASSERT_FALSE(table.has_x());
@@ -65,8 +65,8 @@ TEST(Table, BuilderBuildTableVectorOfStruct) {
   };
   fidl::VectorView<test::CopyableStruct> vector_view = fidl::unowned_vec(structs);
   test::SampleTable::Frame frame;
-  auto builder = test::SampleTable::Builder(fidl::unowned(&frame))
-                     .set_vector_of_struct(fidl::unowned(&vector_view));
+  auto builder = test::SampleTable::Builder(fidl::unowned_ptr(&frame))
+                     .set_vector_of_struct(fidl::unowned_ptr(&vector_view));
   const auto& table = builder.build();
 
   ASSERT_FALSE(table.has_x());
@@ -87,7 +87,7 @@ TEST(Table, UnownedBuilderBuildEmptyTable) {
 TEST(Table, BuilderBuildEmptyTable) {
   namespace test = llcpp::fidl::llcpp::types::test;
   fidl::aligned<test::SampleEmptyTable::Frame> frame;
-  auto builder = test::SampleEmptyTable::Builder(fidl::unowned(&frame));
+  auto builder = test::SampleEmptyTable::Builder(fidl::unowned_ptr(&frame));
   const auto& table = builder.build();
   ASSERT_TRUE(table.IsEmpty());
 }

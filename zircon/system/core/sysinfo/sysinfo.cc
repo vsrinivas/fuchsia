@@ -47,7 +47,7 @@ void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) 
 void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
   llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
-  return completer.Reply(status, fidl::unowned(&info));
+  return completer.Reply(status, fidl::unowned_ptr(&info));
 }
 
 // TODO(43777): Separate out GetHypervisorResource from sysinfo

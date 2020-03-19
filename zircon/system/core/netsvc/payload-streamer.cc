@@ -30,12 +30,12 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   ReadResult result;
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(result));
     return;
   }
   if (eof_reached_) {
-    result.set_eof(fidl::unowned(&eof_reached_));
+    result.set_eof(fidl::unowned_ptr(&eof_reached_));
     completer.Reply(std::move(result));
     return;
   }
@@ -43,17 +43,17 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   size_t actual;
   auto status = read_(mapper_.start(), read_offset_, mapper_.size(), &actual);
   if (status != ZX_OK) {
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(result));
   } else if (actual == 0) {
     eof_reached_ = true;
-    result.set_eof(fidl::unowned(&eof_reached_));
+    result.set_eof(fidl::unowned_ptr(&eof_reached_));
     completer.Reply(std::move(result));
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
     ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = actual};
-    result.set_info(fidl::unowned(&info));
+    result.set_info(fidl::unowned_ptr(&info));
     read_offset_ += actual;
     completer.Reply(std::move(result));
   }

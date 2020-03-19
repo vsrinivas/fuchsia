@@ -77,7 +77,7 @@ class TestServer final : public fio::Directory::Interface {
       size_t entry_size = sizeof(dirent) + name_length;
 
       if (actual + entry_size > max_bytes) {
-        return completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned(buffer_start), actual));
+        return completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
       }
 
       auto name = new char[name_length + 1];
@@ -94,7 +94,7 @@ class TestServer final : public fio::Directory::Interface {
 
       actual += entry_size;
     }
-    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned(buffer_start), actual));
+    completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
   }
 
   void Rewind(RewindCompleter::Sync completer) override {

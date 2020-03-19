@@ -243,15 +243,15 @@ bool linearize_vector_of_string() {
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buf_size]);
 
   fidl::StringView strings[3] = {};
-  strings[0].set_data(fidl::unowned_ptr<const char>(str1));
+  strings[0].set_data(fidl::unowned_ptr_t<const char>(str1));
   strings[0].set_size(sizeof(str1));
-  strings[1].set_data(fidl::unowned_ptr<const char>(str2));
+  strings[1].set_data(fidl::unowned_ptr_t<const char>(str2));
   strings[1].set_size(sizeof(str2));
-  strings[2].set_data(fidl::unowned_ptr<const char>(str3));
+  strings[2].set_data(fidl::unowned_ptr_t<const char>(str3));
   strings[2].set_size(sizeof(str3));
 
   VectorOfStringRequest message;
-  message.vector.set_data(fidl::unowned(strings));
+  message.vector.set_data(fidl::unowned_ptr(strings));
   message.vector.set_count(3);
 
   const char* error = nullptr;
@@ -335,7 +335,7 @@ bool linearize_struct_with_many_handles() {
 
   fidl::VectorView<zx_handle_t> hs;
   hs.set_count(2);
-  hs.set_data(fidl::unowned(&dummy_handles[2]));
+  hs.set_data(fidl::unowned_ptr(&dummy_handles[2]));
 
   constexpr uint32_t buf_size = 512;
   StructWithManyHandles message = {
@@ -374,7 +374,7 @@ bool linearize_simple_table() {
   SimpleTableEnvelopes envelopes = {};
   SimpleTable simple_table;
   simple_table.set_count(5);
-  simple_table.set_data(fidl::unowned(&envelopes.x));
+  simple_table.set_data(fidl::unowned_ptr(&envelopes.x));
 
   IntStruct x = {10};
   IntStruct y = {20};
@@ -469,7 +469,7 @@ bool linearize_table_field_1() {
   TableOfStructEnvelopes envelopes = {};
   TableOfStruct table;
   table.set_count(1);
-  table.set_data(fidl::unowned(&envelopes.a));
+  table.set_data(fidl::unowned_ptr(&envelopes.a));
 
   constexpr zx_handle_t dummy_handle = static_cast<zx_handle_t>(42);
   OrdinalOneStructWithHandle ordinal1 = {.h = dummy_handle, .foo = 0};
@@ -504,7 +504,7 @@ bool linearize_table_field_2() {
   TableOfStructEnvelopes envelopes = {};
   TableOfStruct table;
   table.set_count(2);
-  table.set_data(fidl::unowned(&envelopes.a));
+  table.set_data(fidl::unowned_ptr(&envelopes.a));
 
   zx_handle_t dummy_handles[4] = {};
   auto handle_value_at = [](int i) -> zx_handle_t { return static_cast<zx_handle_t>(100 + i); };
@@ -513,7 +513,7 @@ bool linearize_table_field_2() {
   }
   fidl::VectorView<zx_handle_t> hs;
   hs.set_count(2);
-  hs.set_data(fidl::unowned(&dummy_handles[2]));
+  hs.set_data(fidl::unowned_ptr(&dummy_handles[2]));
 
   OrdinalTwoStructWithManyHandles ordinal2 = {
       .h1 = dummy_handles[0],
@@ -650,7 +650,7 @@ bool linearize_union_tracking_ptr_unowned() {
 
   int32_t int_val = 2;
   LLCPPStyleUnionStruct str;
-  str.u.set_Primitive(fidl::unowned(&int_val));
+  str.u.set_Primitive(fidl::unowned_ptr(&int_val));
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
@@ -704,7 +704,7 @@ bool linearize_vector_view_tracking_ptr_unowned() {
     arr[i] = i;
 
   Uint32VectorStruct str;
-  str.vec.set_data(fidl::unowned(arr));
+  str.vec.set_data(fidl::unowned_ptr(arr));
   str.vec.set_count(kSize);
 
   constexpr uint32_t kBufSize = 512;

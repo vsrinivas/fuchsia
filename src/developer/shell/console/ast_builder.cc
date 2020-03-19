@@ -67,18 +67,18 @@ NodeId AstBuilder::AddVariableDeclaration(const std::string& identifier,
                                           bool is_const, bool is_root) {
   auto def = ManageNew<llcpp::fuchsia::shell::VariableDefinition>();
   char* name_buf = ManageCopyOf(identifier.c_str(), identifier.size());
-  def->name.set_data(fidl::unowned(name_buf));
+  def->name.set_data(fidl::unowned_ptr(name_buf));
   def->name.set_size(identifier.size());
   def->type = std::move(type);
   def->mutable_value = !is_const;
   def->initial_value = node_id;
-  auto node = llcpp::fuchsia::shell::Node::WithVariableDefinition(fidl::unowned(def));
+  auto node = llcpp::fuchsia::shell::Node::WithVariableDefinition(fidl::unowned_ptr(def));
   return AddNode(std::move(node), is_root);
 }
 
 NodeId AstBuilder::AddVariableFromDef(NodeId node_id) {
   auto managed_node = ManagedNodeId(node_id);
-  auto node = llcpp::fuchsia::shell::Node::WithVariable(fidl::unowned(managed_node));
+  auto node = llcpp::fuchsia::shell::Node::WithVariable(fidl::unowned_ptr(managed_node));
   return AddNode(std::move(node));
 }
 
@@ -87,9 +87,9 @@ NodeId AstBuilder::AddIntegerLiteral(uint64_t i, bool is_negative) {
 
   uint64_t* managed_val = ManageCopyOf(&i);
 
-  literal->absolute_value = ::fidl::VectorView(fidl::unowned(managed_val), 1);
+  literal->absolute_value = ::fidl::VectorView(fidl::unowned_ptr(managed_val), 1);
   literal->negative = is_negative;
-  auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(fidl::unowned(literal));
+  auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(fidl::unowned_ptr(literal));
   return AddNode(std::move(node));
 }
 
@@ -104,9 +104,9 @@ NodeId AstBuilder::AddIntegerLiteral(int64_t i) {
   }
   uint64_t* managed_val = ManageCopyOf(&val);
 
-  literal->absolute_value = ::fidl::VectorView(fidl::unowned(managed_val), 1);
+  literal->absolute_value = ::fidl::VectorView(fidl::unowned_ptr(managed_val), 1);
   literal->negative = (i < 0);
-  auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(fidl::unowned(literal));
+  auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(fidl::unowned_ptr(literal));
   return AddNode(std::move(node));
 }
 
@@ -114,9 +114,9 @@ NodeId AstBuilder::AddStringLiteral(const std::string& s) {
   auto literal = ManageNew<fidl::StringView>();
 
   char* managed_val = ManageCopyOf(s.data(), s.size());
-  literal->set_data(fidl::unowned(managed_val));
+  literal->set_data(fidl::unowned_ptr(managed_val));
   literal->set_size(s.size());
-  auto node = llcpp::fuchsia::shell::Node::WithStringLiteral(fidl::unowned(literal));
+  auto node = llcpp::fuchsia::shell::Node::WithStringLiteral(fidl::unowned_ptr(literal));
   return AddNode(std::move(node));
 }
 
@@ -126,7 +126,7 @@ NodeId AstBuilder::AddAddition(bool with_exceptions, NodeId left_id, NodeId righ
   addition->right = std::move(right_id);
   addition->with_exceptions = with_exceptions;
 
-  auto node = llcpp::fuchsia::shell::Node::WithAddition(fidl::unowned(addition));
+  auto node = llcpp::fuchsia::shell::Node::WithAddition(fidl::unowned_ptr(addition));
 
   return AddNode(std::move(node), /*root_node=*/false);
 }
@@ -146,14 +146,15 @@ AstBuilder::NodePair AstBuilder::CloseObject() {
     value_mem[i] = std::move(fields[i].value_id);
   }
 
-  object_schema->fields =
-      ::fidl::VectorView<llcpp::fuchsia::shell::NodeId>(fidl::unowned(schema_mem), fields.size());
-  auto schema_node = llcpp::fuchsia::shell::Node::WithObjectSchema(fidl::unowned(object_schema));
+  object_schema->fields = ::fidl::VectorView<llcpp::fuchsia::shell::NodeId>(
+      fidl::unowned_ptr(schema_mem), fields.size());
+  auto schema_node =
+      llcpp::fuchsia::shell::Node::WithObjectSchema(fidl::unowned_ptr(object_schema));
   NodeId schema_node_id = AddNode(std::move(schema_node), true);
 
-  object->fields =
-      ::fidl::VectorView<llcpp::fuchsia::shell::NodeId>(fidl::unowned(value_mem), fields.size());
-  auto value_node = llcpp::fuchsia::shell::Node::WithObject(fidl::unowned(object));
+  object->fields = ::fidl::VectorView<llcpp::fuchsia::shell::NodeId>(fidl::unowned_ptr(value_mem),
+                                                                     fields.size());
+  auto value_node = llcpp::fuchsia::shell::Node::WithObject(fidl::unowned_ptr(object));
   NodeId value_node_id = AddNode(std::move(value_node));
 
   object->object_schema = schema_node_id;
@@ -172,10 +173,10 @@ AstBuilder::NodePair AstBuilder::AddField(const std::string& key, NodeId express
   // Create the type.
   auto field_schema = ManageNew<llcpp::fuchsia::shell::ObjectFieldSchemaDefinition>();
   char* name_buf = ManageCopyOf(key.c_str(), key.size());
-  field_schema->name.set_data(fidl::unowned(name_buf));
+  field_schema->name.set_data(fidl::unowned_ptr(name_buf));
   field_schema->name.set_size(key.size());
   field_schema->type = std::move(type);
-  auto node = llcpp::fuchsia::shell::Node::WithFieldSchema(fidl::unowned(field_schema));
+  auto node = llcpp::fuchsia::shell::Node::WithFieldSchema(fidl::unowned_ptr(field_schema));
   llcpp::fuchsia::shell::NodeId type_id;
   result.schema_node = type_id = AddNode(std::move(node));
 
@@ -185,7 +186,7 @@ AstBuilder::NodePair AstBuilder::AddField(const std::string& key, NodeId express
   field->object_field_schema.node_id = type_id.node_id;
   field->value = expression_node_id;
   llcpp::fuchsia::shell::NodeId value_id;
-  auto value_node = llcpp::fuchsia::shell::Node::WithObjectField(fidl::unowned(field));
+  auto value_node = llcpp::fuchsia::shell::Node::WithObjectField(fidl::unowned_ptr(field));
   result.value_node = value_id = AddNode(std::move(value_node));
 
   std::vector<FidlNodeIdPair>& fields = object_stack_.back();

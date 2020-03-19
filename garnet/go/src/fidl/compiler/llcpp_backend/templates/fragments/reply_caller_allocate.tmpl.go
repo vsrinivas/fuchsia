@@ -49,7 +49,7 @@ void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ templ
   response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned(&response)));
+  Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
 }
 {{- end }}
 `

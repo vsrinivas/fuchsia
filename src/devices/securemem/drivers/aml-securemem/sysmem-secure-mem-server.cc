@@ -122,11 +122,11 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
   zx_status_t status = SetPhysicalSecureHeapsInternal(heaps);
   if (status != ZX_OK) {
     LOG(ERROR, "SetPhysicalSecureHeapsInternal() failed - status: %d", status);
-    result.set_err(fidl::unowned(&status));
+    result.set_err(fidl::unowned_ptr(&status));
     return;
   }
   fidl::aligned<llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response> response;
-  result.set_response(fidl::unowned(&response));
+  result.set_response(fidl::unowned_ptr(&response));
 }
 
 void SysmemSecureMemServer::PostToLoop(fit::closure to_run) {

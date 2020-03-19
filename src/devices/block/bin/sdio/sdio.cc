@@ -264,7 +264,7 @@ int ReadStress(SdioClient client, uint32_t address, int argc, const char** argv)
     if (use_dma) {
       txn.dma_vmo = std::move(dma_vmo);
     } else {
-      txn.virt = fidl::VectorView(fidl::unowned(buffer.get()), size);
+      txn.virt = fidl::VectorView(fidl::unowned_ptr(buffer.get()), size);
     }
 
     auto result = client.DoRwTxn(std::move(txn));

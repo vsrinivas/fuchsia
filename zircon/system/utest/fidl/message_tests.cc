@@ -31,7 +31,7 @@ bool message_test() {
   fidl::StringView* view = builder.New<fidl::StringView>();
 
   char* data = builder.NewArray<char>(4);
-  view->set_data(fidl::unowned(data));
+  view->set_data(fidl::unowned_ptr(data));
   view->set_size(4);
 
   data[0] = 'a';

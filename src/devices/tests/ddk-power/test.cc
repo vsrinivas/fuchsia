@@ -64,8 +64,8 @@ class PowerTestCase : public zxtest::Test {
   void AddChildWithPowerArgs(DevicePowerStateInfo *states, uint8_t sleep_state_count,
                              DevicePerformanceStateInfo *perf_states, uint8_t perf_state_count,
                              bool add_invisible = false) {
-    auto power_states = ::fidl::VectorView(fidl::unowned(states), sleep_state_count);
-    auto perf_power_states = ::fidl::VectorView(fidl::unowned(perf_states), perf_state_count);
+    auto power_states = ::fidl::VectorView(fidl::unowned_ptr(states), sleep_state_count);
+    auto perf_power_states = ::fidl::VectorView(fidl::unowned_ptr(perf_states), perf_state_count);
     auto response = TestDevice::Call::AddDeviceWithPowerArgs(
         zx::unowned(child_device_handle), std::move(power_states), std::move(perf_power_states),
         add_invisible);
