@@ -5,7 +5,8 @@
 #![allow(dead_code)]
 
 use {
-    fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_device_service, fuchsia_zircon,
+    fidl_fuchsia_wlan_device::{self as fidl_device, MacRole},
+    fidl_fuchsia_wlan_device_service as fidl_service, fuchsia_zircon,
     log::{info, warn},
     std::collections::{HashMap, HashSet},
     thiserror::Error,
@@ -20,11 +21,15 @@ enum PhyManagerError {
     PhyQueryFailure,
     #[error("unable to query iface information")]
     IfaceQueryFailure,
+    #[error("unable to create iface")]
+    IfaceCreateFailure,
+    #[error("unable to destroy iface")]
+    IfaceDestroyFailure,
 }
 
 /// Stores information about a WLAN PHY and any interfaces that belong to it.
 struct PhyContainer {
-    phy_info: fidl_fuchsia_wlan_device::PhyInfo,
+    phy_info: fidl_device::PhyInfo,
     client_ifaces: HashSet<u16>,
     ap_ifaces: HashSet<u16>,
 }
@@ -32,13 +37,14 @@ struct PhyContainer {
 /// Maintains a record of all PHYs that are present and their associated interfaces.
 struct PhyManager {
     phys: HashMap<u16, PhyContainer>,
-    device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    device_service: fidl_service::DeviceServiceProxy,
+    client_connections_enabled: bool,
 }
 
 impl PhyContainer {
     /// Stores the PhyInfo associated with a newly discovered PHY and creates empty vectors to hold
     /// interface IDs that belong to this PHY.
-    pub fn new(phy_info: fidl_fuchsia_wlan_device::PhyInfo) -> Self {
+    pub fn new(phy_info: fidl_device::PhyInfo) -> Self {
         PhyContainer {
             phy_info: phy_info,
             client_ifaces: HashSet::new(),
@@ -50,8 +56,8 @@ impl PhyContainer {
 impl PhyManager {
     /// Internally stores a DeviceServiceProxy to query PHY and interface properties and create and
     /// destroy interfaces as requested.
-    pub fn new(device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy) -> Self {
-        PhyManager { phys: HashMap::new(), device_service: device_service }
+    pub fn new(device_service: fidl_service::DeviceServiceProxy) -> Self {
+        PhyManager { phys: HashMap::new(), device_service, client_connections_enabled: false }
     }
 
     /// Checks to see if this PHY is already accounted for.  If it is not, queries its PHY
@@ -59,7 +65,7 @@ impl PhyManager {
     pub async fn add_phy(&mut self, phy_id: u16) -> Result<(), PhyManagerError> {
         let query_phy_response = match self
             .device_service
-            .query_phy(&mut fidl_fuchsia_wlan_device_service::QueryPhyRequest { phy_id: phy_id })
+            .query_phy(&mut fidl_service::QueryPhyRequest { phy_id: phy_id })
             .await
         {
             Ok((status, query_phy_response)) => {
@@ -75,8 +81,19 @@ impl PhyManager {
 
         if let Some(response) = query_phy_response {
             info!("adding PHY ID #{}", phy_id);
-            self.phys.insert(response.info.id, PhyContainer::new(response.info));
+            let phy_id = response.info.id;
+            let mut phy_container = PhyContainer::new(response.info);
+
+            if self.client_connections_enabled
+                && phy_container.phy_info.mac_roles.contains(&MacRole::Client)
+            {
+                let iface_id = create_iface(&self.device_service, phy_id, MacRole::Client).await?;
+                phy_container.client_ifaces.insert(iface_id);
+            }
+
+            self.phys.insert(phy_id, phy_container);
         }
+
         Ok(())
     }
 
@@ -100,7 +117,7 @@ impl PhyManager {
     async fn query_iface(
         &self,
         iface_id: u16,
-    ) -> Result<Option<fidl_fuchsia_wlan_device_service::QueryIfaceResponse>, PhyManagerError> {
+    ) -> Result<Option<fidl_service::QueryIfaceResponse>, PhyManagerError> {
         match self.device_service.query_iface(iface_id).await {
             Ok((status, response)) => match status {
                 fuchsia_zircon::sys::ZX_OK => match response {
@@ -128,19 +145,19 @@ impl PhyManager {
 
             // TODO(47383): PhyManager will add interfaces and instigate most of these events.
             match query_iface_response.role {
-                fidl_fuchsia_wlan_device::MacRole::Client => {
+                MacRole::Client => {
                     if !phy.client_ifaces.contains(&iface_id) {
                         warn!("Detected an unexpected client iface created outside of PhyManager");
                         let _ = phy.client_ifaces.insert(iface_id);
                     }
                 }
-                fidl_fuchsia_wlan_device::MacRole::Ap => {
+                MacRole::Ap => {
                     if !phy.ap_ifaces.contains(&iface_id) {
                         warn!("Detected an unexpected AP iface created outside of PhyManager");
                         let _ = phy.ap_ifaces.insert(iface_id);
                     }
                 }
-                fidl_fuchsia_wlan_device::MacRole::Mesh => {
+                MacRole::Mesh => {
                     return Err(PhyManagerError::Unsupported);
                 }
             }
@@ -155,6 +172,95 @@ impl PhyManager {
             phy_info.ap_ifaces.remove(&iface_id);
         }
     }
+
+    /// Returns a list of PHY IDs that can have interfaces of the requested MAC role.
+    fn phys_for_role(&self, role: MacRole) -> Vec<u16> {
+        self.phys
+            .iter()
+            .filter_map(|(k, v)| if v.phy_info.mac_roles.contains(&role) { Some(*k) } else { None })
+            .collect()
+    }
+
+    /// Creates client interfaces for all PHYs that are capable of acting as clients.  For newly
+    /// discovered PHYs, create client interfaces if the PHY can support them.
+    pub async fn start_client_connections(&mut self) -> Result<(), PhyManagerError> {
+        self.client_connections_enabled = true;
+
+        let client_capable_phy_ids = self.phys_for_role(MacRole::Client);
+
+        for client_phy in client_capable_phy_ids.iter() {
+            let phy_container =
+                self.phys.get_mut(&client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
+            if phy_container.client_ifaces.is_empty() {
+                let iface_id =
+                    create_iface(&self.device_service, *client_phy, MacRole::Client).await?;
+                phy_container.client_ifaces.insert(iface_id);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Destroys all client interfaces.  Do not allow the creation of client interfaces for newly
+    /// discovered PHYs.
+    pub async fn stop_client_connections(&mut self) -> Result<(), PhyManagerError> {
+        self.client_connections_enabled = false;
+
+        let client_capable_phys = self.phys_for_role(MacRole::Client);
+
+        for client_phy in client_capable_phys.iter() {
+            let phy_container =
+                self.phys.get_mut(&client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
+            for iface_id in phy_container.client_ifaces.drain() {
+                let mut request = fidl_service::DestroyIfaceRequest { iface_id: iface_id };
+                match self.device_service.destroy_iface(&mut request).await {
+                    Ok(status) => {
+                        if fuchsia_zircon::ok(status).is_err() {
+                            return Err(PhyManagerError::IfaceDestroyFailure);
+                        }
+                    }
+                    Err(_) => return Err(PhyManagerError::IfaceDestroyFailure),
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Finds a PHY with a client interface and returns the interface's ID to the caller.
+    pub fn get_client(&mut self) -> Option<u16> {
+        let client_capable_phys = self.phys_for_role(MacRole::Client);
+        if client_capable_phys.is_empty() {
+            return None;
+        }
+
+        // Find the first PHY with any client interfaces and return its first client interface.
+        let phy = self.phys.get_mut(&client_capable_phys[0])?;
+        match phy.client_ifaces.iter().next() {
+            Some(iface_id) => Some(*iface_id),
+            None => None,
+        }
+    }
+}
+
+/// Creates an interface of the requested role for the requested PHY ID.  Returns either the
+/// ID of the created interface or an error.
+async fn create_iface(
+    proxy: &fidl_service::DeviceServiceProxy,
+    phy_id: u16,
+    role: MacRole,
+) -> Result<u16, PhyManagerError> {
+    let mut request = fidl_service::CreateIfaceRequest { phy_id, role };
+    let create_iface_response = match proxy.create_iface(&mut request).await {
+        Ok((status, iface_response)) => {
+            if fuchsia_zircon::ok(status).is_err() || iface_response.is_none() {
+                return Err(PhyManagerError::IfaceCreateFailure);
+            }
+            iface_response.ok_or_else(|| PhyManagerError::IfaceCreateFailure)?
+        }
+        Err(_) => return Err(PhyManagerError::IfaceCreateFailure),
+    };
+    Ok(create_iface_response.iface_id)
 }
 
 #[cfg(test)]
@@ -162,8 +268,8 @@ mod tests {
     use {
         super::*,
         fidl::endpoints,
-        fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_device_service,
-        fuchsia_async::Executor,
+        fidl_fuchsia_wlan_device as fidl_device, fidl_fuchsia_wlan_device_service as fidl_service,
+        fuchsia_async::{run_singlethreaded, Executor},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
         futures::stream::StreamExt,
         futures::task::Poll,
@@ -174,15 +280,14 @@ mod tests {
     /// Hold the client and service ends for DeviceService to allow mocking DeviceService responses
     /// for unit tests.
     struct TestValues {
-        proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-        stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        proxy: fidl_service::DeviceServiceProxy,
+        stream: fidl_service::DeviceServiceRequestStream,
     }
 
     /// Create a TestValues for a unit test.
     fn test_setup() -> TestValues {
-        let (proxy, requests) =
-            endpoints::create_proxy::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
-                .expect("failed to create SeviceService proxy");
+        let (proxy, requests) = endpoints::create_proxy::<fidl_service::DeviceServiceMarker>()
+            .expect("failed to create SeviceService proxy");
         let stream = requests.into_stream().expect("failed to create stream");
 
         TestValues { proxy: proxy, stream: stream }
@@ -192,20 +297,20 @@ mod tests {
     /// PhyInfo.
     fn send_query_phy_response(
         exec: &mut Executor,
-        server: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
-        phy_info: Option<fidl_fuchsia_wlan_device::PhyInfo>,
+        server: &mut fidl_service::DeviceServiceRequestStream,
+        phy_info: Option<fidl_device::PhyInfo>,
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut server.next()),
             Poll::Ready(Some(Ok(
-                fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryPhy {
+                fidl_service::DeviceServiceRequest::QueryPhy {
                     responder, ..
                 }
             ))) => {
                 match phy_info {
                     Some(phy_info) => responder.send(
                         ZX_OK,
-                        Some(&mut fidl_fuchsia_wlan_device_service::QueryPhyResponse {
+                        Some(&mut fidl_service::QueryPhyResponse {
                             info: phy_info,
                         })
                     )
@@ -219,13 +324,13 @@ mod tests {
     /// Create a PhyInfo object for unit testing.
     fn send_query_iface_response(
         exec: &mut Executor,
-        server: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
-        iface_info: Option<&mut fidl_fuchsia_wlan_device_service::QueryIfaceResponse>,
+        server: &mut fidl_service::DeviceServiceRequestStream,
+        iface_info: Option<&mut fidl_service::QueryIfaceResponse>,
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut server.next()),
             Poll::Ready(Some(Ok(
-                fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                fidl_service::DeviceServiceRequest::QueryIface {
                     iface_id: _,
                     responder,
                 }
@@ -235,14 +340,65 @@ mod tests {
         );
     }
 
+    /// Handles the service side of a DeviceService::CreateIface request by replying with the
+    /// provided optional iface ID.
+    fn send_create_iface_response(
+        exec: &mut Executor,
+        server: &mut fidl_service::DeviceServiceRequestStream,
+        iface_id: Option<u16>,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut server.next()),
+            Poll::Ready(Some(Ok(
+                fidl_service::DeviceServiceRequest::CreateIface {
+                    req: _,
+                    responder,
+                }
+            ))) => {
+                match iface_id {
+                    Some(iface_id) => responder.send(
+                        ZX_OK,
+                        Some(&mut fidl_service::CreateIfaceResponse {
+                            iface_id: iface_id,
+                        })
+                    )
+                    .expect("sending fake iface id"),
+                    None => responder.send(ZX_ERR_NOT_FOUND, None).expect("sending fake response with none")
+                }
+            }
+        );
+    }
+
+    /// Handles the service side of a DeviceService::DestroyIface request by replying with the
+    /// provided zx_status_t.
+    fn send_destroy_iface_response(
+        exec: &mut Executor,
+        server: &mut fidl_service::DeviceServiceRequestStream,
+        return_status: fuchsia_zircon::zx_status_t,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut server.next()),
+            Poll::Ready(Some(Ok(
+                fidl_service::DeviceServiceRequest::DestroyIface {
+                    req: _,
+                    responder,
+                }
+            ))) => {
+                responder
+                    .send(return_status)
+                    .expect(format!("sending fake response: {}", return_status).as_str());
+            }
+        );
+    }
+
     /// Create a PhyInfo object for unit testing.
     fn create_phy_info(
         id: u16,
         dev_path: Option<String>,
         mac: [u8; 6],
-        mac_roles: Vec<fidl_fuchsia_wlan_device::MacRole>,
-    ) -> fidl_fuchsia_wlan_device::PhyInfo {
-        fidl_fuchsia_wlan_device::PhyInfo {
+        mac_roles: Vec<MacRole>,
+    ) -> fidl_device::PhyInfo {
+        fidl_device::PhyInfo {
             id: id,
             dev_path: dev_path,
             hw_mac_address: mac,
@@ -254,14 +410,15 @@ mod tests {
         }
     }
 
+    /// Creates a QueryIfaceResponse from the arguments provided by the caller.
     fn create_iface_response(
-        role: fidl_fuchsia_wlan_device::MacRole,
+        role: MacRole,
         id: u16,
         phy_id: u16,
         phy_assigned_id: u16,
         mac: [u8; 6],
-    ) -> fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-        fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+    ) -> fidl_service::QueryIfaceResponse {
+        fidl_service::QueryIfaceResponse {
             role: role,
             id: id,
             phy_id: phy_id,
@@ -402,8 +559,52 @@ mod tests {
     /// calling remove_phy on PhyManager for a PHY that not longer exists.  The PhyManager in this
     /// case should remove the PhyContainer associated with the removed PHY ID.
     #[test]
-    fn remove_valid_phy() {
-        let _exec = Executor::new().expect("failed to create an executor");
+    fn add_phy_after_start_client_connections() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_device_path = Some("/test/path".to_string());
+        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_mac_roles = vec![MacRole::Client];
+        let phy_info = create_phy_info(
+            fake_phy_id,
+            fake_device_path.clone(),
+            fake_mac_addr,
+            fake_mac_roles.clone(),
+        );
+
+        {
+            let start_connections_fut = phy_manager.start_client_connections();
+            pin_mut!(start_connections_fut);
+            assert!(exec.run_until_stalled(&mut start_connections_fut).is_ready());
+        }
+
+        // Add a new phy.  Since client connections have been started, it should also create a
+        // client iface.
+        {
+            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            send_query_phy_response(&mut exec, &mut test_values.stream, Some(phy_info));
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            send_create_iface_response(&mut exec, &mut test_values.stream, Some(fake_iface_id));
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
+
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+        let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
+        assert!(phy_container.client_ifaces.contains(&fake_iface_id));
+    }
+
+    #[run_singlethreaded(test)]
+    async fn remove_valid_phy() {
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy);
 
@@ -424,9 +625,8 @@ mod tests {
     /// calling remove_phy on PhyManager for a PHY ID that is not accounted for by the PhyManager.
     /// The PhyManager should realize that it is unaware of this PHY ID and leave its PhyContainers
     /// unchanged.
-    #[test]
-    fn remove_nonexistent_phy() {
-        let _exec = Executor::new().expect("failed to create an executor");
+    #[run_singlethreaded(test)]
+    async fn remove_nonexistent_phy() {
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy);
 
@@ -464,7 +664,7 @@ mod tests {
         let phy_container = PhyContainer::new(phy_info);
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
-        let fake_role = fidl_fuchsia_wlan_device::MacRole::Client;
+        let fake_role = MacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let mut iface_response = create_iface_response(
@@ -520,7 +720,7 @@ mod tests {
             create_phy_info(fake_phy_id, fake_device_path, fake_mac_addr, fake_mac_roles);
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
-        let fake_role = fidl_fuchsia_wlan_device::MacRole::Client;
+        let fake_role = MacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let mut iface_response = create_iface_response(
@@ -588,7 +788,7 @@ mod tests {
         phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
-        let fake_role = fidl_fuchsia_wlan_device::MacRole::Client;
+        let fake_role = MacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let mut iface_response = create_iface_response(
@@ -652,9 +852,8 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnIfaceRemoved event
     /// for an iface that has been accounted for by the PhyManager.  The PhyManager should remove
     /// the iface ID from the PHY's list of client ifaces.
-    #[test]
-    fn test_on_iface_removed() {
-        let mut _exec = Executor::new().expect("failed to create an executor");
+    #[run_singlethreaded(test)]
+    async fn test_on_iface_removed() {
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy);
 
@@ -684,9 +883,8 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnIfaceRemoved event
     /// for an iface that has not been accounted for.  The PhyManager should simply ignore the
     /// request and leave its list of client iface IDs unchanged.
-    #[test]
-    fn remove_missing_iface() {
-        let mut _exec = Executor::new().expect("failed to create an executor");
+    #[run_singlethreaded(test)]
+    async fn remove_missing_iface() {
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy);
 
@@ -713,5 +911,184 @@ mod tests {
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert_eq!(phy_container.client_ifaces.len(), 1);
         assert!(phy_container.client_ifaces.contains(&present_iface_id));
+    }
+
+    /// Tests the response of the PhyManager when a client iface is requested, but no PHYs are
+    /// present.  The expectation is that the PhyManager returns None.
+    #[run_singlethreaded(test)]
+    async fn get_client_no_phys() {
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        let client = phy_manager.get_client();
+        assert!(client.is_none());
+    }
+
+    /// Tests the response of the PhyManager when a client iface is requested, a client-capable PHY
+    /// has been discovered, but client connections have not been started.  The expectation is that
+    /// the PhyManager returns None.
+    #[run_singlethreaded(test)]
+    async fn get_unconfigured_client() {
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_phy_id = 1;
+        let fake_device_path = Some("/test/path".to_string());
+        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_mac_roles = vec![MacRole::Client];
+        let phy_info =
+            create_phy_info(fake_phy_id, fake_device_path, fake_mac_addr, fake_mac_roles);
+        let phy_container = PhyContainer::new(phy_info);
+
+        phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Retrieve the client ID
+        let client = phy_manager.get_client();
+        assert!(client.is_none());
+    }
+
+    /// Tests the response of the PhyManager when a client iface is requested and a client iface is
+    /// present.  The expectation is that the PhyManager should reply with the iface ID of the
+    /// client iface.
+    #[run_singlethreaded(test)]
+    async fn get_configured_client() {
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_phy_id = 1;
+        let fake_device_path = Some("/test/path".to_string());
+        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_mac_roles = vec![MacRole::Client];
+        let phy_info =
+            create_phy_info(fake_phy_id, fake_device_path, fake_mac_addr, fake_mac_roles);
+        let phy_container = PhyContainer::new(phy_info);
+
+        phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Insert the fake iface
+        let fake_iface_id = 1;
+        let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+        phy_container.client_ifaces.insert(fake_iface_id);
+
+        // Retrieve the client ID
+        let client = phy_manager.get_client();
+        assert_eq!(client.unwrap(), fake_iface_id)
+    }
+
+    /// Tests the response of the PhyManager when a client iface is requested and the only PHY
+    /// that is present does not support client ifaces and has an AP iface present.  The
+    /// expectation is that the PhyManager returns None.
+    #[run_singlethreaded(test)]
+    async fn get_client_no_compatible_phys() {
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_device_path = Some("/test/path".to_string());
+        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_mac_roles = vec![MacRole::Ap];
+        let phy_info =
+            create_phy_info(fake_phy_id, fake_device_path, fake_mac_addr, fake_mac_roles);
+        let mut phy_container = PhyContainer::new(phy_info);
+        phy_container.ap_ifaces.insert(fake_iface_id);
+
+        phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Retrieve the client ID
+        let client = phy_manager.get_client();
+        assert!(client.is_none());
+    }
+
+    /// Tests the PhyManager's response to stop_client_connection when there is an existing client
+    /// iface.  The expectation is that the client iface is destroyed and there is no remaining
+    /// record of the iface ID in the PhyManager.
+    #[test]
+    fn stop_client_connections() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_device_path = Some("/test/path".to_string());
+        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_mac_roles = vec![MacRole::Client];
+        let phy_info =
+            create_phy_info(fake_phy_id, fake_device_path, fake_mac_addr, fake_mac_roles);
+        let phy_container = PhyContainer::new(phy_info);
+
+        {
+            phy_manager.phys.insert(fake_phy_id, phy_container);
+
+            // Insert the fake iface
+            let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+            phy_container.client_ifaces.insert(fake_iface_id);
+
+            // Stop client connections
+            let stop_clients_future = phy_manager.stop_client_connections();
+            pin_mut!(stop_clients_future);
+
+            assert!(exec.run_until_stalled(&mut stop_clients_future).is_pending());
+
+            send_destroy_iface_response(&mut exec, &mut test_values.stream, ZX_OK);
+
+            assert!(exec.run_until_stalled(&mut stop_clients_future).is_ready());
+        }
+
+        // Ensure that the client interface that was added has been removed.
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+
+        let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
+        assert!(!phy_container.client_ifaces.contains(&fake_iface_id));
+    }
+
+    /// Tests the PhyManager's response to stop_client_connections when no client ifaces are
+    /// present but an AP iface is present.  The expectation is that the AP iface is left intact.
+    #[test]
+    fn stop_client_connections_no_clients() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_device_path = Some("/test/path".to_string());
+        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_mac_roles = vec![MacRole::Ap];
+        let phy_info =
+            create_phy_info(fake_phy_id, fake_device_path, fake_mac_addr, fake_mac_roles);
+        let phy_container = PhyContainer::new(phy_info);
+
+        // Insert the fake AP iface and then stop clients
+        {
+            phy_manager.phys.insert(fake_phy_id, phy_container);
+
+            // Insert the fake AP iface
+            let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+            phy_container.ap_ifaces.insert(fake_iface_id);
+
+            // Stop client connections
+            let stop_clients_future = phy_manager.stop_client_connections();
+            pin_mut!(stop_clients_future);
+
+            assert!(exec.run_until_stalled(&mut stop_clients_future).is_ready());
+        }
+
+        // Ensure that the fake PHY and AP interface are still present.
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+
+        let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
+        assert!(phy_container.ap_ifaces.contains(&fake_iface_id));
     }
 }
