@@ -7,18 +7,7 @@
 #include "test_settings.h"
 
 #ifdef __Fuchsia__
-#include <lib/zx/process.h>
-
 #include "src/lib/syslog/cpp/logger.h"
-
-std::string GetProcessName() {
-  char process_name[ZX_MAX_NAME_LEN] = {};
-  auto err = zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-  if (err) {
-    return "<unknown test>";
-  }
-  return process_name;
-}
 #endif
 
 int main(int argc, char** argv) {
@@ -27,7 +16,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 #ifdef __Fuchsia__
-  syslog::InitLogger({GetProcessName()});
+  syslog::InitLogger();
 #endif
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

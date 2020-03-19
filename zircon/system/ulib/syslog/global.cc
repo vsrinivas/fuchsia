@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/global.h>
+#include <lib/zx/process.h>
 
 #include <memory>
 
@@ -20,11 +21,19 @@ fx_logger_t* fx_log_get_logger() { return g_logger_ptr.get(); }
 
 SYSLOG_EXPORT
 zx_status_t fx_log_init(void) {
+  char process_name[ZX_MAX_NAME_LEN] = "";
+  const char* tag = process_name;
+
+  zx_status_t status =
+      zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  if (status != ZX_OK)
+    process_name[0] = '\0';
+
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
                                .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = NULL,
-                               .num_tags = 0};
+                               .tags = &tag,
+                               .num_tags = 1};
 
   return fx_log_init_with_config(&config);
 }
