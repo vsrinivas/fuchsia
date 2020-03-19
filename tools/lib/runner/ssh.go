@@ -66,7 +66,9 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 
 	errs := make(chan error)
 	go func() {
-		if err := session.Run(strings.Join(command, " ")); err != nil {
+		cmd := strings.Join(command, " ")
+		logger.Tracef(ctx, "starting:\n%s", cmd)
+		if err := session.Run(cmd); err != nil {
 			errs <- fmt.Errorf("failed to run SSH command: %v", err)
 			return
 		}
