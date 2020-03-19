@@ -65,8 +65,14 @@ Note: You need to get OSRB approval first before uploading a CL for review.
    that are only used for testing but are excluded when the crate is vendored.
    If you are not a Google employee, you will need to ask a Google employee to
    do this part for you.
+
+   Note: As part of OSRB review, you may be asked to import only a subset
+   of the files in a third-party crate. See [Importing a subset of files in a crate](#importing-a-subset-of-files-in-a-crate) for how to do this.
+
 1. After the OSRB approval, upload the change for review to Gerrit.
 1. Get `code-review+2` and merge the change into [third_party/rust_crates][3p-crates].
+
+
 
 ## Steps to update a third-party crate
 
@@ -96,6 +102,25 @@ To update a third-party crate, do the following:
 [3p-vendor]: /third_party/rust_crates/vendor
 [osrb-process]: https://docs.google.com/document/d/1X3eNvc4keQxOpbkGUiyYBMtr3ueEnVQCPW61FT96o_E/edit#heading=h.7mb7m2qs89th
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
+
+## Importing a subset of files in a crate
+
+In some cases, you may want to import only a subset of files in a crate. For example, there may be an optional license in the
+third-party repo that's incompatible with Fuchsia's license requirements. Here's [an example](https://fuchsia-review.googlesource.com/c/fuchsia/+/369174) OSRB review in which this happened.
+
+To do this, you'll need to add the crate's files to `/third_party/rust_crates/tiny_mirrors`. 
+
+1. Follow the [instructions for adding a third-party crate](#steps-to-add-a-third-party-crate).
+1. After running `fx update-rustc-third-party`, move the downloaded copy of your crate from `/third_party/rust_crates/vendor/<my_crate>` to `/third_party/rust_crates/tiny_mirrors`.
+1. Make the changes you need to make to the imported files.
+1. Add a line to the `[patch.crates-io]` section of `/third_party/rust_crates/Cargo.toml` to point to your new crate:
+   ```
+   [patch.crates-io]
+   ...
+   my_crate = { path = "tiny_mirrors/my_crate" }
+   ...
+   ```
+1. Re-run `fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json` and `fx build`.
 
 ## Unicode crates
 
