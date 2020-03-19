@@ -70,6 +70,7 @@ rustc_binary("font_provider") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",
+    "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",

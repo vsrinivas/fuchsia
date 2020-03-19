@@ -6,7 +6,7 @@ use {
     super::{cache::Cache, Asset, AssetId, AssetLoader},
     anyhow::Error,
     fidl_fuchsia_fonts::CacheMissPolicy,
-    fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
+    fidl_fuchsia_io as io, fidl_fuchsia_mem as mem, fuchsia_inspect as finspect,
     futures::lock::Mutex,
     manifest::v2,
     std::{collections::BTreeMap, hash::Hash, path::PathBuf},
@@ -42,6 +42,8 @@ impl FullAssetLocation {
 /// Create an instance with [`new()`](AssetCollectionBuilder::new), then populate using
 /// [`add_or_get_asset_id()`](AssetCollectionBuilder::add_or_get_asset_id), and finally construct
 /// an `AssetCollection` using [`build()`](AssetCollectionBuilder::build).
+///
+/// The builder is consumed when `build()` is called.
 #[derive(Debug)]
 pub struct AssetCollectionBuilder<L>
 where
@@ -55,6 +57,7 @@ where
     /// Used for looking up assets for the fallback chain.
     file_name_to_id_map: BTreeMap<String, AssetId>,
     next_id: u32,
+    inspect_node: finspect::Node,
 }
 
 impl<L> AssetCollectionBuilder<L>
@@ -63,7 +66,15 @@ where
 {
     /// Creates a new, empty `AssetCollectionBuilder` with the given asset loader, cache capacity,
     /// and parent Inspect node.
-    pub fn new(asset_loader: L, cache_capacity_bytes: u64) -> AssetCollectionBuilder<L> {
+    ///
+    /// A child node for the asset collection is created immediately in the builder, to avoid having
+    /// to manage the lifetime of the borrowed parent node. (If the builder is dropped without
+    /// calling `build()`, the node is also dropped.)
+    pub fn new(
+        asset_loader: L,
+        cache_capacity_bytes: u64,
+        parent_inspect_node: &finspect::Node,
+    ) -> AssetCollectionBuilder<L> {
         AssetCollectionBuilder {
             asset_loader,
             cache_capacity_bytes,
@@ -71,6 +82,8 @@ where
             location_to_id_map: BTreeMap::new(),
             file_name_to_id_map: BTreeMap::new(),
             next_id: 0,
+            // TODO(fxb/45391): Factor this out into AssectCollectionInspectData
+            inspect_node: parent_inspect_node.create_child("asset_collection"),
         }
     }
 
@@ -97,13 +110,13 @@ where
         self.file_name_to_id_map.get(file_name).map(|asset_id| *asset_id)
     }
 
-    /// Build an [`AssetCollection`].
+    /// Consumes the builder and creates an [`AssetCollection`].
     pub fn build(self) -> AssetCollection<L> {
         AssetCollection {
             asset_loader: self.asset_loader,
             id_to_location_map: self.id_to_location_map,
             id_to_dir_map: Mutex::new(BTreeMap::new()),
-            cache: Mutex::new(Cache::new(self.cache_capacity_bytes)),
+            cache: Mutex::new(Cache::new(self.cache_capacity_bytes, &self.inspect_node)),
         }
     }
 }
@@ -168,7 +181,8 @@ impl<L: AssetLoader> AssetCollection<L> {
                     }
                 }?;
                 let mut cache_lock = self.cache.lock().await;
-                cache_lock.push(Asset { id, buffer }).buffer
+                let (asset, _, _) = cache_lock.push(Asset { id, buffer });
+                asset.buffer
             }
         };
         Ok(buffer)

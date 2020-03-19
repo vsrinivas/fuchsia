@@ -14,6 +14,7 @@ use {
     argh::FromArgs,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::component::inspector,
     fuchsia_syslog::{self as syslog, *},
     fuchsia_trace as trace, fuchsia_trace_provider as trace_provider,
     std::path::PathBuf,
@@ -66,7 +67,8 @@ async fn main() -> Result<(), Error> {
 
     let font_manifest_paths = select_manifests(&args)?;
 
-    let mut service_builder = FontServiceBuilder::with_default_asset_loader(CACHE_CAPACITY_BYTES);
+    let mut service_builder =
+        FontServiceBuilder::with_default_asset_loader(CACHE_CAPACITY_BYTES, inspector().root());
     fx_vlog!(1, "Building service with manifest(s) {:?}", &font_manifest_paths);
     for path in &font_manifest_paths {
         service_builder.add_manifest_from_file(path);
@@ -87,7 +89,6 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(ProviderRequestStream::Stable)
         .add_fidl_service(ProviderRequestStream::Experimental);
     fs.take_and_serve_directory_handle()?;
-    let fs = fs;
 
     service.run(fs).await;
 

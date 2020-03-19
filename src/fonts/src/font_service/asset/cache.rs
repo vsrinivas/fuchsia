@@ -4,6 +4,7 @@
 
 use {
     super::asset::{Asset, AssetId},
+    fuchsia_inspect::{self as finspect, NumericProperty},
     std::collections::VecDeque,
 };
 
@@ -17,11 +18,16 @@ pub struct Cache {
     available: u64,
     /// Assets ordered by recency of last use.
     cache: VecDeque<Asset>,
+
+    inspect_data: AssetCacheInspectData,
 }
 
 impl Cache {
-    pub fn new(capacity: u64) -> Cache {
-        Cache { capacity, available: capacity, cache: VecDeque::new() }
+    /// Creates a new cache instance with the given `capacity` in bytes, and with the given parent
+    /// Inspect node.
+    pub fn new(capacity: u64, parent_inspect_node: &finspect::Node) -> Cache {
+        let inspect_data = AssetCacheInspectData::new(parent_inspect_node, capacity);
+        Cache { capacity, available: capacity, cache: VecDeque::new(), inspect_data }
     }
 
     /// Get the index of the [`Asset`] with ID `id`, if it is cached.
@@ -65,41 +71,101 @@ impl Cache {
 
     /// Remove and return the least recently used cached [`Asset`].
     /// Returns [`None`] if the cache is empty.
-    fn pop(&mut self) {
-        if let Some(asset) = self.cache.pop_front() {
+    fn pop(&mut self) -> Option<Asset> {
+        let popped = self.cache.pop_front();
+        if let Some(asset) = &popped {
             self.available += asset.buffer.size;
+            self.inspect_data.on_pop(&asset);
         }
+        popped
     }
 
     /// Add a clone of `asset` to the cache, and return the original.
     /// If `asset` is already cached, calls [`move_to_back`] before returning.
     /// If cloning `asset` fails or if `asset` is larger than the cache capacity, nothing is cached.
     /// As many cached [`Assets`] as needed (in LRU order) will be popped to make space for `asset`.
-    pub fn push(&mut self, asset: Asset) -> Asset {
+    ///
+    /// Returns the original given `Asset`, a `bool` indicating whether it is now cached
+    /// successfully (including if it was already cached), and any `Asset`s that were evicted to
+    /// make room for it.
+    pub fn push(&mut self, asset: Asset) -> (Asset, bool, Vec<Asset>) {
+        let mut is_cached = false;
+        let mut evicted = Vec::<Asset>::new();
+
         if let Some(index) = self.index_of(asset.id) {
             self.move_to_back(index);
+            is_cached = true
         } else if asset.buffer.size < self.capacity {
             if let Some(clone) = asset.try_clone().ok() {
                 while clone.buffer.size > self.available {
-                    self.pop();
+                    if let Some(popped) = self.pop() {
+                        evicted.push(popped);
+                    }
                 }
+                is_cached = true;
                 self.available -= clone.buffer.size;
+                self.inspect_data.on_push(&clone);
                 self.cache.push_back(clone);
             }
         }
-        asset
+        (asset, is_cached, evicted)
+    }
+}
+
+/// Inspect data for [AssetCache].
+#[allow(dead_code)]
+pub struct AssetCacheInspectData {
+    /// Root Inspect node for the cache
+    node: finspect::Node,
+    /// Tracks bytes used by the cache
+    used_bytes: finspect::UintProperty,
+    /// Tracks number of assets in the cache
+    count: finspect::UintProperty,
+}
+
+impl AssetCacheInspectData {
+    /// Creates a new instance with the given parent node and cache capacity.
+    fn new(parent_node: &finspect::Node, capacity: u64) -> Self {
+        let node = parent_node.create_child("asset_cache");
+        node.record_uint("capacity_bytes", capacity);
+        let used = node.create_uint("used_bytes", 0);
+        let count = node.create_uint("count", 0);
+        AssetCacheInspectData { node, used_bytes: used, count }
+    }
+
+    fn on_pop(&mut self, popped_asset: &Asset) {
+        self.used_bytes.subtract(popped_asset.buffer.size);
+        self.count.subtract(1);
+    }
+
+    fn on_push(&mut self, pushed_asset: &Asset) {
+        self.used_bytes.add(pushed_asset.buffer.size);
+        self.count.add(1);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_mem as mem, fuchsia_zircon as zx};
+    use {
+        super::*, fidl_fuchsia_mem as mem, fuchsia_inspect::assert_inspect_tree,
+        fuchsia_zircon as zx,
+    };
 
+    /// Creates a `Cache` with some mocked assets.
     fn mock_cache() -> Cache {
+        let inspector = finspect::Inspector::new();
+        mock_cache_with_inspector(&inspector)
+    }
+
+    /// Creates a cache with some mocked assets and the given `Inspector`.
+    fn mock_cache_with_inspector(inspector: &finspect::Inspector) -> Cache {
+        let inspector_root = inspector.root();
+        let capacity = 3000;
         Cache {
-            capacity: 3000,
+            capacity,
             available: 1000,
             cache: VecDeque::from(vec![mock_asset(1, 1024, 1000), mock_asset(2, 1024, 1000)]),
+            inspect_data: AssetCacheInspectData::new(inspector_root, capacity),
         }
     }
 
@@ -166,7 +232,8 @@ mod tests {
 
     #[test]
     fn test_pop_empty() {
-        let mut cache = Cache::new(10);
+        let inspector = finspect::Inspector::new();
+        let mut cache = Cache::new(10, inspector.root());
         cache.pop();
         assert_eq!(cache.available, 10);
     }
@@ -176,10 +243,12 @@ mod tests {
         let mut cache = mock_cache();
         let unused_before = cache.available;
         let to_push = mock_asset(3, 1024, 1000);
-        let cached = cache.push(to_push);
+        let (cached, is_cached, evicted) = cache.push(to_push);
         assert_eq!(cached.id, AssetId(3));
         assert_eq!(cached.id, cache.cache.back().unwrap().id);
         assert_eq!(cache.available, unused_before - 1000);
+        assert!(is_cached);
+        assert!(evicted.is_empty());
     }
 
     #[test]
@@ -187,11 +256,14 @@ mod tests {
         let mut cache = mock_cache();
         let to_push = mock_asset(3, 2048, 2000);
         let should_be_popped_id = cache.cache.front().unwrap().id;
-        let cached = cache.push(to_push);
+        let (cached, is_cached, evicted) = cache.push(to_push);
         assert_eq!(cached.id, AssetId(3));
         assert_eq!(cached.id, cache.cache.back().unwrap().id);
         assert_eq!(cache.available, 0);
         assert!(cache.index_of(should_be_popped_id).is_none());
+        assert!(is_cached);
+        assert_eq!(evicted.len(), 1);
+        assert_eq!(evicted[0].id, should_be_popped_id);
     }
 
     #[test]
@@ -200,10 +272,12 @@ mod tests {
         let unused_before = cache.available;
         let to_push = cache.cache.front().unwrap().try_clone().unwrap();
         let front_id = to_push.id;
-        let cached = cache.push(to_push);
+        let (cached, is_cached, evicted) = cache.push(to_push);
         assert_eq!(cached.id, front_id);
         assert_eq!(cached.id, cache.cache.back().unwrap().id);
         assert_eq!(cache.available, unused_before);
+        assert!(is_cached);
+        assert!(evicted.is_empty());
     }
 
     #[test]
@@ -211,8 +285,35 @@ mod tests {
         let mut cache = mock_cache();
         let unused_before = cache.available;
         let too_big = mock_asset(3, 4096, 4000);
-        let too_big = cache.push(too_big);
+        let (too_big, is_cached, evicted) = cache.push(too_big);
+        assert!(!is_cached);
+        assert!(evicted.is_empty());
         assert!(cache.get(too_big.id).is_none());
         assert_eq!(cache.available, unused_before);
+    }
+
+    #[test]
+    fn test_inspect_data() {
+        let inspector = finspect::Inspector::new();
+        let capacity = 3000;
+        let mut cache = Cache::new(capacity, inspector.root());
+        assert_inspect_tree!(inspector, root: {
+            asset_cache: {
+                capacity_bytes: 3000u64,
+                used_bytes: 0u64,
+                count: 0u64,
+            }
+        });
+
+        let asset = mock_asset(1, 1024, 1000);
+        cache.push(asset);
+
+        assert_inspect_tree!(inspector, root: contains {
+            asset_cache: {
+                capacity_bytes: 3000u64,
+                used_bytes: 1000u64,
+                count: 1u64,
+            }
+        });
     }
 }

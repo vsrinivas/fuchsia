@@ -11,6 +11,7 @@ use {
     },
     anyhow::{format_err, Error},
     font_info::FontInfoLoaderImpl,
+    fuchsia_inspect as finspect,
     fuchsia_syslog::fx_vlog,
     fuchsia_trace as trace,
     manifest::{v2, FontManifestWrapper, FontsManifest},
@@ -46,8 +47,13 @@ impl FontServiceBuilder<AssetLoaderImpl> {
     /// Creates a new, empty builder with a real asset loader.
     pub fn with_default_asset_loader(
         cache_capacity_bytes: u64,
+        root: &finspect::Node,
     ) -> FontServiceBuilder<AssetLoaderImpl> {
-        FontServiceBuilder::<AssetLoaderImpl>::new(AssetLoaderImpl::new(), cache_capacity_bytes)
+        FontServiceBuilder::<AssetLoaderImpl>::new(
+            AssetLoaderImpl::new(),
+            cache_capacity_bytes,
+            root,
+        )
     }
 }
 
@@ -56,10 +62,14 @@ where
     L: AssetLoader,
 {
     /// Creates a new, empty builder.
-    pub fn new(asset_loader: L, cache_capacity_bytes: u64) -> FontServiceBuilder<L> {
+    pub fn new(
+        asset_loader: L,
+        cache_capacity_bytes: u64,
+        root: &finspect::Node,
+    ) -> FontServiceBuilder<L> {
         FontServiceBuilder {
             manifests: vec![],
-            assets: AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes),
+            assets: AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes, root),
             families: BTreeMap::new(),
             fallback_collection: TypefaceCollectionBuilder::new(),
         }
@@ -379,7 +389,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_multiple_overlapping_manifests() -> Result<(), Error> {
-        let mut builder = FontServiceBuilder::with_default_asset_loader(5000);
+        let inspector = finspect::Inspector::new();
+        let mut builder = FontServiceBuilder::with_default_asset_loader(5000, inspector.root());
         builder
             .add_manifest(FontManifestWrapper::Version2(v2::FontsManifest {
                 families: vec![v2::Family {
@@ -533,11 +544,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_manifest() -> Result<(), Error> {
+        let inspector = finspect::Inspector::new();
         let manifest = FontManifestWrapper::Version2(v2::FontsManifest {
             families: vec![],
             fallback_chain: vec![],
         });
-        let mut builder = FontServiceBuilder::with_default_asset_loader(5000);
+        let mut builder = FontServiceBuilder::with_default_asset_loader(5000, inspector.root());
         builder.add_manifest(manifest);
         builder.build().await?; // Should succeed
         Ok(())
