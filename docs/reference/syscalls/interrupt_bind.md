@@ -32,6 +32,11 @@ be delivered to the port it is bound to, with the timestamp (relative to **ZX_CL
 of when the interrupt was triggered in the `zx_packet_interrupt_t`.  The *key* used
 when binding the interrupt will be present in the `key` field of the `zx_port_packet_t`.
 
+If the interrupt being bound is in a triggered state, then a
+**ZX_PKT_TYPE_INTERRUPT** packet will be sent to the port the interrupt is being bound to,
+with the timestamp of when the interrupt was triggered. This packet will need
+to be processed normally.
+
 To bind to a port pass **ZX_INTERRUPT_BIND** in *options*.
 
 To unbind a previously bound port pass **ZX_INTERRUPT_UNBIND** in *options*. For unbind the

@@ -191,6 +191,11 @@ zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatche
 
   port_dispatcher_ = ktl::move(port_dispatcher);
   port_packet_.key = key;
+
+  if (state_ == InterruptState::TRIGGERED) {
+    SendPacketLocked(timestamp_);
+    state_ = InterruptState::NEEDACK;
+  }
   return ZX_OK;
 }
 

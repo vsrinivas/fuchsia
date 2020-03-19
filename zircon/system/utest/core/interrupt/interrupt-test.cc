@@ -94,6 +94,27 @@ TEST_F(InterruptTest, NonBindablePort) {
   ASSERT_EQ(interrupt.bind(port, kKey, 0), ZX_ERR_WRONG_TYPE);
 }
 
+// Tests that an interrupt that is in the TRIGGERED state will send the IRQ out on a port
+// if it is bound to that port.
+TEST_F(InterruptTest, BindTriggeredIrqToPort) {
+  zx::interrupt interrupt;
+  zx::port port;
+  zx_port_packet_t out;
+
+  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
+
+  // Trigger the IRQ.
+  ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
+
+  // Bind to a Port.
+  ASSERT_OK(interrupt.bind(port, kKey, 0));
+
+  // See if the packet is delivered.
+  ASSERT_OK(port.wait(zx::time::infinite(), &out));
+  ASSERT_EQ(out.interrupt.timestamp, kSignaledTimeStamp1.get());
+}
+
 // Tests Interrupts bound to a port
 TEST_F(InterruptTest, BindPort) {
   zx::interrupt interrupt;
