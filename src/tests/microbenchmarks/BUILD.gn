@@ -167,3 +167,10 @@ group("tests") {
     ":fuchsia_microbenchmarks_unittestmode",
   ]
 }
+
+# Convenience target so that one can pass "--with //src/tests/microbenchmarks"
+# to "fx set".
+group("microbenchmarks") {
+  testonly = true
+  deps = [ ":tests" ]
+}
