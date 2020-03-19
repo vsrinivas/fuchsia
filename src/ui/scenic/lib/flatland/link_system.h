@@ -168,7 +168,8 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // instances. |global_topology| is the ToplogyVector of all nodes visible from the (currently
   // single) display, |live_nodes| is the set of nodes in that vector, and |uber_structs| is the set
   // of UberStructs used to generate the global topology.
-  void UpdateLinks(const TransformGraph::TopologyVector& global_topology,
+  void UpdateLinks(const std::vector<TransformHandle>& global_topology,
+                   const std::vector<uint64_t>& child_counts,
                    const std::unordered_set<TransformHandle>& live_handles,
                    const UberStruct::InstanceMap& uber_structs);
 

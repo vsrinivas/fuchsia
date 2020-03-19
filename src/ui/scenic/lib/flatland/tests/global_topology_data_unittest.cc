@@ -4,10 +4,15 @@
 
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
+#include <memory>
+
 #include <gtest/gtest.h>
 
 #include "gmock/gmock.h"
 #include "src/lib/fxl/logging.h"
+
+#include <glm/gtc/constants.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
 
 using flatland::TransformGraph;
 using flatland::TransformHandle;
@@ -33,14 +38,14 @@ namespace test {
 // particular call in a unit test.
 //
 // |data| is a :GlobalTopologyData object. |link_id| is the instance ID for link handles.
-#define CHECK_GLOBAL_TOPOLOGY_DATA(data, link_id)       \
-  {                                                     \
-    std::unordered_set<TransformHandle> all_handles;    \
-    for (auto entry : data.topology_vector) {           \
-      all_handles.insert(entry.handle);                 \
-      EXPECT_NE(entry.handle.GetInstanceId(), link_id); \
-    }                                                   \
-    EXPECT_EQ(all_handles, data.live_handles);          \
+#define CHECK_GLOBAL_TOPOLOGY_DATA(data, link_id)    \
+  {                                                  \
+    std::unordered_set<TransformHandle> all_handles; \
+    for (auto handle : data.topology_vector) {       \
+      all_handles.insert(handle);                    \
+      EXPECT_NE(handle.GetInstanceId(), link_id);    \
+    }                                                \
+    EXPECT_EQ(all_handles, data.live_handles);       \
   }
 
 TEST(GlobalTopologyDataTest, GlobalTopologyUnknownGraph) {
@@ -49,6 +54,8 @@ TEST(GlobalTopologyDataTest, GlobalTopologyUnknownGraph) {
   auto output =
       GlobalTopologyData::ComputeGlobalTopologyData({}, {}, kLinkInstanceId, unknown_handle);
   EXPECT_TRUE(output.topology_vector.empty());
+  EXPECT_TRUE(output.child_counts.empty());
+  EXPECT_TRUE(output.parent_indices.empty());
   EXPECT_TRUE(output.live_handles.empty());
 }
 
@@ -72,11 +79,17 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinkExpansion) {
   // Combined, the global vector looks like this (the link handle is ommitted):
   //
   // 1:0 - 2:0
-  TransformGraph::TopologyVector expected_topology = {{{1, 0}, 1}, {{2, 0}, 0}};
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {2, 0}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {1, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0};
+
   auto output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 }
 
 TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
@@ -102,7 +115,9 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   // 1:0 - 1:1
   //     \
   //       1:2
-  TransformGraph::TopologyVector expected_topology = {{{1, 0}, 2}, {{1, 1}, 0}, {{1, 2}, 0}};
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {1, 1}, {1, 2}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {2, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 0};
 
   auto uber_struct = std::make_unique<UberStruct>();
   uber_struct->local_topology = vectors[0];
@@ -111,7 +126,10 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   auto output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 
   // With the second vector updated, we still get the same result because the two are not linked.
   //
@@ -125,7 +143,10 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 
   // When the link becomes available, the full topology is available, excluding the link handle.
   //
@@ -134,14 +155,19 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   //    \  2:0 - 2:1
   //     \
   //       1:2
-  expected_topology = {{{1, 0}, 3}, {{1, 1}, 0}, {{2, 0}, 1}, {{2, 1}, 0}, {{1, 2}, 0}};
+  expected_topology = {{1, 0}, {1, 1}, {2, 0}, {2, 1}, {1, 2}};
+  expected_child_counts = {3, 0, 1, 0, 0};
+  expected_parent_indices = {0, 0, 0, 2, 0};
 
   MakeLink(links, 2);  // 0:2 - 2:0
 
   output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 }
 
 TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
@@ -164,12 +190,17 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
     uber_structs[v[0].handle.GetInstanceId()] = std::move(uber_struct);
   }
 
-  TransformGraph::TopologyVector expected_topology = {{{1, 0}, 0}};
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0};
 
   auto output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 
   // Changing the link to the right root handle of 2:0 completes the topology.
   MakeLink(links, 2);  // 0:2 - 2:0
@@ -177,12 +208,17 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
   // So the expected topology, excluding the link handle:
   //
   // 1:0 - 2:0
-  expected_topology = {{{1, 0}, 1}, {{2, 0}, 0}};
+  expected_topology = {{1, 0}, {2, 0}};
+  expected_child_counts = {1, 0};
+  expected_parent_indices = {0, 0};
 
   output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 }
 
 TEST(GlobalTopologyDataTest, GlobalTopologyDiamondInheritance) {
@@ -218,12 +254,130 @@ TEST(GlobalTopologyDataTest, GlobalTopologyDiamondInheritance) {
   //     \       3:0
   //      \
   //       3:0
-  TransformGraph::TopologyVector expected_topology = {
-      {{1, 0}, 2}, {{2, 0}, 2}, {{2, 1}, 0}, {{3, 0}, 0}, {{3, 0}, 0}};
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {2, 0}, {2, 1}, {3, 0}, {3, 0}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {2, 2, 0, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 1, 1, 0};
+
   auto output =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
+}
+
+TEST(GlobalTopologyDataTest, EmptyTopologyReturnsEmptyMatrices) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::TopologyVector topology_vector;
+  GlobalTopologyData::ParentIndexVector parent_indices;
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalMatrices(topology_vector, parent_indices, uber_structs);
+  EXPECT_TRUE(output.empty());
+}
+
+TEST(GlobalTopologyDataTest, EmptyLocalMatricesAreIdentity) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+
+  // The UberStruct for instance ID 1 must exist, but it contains no local matrices.
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_structs[1] = std::move(uber_struct);
+
+  // The root matrix is set to the identity matrix, and the second inherits that.
+  std::vector<glm::mat3> expected_matrices = {
+      glm::mat3(),
+      glm::mat3(),
+  };
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalMatrices(topology_vector, parent_indices, uber_structs);
+  EXPECT_THAT(output, ::testing::ElementsAreArray(expected_matrices));
+}
+
+TEST(GlobalTopologyDataTest, GlobalMatricesIncludeParentMatrix) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1 - 1:2
+  //     \
+  //       1:3 - 1:4
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0, 1, 0, 3};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  static const glm::vec2 kTranslation = {1.f, 2.f};
+  static const float kRotation = glm::half_pi<float>();
+  static const glm::vec2 kScale = {3.f, 5.f};
+
+  // All transforms will get the translation from 1:0
+  uber_struct->local_matrices[{1, 0}] = glm::translate(glm::mat3(), kTranslation);
+
+  // The 1:1 - 1:2 branch rotates, then scales.
+  uber_struct->local_matrices[{1, 1}] = glm::rotate(glm::mat3(), kRotation);
+  uber_struct->local_matrices[{1, 2}] = glm::scale(glm::mat3(), kScale);
+
+  // The 1:3 - 1:4 branch scales, then rotates.
+  uber_struct->local_matrices[{1, 3}] = glm::scale(glm::mat3(), kScale);
+  uber_struct->local_matrices[{1, 4}] = glm::rotate(glm::mat3(), kRotation);
+
+  uber_structs[1] = std::move(uber_struct);
+
+  // The expected matrices apply the operations in the correct order. The translation always comes
+  // first, followed by the operations of the children.
+  std::vector<glm::mat3> expected_matrices = {
+      glm::translate(glm::mat3(), kTranslation),
+      glm::rotate(glm::translate(glm::mat3(), kTranslation), kRotation),
+      glm::scale(glm::rotate(glm::translate(glm::mat3(), kTranslation), kRotation), kScale),
+      glm::scale(glm::translate(glm::mat3(), kTranslation), kScale),
+      glm::rotate(glm::scale(glm::translate(glm::mat3(), kTranslation), kScale), kRotation),
+  };
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalMatrices(topology_vector, parent_indices, uber_structs);
+  EXPECT_THAT(output, ::testing::ElementsAreArray(expected_matrices));
+}
+
+TEST(GlobalTopologyDataTest, GlobalMatricesMultipleUberStructs) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 2:0
+  //     \
+  //       1:1
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {2, 0}, {1, 1}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0, 0};
+
+  auto uber_struct1 = std::make_unique<UberStruct>();
+  auto uber_struct2 = std::make_unique<UberStruct>();
+
+  // Each matrix scales by a different prime number to distinguish the branches.
+  uber_struct1->local_matrices[{1, 0}] = glm::scale(glm::mat3(), {2.f, 2.f});
+  uber_struct1->local_matrices[{1, 1}] = glm::scale(glm::mat3(), {3.f, 3.f});
+
+  uber_struct2->local_matrices[{2, 0}] = glm::scale(glm::mat3(), {5.f, 5.f});
+
+  uber_structs[1] = std::move(uber_struct1);
+  uber_structs[2] = std::move(uber_struct2);
+
+  std::vector<glm::mat3> expected_matrices = {
+      glm::scale(glm::mat3(), glm::vec2(2.f)),   // 1:0 = 2
+      glm::scale(glm::mat3(), glm::vec2(10.f)),  // 1:0 * 2:0 = 2 * 5 = 10
+      glm::scale(glm::mat3(), glm::vec2(6.f)),   // 1:0 * 1:1 = 2 * 3 = 6
+  };
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalMatrices(topology_vector, parent_indices, uber_structs);
+  EXPECT_THAT(output, ::testing::ElementsAreArray(expected_matrices));
 }
 
 #undef CHECK_GLOBAL_TOPOLOGY_DATA

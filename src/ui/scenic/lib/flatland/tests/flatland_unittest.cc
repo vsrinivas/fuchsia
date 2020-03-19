@@ -4,12 +4,18 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <limits>
+
 #include <gtest/gtest.h>
 
+#include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
+
+#include <glm/gtc/epsilon.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
 
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
@@ -26,9 +32,10 @@ using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::Vec2;
 
-// This is a macro so that, if the various test macros fail, we get a line number associated with a
+// These macros are so that, if the various test macros fail, we get a line number associated with a
 // particular Present() call in a unit test.
 //
 // |flatland| is a Flatland object. |expect_success| should be false if the call to Present() is
@@ -46,6 +53,28 @@ using fuchsia::ui::scenic::internal::Vec2;
       processed_callback = true;                                                      \
     });                                                                               \
     EXPECT_TRUE(processed_callback);                                                  \
+  }
+
+// |global_topology_data| is a GlobalTopologyData object. |global_matrices| is a vector of
+// glm::mat3's generated from the same set of UberStructs and topology data. |target_handle| is the
+// TransformHandle of the matrix to compare. |expected_matrix| is the expected value of that matrix.
+#define EXPECT_MATRIX(global_topology_data, global_matrices, target_handle, expected_matrix)     \
+  {                                                                                              \
+    ASSERT_EQ(global_topology_data.live_handles.count(target_handle), 1u);                       \
+    int index = -1;                                                                              \
+    for (size_t i = 0; i < global_topology_data.topology_vector.size(); ++i) {                   \
+      if (global_topology_data.topology_vector[i] == target_handle) {                            \
+        index = i;                                                                               \
+        break;                                                                                   \
+      }                                                                                          \
+    }                                                                                            \
+    ASSERT_NE(index, -1);                                                                        \
+    const glm::mat3& matrix = global_matrices[index];                                            \
+    for (size_t i = 0; i < 3; ++i) {                                                             \
+      for (size_t j = 0; j < 3; ++j) {                                                           \
+        EXPECT_FLOAT_EQ(matrix[i][j], expected_matrix[i][j]) << " row " << j << " column " << i; \
+      }                                                                                          \
+    }                                                                                            \
   }
 
 namespace {
@@ -68,6 +97,19 @@ void CreateLink(Flatland* parent, Flatland* child, LinkId id,
   PRESENT((*child), true);
 }
 
+float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation) {
+  switch (orientation) {
+    case Orientation::CCW_0_DEGREES:
+      return 0.f;
+    case Orientation::CCW_90_DEGREES:
+      return glm::half_pi<float>();
+    case Orientation::CCW_180_DEGREES:
+      return glm::pi<float>();
+    case Orientation::CCW_270_DEGREES:
+      return glm::three_over_two_pi<float>();
+  }
+}
+
 class FlatlandTest : public gtest::TestLoopFixture {
  public:
   FlatlandTest()
@@ -84,17 +126,22 @@ class FlatlandTest : public gtest::TestLoopFixture {
     auto links = link_system_->GetResolvedTopologyLinks();
     auto data = GlobalTopologyData::ComputeGlobalTopologyData(
         snapshot, links, link_system_->GetInstanceId(), parent);
-    for (auto entry : data.topology_vector) {
-      if (entry.handle == child) {
+    for (auto handle : data.topology_vector) {
+      if (handle == child) {
         return true;
       }
     }
     return false;
   }
 
+  struct GlobalFlatlandData {
+    GlobalTopologyData topology_data;
+    std::vector<glm::mat3> global_matrices;
+  };
+
   // Processing the main loop involves generating a global topology. For testing, the root transform
   // is provided directly to this function.
-  void ProcessMainLoop(TransformHandle root_transform) {
+  GlobalFlatlandData ProcessMainLoop(TransformHandle root_transform) {
     // Run the looper in case there are queued commands in, e.g., ObjectLinker.
     RunLoopUntilIdle();
 
@@ -103,10 +150,15 @@ class FlatlandTest : public gtest::TestLoopFixture {
     auto links = link_system_->GetResolvedTopologyLinks();
     auto data = GlobalTopologyData::ComputeGlobalTopologyData(
         snapshot, links, link_system_->GetInstanceId(), root_transform);
-    link_system_->UpdateLinks(data.topology_vector, data.live_handles, snapshot);
+    auto matrices = GlobalTopologyData::ComputeGlobalMatrices(data.topology_vector,
+                                                              data.parent_indices, snapshot);
+
+    link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, snapshot);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
+
+    return {.topology_data = data, .global_matrices = matrices};
   }
 
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
@@ -414,6 +466,118 @@ TEST_F(FlatlandTest, SetRootTransform) {
   // Setting the root to a released transform is not allowed.
   flatland.SetRootTransform(kId1);
   PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, SetTranslationErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  const uint64_t kIdNotCreated = 1;
+
+  // Zero is not a valid transform ID.
+  flatland.SetTranslation(0, {1.f, 2.f});
+  PRESENT(flatland, false);
+
+  // Transform does not exist.
+  flatland.SetTranslation(kIdNotCreated, {1.f, 2.f});
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, SetOrientationErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  const uint64_t kIdNotCreated = 1;
+
+  // Zero is not a valid transform ID.
+  flatland.SetOrientation(0, Orientation::CCW_90_DEGREES);
+  PRESENT(flatland, false);
+
+  // Transform does not exist.
+  flatland.SetOrientation(kIdNotCreated, Orientation::CCW_90_DEGREES);
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, SetScaleErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  const uint64_t kIdNotCreated = 1;
+
+  // Zero is not a valid transform ID.
+  flatland.SetScale(0, {1.f, 2.f});
+  PRESENT(flatland, false);
+
+  // Transform does not exist.
+  flatland.SetScale(kIdNotCreated, {1.f, 2.f});
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, SetGeometricTransformProperties) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  // Create two Transforms in the parent to ensure properties cascade down children.
+  const uint64_t kId1 = 1;
+  const uint64_t kId2 = 2;
+
+  parent.CreateTransform(kId1);
+  parent.CreateTransform(kId2);
+
+  parent.SetRootTransform(kId1);
+  parent.AddChild(kId1, kId2);
+
+  parent.SetLinkOnTransform(kLinkId1, kId2);
+
+  PRESENT(parent, true);
+
+  // With no properties set, the child root has an identity transform.
+  auto data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.global_matrices, child.GetRoot(), glm::mat3());
+
+  // Set up one property per transform. Set up kId2 before kId1 to ensure the hierarchy is used.
+  parent.SetScale(kId2, {2.f, 3.f});
+  parent.SetTranslation(kId1, {1.f, 2.f});
+  PRESENT(parent, true);
+
+  // The operations should be applied in the following order:
+  // - Translation on kId1
+  // - Scale on kId2
+  glm::mat3 expected_matrix = glm::mat3();
+  expected_matrix = glm::translate(expected_matrix, {1.f, 2.f});
+  expected_matrix = glm::scale(expected_matrix, {2.f, 3.f});
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.global_matrices, child.GetRoot(), expected_matrix);
+
+  // Fill out the remaining properties on both transforms.
+  parent.SetOrientation(kId1, Orientation::CCW_90_DEGREES);
+  parent.SetScale(kId1, {4.f, 5.f});
+  parent.SetTranslation(kId2, {6.f, 7.f});
+  parent.SetOrientation(kId2, Orientation::CCW_270_DEGREES);
+  PRESENT(parent, true);
+
+  // The operations should be applied in the following order:
+  // - Translation on kId1
+  // - Orientation on kId1
+  // - Scale on kId1
+  // - Translation on kId2
+  // - Orientation on kId2
+  // - Scale on kId2
+  expected_matrix = glm::mat3();
+  expected_matrix = glm::translate(expected_matrix, {1.f, 2.f});
+  expected_matrix = glm::rotate(expected_matrix, GetOrientationAngle(Orientation::CCW_90_DEGREES));
+  expected_matrix = glm::scale(expected_matrix, {4.f, 5.f});
+  expected_matrix = glm::translate(expected_matrix, {6.f, 7.f});
+  expected_matrix = glm::rotate(expected_matrix, GetOrientationAngle(Orientation::CCW_270_DEGREES));
+  expected_matrix = glm::scale(expected_matrix, {2.f, 3.f});
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.global_matrices, child.GetRoot(), expected_matrix);
 }
 
 TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {

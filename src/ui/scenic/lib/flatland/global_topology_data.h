@@ -15,11 +15,26 @@
 namespace flatland {
 
 struct GlobalTopologyData {
-  // The global topology vector, which may contain TransformHandles from multiple TransformGraphs.
-  // This vector will never contain TransformHandles authored by the LinkSystem.
-  TransformGraph::TopologyVector topology_vector;
+  // The list of transforms reachable from a particular root, sorted in topological (i.e.,
+  // depth-first) order. This vector may contain TransformHandles from multiple TransformGraphs,
+  // but will never contain TransformHandles authored by the LinkSystem.
+  //
+  // Unlike the TransformGraph::TopologyVector, this vector does not contain child counts or any
+  // other information regarding parent-child relationships; that data is stored separately in the
+  // GlobalTopologyData.
+  using TopologyVector = std::vector<TransformHandle>;
+  TopologyVector topology_vector;
 
-  // The set of TransformHandles in the topology vector (provided for convenience).
+  // The list of direct child counts for each entry in the |topology_vector|.
+  using ChildCountVector = std::vector<uint64_t>;
+  ChildCountVector child_counts;
+
+  // The list of parent indices for each entry in the |topology_vector|. The first entry will
+  // always be zero to indicate that the first TransformHandle has no parent.
+  using ParentIndexVector = std::vector<size_t>;
+  ParentIndexVector parent_indices;
+
+  // The set of TransformHandles in the |topology_vector| (provided for convenience).
   std::unordered_set<TransformHandle> live_handles;
 
   // Computes the GlobalTopologyData consisting of all TransformHandles reachable from |root|.
@@ -41,6 +56,14 @@ struct GlobalTopologyData {
                                                       const LinkSystem::LinkTopologyMap& links,
                                                       TransformHandle::InstanceId link_instance_id,
                                                       TransformHandle root);
+
+  // Computes the global transform matrix for each transform in |global_topology| using the local
+  // matrices in the |uber_structs|. If a transform doesn't have a local matrix present in the
+  // appropriate UberStruct, this function assumes that transform's local matrix is the identity
+  // matrix.
+  static std::vector<glm::mat3> ComputeGlobalMatrices(const TopologyVector& topology_vector,
+                                                      const ParentIndexVector& parent_indices,
+                                                      const UberStruct::InstanceMap& uber_structs);
 };
 
 }  // namespace flatland

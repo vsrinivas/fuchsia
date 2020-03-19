@@ -15,6 +15,13 @@ struct Vec2 {
     float32 y;
 };
 
+enum Orientation {
+    CCW_0_DEGREES = 0;
+    CCW_90_DEGREES = 1;
+    CCW_180_DEGREES = 2;
+    CCW_270_DEGREES = 3;
+};
+
 /// The return type of GraphLink::GetLayout(). This table contains most of the information necessary
 /// for a client to decide how to layout their content in a Flatland instance. This data may be
 /// provided to the client before the command that creates the Link is presented, so that the client
@@ -195,6 +202,28 @@ protocol Flatland {
     /// Zero is not a valid transform id. All other values are valid, assuming they are not already
     /// in use (see ReleaseTransform() for more details).
     CreateTransform(TransformId transform_id);
+
+    // ***** Attributes *****
+
+    /// All Transform objects support all attributes.
+    ///
+    /// Geometric attributes are applied in the following order:
+    /// 1. Translation (relative to the parent's coordinate space)
+    /// 2. Orientation (around the new origin as defined by the translation)
+    /// 3. Scale (relative to the new rotated origin)
+    /// 4. Crop (in the scaled coordinate space)
+    ///
+    /// Sets the translation on a Transform. The order of geometric attribute application is
+    /// addressed above.
+    SetTranslation(TransformId transform_id, Vec2 translation);
+
+    /// Sets the orientation on a Transform. The order of geometric attribute application is
+    /// addressed in the documentation for SetTranslation().
+    SetOrientation(TransformId transform_id, Orientation orientation);
+
+    /// Sets the scale on a Transform. The order of geometric attribute application is addressed
+    /// in the documentation for SetTranslation().
+    SetScale(TransformId transform_id, Vec2 scale);
 
     // Transform management
 

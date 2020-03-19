@@ -15,6 +15,13 @@
 #include <unordered_set>
 #include <vector>
 
+// clang-format off
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+// clang-format on
+
+#include <glm/vec2.hpp>
+#include <glm/mat3x3.hpp>
+
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
@@ -57,6 +64,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void ClearGraph() override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void CreateTransform(TransformId transform_id) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void SetTranslation(TransformId transform_id,
+                      fuchsia::ui::scenic::internal::Vec2 translation) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void SetOrientation(TransformId transform_id,
+                      fuchsia::ui::scenic::internal::Orientation orientation) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void SetScale(TransformId transform_id, fuchsia::ui::scenic::internal::Vec2 scale) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void AddChild(TransformId parent_transform_id, TransformId child_transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
@@ -136,6 +151,39 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // The link from this Flatland instance to our parent.
   std::optional<LinkSystem::ParentLink> parent_link_;
+
+  // Represents a geometric transformation as three separate components applied in the following
+  // order: translation (relative to the parent's coordinate space), orientation (around the new
+  // origin as defined by the translation), and scale (relative to the new rotated origin).
+  class MatrixData {
+   public:
+    void SetTranslation(fuchsia::ui::scenic::internal::Vec2 translation);
+    void SetOrientation(fuchsia::ui::scenic::internal::Orientation orientation);
+    void SetScale(fuchsia::ui::scenic::internal::Vec2 scale);
+
+    // Returns this geometric transformation as a single 3x3 matrix using the order of operations
+    // above: translation, orientation, then scale.
+    glm::mat3 GetMatrix() const;
+
+    static float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation);
+
+   private:
+    // Applies the translation, then orientation, then scale to the identity matrix.
+    void RecomputeMatrix();
+
+    glm::vec2 translation_ = glm::vec2(0.f, 0.f);
+    glm::vec2 scale_ = glm::vec2(1.f, 1.f);
+    float angle_ = 0.f;
+
+    // Recompute and cache the local matrix each time a component is changed to avoid recomputing
+    // the matrix for each frame. We expect GetMatrix() to be called far more frequently (roughly
+    // once per rendered frame) than the setters are called.
+    glm::mat3 matrix_ = glm::mat3(1.f);
+  };
+
+  // A geometric transform for each TransformHandle. If not present, that TransformHandle has the
+  // identity matrix for its transform.
+  std::unordered_map<TransformHandle, MatrixData> matrices_;
 };
 
 }  // namespace flatland

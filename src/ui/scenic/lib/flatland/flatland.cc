@@ -10,6 +10,10 @@
 
 #include "src/lib/fxl/logging.h"
 
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_access.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -17,6 +21,7 @@ using fuchsia::ui::scenic::internal::Error;
 using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
@@ -61,11 +66,14 @@ void Flatland::Present(PresentCallback callback) {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = std::move(data.sorted_transforms);
 
-    for (const auto& link_kv : child_links_) {
+    for (const auto& [handle, child_link] : child_links_) {
       LinkProperties initial_properties;
-      fidl::Clone(link_kv.second.properties, &initial_properties);
-      uber_struct->link_properties[link_kv.second.link.graph_handle] =
-          std::move(initial_properties);
+      fidl::Clone(child_link.properties, &initial_properties);
+      uber_struct->link_properties[child_link.link.graph_handle] = std::move(initial_properties);
+    }
+
+    for (const auto& [handle, matrix_data] : matrices_) {
+      uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
     }
 
     uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
@@ -178,6 +186,66 @@ void Flatland::CreateTransform(TransformId transform_id) {
 
     TransformHandle handle = transform_graph_.CreateTransform();
     transforms_.insert({transform_id, handle});
+
+    return true;
+  });
+}
+
+void Flatland::SetTranslation(TransformId transform_id, Vec2 translation) {
+  pending_operations_.push_back([=]() {
+    if (transform_id == kInvalidId) {
+      FXL_LOG(ERROR) << "SetTranslation called with transform_id 0";
+      return false;
+    }
+
+    auto transform_kv = transforms_.find(transform_id);
+
+    if (transform_kv == transforms_.end()) {
+      FXL_LOG(ERROR) << "SetTranslation failed, transform_id " << transform_id << " not found";
+      return false;
+    }
+
+    matrices_[transform_kv->second].SetTranslation(translation);
+
+    return true;
+  });
+}
+
+void Flatland::SetOrientation(TransformId transform_id, Orientation orientation) {
+  pending_operations_.push_back([=]() {
+    if (transform_id == kInvalidId) {
+      FXL_LOG(ERROR) << "SetOrientation called with transform_id 0";
+      return false;
+    }
+
+    auto transform_kv = transforms_.find(transform_id);
+
+    if (transform_kv == transforms_.end()) {
+      FXL_LOG(ERROR) << "SetOrientation failed, transform_id " << transform_id << " not found";
+      return false;
+    }
+
+    matrices_[transform_kv->second].SetOrientation(orientation);
+
+    return true;
+  });
+}
+
+void Flatland::SetScale(TransformId transform_id, Vec2 scale) {
+  pending_operations_.push_back([=]() {
+    if (transform_id == kInvalidId) {
+      FXL_LOG(ERROR) << "SetScale called with transform_id 0";
+      return false;
+    }
+
+    auto transform_kv = transforms_.find(transform_id);
+
+    if (transform_kv == transforms_.end()) {
+      FXL_LOG(ERROR) << "SetScale failed, transform_id " << transform_id << " not found";
+      return false;
+    }
+
+    matrices_[transform_kv->second].SetScale(scale);
 
     return true;
   });
@@ -444,5 +512,48 @@ void Flatland::ReleaseLink(LinkId link_id,
 TransformHandle Flatland::GetRoot() const {
   return parent_link_ ? parent_link_->link_origin : local_root_;
 }
+
+// MatrixData function implementations
+
+// static
+float Flatland::MatrixData::GetOrientationAngle(
+    fuchsia::ui::scenic::internal::Orientation orientation) {
+  switch (orientation) {
+    case Orientation::CCW_0_DEGREES:
+      return 0.f;
+    case Orientation::CCW_90_DEGREES:
+      return glm::half_pi<float>();
+    case Orientation::CCW_180_DEGREES:
+      return glm::pi<float>();
+    case Orientation::CCW_270_DEGREES:
+      return glm::three_over_two_pi<float>();
+  }
+}
+
+void Flatland::MatrixData::SetTranslation(fuchsia::ui::scenic::internal::Vec2 translation) {
+  translation_.x = translation.x;
+  translation_.y = translation.y;
+
+  RecomputeMatrix();
+}
+
+void Flatland::MatrixData::SetOrientation(fuchsia::ui::scenic::internal::Orientation orientation) {
+  angle_ = GetOrientationAngle(orientation);
+
+  RecomputeMatrix();
+}
+
+void Flatland::MatrixData::SetScale(fuchsia::ui::scenic::internal::Vec2 scale) {
+  scale_.x = scale.x;
+  scale_.y = scale.y;
+
+  RecomputeMatrix();
+}
+
+void Flatland::MatrixData::RecomputeMatrix() {
+  matrix_ = glm::scale(glm::rotate(glm::translate(glm::mat3(), translation_), angle_), scale_);
+}
+
+glm::mat3 Flatland::MatrixData::GetMatrix() const { return matrix_; }
 
 }  // namespace flatland

@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 
 #include <chrono>
+#include <cstddef>
 #include <mutex>
 #include <thread>
 
@@ -39,14 +40,14 @@ namespace test {
 // particular call in a unit test.
 //
 // |data| is a GlobalTopologyData object. |link_id| is the instance ID for link handles.
-#define CHECK_GLOBAL_TOPOLOGY_DATA(data, link_id)       \
-  {                                                     \
-    std::unordered_set<TransformHandle> all_handles;    \
-    for (auto entry : data.topology_vector) {           \
-      all_handles.insert(entry.handle);                 \
-      EXPECT_NE(entry.handle.GetInstanceId(), link_id); \
-    }                                                   \
-    EXPECT_EQ(all_handles, data.live_handles);          \
+#define CHECK_GLOBAL_TOPOLOGY_DATA(data, link_id)    \
+  {                                                  \
+    std::unordered_set<TransformHandle> all_handles; \
+    for (auto handle : data.topology_vector) {       \
+      all_handles.insert(handle);                    \
+      EXPECT_NE(handle.GetInstanceId(), link_id);    \
+    }                                                \
+    EXPECT_EQ(all_handles, data.live_handles);       \
   }
 
 TEST(UberStructSystemTest, InstanceIdUniqueness) {
@@ -250,6 +251,7 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
 
   // The expected output child counts should be the same regardless.
   const std::vector<uint64_t> expected_child_counts = {2, 2, 2, 0, 0, 0, 2, 2, 0, 0, 0};
+  const std::vector<size_t> expected_parent_indices = {0, 0, 1, 2, 2, 1, 0, 6, 7, 7, 6};
 
   std::vector<std::thread> threads;
   bool run = true;
@@ -285,12 +287,8 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
                                                                 kLinkInstanceId, {1, 0});
     CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
 
-    std::vector<uint64_t> child_counts;
-    child_counts.resize(output.topology_vector.size());
-    for (uint64_t i = 0; i < output.topology_vector.size(); i++) {
-      child_counts[i] = output.topology_vector[i].child_count;
-    }
-    EXPECT_THAT(child_counts, ::testing::ElementsAreArray(expected_child_counts));
+    EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+    EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
 
     // This sleep triggers the Compute call at a random point in the middle of all of the
     // thread updates.

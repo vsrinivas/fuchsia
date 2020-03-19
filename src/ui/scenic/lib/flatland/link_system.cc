@@ -110,7 +110,8 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
   });
 }
 
-void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_topology,
+void LinkSystem::UpdateLinks(const std::vector<TransformHandle>& global_topology,
+                             const std::vector<uint64_t>& child_counts,
                              const std::unordered_set<TransformHandle>& live_handles,
                              const UberStruct::InstanceMap& uber_structs) {
   std::scoped_lock lock(map_mutex_);
@@ -121,13 +122,14 @@ void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_topolo
                                                : GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
   }
 
-  for (const auto& entry : global_topology) {
-    auto content_iter = content_link_map_.find(entry.handle);
-    if (content_iter != content_link_map_.end()) {
+  for (size_t i = 0; i < global_topology.size(); ++i) {
+    const auto& handle = global_topology[i];
+    auto content_link_kv = content_link_map_.find(handle);
+    if (content_link_kv != content_link_map_.end()) {
       // Confirm that the ContentLink handle has at least one child (i.e., the link_origin of the
       // child Flatland instance). If not, then the child has not yet called Present().
-      if (entry.child_count > 0) {
-        content_iter->second->UpdateLinkStatus(ContentLinkStatus::CONTENT_HAS_PRESENTED);
+      if (child_counts[i] > 0) {
+        content_link_kv->second->UpdateLinkStatus(ContentLinkStatus::CONTENT_HAS_PRESENTED);
       }
     }
 
@@ -135,12 +137,12 @@ void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_topolo
     // |graph_handle|. They can show up in either order (LinkProperties before GraphLinkImpl if the
     // parent Flatland calls Present() first, other way around if the link resolves first), so one
     // being present without another is not a bug.
-    auto uber_struct_kv = uber_structs.find(entry.handle.GetInstanceId());
+    auto uber_struct_kv = uber_structs.find(handle.GetInstanceId());
     if (uber_struct_kv != uber_structs.end()) {
-      auto properties_kv = uber_struct_kv->second->link_properties.find(entry.handle);
+      auto properties_kv = uber_struct_kv->second->link_properties.find(handle);
       if (properties_kv != uber_struct_kv->second->link_properties.end() &&
           properties_kv->second.has_logical_size()) {
-        auto graph_kv = graph_link_map_.find(entry.handle);
+        auto graph_kv = graph_link_map_.find(handle);
         if (graph_kv != graph_link_map_.end()) {
           LayoutInfo info;
           info.set_logical_size(properties_kv->second.logical_size());
