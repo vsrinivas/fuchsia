@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net"
 	"os"
 	"path"
 	"strconv"
@@ -44,10 +45,10 @@ func findDefaultTarget() (string, error) {
 	if err != nil {
 		return "", errors.New(output)
 	}
-	return "[" + output + "]", nil
+	return output, nil
 }
 
-func NewTargetConnection(hostname, keyFile string) (*TargetConnection, error) {
+func NewTargetConnection(hostname, port, keyFile string) (*TargetConnection, error) {
 	if hostname == "" {
 		defaultHostname, err := findDefaultTarget()
 		if err != nil {
@@ -55,6 +56,10 @@ func NewTargetConnection(hostname, keyFile string) (*TargetConnection, error) {
 				err.Error())
 		}
 		hostname = defaultHostname
+	}
+
+	if port == "" {
+		port = "22"
 	}
 
 	signer, err := newSigner(keyFile)
@@ -70,7 +75,8 @@ func NewTargetConnection(hostname, keyFile string) (*TargetConnection, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	client, err := ssh.Dial("tcp", hostname+":22", config)
+	address := net.JoinHostPort(hostname, port)
+	client, err := ssh.Dial("tcp", address, config)
 	if err != nil {
 		return nil, err
 	}
