@@ -791,15 +791,20 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         continue;
       }
       case Frame::kStateString: {
-        // TODO(fxb/42059) Clear the ownership bit in size and call VisitVectorOrStringCount.
         auto string_ptr = PtrTo<fidl_string_t>(frame->position);
+        // The MSB of the size is reserved for an ownership bit used by fidl::StringView.
+        // fidl::StringView's count() would be ideally used in place of the direct bit masking
+        // here, but because of build dependencies this is currently not possible.
+        const uint64_t size = string_ptr->size & ~kVectorOwnershipMask;
+        auto status = visitor.VisitVectorOrStringCount(&string_ptr->size);
+        FIDL_STATUS_GUARD(status);
         if (string_ptr->data == nullptr) {
           if (!frame->string_state.nullable &&
               !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
             visitor.OnError("non-nullable string is absent");
             FIDL_STATUS_GUARD(Status::kConstraintViolationError);
           }
-          if (string_ptr->size == 0) {
+          if (size == 0) {
             if (frame->string_state.nullable ||
                 !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
               Pop();
@@ -811,7 +816,6 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           }
         }
         uint64_t bound = frame->string_state.max_size;
-        uint64_t size = string_ptr->size;
         if (size > std::numeric_limits<uint32_t>::max()) {
           visitor.OnError("string size overflows 32 bits");
           FIDL_STATUS_GUARD(Status::kMemoryError);
@@ -821,7 +825,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           FIDL_STATUS_GUARD(Status::kConstraintViolationError);
         }
         Position position;
-        auto status = visitor.VisitPointer(
+        status = visitor.VisitPointer(
             position, VisitorImpl::PointeeType::kVectorOrString,
             &reinterpret_cast<Ptr<void>&>(const_cast<Ptr<char>&>(string_ptr->data)),
             static_cast<uint32_t>(size), &position);
@@ -849,7 +853,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
       case Frame::kStateVector: {
         auto vector_ptr = PtrTo<fidl_vector_t>(frame->position);
         // The MSB of the count is reserved for an ownership bit used by fidl::VectorView.
-        // fidl::VectorView's count would be ideally used in place of the direct bit masking
+        // fidl::VectorView's count() would be ideally used in place of the direct bit masking
         // here, but because of build dependencies this is currently not possible.
         const uint64_t count = vector_ptr->count & ~kVectorOwnershipMask;
         auto status = visitor.VisitVectorOrStringCount(&vector_ptr->count);

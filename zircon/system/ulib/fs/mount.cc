@@ -137,7 +137,7 @@ zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
   }
 
   auto r = fio::Directory::Call::Open(zx::unowned_channel(h), options.ToIoV1Flags(), mode,
-                                      fidl::StringView(path), std::move(channel))
+                                      fidl::unowned_str(path), std::move(channel))
                .status();
   if (r == ZX_ERR_PEER_CLOSED) {
     zx::channel c;

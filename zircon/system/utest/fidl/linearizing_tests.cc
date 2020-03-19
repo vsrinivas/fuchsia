@@ -243,11 +243,11 @@ bool linearize_vector_of_string() {
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buf_size]);
 
   fidl::StringView strings[3] = {};
-  strings[0].set_data(str1);
+  strings[0].set_data(fidl::unowned_ptr<const char>(str1));
   strings[0].set_size(sizeof(str1));
-  strings[1].set_data(str2);
+  strings[1].set_data(fidl::unowned_ptr<const char>(str2));
   strings[1].set_size(sizeof(str2));
-  strings[2].set_data(str3);
+  strings[2].set_data(fidl::unowned_ptr<const char>(str3));
   strings[2].set_size(sizeof(str3));
 
   VectorOfStringRequest message;
@@ -652,12 +652,12 @@ bool linearize_union_tracking_ptr_unowned() {
   LLCPPStyleUnionStruct str;
   str.u.set_Primitive(fidl::unowned(&int_val));
 
-  constexpr uint32_t buf_size = 512;
-  uint8_t buffer[buf_size];
+  constexpr uint32_t kBufSize = 512;
+  uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
   auto status = fidl_linearize(&v1_fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
-                               buf_size, &actual_num_bytes, &error);
+                               kBufSize, &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
   fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
@@ -677,12 +677,12 @@ bool linearize_union_tracking_ptr_heap_allocate() {
   LLCPPStyleUnionStruct str;
   str.u.set_Primitive(std::make_unique<int32_t>(int_val));
 
-  constexpr uint32_t buf_size = 512;
-  uint8_t buffer[buf_size];
+  constexpr uint32_t kBufSize = 512;
+  uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
   auto status = fidl_linearize(&v1_fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
-                               buf_size, &actual_num_bytes, &error);
+                               kBufSize, &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
   fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
@@ -757,6 +757,56 @@ bool linearize_vector_view_tracking_ptr_heap_allocate() {
   END_TEST;
 }
 
+bool linearize_string_view_tracking_ptr_unowned() {
+  BEGIN_TEST;
+
+  const char input[] = "abcd";
+  StringStruct str = {.str = fidl::unowned_str(input, strlen(input))};
+
+  constexpr uint32_t kBufSize = 512;
+  uint8_t buffer[kBufSize];
+  const char* error = nullptr;
+  uint32_t actual_num_bytes = 0;
+  auto status = fidl_linearize(&v1_fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
+                               &actual_num_bytes, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl_string_t* written_string = reinterpret_cast<fidl_string_t*>(buffer);
+
+  EXPECT_EQ(written_string->size, strlen(input));
+  EXPECT_NE(written_string->data, nullptr);
+  const char* written_data = reinterpret_cast<const char*>(written_string->data);
+  for (size_t i = 0; i < strlen(input); i++)
+    EXPECT_EQ(written_data[i], input[i]);
+
+  END_TEST;
+}
+
+bool linearize_string_view_tracking_ptr_heap_allocate() {
+  BEGIN_TEST;
+
+  const char input[] = "abcd";
+  StringStruct str = {.str = fidl::heap_copy_str(input, strlen(input))};
+
+  constexpr uint32_t kBufSize = 512;
+  uint8_t buffer[kBufSize];
+  const char* error = nullptr;
+  uint32_t actual_num_bytes = 0;
+  auto status = fidl_linearize(&v1_fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
+                               &actual_num_bytes, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl_string_t* written_string = reinterpret_cast<fidl_string_t*>(buffer);
+
+  EXPECT_EQ(written_string->size, strlen(input));
+  EXPECT_NE(written_string->data, nullptr);
+  const char* written_data = reinterpret_cast<const char*>(written_string->data);
+  for (size_t i = 0; i < strlen(input); i++)
+    EXPECT_EQ(written_data[i], input[i]);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(strings)
 RUN_TEST(linearize_present_nonnullable_string)
 RUN_TEST(linearize_present_nonnullable_longer_string)
@@ -794,6 +844,8 @@ RUN_TEST(linearize_union_tracking_ptr_unowned)
 RUN_TEST(linearize_union_tracking_ptr_heap_allocate)
 RUN_TEST(linearize_vector_view_tracking_ptr_unowned)
 RUN_TEST(linearize_vector_view_tracking_ptr_heap_allocate)
+RUN_TEST(linearize_string_view_tracking_ptr_unowned)
+RUN_TEST(linearize_string_view_tracking_ptr_heap_allocate)
 END_TEST_CASE(tracking_ptr)
 
 }  // namespace

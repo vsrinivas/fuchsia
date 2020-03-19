@@ -27,9 +27,9 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
   // response on the accompanying channel.
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
-  auto result = fio::Directory::Call::Open(zx::unowned_channel(directory),
-                                           fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE, 0,
-                                           fidl::StringView(path, strlen(path)), std::move(server));
+  auto result = fio::Directory::Call::Open(
+      zx::unowned_channel(directory), fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE, 0,
+      fidl::unowned_str(path, strlen(path)), std::move(server));
   ASSERT_EQ(result.status(), ZX_OK);
   zx_signals_t pending;
   ASSERT_EQ(

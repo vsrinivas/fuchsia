@@ -7,17 +7,18 @@
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <memory>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <memory>
+
 // for guid printing
-#include <fbl/intrusive_double_list.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
+#include <fbl/intrusive_double_list.h>
 #include <gpt/c/gpt.h>
 
 void usage(void) {
@@ -48,16 +49,14 @@ static zx_duration_t timeout = 0;
 const char* devclass = NULL;
 
 class Rule : public fbl::DoublyLinkedListable<std::unique_ptr<Rule>> {
-public:
+ public:
   using Func = zx_status_t (*)(const char* arg, int fd);
 
   Rule(Func func, const char* arg) : func_(func), arg_(arg) {}
 
-  zx_status_t CallWithFd(int fd) const {
-    return func_(arg_, fd);
-  }
+  zx_status_t CallWithFd(int fd) const { return func_(arg_, fd); }
 
-private:
+ private:
   Func func_;
   const char* arg_;
 };
@@ -128,7 +127,7 @@ zx_status_t expr_topo(const char* arg, int fd) {
     call_status = resp->result.err();
   } else {
     path_len = resp->result.response().path.size();
-    auto r = resp->result.response();
+    auto& r = resp->result.response();
     memcpy(topo, r.path.data(), r.path.size());
   }
   fdio_unsafe_release(io);

@@ -26,7 +26,7 @@ namespace {
 ::llcpp::fuchsia::cobalt::CobaltEvent MetricIntoToCobaltEvent(const MetricOptions& metric_info) {
   llcpp::fuchsia::cobalt::CobaltEvent event;
   event.metric_id = metric_info.metric_id;
-  event.component = fidl::StringView(metric_info.component);
+  event.component = fidl::unowned_str(metric_info.component);
   // Safe to do so, since the request is read only.
   event.event_codes = fidl::VectorView<uint32_t>(
       fidl::unowned(const_cast<uint32_t*>(metric_info.event_codes.data())),

@@ -456,7 +456,7 @@ fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
     bool is_dir = random.UpTo(2) == 0;
     int32_t flags = static_cast<int32_t>(random.UpTo(1000));
     dirents[i] = gen::DirEnt{.is_dir = is_dir,
-                             .name = fidl::StringView{name, static_cast<uint64_t>(str_len)},
+                             .name = fidl::unowned_str(name, static_cast<uint64_t>(str_len)),
                              .some_flags = flags};
   }
   return dirents;
@@ -548,8 +548,8 @@ void CallerAllocateReadDir() {
     const auto& dirents = result.Unwrap()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents().count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
-      auto actual = dirents[i];
-      auto expected = golden_dirents()[i];
+      auto& actual = dirents[i];
+      auto& expected = golden_dirents()[i];
       EXPECT_EQ(actual.is_dir, expected.is_dir);
       EXPECT_EQ(actual.some_flags, expected.some_flags);
       ASSERT_EQ(actual.name.size(), expected.name.size());
@@ -580,8 +580,8 @@ void InPlaceReadDir() {
     const auto& dirents = result.message.message()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents().count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
-      auto actual = dirents[i];
-      auto expected = golden_dirents()[i];
+      auto& actual = dirents[i];
+      auto& expected = golden_dirents()[i];
       EXPECT_EQ(actual.is_dir, expected.is_dir);
       EXPECT_EQ(actual.some_flags, expected.some_flags);
       ASSERT_EQ(actual.name.size(), expected.name.size());

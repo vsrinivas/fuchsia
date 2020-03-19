@@ -210,3 +210,7 @@ struct Uint64EnumStruct {
 struct Uint32VectorStruct {
     vector<uint32> vec;
 };
+
+struct StringStruct {
+    string str;
+};

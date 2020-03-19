@@ -113,7 +113,7 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
 
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteDataFileCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteDataFile(filename, std::move(payload)));
+    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)));
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override;
@@ -157,7 +157,7 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
 
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteDataFileCompleter::Sync completer) override {
-    completer.Reply(sink_.WriteDataFile(filename, std::move(payload)));
+    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)));
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override;

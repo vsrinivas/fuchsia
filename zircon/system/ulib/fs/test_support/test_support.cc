@@ -39,7 +39,7 @@ std::string GetTopologicalPath(zx_handle_t channel) {
     status = resp->result.err();
   } else {
     status = ZX_OK;
-    auto r = resp->result.response();
+    auto& r = resp->result.response();
     path_len = r.path.size();
     if (path_len > PATH_MAX) {
       return std::string("");

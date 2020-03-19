@@ -107,7 +107,7 @@ void InterpreterTest::Finish(FinishAction action) {
           fidl::Buffer<llcpp::fuchsia::shell::Node> request_buffer;
           auto& response_buffer =
               to_be_deleted_.emplace_back(new fidl::Buffer<llcpp::fuchsia::shell::Node>());
-          auto response = shell().LoadGlobal(request_buffer.view(), fidl::StringView(global),
+          auto response = shell().LoadGlobal(request_buffer.view(), fidl::unowned_str(global),
                                              response_buffer->view());
           auto& nodes = response->nodes;
           if (!nodes.empty()) {

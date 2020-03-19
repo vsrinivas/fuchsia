@@ -190,7 +190,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                       const std::string& error_message) {
     return llcpp::fuchsia::shell::Shell::SendOnErrorEvent(::zx::unowned_channel(handle_),
                                                           context_id, fidl::unowned_vec(locations),
-                                                          fidl::StringView(error_message));
+                                                          fidl::unowned_str(error_message));
   }
 
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
@@ -210,7 +210,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
   zx_status_t OnTextResult(uint64_t context_id, const std::string& result, bool partial_result) {
     return llcpp::fuchsia::shell::Shell::SendOnTextResultEvent(
-        ::zx::unowned_channel(handle_), context_id, fidl::StringView(result), partial_result);
+        ::zx::unowned_channel(handle_), context_id, fidl::unowned_str(result), partial_result);
   }
 
  private:

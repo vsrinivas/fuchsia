@@ -66,7 +66,6 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
-  fidl::StringView name_view(name, strlen(name));
 
   zx_status_t status;
   zx::channel parent, parent_server;
@@ -78,7 +77,8 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
     return status;
   }
   fio::DirectoryAdmin::SyncClient parent_client(std::move(parent));
-  auto resp = parent_client.MountAndCreate(std::move(root), name_view, 0);
+  auto resp =
+      parent_client.MountAndCreate(std::move(root), fidl::unowned_str(name, strlen(name)), 0);
   if (!resp.ok()) {
     return resp.status();
   }

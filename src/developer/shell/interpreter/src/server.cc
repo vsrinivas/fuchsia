@@ -24,7 +24,7 @@ namespace shell {
 namespace interpreter {
 namespace server {
 
-inline std::string_view GetView(::fidl::StringView view) {
+inline std::string_view GetView(const ::fidl::StringView& view) {
   return std::string_view(view.data(), view.size());
 }
 

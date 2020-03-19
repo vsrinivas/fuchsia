@@ -45,9 +45,9 @@ TEST(InlineXUnionInStruct, Success) {
     llcpp_misc::SimpleUnion simple_union;
     int64_t i64 = 0xdeadbeef;
     simple_union.set_i64(fidl::unowned(&i64));
-    input.before = fidl::StringView(before);
+    input.before = fidl::unowned_str(before);
     input.xu.set_su(fidl::unowned(&simple_union));
-    input.after = fidl::StringView(after);
+    input.after = fidl::unowned_str(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
     auto linearize_result = fidl::Linearize(&input, std::move(bytes));
@@ -103,9 +103,9 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   // encode
   {
     llcpp_misc::InlineXUnionInStruct input;
-    input.before = fidl::StringView(before);
+    input.before = fidl::unowned_str(before);
     input.xu.set_i(fidl::unowned(&integer));
-    input.after = fidl::StringView(after);
+    input.after = fidl::unowned_str(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
     auto linearize_result = fidl::Linearize(&input, std::move(bytes));
@@ -140,8 +140,8 @@ TEST(PrimitiveInXUnionInStruct, Success) {
 TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   llcpp_misc::InlineXUnionInStruct input = {};
   std::string empty_str = "";
-  input.before = fidl::StringView(empty_str);
-  input.after = fidl::StringView(empty_str);
+  input.before = fidl::unowned_str(empty_str);
+  input.after = fidl::unowned_str(empty_str);
   std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
   fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
   auto linearize_result = fidl::Linearize(&input, std::move(bytes));
@@ -331,9 +331,9 @@ TEST(ComplexTable, Success) {
     auto simple_table = simple_builder.build();
     llcpp_misc::SampleXUnion xu;
     xu.set_i(fidl::unowned(&xunion_i));
-    std::vector<fidl::StringView> strings_vector{
-        fidl::StringView(before),
-        fidl::StringView(after),
+    fidl::StringView strings_vector[]{
+        fidl::unowned_str(before),
+        fidl::unowned_str(after),
     };
     fidl::VectorView<fidl::StringView> strings = fidl::unowned_vec(strings_vector);
     auto builder = llcpp_misc::ComplexTable::UnownedBuilder()

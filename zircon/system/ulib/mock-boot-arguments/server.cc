@@ -47,7 +47,7 @@ void Server::GetString(fidl::StringView view, GetStringCompleter::Sync completer
   if (ret == arguments.end()) {
     completer.Reply(fidl::StringView{});
   } else {
-    completer.Reply(fidl::StringView{ret->second});
+    completer.Reply(fidl::unowned_str(ret->second));
   }
 }
 
@@ -59,7 +59,7 @@ void Server::GetStrings(fidl::VectorView<fidl::StringView> keys,
     if (ret == arguments.end()) {
       result.emplace_back(fidl::StringView{});
     } else {
-      result.emplace_back(fidl::StringView{ret->second});
+      result.emplace_back(fidl::unowned_str(ret->second));
     }
   }
   completer.Reply(fidl::unowned_vec(result));
@@ -90,12 +90,12 @@ void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync completer) 
   }
   std::vector<fidl::StringView> views;
   for (auto val : result) {
-    views.emplace_back(fidl::StringView{val});
+    views.emplace_back(fidl::unowned_str(val));
   }
   completer.Reply(fidl::unowned_vec(views));
 }
 
-bool Server::StrToBool(fidl::StringView key, bool defaultval) {
+bool Server::StrToBool(const fidl::StringView& key, bool defaultval) {
   auto ret = arguments.find(std::string{key.data(), key.size()});
 
   if (ret == arguments.end()) {

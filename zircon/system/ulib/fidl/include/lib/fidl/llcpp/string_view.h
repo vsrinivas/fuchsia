@@ -10,20 +10,17 @@
 
 #include <type_traits>
 
+#include "vector_view.h"
+
 namespace fidl {
 
-class StringView final : private fidl_string_t {
-  // The maximum count to avoid colliding with the ownership bit.
-  static constexpr uint64_t kMaxCount = internal::kVectorOwnershipMask - 1ULL;
-
+class StringView final : private VectorView<const char> {
  public:
-  StringView() : fidl_string_t{} {}
-  constexpr StringView(const char* data, uint64_t size)
-      : fidl_string_t{size, const_cast<char*>(data)} {
-    if (size > kMaxCount) {
-      abort();
-    }
-  }
+  StringView() : VectorView() {}
+  StringView(tracking_ptr<const char[]>&& data, uint64_t size)
+      : VectorView(std::move(data), size) {}
+  explicit StringView(VectorView<char>&& vv) : VectorView(std::move(vv)) {}
+  explicit StringView(VectorView<const char>&& vv) : VectorView(std::move(vv)) {}
 
   // Constructs a fidl::StringView referencing a string literal. For example:
   //
@@ -31,35 +28,19 @@ class StringView final : private fidl_string_t {
   //     view.size() == 5;
   //
   template <size_t N>
-  constexpr explicit StringView(const char (&literal)[N])
-      : fidl_string_t{N - 1, const_cast<char*>(literal)} {
-    static_assert(N > 0, "Empty string should be null-terminated");
+  constexpr StringView(const char (&literal)[N], uint64_t size = N - 1)
+      : VectorView(fidl::unowned_ptr<const char>(literal), size) {
+    static_assert(N > 0, "String should not be empty");
   }
 
-  // Creates a view over any container that implements |[const] char* data()| and |size()|.
-  // E.g. an std::string.
-  template <typename C, typename = decltype(std::declval<C&>().data()),
-            typename = decltype(std::declval<C&>().size()),
-            typename = std::enable_if_t<
-                std::is_same<typename std::remove_const<typename std::remove_pointer<
-                                 decltype(std::declval<C&>().data())>::type>::type,
-                             char>::value>>
-  explicit StringView(C& container)
-      : fidl_string_t{container.size(), const_cast<char*>(container.data())} {}
+  uint64_t size() const { return count(); }
+  void set_size(uint64_t size) { set_count(size); }
 
-  uint64_t size() const { return fidl_string_t::size; }
-  void set_size(uint64_t size) {
-    if (size > kMaxCount) {
-      abort();
-    }
-    fidl_string_t::size = size;
-  }
+  const char* data() const { return VectorView::data(); }
+  void set_data(tracking_ptr<const char[]> data) { VectorView::set_data(std::move(data)); }
 
-  const char* data() const { return fidl_string_t::data; }
-  void set_data(const char* data) { fidl_string_t::data = const_cast<char*>(data); }
-
-  bool is_null() const { return fidl_string_t::data == nullptr; }
-  bool empty() const { return fidl_string_t::size == 0; }
+  bool is_null() const { return data() == nullptr; }
+  bool empty() const { return size() == 0; }
 
   const char& at(size_t offset) const { return data()[offset]; }
 
