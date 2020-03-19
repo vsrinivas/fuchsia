@@ -161,7 +161,11 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 		}
 	}
 
-	localTester := newSubprocessTester(localWD, os.Environ())
+	localEnv := append(os.Environ(),
+		// Tell tests written in Rust to print stack on failures.
+		"RUST_BACKTRACE=1",
+	)
+	localTester := newSubprocessTester(localWD, localEnv)
 	if err := runTests(ctx, localTests, localTester, outputs); err != nil {
 		return err
 	}
