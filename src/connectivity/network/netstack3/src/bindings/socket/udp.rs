@@ -12,7 +12,7 @@ use std::ops::{Deref, DerefMut};
 use anyhow::{format_err, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl::AsyncChannel;
-use fidl_fuchsia_io::{self as fdio, NodeInfo, NodeMarker};
+use fidl_fuchsia_io::{self as fio, NodeInfo, NodeMarker};
 use fidl_fuchsia_posix_socket::{
     self as psocket, DatagramSocketRequest, DatagramSocketRequestStream,
 };
@@ -148,13 +148,6 @@ struct AvailableMessage<A> {
     source_addr: A,
     source_port: u16,
     data: Vec<u8>,
-}
-
-/// Whether we need to close the underlying channel.
-#[derive(Eq, PartialEq)]
-enum ChannelAction {
-    LeaveOpen,
-    Close,
 }
 
 /// Internal state of a [`UdpSocketWorker`].
@@ -308,18 +301,18 @@ where
                 };
                 // Datagram sockets don't understand the following flags.
                 let append_no_remote =
-                    flags & fdio::OPEN_FLAG_APPEND != 0 || flags & fdio::OPEN_FLAG_NO_REMOTE != 0;
+                    flags & fio::OPEN_FLAG_APPEND != 0 || flags & fio::OPEN_FLAG_NO_REMOTE != 0;
                 // Datagram sockets are neither mountable nor executable.
                 let admin_executable =
-                    flags & fdio::OPEN_RIGHT_ADMIN != 0 || flags & fdio::OPEN_RIGHT_EXECUTABLE != 0;
+                    flags & fio::OPEN_RIGHT_ADMIN != 0 || flags & fio::OPEN_RIGHT_EXECUTABLE != 0;
                 // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with OPEN_RIGHT_* flags.
-                let conflicting_rights = flags & fdio::CLONE_FLAG_SAME_RIGHTS != 0
-                    && (flags & fdio::OPEN_RIGHT_READABLE != 0
-                        || flags & fdio::OPEN_RIGHT_WRITABLE != 0);
+                let conflicting_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS != 0
+                    && (flags & fio::OPEN_RIGHT_READABLE != 0
+                        || flags & fio::OPEN_RIGHT_WRITABLE != 0);
                 // TODO(zeling): currently only CLONE_FLAG_SAME_RIGHTS is supported, we should
                 // adjust rights if the user explicitly wants to reduce rights, but currently
                 // there are no readonly or writeonly dgram sockets.
-                let no_same_rights = flags & fdio::CLONE_FLAG_SAME_RIGHTS == 0;
+                let no_same_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS == 0;
 
                 if append_no_remote || admin_executable || conflicting_rights || no_same_rights {
                     send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
@@ -327,7 +320,7 @@ where
                     return Ok(());
                 }
 
-                if flags & fdio::OPEN_FLAG_DESCRIBE != 0 {
+                if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
                     let mut info = worker.make_handler().await.describe();
                     send_on_open(zx::sys::ZX_OK, info.as_mut());
                 }
@@ -340,108 +333,6 @@ where
     async fn make_handler(&self) -> RequestHandler<'_, I, C> {
         let ctx = self.ctx.lock().await;
         RequestHandler { ctx, binding_id: self.id, _marker: PhantomData }
-    }
-
-    /// Handles a [POSIX socket request].
-    ///
-    /// [POSIX socket request]: psocket::DatagramSocketRequest
-    async fn handle_request(&self, req: psocket::DatagramSocketRequest) -> ChannelAction {
-        match req {
-            psocket::DatagramSocketRequest::Describe { responder } => {
-                // If the call to duplicate_handle fails, we have no choice but to drop the
-                // responder and close the channel, since Describe must be infallible.
-                if let Some(mut info) = self.make_handler().await.describe() {
-                    responder_send!(responder, &mut info);
-                }
-            }
-            psocket::DatagramSocketRequest::Connect { addr, responder } => {
-                responder_send!(responder, &mut self.make_handler().await.connect(addr));
-            }
-            psocket::DatagramSocketRequest::Clone { flags, object, .. } => {
-                let cloned_worker = self.clone().await;
-                self.clone_spawn(flags, object, cloned_worker);
-            }
-            psocket::DatagramSocketRequest::Close { responder } => {
-                responder_send!(responder, self.make_handler().await.close().err().unwrap_or(0i32));
-                return ChannelAction::Close;
-            }
-            psocket::DatagramSocketRequest::Sync { responder } => {
-                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
-            }
-            psocket::DatagramSocketRequest::GetAttr { responder } => {
-                responder_send!(
-                    responder,
-                    zx::Status::NOT_SUPPORTED.into_raw(),
-                    &mut fidl_fuchsia_io::NodeAttributes {
-                        mode: 0,
-                        id: 0,
-                        content_size: 0,
-                        storage_size: 0,
-                        link_count: 0,
-                        creation_time: 0,
-                        modification_time: 0
-                    }
-                );
-            }
-            psocket::DatagramSocketRequest::SetAttr { flags: _, attributes: _, responder } => {
-                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
-            }
-            psocket::DatagramSocketRequest::Bind { addr, responder } => {
-                responder_send!(responder, &mut self.make_handler().await.bind(addr));
-            }
-            psocket::DatagramSocketRequest::GetSockName { responder } => {
-                responder_send!(responder, &mut self.make_handler().await.get_sock_name());
-            }
-            psocket::DatagramSocketRequest::GetPeerName { responder } => {
-                responder_send!(responder, &mut self.make_handler().await.get_peer_name());
-            }
-            psocket::DatagramSocketRequest::SetSockOpt { level, optname, optval: _, responder } => {
-                warn!("UDP setsockopt {} {} not implemented", level, optname);
-                responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
-            }
-            psocket::DatagramSocketRequest::GetSockOpt { level, optname, responder } => {
-                warn!("UDP getsockopt {} {} not implemented", level, optname);
-                responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
-            }
-
-            DatagramSocketRequest::Shutdown { how: _, responder: _ } => {
-                warn!("UDP Shutdown not implemented");
-            }
-            DatagramSocketRequest::RecvMsg {
-                addr_len,
-                data_len,
-                control_len: _,
-                flags: _,
-                responder,
-            } => {
-                // TODO(brunodalbo) handle control and flags
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.recv_msg(addr_len as usize, data_len as usize)
-                );
-            }
-            DatagramSocketRequest::SendMsg { addr, data, control: _, flags: _, responder } => {
-                // TODO(brunodalbo) handle control and flags
-                // TODO(brunodalbo) we're flattenting the parts of the
-                // message in `data` into a single Vec. There may be a
-                // way to avoid this by using the FragmentedBuffer
-                // utilities in the packet crate.
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.send_msg(
-                        addr,
-                        data.into_iter().map(|v| v.into_iter()).flatten().collect()
-                    )
-                );
-            }
-            DatagramSocketRequest::NodeGetFlags { responder } => {
-                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
-            }
-            DatagramSocketRequest::NodeSetFlags { flags: _, responder } => {
-                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
-            }
-        }
-        return ChannelAction::LeaveOpen;
     }
 
     /// Handles [a stream of POSIX socket requests].
@@ -460,8 +351,134 @@ where
         while let Some(event) = events.next().await {
             match event {
                 Ok(req) => {
-                    if self.handle_request(req).await == ChannelAction::Close {
-                        return Ok(());
+                    match req {
+                        psocket::DatagramSocketRequest::Describe { responder } => {
+                            // If the call to duplicate_handle fails, we have no choice but to drop the
+                            // responder and close the channel, since Describe must be infallible.
+                            if let Some(mut info) = self.make_handler().await.describe() {
+                                responder_send!(responder, &mut info);
+                            }
+                        }
+                        psocket::DatagramSocketRequest::Connect { addr, responder } => {
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.connect(addr)
+                            );
+                        }
+                        psocket::DatagramSocketRequest::Clone { flags, object, .. } => {
+                            let cloned_worker = self.clone().await;
+                            self.clone_spawn(flags, object, cloned_worker);
+                        }
+                        psocket::DatagramSocketRequest::Close { responder } => {
+                            responder_send!(
+                                responder,
+                                self.make_handler().await.close().err().unwrap_or(0i32)
+                            );
+                            return Ok(());
+                        }
+                        psocket::DatagramSocketRequest::Sync { responder } => {
+                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+                        }
+                        psocket::DatagramSocketRequest::GetAttr { responder } => {
+                            responder_send!(
+                                responder,
+                                zx::Status::NOT_SUPPORTED.into_raw(),
+                                &mut fidl_fuchsia_io::NodeAttributes {
+                                    mode: 0,
+                                    id: 0,
+                                    content_size: 0,
+                                    storage_size: 0,
+                                    link_count: 0,
+                                    creation_time: 0,
+                                    modification_time: 0
+                                }
+                            );
+                        }
+                        psocket::DatagramSocketRequest::SetAttr {
+                            flags: _,
+                            attributes: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+                        }
+                        psocket::DatagramSocketRequest::Bind { addr, responder } => {
+                            responder_send!(responder, &mut self.make_handler().await.bind(addr));
+                        }
+                        psocket::DatagramSocketRequest::GetSockName { responder } => {
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.get_sock_name()
+                            );
+                        }
+                        psocket::DatagramSocketRequest::GetPeerName { responder } => {
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.get_peer_name()
+                            );
+                        }
+                        psocket::DatagramSocketRequest::SetSockOpt {
+                            level,
+                            optname,
+                            optval: _,
+                            responder,
+                        } => {
+                            warn!("UDP setsockopt {} {} not implemented", level, optname);
+                            responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
+                        }
+                        psocket::DatagramSocketRequest::GetSockOpt {
+                            level,
+                            optname,
+                            responder,
+                        } => {
+                            warn!("UDP getsockopt {} {} not implemented", level, optname);
+                            responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
+                        }
+
+                        DatagramSocketRequest::Shutdown { how: _, responder: _ } => {
+                            warn!("UDP Shutdown not implemented");
+                        }
+                        DatagramSocketRequest::RecvMsg {
+                            addr_len,
+                            data_len,
+                            control_len: _,
+                            flags: _,
+                            responder,
+                        } => {
+                            // TODO(brunodalbo) handle control and flags
+                            responder_send!(
+                                responder,
+                                &mut self
+                                    .make_handler()
+                                    .await
+                                    .recv_msg(addr_len as usize, data_len as usize)
+                            );
+                        }
+                        DatagramSocketRequest::SendMsg {
+                            addr,
+                            data,
+                            control: _,
+                            flags: _,
+                            responder,
+                        } => {
+                            // TODO(brunodalbo) handle control and flags
+                            // TODO(brunodalbo) we're flattenting the parts of the
+                            // message in `data` into a single Vec. There may be a
+                            // way to avoid this by using the FragmentedBuffer
+                            // utilities in the packet crate.
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.send_msg(
+                                    addr,
+                                    data.into_iter().map(|v| v.into_iter()).flatten().collect()
+                                )
+                            );
+                        }
+                        DatagramSocketRequest::NodeGetFlags { responder } => {
+                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
+                        }
+                        DatagramSocketRequest::NodeSetFlags { flags: _, responder } => {
+                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+                        }
                     }
                 }
                 Err(err) => {
@@ -773,7 +790,7 @@ mod tests {
     use super::*;
 
     use fidl::{endpoints::ServerEnd, AsyncChannel};
-    use fidl_fuchsia_io as fdio;
+    use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
     use fuchsia_zircon::{self as zx, AsHandleRef};
     use futures::StreamExt;
@@ -1151,7 +1168,7 @@ mod tests {
         let (alice_socket, alice_events) = get_socket_and_event::<A>(t.get(0)).await;
         // Test for the OPEN_FLAG_DESCRIBE.
         let alice_cloned =
-            socket_clone(&alice_socket, fdio::CLONE_FLAG_SAME_RIGHTS | fdio::OPEN_FLAG_DESCRIBE)
+            socket_clone(&alice_socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE)
                 .await
                 .expect("cannot clone socket");
         let mut events = alice_cloned.take_event_stream();
@@ -1185,7 +1202,7 @@ mod tests {
         );
 
         let (bob_socket, bob_events) = get_socket_and_event::<A>(t.get(1)).await;
-        let bob_cloned = socket_clone(&bob_socket, fdio::CLONE_FLAG_SAME_RIGHTS)
+        let bob_cloned = socket_clone(&bob_socket, fio::CLONE_FLAG_SAME_RIGHTS)
             .await
             .expect("failed to clone socket");
         let sockaddr = A::create(A::REMOTE_ADDR, 200);
@@ -1315,7 +1332,7 @@ mod tests {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack).await;
-        let cloned = socket_clone(&socket, fdio::CLONE_FLAG_SAME_RIGHTS).await.unwrap();
+        let cloned = socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap();
         socket.close().await.expect("failed to close the socket");
         socket
             .close()
@@ -1361,7 +1378,7 @@ mod tests {
         let test_stack = t.get(0);
         let cloned = {
             let socket = get_socket::<A>(test_stack).await;
-            socket_clone(&socket, fdio::CLONE_FLAG_SAME_RIGHTS).await.unwrap()
+            socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap()
             // socket goes out of scope indicating an implicit close.
         };
         // Using an explicit close here.
@@ -1403,16 +1420,15 @@ mod tests {
             assert!(cloned.into_channel().unwrap().is_closed());
         };
         // conflicting flags
-        expect_invalid_args(&socket, fdio::CLONE_FLAG_SAME_RIGHTS | fdio::OPEN_RIGHT_READABLE)
-            .await;
+        expect_invalid_args(&socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_RIGHT_READABLE).await;
         // no remote
-        expect_invalid_args(&socket, fdio::OPEN_FLAG_NO_REMOTE).await;
+        expect_invalid_args(&socket, fio::OPEN_FLAG_NO_REMOTE).await;
         // append
-        expect_invalid_args(&socket, fdio::OPEN_FLAG_APPEND).await;
+        expect_invalid_args(&socket, fio::OPEN_FLAG_APPEND).await;
         // admin
-        expect_invalid_args(&socket, fdio::OPEN_RIGHT_ADMIN).await;
+        expect_invalid_args(&socket, fio::OPEN_RIGHT_ADMIN).await;
         // executable
-        expect_invalid_args(&socket, fdio::OPEN_RIGHT_EXECUTABLE).await;
+        expect_invalid_args(&socket, fio::OPEN_RIGHT_EXECUTABLE).await;
         socket.close().await.expect("failed to close");
 
         // make sure we don't leak anything.
