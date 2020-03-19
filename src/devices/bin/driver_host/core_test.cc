@@ -8,6 +8,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <ddk/driver.h>
+#include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
 #include "driver_host.h"
@@ -128,7 +129,10 @@ class CoreTest : public zxtest::Test {
  protected:
   CoreTest() : ctx_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ctx_.loop().StartThread("driver_host-test-loop");
+    internal::RegisterContextForApi(&ctx_);
   }
+
+  ~CoreTest() { internal::RegisterContextForApi(nullptr); }
 
   void Connect(zx::channel* out) {
     zx::channel local, remote;
@@ -139,7 +143,7 @@ class CoreTest : public zxtest::Test {
 
   // This simulates receiving an unbind and remove request from the devcoordinator.
   void UnbindDevice(fbl::RefPtr<zx_device> dev) {
-    ApiAutoLock lock;
+    fbl::AutoLock lock(&ctx_.api_lock());
     ctx_.DeviceUnbind(dev);
     // DeviceCompleteRemoval() will drop the device reference added by device_add().
     // Since we never called device_add(), we should increment the reference count here.

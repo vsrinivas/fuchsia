@@ -432,10 +432,13 @@ namespace {
 // to drivers.  Some of these functions unfortunately do not take an argument that can be used to
 // find a context.
 DriverHostContext* kContextForApi = nullptr;
-void RegisterContextForApi(DriverHostContext* context) { kContextForApi = context; }
 
 }  // namespace
 
+void RegisterContextForApi(DriverHostContext* context) {
+  ZX_ASSERT((context == nullptr) != (kContextForApi == nullptr));
+  kContextForApi = context;
+}
 DriverHostContext* ContextForApi() { return kContextForApi; }
 
 void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
@@ -535,7 +538,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
   {
     // Acquire the API lock so that we don't have to worry about concurrent
     // device removes
-    ApiAutoLock lock;
+    fbl::AutoLock lock(&driver_host_context_->api_lock());
 
     for (size_t i = 0; i < fragments.count(); ++i) {
       uint64_t local_id = fragments.data()[i];

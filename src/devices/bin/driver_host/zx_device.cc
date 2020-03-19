@@ -166,13 +166,13 @@ zx_status_t zx_device::SetSystemPowerStateMapping(const SystemPowerStateMapping&
 // guarantee the lock holding invariant.  Instead, we acquire the lock if
 // it's not already being held by the current thread.
 void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
-  bool acq_lock = !DM_LOCK_HELD();
+  bool acq_lock = !driver_host_context_->api_lock().IsHeldByCurrentThread();
   if (acq_lock) {
-    DM_LOCK();
+    driver_host_context_->api_lock().Acquire();
   }
-  auto unlock = fbl::MakeAutoCall([acq_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  auto unlock = fbl::MakeAutoCall([this, acq_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
     if (acq_lock) {
-      DM_UNLOCK();
+      driver_host_context_->api_lock().Release();
     }
   });
 

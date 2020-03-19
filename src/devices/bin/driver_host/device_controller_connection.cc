@@ -67,7 +67,7 @@ void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "init");
   this->dev()->init_cb = [completer = completer.ToAsync(), trace = std::move(trace)](
                              zx_status_t status) mutable { completer.Reply(status); };
-  ApiAutoLock lock;
+  fbl::AutoLock lock(&driver_host_context_->api_lock());
   driver_host_context_->DeviceInit(this->dev());
 }
 
@@ -82,7 +82,7 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
     }
     completer.Reply(status);
   };
-  ApiAutoLock lock;
+  fbl::AutoLock lock(&driver_host_context_->api_lock());
   driver_host_context_->DeviceSystemSuspend(this->dev(), flags);
 }
 
@@ -106,7 +106,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     }
     completer.Reply(status);
   };
-  ApiAutoLock lock;
+  fbl::AutoLock lock(&driver_host_context_->api_lock());
   driver_host_context_->DeviceSystemResume(this->dev(), target_system_state);
 }
 
@@ -209,7 +209,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
     result.set_response(fidl::unowned(&response));
     completer.Reply(std::move(result));
   };
-  ApiAutoLock lock;
+  fbl::AutoLock lock(&driver_host_context_->api_lock());
   driver_host_context_->DeviceUnbind(this->dev());
 }
 
@@ -222,7 +222,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
     result.set_response(fidl::unowned(&response));
     completer.Reply(std::move(result));
   };
-  ApiAutoLock lock;
+  fbl::AutoLock lock(&driver_host_context_->api_lock());
   driver_host_context_->DeviceCompleteRemoval(this->dev());
 }
 

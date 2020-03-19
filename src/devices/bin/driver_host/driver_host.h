@@ -48,6 +48,7 @@ namespace internal {
 
 // Get the DriverHostContext that should be used by all external API methods
 DriverHostContext* ContextForApi();
+void RegisterContextForApi(DriverHostContext* context);
 
 class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
                                     public fuchsia::device::manager::DevhostController::Interface {
