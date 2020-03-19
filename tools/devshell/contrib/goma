@@ -129,7 +129,8 @@ function check-build {
     echo "$FUCHSIA_BUILD_DIR has Goma enabled."
   elif $update; then
     echo "*** Enabling Goma in $FUCHSIA_BUILD_DIR..."
-    sed -i /use_goma/d "$FUCHSIA_BUILD_DIR/args.gn"
+    sed -e /use_goma/d "$FUCHSIA_BUILD_DIR/args.gn" > "$FUCHSIA_BUILD_DIR/args.gn.new"
+    mv -f "$FUCHSIA_BUILD_DIR/args.gn.new" "$FUCHSIA_BUILD_DIR/args.gn"
     echo "use_goma = true" >> "$FUCHSIA_BUILD_DIR/args.gn"
     echo "*** Make sure that Goma has been set up via \`fx goma bootstrap\`!"
     gen=true
