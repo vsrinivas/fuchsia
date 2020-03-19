@@ -6,8 +6,8 @@ toc:
   path: /docs/development/testing/running_tests_as_components.md
 - title: "Testing Scenic and Escher"
   path: /docs/development/testing/scenic_testing.md
-- title: "Questions and answers"
-  path: /docs/development/testing/faq.md
+- title: "Run an end-to-end test"
+  path: /docs/development/testing/run_an_end_to_end_test.md
 - title: "Zircon testing"
   section:
   - title: "Zircon testing overview"
@@ -19,3 +19,5 @@ toc:
 - title: "Fuzzing"
   section:
   - include: /docs/development/testing/fuzzing/_toc.yaml
+- title: "Questions and answers"
+  path: /docs/development/testing/faq.md
