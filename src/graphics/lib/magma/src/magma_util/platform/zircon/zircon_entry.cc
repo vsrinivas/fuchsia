@@ -72,9 +72,6 @@ static zx_status_t device_fidl_query(void* context, uint64_t query_id, fidl_txn_
 
   uint64_t result;
   switch (query_id) {
-    case MAGMA_QUERY_DEVICE_ID:
-      result = device->magma_system_device->GetDeviceId();
-      break;
     case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
 #if MAGMA_TEST_DRIVER
       result = 1;

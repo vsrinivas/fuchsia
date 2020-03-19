@@ -8,27 +8,6 @@
 #include "sys_driver/magma_system_connection.h"
 #include "sys_driver/magma_system_device.h"
 
-class MsdMockDevice_GetDeviceId : public MsdMockDevice {
- public:
-  MsdMockDevice_GetDeviceId(uint32_t device_id) : device_id_(device_id) {}
-
-  uint32_t GetDeviceId() override { return device_id_; }
-
- private:
-  uint32_t device_id_;
-};
-
-TEST(MagmaSystemConnection, GetDeviceId) {
-  uint32_t test_id = 0xdeadbeef;
-
-  auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-  auto device = MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev));
-
-  uint32_t device_id = device->GetDeviceId();
-  // For now device_id is invalid
-  EXPECT_EQ(device_id, test_id);
-}
-
 class MsdMockConnection_ContextManagement : public MsdMockConnection {
  public:
   MsdMockConnection_ContextManagement() {}
