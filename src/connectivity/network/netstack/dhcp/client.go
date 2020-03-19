@@ -157,6 +157,8 @@ func (c *Client) Run(ctx context.Context) {
 	rebindTimer := time.NewTimer(math.MaxInt64)
 	renewTimer := time.NewTimer(math.MaxInt64)
 
+	var leaseExpirationTime, rebindTime time.Time
+
 	go func() {
 		c.sem <- struct{}{}
 		defer func() { <-c.sem }()
@@ -169,7 +171,31 @@ func (c *Client) Run(ctx context.Context) {
 
 		for {
 			if err := func() error {
-				ctx, cancel := context.WithTimeout(ctx, info.Acquisition)
+				acquisitionTimeout := info.Acquisition
+
+				// Adjust the timeout to make sure client is not stuck in retransmission
+				// when it should transition to the next state. This can only happen for
+				// two time-driven transitions: RENEW->REBIND, REBIND->INIT.
+				//
+				// Another time-driven transition BOUND->RENEW is not handled here because
+				// the client does not have to send out any request during BOUND.
+				switch s := info.State; s {
+				case initSelecting:
+					// Nothing to do. The client is initializing, no leases have been acquired.
+					// Thus no times are set for renew, rebind, and lease expiration.
+				case renewing:
+					if tilRebind := time.Until(rebindTime); tilRebind < acquisitionTimeout {
+						acquisitionTimeout = tilRebind
+					}
+				case rebinding:
+					if tilLeaseExpire := time.Until(leaseExpirationTime); tilLeaseExpire < acquisitionTimeout {
+						acquisitionTimeout = tilLeaseExpire
+					}
+				default:
+					panic(fmt.Sprintf("unexpected state before acquire: %s", s))
+				}
+
+				ctx, cancel := context.WithTimeout(ctx, acquisitionTimeout)
 				defer cancel()
 
 				cfg, err := c.acquire(ctx, &info)
@@ -197,8 +223,7 @@ func (c *Client) Run(ctx context.Context) {
 						syslog.WarnTf(tag, "invalid renewal time: renewing=%s lease=%s", cfg.RenewalTime, cfg.LeaseLength)
 						fallthrough
 					case cfg.RenewalTime == 0:
-						// Based on RFC 2131 Sec. 4.4.5, this defaults to
-						// (0.5 * duration_of_lease).
+						// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
 						renewalTime = leaseLength / 2
 					}
 					switch {
@@ -206,12 +231,15 @@ func (c *Client) Run(ctx context.Context) {
 						syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s renewing=%s", cfg.RebindingTime, cfg.RenewalTime)
 						fallthrough
 					case cfg.RebindingTime == 0:
-						// Based on RFC 2131 Sec. 4.4.5, this defaults to
-						// (0.875 * duration_of_lease).
+						// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
 						rebindingTime = leaseLength * 875 / 1000
 					}
 					cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime = leaseLength, renewalTime, rebindingTime
 				}
+
+				now := time.Now()
+				leaseExpirationTime = now.Add(cfg.LeaseLength)
+				rebindTime = now.Add(cfg.RebindingTime)
 
 				initSelectingTimer.Reset(cfg.LeaseLength)
 				renewTimer.Reset(cfg.RenewalTime)
@@ -236,7 +264,7 @@ func (c *Client) Run(ctx context.Context) {
 				case rebinding:
 					timer = rebindTimer
 				default:
-					panic(fmt.Sprintf("unknown client state: state=%s", info.State))
+					panic(fmt.Sprintf("unexpected client state: state=%s", info.State))
 				}
 				timer.Reset(info.Backoff)
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)

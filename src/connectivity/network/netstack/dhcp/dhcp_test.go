@@ -767,12 +767,64 @@ func TestStateTransition(t *testing.T) {
 		testLeaseExpire
 	)
 
-	for name, typ := range map[string]testType{
-		"Renew":       testRenew,
-		"Rebind":      testRebind,
-		"LeaseExpire": testLeaseExpire,
+	const (
+		// acquireTimeout is the default acquisition timeout to use in tests.
+		// It is small enough to make sure the client doesn't get stuck in retransmission
+		// when it should transition to the next state.
+		acquireTimeout = 100 * time.Millisecond
+		// The following 3 durations are included in DHCP responses.
+		// They are multiples of a second because that's the smallest time granularity
+		// DHCP messages support.
+		renewTime   = 1 * time.Second
+		rebindTime  = 2 * time.Second
+		leaseLength = 3 * time.Second
+		// testTimeout is the amount of time the test is willing to wait for the
+		// client to bind/unbind addresses. This value has to be larger than lease length,
+		// because in the worst case a test has to wait for the client to respond
+		// to lease expiration.
+		testTimeout = leaseLength + 1*time.Second
+	)
+
+	for _, tc := range []struct {
+		name           string
+		typ            testType
+		acquireTimeout time.Duration
+	}{
+		{
+			name:           "Renew",
+			typ:            testRenew,
+			acquireTimeout: acquireTimeout,
+		},
+		{
+			name:           "Rebind",
+			typ:            testRebind,
+			acquireTimeout: acquireTimeout,
+		},
+		{
+			// Test the client is not stuck in retransimission longer than it should.
+			// If the client keeps retransmitting until the acquisition timeout
+			// configured in this test, the lease will expire after it's done,
+			// causing it to miss REBIND.
+			name:           "RebindWithLargeAcquisitionTimeout",
+			typ:            testRebind,
+			acquireTimeout: leaseLength + 1*time.Second,
+		},
+		{
+			name:           "LeaseExpire",
+			typ:            testLeaseExpire,
+			acquireTimeout: acquireTimeout,
+		},
+		{
+			// Test the client is not stuck in retransimission longer than it should.
+			// If the client keeps retransmitting until the acquisition timeout
+			// configured in this test, the test will timeout before the client can
+			// reinitialize after lease expiration.
+			name:           "LeaseExpireWithLargeAcquisitionTimeout",
+			typ:            testLeaseExpire,
+			acquireTimeout: testTimeout + 1*time.Second,
+		},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			var serverLinkEP, clientLinkEP endpoint
 			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
@@ -782,7 +834,7 @@ func TestStateTransition(t *testing.T) {
 				if atomic.LoadUint32(&blockData) == 1 {
 					return nil, 0
 				}
-				if typ == testRebind {
+				if tc.typ == testRebind {
 					// Only pass client broadcast packets back into the stack. This simulates
 					// packet loss during the client's unicast RENEWING state, forcing
 					// it into broadcast REBINDING state.
@@ -806,9 +858,9 @@ func TestStateTransition(t *testing.T) {
 				SubnetMask:    "\xff\xff\xff\x00",
 				Gateway:       "\xc0\xa8\x03\xF0",
 				DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-				LeaseLength:   6 * defaultAcquireTimeout,
-				RebindingTime: 4 * defaultAcquireTimeout,
-				RenewalTime:   2 * defaultAcquireTimeout,
+				LeaseLength:   leaseLength,
+				RebindingTime: rebindTime,
+				RenewalTime:   renewTime,
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -852,10 +904,15 @@ func TestStateTransition(t *testing.T) {
 						t.Fatalf("aquisition %d: lease length: %s, want %s", count, cfg.LeaseLength, serverCfg.LeaseLength)
 					}
 				}
-				addrCh <- curAddr
+				// Respond to context cancellation to avoid deadlock when
+				// enclosing test times out.
+				select {
+				case <-ctx.Done():
+				case addrCh <- curAddr:
+				}
 			}
 
-			c := NewClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
+			c := NewClient(clientStack, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -863,19 +920,12 @@ func TestStateTransition(t *testing.T) {
 			select {
 			case addr = <-addrCh:
 				t.Logf("got first address: %s", addr)
-			case <-time.After(10 * time.Second):
+			case <-time.After(testTimeout):
 				t.Fatal("timeout acquiring initial address")
 			}
 
 			wantAddr := addr
-			var timeout time.Duration
-			switch typ {
-			case testRenew:
-				timeout = serverCfg.RenewalTime
-			case testRebind:
-				timeout = serverCfg.RebindingTime
-			case testLeaseExpire:
-				timeout = serverCfg.LeaseLength
+			if tc.typ == testLeaseExpire {
 				wantAddr = tcpip.AddressWithPrefix{}
 				// Cut the data flow to block request packets during renew/rebind.
 				// TODO(ckuiper): This has the potential for a race between when the thread that injects
@@ -890,7 +940,7 @@ func TestStateTransition(t *testing.T) {
 				if newAddr != wantAddr {
 					t.Fatalf("incorrect new address: got = %s, want = %s", newAddr, wantAddr)
 				}
-			case <-time.After(5 * timeout):
+			case <-time.After(testTimeout):
 				t.Fatal("timeout acquiring renewed address")
 			}
 		})
