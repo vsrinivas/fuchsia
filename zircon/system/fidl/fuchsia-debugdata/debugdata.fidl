@@ -5,23 +5,34 @@
 library fuchsia.debugdata;
 
 /// The maximum length, in bytes, of data sink or configuration name.
+/// TODO(mcgrathr): Align this with file name limits in some fs protocol.
 const uint64 MAX_NAME = 1024;
 
-/// DebugData defines the interface for instrumentation configuration and data publishing.
+/// DebugData defines the interface for instrumentation configuration and data
+/// publishing.
 [Layout = "Simple", Discoverable]
 protocol DebugData {
-    /// The program runtime sends a string naming a `data_sink` and transfers the sole handle to
-    /// a VMO containing the `data` it wants published there.  The `data_sink` string identifies
-    /// a type of data, and the VMO's object name can specifically identify the data set in this
-    /// VMO.  The client must transfer the only handle to the VMO (which prevents the VMO being
-    /// resized without the receiver's knowledge), but it might still have the VMO mapped in and
-    /// continue to write data to it.  Code instrumentation runtimes use this to deliver large
-    /// binary trace results.
+    /// The program runtime sends a string naming a `data_sink` and transfers
+    /// the sole handle to a VMO containing the `data` it wants published
+    /// there.  The `data_sink` string identifies a type of data, and the
+    /// VMO's object name can specifically identify the data set in this VMO.
+    /// The ZX_PROP_VMO_CONTENT_SIZE property should be set on the VMO to
+    /// indicate the precise size of the data in case that is not whole pages;
+    /// however, leaving it unset (i.e. 0) is acceptable when the whole-page
+    /// size of the VMO is the intended size of dump.  The client must
+    /// transfer the only handle to the VMO (which prevents the VMO being
+    /// resized without the receiver's knowledge), but it might still have the
+    /// VMO mapped in and continue to write data to it.  Code instrumentation
+    /// runtimes use this to deliver large binary trace results.
+    // TODO(mcgrathr): Consider dropping the "sole handle" wording and instead
+    // just say the receiver is expected to wait for the process to die before
+    // consuming the VMO.
     Publish(string:MAX_NAME data_sink, handle<vmo> data);
 
-    /// The program runtime names a `config_name` referring to a debug configuration of some kind
-    /// and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
-    /// allow large options text to be stored in a file rather than passed directly in environment
+    /// The program runtime names a `config_name` referring to a debug
+    /// configuration of some kind and gets back a VMO to read configuration
+    /// data from.  The sanitizer runtimes use this to allow large options
+    /// text to be stored in a file rather than passed directly in environment
     /// strings.
     LoadConfig(string:MAX_NAME config_name) -> (handle<vmo>? config);
 };
