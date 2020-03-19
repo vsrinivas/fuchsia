@@ -4,10 +4,16 @@
 
 group("lib") {
   testonly = true
-  deps = [ "lowpan_driver_common" ]
+  deps = [
+    "lowpan_driver_common",
+    "spinel_pack",
+  ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ "lowpan_driver_common:tests" ]
+  public_deps = [
+    "lowpan_driver_common:tests",
+    "spinel_pack:tests",
+  ]
 }
