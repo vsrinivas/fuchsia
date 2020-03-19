@@ -21,12 +21,16 @@ MOCKED_SSH_BIN="mocked/ssh"
 MOCKED_DEVICE_FINDER="scripts/sdk/gn/base/tools/device-finder"
 MOCKED_GSUTIL="mocked/gsutil"
 MOCKED_CIPD="mocked/cipd"
+MOCKED_PGREP="mocked/pgrep"
+MOCKED_KILL="mocked/kill"
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
    "${MOCKED_SSH_BIN}"
    "${MOCKED_DEVICE_FINDER}"
    "${MOCKED_GSUTIL}"
    "${MOCKED_CIPD}"
+   "${MOCKED_PGREP}"
+   "${MOCKED_KILL}"
 )
 
 BT_SET_UP() {
@@ -37,6 +41,12 @@ EOF
 
 # Add mocked system tools to the path.
 export PATH="${BT_TEMP_DIR}/mocked:${PATH}"
+
+if [ "$(type -t kill)" = "builtin" ]; then
+    kill() {
+      "${BT_TEMP_DIR}/${MOCKED_KILL}" "$@"
+    }
+fi
 
 # Copy the SDK manifest to the expected location
 mkdir -p  "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta"
@@ -197,5 +207,29 @@ EOF
   IFS=' ' read -r -a RESULT_LIST <<< "$(get-available-images "sdk_id" "other")"
   BT_EXPECT_EQ "${RESULT_LIST[*]}" "image4 image5 image6 image1 image2 image3"
 }
+
+TEST_kill-running-pm_not_found() {
+  cat > "${BT_TEMP_DIR}/${MOCKED_PGREP}.mock_side_effects" <<"EOF"
+      echo ""
+EOF
+
+  BT_EXPECT kill-running-pm 2> "${BT_TEMP_DIR}/kill-running-pm_output.txt"
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/kill-running-pm_output.txt" "WARNING: existing pm process not found"
+}
+
+TEST_kill-running-pm_found() {
+  if is-mac; then
+    pgrep_result="987654321"
+  else
+    pgrep_result="987654321 /path/tools/pm"
+  fi
+  cat > "${BT_TEMP_DIR}/${MOCKED_PGREP}.mock_side_effects" <<EOF
+      echo "${pgrep_result}"
+EOF
+
+  BT_EXPECT kill-running-pm 2> "${BT_TEMP_DIR}/kill-running-pm_output.txt"
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/kill-running-pm_output.txt" "WARNING: Killing existing pm process"
+}
+
 
 BT_RUN_TESTS "$@"
