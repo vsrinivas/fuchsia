@@ -33,21 +33,23 @@ fuchsia::media::Usage Usage(fuchsia::media::AudioCaptureUsage u) {
 
 AudioAdmin::AudioAdmin(StreamVolumeManager* stream_volume_manager,
                        async_dispatcher_t* fidl_dispatcher,
-                       PolicyActionReporter* policy_action_reporter)
+                       PolicyActionReporter* policy_action_reporter,
+                       ActivityDispatcher* activity_dispatcher)
     : AudioAdmin(
           BehaviorGain{
               .none_gain_db = 0.0f,
               .duck_gain_db = -35.0f,
               .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
           },
-          stream_volume_manager, policy_action_reporter, fidl_dispatcher) {}
+          stream_volume_manager, policy_action_reporter, activity_dispatcher, fidl_dispatcher) {}
 
 AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* stream_volume_manager,
                        PolicyActionReporter* policy_action_reporter,
-                       async_dispatcher_t* fidl_dispatcher)
+                       ActivityDispatcher* activity_dispatcher, async_dispatcher_t* fidl_dispatcher)
     : behavior_gain_(behavior_gain),
       stream_volume_manager_(*stream_volume_manager),
       policy_action_reporter_(*policy_action_reporter),
+      activity_dispatcher_(*activity_dispatcher),
       fidl_dispatcher_(fidl_dispatcher) {
   FX_DCHECK(stream_volume_manager);
   FX_DCHECK(policy_action_reporter);
@@ -233,6 +235,19 @@ void AudioAdmin::UpdatePolicy() {
   }
 }
 
+void AudioAdmin::UpdateActivity() {
+  TRACE_DURATION("audio", "AudioAdmin::UpdateActivity");
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+
+  std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity;
+  for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+    if (IsActive(static_cast<fuchsia::media::AudioRenderUsage>(i))) {
+      activity.set(i);
+    }
+  }
+  activity_dispatcher_.OnActivityChanged(activity);
+}
+
 void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
                                      fuchsia::media::AudioRenderer* renderer) {
   async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, renderer = renderer] {
@@ -247,6 +262,7 @@ void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, boo
     }
 
     UpdatePolicy();
+    UpdateActivity();
   });
 }
 

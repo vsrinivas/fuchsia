@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/context.h"
 
+#include "src/media/audio/audio_core/activity_dispatcher.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/link_matrix.h"
@@ -36,7 +37,7 @@ class ContextImpl : public Context {
                         &link_matrix_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher()),
         audio_admin_(&stream_volume_manager_, threading_model_->FidlDomain().dispatcher(),
-                     &usage_reporter_),
+                     &usage_reporter_, &activity_dispatcher_),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
         process_config_(std::move(process_config)) {
@@ -62,6 +63,7 @@ class ContextImpl : public Context {
   void PublishOutgoingServices() override {
     component_context_->outgoing()->AddPublicService(device_manager_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(usage_reporter_.GetFidlRequestHandler());
+    component_context_->outgoing()->AddPublicService(activity_dispatcher_.GetFidlRequestHandler());
   }
   ThreadingModel& threading_model() override { return *threading_model_; }
   AudioDeviceManager& device_manager() override { return device_manager_; }
@@ -91,6 +93,9 @@ class ContextImpl : public Context {
   StreamVolumeManager stream_volume_manager_;
 
   UsageReporterImpl usage_reporter_;
+
+  // Dispatcher for audio activity.
+  ActivityDispatcherImpl activity_dispatcher_;
 
   // Audio usage manager
   AudioAdmin audio_admin_;

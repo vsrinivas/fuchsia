@@ -80,6 +80,20 @@ TEST_F(UsageReporterTest, ConnectToUsageReporter) {
 }
 
 //
+// Test that the user is connected to the activity reporter.
+//
+TEST_F(AudioTest, ConnectToActivityReporter) {
+  fuchsia::media::ActivityReporterPtr activity_reporter;
+  environment()->ConnectToService(activity_reporter.NewRequest());
+  activity_reporter.set_error_handler(ErrorHandler());
+
+  activity_reporter->WatchRenderActivity(
+      CompletionCallback([&](const std::vector<fuchsia::media::AudioRenderUsage>& activity) {}));
+
+  ExpectCallback();
+}
+
+//
 // Audio validation
 // Tests of the asynchronous Audio interface.
 //

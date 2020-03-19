@@ -105,6 +105,8 @@ void HermeticAudioEnvironment::Start(async::Loop* loop) {
   // component, otherwise these components would still be provided the shared/global devmgr.
   auto services = sys::testing::EnvironmentServices::Create(real_env);
   services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
+                                     fuchsia::media::ActivityReporter::Name_);
+  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
                                      fuchsia::media::AudioCore::Name_);
   services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
                                      fuchsia::media::AudioDeviceEnumerator::Name_);

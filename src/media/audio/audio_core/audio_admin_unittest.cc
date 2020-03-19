@@ -42,13 +42,29 @@ class MockPolicyActionReporter : public AudioAdmin::PolicyActionReporter {
       receiver_;
 };
 
+class MockActivityDispatcher : public AudioAdmin::ActivityDispatcher {
+ public:
+  void OnActivityChanged(std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) override {
+    last_dispatched_activity_ = activity;
+  }
+
+  // Access last activity dispatched.
+  std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> GetLastActivity() {
+    return last_dispatched_activity_;
+  }
+
+ private:
+  std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> last_dispatched_activity_;
+};
+
 class AudioAdminTest : public gtest::TestLoopFixture {};
 
 TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
   StreamVolumeManager stream_volume_manager(dispatcher());
   AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   dispatcher());
+                   &mock_activity_dispatcher, dispatcher());
   test::NullAudioRenderer r1, r2;
 
   // Set an inintial stream volume.
@@ -81,8 +97,9 @@ TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
 TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
   AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   dispatcher());
+                   &mock_activity_dispatcher, dispatcher());
   test::NullAudioRenderer r1, r2;
 
   // Media should duck when comms is active.
@@ -132,8 +149,9 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
 TEST_F(AudioAdminTest, CapturerDucksRenderer) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
   AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   dispatcher());
+                   &mock_activity_dispatcher, dispatcher());
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -184,8 +202,9 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
 TEST_F(AudioAdminTest, RendererDucksCapturer) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
   AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   dispatcher());
+                   &mock_activity_dispatcher, dispatcher());
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -246,8 +265,9 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
         });
 
     StreamVolumeManager stream_volume_manager(dispatcher());
+    MockActivityDispatcher mock_activity_dispatcher;
     AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                     dispatcher());
+                     &mock_activity_dispatcher, dispatcher());
     test::NullAudioRenderer r1;
     test::NullAudioCapturer c1;
 
@@ -281,6 +301,51 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
 
   test_policy_action(fuchsia::media::Behavior::DUCK);
   test_policy_action(fuchsia::media::Behavior::MUTE);
+}
+
+TEST_F(AudioAdminTest, ActivityDispatched) {
+  // Test that a change of usage given an initial activity is correctly dispatched.
+  auto test_dispatch_action = [this](
+                                  std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> initial_activity,
+                                  fuchsia::media::AudioRenderUsage changed_usage) {
+    StreamVolumeManager stream_volume_manager(dispatcher());
+    MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+    MockActivityDispatcher mock_activity_dispatcher;
+    AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
+                     &mock_activity_dispatcher, dispatcher());
+
+    // Trigger the initial activity by registering AudioRenderers.
+    std::array<test::NullAudioRenderer, fuchsia::media::CAPTURE_USAGE_COUNT> rs;
+    for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+      if (initial_activity[i]) {
+        admin.UpdateRendererState(static_cast<fuchsia::media::AudioRenderUsage>(i), true, &rs[i]);
+      }
+    }
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(initial_activity, mock_activity_dispatcher.GetLastActivity());
+
+    int changed_usage_index = static_cast<int>(changed_usage);
+    std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> final_activity = initial_activity;
+    final_activity.flip(changed_usage_index);
+
+    // Modify the initial activity to reflect the changed usage.
+    admin.UpdateRendererState(changed_usage, final_activity[changed_usage_index],
+                              &rs[changed_usage_index]);
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(final_activity, mock_activity_dispatcher.GetLastActivity());
+  };
+
+  // Check all of the possible state transitions from each possible activity.
+  int possible_activities_count = std::pow(2, fuchsia::media::CAPTURE_USAGE_COUNT);
+  for (int i = 0; i < possible_activities_count; i++) {
+    for (int j = 0; j < fuchsia::media::CAPTURE_USAGE_COUNT; j++) {
+      auto initial_activity = static_cast<std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>>(i);
+      auto changed_usage = static_cast<fuchsia::media::AudioRenderUsage>(j);
+      test_dispatch_action(initial_activity, changed_usage);
+    }
+  }
 }
 
 }  // namespace

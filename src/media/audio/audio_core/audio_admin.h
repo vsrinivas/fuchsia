@@ -40,6 +40,15 @@ class AudioAdmin {
                                     fuchsia::media::Behavior policy_action) = 0;
   };
 
+  // An interface by which |AudioAdmin| can report which AudioCaptureUsages are active.
+  class ActivityDispatcher {
+   public:
+    virtual ~ActivityDispatcher() {}
+
+    using Activity = std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>;
+    virtual void OnActivityChanged(std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) = 0;
+  };
+
   // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.
   //
   // The |BehaviorGain| provides the target gain_db values to use when triggering behaviors between
@@ -48,11 +57,12 @@ class AudioAdmin {
   //
   // |gain_adjustment| must be non-null.
   AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* volume_manager,
-             PolicyActionReporter* policy_action_reporter, async_dispatcher_t* fidl_dispatcher);
+             PolicyActionReporter* policy_action_reporter, ActivityDispatcher* activity_dispatcher,
+             async_dispatcher_t* fidl_dispatcher);
 
   // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
   AudioAdmin(StreamVolumeManager* volume_manager, async_dispatcher_t* fidl_dispatcher,
-             PolicyActionReporter* policy_action_reporter);
+             PolicyActionReporter* policy_action_reporter, ActivityDispatcher* activity_dispatcher);
 
   // Sets the interaction behavior between |active| and |affected| usages.
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
@@ -80,6 +90,7 @@ class AudioAdmin {
   const BehaviorGain behavior_gain_;
   StreamVolumeManager& stream_volume_manager_ FXL_GUARDED_BY(fidl_thread_checker_);
   PolicyActionReporter& policy_action_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
+  ActivityDispatcher& activity_dispatcher_ FXL_GUARDED_BY(fidl_thread_checker_);
 
   // Ensures we are always on the thread on which the class was constructed, which should
   // be the FIDL thread.
@@ -87,6 +98,7 @@ class AudioAdmin {
   async_dispatcher_t* fidl_dispatcher_;
 
   void UpdatePolicy();
+  void UpdateActivity();
 
   // Helpers to make the control of streams cleaner.
   void SetUsageNone(fuchsia::media::AudioRenderUsage usage);

@@ -56,6 +56,8 @@ audio_core_package("audio_core") {
 source_set("audio_core_lib") {
   public_configs = [ ":audio_core_config" ]
   sources = [
+    "activity_dispatcher.cc",
+    "activity_dispatcher.h",
     "audio_admin.cc",
     "audio_admin.h",
     "audio_capturer.cc",
@@ -214,6 +216,7 @@ executable("unittest_bin") {
   output_name = "audio_core_unittests"
 
   sources = [
+    "activity_dispatcher_unittest.cc",
     "audio_admin_unittest.cc",
     "audio_capturer_unittest.cc",
     "audio_device_settings_unittest.cc",
