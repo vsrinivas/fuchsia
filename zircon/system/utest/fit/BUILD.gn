@@ -66,6 +66,9 @@ test("fit") {
     deps += [ "//zircon/public/lib/unittest-static" ]
   }
   public_configs = [ ":no_unused_function" ]
+
+  # TODO(48668): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 config("shadow") {
