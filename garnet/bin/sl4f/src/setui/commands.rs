@@ -28,5 +28,7 @@ async fn setui_method_to_fidl(
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         SetUiMethod::Mutate => facade.mutate(args).await,
+        SetUiMethod::SetNetwork => facade.set_network(args).await,
+        SetUiMethod::GetNetwork => facade.get_network_setting().await,
     }
 }

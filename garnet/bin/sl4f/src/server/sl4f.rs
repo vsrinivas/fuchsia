@@ -135,7 +135,7 @@ impl Sl4f {
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),
-                "setui_facade" => SetUiFacade::new()?,
+                "setui_facade" => SetUiFacade::new(),
                 "test_facade" => TestFacade::new(),
                 "traceutil_facade" => TraceutilFacade::new(),
                 "tracing_facade" => TracingFacade::new(),

@@ -31,6 +31,7 @@
             "fuchsia.paver.Paver",
             "fuchsia.process.Launcher",
             "fuchsia.setui.SetUiService",
+            "fuchsia.settings.Setup",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.controller.Controller",
