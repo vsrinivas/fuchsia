@@ -1,4 +1,4 @@
-# Low-Level C++ Language FIDL Tutorial
+# Low-level C++ language FIDL tutorial
 
 [TOC]
 
@@ -22,7 +22,7 @@ familiarize themselves with the [C Language Bindings](tutorial-c.md#reference)
 and the [FIDL wire-format](../reference/wire-format/README.md). Parts of this
 tutorial assume knowledge of these related concepts.
 
-# Getting Started
+# Getting started
 
 Two build setups exist in the source tree: the Zircon build and the Fuchsia
 build. The LLCPP code generator is not supported by the Zircon build. Therefore,
@@ -37,9 +37,9 @@ the steps to use the bindings depend on where the consumer code is located:
     e.g. `"$zx/system/fidl/fuchsia-mem:llcpp"`, and the bindings code will be
     automatically generated as part of the build.
 
-## Preliminary Concepts
+## Preliminary concepts
 
-*   **Decoded Message:**
+*   **Decoded message:**
     A FIDL message in [decoded form](../reference/wire-format#Decoded-Messages)
     is a contiguous buffer that is directly accessible by reinterpreting the
     memory as the corresponding LLCPP FIDL type. That is, all pointers point
@@ -47,14 +47,14 @@ the steps to use the bindings depend on where the consumer code is located:
     defined by the FIDL wire-format. When making a call, a response buffer is
     used to decode the response message.
 
-*   **Encoded Message:**
+*   **Encoded message:**
     A FIDL message in [encoded form](../reference/wire-format#Encoded-Messages)
     is an opaque contiguous buffer plus an array of handles. The buffer is
     of the same length as the decoded counterpart, but pointers are replaced
     with placeholders, and handles are moved to the accompanying array.
     When making a call, a request buffer is used to encode the request message.
 
-*   **Message Linearization:**
+*   **Message linearization:**
     FIDL messages have to be in a contiguous buffer packed according to the
     wire-format. When making a call however, the arguments to the bindings code
     and out-of-line objects are usually scattered in memory, unless careful
@@ -62,12 +62,17 @@ the steps to use the bindings depend on where the consumer code is located:
     down the tree of objects and packing them is termed *linearization*, and
     usually involves `O(message size)` copying.
 
-*   **Message Ownership:**
-    Crucially, LLCPP generated structures are views over some underlying buffer;
-    they do not own memory or handles located out-of-line. In practice, one
-    must ensure the object managing the buffer outlives the views.
+*   **Message layout:**
+    The in-memory layout of LLCPP structures is the same as the layout of the
+    wire format. The LLCPP objects can be thought of as a view over the
+    encoded message..
+    
+*   **Message ownership:**
+    LLCPP objects use [`tracking_ptr`](#Pointers-and-memory-ownership) smart
+    pointers to manage ownership and track whether an object is heap allocated
+    and owned or user-managed and unowned.
 
-## Generated API Overview
+## Generated API overview
 
 Low-Level C++ bindings are full featured, and support control over allocation as
 well as zero-copy encoding/decoding. (Note that contrary to the C bindings they
@@ -182,7 +187,7 @@ comes with caveats. We will dive into these separately.
 
 ## Client API
 
-### Sync Client `(Protocol::SyncClient)`
+### Sync client `(Protocol::SyncClient)`
 
 The following code is generated for `SpaceShape::SyncClient`. Each FIDL method
 always correspond to two overloads which differ in memory management strategies,
@@ -337,7 +342,7 @@ Here the return value `result` owns them, and takes care of closing them when
 it goes out of scope.
 If any handle is `std::move`ed away, `result` would not accidentally close it.
 
-### Static Functions `(Protocol::Call)`
+### Static functions `(Protocol::Call)`
 
 The following code is generated for `SpaceShape::Call`:
 
@@ -394,7 +399,7 @@ flavor*. Both types define the same set of methods:
     points to a caller-provided buffer. `Unwrap()` should only be called when
     the status is `ZX_OK`.
 
-#### Allocation Strategy And Move Semantics
+#### Allocation strategy And move semantics
 
 `ResultOf::Foo` stores the response buffer inline if the message is guaranteed
 to fit under 512 bytes. Since the result object is usually instantiated on the
@@ -430,7 +435,7 @@ int count = CountPlanets(result.Unwrap()->planets);
 > consider pre-allocating a buffer in the outer-most function and use the
 > caller-allocating flavor.
 
-### In-Place Calls
+### In-place calls
 
 Both the *managed flavor* and the *caller-allocating flavor* will copy the
 arguments into the request buffer. When there is out-of-line data involved,
@@ -552,12 +557,12 @@ class MyServer final : fuchsia::fleet::SpaceShip::Interface {
   void ScanForPlanets(ScanForPlanetsCompleter::Sync completer) override {
     fidl::VectorView<Planet> discovered_planets = /* perform planet scan */;
     // Send the |discovered_planets| vector as the response.
-    completer.Reply(discovered_planets);
+    completer.Reply(std::move(discovered_planets));
   }
   void DirectedScan(int16_t heading, DirectedScanCompleter::Sync completer) override {
     fidl::VectorView<Planet> discovered_planets = /* perform a directed planet scan */;
     // Send the |discovered_planets| vector as the response.
-    completer.Reply(discovered_planets);
+    completer.Reply(std::move(discovered_planets));
   }
 };
 ```
@@ -571,7 +576,7 @@ defines up to three overloads of a `Reply()` function
 The completer always defines a `Close(zx_status_t)` function, to close the
 connection with a specified epitaph.
 
-### Responding Asynchronously
+### Responding asynchronously
 
 Notice that the type for the completer `ScanForPlanetsCompleter::Sync` has
 `::Sync`. This indicates the default mode of operation: the server must
@@ -590,12 +595,12 @@ void ScanForPlanets(ScanForPlanetsCompleter::Sync completer) override {
   EnqueuePlanetScan(some_parameters)
       .OnDone([completer = completer.ToAsync()] (auto planets) mutable {
         // Here the type of |completer| is |ScanForPlanetsCompleter::Async|.
-        completer.Reply(planets);
+        completer.Reply(std::move(planets));
       });
 }
 ```
 
-### Parallel Message Handling
+### Parallel message handling
 
 NOTE: This use-case is currently possible only using the
 [lib/fidl-async](/zircon/system/ulib/fidl-async) bindings.
@@ -615,7 +620,7 @@ void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) over
   // another has completed.
   completer.EnableNextDispatch();
   fidl::VectorView<Planet> discovered_planets = /* perform a directed planet scan */;
-  completer.Reply(discovered_planets);
+  completer.Reply(std::move(discovered_planets));
 }
 ```
 
@@ -634,9 +639,130 @@ void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) over
 *   Reuse encoders, decoders, and coding tables generated for C language
     bindings.
 
-## Code Generator
+## Pointers and memory ownership
 
-### Mapping FIDL Types to Low-Level C++ Types
+LLCPP objects use special smart pointers called `tracking_ptr` to keep track of memory ownership.
+With `tracking_ptr`, LLCPP makes it possible for your code to easily set a value and forget
+about ownership: `tracking_ptr` will take care of freeing memory when it goes out of scope.
+
+These pointers have two states:
+- unowned (constructed from an `unowned_ptr_t`)
+- heap allocated and owned (constructed from a `std::unique_ptr`)
+
+When the contents is owned, a `tracking_ptr` behaves like a `unique_ptr` and the pointer is
+deleted on destruction. In the unowned state, `tracking_ptr` behaves like a raw pointer and
+destruction is a no-op.
+
+`tracking_ptr` is move-only and has an API closely matching `unique_ptr`.
+
+### Types of object allocation
+`tracking_ptr` makes it possible to create LLCPP objects with several allocation strategies.
+The allocation strategies can be mixed and matched within the same code.
+
+#### Heap allocation
+To heap allocate objects, use the standard `std::make_unique`.
+
+An example with an optional uint32 field represented as a `tracking_ptr`.
+
+```
+MyStruct s;
+s.opt_uint32_field = std::make_unique<uint32_t>(123);
+```
+
+This applies to all union and table fields and data arrays within vectors and strings.
+Vector and string data arrays must use the array specialization of `std::unique_ptr`,
+which takes the element count as an argument.
+
+```
+VectorView<uint32_t> vec;
+vec.set_data(std::make_unique<uint32_t[]>(10));
+```
+
+To copy a collection to a `VectorView`, use `heap_copy_vec`.
+
+```
+std::vector<uint32_t> vec;
+fidl::VectorView<uint32_t> vv = heap_copy_vec(vec);
+```
+
+To copy a string to a `StringView`, use `heap_copy_str`.
+
+```
+std::string_view str = "hello world";
+fidl::StringView sv = heap_copy_str(str);
+```
+
+#### Allocators
+FIDL provides an `Allocator` API that enables creating `tracking_ptr`s to LLCPP objects through a
+number of allocation algorithms. Currently, `BufferAllocator` is the only implementation, which
+allocates a fixed size buffer for stack allocation.
+
+Example:
+
+```
+BufferAllocator<2048> allocator;
+MyStruct s;
+s.opt_uint32_field = allocator.make<uint32_t>(123);
+```
+
+The arguments to `allocator.make` are identical to the arguments to `std::make_unique`.
+This also applies to VectorViews.
+
+```
+BufferAllocator<2048> allocator;
+fidl::VectorView<uint32_t> vec;
+vec.set_data(allocator.make<uint32_t[]>(10));
+```
+
+To copy a collection to a `VectorView` using an allocator, use `copy_vec`.
+
+```
+BufferAllocator<2048> allocator;
+std::vector<uint32_t> vec;
+fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, vec);
+```
+
+To create a copy of a string using an allocator, use `copy_str`.
+
+```
+BufferAllocator<2048> allocator;
+std::string_view str = "hello world";
+fidl::StringView sv = fidl::copy_str(allocator, str);
+```
+
+#### Unowned pointers
+In addition to the managed allocation strategies, it is also possible to directly
+create pointers to memory unowned by FIDL. This is discouraged, as it is easy to
+accidentally create use-after-free bugs. `unowned_ptr` exists to explicitly mark
+pointers to FIDL-unowned memory.
+
+The `unowned_ptr` helper is the recommended way to create `unowned_ptr_t`s,
+which is more ergonomic than using the `unowned_ptr_t` constructor directly.
+
+```
+MyStruct s;
+uint32_t i = 123;
+s.opt_uint32_field = fidl::unowned_ptr(&i);
+```
+
+To create a `VectorView` from a collection using an unowned pointer to the
+collection's data array, use `unowned_vec`.
+
+```
+std::vector<uint32_t> vec;
+fidl::VectorView<uint32_t> vv = fidl::unowned_vec(vec);
+```
+
+To create a `StringView` from unowned memory, use `unowned_str`.
+
+```
+std::string_view str = "hello world";
+fidl::StringView sv = fidl::unowned_str(str);
+```
+
+## Code generator
+
+### Mapping FIDL types to low-level C++ types
 
 This is the mapping from FIDL types to Low-Level C++ types which the code
 generator produces.
@@ -665,7 +791,7 @@ FIDL                                        | Low-Level C++
 *request\<Protocol\>, request\<Protocol\>?* | `zx::channel`
 *struct* Struct                             | *struct* Struct
 *struct?* Struct                            | *struct* Struct*
-*table* Table                               | (not yet supported)
+*table* Table                               | *struct* Table
 *union* Union                               | *struct* Union
 *union?* Union                              | *struct* Union*
 *union* Union                               | *struct* Union
@@ -711,7 +837,35 @@ Similar to `std::array<T, N>` but intended purely for in-place use.
 It is memory layout compatible with FIDL arrays, and is standard-layout.
 The destructor closes handles if applicable e.g. it is an array of handles.
 
-## Bindings Library
+#### Tables
+
+The following example table will be used in this section:
+
+```
+table MyTable {
+  1: uint32 x;
+  2: uint32 y;
+};
+```
+
+Tables can be built using the associated table builder. For `MyTable`, the associated builder
+would be `MyTable::Builder` which can be used as follows:
+
+```
+MyTable table = MyTable::Builder(std::make_unique<MyTable::Frame>())
+                        .set_x(std::make_unique<uint32_t>(10))
+                        .set_y(std::make_unique<uint32_t(20))
+                        .build();
+```
+
+`MyTable::Frame` is the table's `Frame` - essentially its internal storage. The internal storage
+needs to be allocated separately from the builder because LLCPP maintains the object layout of
+the underlying wire format.
+
+In addition to assigning fields with `std::unique_ptr`, any of the allocation strategies previously
+metioned can be alternatively used.
+
+## Bindings library
 
 ### Dependencies
 
@@ -719,7 +873,7 @@ The low-level C++ bindings depend only on a small subset of header-only parts
 of the standard library. As such, they may be used in environments where linking
 against the C++ standard library is discouraged or impossible.
 
-### Helper Types
+### Helper types
 
 #### fidl::DecodedMessage\<T\>
 
