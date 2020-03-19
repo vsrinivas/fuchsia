@@ -7,7 +7,10 @@ import("//build/test/test_package.gni")
 
 source_set("predicates") {
   testonly = true
-  sources = [ "status.h" ]
+  sources = [
+    "status.cc",
+    "status.h",
+  ]
   public_deps = [ "//third_party/googletest:gtest" ]
 }
 
