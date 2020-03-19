@@ -32,11 +32,14 @@ var (
 	// The path to the json manifest file containing the tests to mutiply.
 	multipliersPath string
 
-	// Maximum number of tests per shard.
+	// Target number of tests per shard.
 	targetTestCount int
 
-	// Maximum number of tests per shard.
+	// Target duration per shard.
 	targetDurationSecs int
+
+	// Maximum number of shards per environment.
+	maxShardsPerEnvironment int
 )
 
 func usage() {
@@ -55,8 +58,11 @@ func init() {
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
 	flag.StringVar(&multipliersPath, "multipliers", "", "path to the json manifest containing tests to multiply")
 	flag.IntVar(&targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
-	// TODO(olivernewman): Delete this flag once it's no longer set by the
-	// recipes.
+	flag.IntVar(&maxShardsPerEnvironment, "max-shards-per-env", 8, "maximum shards allowed per environment. If <= 0, no max will be set")
+	// Despite being a misnomer, this argument is still called -max-shard-size
+	// for legacy reasons. If it becomes confusing, we can create a new
+	// target_test_count fuchsia.proto field and do a soft transition with the
+	// recipes to start setting the renamed argument instead.
 	flag.IntVar(&targetTestCount, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
 	flag.Usage = usage
 }
@@ -103,7 +109,7 @@ func execute() error {
 	}
 
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
-	shards = testsharder.WithTargetDuration(shards, targetDuration, targetTestCount, testDurations)
+	shards = testsharder.WithTargetDuration(shards, targetDuration, targetTestCount, maxShardsPerEnvironment, testDurations)
 
 	if err := testsharder.ExtractDeps(shards, m.BuildDir()); err != nil {
 		return err

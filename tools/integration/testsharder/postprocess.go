@@ -8,6 +8,7 @@ import (
 	"container/heap"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,8 +17,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
-
-const maxShardsPerEnvironment = 8
 
 func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 	for _, shard := range shards {
@@ -109,9 +108,18 @@ func divRoundUp(a, b int) int {
 // to complete in approximately `targetDuration` time.
 // If targetDuration <= 0, just returns its input.
 // Alternatively, accepts a `targetTestCount` argument for backwards compatibility.
-func WithTargetDuration(shards []*Shard, targetDuration time.Duration, targetTestCount int, testDurations TestDurationsMap) []*Shard {
+func WithTargetDuration(
+	shards []*Shard,
+	targetDuration time.Duration,
+	targetTestCount,
+	maxShardsPerEnvironment int,
+	testDurations TestDurationsMap,
+) []*Shard {
 	if targetDuration <= 0 && targetTestCount <= 0 {
 		return shards
+	}
+	if maxShardsPerEnvironment <= 0 {
+		maxShardsPerEnvironment = math.MaxInt64
 	}
 
 	if targetDuration > 0 {
