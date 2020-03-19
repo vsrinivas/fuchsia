@@ -1088,7 +1088,11 @@ impl EventDispatcher for DummyEventDispatcher {
 
     type Rng = FakeCryptoRng<XorShiftRng>;
 
-    fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
+    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
+        &self.rng
+    }
+
+    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
         &mut self.rng
     }
 }

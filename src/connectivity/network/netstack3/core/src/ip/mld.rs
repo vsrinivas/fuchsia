@@ -20,14 +20,10 @@ use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 #[cfg(test)]
 use rand::Rng;
-use rand_xorshift::XorShiftRng;
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
-use crate::context::{
-    FrameContext, InstantContext, RngContext, RngContextExt, StateContext, TimerContext,
-    TimerHandler,
-};
+use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext, TimerHandler};
 use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
 use crate::ip::{IpDeviceIdContext, IpProto};
 use crate::wire::icmp::mld::{
@@ -63,8 +59,7 @@ impl<D> MldFrameMetadata<D> {
 pub(crate) trait MldContext:
     IpDeviceIdContext
     + TimerContext<MldReportDelay<<Self as IpDeviceIdContext>::DeviceId>>
-    + RngContext
-    + StateContext<
+    + RngStateContext<
         MldInterface<<Self as InstantContext>::Instant>,
         <Self as IpDeviceIdContext>::DeviceId,
     > + FrameContext<EmptyBuf, MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>>
@@ -124,21 +119,15 @@ fn handle_mld_message<C: MldContext, B: ByteSlice, F>(
     handler: F,
 ) -> MldResult<()>
 where
-    F: Fn(&mut XorShiftRng, &mut MldGroupState<C::Instant>) -> Actions<MldProtocolSpecific>,
+    F: Fn(&mut C::Rng, &mut MldGroupState<C::Instant>) -> Actions<MldProtocolSpecific>,
 {
-    // TODO(joshlf): Once we figure out how to access the RNG and the state at
-    // the same time, get rid of this hack. For the time being, this is probably
-    // fine because, while the `XorShiftRng` isn't cryptographically secure, its
-    // seed is, which means that, at worst, an attacker will be able to
-    // correlate events generated during this one function call.
-    let mut rng = ctx.new_xorshift_rng();
+    let (state, rng) = ctx.get_state_rng_with(device);
     let group_addr = body.group_addr;
     if !group_addr.is_specified() {
-        let addr_and_actions = ctx
-            .get_state_mut_with(device)
+        let addr_and_actions = state
             .groups
             .iter_mut()
-            .map(|(addr, state)| (addr.clone(), handler(&mut rng, state)))
+            .map(|(addr, state)| (addr.clone(), handler(rng, state)))
             .collect::<Vec<_>>();
         // `addr` must be a multicast address, otherwise it will not have
         // an associated state in the first place
@@ -147,8 +136,8 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match ctx.get_state_mut_with(device).groups.get_mut(&group_addr) {
-            Some(state) => handler(&mut rng, state),
+        let actions = match state.groups.get_mut(&group_addr) {
+            Some(state) => handler(rng, state),
             None => return Err(MldError::NotAMember { addr: group_addr.get() }),
         };
         run_actions(ctx, device, actions, group_addr);
@@ -282,14 +271,9 @@ pub(crate) fn mld_join_group<C: MldContext>(
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) {
-    // TODO(joshlf): Once we figure out how to access the RNG and the state at
-    // the same time, get rid of this hack. For the time being, this is probably
-    // fine because, while the `XorShiftRng` isn't cryptographically secure, its
-    // seed is, which means that, at worst, an attacker will be able to
-    // correlate events generated during this one function call.
-    let mut rng = ctx.new_xorshift_rng();
     let now = ctx.now();
-    let actions = ctx.get_state_mut_with(device).join_group(&mut rng, group_addr, now);
+    let (state, rng) = ctx.get_state_rng_with(device);
+    let actions = state.join_group(rng, group_addr, now);
     // actions will be `Nothing` if the the host is not in the `NonMember` state.
     run_actions(ctx, device, actions, group_addr);
 }
@@ -456,13 +440,15 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
+    use rand_xorshift::XorShiftRng;
 
     use super::*;
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
+    use crate::context::DualStateContext;
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::ip::{DummyDeviceId, IPV6_ALL_ROUTERS};
     use crate::testutil;
-    use crate::testutil::new_rng;
+    use crate::testutil::{new_rng, FakeCryptoRng};
     use crate::wire::icmp::mld::MulticastListenerQuery;
     use crate::wire::icmp::{IcmpParseArgs, Icmpv6Packet};
 
@@ -489,13 +475,25 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl StateContext<MldInterface<DummyInstant>, DummyDeviceId> for DummyContext {
-        fn get_state_with(&self, _id: DummyDeviceId) -> &MldInterface<DummyInstant> {
-            &self.get_ref().interface
+    impl DualStateContext<MldInterface<DummyInstant>, FakeCryptoRng<XorShiftRng>, DummyDeviceId>
+        for DummyContext
+    {
+        fn get_states_with(
+            &self,
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (&MldInterface<DummyInstant>, &FakeCryptoRng<XorShiftRng>) {
+            let (state, rng) = self.get_states();
+            (&state.interface, rng)
         }
 
-        fn get_state_mut_with(&mut self, _id: DummyDeviceId) -> &mut MldInterface<DummyInstant> {
-            &mut self.get_mut().interface
+        fn get_states_mut_with(
+            &mut self,
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (&mut MldInterface<DummyInstant>, &mut FakeCryptoRng<XorShiftRng>) {
+            let (state, rng) = self.get_states_mut();
+            (&mut state.interface, rng)
         }
     }
 
@@ -674,11 +672,11 @@ mod tests {
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
 
         // We have received a query, hence we are falling back to Delay Member state.
-        let group_state =
-            <DummyContext as StateContext<MldInterface<_>, _>>::get_state_with(&ctx, DummyDeviceId)
-                .groups
-                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-                .unwrap();
+        let group_state = ctx
+            .get_state_with(DummyDeviceId)
+            .groups
+            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+            .unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(_) => {}
             _ => panic!("Wrong State!"),
@@ -706,11 +704,11 @@ mod tests {
 
         // Since it is an immediate query, we will send a report immediately and turn
         // into Idle state again
-        let group_state =
-            <DummyContext as StateContext<MldInterface<_>, _>>::get_state_with(&ctx, DummyDeviceId)
-                .groups
-                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-                .unwrap();
+        let group_state = ctx
+            .get_state_with(DummyDeviceId)
+            .groups
+            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+            .unwrap();
         match group_state.get_inner() {
             MemberState::Idle(_) => {}
             _ => panic!("Wrong State!"),

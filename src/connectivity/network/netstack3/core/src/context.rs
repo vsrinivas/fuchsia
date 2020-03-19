@@ -39,10 +39,8 @@
 
 use core::time::Duration;
 
-use byteorder::{ByteOrder, NativeEndian};
 use packet::{BufferMut, Serializer};
-use rand::{CryptoRng, Rng, RngCore, SeedableRng};
-use rand_xorshift::XorShiftRng;
+use rand::{CryptoRng, RngCore};
 
 use crate::{Context, EventDispatcher, Instant};
 
@@ -162,7 +160,7 @@ pub(crate) trait TimerHandler<Ctx, Id> {
 //   network stack are not predictable by outside observers. This helps prevent
 //   certain kinds of fingerprinting and denial of service attacks.
 
-/// A context that provides a random number generator.
+/// A context that provides a random number generator (RNG).
 pub trait RngContext {
     // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
     // introduce a second, non-cryptographically secure, RNG.
@@ -177,31 +175,35 @@ pub trait RngContext {
     fn rng(&mut self) -> &mut Self::Rng;
 }
 
-pub(crate) trait RngContextExt: RngContext {
-    /// Seed a new `XorShiftRng` from this [`RngContext`]'s RNG.
-    ///
-    /// This is a hack until we figure out a strategy for splitting context
-    /// objects. Currently, since most context methods take a `&mut self`
-    /// argument, lifetimes which don't need to conflict in principle - such as
-    /// the lifetime of an RNG from [`RngContext`] and a state from
-    /// [`StateContext`] - do conflict, and thus cannot overlap. Until we figure
-    /// out an approach to deal with that problem, this exists as a workaround.
-    fn new_xorshift_rng(&mut self) -> XorShiftRng {
-        let mut seed: u64 = self.rng().gen();
-        if seed == 0 {
-            // XorShiftRng can't take 0 seeds
-            seed = 1;
-        }
-        let mut bytes = [0; 16];
-        NativeEndian::write_u32(&mut bytes[0..4], seed as u32);
-        NativeEndian::write_u32(&mut bytes[4..8], (seed >> 32) as u32);
-        NativeEndian::write_u32(&mut bytes[8..12], seed as u32);
-        NativeEndian::write_u32(&mut bytes[12..16], (seed >> 32) as u32);
-        XorShiftRng::from_seed(bytes)
+/// A context that provides access to a random number generator (RNG) and a
+/// state at the same time.
+///
+/// `RngStateContext<State, Id>` is more powerful than `C: RngContext +
+/// StateContext<State, Id>` because the latter only allows accessing either the
+/// RNG or the state at a time, but not both due to lifetime restrictions.
+pub trait RngStateContext<State, Id = ()>:
+    RngContext + DualStateContext<State, <Self as RngContext>::Rng, Id, ()>
+{
+    /// Gets the state and the random number generator (RNG).
+    fn get_state_rng_with(&mut self, id: Id) -> (&mut State, &mut Self::Rng) {
+        self.get_states_mut_with(id, ())
     }
 }
 
-impl<C: RngContext> RngContextExt for C {}
+impl<State, Id, C: RngContext + DualStateContext<State, <Self as RngContext>::Rng, Id, ()>>
+    RngStateContext<State, Id> for C
+{
+}
+
+/// An extension trait for [`RngStateContext`] where `Id = ()`.
+pub trait RngStateContextExt<State>: RngStateContext<State> {
+    /// Gets the state and the random number generator (RNG).
+    fn get_state_rng(&mut self) -> (&mut State, &mut Self::Rng) {
+        self.get_state_rng_with(())
+    }
+}
+
+impl<State, C: RngStateContext<State>> RngStateContextExt<State> for C {}
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
@@ -209,7 +211,7 @@ impl<D: EventDispatcher> RngContext for Context<D> {
     type Rng = D::Rng;
 
     fn rng(&mut self) -> &mut D::Rng {
-        self.dispatcher_mut().rng()
+        self.dispatcher_mut().rng_mut()
     }
 }
 
@@ -220,20 +222,33 @@ impl<D: EventDispatcher> RngContext for Context<D> {
 /// single instance of `State`.
 pub trait StateContext<State, Id = ()> {
     /// Get the state immutably.
+    ///
+    /// # Panics
+    ///
+    /// `get_state_with` panics if `id` is not a valid identifier. (e.g., an
+    /// out-of-bounds index, a reference to an object that has been removed from
+    /// a map, etc).
     fn get_state_with(&self, id: Id) -> &State;
 
     /// Get the state mutably.
+    ///
+    /// # Panics
+    ///
+    /// `get_state_mut_with` panics if `id` is not a valid identifier. (e.g., an
+    /// out-of-bounds index, a reference to an object that has been removed from
+    /// a map, etc).
     fn get_state_mut_with(&mut self, id: Id) -> &mut State;
 
-    // TODO(joshlf): Change the `where` bounds in `get_state` and
-    // `get_state_mut` to `where Id = ()` when equality bounds are supported.
+    // TODO(joshlf): Once equality `where` bounds are supported, use those
+    // instead of these `where Self: StateContext<...>` bounds
+    // (https://github.com/rust-lang/rust/issues/20041).
 
     /// Get the state immutably when the `Id` type is `()`.
     ///
     /// `x.get_state()` is shorthand for `x.get_state_with(())`.
     fn get_state(&self) -> &State
     where
-        Self: StateContext<State, ()>,
+        Self: StateContext<State>,
     {
         self.get_state_with(())
     }
@@ -243,9 +258,128 @@ pub trait StateContext<State, Id = ()> {
     /// `x.get_state_mut()` is shorthand for `x.get_state_mut_with(())`.
     fn get_state_mut(&mut self) -> &mut State
     where
-        Self: StateContext<State, ()>,
+        Self: StateContext<State>,
     {
         self.get_state_mut_with(())
+    }
+}
+
+// NOTE(joshlf): I experimented with a generic `MultiStateContext` trait which
+// could be invoked as `MultiStateContext<(T,)>`, `MultiStateContext<(T, U)>`,
+// etc. It proved difficult to use in practice, as implementations often
+// required a lot of boilerplate. See this issue for detail:
+// https://users.rust-lang.org/t/why-doesnt-rust-know-the-concrete-type-in-this-trait-impl/39498.
+// In practice, having a `DualStateContext` trait which only supports two state
+// types results in a much simpler and easier to use API.
+
+/// A context that provides access to two states at once.
+///
+/// Unlike [`StateContext`], `DualStateContext` provides access to two different
+/// states at once. `C: DualStateContext<T, U>` is more powerful than `C:
+/// StateContext<T> + StateContext<U>` because the latter only allows accessing
+/// either `T` or `U` at a time, but not both due to lifetime restrictions.
+pub trait DualStateContext<State0, State1, Id0 = (), Id1 = ()> {
+    /// Gets the states immutably.
+    ///
+    /// # Panics
+    ///
+    /// `get_states_with` panics if `id0` or `id1` are not valid identifiers.
+    /// (e.g., an out-of-bounds index, a reference to an object that has been
+    /// removed from a map, etc).
+    fn get_states_with(&self, id0: Id0, id1: Id1) -> (&State0, &State1);
+
+    /// Gets the states mutably.
+    ///
+    /// # Panics
+    ///
+    /// `get_states_mut_with` panics if `id0` or `id1` are not valid
+    /// identifiers. (e.g., an out-of-bounds index, a reference to an object
+    /// that has been removed from a map, etc).
+    fn get_states_mut_with(&mut self, id0: Id0, id1: Id1) -> (&mut State0, &mut State1);
+
+    // TODO(joshlf): Once equality `where` bounds are supported, use those
+    // instead of these `where Self: DualStateContext<...>` bounds
+    // (https://github.com/rust-lang/rust/issues/20041).
+
+    /// Get the first state (`State0`) immutably when the `Id1` type is `()`.
+    ///
+    /// `x.get_state_with(id)` is shorthand for `x.get_states_with(id, ()).0`.
+    ///
+    /// # Panics
+    ///
+    /// `get_state_with` panics if `id0` is not a valid identifier. (e.g., an
+    /// out-of-bounds index, a reference to an object that has been removed from
+    /// a map, etc).
+    fn get_state_with<'a>(&'a self, id: Id0) -> &'a State0
+    where
+        Self: DualStateContext<State0, State1, Id0>,
+        State1: 'a,
+    {
+        let (state0, _state1) = self.get_states_with(id, ());
+        state0
+    }
+
+    /// Get the first state (`State0`) mutably when the `Id1` type is `()`.
+    ///
+    /// `x.get_state_mut_with(id)` is shorthand for `x.get_states_mut_with(id,
+    /// ()).0`.
+    ///
+    /// # Panics
+    ///
+    /// `get_state_mut_with` panics if `id0` is not a valid identifier. (e.g.,
+    /// an out-of-bounds index, a reference to an object that has been removed
+    /// from a map, etc).
+    fn get_state_mut_with<'a>(&'a mut self, id: Id0) -> &'a mut State0
+    where
+        Self: DualStateContext<State0, State1, Id0>,
+        State1: 'a,
+    {
+        let (state0, _state1) = self.get_states_mut_with(id, ());
+        state0
+    }
+
+    /// Get the states immutably when both ID types are `()`.
+    ///
+    /// `x.get_states()` is shorthand for `x.get_states_with((), ())`.
+    fn get_states(&self) -> (&State0, &State1)
+    where
+        Self: DualStateContext<State0, State1>,
+    {
+        self.get_states_with((), ())
+    }
+
+    /// Get the state mutably when both ID types are `()`.
+    ///
+    /// `x.get_states_mut()` is shorthand for `x.get_states_mut_with((), ())`.
+    fn get_states_mut(&mut self) -> (&mut State0, &mut State1)
+    where
+        Self: DualStateContext<State0, State1>,
+    {
+        self.get_states_mut_with((), ())
+    }
+
+    /// Get the first state (`State0`) immutably when both ID types are `()`.
+    ///
+    /// `x.get_first_state()` is shorthand for `x.get_states().0`.
+    fn get_first_state<'a>(&'a self) -> &'a State0
+    where
+        Self: DualStateContext<State0, State1>,
+        State1: 'a,
+    {
+        let (state0, _state1) = self.get_states_with((), ());
+        state0
+    }
+
+    /// Get the first state (`State0`) mutably when both ID types are `()`.
+    ///
+    /// `x.get_first_state_mut()` is shorthand for `x.get_states_mut().0`.
+    fn get_first_state_mut<'a>(&'a mut self) -> &'a mut State0
+    where
+        Self: DualStateContext<State0, State1>,
+        State1: 'a,
+    {
+        let (state0, _state1) = self.get_states_mut_with((), ());
+        state0
     }
 }
 
@@ -796,6 +930,20 @@ pub(crate) mod testutil {
 
         fn rng(&mut self) -> &mut Self::Rng {
             &mut self.rng
+        }
+    }
+
+    impl<S, Id, Meta> DualStateContext<S, FakeCryptoRng<XorShiftRng>> for DummyContext<S, Id, Meta> {
+        fn get_states_with(&self, _id0: (), _id1: ()) -> (&S, &FakeCryptoRng<XorShiftRng>) {
+            (&self.state, &self.rng)
+        }
+
+        fn get_states_mut_with(
+            &mut self,
+            _id0: (),
+            _id1: (),
+        ) -> (&mut S, &mut FakeCryptoRng<XorShiftRng>) {
+            (&mut self.state, &mut self.rng)
         }
     }
 

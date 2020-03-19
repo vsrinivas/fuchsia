@@ -16,7 +16,7 @@ use specialize_ip_macro::specialize_ip;
 use thiserror::Error;
 
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
-use crate::context::{CounterContext, RngContext, RngContextExt, StateContext};
+use crate::context::{CounterContext, DualStateContext, RngStateContext, RngStateContextExt};
 use crate::data_structures::IdMapCollectionKey;
 use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 use crate::ip::{
@@ -197,14 +197,9 @@ fn try_alloc_local_port<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &mut C,
     id: &ProtocolFlowId<I::Addr>,
 ) -> Option<NonZeroU16> {
-    // TODO(brunodalbo): We're crating a split rng context here because we
-    // don't have a way to access different contexts mutably. We should pass
-    // directly the RngContext defined by the UdpContext once we can do
-    // that.
-    let mut rng = ctx.new_xorshift_rng();
-    let state = ctx.get_state_mut();
+    let (state, rng) = ctx.get_state_rng();
     // lazily init port_alloc if it hasn't been inited yet.
-    let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(&mut rng));
+    let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(rng));
     port_alloc.try_alloc(&id, &state.conn_state).and_then(NonZeroU16::new)
 }
 
@@ -406,7 +401,7 @@ impl<I: Ip> IdMapCollectionKey for UdpListenerId<I> {
 
 /// An execution context for the UDP protocol.
 pub trait UdpContext<I: IcmpIpExt>:
-    TransportIpContext<I> + StateContext<UdpState<I>> + RngContext + CounterContext
+    TransportIpContext<I> + RngStateContext<UdpState<I>> + CounterContext
 {
     /// Receive an ICMP error message related to a previously-sent UDP packet.
     ///
@@ -465,29 +460,30 @@ pub trait BufferUdpContext<I: IcmpIpExt, B: BufferMut>:
     }
 }
 
-impl<I: Ip, D: EventDispatcher> StateContext<UdpState<I>> for Context<D> {
-    fn get_state_with(&self, _id: ()) -> &UdpState<I> {
+impl<I: Ip, D: EventDispatcher> DualStateContext<UdpState<I>, D::Rng> for Context<D> {
+    fn get_states_with(&self, _id0: (), _id1: ()) -> (&UdpState<I>, &D::Rng) {
         #[specialize_ip]
-        fn get_state<I: Ip, D: EventDispatcher>(ctx: &Context<D>) -> &UdpState<I> {
+        fn get<I: Ip, D: EventDispatcher>(ctx: &Context<D>) -> (&UdpState<I>, &D::Rng) {
             #[ipv4]
-            return &ctx.state().transport.udpv4;
+            return (&ctx.state().transport.udpv4, ctx.dispatcher().rng());
             #[ipv6]
-            return &ctx.state().transport.udpv6;
+            return (&ctx.state().transport.udpv6, ctx.dispatcher().rng());
         }
 
-        get_state(self)
+        get(self)
     }
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut UdpState<I> {
+    fn get_states_mut_with(&mut self, _id0: (), _id1: ()) -> (&mut UdpState<I>, &mut D::Rng) {
         #[specialize_ip]
-        fn get_state_mut<I: Ip, D: EventDispatcher>(ctx: &mut Context<D>) -> &mut UdpState<I> {
+        fn get<I: Ip, D: EventDispatcher>(ctx: &mut Context<D>) -> (&mut UdpState<I>, &mut D::Rng) {
+            let (state, dispatcher) = ctx.state_and_dispatcher();
             #[ipv4]
-            return &mut ctx.state_mut().transport.udpv4;
+            return (&mut state.transport.udpv4, dispatcher.rng_mut());
             #[ipv6]
-            return &mut ctx.state_mut().transport.udpv6;
+            return (&mut state.transport.udpv6, dispatcher.rng_mut());
         }
 
-        get_state_mut(self)
+        get(self)
     }
 }
 
@@ -597,7 +593,7 @@ impl<I: IcmpIpExt, C: UdpContext<I>> IpTransportContext<I, C> for UdpIpTransport
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {
             if let Some(socket) =
-                ctx.get_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
+                ctx.get_first_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
             {
                 let id = match socket {
                     LookupResult::Conn(id, _) => Ok(id),
@@ -635,7 +631,7 @@ impl<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportCon
             return Ok(());
         };
 
-        let state = ctx.get_state();
+        let state = ctx.get_first_state();
 
         if let Some(socket) = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
@@ -710,7 +706,7 @@ pub fn send_udp_conn<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     conn: UdpConnId<I>,
     body: B,
 ) -> Result<(), SendError> {
-    let state = ctx.get_state();
+    let state = ctx.get_first_state();
     let Conn { local_ip, local_port, remote_ip, remote_port } = *state
         .conn_state
         .conns
@@ -763,7 +759,7 @@ pub fn send_udp_listener<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
         return Err(SendError::Local(LocalAddressError::CannotBindToAddress));
     }
 
-    let state = ctx.get_state();
+    let state = ctx.get_first_state();
 
     let local_port = match listener.listener_type {
         ListenerType::Specified => {
@@ -842,7 +838,7 @@ pub fn connect_udp<I: IcmpIpExt, C: UdpContext<I>>(
 
     let c = Conn { local_ip, local_port, remote_ip, remote_port };
     let listener = Listener { addr: local_ip, port: local_port };
-    let state = ctx.get_state_mut();
+    let state = ctx.get_first_state_mut();
     if state.conn_state.conns.get_id_by_addr(&c).is_some()
         || state.conn_state.listeners.get_by_addr(&listener).is_some()
     {
@@ -864,7 +860,7 @@ pub fn remove_udp_conn<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let state = ctx.get_state_mut();
+    let state = ctx.get_first_state_mut();
     state.conn_state.conns.remove_by_id(id.into()).expect("UDP connection not found").into()
 }
 
@@ -877,7 +873,7 @@ pub fn get_udp_conn_info<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    ctx.get_state()
+    ctx.get_first_state()
         .conn_state
         .conns
         .get_conn_by_id(id.into())
@@ -907,19 +903,21 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpContext<I>>(
     port: Option<NonZeroU16>,
 ) -> Result<UdpListenerId<I>, SocketError> {
     let port = if let Some(port) = port {
-        if !ctx.get_state().conn_state.is_listen_port_available(addr, port) {
+        if !ctx.get_first_state().conn_state.is_listen_port_available(addr, port) {
             return Err(SocketError::Local(LocalAddressError::AddressInUse));
         }
         port
     } else {
-        let used_ports =
-            ctx.get_state_mut().conn_state.collect_used_local_ports(addr.as_ref().into_iter());
+        let used_ports = ctx
+            .get_first_state_mut()
+            .conn_state
+            .collect_used_local_ports(addr.as_ref().into_iter());
         try_alloc_listen_port(ctx, &used_ports)
             .ok_or(SocketError::Local(LocalAddressError::FailedToAllocateLocalPort))?
     };
     match addr {
         None => {
-            let state = ctx.get_state_mut();
+            let state = ctx.get_first_state_mut();
             Ok(UdpListenerId::new_wildcard(
                 state.conn_state.wildcard_listeners.insert(alloc::vec![port]),
             ))
@@ -928,7 +926,7 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpContext<I>>(
             if !ctx.is_local_addr(addr.get()) {
                 return Err(SocketError::Local(LocalAddressError::CannotBindToAddress));
             }
-            let state = ctx.get_state_mut();
+            let state = ctx.get_first_state_mut();
             Ok(UdpListenerId::new_specified(
                 state.conn_state.listeners.insert(alloc::vec![Listener { addr, port }]),
             ))
@@ -949,7 +947,7 @@ pub fn remove_udp_listener<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let state = ctx.get_state_mut();
+    let state = ctx.get_first_state_mut();
     match id.listener_type {
         ListenerType::Specified => state
             .conn_state
@@ -986,7 +984,7 @@ pub fn get_udp_listener_info<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let state = ctx.get_state();
+    let state = ctx.get_first_state();
     match id.listener_type {
         ListenerType::Specified => state
             .conn_state
@@ -1042,6 +1040,7 @@ impl<S: Serializer> From<S> for SendError {
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, Serializer};
+    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::ip_test;
 
     use super::*;
@@ -1049,7 +1048,7 @@ mod tests {
         icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
         DummyDeviceId, IpDeviceIdContext, IpExt, IpPacketBuilder, IpProto,
     };
-    use crate::testutil::{set_logger_for_test, TestIpExt};
+    use crate::testutil::{set_logger_for_test, FakeCryptoRng, TestIpExt};
     use crate::wire::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
     use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
     use crate::wire::ipv6::{Ipv6Header, Ipv6PacketRaw};
@@ -1126,13 +1125,23 @@ mod tests {
         }
     }
 
-    impl<I: IcmpIpExt> StateContext<UdpState<I>> for DummyContext<I> {
-        fn get_state_with(&self, _id: ()) -> &UdpState<I> {
-            &self.get_ref().state
+    impl<I: IcmpIpExt> DualStateContext<UdpState<I>, FakeCryptoRng<XorShiftRng>> for DummyContext<I> {
+        fn get_states_with(
+            &self,
+            _id0: (),
+            _id1: (),
+        ) -> (&UdpState<I>, &FakeCryptoRng<XorShiftRng>) {
+            let (state, rng): (&DummyUdpContext<I>, _) = self.get_states();
+            (&state.state, rng)
         }
 
-        fn get_state_mut_with(&mut self, _id: ()) -> &mut UdpState<I> {
-            &mut self.get_mut().state
+        fn get_states_mut_with(
+            &mut self,
+            _id0: (),
+            _id1: (),
+        ) -> (&mut UdpState<I>, &mut FakeCryptoRng<XorShiftRng>) {
+            let (state, rng): (&mut DummyUdpContext<I>, _) = self.get_states_mut();
+            (&mut state.state, rng)
         }
     }
 
@@ -1417,10 +1426,13 @@ mod tests {
         let local_ip = local_ip::<I>();
         // exhaust local ports to trigger FailedToAllocateLocalPort error.
         for port_num in UdpConnectionState::<I>::EPHEMERAL_RANGE {
-            ctx.get_state_mut().conn_state.listeners.insert(vec![Listener {
-                addr: local_ip,
-                port: NonZeroU16::new(port_num).unwrap(),
-            }]);
+            DualStateContext::<UdpState<I>, _>::get_first_state_mut(&mut ctx)
+                .conn_state
+                .listeners
+                .insert(vec![Listener {
+                    addr: local_ip,
+                    port: NonZeroU16::new(port_num).unwrap(),
+                }]);
         }
 
         let remote_ip = remote_ip::<I>();
@@ -1480,7 +1492,15 @@ mod tests {
         let remote_ip = remote_ip::<I>();
 
         // UDP connection count should be zero before and after `send_udp` call.
-        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .conns
+                .addr_to_id
+                .keys()
+                .len(),
+            0
+        );
 
         let body = [1, 2, 3, 4, 5];
         // Try to send something with send_udp
@@ -1495,7 +1515,15 @@ mod tests {
         .expect("send_udp failed");
 
         // UDP connection count should be zero before and after `send_udp` call.
-        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .conns
+                .addr_to_id
+                .keys()
+                .len(),
+            0
+        );
         let frames = ctx.frames();
         assert_eq!(frames.len(), 1);
 
@@ -1555,7 +1583,15 @@ mod tests {
         let remote_ip = remote_ip::<I>();
 
         // UDP connection count should be zero before and after `send_udp` call.
-        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .conns
+                .addr_to_id
+                .keys()
+                .len(),
+            0
+        );
 
         // Instruct the dummy frame context to throw errors.
         let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I::Addr>> =
@@ -1578,7 +1614,15 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call (even in the case
         // of errors).
-        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .conns
+                .addr_to_id
+                .keys()
+                .len(),
+            0
+        );
     }
 
     /// Tests that UDP send failures are propagated as errors.
@@ -1887,7 +1931,7 @@ mod tests {
         connect_udp::<I, _>(&mut ctx, Some(local_ip_2), Some(pf), remote_ip, remote_port)
             .expect("connect_udp failed");
 
-        let conn_state = &ctx.get_state().conn_state;
+        let conn_state = &DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state;
 
         // collect all used local ports:
         assert_eq!(
@@ -1924,24 +1968,16 @@ mod tests {
         let specified_list =
             listen_udp::<I, _>(&mut ctx, Some(local_ip), None).expect("listen_udp failed");
 
-        let wildcard_port = ctx
-            .get_state()
-            .conn_state
+        let conn_state = &DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state;
+        let wildcard_port = conn_state
             .wildcard_listeners
             .get_by_listener(wildcard_list.id)
             .unwrap()
             .first()
             .unwrap()
             .clone();
-        let specified_port = ctx
-            .get_state()
-            .conn_state
-            .listeners
-            .get_by_listener(specified_list.id)
-            .unwrap()
-            .first()
-            .unwrap()
-            .port;
+        let specified_port =
+            conn_state.listeners.get_by_listener(specified_list.id).unwrap().first().unwrap().port;
         assert!(UdpConnectionState::<I>::EPHEMERAL_RANGE.contains(&wildcard_port.get()));
         assert!(UdpConnectionState::<I>::EPHEMERAL_RANGE.contains(&specified_port.get()));
         assert_ne!(wildcard_port, specified_port);
@@ -1967,7 +2003,11 @@ mod tests {
 
         // assert that that connection id was removed from the connections
         // state:
-        assert!(ctx.get_state().conn_state.conns.get_conn_by_id(conn.0).is_none());
+        assert!(DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+            .conn_state
+            .conns
+            .get_conn_by_id(conn.0)
+            .is_none());
     }
 
     /// Tests [`remove_udp_listener`]
@@ -1983,14 +2023,22 @@ mod tests {
         let info = remove_udp_listener(&mut ctx, list);
         assert_eq!(info.local_ip.unwrap(), local_ip);
         assert_eq!(info.local_port, local_port);
-        assert!(ctx.get_state().conn_state.listeners.get_by_listener(list.id).is_none());
+        assert!(DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+            .conn_state
+            .listeners
+            .get_by_listener(list.id)
+            .is_none());
 
         // test removing a wildcard listener:
         let list = listen_udp::<I, _>(&mut ctx, None, Some(local_port)).expect("listen_udp failed");
         let info = remove_udp_listener(&mut ctx, list);
         assert!(info.local_ip.is_none());
         assert_eq!(info.local_port, local_port);
-        assert!(ctx.get_state().conn_state.wildcard_listeners.get_by_listener(list.id).is_none());
+        assert!(DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+            .conn_state
+            .wildcard_listeners
+            .get_by_listener(list.id)
+            .is_none());
     }
 
     #[ip_test]

@@ -285,7 +285,11 @@ impl EventDispatcher for BindingsDispatcher {
 
     type Rng = OsRng;
 
-    fn rng(&mut self) -> &mut OsRng {
+    fn rng(&self) -> &OsRng {
+        &self.rng
+    }
+
+    fn rng_mut(&mut self) -> &mut OsRng {
         &mut self.rng
     }
 }

@@ -2090,12 +2090,13 @@ mod tests {
         LinkLocalAddr,
     };
     use packet::{Buf, Serializer};
+    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::context::{
         testutil::{DummyContext, DummyInstant},
-        FrameContext, TimerContext,
+        DualStateContext, FrameContext, TimerContext,
     };
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
     use crate::ip::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
@@ -2105,8 +2106,8 @@ mod tests {
         receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId, IpExt, IpPacketBuilder,
     };
     use crate::testutil::{
-        DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
-        DUMMY_CONFIG_V6,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt,
+        DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
     use crate::wire::icmp::{
         IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode,
@@ -2941,6 +2942,26 @@ mod tests {
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
             _packet: NdpPacket<B>,
         ) {
+            unimplemented!()
+        }
+    }
+
+    impl DualStateContext<MldInterface<DummyInstant>, FakeCryptoRng<XorShiftRng>, DummyDeviceId>
+        for Dummyv6Context
+    {
+        fn get_states_with(
+            &self,
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (&MldInterface<DummyInstant>, &FakeCryptoRng<XorShiftRng>) {
+            unimplemented!()
+        }
+
+        fn get_states_mut_with(
+            &mut self,
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (&mut MldInterface<DummyInstant>, &mut FakeCryptoRng<XorShiftRng>) {
             unimplemented!()
         }
     }

@@ -445,12 +445,19 @@ pub trait EventDispatcher:
     /// fingerprinting and denial of service attacks.
     type Rng: RngCore + CryptoRng;
 
-    /// Get the random number generator (RNG).
+    /// Get the random number generator (RNG) immutably.
     ///
     /// Code in the core is required to only obtain random values through this
     /// RNG. This allows a deterministic RNG to be provided when useful (for
     /// example, in tests).
-    fn rng(&mut self) -> &mut Self::Rng;
+    fn rng(&self) -> &Self::Rng;
+
+    /// Get the random number generator (RNG) mutably.
+    ///
+    /// `rng_mut` is like [`rng`], but it returns a mutable reference.
+    ///
+    /// [`rng`]: crate::EventDispatcher::rng
+    fn rng_mut(&mut self) -> &mut Self::Rng;
 }
 
 impl<D: EventDispatcher> TimerContext<TimerId> for Context<D> {

@@ -18,14 +18,10 @@ use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::Rng;
-use rand_xorshift::XorShiftRng;
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
-use crate::context::{
-    FrameContext, InstantContext, RngContext, RngContextExt, StateContext, TimerContext,
-    TimerHandler,
-};
+use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext, TimerHandler};
 use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
 use crate::ip::{IpDeviceIdContext, IpProto, Ipv4Option};
 use crate::wire::igmp::{
@@ -56,8 +52,7 @@ impl<D> IgmpPacketMetadata<D> {
 pub(crate) trait IgmpContext:
     IpDeviceIdContext
     + TimerContext<IgmpTimerId<<Self as IpDeviceIdContext>::DeviceId>>
-    + RngContext
-    + StateContext<
+    + RngStateContext<
         IgmpInterface<<Self as InstantContext>::Instant>,
         <Self as IpDeviceIdContext>::DeviceId,
     > + FrameContext<EmptyBuf, IgmpPacketMetadata<<Self as IpDeviceIdContext>::DeviceId>>
@@ -117,24 +112,18 @@ fn handle_igmp_message<C: IgmpContext, B: ByteSlice, M, F>(
 where
     M: MessageType<B, FixedHeader = Ipv4Addr>,
     F: Fn(
-        &mut XorShiftRng,
+        &mut C::Rng,
         &mut IgmpGroupState<C::Instant>,
         &IgmpMessage<B, M>,
     ) -> Actions<Igmpv2ProtocolSpecific>,
 {
-    // TODO(joshlf): Once we figure out how to access the RNG and the state at
-    // the same time, get rid of this hack. For the time being, this is probably
-    // fine because, while the `XorShiftRng` isn't cryptographically secure, its
-    // seed is, which means that, at worst, an attacker will be able to
-    // correlate events generated during this one function call.
-    let mut rng = ctx.new_xorshift_rng();
     let group_addr = msg.group_addr();
+    let (state, rng) = ctx.get_state_rng_with(device);
     if !group_addr.is_specified() {
-        let addr_and_actions = ctx
-            .get_state_mut_with(device)
+        let addr_and_actions = state
             .groups
             .iter_mut()
-            .map(|(addr, state)| (addr.clone(), handler(&mut rng, state, &msg)))
+            .map(|(addr, state)| (addr.clone(), handler(rng, state, &msg)))
             .collect::<Vec<_>>();
         // `addr` must be a multicast address, otherwise it will not have
         // an associated state in the first place
@@ -143,8 +132,8 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match ctx.get_state_mut_with(device).groups.get_mut(&group_addr) {
-            Some(state) => handler(&mut rng, state, &msg),
+        let actions = match state.groups.get_mut(&group_addr) {
+            Some(state) => handler(rng, state, &msg),
             None => return Err(IgmpError::NotAMember { addr: *group_addr }),
         };
         // `group_addr` here must be a multicast address for similar reasons
@@ -466,13 +455,8 @@ pub(crate) fn igmp_join_group<C: IgmpContext>(
     group_addr: MulticastAddr<Ipv4Addr>,
 ) {
     let now = ctx.now();
-    // TODO(joshlf): Once we figure out how to access the RNG and the state at
-    // the same time, get rid of this hack. For the time being, this is probably
-    // fine because, while the `XorShiftRng` isn't cryptographically secure, its
-    // seed is, which means that, at worst, an attacker will be able to
-    // correlate events generated during this one function call.
-    let mut rng = ctx.new_xorshift_rng();
-    let actions = ctx.get_state_mut_with(device).join_group(&mut rng, group_addr, now);
+    let (state, rng) = ctx.get_state_rng_with(device);
+    let actions = state.join_group(rng, group_addr, now);
     // actions will be `Nothing` if the the host is not in the `NonMember` state.
     run_actions(ctx, device, actions, group_addr);
 }
@@ -501,11 +485,13 @@ mod tests {
 
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
+    use rand_xorshift::XorShiftRng;
 
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
+    use crate::context::DualStateContext;
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::ip::DummyDeviceId;
-    use crate::testutil::new_rng;
+    use crate::testutil::{new_rng, FakeCryptoRng};
     use crate::wire::igmp::messages::IgmpMembershipQueryV2;
 
     /// A dummy [`IgmpContext`] that stores the [`IgmpInterface`] and an optional IPv4 address
@@ -531,13 +517,25 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl StateContext<IgmpInterface<DummyInstant>, DummyDeviceId> for DummyContext {
-        fn get_state_with(&self, _id: DummyDeviceId) -> &IgmpInterface<DummyInstant> {
-            &self.get_ref().interface
+    impl DualStateContext<IgmpInterface<DummyInstant>, FakeCryptoRng<XorShiftRng>, DummyDeviceId>
+        for DummyContext
+    {
+        fn get_states_with(
+            &self,
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (&IgmpInterface<DummyInstant>, &FakeCryptoRng<XorShiftRng>) {
+            let (state, rng) = self.get_states();
+            (&state.interface, rng)
         }
 
-        fn get_state_mut_with(&mut self, _id: DummyDeviceId) -> &mut IgmpInterface<DummyInstant> {
-            &mut self.get_mut().interface
+        fn get_states_mut_with(
+            &mut self,
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (&mut IgmpInterface<DummyInstant>, &mut FakeCryptoRng<XorShiftRng>) {
+            let (state, rng) = self.get_states_mut();
+            (&mut state.interface, rng)
         }
     }
 
@@ -673,13 +671,11 @@ mod tests {
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
 
         // We have received a query, hence we are falling back to Delay Member state.
-        let group_state = <DummyContext as StateContext<IgmpInterface<_>, _>>::get_state_with(
-            &ctx,
-            DummyDeviceId,
-        )
-        .groups
-        .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-        .unwrap();
+        let group_state = ctx
+            .get_state_with(DummyDeviceId)
+            .groups
+            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+            .unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(_) => {}
             _ => panic!("Wrong State!"),
@@ -702,13 +698,11 @@ mod tests {
         assert_eq!(ctx.frames().len(), 1);
 
         // Since we have heard from the v1 router, we should have set our flag
-        let group_state = <DummyContext as StateContext<IgmpInterface<_>, _>>::get_state_with(
-            &ctx,
-            DummyDeviceId,
-        )
-        .groups
-        .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-        .unwrap();
+        let group_state = ctx
+            .get_state_with(DummyDeviceId)
+            .groups
+            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+            .unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(state) => {
                 assert!(state.get_protocol_specific().v1_router_present)
@@ -732,13 +726,11 @@ mod tests {
 
         assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
         // After the second timer, we should reset our flag for v1 routers.
-        let group_state = <DummyContext as StateContext<IgmpInterface<_>, _>>::get_state_with(
-            &ctx,
-            DummyDeviceId,
-        )
-        .groups
-        .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-        .unwrap();
+        let group_state = ctx
+            .get_state_with(DummyDeviceId)
+            .groups
+            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+            .unwrap();
         match group_state.get_inner() {
             MemberState::Idle(state) => assert!(!state.get_protocol_specific().v1_router_present),
             _ => panic!("Wrong State!"),

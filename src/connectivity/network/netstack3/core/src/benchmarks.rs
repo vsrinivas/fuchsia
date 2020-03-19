@@ -108,7 +108,11 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 
     type Rng = FakeCryptoRng<XorShiftRng>;
 
-    fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
+    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
+        unimplemented!()
+    }
+
+    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
         unimplemented!()
     }
 }

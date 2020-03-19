@@ -178,8 +178,12 @@ impl EventDispatcher for TestDispatcher {
 
     type Rng = <BindingsDispatcher as EventDispatcher>::Rng;
 
-    fn rng(&mut self) -> &mut Self::Rng {
+    fn rng(&self) -> &Self::Rng {
         self.disp.rng()
+    }
+
+    fn rng_mut(&mut self) -> &mut Self::Rng {
+        self.disp.rng_mut()
     }
 }
 

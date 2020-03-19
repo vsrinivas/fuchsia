@@ -24,8 +24,8 @@ use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
 use crate::context::{
-    CounterContext, FrameContext, InstantContext, RecvFrameContext, RngContext, StateContext,
-    TimerContext,
+    CounterContext, DualStateContext, FrameContext, InstantContext, RecvFrameContext, RngContext,
+    StateContext, TimerContext,
 };
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{
@@ -159,58 +159,56 @@ impl<D: EventDispatcher>
     }
 }
 
-impl<D: EventDispatcher> StateContext<IgmpInterface<D::Instant>, DeviceId> for Context<D> {
-    fn get_state_with(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
+impl<D: EventDispatcher> DualStateContext<IgmpInterface<D::Instant>, D::Rng, DeviceId, ()>
+    for Context<D>
+{
+    fn get_states_with(&self, device: DeviceId, _id1: ()) -> (&IgmpInterface<D::Instant>, &D::Rng) {
         match device.protocol {
-            DeviceProtocol::Ethernet => {
-                &<Context<D> as StateContext<
-                    IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>,
-                    EthernetDeviceId,
-                >>::get_state_with(self, device.id().into())
-                .ip()
-                .igmp
-            }
+            DeviceProtocol::Ethernet => (
+                &self.state().device.ethernet.get(device.id()).unwrap().device.ip().igmp,
+                self.dispatcher().rng(),
+            ),
         }
     }
 
-    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
+    fn get_states_mut_with(
+        &mut self,
+        device: DeviceId,
+        _id1: (),
+    ) -> (&mut IgmpInterface<D::Instant>, &mut D::Rng) {
+        let (state, dispatcher) = self.state_and_dispatcher();
         match device.protocol {
-            DeviceProtocol::Ethernet => {
-                &mut <Context<D> as StateContext<
-                    IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>,
-                    EthernetDeviceId,
-                >>::get_state_mut_with(self, device.id().into())
-                .ip_mut()
-                .igmp
-            }
+            DeviceProtocol::Ethernet => (
+                &mut state.device.ethernet.get_mut(device.id()).unwrap().device.ip_mut().igmp,
+                dispatcher.rng_mut(),
+            ),
         }
     }
 }
 
-impl<D: EventDispatcher> StateContext<MldInterface<D::Instant>, DeviceId> for Context<D> {
-    fn get_state_with(&self, device: DeviceId) -> &MldInterface<D::Instant> {
+impl<D: EventDispatcher> DualStateContext<MldInterface<D::Instant>, D::Rng, DeviceId, ()>
+    for Context<D>
+{
+    fn get_states_with(&self, device: DeviceId, _id1: ()) -> (&MldInterface<D::Instant>, &D::Rng) {
         match device.protocol {
-            DeviceProtocol::Ethernet => {
-                &<Context<D> as StateContext<
-                    IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>,
-                    EthernetDeviceId,
-                >>::get_state_with(self, device.id().into())
-                .ip()
-                .mld
-            }
+            DeviceProtocol::Ethernet => (
+                &self.state().device.ethernet.get(device.id()).unwrap().device.ip().mld,
+                self.dispatcher().rng(),
+            ),
         }
     }
 
-    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut MldInterface<D::Instant> {
+    fn get_states_mut_with(
+        &mut self,
+        device: DeviceId,
+        _id1: (),
+    ) -> (&mut MldInterface<D::Instant>, &mut D::Rng) {
+        let (state, dispatcher) = self.state_and_dispatcher();
         match device.protocol {
-            DeviceProtocol::Ethernet => {
-                &mut <Context<D> as StateContext<
-                    IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>,
-                    EthernetDeviceId,
-                >>::get_state_mut_with(self, device.id().into())
-                .ip_mut()
-                .mld
-            }
+            DeviceProtocol::Ethernet => (
+                &mut state.device.ethernet.get_mut(device.id()).unwrap().device.ip_mut().mld,
+                dispatcher.rng_mut(),
+            ),
         }
     }
 }

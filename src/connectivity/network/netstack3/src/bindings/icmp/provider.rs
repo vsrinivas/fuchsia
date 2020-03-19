@@ -118,7 +118,7 @@ where
         // TODO(fxb/36212): Generate icmp_ids without relying on an RNG. This line
         // of code does not handle conflicts very well, requiring the client to
         // continuously create sockets until it succeeds.
-        let icmp_id = ctx.dispatcher_mut().rng().next_u32() as u16;
+        let icmp_id = ctx.dispatcher_mut().rng_mut().next_u32() as u16;
         self.connect_echo_socket_inner::<I>(ctx, stream, local, remote, icmp_id)
     }
 
