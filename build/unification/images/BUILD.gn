@@ -2866,13 +2866,10 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
 #------------------
-    "//zircon/system/utest/fidl-coding-tables:fidl-coding-tables-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/fidl-llcpp-interop:fidl-llcpp-interop-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/fidl-simple:fidl-simple-manifest",
 #------------------
 #------------------
     #":test.sys.fidl-test",
@@ -3531,13 +3528,10 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
 #------------------
-    "//zircon/system/utest/fidl-coding-tables:fidl-coding-tables-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/fidl-llcpp-interop:fidl-llcpp-interop-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/fidl-simple:fidl-simple-manifest",
 #------------------
 #------------------
     #":test.sys.fidl-test",

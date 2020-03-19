@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/coding_tables_tests"
+    }
+}

@@ -33,7 +33,8 @@ enum Alert {
     YELLOW = 2;
     RED = 3;
 };
-bits Shields:uint8 {
+
+bits Shields : uint8 {
     PORT = 1;
     STARBOARD = 2;
     FORE = 4;

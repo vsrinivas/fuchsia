@@ -181,19 +181,13 @@ fidlc tests are at:
 
 * [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 * [//zircon/system/utest/fidl/][fidlc-tests].
-* [//zircon/system/utest/fidl-coding/tables/][fidlc-coding-tables-tests].
-* [//zircon/system/utest/fidl-simple][fidl-simple (C runtime tests)].
+* [//src/lib/fidl/c/coding_tables_tests/][fidlc-coding-tables-tests].
+* [//src/lib/fidl/c/simple_tests][fidl-simple](C runtime tests).
 
 ```sh
 # build & run fidlc tests
 fx build system/utest:host
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
-
-# build & run fidl-coding-tables tests
-# --with-base puts all zircon tests under /boot with the bringup.x64 target, or /system when using the core.x64 target
-fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
-fx build
-fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
 ```
 
 To regenerate the FIDL definitions used in unit testing, run:
@@ -269,23 +263,24 @@ fx exec topaz/bin/fidlgen_dart/regen.sh
 
 ### C runtime
 
-```sh
-fx set core.x64 --with-base //garnet/packages/tests:zircon
-fx build
-fx qemu -kN
+You first need to have Fuchsia running in an emulator. Here are the steps:
 
-# On Fuchsia device's shell
-$ runtests -t fidl-test
-$ runtests -t fidl-simple-test
+```sh
+Tab 1> fx build && fx serve-updates
+
+Tab 2> fx qemu -kN
+
+Tab 3> fx test fidl-c-tests
 ```
 
 The `-k` flag enables KVM. It is not required, but the emulator is *much* slower
 without it. The `-N` flag enables networking.
 
-You might get lucky with
+There is one test that must be run separately as a zbi test, which is the
+`fidl-test`:
+
 ```
 fx qemu -kN -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
-fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test
 ```
 
 When the test completes, you're running in the QEMU emulator.
@@ -299,7 +294,6 @@ Tab 1> fx set core.x64 --with-base //garnet/packages/tests:zircon
 Tab 1> fx build && fx qemu -kN
 
 Tab 2> fx shell
-Tab 2(shell)> runtests -t fidl-simple-test
 Tab 2(shell)> runtests -t fidl-test
 ```
 
@@ -453,7 +447,6 @@ The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:z
 | Name                      | Test Command                                                                                                  | Directories Covered     |
 |---------------------------|---------------------------------------------------------------------------------------------------------------|-------------------------|
 | fidlc host test           | $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug  | zircon/system/host/fidl |
-| fidl coding tables test   | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test                               | zircon/system/host/fidl |
 | fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test                                             | zircon/system/ulib/fidl |
 | fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test                                      | zircon/system/ulib/fidl |
 | fidl c-llcpp interop test | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test                               | zircon/system/ulib/fidl |
@@ -602,8 +595,8 @@ fidl fmt --library my_library.fidl -i
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
 [compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
 [fidlc-source]: /zircon/tools/fidl/
-[fidlc-coding-tables-tests]: /zircon/system/utest/fidl-coding-tables/
-[fidl-simple]: /zircon/system/utest/fidl-simple/
+[fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
+[fidl-simple]: /src/lib/fidl/c/simple_tests/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [fidlc-tests]: /zircon/system/utest/fidl/
 [jsonir]: /docs/development/languages/fidl/reference/json-ir.md

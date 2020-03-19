@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/spaceship/c/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/channel.h>
 #include <string.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
+
+#include <fidl/test/spaceship/c/fidl.h>
+#include <unittest/unittest.h>
 
 namespace {
 

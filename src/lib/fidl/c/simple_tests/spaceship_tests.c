@@ -109,7 +109,7 @@ static bool spaceship_test(void) {
   {
     int8_t result = 0;
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-              fidl_test_spaceship_SpaceShipAdjustHeading(client, NULL, 1 << 31, &result), "");
+              fidl_test_spaceship_SpaceShipAdjustHeading(client, NULL, 1u << 31, &result), "");
   }
 
   {

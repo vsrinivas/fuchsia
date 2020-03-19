@@ -57,6 +57,7 @@ group("tests") {
     "elflib:tests",
     "fake-clock:tests",
     "fdio:tests",
+    "fidl:tests",
     "fidl_codec:tests",
     "fidl_table_validation:tests",
     "fuchsia-async:tests",
