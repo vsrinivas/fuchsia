@@ -23,7 +23,7 @@ use log::{error, info, warn};
 use omaha_client::{
     common::{AppSet, CheckOptions},
     protocol::request::InstallSource,
-    state_machine::{self, StartUpdateCheckResponse},
+    state_machine::{self, StartUpdateCheckResponse, StateMachineGone},
     storage::Storage,
 };
 use std::cell::RefCell;
@@ -50,17 +50,19 @@ fn write_partition(partition: SysconfigPartition, data: &[u8]) -> Result<(), Err
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct State {
     pub manager_state: state_machine::State,
     pub version_available: Option<String>,
+    pub install_progress: Option<f32>,
 }
 
 impl From<State> for Option<update::State> {
     fn from(state: State) -> Self {
         let update =
             Some(UpdateInfo { version_available: state.version_available, download_size: None });
-        let installation_progress = Some(InstallationProgress { fraction_completed: None });
+        let installation_progress =
+            Some(InstallationProgress { fraction_completed: state.install_progress });
         match state.manager_state {
             state_machine::State::Idle => None,
             state_machine::State::CheckingForUpdates => {
@@ -129,11 +131,28 @@ impl Event for State {
     }
 }
 
-pub struct FidlServer<ST>
+pub trait StateMachineController: Clone {
+    fn start_update_check(
+        &mut self,
+        options: CheckOptions,
+    ) -> BoxFuture<'_, Result<StartUpdateCheckResponse, StateMachineGone>>;
+}
+
+impl StateMachineController for state_machine::ControlHandle {
+    fn start_update_check(
+        &mut self,
+        options: CheckOptions,
+    ) -> BoxFuture<'_, Result<StartUpdateCheckResponse, StateMachineGone>> {
+        self.start_update_check(options).boxed()
+    }
+}
+
+pub struct FidlServer<ST, SM>
 where
     ST: Storage,
+    SM: StateMachineController,
 {
-    state_machine_control: state_machine::ControlHandle,
+    state_machine_control: SM,
 
     storage_ref: Rc<Mutex<ST>>,
 
@@ -157,19 +176,24 @@ pub enum IncomingServices {
     ChannelProvider(ProviderRequestStream),
 }
 
-impl<ST> FidlServer<ST>
+impl<ST, SM> FidlServer<ST, SM>
 where
     ST: Storage + 'static,
+    SM: StateMachineController,
 {
     pub fn new(
-        state_machine_control: state_machine::ControlHandle,
+        state_machine_control: SM,
         storage_ref: Rc<Mutex<ST>>,
         app_set: AppSet,
         apps_node: AppsNode,
         state_node: StateNode,
         channel_configs: Option<ChannelConfigs>,
     ) -> Self {
-        let state = State { manager_state: state_machine::State::Idle, version_available: None };
+        let state = State {
+            manager_state: state_machine::State::Idle,
+            version_available: None,
+            install_progress: None,
+        };
         state_node.set(&state);
         let (monitor_queue_fut, monitor_queue) = EventQueue::new();
         fasync::spawn_local(monitor_queue_fut);
@@ -389,31 +413,32 @@ where
     pub async fn on_state_change(server: Rc<RefCell<Self>>, state: state_machine::State) {
         server.borrow_mut().state.manager_state = state;
 
-        Self::send_state_to_queue(Rc::clone(&server)).await;
-
-        {
-            let s = server.borrow();
-            // State is back to idle, clear the current update monitor handles.
-            if s.state.manager_state == state_machine::State::Idle {
-                let mut monitor_queue = s.monitor_queue.clone();
-                drop(s);
-                if let Err(e) = monitor_queue.clear().await {
-                    warn!("error clearing clients of monitor_queue: {:?}", e)
-                }
+        match state {
+            state_machine::State::Idle => {
+                server.borrow_mut().state.install_progress = None;
             }
+            state_machine::State::WaitingForReboot => {
+                server.borrow_mut().state.install_progress = Some(1.);
+            }
+            _ => {}
         }
 
-        let s = server.borrow();
+        Self::send_state_to_queue(Rc::clone(&server)).await;
 
+        let s = server.borrow();
         s.state_node.set(&s.state);
 
-        // The state machine might make changes to apps only when state changes to `Idle` or
-        // `WaitingForReboot`, update the apps node in inspect.
-        if s.state.manager_state == state_machine::State::Idle
-            || s.state.manager_state == state_machine::State::WaitingForReboot
-        {
-            let app_set = s.app_set.clone();
+        if state == state_machine::State::Idle || state == state_machine::State::WaitingForReboot {
+            // State is back to idle or waiting for reboot, clear the current update monitor handles.
+            let mut monitor_queue = s.monitor_queue.clone();
             drop(s);
+            if let Err(e) = monitor_queue.clear().await {
+                warn!("error clearing clients of monitor_queue: {:?}", e);
+            }
+
+            // The state machine might make changes to apps only when state changes to `Idle` or
+            // `WaitingForReboot`, update the apps node in inspect.
+            let app_set = server.borrow().app_set.clone();
             let app_set = app_set.to_vec().await;
             server.borrow().apps_node.set(&app_set);
         }
@@ -428,10 +453,18 @@ where
             warn!("error sending state to monitor_queue: {:?}", e)
         }
     }
+
+    pub async fn on_progress_change(
+        server: Rc<RefCell<Self>>,
+        progress: state_machine::InstallProgress,
+    ) {
+        server.borrow_mut().state.install_progress = Some(progress.progress);
+        Self::send_state_to_queue(server).await;
+    }
 }
 
 #[cfg(test)]
-pub use stub::{FidlServerBuilder, StubFidlServer};
+pub use stub::{FidlServerBuilder, StubFidlServer, StubStateMachineController};
 
 #[cfg(test)]
 mod stub {
@@ -457,7 +490,37 @@ mod stub {
     };
     use std::time::Duration;
 
-    pub type StubFidlServer = FidlServer<MemStorage>;
+    #[derive(Clone)]
+    pub struct StubStateMachineController;
+
+    impl StateMachineController for StubStateMachineController {
+        fn start_update_check(
+            &mut self,
+            _options: CheckOptions,
+        ) -> BoxFuture<'_, Result<StartUpdateCheckResponse, StateMachineGone>> {
+            future::ready(Ok(StartUpdateCheckResponse::Started)).boxed()
+        }
+    }
+
+    #[derive(Clone)]
+    pub enum StubOrRealStateMachineController {
+        Stub(StubStateMachineController),
+        Real(state_machine::ControlHandle),
+    }
+
+    impl StateMachineController for StubOrRealStateMachineController {
+        fn start_update_check(
+            &mut self,
+            options: CheckOptions,
+        ) -> BoxFuture<'_, Result<StartUpdateCheckResponse, StateMachineGone>> {
+            match self {
+                Self::Stub(stub) => stub.start_update_check(options),
+                Self::Real(real) => real.start_update_check(options).boxed(),
+            }
+        }
+    }
+
+    pub type StubFidlServer = FidlServer<MemStorage, StubOrRealStateMachineController>;
 
     pub struct FidlServerBuilder {
         apps: Vec<App>,
@@ -465,6 +528,7 @@ mod stub {
         apps_node: Option<AppsNode>,
         state_node: Option<StateNode>,
         allow_update_check: bool,
+        state_machine_control: Option<StubStateMachineController>,
     }
 
     impl FidlServerBuilder {
@@ -475,9 +539,12 @@ mod stub {
                 apps_node: None,
                 state_node: None,
                 allow_update_check: true,
+                state_machine_control: None,
             }
         }
+    }
 
+    impl FidlServerBuilder {
         pub fn with_apps(mut self, mut apps: Vec<App>) -> Self {
             self.apps.append(&mut apps);
             self
@@ -500,6 +567,14 @@ mod stub {
 
         pub fn allow_update_check(mut self, allow_update_check: bool) -> Self {
             self.allow_update_check = allow_update_check;
+            self
+        }
+
+        pub fn state_machine_control(
+            mut self,
+            state_machine_control: StubStateMachineController,
+        ) -> Self {
+            self.state_machine_control = Some(state_machine_control);
             self
         }
 
@@ -531,6 +606,10 @@ mod stub {
 
             let apps_node = self.apps_node.unwrap_or(AppsNode::new(root.create_child("apps")));
             let state_node = self.state_node.unwrap_or(StateNode::new(root.create_child("state")));
+            let state_machine_control = match self.state_machine_control {
+                Some(stub) => StubOrRealStateMachineController::Stub(stub),
+                None => StubOrRealStateMachineController::Real(state_machine_control),
+            };
             let fidl = Rc::new(RefCell::new(FidlServer::new(
                 state_machine_control,
                 storage_ref,
@@ -713,6 +792,48 @@ mod tests {
             }
         }
         assert_eq!(None, expected_states.next());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_monitor_progress() {
+        let fidl = FidlServerBuilder::new()
+            .state_machine_control(StubStateMachineController)
+            .build()
+            .await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
+        let (client_end, mut stream) = create_request_stream::<MonitorMarker>().unwrap();
+        let options = update::CheckOptions {
+            initiator: Some(Initiator::User),
+            allow_attaching_to_existing_update_check: Some(true),
+        };
+        let result = proxy.check_now(options, Some(client_end)).await.unwrap();
+        assert_matches!(result, Ok(()));
+        FidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::InstallingUpdate).await;
+        // Ignore the first InstallingUpdate state with no progress.
+        let MonitorRequest::OnState { state: _, responder } =
+            stream.try_next().await.unwrap().unwrap();
+        responder.send().unwrap();
+
+        let progresses = vec![0.0, 0.3, 0.9, 1.0];
+        for &progress in &progresses {
+            FidlServer::on_progress_change(
+                Rc::clone(&fidl),
+                state_machine::InstallProgress { progress },
+            )
+            .await;
+            let MonitorRequest::OnState { state, responder } =
+                stream.try_next().await.unwrap().unwrap();
+            match state {
+                update::State::InstallingUpdate(InstallingData {
+                    update: _,
+                    installation_progress,
+                }) => {
+                    assert_eq!(installation_progress.unwrap().fraction_completed.unwrap(), progress)
+                }
+                state => panic!("unexpected state: {:?}", state),
+            }
+            responder.send().unwrap();
+        }
     }
 
     #[fasync::run_singlethreaded(test)]

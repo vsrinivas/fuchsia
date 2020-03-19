@@ -348,8 +348,8 @@ fn update_info() -> Option<UpdateInfo> {
     Some(UpdateInfo { version_available: None, download_size: None })
 }
 
-fn progress() -> Option<InstallationProgress> {
-    Some(InstallationProgress { fraction_completed: None })
+fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
+    Some(InstallationProgress { fraction_completed })
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -373,15 +373,46 @@ async fn test_omaha_client_update() {
             State::CheckingForUpdates(CheckingForUpdatesData {}),
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
-                installation_progress: progress(),
-            }),
-            State::WaitingForReboot(InstallingData {
-                update: update_info(),
-                installation_progress: progress(),
+                installation_progress: progress(None),
             }),
         ],
     )
     .await;
+    let mut last_progress: Option<InstallationProgress> = None;
+    let mut waiting_for_reboot = false;
+    while let Some(request) = stream.try_next().await.unwrap() {
+        let MonitorRequest::OnState { state, responder } = request;
+        match state {
+            State::InstallingUpdate(InstallingData { update, installation_progress }) => {
+                assert_eq!(update, update_info());
+                assert!(!waiting_for_reboot);
+                if let Some(last_progress) = last_progress {
+                    let last = last_progress.fraction_completed.unwrap();
+                    let current =
+                        installation_progress.as_ref().unwrap().fraction_completed.unwrap();
+                    assert!(
+                        last <= current,
+                        "progress is not increasing, last: {}, current: {}",
+                        last,
+                        current,
+                    );
+                }
+                last_progress = installation_progress;
+            }
+            State::WaitingForReboot(InstallingData { update, installation_progress }) => {
+                assert_eq!(update, update_info());
+                assert_eq!(installation_progress, progress(Some(1.)));
+                assert!(!waiting_for_reboot);
+                waiting_for_reboot = true;
+            }
+            state => {
+                panic!("Unexpected state: {:?}", state);
+            }
+        }
+        responder.send().unwrap();
+    }
+    assert_matches!(last_progress, Some(_));
+    assert!(waiting_for_reboot);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -395,16 +426,48 @@ async fn test_omaha_client_update_error() {
             State::CheckingForUpdates(CheckingForUpdatesData {}),
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
-                installation_progress: progress(),
-            }),
-            State::InstallationError(InstallationErrorData {
-                update: update_info(),
-                installation_progress: progress(),
+                installation_progress: progress(None),
             }),
         ],
     )
     .await;
-    assert_matches!(stream.next().await, None);
+    let mut last_progress: Option<InstallationProgress> = None;
+    let mut installation_error = false;
+    while let Some(request) = stream.try_next().await.unwrap() {
+        let MonitorRequest::OnState { state, responder } = request;
+        match state {
+            State::InstallingUpdate(InstallingData { update, installation_progress }) => {
+                assert_eq!(update, update_info());
+                assert!(!installation_error);
+                if let Some(last_progress) = last_progress {
+                    let last = last_progress.fraction_completed.unwrap();
+                    let current =
+                        installation_progress.as_ref().unwrap().fraction_completed.unwrap();
+                    assert!(
+                        last <= current,
+                        "progress is not increasing, last: {}, current: {}",
+                        last,
+                        current,
+                    );
+                }
+                last_progress = installation_progress;
+            }
+
+            State::InstallationError(InstallationErrorData {
+                update,
+                installation_progress: _,
+            }) => {
+                assert_eq!(update, update_info());
+                assert!(!installation_error);
+                installation_error = true;
+            }
+            state => {
+                panic!("Unexpected state: {:?}", state);
+            }
+        }
+        responder.send().unwrap();
+    }
+    assert!(installation_error);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -450,7 +513,7 @@ async fn test_omaha_client_invalid_url() {
             State::CheckingForUpdates(CheckingForUpdatesData {}),
             State::InstallationError(InstallationErrorData {
                 update: update_info(),
-                installation_progress: progress(),
+                installation_progress: progress(None),
             }),
         ],
     )

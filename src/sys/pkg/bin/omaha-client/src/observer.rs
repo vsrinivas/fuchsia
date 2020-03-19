@@ -4,24 +4,25 @@
 
 use crate::{
     cobalt::notify_cobalt_current_channel,
-    fidl::FidlServer,
+    fidl::{FidlServer, StateMachineController},
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
 };
 use omaha_client::{
     clock,
     common::{AppSet, ProtocolState, UpdateCheckSchedule},
-    state_machine::{update_check, State, StateMachineEvent, UpdateCheckError},
+    state_machine::{update_check, InstallProgress, State, StateMachineEvent, UpdateCheckError},
     storage::Storage,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
 
-pub struct FuchsiaObserver<ST>
+pub struct FuchsiaObserver<ST, SM>
 where
     ST: Storage,
+    SM: StateMachineController,
 {
-    fidl_server: Rc<RefCell<FidlServer<ST>>>,
+    fidl_server: Rc<RefCell<FidlServer<ST, SM>>>,
     schedule_node: ScheduleNode,
     protocol_state_node: ProtocolStateNode,
     last_results_node: LastResultsNode,
@@ -30,12 +31,13 @@ where
     notified_cobalt: bool,
 }
 
-impl<ST> FuchsiaObserver<ST>
+impl<ST, SM> FuchsiaObserver<ST, SM>
 where
     ST: Storage + 'static,
+    SM: StateMachineController,
 {
     pub fn new(
-        fidl_server: Rc<RefCell<FidlServer<ST>>>,
+        fidl_server: Rc<RefCell<FidlServer<ST, SM>>>,
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
         last_results_node: LastResultsNode,
@@ -60,6 +62,9 @@ where
             StateMachineEvent::ProtocolStateChange(state) => self.on_protocol_state_change(&state),
             StateMachineEvent::UpdateCheckResult(result) => {
                 self.on_update_check_result(&result).await
+            }
+            StateMachineEvent::InstallProgressChange(progress) => {
+                self.on_progress_change(progress).await
             }
         }
     }
@@ -100,6 +105,10 @@ where
             notify_cobalt_current_channel(self.app_set.clone()).await;
             self.notified_cobalt = true;
         }
+    }
+
+    async fn on_progress_change(&mut self, progress: InstallProgress) {
+        FidlServer::on_progress_change(Rc::clone(&self.fidl_server), progress).await
     }
 }
 

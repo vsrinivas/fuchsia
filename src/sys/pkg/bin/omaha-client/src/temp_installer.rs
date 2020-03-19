@@ -82,16 +82,20 @@ impl Installer for FuchsiaInstaller {
         }
         .boxed();
         let progress_timer = make_progress_timer(observer.clone()).boxed();
-        // Send 0 outside of timer, so that 0 is always sent even if timer is never
-        // scheduled. Allows unit tests to be deterministic.
-        observer.map(|o| o.receive_progress(None, 0, None, None));
         async move {
+            // Send 0 outside of timer, so that 0 is always sent even if timer is never
+            // scheduled. Allows unit tests to be deterministic.
+            if let Some(observer) = observer {
+                observer.receive_progress(None, 0., None, None).await;
+            }
             let update_res = match select(system_updater, progress_timer).await {
                 Either::Left((update_res, _)) => update_res,
                 Either::Right(((), system_updater)) => system_updater.await,
             };
             if update_res.is_ok() {
-                observer.map(|o| o.receive_progress(None, 10_000, None, None));
+                if let Some(observer) = observer {
+                    observer.receive_progress(None, 1., None, None).await;
+                }
             }
             update_res
         }
@@ -113,7 +117,7 @@ impl Installer for FuchsiaInstaller {
 
 const EXPECTED_UPDATE_DURATION: Duration = Duration::from_minutes(4);
 const TIMER_CHUNKS: u16 = 90;
-const TIMER_MAX_PROGRESS: u16 = 9_000;
+const TIMER_MAX_PROGRESS: f32 = 0.9;
 
 async fn make_progress_timer(observer: Option<&dyn ProgressObserver>) {
     let observer = if let Some(observer) = observer {
@@ -125,15 +129,14 @@ async fn make_progress_timer(observer: Option<&dyn ProgressObserver>) {
     fasync::Interval::new(EXPECTED_UPDATE_DURATION / TIMER_CHUNKS)
         .enumerate()
         .take(TIMER_CHUNKS as usize)
-        .map(|(i, ())| {
+        .for_each(|(i, ())| {
             observer.receive_progress(
                 None,
-                (i as u16 + 1) * (TIMER_MAX_PROGRESS / TIMER_CHUNKS),
+                (i + 1) as f32 / (TIMER_CHUNKS as f32 / TIMER_MAX_PROGRESS),
                 None,
                 None,
             )
         })
-        .collect::<()>()
         .await;
 }
 
@@ -203,7 +206,7 @@ mod tests {
     }
 
     struct MockProgressObserver {
-        progresses: Mutex<Vec<u16>>,
+        progresses: Mutex<Vec<f32>>,
     }
     impl MockProgressObserver {
         fn new() -> Self {
@@ -214,14 +217,15 @@ mod tests {
         fn receive_progress(
             &self,
             operation: Option<&str>,
-            progress: u16,
+            progress: f32,
             total_size: Option<u64>,
             size_so_far: Option<u64>,
-        ) {
+        ) -> BoxFuture<'_, ()> {
             assert_eq!(operation, None);
             assert_eq!(total_size, None);
             assert_eq!(size_so_far, None);
             self.progresses.lock().push(progress);
+            future::ready(()).boxed()
         }
     }
 
@@ -238,7 +242,10 @@ mod tests {
         while exec.wake_next_timer().is_some() {
             assert_matches!(exec.run_until_stalled(&mut installer_fut), Poll::Pending);
         }
-        assert_eq!(*observer.progresses.lock(), (0..=9000).step_by(100).collect::<Vec<_>>());
+        assert_eq!(
+            *observer.progresses.lock(),
+            (0..=90).map(|i| i as f32 / 100.).collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -256,7 +263,7 @@ mod tests {
             exec.run_until_stalled(&mut future::join(installer_fut, launcher_fut).boxed()),
             Poll::Ready((Ok(()), ()))
         );
-        assert_eq!(*observer.progresses.lock(), vec![0, 10_000]);
+        assert_eq!(*observer.progresses.lock(), vec![0., 1.]);
     }
 
     #[test]
@@ -280,7 +287,7 @@ mod tests {
         );
         assert_eq!(
             *observer.progresses.lock(),
-            vec![0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 10000]
+            vec![0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 1.]
         );
     }
 }

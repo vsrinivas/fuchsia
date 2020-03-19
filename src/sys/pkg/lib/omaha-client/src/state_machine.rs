@@ -51,7 +51,8 @@ pub use timer::MockTimer;
 pub use timer::Timer;
 
 mod observer;
-pub use observer::StateMachineEvent;
+use observer::StateMachineProgressObserver;
+pub use observer::{InstallProgress, StateMachineEvent};
 
 const LAST_CHECK_TIME: &str = "last_check_time";
 const INSTALL_PLAN_ID: &str = "install_plan_id";
@@ -797,7 +798,21 @@ where
             let update_first_seen_time =
                 self.record_update_first_seen_time(&install_plan_id, update_start_time).await;
 
-            let install_result = self.installer.perform_install(&install_plan, None).await;
+            let (send, mut recv) = mpsc::channel(0);
+            let observer = StateMachineProgressObserver(send);
+            let perform_install = async {
+                let result = self.installer.perform_install(&install_plan, Some(&observer)).await;
+                // Drop observer so that we can stop waiting for the next progress.
+                drop(observer);
+                result
+            };
+            let yield_progress = async {
+                while let Some(progress) = recv.next().await {
+                    co.yield_(StateMachineEvent::InstallProgressChange(progress)).await;
+                }
+            };
+
+            let (install_result, ()) = future::join(perform_install, yield_progress).await;
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
                 self.report_error(&request_params, EventErrorCode::Installation, &apps, co).await;
@@ -2100,16 +2115,25 @@ mod tests {
     impl Installer for TestInstaller {
         type InstallPlan = StubPlan;
         type Error = StubInstallErrors;
-        fn perform_install(
-            &mut self,
+        fn perform_install<'a>(
+            &'a mut self,
             _install_plan: &StubPlan,
-            _observer: Option<&dyn ProgressObserver>,
-        ) -> BoxFuture<'_, Result<(), Self::Error>> {
+            observer: Option<&'a dyn ProgressObserver>,
+        ) -> BoxFuture<'a, Result<(), Self::Error>> {
             if self.should_fail {
                 future::ready(Err(StubInstallErrors::Failed)).boxed()
             } else {
                 clock::mock::set(time::i64_to_time(222222222));
-                future::ready(Ok(())).boxed()
+                async move {
+                    if let Some(observer) = observer {
+                        observer.receive_progress(None, 0.0, None, None).await;
+                        observer.receive_progress(None, 0.3, None, None).await;
+                        observer.receive_progress(None, 0.9, None, None).await;
+                        observer.receive_progress(None, 1.0, None, None).await;
+                    }
+                    Ok(())
+                }
+                .boxed()
             }
         }
 
@@ -2583,6 +2607,49 @@ mod tests {
             observer.take_states(),
             vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate, State::Idle]
         );
+    }
+
+    #[test]
+    fn test_progress_observer() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let progresses = StateMachineBuilder::new(
+                StubPolicyEngine,
+                http,
+                TestInstaller::default(),
+                StubTimer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                config,
+                make_test_app_set(),
+            )
+            .oneshot_check(CheckOptions::default())
+            .await
+            .filter_map(|event| {
+                future::ready(match event {
+                    StateMachineEvent::InstallProgressChange(InstallProgress { progress }) => {
+                        Some(progress)
+                    }
+                    _ => None,
+                })
+            })
+            .collect::<Vec<f32>>()
+            .await;
+            assert_eq!(progresses, [0.0, 0.3, 0.9, 1.0]);
+        });
     }
 
     #[test]

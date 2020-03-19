@@ -60,15 +60,15 @@ pub trait ProgressObserver: Sync {
     /// Receive progress on the installation.
     ///
     /// operation - The current operation of the install (if applicable)
-    /// progress - 0 to 10,000, amount complete out of 10,000.
+    /// progress - 0 to 1 fraction completed.
     /// total_size - Maximal size of the download of the install
     /// size_so_far - Downloaded data so far (may move forward erratically based on cached or
     ///               previously downloaded data)
     fn receive_progress(
         &self,
         operation: Option<&str>,
-        progress: u16,
+        progress: f32,
         total_size: Option<u64>,
         size_so_far: Option<u64>,
-    );
+    ) -> BoxFuture<'_, ()>;
 }
