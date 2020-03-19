@@ -346,7 +346,7 @@ impl ProfileServerFacade {
             let data_element = if let Some(d) = raw_element["data"].as_u64() {
                 DataElement {
                     type_: DataElementType::UnsignedInteger,
-                    size: 2,
+                    size: 1,
                     data: DataElementData::Integer(d as i64),
                 }
             } else {
@@ -488,17 +488,22 @@ impl ProfileServerFacade {
             fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
-        let raw_additional_protocol_descriptors =
-            if let Some(v) = record_description.get("additional_protocol_descriptors") {
-                if let Some(arr) = v.as_array() {
-                    Some(self.generate_protocol_descriptors(arr)?)
-                } else {
-                    let log_err = "Invalid type for protocol_descriptors in record input.";
-                    fx_err_and_bail!(&with_line!(tag), log_err)
-                }
-            } else {
+        let raw_additional_protocol_descriptors = if let Some(v) =
+            record_description.get("additional_protocol_descriptors")
+        {
+            if let Some(arr) = v.as_array() {
+                Some(self.generate_protocol_descriptors(arr)?)
+            } else if v.is_null() {
                 None
-            };
+            } else {
+                let log_err =
+                    "Invalid type for 'additional_protocol_descriptors'. Expected null or array.";
+                fx_err_and_bail!(&with_line!(tag), log_err)
+            }
+        } else {
+            let log_err = "Invalid SDP record input. Missing 'additional_protocol_descriptors'";
+            fx_err_and_bail!(&with_line!(tag), log_err)
+        };
 
         let information = if let Some(v) = record_description.get("information") {
             if let Some(r) = v.as_array() {
