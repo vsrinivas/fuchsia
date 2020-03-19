@@ -25,7 +25,7 @@ class USBVirtualBusBase {
  public:
   USBVirtualBusBase(std::string pkg_url, std::string svc_name);
   void InitPeripheral();
-  void SetupPeripheralDevice(DeviceDescriptor&& device_desc,
+  void SetupPeripheralDevice(const DeviceDescriptor& device_desc,
                              std::vector<FunctionDescriptor> function_descs);
   void ClearPeripheralDeviceFunctions();
   int GetRootFd();

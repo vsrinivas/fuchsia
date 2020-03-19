@@ -60,7 +60,6 @@ extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTab
 extern const fidl_type_t v1_fidl_test_coding_LLCPPStyleUnionStructTable;
 
 extern const fidl_type_t v1_fidl_test_coding_Uint32VectorStructTable;
-extern const fidl_type_t v1_fidl_test_coding_StringStructTable;
 
 #if defined(__cplusplus)
 }
@@ -208,10 +207,6 @@ struct SampleNullableXUnionStruct {
 
 struct Uint32VectorStruct {
   fidl::VectorView<uint32_t> vec;
-};
-
-struct StringStruct {
-  fidl::StringView str;
 };
 
 struct Int16Bits {

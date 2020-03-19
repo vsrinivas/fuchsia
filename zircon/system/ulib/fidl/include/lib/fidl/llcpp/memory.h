@@ -15,7 +15,6 @@
 #include <iterator>
 
 #include "allocator.h"
-#include "string_view.h"
 #include "unowned_ptr.h"
 #include "vector_view.h"
 
@@ -34,8 +33,7 @@ unowned_ptr<ElemType> unowned(T* ptr) {
   return unowned_ptr<T>(ptr);
 }
 
-// Construct a VectorView from a container supporting std::size and std::data using an unowned_ptr
-// to the internal container data.
+// Construct a vector_view from a container using an unowned_ptr to the internal container data.
 //
 // Example:
 // std::vector<uint32_t> vec;
@@ -48,29 +46,6 @@ VectorView<ElemType> unowned_vec(T& container) {
   return VectorView(fidl::unowned(std::data(container)), std::size(container));
 }
 
-// Construct a StringView from a container supporting std::size and std::data using an unowned_ptr
-// to the internal container data.
-//
-// Example:
-// std::string str;
-// StringView sv = fidl::unowned_str(str);
-template <typename T, typename = decltype(std::data(std::declval<T&>())),
-          typename = decltype(std::size(std::declval<T&>())),
-          typename = std::enable_if_t<!std::is_array<T>::value>>
-StringView unowned_str(const T& container) {
-  return StringView(fidl::unowned(std::data(container)), std::size(container));
-}
-
-// Construct a StringView from a c-string using an unowned_ptr to the data.
-//
-// Example:
-// char * str = "hello world";
-// StringView sv = fidl::unowned_str(str, 2);
-template <typename = std::enable_if_t<true>>  // avoid symbol-redefinition
-StringView unowned_str(const char* str, size_t len) {
-  return StringView(fidl::unowned(str), len);
-}
-
 }  // namespace fidl
 
 // TODO(fxb/42059): Create additional helpers for copying LLCPP objects.
@@ -78,7 +53,7 @@ StringView unowned_str(const char* str, size_t len) {
 namespace {
 
 template <typename ElemType>
-void op_copy(std::remove_const_t<ElemType>* out, const ElemType& in) {
+void op_copy(ElemType* out, const ElemType& in) {
   *out = in;
 }
 
@@ -95,8 +70,8 @@ template <typename ElemType, typename ContainerType, typename Op>
 fidl::VectorView<ElemType> heap_op(ContainerType& container, Op op) {
   size_t size = std::size(container);
   // Don't use std::make_unique to avoid the cost of constructing the array elements.
-  auto array = new std::remove_const_t<ElemType>[size];
-  std::unique_ptr<std::remove_const_t<ElemType>[]> uptr(array);
+  ElemType* array = new ElemType[size];
+  std::unique_ptr<ElemType[]> uptr(array);
   iterate_do(uptr.get(), container, op);
   return fidl::VectorView(std::move(uptr), size);
 }
@@ -107,7 +82,7 @@ fidl::VectorView<ElemType> allocator_op(fidl::Allocator& allocator, ContainerTyp
                                         Op op) {
   size_t size = std::size(container);
   // TODO(fxb/42059): Support the equivalent of std::make_unique_for_overwrite.
-  auto ptr = allocator.make<std::remove_const_t<ElemType>[]>(size);
+  fidl::tracking_ptr<ElemType[]> ptr = allocator.make<ElemType[]>(size);
   iterate_do(ptr.get(), container, op);
   return fidl::VectorView(std::move(ptr), size);
 }
@@ -116,8 +91,8 @@ fidl::VectorView<ElemType> allocator_op(fidl::Allocator& allocator, ContainerTyp
 
 namespace fidl {
 
-// Construct a vector_view from a container supporting std::size and std:data using a heap
-// allocated array. The internal array elements will be copied to the new array.
+// Construct a vector_view from a container using a heap allocated array. The internal array
+// elements will be copied to the new array.
 //
 // Example:
 // std::vector<uint32_t> vec;
@@ -132,8 +107,8 @@ VectorView<ElemType> heap_copy_vec(const T& container) {
   return heap_op<ElemType>(container, op_copy<ElemType>);
 }
 
-// Construct a vector_view from a container supporting std::size and std::data using an array
-// allocated with a fidl::Allocator. The internal array elements will be copied to the new array.
+// Construct a vector_view from a container using an array allocated with a fidl::Allocator. The
+// internal array elements will be copied to the new array.
 //
 // Example:
 // std::vector<uint32_t> vec;
@@ -149,57 +124,6 @@ VectorView<ElemType> copy_vec(fidl::Allocator& allocator, const T& container) {
 }
 
 // TODO(fxb/42059): Add support for heap_move and move.
-
-// Construct a StringView from a container using a heap allocated array.
-//
-// Example:
-// std::string str;
-// StringView sv = fidl::heap_copy_str(str);
-template <typename T, typename = decltype(std::data(std::declval<T&>())),
-          typename = decltype(std::size(std::declval<T&>())),
-          typename = std::enable_if_t<!std::is_array<T>::value>>
-StringView heap_copy_str(const T& container) {
-  return StringView(std::move(heap_copy_vec(container)));
-}
-
-// Construct a StringView from a c-string using a heap allocated array.
-//
-// Example:
-// char * str = "hello world";
-// StringView sv = fidl::heap_copy_str(str, 2);
-template <typename = std::enable_if_t<true>>  // avoid symbol-redefinition
-StringView heap_copy_str(const char* str, size_t len) {
-  std::unique_ptr<const char[]> buf = std::make_unique<const char[]>(len);
-  memcpy(const_cast<char*>(buf.get()), str, len);
-  return StringView(std::move(buf), len);
-}
-
-// Construct a StringView from a container supporting std::size and std::data using a
-// fidl::Allocator-allocated array.
-//
-// Example:
-// fidl::BufferAllocator<2048> allocator;
-// std::string str;
-// StringView sv = fidl::copy_str(allocator, str);
-template <typename T, typename = decltype(std::data(std::declval<T&>())),
-          typename = decltype(std::size(std::declval<T&>())),
-          typename = std::enable_if_t<!std::is_array<T>::value>>
-StringView copy_str(fidl::Allocator& allocator, T& container) {
-  return StringView(std::move(copy_vec(allocator, container)));
-}
-
-// Construct a StringView from a c-string using a fidl::Allocator-allocated array.
-//
-// Example:
-// fidl::BufferAllocator<2048> allocator;
-// char * str = "hello world";
-// StringView sv = fidl::heap_copy_str(allocator, str, 2);
-template <typename = std::enable_if_t<true>>  // avoid symbol-redefinition
-StringView copy_str(fidl::Allocator& allocator, const char* str, size_t len) {
-  tracking_ptr<const char[]> buf = allocator.make<const char[]>(len);
-  memcpy(const_cast<char*>(buf.get()), str, len);
-  return StringView(std::move(buf), len);
-}
 
 }  // namespace fidl
 

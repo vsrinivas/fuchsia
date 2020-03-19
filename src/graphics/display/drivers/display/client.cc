@@ -1440,9 +1440,9 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       info.using_fallback_size = true;
     }
 
-    info.manufacturer_name = fidl::unowned_str(manufacturer_name, strlen(manufacturer_name));
-    info.monitor_name = fidl::unowned_str(monitor_name, strlen(monitor_name));
-    info.monitor_serial = fidl::unowned_str(monitor_serial, strlen(monitor_serial));
+    info.manufacturer_name = fidl::StringView(manufacturer_name, strlen(manufacturer_name));
+    info.monitor_name = fidl::StringView(monitor_name, strlen(monitor_name));
+    info.monitor_serial = fidl::StringView(monitor_serial, strlen(monitor_serial));
 
     coded_configs.push_back(std::move(info));
   }

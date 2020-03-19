@@ -760,7 +760,7 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
     return;
   }
 
-  zx_status_t status = SetDeviceDescriptor(std::move(device_desc));
+  zx_status_t status = SetDeviceDescriptor(device_desc);
   if (status != ZX_OK) {
     response.set_err(fidl::unowned(&status));
     completer.Reply(std::move(response));

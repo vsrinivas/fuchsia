@@ -83,7 +83,7 @@ fbl::unique_fd FindGpt() {
       continue;
     }
 
-    auto& r = path_response.result.response();
+    auto r = path_response.result.response();
     path[PATH_MAX - 1] = '\0';
     strncpy(path, r.path.data(), std::min<size_t>(PATH_MAX, r.path.size()));
 

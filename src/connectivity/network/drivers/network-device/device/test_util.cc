@@ -250,10 +250,9 @@ zx_status_t TestSession::Open(zx::unowned_channel netdevice, const char* name,
     return status;
   }
 
-  auto session_name = fidl::unowned_str(name, strlen(name));
+  fidl::StringView session_name(name, strlen(name));
 
-  auto res = netdev::Device::Call::OpenSession(std::move(netdevice), std::move(session_name),
-                                               std::move(info));
+  auto res = netdev::Device::Call::OpenSession(std::move(netdevice), session_name, std::move(info));
   if (res.status() != ZX_OK) {
     printf("OpenSession FIDL failure: %s %s\n", zx_status_get_string(res.status()), res.error());
     return res.status();

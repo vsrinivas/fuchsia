@@ -6,8 +6,8 @@
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
@@ -59,7 +59,7 @@ void USBVirtualBusQmi::InitUsbQmi(fbl::String* devpath) {
   };
   std::vector<usb_peripheral::FunctionDescriptor> function_descs_vec;
   function_descs_vec.push_back(qmi_function_desc);
-  SetupPeripheralDevice(std::move(device_desc), std::move(function_descs_vec));
+  SetupPeripheralDevice(device_desc, std::move(function_descs_vec));
   fbl::unique_fd fd(openat(devfs_root().get(), "class/qmi-transport", O_RDONLY));
   while (fdio_watch_directory(fd.get(), usb_virtual_bus_helper::WaitForAnyFile, ZX_TIME_INFINITE,
                               devpath) != ZX_ERR_STOP)

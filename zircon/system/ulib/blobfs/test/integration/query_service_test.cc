@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/fs/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/zx/vmo.h>
 
@@ -32,8 +32,8 @@ class QueryServiceTest : public BlobfsTestWithFvm {
     EXPECT_TRUE(export_root_.has_value());
     std::string query_service_path = std::string("svc/") + fuchsia_fs::Query::Name;
     EXPECT_OK(export_root_
-                  ->Open(fio::OPEN_RIGHT_READABLE, 0, fidl::unowned_str(query_service_path),
-                         std::move(query_server_end))
+                  ->Open(fio::OPEN_RIGHT_READABLE, 0,
+                         fidl::StringView(query_service_path), std::move(query_server_end))
                   .status());
     return fuchsia_fs::Query::SyncClient(std::move(query_client_end));
   }

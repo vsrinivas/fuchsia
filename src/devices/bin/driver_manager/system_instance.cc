@@ -54,11 +54,11 @@ struct ConsoleParams {
 };
 
 ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
-  fidl::StringView string_keys[]{
-      "netsvc.interface",
-      "zircon.nodename",
-      "clock.backstop",
-      "zircon.autorun.boot",
+  std::vector<fidl::StringView> string_keys{
+      fidl::StringView{"netsvc.interface"},
+      fidl::StringView{"zircon.nodename"},
+      fidl::StringView{"clock.backstop"},
+      fidl::StringView{"zircon.autorun.boot"},
   };
 
   auto string_resp = client->GetStrings(fidl::unowned_vec(string_keys));
@@ -71,9 +71,12 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
     ret.autorun_boot = std::string{values[3].data(), values[3].size()};
   }
 
-  llcpp::fuchsia::boot::BoolPair bool_keys[]{
-      {"netsvc.disable", true},       {"netsvc.netboot", false},  {"netsvc.advertise", true},
-      {"netsvc.all-features", false}, {"virtcon.disable", false},
+  std::vector<llcpp::fuchsia::boot::BoolPair> bool_keys{
+      {fidl::StringView{"netsvc.disable"}, true},
+      {fidl::StringView{"netsvc.netboot"}, false},
+      {fidl::StringView{"netsvc.advertise"}, true},
+      {fidl::StringView{"netsvc.all-features"}, false},
+      {fidl::StringView{"virtcon.disable"}, false},
   };
 
   auto bool_resp = client->GetBools(fidl::unowned_vec(bool_keys));
@@ -89,7 +92,7 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
 }
 
 ConsoleParams GetConsoleParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
-  fidl::StringView vars[]{"TERM", "console.path"};
+  std::vector<fidl::StringView> vars{fidl::StringView{"TERM"}, fidl::StringView{"console.path"}};
   auto resp = client->GetStrings(fidl::unowned_vec(vars));
   ConsoleParams ret;
   if (!resp.ok()) {

@@ -64,7 +64,7 @@ zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_le
     return resp->result.err();
   }
 
-  auto& response = resp->result.response();
+  auto response = resp->result.response();
   strncpy(buf, response.path.data(), std::min(buf_len, response.path.size()));
   buf[response.path.size()] = '\0';
   return ZX_OK;

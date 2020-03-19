@@ -286,7 +286,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     fprocess::NameInfo data[count];
     for (size_t i = 0; i < count; i++) {
       const char* path = flat->path[i];
-      data[i].path = fidl::unowned_str(path, strlen(path));
+      data[i].path = fidl::StringView(path, strlen(path));
       data[i].directory.reset(flat->handle[i]);
     }
     fidl::VectorView<fprocess::NameInfo> names(fidl::unowned(data), count);
@@ -341,7 +341,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   if (process_name_size >= ZX_MAX_NAME_LEN) {
     process_name_size = ZX_MAX_NAME_LEN - 1;
   }
-  launch_info.name = fidl::unowned_str(process_name, process_name_size);
+  launch_info.name = fidl::StringView(process_name, process_name_size);
 
   fprocess::Launcher::ResultOf::CreateWithoutStarting result =
       launcher.CreateWithoutStarting(std::move(launch_info));

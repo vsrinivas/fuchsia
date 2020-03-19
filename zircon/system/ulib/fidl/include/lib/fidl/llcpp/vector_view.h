@@ -34,9 +34,6 @@ namespace fidl {
 // obj.set_vec_field(VectorView(vv));
 template <typename T>
 class VectorView {
-  template <typename>
-  friend class VectorView;
-
   using marked_count = uint64_t;
 
   // The MSB of count_ stores whether or not data_ is owned by VectorView.
@@ -55,21 +52,14 @@ class VectorView {
   // Ideally these constructors wouldn't be needed, but automatic deduction into the tracking_ptr
   // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
   VectorView(unowned_ptr<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
-  template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  VectorView(unowned_ptr<std::remove_const_t<U>> data, uint64_t count)
-      : VectorView(tracking_ptr<T[]>(data), count) {}
   VectorView(std::unique_ptr<T[]>&& data, uint64_t count)
       : VectorView(tracking_ptr<T[]>(std::move(data)), count) {}
-  VectorView(std::nullptr_t data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
+  VectorView(nullptr_t data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
   // This constructor triggers a static assertion in tracking_ptr.
-  template <typename U, typename = std::enable_if_t<!std::is_array<U>::value>>
+  template <typename U>
   VectorView(U* data, uint64_t count) : VectorView(tracking_ptr<U[]>(data), count) {}
 
-  template <typename U>
-  VectorView(VectorView<U>&& other) {
-    static_assert(
-        std::is_same<T, U>::value || std::is_same<T, std::add_const_t<U>>::value,
-        "VectorView<T> can only be move-constructed from VectorView<T> or VectorView<const T>");
+  VectorView(VectorView&& other) {
     count_ = other.count_;
     data_ = other.data_;
     other.count_ = 0;
@@ -82,10 +72,7 @@ class VectorView {
     }
   }
 
-  template <typename U>
-  VectorView& operator=(VectorView<U>&& other) {
-    static_assert(std::is_same<T, U>::value || std::is_same<T, std::add_const_t<U>>::value,
-                  "VectorView<T> can only be assigned from VectorView<T> or VectorView<const T>");
+  VectorView& operator=(VectorView&& other) {
     if (data_ != nullptr && is_owned()) {
       delete[] data_;
     }
@@ -169,7 +156,6 @@ class LayoutChecker {
   static_assert(sizeof(fidl::VectorView<uint8_t>::data_) == sizeof(fidl_vector_t::data),
                 "VectorView data size should match fidl_vector_t");
 };
-
 }  // namespace
 
 #endif  // LIB_FIDL_LLCPP_VECTOR_VIEW_H_

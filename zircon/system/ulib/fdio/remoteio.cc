@@ -67,7 +67,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
   }
   uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
   return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
-                                    fidl::unowned_str(path, length), std::move(request))
+                                    fidl::StringView(path, length), std::move(request))
       .status();
 }
 
@@ -135,7 +135,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
   }
 
   return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
-                                    fidl::unowned_str(path, length), std::move(request))
+                                    fidl::StringView(path, length), std::move(request))
       .status();
 }
 
@@ -420,7 +420,7 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
   }
 
   status = fio::Directory::Call::Open(zx::unowned_channel(dir), flags, mode,
-                                      fidl::unowned_str(path, length), std::move(request))
+                                      fidl::StringView(path, length), std::move(request))
                .status();
   if (status != ZX_OK) {
     return status;

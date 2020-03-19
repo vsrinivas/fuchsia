@@ -160,7 +160,7 @@ bool TestDevice::BindFvmDriver() {
   ASSERT_NONNULL(io);
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
       zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-      ::fidl::unowned_str(kFvmDriver, strlen(kFvmDriver)));
+      ::fidl::StringView(kFvmDriver, strlen(kFvmDriver)));
   zx_status_t status = resp.status();
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
@@ -188,7 +188,7 @@ bool TestDevice::Rebind() {
     ;
     auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
         zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
-        ::fidl::unowned_str(kFvmDriver, strlen(kFvmDriver)));
+        ::fidl::StringView(kFvmDriver, strlen(kFvmDriver)));
     zx_status_t status = resp.status();
     if (resp->result.is_err()) {
       call_status = resp->result.err();
@@ -411,7 +411,7 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     call_status = resp->result.err();
   } else {
     call_status = ZX_OK;
-    auto& r = resp->result.response();
+    auto r = resp->result.response();
     out_len = r.path.size();
     memcpy(fvm_part_path_, r.path.data(), r.path.size());
   }

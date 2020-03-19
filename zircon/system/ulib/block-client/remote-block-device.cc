@@ -74,7 +74,7 @@ zx_status_t RemoteBlockDevice::GetDevicePath(size_t buffer_len, char* out_name,
   if (resp->result.is_err()) {
     status = resp->result.err();
   } else {
-    auto& r = resp->result.response();
+    auto r = resp->result.response();
     *out_len = r.path.size();
     memcpy(out_name, r.path.data(), r.path.size());
     status = ZX_OK;

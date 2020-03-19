@@ -172,8 +172,7 @@ TEST(LoaderServiceTest, Create) {
 
   {
     fidl::StringView lib("a.so");
-    auto result =
-        fuchsia::ldsvc::Loader::Call::LoadObject(zx::unowned_channel{ldsvc}, std::move(lib));
+    auto result = fuchsia::ldsvc::Loader::Call::LoadObject(zx::unowned_channel{ldsvc}, lib);
     // Verify that succeeded and the handle we get back is valid.
     ASSERT_TRUE(result.ok());
     auto& vmo = result->object;

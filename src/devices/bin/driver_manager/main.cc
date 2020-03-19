@@ -58,14 +58,14 @@ struct DriverManagerParams {
 };
 
 DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::SyncClient& client) {
-  llcpp::fuchsia::boot::BoolPair bool_req[]{
-      {"devmgr.verbose", false},
-      {"devmgr.require-system", false},
+  std::vector<llcpp::fuchsia::boot::BoolPair> bool_req{
+      {fidl::StringView{"devmgr.verbose"}, false},
+      {fidl::StringView{"devmgr.require-system"}, false},
       // TODO(bwb): remove this or figure out how to make it work
-      {"devmgr.devhost.asan", false},
-      {"devmgr.devhost.strict-linking", false},
+      {fidl::StringView{"devmgr.devhost.asan"}, false},
+      {fidl::StringView{"devmgr.devhost.strict-linking"}, false},
       // Turn it on by default. See fxb/34577
-      {"devmgr.suspend-timeout-fallback", true},
+      {fidl::StringView{"devmgr.suspend-timeout-fallback"}, true},
   };
   auto bool_resp = client.GetBools(fidl::unowned_vec(bool_req));
   DriverManagerParams params{false, false, false, false, true};

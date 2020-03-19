@@ -61,7 +61,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
       if (resp->result.is_err()) {
         status = resp->result.err();
       } else {
-        auto& r = resp->result.response();
+        auto r = resp->result.response();
         actual_len = r.path.size();
         if (actual_len > 1024) {
           goto fail_close_svc;

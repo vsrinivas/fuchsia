@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
       if (resp->result.is_err()) {
         status = resp->result.err();
       } else {
-        auto& r = resp->result.response();
+        auto r = resp->result.response();
         path_len = r.path.size();
         if (path_len > PATH_MAX) {
           return ZX_ERR_INTERNAL;

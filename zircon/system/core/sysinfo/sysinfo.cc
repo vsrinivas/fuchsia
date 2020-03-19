@@ -29,7 +29,7 @@ void SysInfo::GetHypervisorResource(GetHypervisorResourceCompleter::Sync complet
 void SysInfo::GetBoardName(GetBoardNameCompleter::Sync completer) {
   std::string board_name;
   zx_status_t status = GetBoardName(&board_name);
-  return completer.Reply(status, fidl::unowned_str(board_name));
+  return completer.Reply(status, fidl::StringView(board_name));
 }
 
 void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
@@ -41,7 +41,7 @@ void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
 void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
   std::string bootloader_vendor;
   zx_status_t status = GetBootloaderVendor(&bootloader_vendor);
-  return completer.Reply(status, fidl::unowned_str(bootloader_vendor));
+  return completer.Reply(status, fidl::StringView(bootloader_vendor));
 }
 
 void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {

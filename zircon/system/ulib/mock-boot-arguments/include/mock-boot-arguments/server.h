@@ -30,7 +30,7 @@ class Server final : public llcpp::fuchsia::boot::Arguments::Interface {
 
  private:
   std::map<std::string, std::string> arguments;
-  bool StrToBool(const fidl::StringView& key, bool defaultval);
+  bool StrToBool(fidl::StringView key, bool defaultval);
 };
 
 }  // namespace mock_boot_arguments

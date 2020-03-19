@@ -734,13 +734,13 @@ zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, co
                                    size_t path_len, zx_handle_t request) {
   Remote rio(io);
   auto result = fio::Directory::Call::Open(rio.control(), flags, mode,
-                                           fidl::unowned_str(path, path_len), zx::channel(request));
+                                           fidl::StringView(path, path_len), zx::channel(request));
   return result.status();
 }
 
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* path) {
   Remote rio(io);
-  auto result = fio::Directory::Call::Unlink(rio.control(), fidl::unowned_str(path, strlen(path)));
+  auto result = fio::Directory::Call::Unlink(rio.control(), fidl::StringView(path, strlen(path)));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -761,8 +761,8 @@ zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst
                                const char* dst_path) {
   Remote rio(io);
   auto result = fio::Directory::Call::Rename(
-      rio.control(), fidl::unowned_str(src_path, strlen(src_path)), zx::handle(dst_token),
-      fidl::unowned_str(dst_path, strlen(dst_path)));
+      rio.control(), fidl::StringView(src_path, strlen(src_path)), zx::handle(dst_token),
+      fidl::StringView(dst_path, strlen(dst_path)));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -770,8 +770,8 @@ zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_t
                              const char* dst_path) {
   Remote rio(io);
   auto result = fio::Directory::Call::Link(
-      rio.control(), fidl::unowned_str(src_path, strlen(src_path)), zx::handle(dst_token),
-      fidl::unowned_str(dst_path, strlen(dst_path)));
+      rio.control(), fidl::StringView(src_path, strlen(src_path)), zx::handle(dst_token),
+      fidl::StringView(dst_path, strlen(dst_path)));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 

@@ -223,25 +223,6 @@ TEST(TrackingPtr, Comparison) {
   set.insert(fidl::unowned_ptr<int32_t>(lower_ptr));
 }
 
-TEST(TrackingPtr, Const) {
-  int32_t val = 1;
-  fidl::unowned_ptr<int32_t> uptr(&val);
-
-  fidl::tracking_ptr<const int32_t> const_ptr1(uptr);
-  EXPECT_EQ(*const_ptr1, val);
-
-  fidl::tracking_ptr<int32_t> ptr2(uptr);
-  fidl::tracking_ptr<const int32_t> const_ptr2(std::move(ptr2));
-  EXPECT_EQ(*const_ptr2, val);
-
-  fidl::tracking_ptr<const int32_t[]> const_arr1(uptr);
-  EXPECT_EQ(const_arr1[0], val);
-
-  fidl::tracking_ptr<int32_t[]> arr2(uptr);
-  fidl::tracking_ptr<const int32_t[]> const_arr2(std::move(arr2));
-  EXPECT_EQ(const_arr2[0], val);
-}
-
 TEST(TrackingPtr, Casting) {
   struct Base {
     uint64_t v;

@@ -91,11 +91,13 @@ class OutgoingDirectoryTest : public zxtest::Test {
     GetDataRoot(&data_root);
     fio::Directory::SyncClient data_client(std::move(data_root));
 
+    fidl::StringView test_file_name("test_file");
     zx::channel test_file, test_file_server;
     ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
     uint32_t file_flags =
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
-    ASSERT_OK(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status());
+    ASSERT_OK(
+        data_client.Open(file_flags, 0, test_file_name, std::move(test_file_server)).status());
 
     fio::File::SyncClient file_client(std::move(test_file));
     std::vector<uint8_t> content{1, 2, 3, 4};
@@ -181,12 +183,13 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
   GetDataRoot(&data_root);
   fio::Directory::SyncClient data_client(std::move(data_root));
 
+  fidl::StringView test_file_name("test_file");
   zx::channel fail_test_file, fail_test_file_server;
   ASSERT_OK(zx::channel::create(0, &fail_test_file, &fail_test_file_server));
   uint32_t fail_file_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
   // open "succeeds" but...
-  ASSERT_OK(
-      data_client.Open(fail_file_flags, 0, "test_file", std::move(fail_test_file_server)).status());
+  ASSERT_OK(data_client.Open(fail_file_flags, 0, test_file_name, std::move(fail_test_file_server))
+                .status());
 
   // ...we can't actually use the channel
   fio::File::SyncClient fail_file_client(std::move(fail_test_file));
@@ -197,7 +200,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
   zx::channel test_file, test_file_server;
   ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
   uint32_t file_flags = fio::OPEN_RIGHT_READABLE;
-  ASSERT_OK(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status());
+  ASSERT_OK(data_client.Open(file_flags, 0, test_file_name, std::move(test_file_server)).status());
 
   fio::File::SyncClient file_client(std::move(test_file));
   resp = file_client.Read(4);
@@ -220,7 +223,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
   uint32_t file_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
   ASSERT_OK(fio::Directory::Call::Open(std::move(export_root), file_flags, 0,
-                                       fidl::unowned_str(test_file_name),
+                                       fidl::StringView(test_file_name),
                                        std::move(test_file_server))
                 .status());
 

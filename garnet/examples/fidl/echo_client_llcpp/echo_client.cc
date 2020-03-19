@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/examples/echo/llcpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,8 +16,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include <fidl/examples/echo/llcpp/fidl.h>
 
 int main(int argc, const char** argv) {
   std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_llcpp#meta/echo_server_llcpp.cmx";
@@ -49,7 +48,7 @@ int main(int argc, const char** argv) {
 
   // Using low-level C++ bindings to perform a call
   ::llcpp::fidl::examples::echo::Echo::SyncClient client(std::move(client_end));
-  auto result = client.EchoString(fidl::unowned_str(msg));
+  auto result = client.EchoString(fidl::StringView(msg));
   if (result.status() != ZX_OK) {
     std::cerr << "Failed to call server: " << result.status() << " (" << result.error() << ")"
               << std::endl;

@@ -61,7 +61,7 @@ zx_status_t GetTopologicalPath(int fd, std::string* out) {
   if (resp->result.is_err()) {
     return ZX_ERR_NOT_FOUND;
   } else {
-    auto& r = resp->result.response();
+    auto r = resp->result.response();
     path_len = r.path.size();
     if (path_len > PATH_MAX) {
       return ZX_ERR_INTERNAL;
@@ -126,8 +126,7 @@ void USBVirtualBus::InitUsbCdcEcm(std::string* peripheral_path, std::string* hos
   std::vector<usb_peripheral::FunctionDescriptor> function_descs;
   function_descs.push_back(usb_cdc_ecm_function_desc);
 
-  ASSERT_NO_FATAL_FAILURES(
-      SetupPeripheralDevice(std::move(device_desc), std::move(function_descs)));
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(device_desc, std::move(function_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
   DevicePaths device_paths;

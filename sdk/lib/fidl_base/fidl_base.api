@@ -11,5 +11,5 @@
   "pkg/fidl_base/include/lib/fidl/transformer.h": "f9abda97bc79ffc2b786df566847598f",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "7c1edfe5a4599f63358c3375668224c4",
   "pkg/fidl_base/include/lib/fidl/visitor.h": "f66c2e1f55c91443b38f95de6d2f3da0",
-  "pkg/fidl_base/include/lib/fidl/walker.h": "a2a5abf1e4acf6efbbeba679eba7ed8a"
+  "pkg/fidl_base/include/lib/fidl/walker.h": "56ae9d2852056ac6e8a1c766bec4aebe"
 }

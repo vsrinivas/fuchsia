@@ -4,27 +4,27 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/paver/llcpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/vmo.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/status.h>
-
-#include <cstdio>
-#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
+#include <lib/fdio/directory.h>
+#include <fuchsia/paver/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
+#include <zircon/status.h>
+
+#include <cstdio>
+#include <utility>
 
 #include "payload-streamer.h"
 
@@ -52,9 +52,8 @@ void PrintUsage() {
   ERROR("  --file <file>: Read from FILE instead of stdin\n");
   ERROR("  --force: Install partition even if inappropriate for the device\n");
   ERROR("  --path <path>: Install DATA file to path\n");
-  ERROR(
-      "  --block-device <path>: Block device to operate on. Only applies to wipe, "
-      "init-partition-tables, and wipe-partition-tables\n");
+  ERROR("  --block-device <path>: Block device to operate on. Only applies to wipe, "
+        "init-partition-tables, and wipe-partition-tables\n");
 }
 
 // Refer to //zircon/system/fidl/fuchsia.paver/paver-fidl for a list of what
@@ -71,7 +70,7 @@ enum class Command {
 
 struct Flags {
   Command cmd;
-  const char* cmd_name = nullptr;
+  const char *cmd_name = nullptr;
   ::llcpp::fuchsia::paver::Configuration configuration;
   ::llcpp::fuchsia::paver::Asset asset;
   fbl::unique_fd payload_fd;
@@ -265,8 +264,8 @@ zx_status_t RealMain(Flags flags) {
       if (flags.block_device != nullptr) {
         status = zx::channel::create(0, &block_device, &block_device_remote);
         if (status != ZX_OK) {
-          ERROR("Unable create channel: %s\n", zx_status_get_string(status));
-          return status;
+            ERROR("Unable create channel: %s\n", zx_status_get_string(status));
+            return status;
         }
         status = fdio_service_connect(flags.block_device, block_device_remote.release());
         if (status != ZX_OK) {
@@ -305,8 +304,8 @@ zx_status_t RealMain(Flags flags) {
       zx::channel block_device, block_device_remote;
       status = zx::channel::create(0, &block_device, &block_device_remote);
       if (status != ZX_OK) {
-        ERROR("Unable create channel: %s\n", zx_status_get_string(status));
-        return status;
+          ERROR("Unable create channel: %s\n", zx_status_get_string(status));
+          return status;
       }
       status = fdio_service_connect(flags.block_device, block_device_remote.release());
       if (status != ZX_OK) {
@@ -377,8 +376,8 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      auto result = data_sink.WriteDataFile(fidl::unowned_str(flags.path, strlen(flags.path)),
-                                            std::move(payload));
+      auto result = data_sink.WriteDataFile(fidl::StringView(flags.path, strlen(flags.path)),
+                                               std::move(payload));
       status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("install-data-file failed: %s\n", zx_status_get_string(status));

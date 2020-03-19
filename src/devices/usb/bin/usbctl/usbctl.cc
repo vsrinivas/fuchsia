@@ -155,17 +155,17 @@ static int open_usb_device(void) {
 static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   device_desc.id_vendor = htole16(config->vid);
   device_desc.id_product = htole16(config->pid);
-  device_desc.manufacturer = MANUFACTURER_STRING;
-  device_desc.product = fidl::unowned_str(config->product_string, strlen(config->product_string));
-  device_desc.serial = SERIAL_STRING;
+  device_desc.manufacturer = fidl::StringView(MANUFACTURER_STRING);
+  device_desc.product = fidl::StringView(config->product_string, strlen(config->product_string));
+  device_desc.serial = fidl::StringView(SERIAL_STRING);
 
   peripheral::FunctionDescriptor func_descs[config->descs_count];
   memcpy(func_descs, config->descs, sizeof(peripheral::FunctionDescriptor) * config->descs_count);
   fidl::VectorView<peripheral::FunctionDescriptor> function_descs(fidl::unowned(func_descs),
                                                                   config->descs_count);
 
-  auto resp = peripheral::Device::Call::SetConfiguration(
-      zx::unowned_channel(svc), std::move(device_desc), std::move(function_descs));
+  auto resp = peripheral::Device::Call::SetConfiguration(zx::unowned_channel(svc), device_desc,
+                                                         std::move(function_descs));
   if (resp.status() != ZX_OK) {
     return resp.status();
   }

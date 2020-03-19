@@ -15,6 +15,7 @@ if (is_fuchsia) {
       "linearizing_tests.cc",
       "llcpp_transaction_tests.cc",
       "llcpp_types_tests.cc",
+      "llcpp_views_tests.cc",
       "main.cc",
       "on_error_handle_tests.cc",
     ]

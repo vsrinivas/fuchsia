@@ -927,9 +927,8 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
     completer.Reply(std::move(response));
     return;
   }
-  auto path_view = ::fidl::unowned_str(path, strlen(path));
-  llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response resp{
-      .path = std::move(path_view)};
+  auto path_view = ::fidl::StringView(path, strlen(path));
+  llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response resp{.path = path_view};
   response.set_response(fidl::unowned(&resp));
   completer.Reply(std::move(response));
 }

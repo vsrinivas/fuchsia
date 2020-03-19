@@ -67,7 +67,7 @@ NodeId AstBuilder::AddVariableDeclaration(const std::string& identifier,
                                           bool is_const, bool is_root) {
   auto def = ManageNew<llcpp::fuchsia::shell::VariableDefinition>();
   char* name_buf = ManageCopyOf(identifier.c_str(), identifier.size());
-  def->name.set_data(fidl::unowned(name_buf));
+  def->name.set_data(name_buf);
   def->name.set_size(identifier.size());
   def->type = std::move(type);
   def->mutable_value = !is_const;
@@ -114,7 +114,7 @@ NodeId AstBuilder::AddStringLiteral(const std::string& s) {
   auto literal = ManageNew<fidl::StringView>();
 
   char* managed_val = ManageCopyOf(s.data(), s.size());
-  literal->set_data(fidl::unowned(managed_val));
+  literal->set_data(managed_val);
   literal->set_size(s.size());
   auto node = llcpp::fuchsia::shell::Node::WithStringLiteral(fidl::unowned(literal));
   return AddNode(std::move(node));
@@ -172,7 +172,7 @@ AstBuilder::NodePair AstBuilder::AddField(const std::string& key, NodeId express
   // Create the type.
   auto field_schema = ManageNew<llcpp::fuchsia::shell::ObjectFieldSchemaDefinition>();
   char* name_buf = ManageCopyOf(key.c_str(), key.size());
-  field_schema->name.set_data(fidl::unowned(name_buf));
+  field_schema->name.set_data(name_buf);
   field_schema->name.set_size(key.size());
   field_schema->type = std::move(type);
   auto node = llcpp::fuchsia::shell::Node::WithFieldSchema(fidl::unowned(field_schema));

@@ -85,7 +85,7 @@ void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync completer) {
   }
   auto name = lights_[index].GetName();
   return completer.ReplySuccess({
-      .name = ::fidl::unowned_str(name),
+      .name = ::fidl::StringView(&name[0], name.size()),
       .capability = lights_[index].GetCapability(),
   });
 }

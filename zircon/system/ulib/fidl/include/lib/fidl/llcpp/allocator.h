@@ -92,7 +92,7 @@ class Allocator {
     void* data;
     bool requires_delete;
   };
-  virtual allocation_result allocate(size_t obj_size, size_t count, destructor dtor) = 0;
+  virtual allocation_result allocate(size_t obj_size, uint32_t count, destructor dtor) = 0;
 
  private:
   template <typename T>

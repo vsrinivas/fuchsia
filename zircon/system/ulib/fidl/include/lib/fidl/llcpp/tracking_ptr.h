@@ -85,15 +85,10 @@ class tracking_ptr final {
                   "As an alternative, consider using a fidl::Allocator."
                   " For heap allocator values, construct with unique_ptr<T>.");
   }
-  template <typename U>
+  template <typename U,
+            typename = std::enable_if_t<(std::is_array<T>::value == std::is_array<U>::value) ||
+                                        std::is_void<T>::value || std::is_void<U>::value>>
   tracking_ptr(tracking_ptr<U>&& other) noexcept {
-    // Force a static cast to restrict the types of assignments that can be made.
-    // Ideally this would be implemented with a type trait, but none exist now.
-    set_marked(reinterpret_cast<marked_ptr>(
-        static_cast<T*>(reinterpret_cast<U*>(other.release_marked_ptr()))));
-  }
-  template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  tracking_ptr(tracking_ptr<std::remove_const_t<U>>&& other) noexcept {
     // Force a static cast to restrict the types of assignments that can be made.
     // Ideally this would be implemented with a type trait, but none exist now.
     set_marked(reinterpret_cast<marked_ptr>(
@@ -104,13 +99,6 @@ class tracking_ptr final {
     set_owned(other.release());
   }
   tracking_ptr(unowned_ptr<T> other) {
-    static_assert(std::alignment_of<T>::value >= kMinAlignment,
-                  "unowned_ptr must point to an aligned value. "
-                  "An insufficiently aligned value can be aligned with fidl::aligned");
-    set_unowned(other.get());
-  }
-  template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  tracking_ptr(unowned_ptr<std::remove_const_t<U>> other) {
     static_assert(std::alignment_of<T>::value >= kMinAlignment,
                   "unowned_ptr must point to an aligned value. "
                   "An insufficiently aligned value can be aligned with fidl::aligned");
@@ -188,9 +176,6 @@ class tracking_ptr final {
 
 template <typename T>
 class tracking_ptr<T[]> final {
-  template <typename>
-  friend class tracking_ptr;
-
  public:
   constexpr tracking_ptr() noexcept {}
   constexpr tracking_ptr(std::nullptr_t) noexcept {}
@@ -206,14 +191,7 @@ class tracking_ptr<T[]> final {
                   "As an alternative, consider using a fidl::Allocator."
                   " For heap allocator values, construct with unique_ptr<T>.");
   }
-
   tracking_ptr(tracking_ptr&& other) noexcept {
-    reset(other.is_owned_, other.ptr_);
-    other.is_owned_ = false;
-    other.ptr_ = nullptr;
-  }
-  template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  tracking_ptr(tracking_ptr<std::remove_const_t<U>[]>&& other) noexcept {
     reset(other.is_owned_, other.ptr_);
     other.is_owned_ = false;
     other.ptr_ = nullptr;
@@ -223,10 +201,6 @@ class tracking_ptr<T[]> final {
     reset(true, other.release());
   }
   tracking_ptr(unowned_ptr<T> other) { reset(false, other.get()); }
-  template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
-  tracking_ptr(unowned_ptr<std::remove_const_t<U>> other) {
-    reset(false, other.get());
-  }
   tracking_ptr(const tracking_ptr&) = delete;
 
   ~tracking_ptr() { reset(false, nullptr); }

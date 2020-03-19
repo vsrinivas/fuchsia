@@ -107,7 +107,7 @@ class FrobinatorImpl : public test::Frobinator::Interface {
   virtual void Frob(::fidl::StringView value, FrobCompleter::Sync completer) override {}
 
   virtual void Grob(::fidl::StringView value, GrobCompleter::Sync completer) override {
-    completer.Reply(std::move(value));
+    completer.Reply(value);
   }
 };
 
@@ -115,7 +115,7 @@ TEST(MagicNumberTest, RequestWrite) {
   zx::channel h1, h2;
   ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
   std::string s = "hi";
-  test::Frobinator::Call::Frob(zx::unowned_channel(h1), fidl::unowned_str(s));
+  test::Frobinator::Call::Frob(zx::unowned_channel(h1), fidl::StringView(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -138,7 +138,7 @@ TEST(MagicNumberTest, EventWrite) {
   zx::channel h1, h2;
   ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
   std::string s = "hi";
-  test::Frobinator::SendHrobEvent(zx::unowned_channel(h1), fidl::unowned_str(s));
+  test::Frobinator::SendHrobEvent(zx::unowned_channel(h1), fidl::StringView(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -171,7 +171,7 @@ TEST(MagicNumberTest, ResponseWrite) {
   fidl::Buffer<test::Frobinator::GrobRequest> request;
   fidl::Buffer<test::Frobinator::GrobResponse> response;
   auto result = test::Frobinator::Call::Grob(zx::unowned_channel(h1), request.view(),
-                                             fidl::unowned_str(s), response.view());
+                                             fidl::StringView(s), response.view());
   ASSERT_TRUE(result.ok());
   auto hdr = reinterpret_cast<fidl_message_header_t*>(response.view().data());
   ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);
@@ -195,7 +195,7 @@ TEST(MagicNumberTest, EventRead) {
           test::Frobinator::HrobResponse::PrimarySize)));
   // Set an incompatible magic number
   reinterpret_cast<fidl_message_header_t*>(&_response)->magic_number = 0;
-  _response.value = fidl::unowned_str(s);
+  _response.value = fidl::StringView(s);
   auto linearize_result = fidl::Linearize(&_response, fidl::BytePart(write_bytes, kWriteAllocSize));
   ASSERT_EQ(fidl::Write(zx::unowned_channel(h1), std::move(linearize_result.message)), ZX_OK);
 

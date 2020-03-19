@@ -49,8 +49,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  auto result = test_root.CreateDevice(fidl::unowned_str(driver_name, strlen(driver_name)),
-                                       std::move(remote));
+  auto result = test_root.CreateDevice({driver_name, strlen(driver_name)}, std::move(remote));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   *dev_channel = std::move(local);

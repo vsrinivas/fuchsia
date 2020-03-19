@@ -172,7 +172,7 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
   }
 
   auto result = fuchsia_io::Directory::Call::Open(
-      std::move(root_channel), flags, mode, fidl::unowned_str(path), std::move(channel_server_end));
+      std::move(root_channel), flags, mode, fidl::StringView(path), std::move(channel_server_end));
   status = result.status();
   if (status != ZX_OK) {
     LOG(ERROR, "could not call fuchsia.io.Directory/Open (status: %d)", status);
@@ -1301,7 +1301,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
 
   std::string filename = path.filename().string();
   auto result = fuchsia_io::Directory::Call::Unlink(zx::unowned_channel(storage_channel),
-                                                    fidl::unowned_str(filename));
+                                                    fidl::StringView(filename));
   status = result.status();
   zx_status_t io_status = result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
@@ -1392,8 +1392,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   }
 
   auto rename_result = fuchsia_io::Directory::Call::Rename(
-      zx::unowned_channel(old_storage_channel), fidl::unowned_str(old_name),
-      std::move(token_result->token), fidl::unowned_str(new_name));
+      zx::unowned_channel(old_storage_channel), fidl::StringView(old_name),
+      std::move(token_result->token), fidl::StringView(new_name));
   status = rename_result.status();
   io_status = rename_result->s;
   if (status != ZX_OK || io_status != ZX_OK) {

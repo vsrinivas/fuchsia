@@ -46,8 +46,8 @@ using devmgr_integration_test::RecursiveWaitForFile;
 constexpr uint32_t kBootloaderFirstBlock = 4;
 
 // Currently our Astro implementation only supports the default empty type.
-constexpr std::string_view kSupportedFirmwareType("");
-constexpr std::string_view kUnsupportedFirmwareType("unsupported_type");
+constexpr fidl::StringView kSupportedFirmwareType("");
+constexpr fidl::StringView kUnsupportedFirmwareType("unsupported_type");
 
 constexpr fuchsia_hardware_nand_RamNandInfo
     kNandInfo =
@@ -794,8 +794,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmware) {
   CreatePayload(4 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kSupportedFirmwareType), std::move(payload));
+  auto result = data_sink_->WriteFirmware(kSupportedFirmwareType, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
@@ -809,8 +808,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
   CreatePayload(4 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kUnsupportedFirmwareType), std::move(payload));
+  auto result = data_sink_->WriteFirmware(kUnsupportedFirmwareType, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_unsupported_type());
   ASSERT_TRUE(result->result.unsupported_type());
@@ -828,8 +826,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
   CreatePayload(4 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kSupportedFirmwareType), std::move(payload));
+  auto result = data_sink_->WriteFirmware(kSupportedFirmwareType, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_NOT_OK(result->result.status());

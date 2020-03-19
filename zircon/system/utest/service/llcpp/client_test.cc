@@ -29,7 +29,7 @@ class EchoCommon : public Echo::Interface {
 
   void EchoString(fidl::StringView input, EchoStringCompleter::Sync completer) override {
     std::string reply = prefix_ + ": " + std::string(input.data(), input.size());
-    completer.Reply(fidl::unowned_str(reply));
+    completer.Reply(fidl::StringView(reply));
   }
 
  private:
