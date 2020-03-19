@@ -17,11 +17,12 @@ use {
     },
     fidl_fuchsia_overnet_protocol::NodeId,
     fidl_fuchsia_test_manager as ftest_manager,
+    futures::channel::mpsc,
+    futures::lock::Mutex,
     futures::prelude::*,
     hoist::spawn,
     std::process::Command,
-    std::sync::{mpsc, Arc, Mutex},
-    std::thread,
+    std::sync::Arc,
     std::time::Duration,
 };
 
@@ -51,7 +52,7 @@ pub struct Daemon {
 
 impl Daemon {
     pub async fn new() -> Result<Daemon, Error> {
-        let (tx, rx) = mpsc::channel::<Target>();
+        let (tx, rx) = mpsc::unbounded::<Target>();
         let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
         Daemon::spawn_receiver_loop(rx, Arc::clone(&target_collection));
         let config =
@@ -64,11 +65,16 @@ impl Daemon {
         Ok(Daemon { remote_control_proxy, target_collection })
     }
 
-    pub fn spawn_receiver_loop(rx: mpsc::Receiver<Target>, tc: Arc<Mutex<TargetCollection>>) {
-        thread::spawn(move || loop {
-            let target = rx.recv().unwrap();
-            let mut targets = tc.lock().unwrap();
-            targets.merge_insert(target);
+    pub fn spawn_receiver_loop(
+        mut rx: mpsc::UnboundedReceiver<Target>,
+        tc: Arc<Mutex<TargetCollection>>,
+    ) {
+        spawn(async move {
+            loop {
+                let target = rx.next().await.unwrap();
+                let mut targets = tc.lock().await;
+                targets.merge_insert(target);
+            }
         });
     }
 
@@ -169,7 +175,7 @@ impl Daemon {
                 }
                 // TODO(awdavies): Make this into a common format for easy
                 // parsing.
-                let targets = self.target_collection.lock().unwrap();
+                let targets = self.target_collection.lock().await;
                 let response = match value.as_ref() {
                     "" => format!("{:?}", targets),
                     _ => format!("{:?}", targets.target_by_nodename(&value)),
@@ -221,7 +227,7 @@ async fn exec_server(daemon: Daemon, quiet: bool) -> Result<(), Error> {
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
         let daemon_clone = daemon.clone();
-        hoist::spawn(async move {
+        spawn(async move {
             daemon_clone
                 .handle_requests_from_stream(DaemonRequestStream::from_channel(chan), quiet)
                 .await
@@ -268,7 +274,7 @@ mod test {
     };
 
     fn spawn_daemon_server_with_fake_remote_control(stream: DaemonRequestStream) {
-        hoist::spawn(async move {
+        spawn(async move {
             Daemon::new_with_proxy(setup_fake_remote_control_service())
                 .handle_requests_from_stream(stream, false)
                 .await
@@ -280,7 +286,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        hoist::spawn(async move {
+        spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(RemoteControlRequest::StartComponent { responder, .. }) => {

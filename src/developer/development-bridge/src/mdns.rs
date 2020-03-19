@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use crate::discovery::{TargetFinder, TargetFinderConfig};
 use crate::target::*;
+use futures::channel::mpsc;
 use std::io;
-use std::sync::mpsc;
 
 #[cfg(target_os = "linux")]
 use {self::linux::MdnsTargetFinderLinuxExt, std::net::UdpSocket};
@@ -30,7 +30,7 @@ impl TargetFinder for MdnsTargetFinder {
     }
 
     #[cfg(target_os = "linux")]
-    fn start(&self, s: &mpsc::Sender<Target>) -> io::Result<()> {
+    fn start(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
         self.linux_start(s)
     }
 
@@ -42,7 +42,7 @@ impl TargetFinder for MdnsTargetFinder {
     }
 
     #[cfg(not(target_os = "linux"))]
-    fn start(&self, _s: &mpsc::Sender<Target>) -> io::Result<()> {
+    fn start(&self, _s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
         unimplemented!()
     }
 }
@@ -77,7 +77,7 @@ mod linux {
     pub trait MdnsTargetFinderLinuxExt: TargetFinder {
         fn linux_new(c: &TargetFinderConfig) -> io::Result<Self>;
 
-        fn linux_start(&self, s: &mpsc::Sender<Target>) -> io::Result<()>;
+        fn linux_start(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()>;
     }
 
     impl MdnsTargetFinderLinuxExt for MdnsTargetFinder {
@@ -106,7 +106,7 @@ mod linux {
             Ok(Self { listener_sockets, sender_sockets, config: config.clone() })
         }
 
-        fn linux_start(&self, s: &mpsc::Sender<Target>) -> io::Result<()> {
+        fn linux_start(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
             self.start_listeners(s)?;
             self.start_query_loop()?;
 
@@ -146,7 +146,7 @@ mod linux {
     }
 
     impl MdnsTargetFinder {
-        fn start_listeners(&self, s: &mpsc::Sender<Target>) -> io::Result<()> {
+        fn start_listeners(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
             // Listen on all sockets in the event that unicast packets are returned.
             for l in self.sender_sockets.iter().chain(self.listener_sockets.iter()) {
                 let sender = s.clone();
@@ -160,7 +160,7 @@ mod linux {
                             Ok(m) => {
                                 if is_fuchsia_response(&m) {
                                     match m.try_into_target(src) {
-                                        Ok(target) => sender.send(target).unwrap(),
+                                        Ok(target) => sender.unbounded_send(target).unwrap(),
                                         _ => (),
                                     }
                                 }
@@ -195,7 +195,7 @@ mod linux {
                         .unwrap_b();
                     loop {
                         sock.send(&message_bytes.as_ref()).unwrap();
-                        thread::sleep(config.broadcast_interval);
+                        std::thread::sleep(config.broadcast_interval);
                     }
                 });
             }
