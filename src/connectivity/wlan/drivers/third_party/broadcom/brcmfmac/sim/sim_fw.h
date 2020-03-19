@@ -285,12 +285,10 @@ class SimFirmware {
                                                           size_t* offset_out);
 
   // Wrap the buffer in an event and send back to the driver over the bus
-  void SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer);
-
-  // Send an event without a payload back to the driver
-  void SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t ifidx,
-                               uint16_t flags = 0, uint32_t reason = 0,
-                               std::optional<common::MacAddr> addr = {});
+  void SendEventToDriver(size_t payload_size, std::unique_ptr<std::vector<uint8_t>> buffer_in,
+                         uint32_t event_type, uint32_t status, uint16_t ifidx,
+                         char* ifname = nullptr, uint16_t flags = 0, uint32_t reason = 0,
+                         std::optional<common::MacAddr> addr = {});
 
   // Get the idx of the SoftAP IF based on Mac address
   int16_t GetIfidxByMac(const common::MacAddr& addr);

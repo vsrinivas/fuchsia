@@ -275,8 +275,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           // non-zero SSID - assume AP start
           ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == false);
           // Indicate success to driver
-          SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx,
-                                  BRCMF_EVENT_MSG_LINK);
+          SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
+                            BRCMF_EVENT_MSG_LINK);
           iface_tbl_[ifidx].ap_config.ap_started = true;
 
           // Set the channel to the value specified in "chanspec" iovar
@@ -295,7 +295,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             hw_.Tx(&disassoc_req_frame);
           }
           iface_tbl_[ifidx].ap_config.clients.clear();
-          SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
+          SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
           iface_tbl_[ifidx].ap_config.ap_started = false;
           iface_tbl_[ifidx].chanspec = 0;
           BRCMF_DBG(SIM, "AP Stop processed\n");
@@ -436,16 +436,13 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
 
 zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* data,
                                             const size_t len) {
-  brcmf_event_msg_be* msg_be;
-  struct brcmf_if_event* ifevent;
   uint8_t iface_id;
-  size_t data_offset;
+  size_t payload_size = sizeof(brcmf_if_event);
+  auto buf = std::make_unique<std::vector<uint8_t>>(payload_size);
 
-  auto buf = CreateEventBuffer(sizeof(brcmf_if_event), &msg_be, &data_offset);
   uint8_t* buffer_data = buf->data();
-  ifevent = reinterpret_cast<brcmf_if_event*>(&buffer_data[data_offset]);
+  struct brcmf_if_event* ifevent = reinterpret_cast<brcmf_if_event*>(buffer_data);
 
-  msg_be->event_type = htobe32(BRCMF_E_IF);
   ifevent->role = 1;
 
   if (HandleIfaceTblReq(add_iface, data, &iface_id) == ZX_OK) {
@@ -459,15 +456,13 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
       ifevent->bsscfgidx = static_cast<const uint8_t>(*bsscfgidx);
     }
     ifevent->ifidx = iface_id;
-    msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
-    sprintf(msg_be->ifname, "wl0.%d", iface_id);
-    msg_be->ifidx = iface_id;
-    ifevent->ifidx = iface_id;
-    msg_be->bsscfgidx = ifevent->bsscfgidx;
+    char ifname[IFNAMSIZ];
+    sprintf(ifname, "wl0.%d", iface_id);
+    SendEventToDriver(payload_size, std::move(buf), BRCMF_E_IF, BRCMF_E_STATUS_SUCCESS, iface_id,
+                      ifname);
   } else {
-    msg_be->status = htobe32(BRCMF_E_STATUS_ERROR);
+    SendEventToDriver(payload_size, std::move(buf), BRCMF_E_IF, BRCMF_E_STATUS_ERROR, 0);
   }
-  SendEventToDriver(std::move(buf));
   return ZX_OK;
 }
 
@@ -475,25 +470,16 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
 // ifidx is expected to be a valid index (allocated and configured as AP)
 #define TWO_ZERO_LEN_TLVS_LEN (4)
 zx_status_t SimFirmware::HandleAssocReq(uint16_t ifidx, const common::MacAddr& src_mac) {
-  brcmf_event_msg_be* msg_be;
-  size_t data_offset;
+  auto buf = std::make_unique<std::vector<uint8_t>>(TWO_ZERO_LEN_TLVS_LEN);
 
-  auto buf = CreateEventBuffer(TWO_ZERO_LEN_TLVS_LEN, &msg_be, &data_offset);
-  uint8_t* buffer_data = buf->data();
-  uint8_t* tlv_buf = &buffer_data[data_offset];
-
-  msg_be->event_type = htobe32(BRCMF_E_ASSOC_IND);
-  msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
-  msg_be->ifidx = ifidx;
-  msg_be->bsscfgidx = iface_tbl_[ifidx].bsscfgidx;
-  memcpy(msg_be->addr, src_mac.byte, ETH_ALEN);
-
+  uint8_t* tlv_buf = buf->data();
   // The driver expects ssid and rsne in TLV format, just fake it for now
   *tlv_buf++ = WLAN_IE_TYPE_SSID;
   *tlv_buf++ = 0;
   *tlv_buf++ = WLAN_IE_TYPE_RSNE;
   *tlv_buf++ = 0;
-  SendEventToDriver(std::move(buf));
+  SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_ASSOC_IND,
+                    BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0, src_mac);
   return ZX_OK;
 }
 
@@ -522,7 +508,7 @@ void SimFirmware::AssocScanDone() {
 
   // Operation fails if we don't have at least one scan result
   if (assoc_state_.scan_results.size() == 0) {
-    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_NO_NETWORKS, scan_state_.ifidx);
+    SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_NO_NETWORKS, scan_state_.ifidx);
     assoc_state_.state = AssocState::NOT_ASSOCIATED;
     return;
   }
@@ -567,7 +553,7 @@ void SimFirmware::AssocClearContext() {
 
 void SimFirmware::AssocHandleFailure() {
   if (assoc_state_.num_attempts >= assoc_max_retries_) {
-    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
+    SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
     AssocClearContext();
   } else {
     assoc_state_.num_attempts++;
@@ -714,11 +700,11 @@ void SimFirmware::RxDisassocReq(const simulation::SimDisassocReqFrame* frame) {
     if (client == frame->src_addr_) {
       iface_tbl_[ifidx].ap_config.clients.remove(frame->src_addr_);
       // Send DISASSOC_IND and DEAUTH events to driver
-      SendSimpleEventToDriver(BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS, ifidx,
-                              BRCMF_EVENT_MSG_LINK, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC,
-                              frame->src_addr_);
-      SendSimpleEventToDriver(BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, ifidx, 0,
-                              WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, frame->src_addr_);
+      SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
+                        BRCMF_EVENT_MSG_LINK, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC,
+                        frame->src_addr_);
+      SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0,
+                        WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, frame->src_addr_);
       BRCMF_DBG(SIM, "Disasoc done Num Clients: %lu\n", iface_tbl_[ifidx].ap_config.clients.size());
       return;
     }
@@ -749,10 +735,10 @@ void SimFirmware::RxAssocResp(const simulation::SimAssocRespFrame* frame) {
   if (frame->status_ == WLAN_ASSOC_RESULT_SUCCESS) {
     // Notify the driver that association succeeded
     assoc_state_.state = AssocState::ASSOCIATED;
-    SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx,
-                            BRCMF_EVENT_MSG_LINK);
-    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, 0, 0,
-                            assoc_state_.opts->bssid);
+    SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, nullptr,
+                      BRCMF_EVENT_MSG_LINK);
+    SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx,
+                      nullptr, 0, 0, assoc_state_.opts->bssid);
   } else {
     AssocHandleFailure();
   }
@@ -773,9 +759,9 @@ void SimFirmware::DisassocLocalClient(brcmf_scb_val_le* scb_val) {
     hw_.Tx(&disassoc_req_frame);
     assoc_state_.state = AssocState::NOT_ASSOCIATED;
     auth_state_.state = AuthState::NOT_AUTHENTICATED;
-    SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
+    SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
   } else {
-    SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
+    SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
   }
   AssocClearContext();
 }
@@ -802,7 +788,7 @@ void SimFirmware::HandleDisassocForClientIF(const common::MacAddr& src, const co
 
   assoc_state_.state = AssocState::NOT_ASSOCIATED;
   // Notify the driver that the AP has disassoc'ed us
-  SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
 
   AssocClearContext();
 }
@@ -815,8 +801,8 @@ void SimFirmware::RxAssocReq(const simulation::SimAssocReqFrame* frame) {
       if (std::memcmp(iface_tbl_[i].mac_addr.byte, frame->bssid_.byte, ETH_ALEN) == 0) {
         // Indicate Assoc success to driver - by sending AUTH_IND and ASSOC_IND
         // AUTH_IND is a simple event with the source mac address included
-        SendSimpleEventToDriver(BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, i, 0, 0,
-                                frame->src_addr_);
+        SendEventToDriver(0, nullptr, BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, i, nullptr, 0, 0,
+                          frame->src_addr_);
         // ASSOC_IND contains some TLVs
         HandleAssocReq(i, frame->src_addr_);
         // Add the client to the list
@@ -1337,7 +1323,7 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
 }
 
 void SimFirmware::EscanComplete() {
-  SendSimpleEventToDriver(BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_SUCCESS, scan_state_.ifidx);
+  SendEventToDriver(0, nullptr, BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_SUCCESS, scan_state_.ifidx);
 }
 
 void SimFirmware::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
@@ -1434,19 +1420,11 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
   // scan_result_size includes all BSS info structures (each including IEs). We (like the firmware)
   // only send one result back at a time.
   size_t scan_result_size = roundup(sizeof(brcmf_escan_result_le) + ssid_ie_size, 4);
-  size_t scan_result_offset;
 
-  brcmf_event_msg_be* msg_be;
-
-  // Buffer is returned zeroed out with scan_result_offset set
-  auto buf = CreateEventBuffer(scan_result_size, &msg_be, &scan_result_offset);
-
-  // Set the scan-specific fields of the event message
-  msg_be->event_type = htobe32(BRCMF_E_ESCAN_RESULT);
-  msg_be->status = htobe32(BRCMF_E_STATUS_PARTIAL);
+  auto buf = std::make_unique<std::vector<uint8_t>>(scan_result_size);
 
   uint8_t* buffer_data = buf->data();
-  auto result_out = reinterpret_cast<brcmf_escan_result_le*>(&buffer_data[scan_result_offset]);
+  auto result_out = reinterpret_cast<brcmf_escan_result_le*>(buffer_data);
   result_out->buflen = scan_result_size;
   result_out->version = BRCMF_BSS_INFO_VERSION;
   result_out->sync_id = scan_state_.opts->sync_id;
@@ -1478,7 +1456,7 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
   bss_info->ie_offset = sizeof(brcmf_bss_info_le);
 
   // IE: SSID
-  size_t ie_offset = scan_result_offset + sizeof(brcmf_escan_result_le);
+  size_t ie_offset = sizeof(brcmf_escan_result_le);
   size_t ie_len = 0;
   uint8_t* ie_data = &buffer_data[ie_offset];
   ie_data[ie_len++] = IEEE80211_ASSOC_TAG_SSID;
@@ -1489,7 +1467,8 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
   bss_info->ie_length = ie_len;
 
   // Wrap this in an event and send it back to the driver
-  SendEventToDriver(std::move(buf));
+  SendEventToDriver(scan_result_size, std::move(buf), BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_PARTIAL,
+                    scan_state_.ifidx);
 }
 
 std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
@@ -1530,26 +1509,36 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
   return buf;
 }
 
-void SimFirmware::SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer) {
-  brcmf_sim_rx_event(simdev_, std::move(buffer));
-}
-
-void SimFirmware::SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t ifidx,
-                                          uint16_t flags, uint32_t reason,
-                                          std::optional<common::MacAddr> addr) {
+void SimFirmware::SendEventToDriver(size_t payload_size,
+                                    std::unique_ptr<std::vector<uint8_t>> buffer_in,
+                                    uint32_t event_type, uint32_t status, uint16_t ifidx,
+                                    char* ifname, uint16_t flags, uint32_t reason,
+                                    std::optional<common::MacAddr> addr) {
   brcmf_event_msg_be* msg_be;
+  size_t payload_offset;
   // Assert if ifidx is not valid
-  ZX_ASSERT(ifidx < kMaxIfSupported && iface_tbl_[ifidx].allocated);
-  auto buf = CreateEventBuffer(0, &msg_be, nullptr);
+  if(event_type != BRCMF_E_IF)
+    ZX_ASSERT(ifidx < kMaxIfSupported && iface_tbl_[ifidx].allocated);
+  auto buf = CreateEventBuffer(payload_size, &msg_be, &payload_offset);
   msg_be->flags = htobe16(flags);
   msg_be->event_type = htobe32(event_type);
   msg_be->status = htobe32(status);
   msg_be->reason = htobe32(reason);
   msg_be->ifidx = ifidx;
   msg_be->bsscfgidx = iface_tbl_[ifidx].bsscfgidx;
+
+  if (ifname)
+    memcpy(msg_be->ifname, ifname, IFNAMSIZ);
+
   if (addr)
     memcpy(msg_be->addr, addr->byte, ETH_ALEN);
-  SendEventToDriver(std::move(buf));
-}
 
+  if (payload_size != 0) {
+    ZX_ASSERT(buffer_in != nullptr);
+    uint8_t* buf_data = buf->data();
+    memcpy(&buf_data[payload_offset], buffer_in->data(), payload_size);
+  }
+
+  brcmf_sim_rx_event(simdev_, std::move(buf));
+}
 }  // namespace wlan::brcmfmac
