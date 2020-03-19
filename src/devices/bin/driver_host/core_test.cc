@@ -11,6 +11,7 @@
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
+#include "device_controller_connection.h"
 #include "driver_host.h"
 #include "zx_device.h"
 
@@ -18,6 +19,9 @@ namespace {
 
 class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::Interface {
  public:
+  FakeCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("driver_host-test-coordinator-loop");
+  }
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     return fidl::Bind(dispatcher, std::move(request), this);
   }
@@ -121,8 +125,15 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     completer.Reply(std::move(response));
   }
 
-  uint32_t bind_count_ = 0;
-  uint32_t unbind_reply_count_ = 0;
+  uint32_t bind_count() { return bind_count_.load(); }
+
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
+
+ private:
+  std::atomic<uint32_t> bind_count_ = 0;
+  // The coordinator needs a separate loop so that when the DriverHost makes blocking calls into it,
+  // it doesn't hang.
+  async::Loop loop_;
 };
 
 class CoreTest : public zxtest::Test {
@@ -134,11 +145,20 @@ class CoreTest : public zxtest::Test {
 
   ~CoreTest() { internal::RegisterContextForApi(nullptr); }
 
-  void Connect(zx::channel* out) {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(coordinator_.Connect(ctx_.loop().dispatcher(), std::move(remote)));
-    *out = std::move(local);
+  void Connect(fbl::RefPtr<zx_device> device) {
+    zx::channel controller_local, controller_remote;
+    ASSERT_OK(zx::channel::create(0, &controller_local, &controller_remote));
+    zx::channel coordinator_local, coordinator_remote;
+    ASSERT_OK(zx::channel::create(0, &coordinator_local, &coordinator_remote));
+
+    std::unique_ptr<DeviceControllerConnection> conn;
+    ASSERT_OK(DeviceControllerConnection::Create(&ctx_, device, std::move(controller_local),
+                                                 std::move(coordinator_remote), &conn));
+
+    ASSERT_OK(coordinator_.Connect(coordinator_.dispatcher(), std::move(coordinator_local)));
+    // Leak this here to pretend its being managed by an async loop.  It'll be later reclaimed when
+    // |device| is destroyed
+    [[maybe_unused]] auto unused = conn.release();
   }
 
   // This simulates receiving an unbind and remove request from the devcoordinator.
@@ -149,6 +169,7 @@ class CoreTest : public zxtest::Test {
     // Since we never called device_add(), we should increment the reference count here.
     fbl::RefPtr<zx_device_t> dev_add_ref(dev.get());
     __UNUSED auto ptr = fbl::ExportToRawPtr(&dev_add_ref);
+    dev->removal_cb = [](zx_status_t) {};
     ctx_.DeviceCompleteRemoval(dev);
   }
 
@@ -163,12 +184,10 @@ TEST_F(CoreTest, RebindNoChildren) {
   zx_protocol_device_t ops = {};
   dev->ops = &ops;
 
-  zx::channel rpc;
-  ASSERT_NO_FATAL_FAILURES(Connect(&rpc));
-  dev->coordinator_rpc = zx::unowned(rpc);
+  ASSERT_NO_FATAL_FAILURES(Connect(dev));
 
   EXPECT_EQ(device_rebind(dev.get()), ZX_OK);
-  EXPECT_EQ(coordinator_.bind_count_, 1);
+  EXPECT_EQ(coordinator_.bind_count(), 1);
 
   dev->flags |= DEV_FLAG_DEAD;
 }
@@ -178,35 +197,39 @@ TEST_F(CoreTest, RebindHasOneChild) {
     uint32_t unbind_count = 0;
     fbl::RefPtr<zx_device> parent;
 
-    zx::channel rpc;
-    ASSERT_NO_FATAL_FAILURES(Connect(&rpc));
-
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
     ASSERT_OK(zx_device::Create(&ctx_, &parent));
+    ASSERT_NO_FATAL_FAILURES(Connect(parent));
     parent->ops = &ops;
     parent->ctx = &unbind_count;
-    parent->coordinator_rpc = zx::unowned(rpc);
     {
       fbl::RefPtr<zx_device> child;
       ASSERT_OK(zx_device::Create(&ctx_, &child));
+      ASSERT_NO_FATAL_FAILURES(Connect(child));
       child->ops = &ops;
       child->ctx = &unbind_count;
-      child->rpc = zx::unowned(rpc);
       parent->children.push_back(child.get());
       child->parent = parent;
 
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
-      EXPECT_EQ(coordinator_.bind_count_, 0);
+      EXPECT_EQ(coordinator_.bind_count(), 0);
       ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
       EXPECT_EQ(unbind_count, 1);
 
       child->flags |= DEV_FLAG_DEAD;
     }
+
+    ctx_.loop().Quit();
+    ctx_.loop().JoinThreads();
+    ASSERT_OK(ctx_.loop().ResetQuit());
+    ASSERT_OK(ctx_.loop().RunUntilIdle());
+    EXPECT_EQ(coordinator_.bind_count(), 1);
+
     parent->flags |= DEV_FLAG_DEAD;
   }
-  EXPECT_EQ(coordinator_.bind_count_, 1);
+  // Join the thread running in the background, then run the rest of the tasks locally.
 }
 
 TEST_F(CoreTest, RebindHasMultipleChildren) {
@@ -214,23 +237,20 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     uint32_t unbind_count = 0;
     fbl::RefPtr<zx_device> parent;
 
-    zx::channel rpc;
-    ASSERT_NO_FATAL_FAILURES(Connect(&rpc));
-
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
     ASSERT_OK(zx_device::Create(&ctx_, &parent));
+    ASSERT_NO_FATAL_FAILURES(Connect(parent));
     parent->ops = &ops;
     parent->ctx = &unbind_count;
-    parent->coordinator_rpc = zx::unowned(rpc);
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
         ASSERT_OK(zx_device::Create(&ctx_, &child));
+        ASSERT_NO_FATAL_FAILURES(Connect(child));
         child->ops = &ops;
         child->ctx = &unbind_count;
-        child->rpc = zx::unowned(rpc);
         parent->children.push_back(child.get());
         child->parent = parent;
       }
@@ -238,7 +258,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
 
       for (auto& child : children) {
-        EXPECT_EQ(coordinator_.bind_count_, 0);
+        EXPECT_EQ(coordinator_.bind_count(), 0);
         ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
       }
 
@@ -248,9 +268,15 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
         child->flags |= DEV_FLAG_DEAD;
       }
     }
+    // Join the thread running in the background, then run the rest of the tasks locally.
+    ctx_.loop().Quit();
+    ctx_.loop().JoinThreads();
+    ctx_.loop().ResetQuit();
+    ctx_.loop().RunUntilIdle();
+    EXPECT_EQ(coordinator_.bind_count(), 1);
+
     parent->flags |= DEV_FLAG_DEAD;
   }
-  EXPECT_EQ(coordinator_.bind_count_, 1);
 }
 
 }  // namespace
