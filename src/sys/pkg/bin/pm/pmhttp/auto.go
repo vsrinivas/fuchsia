@@ -5,9 +5,10 @@
 package pmhttp
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"fuchsia.googlesource.com/sse"
 )
@@ -31,14 +32,18 @@ func (a *AutoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := sse.Start(w, r)
 	if err != nil {
 		a.mu.Unlock()
-		log.Printf("SSE request failure: %s", err)
+		fmt.Printf("%s [pm auto] SSE request failure: %s\n", time.Now().Format("2006-01-02 15:04:05"), err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	a.clients[w] = struct{}{}
+	fmt.Printf("%s [pm auto] adding client: %s\n", time.Now().Format("2006-01-02 15:04:05"), r.RemoteAddr)
+	fmt.Printf("%s [pm auto] client count: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(a.clients))
 	defer func() {
 		a.mu.Lock()
 		delete(a.clients, w)
+		fmt.Printf("%s [pm auto] removing client: %s\n", time.Now().Format("2006-01-02 15:04:05"), r.RemoteAddr)
+		fmt.Printf("%s [pm auto] client count: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(a.clients))
 		a.mu.Unlock()
 	}()
 	a.mu.Unlock()
