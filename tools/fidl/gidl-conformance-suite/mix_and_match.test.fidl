@@ -16,7 +16,8 @@ struct TestXUnionInTable {
     XUnionInTable value;
 };
 
-protocol EthernetDevice {};
+protocol EthernetDevice {
+};
 
 union IpAddressConfig {
     1: array<uint32>:6 padding_size_24_align_4;
@@ -48,4 +49,47 @@ struct NodeAttributes {
 struct FileGetAttrResponse {
     zx.status s;
     NodeAttributes attributes;
+};
+
+struct Int64Struct {
+    int64 x;
+};
+
+union SimpleUnion {
+    1: int32 i32;
+    2: int64 i64;
+    3: Int64Struct s;
+    4: string str;
+};
+
+flexible union SampleXUnion {
+    1: uint32 u;
+    2: SimpleUnion su;
+    3: SimpleTable st;
+};
+
+union SampleStrictXUnion {
+    1: uint32 u;
+    2: SimpleUnion su;
+    3: SimpleTable st;
+};
+
+struct TestInlineXUnionInStruct {
+    string before;
+    SampleXUnion xu;
+    string after;
+};
+
+struct TestOptionalXUnionInStruct {
+    string before;
+    SampleXUnion? xu;
+    string after;
+};
+
+struct TestStrictXUnionInStruct {
+    SampleStrictXUnion xu;
+};
+
+struct TestFlexibleXUnionInStruct {
+    SampleXUnion xu;
 };

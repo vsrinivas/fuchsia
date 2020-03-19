@@ -7,6 +7,19 @@ namespace fidl {
 namespace test {
 namespace json {
 namespace testing {
+
+class TestProtocol_TestBase : public TestProtocol {
+  public:
+  virtual ~TestProtocol_TestBase() { }
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void StrictXUnionHenceResponseMayBeStackAllocated(StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override {
+    NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated");
+  }
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) override {
+    NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated");
+  }
+
+};
 }  // namespace testing
 }  // namespace json
 }  // namespace test

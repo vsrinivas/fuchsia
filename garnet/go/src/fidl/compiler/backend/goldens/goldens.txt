@@ -240,12 +240,3 @@ union.test.json.llcpp.h.golden
 union.test.json.rs.golden
 union.test.json.syz.txt.golden
 union.test.json_test_base.h.golden
-xunion.test.json
-xunion.test.json.cc.golden
-xunion.test.json.go.golden
-xunion.test.json.h.golden
-xunion.test.json.llcpp.cc.golden
-xunion.test.json.llcpp.h.golden
-xunion.test.json.rs.golden
-xunion.test.json.syz.txt.golden
-xunion.test.json_test_base.h.golden

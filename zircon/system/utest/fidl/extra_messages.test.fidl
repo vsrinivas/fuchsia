@@ -94,7 +94,7 @@ struct SampleNullableXUnionStruct {
     SampleXUnion? opt_xu;
 };
 
-xunion LLCPPStyleUnion {
+flexible union LLCPPStyleUnion {
     1: int32 primitive;
 };
 

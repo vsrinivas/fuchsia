@@ -34,7 +34,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/tools/fidl/examples/tables.test.fidl",
       "$zx/tools/fidl/examples/test.test.fidl",
       "$zx/tools/fidl/examples/types.test.fidl",
-      "$zx/tools/fidl/examples/xunion.test.fidl",
 
       # manual
       "testdata/badformat.fidl.noformat",
@@ -99,8 +98,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/tools/fidl/goldens/union.test.tables.c.golden",
       "$zx/tools/fidl/goldens/union_sandwich.test.json.golden",
       "$zx/tools/fidl/goldens/union_sandwich.test.tables.c.golden",
-      "$zx/tools/fidl/goldens/xunion.test.json.golden",
-      "$zx/tools/fidl/goldens/xunion.test.tables.c.golden",
       "$zx/tools/fidl/testdata/bits.test.fidl",
       "$zx/tools/fidl/testdata/byte_and_bytes.test.fidl",
       "$zx/tools/fidl/testdata/constants.test.fidl",
@@ -143,7 +140,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/tools/fidl/testdata/type_aliases/someotherlibrary.test.fidl",
       "$zx/tools/fidl/testdata/union.test.fidl",
       "$zx/tools/fidl/testdata/union_sandwich.test.fidl",
-      "$zx/tools/fidl/testdata/xunion.test.fidl",
     ]
     script = "gen-goldens.py"
     args = rebase_path(outputs, root_build_dir) +
@@ -186,7 +182,6 @@ if (current_toolchain == default_toolchain) {
       "utils_tests.cc",
       "virtual_source_tests.cc",
       "visitor_unittests.cc",
-      "xunion_tests.cc",
     ]
     deps = [
       ":examples",

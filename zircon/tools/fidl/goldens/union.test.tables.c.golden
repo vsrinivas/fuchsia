@@ -5,9 +5,18 @@
 // Forward declarations for old <-> V1 mappings
 
 static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable;
+static const fidl_type_t Vector10nonnullable5uint8Table;
 static const fidl_type_t Vector4294967295nonnullable19String16nonnullableTable;
+extern const fidl_type_t fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+extern const fidl_type_t fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+extern const fidl_type_t fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+extern const fidl_type_t fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 extern const fidl_type_t fidl_test_json_UnionTable;
+extern const fidl_type_t fidl_test_json_StructWithNullableXUnionTable;
 extern const fidl_type_t fidl_test_json_StrictUnionTable;
+extern const fidl_type_t fidl_test_json_StrictSimpleXUnionTable;
+extern const fidl_type_t fidl_test_json_StrictFooTable;
+extern const fidl_type_t fidl_test_json_StrictBoundedXUnionTable;
 extern const fidl_type_t fidl_test_json_ReverseOrdinalUnionTable;
 extern const fidl_type_t fidl_test_json_PizzaTable;
 extern const fidl_type_t fidl_test_json_PastaTable;
@@ -15,16 +24,36 @@ extern const fidl_type_t fidl_test_json_StrictPizzaOrPastaTable;
 extern const fidl_type_t fidl_test_json_PizzaOrPastaTable;
 extern const fidl_type_t fidl_test_json_FlexiblePizzaOrPastaTable;
 extern const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable;
+extern const fidl_type_t fidl_test_json_OlderSimpleUnionTable;
 extern const fidl_type_t fidl_test_json_NullableUnionStructTable;
+extern const fidl_type_t fidl_test_json_NewerSimpleUnionTable;
 extern const fidl_type_t fidl_test_json_FlexibleUnionTable;
+extern const fidl_type_t fidl_test_json_FlexibleFooTable;
 extern const fidl_type_t fidl_test_json_FieldCollisionTable;
+extern const fidl_type_t fidl_test_json_ExplicitXUnionTable;
 extern const fidl_type_t fidl_test_json_ExplicitUnionTable;
+extern const fidl_type_t fidl_test_json_ExplicitStrictFooTable;
+extern const fidl_type_t fidl_test_json_ExplicitFooTable;
+extern const fidl_type_t fidl_test_json_EmptyTable;
+extern const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable;
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable;
+static const fidl_type_t v1_Vector10nonnullable5uint8Table;
 static const fidl_type_t v1_Vector4294967295nonnullable22v1_String16nonnullableTable;
+extern const fidl_type_t v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+extern const fidl_type_t v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+extern const fidl_type_t v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+extern const fidl_type_t v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 extern const fidl_type_t v1_fidl_test_json_UnionTable;
 extern const fidl_type_t v1_fidl_test_json_UnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StructWithNullableXUnionTable;
 extern const fidl_type_t v1_fidl_test_json_StrictUnionTable;
 extern const fidl_type_t v1_fidl_test_json_StrictUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionTable;
+extern const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionTable;
+extern const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionTable;
 extern const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_PizzaTable;
@@ -37,18 +66,37 @@ extern const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable;
 extern const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_OlderSimpleUnionTable;
+extern const fidl_type_t v1_fidl_test_json_OlderSimpleUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_NullableUnionStructTable;
+extern const fidl_type_t v1_fidl_test_json_NewerSimpleUnionTable;
+extern const fidl_type_t v1_fidl_test_json_NewerSimpleUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleUnionTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FieldCollisionTable;
 extern const fidl_type_t v1_fidl_test_json_FieldCollisionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitXUnionTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitXUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitUnionTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitStrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitStrictFooNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitFooTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitFooNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_EmptyTable;
+extern const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructTable;
+extern const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructNullableRefTable;
 
 // Coding tables for old wire format.
 
 extern const fidl_type_t fidl_test_json_UnionTable;
+extern const fidl_type_t fidl_test_json_StructWithNullableXUnionTable;
 extern const fidl_type_t fidl_test_json_StrictUnionTable;
+extern const fidl_type_t fidl_test_json_StrictSimpleXUnionTable;
+extern const fidl_type_t fidl_test_json_StrictFooTable;
+extern const fidl_type_t fidl_test_json_StrictBoundedXUnionTable;
 extern const fidl_type_t fidl_test_json_ReverseOrdinalUnionTable;
 extern const fidl_type_t fidl_test_json_PizzaTable;
 extern const fidl_type_t fidl_test_json_PastaTable;
@@ -56,29 +104,69 @@ extern const fidl_type_t fidl_test_json_StrictPizzaOrPastaTable;
 extern const fidl_type_t fidl_test_json_PizzaOrPastaTable;
 extern const fidl_type_t fidl_test_json_FlexiblePizzaOrPastaTable;
 extern const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable;
+extern const fidl_type_t fidl_test_json_OlderSimpleUnionTable;
 extern const fidl_type_t fidl_test_json_NullableUnionStructTable;
+extern const fidl_type_t fidl_test_json_NewerSimpleUnionTable;
 extern const fidl_type_t fidl_test_json_FlexibleUnionTable;
+extern const fidl_type_t fidl_test_json_FlexibleFooTable;
 extern const fidl_type_t fidl_test_json_FieldCollisionTable;
+extern const fidl_type_t fidl_test_json_ExplicitXUnionTable;
 extern const fidl_type_t fidl_test_json_ExplicitUnionTable;
+extern const fidl_type_t fidl_test_json_ExplicitStrictFooTable;
+extern const fidl_type_t fidl_test_json_ExplicitFooTable;
+extern const fidl_type_t fidl_test_json_EmptyTable;
+extern const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable;
 
 static const fidl_type_t Pointer20fidl_test_json_UnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_UnionTable.coded_union}}};
 static const fidl_type_t Pointer26fidl_test_json_StrictUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_StrictUnionTable.coded_union}}};
+static const fidl_type_t Pointer33fidl_test_json_StrictSimpleXUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_StrictSimpleXUnionTable.coded_union}}};
+static const fidl_type_t Pointer24fidl_test_json_StrictFooTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_StrictFooTable.coded_union}}};
+static const fidl_type_t Pointer34fidl_test_json_StrictBoundedXUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_StrictBoundedXUnionTable.coded_union}}};
 static const fidl_type_t Pointer34fidl_test_json_ReverseOrdinalUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_ReverseOrdinalUnionTable.coded_union}}};
 static const fidl_type_t Pointer33fidl_test_json_StrictPizzaOrPastaTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_StrictPizzaOrPastaTable.coded_union}}};
 static const fidl_type_t Pointer27fidl_test_json_PizzaOrPastaTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_PizzaOrPastaTable.coded_union}}};
 static const fidl_type_t Pointer35fidl_test_json_FlexiblePizzaOrPastaTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_FlexiblePizzaOrPastaTable.coded_union}}};
 static const fidl_type_t Pointer35fidl_test_json_ExplicitPizzaOrPastaTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_ExplicitPizzaOrPastaTable.coded_union}}};
+static const fidl_type_t Pointer31fidl_test_json_OlderSimpleUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_OlderSimpleUnionTable.coded_union}}};
+static const fidl_type_t Pointer31fidl_test_json_NewerSimpleUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_NewerSimpleUnionTable.coded_union}}};
 static const fidl_type_t Pointer28fidl_test_json_FlexibleUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_FlexibleUnionTable.coded_union}}};
+static const fidl_type_t Pointer26fidl_test_json_FlexibleFooTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_FlexibleFooTable.coded_union}}};
 static const fidl_type_t Pointer29fidl_test_json_FieldCollisionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_FieldCollisionTable.coded_union}}};
+static const fidl_type_t Pointer29fidl_test_json_ExplicitXUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_ExplicitXUnionTable.coded_union}}};
 static const fidl_type_t Pointer28fidl_test_json_ExplicitUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_ExplicitUnionTable.coded_union}}};
+static const fidl_type_t Pointer32fidl_test_json_ExplicitStrictFooTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_ExplicitStrictFooTable.coded_union}}};
+static const fidl_type_t Pointer26fidl_test_json_ExplicitFooTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_ExplicitFooTable.coded_union}}};
+static const fidl_type_t Pointer42fidl_test_json_XUnionContainingEmptyStructTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_XUnionContainingEmptyStructTable.coded_union}}};
 
 static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable}}};
 
+static const fidl_type_t Vector10nonnullable5uint8Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=10u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector10nonnullable5uint8Table}}};
+
 static const fidl_type_t String16nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=16u, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t Vector4294967295nonnullable19String16nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String16nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector4294967295nonnullable22v1_String16nonnullableTable}}};
+
+extern const fidl_type_t fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+static const struct FidlStructField Fields78fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest[] = {};
+const fidl_type_t fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields78fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest", .alt_type=&v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable}}};
+
+extern const fidl_type_t fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+static const struct FidlStructField Fields79fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
+    /*FidlStructField*/{.type=&fidl_test_json_StrictBoundedXUnionTable, .offset=16u, .padding=0u}
+};
+const fidl_type_t fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields79fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, .field_count=1u, .size=40u, .max_out_of_line=16u, .contains_union=true, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse", .alt_type=&v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable}}};
+
+extern const fidl_type_t fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+static const struct FidlStructField Fields80fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest[] = {};
+const fidl_type_t fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields80fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest", .alt_type=&v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable}}};
+
+extern const fidl_type_t fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+static const struct FidlStructField Fields81fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
+    /*FidlStructField*/{.type=&fidl_test_json_OlderSimpleUnionTable, .offset=16u, .padding=0u}
+};
+const fidl_type_t fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields81fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, .field_count=1u, .size=32u, .max_out_of_line=0u, .contains_union=true, .name="fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse", .alt_type=&v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable}}};
 
 
 static const struct FidlUnionField Fields20fidl_test_json_Union[] = {
@@ -88,12 +176,35 @@ static const struct FidlUnionField Fields20fidl_test_json_Union[] = {
 };
 const fidl_type_t fidl_test_json_UnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields20fidl_test_json_Union, .field_count=3u, .data_offset=8u, .size=24u, .name="fidl.test.json/Union", .alt_type=&v1_fidl_test_json_UnionTable}}};
 
+static const struct FidlStructField Fields39fidl_test_json_StructWithNullableXUnion[] = {
+    /*FidlStructField*/{.type=&Pointer31fidl_test_json_OlderSimpleUnionTable, .offset=0u, .padding=0u}
+};
+const fidl_type_t fidl_test_json_StructWithNullableXUnionTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39fidl_test_json_StructWithNullableXUnion, .field_count=1u, .size=8u, .max_out_of_line=16u, .contains_union=true, .name="fidl.test.json/StructWithNullableXUnion", .alt_type=&v1_fidl_test_json_StructWithNullableXUnionTable}}};
+
 static const struct FidlUnionField Fields26fidl_test_json_StrictUnion[] = {
     /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
     /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=2u},
     /*FidlUnionField*/{.type=&Vector4294967295nonnullable27String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=3u}
 };
 const fidl_type_t fidl_test_json_StrictUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields26fidl_test_json_StrictUnion, .field_count=3u, .data_offset=8u, .size=24u, .name="fidl.test.json/StrictUnion", .alt_type=&v1_fidl_test_json_StrictUnionTable}}};
+
+static const struct FidlUnionField Fields33fidl_test_json_StrictSimpleXUnion[] = {
+    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=2u},
+    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=3u}
+};
+const fidl_type_t fidl_test_json_StrictSimpleXUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields33fidl_test_json_StrictSimpleXUnion, .field_count=3u, .data_offset=8u, .size=24u, .name="fidl.test.json/StrictSimpleXUnion", .alt_type=&v1_fidl_test_json_StrictSimpleXUnionTable}}};
+
+static const struct FidlUnionField Fields24fidl_test_json_StrictFoo[] = {
+    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=2u}
+};
+const fidl_type_t fidl_test_json_StrictFooTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields24fidl_test_json_StrictFoo, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/StrictFoo", .alt_type=&v1_fidl_test_json_StrictFooTable}}};
+
+static const struct FidlUnionField Fields34fidl_test_json_StrictBoundedXUnion[] = {
+    /*FidlUnionField*/{.type=&Vector10nonnullable5uint8Table, .padding=0u, .xunion_ordinal=1u}
+};
+const fidl_type_t fidl_test_json_StrictBoundedXUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields34fidl_test_json_StrictBoundedXUnion, .field_count=1u, .data_offset=8u, .size=24u, .name="fidl.test.json/StrictBoundedXUnion", .alt_type=&v1_fidl_test_json_StrictBoundedXUnionTable}}};
 
 static const struct FidlUnionField Fields34fidl_test_json_ReverseOrdinalUnion[] = {
     /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u},
@@ -135,10 +246,23 @@ static const struct FidlUnionField Fields35fidl_test_json_ExplicitPizzaOrPasta[]
 };
 const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields35fidl_test_json_ExplicitPizzaOrPasta, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/ExplicitPizzaOrPasta", .alt_type=&v1_fidl_test_json_ExplicitPizzaOrPastaTable}}};
 
+static const struct FidlUnionField Fields31fidl_test_json_OlderSimpleUnion[] = {
+    /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=4u, .xunion_ordinal=2u}
+};
+const fidl_type_t fidl_test_json_OlderSimpleUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields31fidl_test_json_OlderSimpleUnion, .field_count=2u, .data_offset=8u, .size=16u, .name="fidl.test.json/OlderSimpleUnion", .alt_type=&v1_fidl_test_json_OlderSimpleUnionTable}}};
+
 static const struct FidlStructField Fields34fidl_test_json_NullableUnionStruct[] = {
     /*FidlStructField*/{.type=&Pointer20fidl_test_json_UnionTable, .offset=0u, .padding=0u}
 };
 const fidl_type_t fidl_test_json_NullableUnionStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34fidl_test_json_NullableUnionStruct, .field_count=1u, .size=8u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/NullableUnionStruct", .alt_type=&v1_fidl_test_json_NullableUnionStructTable}}};
+
+static const struct FidlUnionField Fields31fidl_test_json_NewerSimpleUnion[] = {
+    /*FidlUnionField*/{.type=NULL, .padding=8u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=2u},
+    /*FidlUnionField*/{.type=&Vector4294967295nonnullable27String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=3u}
+};
+const fidl_type_t fidl_test_json_NewerSimpleUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields31fidl_test_json_NewerSimpleUnion, .field_count=3u, .data_offset=8u, .size=24u, .name="fidl.test.json/NewerSimpleUnion", .alt_type=&v1_fidl_test_json_NewerSimpleUnionTable}}};
 
 static const struct FidlUnionField Fields28fidl_test_json_FlexibleUnion[] = {
     /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
@@ -147,10 +271,22 @@ static const struct FidlUnionField Fields28fidl_test_json_FlexibleUnion[] = {
 };
 const fidl_type_t fidl_test_json_FlexibleUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields28fidl_test_json_FlexibleUnion, .field_count=3u, .data_offset=8u, .size=24u, .name="fidl.test.json/FlexibleUnion", .alt_type=&v1_fidl_test_json_FlexibleUnionTable}}};
 
+static const struct FidlUnionField Fields26fidl_test_json_FlexibleFoo[] = {
+    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=2u}
+};
+const fidl_type_t fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields26fidl_test_json_FlexibleFoo, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/FlexibleFoo", .alt_type=&v1_fidl_test_json_FlexibleFooTable}}};
+
 static const struct FidlUnionField Fields29fidl_test_json_FieldCollision[] = {
     /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u}
 };
 const fidl_type_t fidl_test_json_FieldCollisionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields29fidl_test_json_FieldCollision, .field_count=1u, .data_offset=4u, .size=8u, .name="fidl.test.json/FieldCollision", .alt_type=&v1_fidl_test_json_FieldCollisionTable}}};
+
+static const struct FidlUnionField Fields29fidl_test_json_ExplicitXUnion[] = {
+    /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=4u, .xunion_ordinal=4u}
+};
+const fidl_type_t fidl_test_json_ExplicitXUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields29fidl_test_json_ExplicitXUnion, .field_count=2u, .data_offset=8u, .size=16u, .name="fidl.test.json/ExplicitXUnion", .alt_type=&v1_fidl_test_json_ExplicitXUnionTable}}};
 
 static const struct FidlUnionField Fields28fidl_test_json_ExplicitUnion[] = {
     /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
@@ -158,12 +294,39 @@ static const struct FidlUnionField Fields28fidl_test_json_ExplicitUnion[] = {
 };
 const fidl_type_t fidl_test_json_ExplicitUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields28fidl_test_json_ExplicitUnion, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/ExplicitUnion", .alt_type=&v1_fidl_test_json_ExplicitUnionTable}}};
 
+static const struct FidlUnionField Fields32fidl_test_json_ExplicitStrictFoo[] = {
+    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=2u},
+    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=3u}
+};
+const fidl_type_t fidl_test_json_ExplicitStrictFooTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields32fidl_test_json_ExplicitStrictFoo, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/ExplicitStrictFoo", .alt_type=&v1_fidl_test_json_ExplicitStrictFooTable}}};
+
+static const struct FidlUnionField Fields26fidl_test_json_ExplicitFoo[] = {
+    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=2u}
+};
+const fidl_type_t fidl_test_json_ExplicitFooTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields26fidl_test_json_ExplicitFoo, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/ExplicitFoo", .alt_type=&v1_fidl_test_json_ExplicitFooTable}}};
+
+static const struct FidlStructField Fields20fidl_test_json_Empty[] = {};
+const fidl_type_t fidl_test_json_EmptyTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20fidl_test_json_Empty, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/Empty", .alt_type=&v1_fidl_test_json_EmptyTable}}};
+
+static const struct FidlUnionField Fields42fidl_test_json_XUnionContainingEmptyStruct[] = {
+    /*FidlUnionField*/{.type=&fidl_test_json_EmptyTable, .padding=3u, .xunion_ordinal=1u}
+};
+const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields42fidl_test_json_XUnionContainingEmptyStruct, .field_count=1u, .data_offset=4u, .size=8u, .name="fidl.test.json/XUnionContainingEmptyStruct", .alt_type=&v1_fidl_test_json_XUnionContainingEmptyStructTable}}};
+
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_fidl_test_json_UnionTable;
 extern const fidl_type_t v1_fidl_test_json_UnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StructWithNullableXUnionTable;
 extern const fidl_type_t v1_fidl_test_json_StrictUnionTable;
 extern const fidl_type_t v1_fidl_test_json_StrictUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionTable;
+extern const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionTable;
+extern const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionTable;
 extern const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_PizzaTable;
@@ -176,22 +339,59 @@ extern const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable;
 extern const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_OlderSimpleUnionTable;
+extern const fidl_type_t v1_fidl_test_json_OlderSimpleUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_NullableUnionStructTable;
+extern const fidl_type_t v1_fidl_test_json_NewerSimpleUnionTable;
+extern const fidl_type_t v1_fidl_test_json_NewerSimpleUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleUnionTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FieldCollisionTable;
 extern const fidl_type_t v1_fidl_test_json_FieldCollisionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitXUnionTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitXUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitUnionTable;
 extern const fidl_type_t v1_fidl_test_json_ExplicitUnionNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitStrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitStrictFooNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitFooTable;
+extern const fidl_type_t v1_fidl_test_json_ExplicitFooNullableRefTable;
+extern const fidl_type_t v1_fidl_test_json_EmptyTable;
+extern const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructTable;
+extern const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructNullableRefTable;
 
 
 static const fidl_type_t v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_String4294967295nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector4294967295nonnullable27String4294967295nonnullableTable}}};
 
+static const fidl_type_t v1_Vector10nonnullable5uint8Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=10u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector10nonnullable5uint8Table}}};
+
 static const fidl_type_t v1_String16nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=16u, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable22v1_String16nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_String16nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector4294967295nonnullable19String16nonnullableTable}}};
+
+extern const fidl_type_t v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+static const struct FidlStructField Fields81v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest[] = {};
+const fidl_type_t v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields81v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest", .alt_type=&fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable}}};
+
+extern const fidl_type_t v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+static const struct FidlStructField Fields82v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
+    /*FidlStructField*/{.type=&v1_fidl_test_json_StrictBoundedXUnionTable, .offset=16u, .padding=0u}
+};
+const fidl_type_t v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields82v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, .field_count=1u, .size=40u, .max_out_of_line=32u, .contains_union=true, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse", .alt_type=&fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable}}};
+
+extern const fidl_type_t v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+static const struct FidlStructField Fields83v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest[] = {};
+const fidl_type_t v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields83v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest", .alt_type=&fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable}}};
+
+extern const fidl_type_t v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+static const struct FidlStructField Fields84v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
+    /*FidlStructField*/{.type=&v1_fidl_test_json_OlderSimpleUnionTable, .offset=16u, .padding=0u}
+};
+const fidl_type_t v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields84v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, .field_count=1u, .size=40u, .max_out_of_line=8u, .contains_union=true, .name="fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse", .alt_type=&fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable}}};
 
 
 static const struct FidlXUnionField Fields23v1_fidl_test_json_Union[] = {
@@ -206,6 +406,11 @@ static const struct FidlXUnionField Fields34v1_fidl_test_json_UnionNullableRef[]
     /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u}
 };
 const fidl_type_t v1_fidl_test_json_UnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields34v1_fidl_test_json_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/Union", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer20fidl_test_json_UnionTable}}};
+static const struct FidlStructField Fields42v1_fidl_test_json_StructWithNullableXUnion[] = {
+    /*FidlStructField*/{.type=&v1_fidl_test_json_OlderSimpleUnionNullableRefTable, .offset=0u, .padding=0u}
+};
+const fidl_type_t v1_fidl_test_json_StructWithNullableXUnionTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_fidl_test_json_StructWithNullableXUnion, .field_count=1u, .size=24u, .max_out_of_line=8u, .contains_union=true, .name="fidl.test.json/StructWithNullableXUnion", .alt_type=&fidl_test_json_StructWithNullableXUnionTable}}};
+
 static const struct FidlXUnionField Fields29v1_fidl_test_json_StrictUnion[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u},
@@ -218,6 +423,36 @@ static const struct FidlXUnionField Fields40v1_fidl_test_json_StrictUnionNullabl
     /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u}
 };
 const fidl_type_t v1_fidl_test_json_StrictUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields40v1_fidl_test_json_StrictUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer26fidl_test_json_StrictUnionTable}}};
+static const struct FidlXUnionField Fields36v1_fidl_test_json_StrictSimpleXUnion[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u}
+};
+const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields36v1_fidl_test_json_StrictSimpleXUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictSimpleXUnion", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_StrictSimpleXUnionTable}}};
+static const struct FidlXUnionField Fields47v1_fidl_test_json_StrictSimpleXUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u}
+};
+const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields47v1_fidl_test_json_StrictSimpleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictSimpleXUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer33fidl_test_json_StrictSimpleXUnionTable}}};
+static const struct FidlXUnionField Fields27v1_fidl_test_json_StrictFoo[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_StrictFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields27v1_fidl_test_json_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_StrictFooTable}}};
+static const struct FidlXUnionField Fields38v1_fidl_test_json_StrictFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_fidl_test_json_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer24fidl_test_json_StrictFooTable}}};
+static const struct FidlXUnionField Fields37v1_fidl_test_json_StrictBoundedXUnion[] = {
+    /*FidlXUnionField*/{.type=&v1_Vector10nonnullable5uint8Table, .ordinal=1u}
+};
+const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields37v1_fidl_test_json_StrictBoundedXUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictBoundedXUnion", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_StrictBoundedXUnionTable}}};
+static const struct FidlXUnionField Fields48v1_fidl_test_json_StrictBoundedXUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_Vector10nonnullable5uint8Table, .ordinal=1u}
+};
+const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields48v1_fidl_test_json_StrictBoundedXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictBoundedXUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer34fidl_test_json_StrictBoundedXUnionTable}}};
 static const struct FidlXUnionField Fields37v1_fidl_test_json_ReverseOrdinalUnion[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u},
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
@@ -278,11 +513,33 @@ static const struct FidlXUnionField Fields49v1_fidl_test_json_ExplicitPizzaOrPas
     /*FidlXUnionField*/{.type=&v1_fidl_test_json_PastaTable, .ordinal=4u}
 };
 const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields49v1_fidl_test_json_ExplicitPizzaOrPastaNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/ExplicitPizzaOrPasta", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer35fidl_test_json_ExplicitPizzaOrPastaTable}}};
+static const struct FidlXUnionField Fields34v1_fidl_test_json_OlderSimpleUnion[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_OlderSimpleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields34v1_fidl_test_json_OlderSimpleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/OlderSimpleUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_OlderSimpleUnionTable}}};
+static const struct FidlXUnionField Fields45v1_fidl_test_json_OlderSimpleUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_OlderSimpleUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields45v1_fidl_test_json_OlderSimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/OlderSimpleUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer31fidl_test_json_OlderSimpleUnionTable}}};
 static const struct FidlStructField Fields37v1_fidl_test_json_NullableUnionStruct[] = {
     /*FidlStructField*/{.type=&v1_fidl_test_json_UnionNullableRefTable, .offset=0u, .padding=0u}
 };
 const fidl_type_t v1_fidl_test_json_NullableUnionStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields37v1_fidl_test_json_NullableUnionStruct, .field_count=1u, .size=24u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/NullableUnionStruct", .alt_type=&fidl_test_json_NullableUnionStructTable}}};
 
+static const struct FidlXUnionField Fields34v1_fidl_test_json_NewerSimpleUnion[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u}
+};
+const fidl_type_t v1_fidl_test_json_NewerSimpleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields34v1_fidl_test_json_NewerSimpleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/NewerSimpleUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_NewerSimpleUnionTable}}};
+static const struct FidlXUnionField Fields45v1_fidl_test_json_NewerSimpleUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u}
+};
+const fidl_type_t v1_fidl_test_json_NewerSimpleUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields45v1_fidl_test_json_NewerSimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/NewerSimpleUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer31fidl_test_json_NewerSimpleUnionTable}}};
 static const struct FidlXUnionField Fields31v1_fidl_test_json_FlexibleUnion[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u},
@@ -295,6 +552,16 @@ static const struct FidlXUnionField Fields42v1_fidl_test_json_FlexibleUnionNulla
     /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u}
 };
 const fidl_type_t v1_fidl_test_json_FlexibleUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields42v1_fidl_test_json_FlexibleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer28fidl_test_json_FlexibleUnionTable}}};
+static const struct FidlXUnionField Fields29v1_fidl_test_json_FlexibleFoo[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields29v1_fidl_test_json_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_FlexibleFooTable}}};
+static const struct FidlXUnionField Fields40v1_fidl_test_json_FlexibleFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields40v1_fidl_test_json_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer26fidl_test_json_FlexibleFooTable}}};
 static const struct FidlXUnionField Fields32v1_fidl_test_json_FieldCollision[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };
@@ -303,6 +570,16 @@ static const struct FidlXUnionField Fields43v1_fidl_test_json_FieldCollisionNull
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };
 const fidl_type_t v1_fidl_test_json_FieldCollisionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields43v1_fidl_test_json_FieldCollisionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FieldCollision", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer29fidl_test_json_FieldCollisionTable}}};
+static const struct FidlXUnionField Fields32v1_fidl_test_json_ExplicitXUnion[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=4u}
+};
+const fidl_type_t v1_fidl_test_json_ExplicitXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields32v1_fidl_test_json_ExplicitXUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/ExplicitXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_ExplicitXUnionTable}}};
+static const struct FidlXUnionField Fields43v1_fidl_test_json_ExplicitXUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=4u}
+};
+const fidl_type_t v1_fidl_test_json_ExplicitXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields43v1_fidl_test_json_ExplicitXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/ExplicitXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer29fidl_test_json_ExplicitXUnionTable}}};
 static const struct FidlXUnionField Fields31v1_fidl_test_json_ExplicitUnion[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u}
@@ -313,3 +590,34 @@ static const struct FidlXUnionField Fields42v1_fidl_test_json_ExplicitUnionNulla
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u}
 };
 const fidl_type_t v1_fidl_test_json_ExplicitUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields42v1_fidl_test_json_ExplicitUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/ExplicitUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer28fidl_test_json_ExplicitUnionTable}}};
+static const struct FidlXUnionField Fields35v1_fidl_test_json_ExplicitStrictFoo[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u}
+};
+const fidl_type_t v1_fidl_test_json_ExplicitStrictFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields35v1_fidl_test_json_ExplicitStrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/ExplicitStrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_ExplicitStrictFooTable}}};
+static const struct FidlXUnionField Fields46v1_fidl_test_json_ExplicitStrictFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u}
+};
+const fidl_type_t v1_fidl_test_json_ExplicitStrictFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields46v1_fidl_test_json_ExplicitStrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/ExplicitStrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer32fidl_test_json_ExplicitStrictFooTable}}};
+static const struct FidlXUnionField Fields29v1_fidl_test_json_ExplicitFoo[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_ExplicitFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields29v1_fidl_test_json_ExplicitFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/ExplicitFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_ExplicitFooTable}}};
+static const struct FidlXUnionField Fields40v1_fidl_test_json_ExplicitFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_ExplicitFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields40v1_fidl_test_json_ExplicitFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/ExplicitFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer26fidl_test_json_ExplicitFooTable}}};
+static const struct FidlStructField Fields23v1_fidl_test_json_Empty[] = {};
+const fidl_type_t v1_fidl_test_json_EmptyTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields23v1_fidl_test_json_Empty, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/Empty", .alt_type=&fidl_test_json_EmptyTable}}};
+
+static const struct FidlXUnionField Fields45v1_fidl_test_json_XUnionContainingEmptyStruct[] = {
+    /*FidlXUnionField*/{.type=&v1_fidl_test_json_EmptyTable, .ordinal=1u}
+};
+const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields45v1_fidl_test_json_XUnionContainingEmptyStruct, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/XUnionContainingEmptyStruct", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_XUnionContainingEmptyStructTable}}};
+static const struct FidlXUnionField Fields56v1_fidl_test_json_XUnionContainingEmptyStructNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_fidl_test_json_EmptyTable, .ordinal=1u}
+};
+const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields56v1_fidl_test_json_XUnionContainingEmptyStructNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/XUnionContainingEmptyStruct", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer42fidl_test_json_XUnionContainingEmptyStructTable}}};

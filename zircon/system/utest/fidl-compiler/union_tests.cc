@@ -13,6 +13,81 @@
 
 namespace {
 
+static bool Compiles(const std::string& source_code,
+                     std::vector<std::string>* out_errors = nullptr) {
+  auto library = TestLibrary("test.fidl", source_code);
+  const bool success = library.Compile();
+
+  if (out_errors) {
+    *out_errors = library.errors();
+  }
+
+  return success;
+}
+
+bool compiling() {
+  BEGIN_TEST;
+
+  // Keywords as field names.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library test;
+
+struct struct {
+    bool field;
+};
+
+union Foo {
+    1: int64 union;
+    2: bool library;
+    3: uint32 uint32;
+    4: struct member;
+};
+)FIDL"));
+
+  // Recursion is allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library test;
+
+union Value {
+  1: bool bool_value;
+  2: vector<Value?> list_value;
+};
+)FIDL"));
+
+  // Mutual recursion is allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library test;
+
+union Foo {
+  1: Bar bar;
+};
+
+struct Bar {
+  Foo? foo;
+};
+)FIDL"));
+
+  // Specifying flexible is allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library test;
+
+flexible union Foo {
+  1: string bar;
+};
+)FIDL"));
+
+  // Specifying strict is allowed.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library test;
+
+strict union Foo {
+  1: string bar;
+};
+)FIDL"));
+
+  END_TEST;
+}
+
 bool must_have_explicit_ordinals() {
   BEGIN_TEST;
 
@@ -267,9 +342,111 @@ union Foo {
   END_TEST;
 }
 
+bool no_directly_recursive_unions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union Value {
+  1: Value value;
+};
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "There is an includes-cycle in declarations");
+
+  END_TEST;
+}
+
+bool invalid_empty_unions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union Foo {};
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "must have at least one non reserved member");
+
+  END_TEST;
+}
+
+bool error_syntax_explicit_ordinals() {
+  BEGIN_TEST;
+  TestLibrary error_library(R"FIDL(
+library example;
+protocol Example {
+  Method() -> () error int32;
+};
+)FIDL");
+  ASSERT_TRUE(error_library.Compile());
+  const fidl::flat::Union* error_union = error_library.LookupUnion("Example_Method_Result");
+  ASSERT_NOT_NULL(error_union);
+  ASSERT_EQ(error_union->members.front().ordinal->value, 1);
+  ASSERT_EQ(error_union->members.back().ordinal->value, 2);
+  END_TEST;
+}
+
+bool no_selector() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union Foo {
+  [Selector = "v2"] 1: string v;
+};
+ 
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Selector' disallowed here");
+
+  END_TEST;
+}
+
+bool deprecated_xunion_warning() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+xunion Foo {
+  1: string foo;
+};
+
+flexible xunion FlexibleFoo {
+  1: string foo;
+};
+
+strict xunion StrictFoo {
+  1: string foo;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  auto warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 3);
+  ASSERT_STR_STR(warnings[0].c_str(), "xunion is deprecated, please use `flexible union` instead");
+  ASSERT_STR_STR(warnings[1].c_str(), "xunion is deprecated, please use `flexible union` instead");
+  ASSERT_STR_STR(warnings[2].c_str(),
+                 "strict xunion is deprecated, please use `strict union` instead");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(union_tests)
+RUN_TEST(compiling)
 RUN_TEST(must_have_explicit_ordinals)
 RUN_TEST(explicit_ordinals)
 RUN_TEST(explicit_ordinals_with_reserved)
@@ -281,4 +458,9 @@ RUN_TEST(default_not_allowed)
 RUN_TEST(must_be_dense)
 RUN_TEST(must_have_at_least_one_non_reserved)
 RUN_TEST(no_nullable_members_in_unions)
+RUN_TEST(no_directly_recursive_unions)
+RUN_TEST(invalid_empty_unions)
+RUN_TEST(error_syntax_explicit_ordinals)
+RUN_TEST(no_selector)
+RUN_TEST(deprecated_xunion_warning)
 END_TEST_CASE(union_tests)

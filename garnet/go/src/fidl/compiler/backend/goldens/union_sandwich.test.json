@@ -349,7 +349,7 @@
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 10,
-        "column": 14
+        "column": 7
       },
       "members": [
         {
@@ -384,7 +384,7 @@
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 20,
-        "column": 14
+        "column": 7
       },
       "members": [
         {
@@ -423,7 +423,7 @@
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 35,
-        "column": 14
+        "column": 7
       },
       "members": [
         {
@@ -459,7 +459,7 @@
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 45,
-        "column": 14
+        "column": 7
       },
       "members": [
         {

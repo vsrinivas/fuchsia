@@ -1313,10 +1313,21 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+        auto strictness = maybe_strictness.value_or(types::Strictness::kFlexible);
+        switch (strictness) {
+          case types::Strictness::kFlexible:
+            error_reporter_->ReportWarning(
+                last_token_, "xunion is deprecated, please use `flexible union` instead");
+            break;
+          case types::Strictness::kStrict:
+            error_reporter_->ReportWarning(
+                last_token_, "strict xunion is deprecated, please use `strict union` instead");
+            break;
+        }
         done_with_library_imports = true;
         ConsumeToken(IdentifierOfSubkind(Token::Subkind::kXUnion));
-        union_declaration_list.emplace_back(ParseUnionDeclaration(
-            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kFlexible)));
+        union_declaration_list.emplace_back(
+            ParseUnionDeclaration(std::move(attributes), scope, strictness));
         return More;
     }
   };
