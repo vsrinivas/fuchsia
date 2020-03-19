@@ -60,6 +60,18 @@ group("scenic") {
   ]
 }
 
+# WARNING: Known to topaz.
+group("scenic_no_ime") {
+  public_deps = [
+    "//garnet/packages/prod:sysmem_connector",
+    "//garnet/packages/prod:vulkan",
+    "//src/ui/bin/activity",
+    "//src/ui/bin/root_presenter",
+    "//src/ui/bin/root_presenter:configs",
+    "//src/ui/scenic",
+  ]
+}
+
 group("cpuperf") {
   testonly = true
   public_deps = [
