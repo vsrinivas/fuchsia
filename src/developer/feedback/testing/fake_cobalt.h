@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_MOCK_COBALT_H_
-#define SRC_DEVELOPER_FEEDBACK_TESTING_MOCK_COBALT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/cobalt/test/cpp/fidl.h>
@@ -106,4 +106,4 @@ void FakeCobalt::GetNewEventsOfType(
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_MOCK_COBALT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_

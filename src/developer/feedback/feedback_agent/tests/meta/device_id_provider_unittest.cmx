@@ -2,7 +2,7 @@
     "program": {
         "binary": "test/device_id_provider_unittest"
     },
-   "sandbox": {
+    "sandbox": {
         "features": [
             "isolated-temp"
         ],

@@ -2,8 +2,8 @@
 // Use of this source is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_WITH_CAPACITY_H_
-#define SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_WITH_CAPACITY_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_H_
 
 #include <cstdint>
 #include <string>
@@ -52,4 +52,4 @@ class WriteOnlyFile {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_WITH_CAPACITY_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_H_

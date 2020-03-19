@@ -2,8 +2,8 @@
 // Use of this source is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_SIZE_H_
-#define SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_SIZE_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_FILE_SIZE_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_FILE_SIZE_H_
 
 #include <cstdint>
 
@@ -66,4 +66,4 @@ class FileSize {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_SIZE_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FILE_SIZE_H_

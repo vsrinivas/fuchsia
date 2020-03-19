@@ -47,7 +47,7 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
       crash_server_(crash_server),
       info_(std::move(info_context)),
       network_reconnection_backoff_(/*initial_delay=*/zx::min(1), /*retry_factor=*/2u,
-                                   /*max_delay=*/zx::hour(1)) {
+                                    /*max_delay=*/zx::hour(1)) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(database_);
 

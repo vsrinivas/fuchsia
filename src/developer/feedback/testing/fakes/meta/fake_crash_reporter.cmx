@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-       "services": [
+        "services": [
             "fuchsia.logger.LogSink"
         ]
     }
