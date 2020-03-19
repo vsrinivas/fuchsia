@@ -11,8 +11,8 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
-FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
+FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
+FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 FUCHSIA_SERVER_PORT="8083"
 IMAGE_NAME="generic-x64"
@@ -88,13 +88,8 @@ esac
 shift
 done
 
-# Check for core SDK being present
-if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
-  exit 2
-fi
 
-SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
+SDK_ID="$(get-sdk-version)"
 
 # The package tarball.  We add the SDK ID to the filename to make them
 # unique.
@@ -174,6 +169,7 @@ if [[ "${PREPARE_ONLY}" == "yes" ]]; then
   exit 0
 fi
 
+# Explicitly pass the sdk path for these methods.
 HOST_IP=$(get-host-ip "${FUCHSIA_SDK_PATH}" "$DEVICE_NAME_FILTER")
 DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
 if [[ ! "$?" || -z "$DEVICE_IP" ]]; then

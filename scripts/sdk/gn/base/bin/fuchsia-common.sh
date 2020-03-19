@@ -23,6 +23,22 @@ if is-mac; then
       [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
   }
 fi
+# Returns the fuchsia sdk root dir. Assuming this script is in ${FUCHSIA_SDK}/bin.
+function get-fuchsia-sdk-dir {
+  dirname "${SCRIPT_SRC_DIR}"
+}
+
+# Returns the data directory for the fuchsia sdk.
+# This directory is expected to be per-developer, not checked into source code revision systems,
+# and is used to store device images and packages and related data items.
+function get-fuchsia-sdk-data-dir {
+  local data_dir
+  data_dir="$(get-fuchsia-sdk-dir)/images"
+  if [[ -d "${data_dir}" ]]; then
+    mkdir -p "${data_dir}"
+  fi
+  echo "${data_dir}" 
+}
 
 # fx-warn prints a line to stderr with a yellow WARNING: prefix.
 function fx-warn {
@@ -47,15 +63,15 @@ function ssh-cmd {
 }
 
 function get-device-ip {
-  # $1 is the SDK_PATH.
+  # $1 is the SDK_PATH (optional. defaults to get-fuchsia-sdk-dir)
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
-  "${1}/tools/device-finder" list -netboot -device-limit 1 -ipv4=false
+  "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -ipv4=false
 }
 
 function get-device-name {
-  # $1 is the SDK_PATH.
-  "${1}/tools/device-finder" list -netboot -device-limit 1 -full | cut -d\  -f2
+  # $1 is the SDK_PATH (optional. defaults to get-fuchsia-sdk-dir)
+  "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -full | cut -d\  -f2
 }
 
 function get-device-ip-by-name {
@@ -63,7 +79,7 @@ function get-device-ip-by-name {
   # If no such device is found, this function returns with a non-zero status
   # code.
 
-  # $1 is the SDK_PATH.
+  # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
   # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
 
@@ -71,21 +87,25 @@ function get-device-ip-by-name {
     # There should typically only be one device that matches the nodename
     # but we add a device-limit to speed up resolution by exiting when the first
     # candidate is found.
-    "${1}/tools/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${2}"
+    "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${2}"
   else
-    get-device-ip "$1"
+    if [[ -n "$1" ]]; then
+      get-device-ip "$1"
+    else
+      get-device-ip
+    fi
   fi
 }
 
 function get-host-ip {
-  # $1 is the SDK_PATH.
+  # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
   # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
   local DEVICE_NAME
   if [[ "${2}" != "" ]]; then
     DEVICE_NAME="${2}"
   else
-    DEVICE_NAME="$(get-device-name "${1}")"
+    DEVICE_NAME="$(get-device-name "${1-$(get-fuchsia-sdk-dir)}")"
   fi
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
@@ -95,13 +115,13 @@ function get-host-ip {
   #   the development host with a different scope than vice versa), we can
   #   strip this from the IPv6 result. This is reliable as long as the Fuchsia
   #   device only needs link-local networking on one interface.
-  "${1}/tools/device-finder" resolve -local -ipv4=false "${DEVICE_NAME}" | head -1 | cut -d '%' -f1
+  "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" resolve -local -ipv4=false "${DEVICE_NAME}" | head -1 | cut -d '%' -f1
 }
 
 function get-sdk-version {
 # Get the Fuchsia SDK id
-# $1 is the SDK_PATH.
-  local FUCHSIA_SDK_METADATA="${1}/meta/manifest.json"
+ # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
+ local FUCHSIA_SDK_METADATA="${1-$(get-fuchsia-sdk-dir)}/meta/manifest.json"
   grep \"id\": "${FUCHSIA_SDK_METADATA}" | cut -d\" -f4
 }
 

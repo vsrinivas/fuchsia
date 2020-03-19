@@ -19,9 +19,10 @@ IMAGE_NAME="qemu-x64"
 VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 
 # Export variables needed here but also in femu.sh
-FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
+FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 export FUCHSIA_SDK_PATH
-export FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
+FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
+export FUCHSIA_IMAGE_WORK_DIR
 
 emu_help () {
   # Extract command-line argument help from emu script, similar to fx-print-command-help
@@ -88,24 +89,19 @@ esac
 shift
 done
 
-# Check for core SDK being present
-if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
-  exit 2
-fi
 
-if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-  if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
-    AUTH_KEYS_FILE="${FUCHSIA_SDK_PATH}/authkeys.txt"
+if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
+  AUTH_KEYS_FILE="$(get-fuchsia-sdk-dir)/authkeys.txt"
+  if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
     # Store the SSL auth keys to a file for sending to the device.
     if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
       fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
       exit 1
     fi
-  else
+  fi
+elif [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
     fx-error "Argument --authorized-keys was specified as ${AUTH_KEYS_FILE} but it does not exist"
     exit 1
-  fi
 fi
 
 if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then

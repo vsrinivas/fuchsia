@@ -15,9 +15,8 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
-export FUCHSIA_SDK_PATH
-export FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
+FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
+FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 
 usage () {
   echo "Usage: $0 <files.far>"
@@ -49,11 +48,5 @@ case $1 in
 esac
 shift
 done
-
-# Check for core SDK being present
-if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
-  exit 2
-fi
 
 "${FUCHSIA_SDK_PATH}/tools/pm" publish  -a -r "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -f "${POSITIONAL[@]}";

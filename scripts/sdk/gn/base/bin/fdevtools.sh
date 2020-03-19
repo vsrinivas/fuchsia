@@ -17,10 +17,9 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 # Computed from instance id at https://chrome-infra-packages.appspot.com/p/fuchsia_internal/gui_tools/fuchsia_devtools/linux-amd64/+/dogfood-1-1
 VER_DEVTOOLS="$(cat "${SCRIPT_SRC_DIR}/devtools.version")"
 
-FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
-export FUCHSIA_SDK_PATH
-FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
+FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 export FUCHSIA_IMAGE_WORK_DIR
+
 
 usage () {
   echo "Usage: $0"
@@ -65,24 +64,18 @@ esac
 shift
 done
 
-# Check for core SDK being present
-if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
-  exit 2
-fi
-
-if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-  if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
-    AUTH_KEYS_FILE="${FUCHSIA_SDK_PATH}/authkeys.txt"
+if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
+  AUTH_KEYS_FILE="$(get-fuchsia-sdk-dir)/authkeys.txt"
+  if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
     # Store the SSL auth keys to a file for sending to the device.
     if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
       fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
       exit 1
     fi
-  else
+  fi
+elif [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
     fx-error "Argument --authorized-keys was specified as ${AUTH_KEYS_FILE} but it does not exist"
     exit 1
-  fi
 fi
 
 if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then
@@ -115,7 +108,8 @@ FDT_GN_SSH="$(command -v ssh)"
 export FDT_GN_SSH
 export FDT_SSH_CONFIG="${SCRIPT_SRC_DIR}/sshconfig"
 export FDT_SSH_KEY="${AUTH_KEYS_FILE}"
-export FDT_GN_DEVFIND="${FUCHSIA_SDK_PATH}/tools/device-finder"
+FDT_GN_DEVFIND="$(get-fuchsia-sdk-dir)/tools/device-finder"
+export FDT_GN_DEVFIND
 export FDT_DEBUG="true"
 echo "Starting system_monitor with FDT_ARGS=[${FDT_ARGS[*]}] and FDT_DIR=${FDT_DIR}, FDT_TOOLCHAIN=${FDT_TOOLCHAIN}, FDT_GN_SSH=${FDT_GN_SSH}, FDT_SSH_CONFIG=${FDT_SSH_CONFIG}, FDT_SSH_KEY=${FDT_SSH_KEY}, FDT_GN_DEVFIND=${FDT_GN_DEVFIND}, FDT_DEBUG=${FDT_DEBUG}"
 "${FDT_DIR}/system_monitor/linux/system_monitor" "${FDT_ARGS[@]}"

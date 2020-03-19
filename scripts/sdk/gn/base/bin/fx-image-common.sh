@@ -17,11 +17,16 @@ fi
 
 # Variables expected by fx emu
 ZIRCON_TOOLS_DIR="${FUCHSIA_SDK_PATH}/tools"
+# shellcheck disable=SC2034
 HOST_OUT_DIR="${FUCHSIA_SDK_PATH}/tools"
+# shellcheck disable=SC2034
 IMAGE_ZIRCONA_ZBI="zircon-a.zbi"
+# shellcheck disable=SC2034
 IMAGE_QEMU_KERNEL_RAW="qemu-kernel.kernel"
+# shellcheck disable=SC2034
 IMAGE_FVM_RAW="storage-full.blk"
 # TODO(fxb/43807): Replace FUCHSIA_ARCH with detecting the architecture, currently only tested with *-x64 images
+# shellcheck disable=SC2034
 FUCHSIA_ARCH="x64"
 
 # Provide fx-zbi functionality using the SDK zbi tool

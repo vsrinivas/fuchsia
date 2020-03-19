@@ -17,8 +17,6 @@ source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 AEMU_VERSION="git_revision:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
 
-
-
 # Helpers.
 
 # Verifies that the given arguments appear in the command line invocation of the
@@ -54,10 +52,57 @@ check_mock_has_args() {
   return 1
 }
 
+# Verifies that the correct emulator command is run by femu when no arguments are provided on the command line.
+TEST_femu_noargs() {
+
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
+  # Mock authkeys
+  echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
+    >"${BT_TEMP_DIR}/scripts/sdk/gn/base/authkeys.txt"
+
+
+  # Create fake "curl" command to that creates a simulated zip file based on the mocked emulator script
+  # femu.sh calls curl like this, so use $4 to write output: curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
+  cat >"${PATH_DIR_FOR_TEST}/curl.mock_side_effects" <<INPUT
+zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator"
+INPUT
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
+
+  # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/fvm.mock_state"
+  gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048
+
+  # Check that fpave.sh was called to download the needed system images
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
+
+  # Check that fserve.sh was called to download the needed system images
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
+
+  # Verify that zbi was called to add the authorized_keys
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/zbi.mock_state"
+  gn-test-check-mock-args _ANY_ -o _ANY_ "${FUCHSIA_WORK_DIR}/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/authkeys.txt"
+
+  # Verify some of the arguments passed to the emulator binary
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator.mock_state"
+  check_mock_has_args -fuchsia
+
+}
+
 # Verifies that the correct emulator command is run by femu, along with the image setup.
 # This tests the -N option. On mac os, this is expected to fail.
 TEST_femu_networking() {
- 
+
   PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
   export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
@@ -69,7 +114,7 @@ INPUT
   # Create fake "curl" command to that creates a simulated zip file based on the mocked emulator script
   # femu.sh calls curl like this, so use $4 to write output: curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
   cat >"${PATH_DIR_FOR_TEST}/curl.mock_side_effects" <<INPUT
-zip "\$4" "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator"
+zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator"
 INPUT
 
   if is-mac; then
@@ -98,21 +143,21 @@ INPUT
   # Check that fpave.sh was called to download the needed system images
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
-  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
   # Check that fserve.sh was called to download the needed system images
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
-  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
   # Verify that zbi was called to add the authorized_keys
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/zbi.mock_state"
-  gn-test-check-mock-args _ANY_ -o _ANY_ "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
+  gn-test-check-mock-args _ANY_ -o _ANY_ "${FUCHSIA_WORK_DIR}/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator.mock_state"
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator.mock_state"
   # The mac address is computed with a hash function in fx emu but will not change if the device
   # is named qemu. We test the generated mac address here since our scripts use the mac for a
   # hard coded address to SSH into the device.
@@ -122,7 +167,6 @@ INPUT
   check_mock_has_args --unknown-arg1-to-qemu
   check_mock_has_args --unknown-arg2-to-qemu
 }
-
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
@@ -148,13 +192,19 @@ BT_MOCKED_TOOLS=(
   _isolated_path_for/stty
 )
 
+BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+
+  # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
+  mkdir -p "${FUCHSIA_WORK_DIR}/image"
+  dd if=/dev/zero of="${FUCHSIA_WORK_DIR}/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null
+}
+
 BT_INIT_TEMP_DIR() {
+
   # Generate the aemu.version file based on the simulated version string
   echo "${AEMU_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/aemu.version"
 
-  # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
-  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image"
-  dd if=/dev/zero of="${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null
 
   # Create empty authorized_keys file to add to the system image, but the contents are not used.
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"

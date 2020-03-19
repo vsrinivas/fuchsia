@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
 #### CATEGORY=Device management
 ### copy a file to/from a target device
 
@@ -11,7 +15,7 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
+FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 
 function usage {
   cat << EOF
@@ -90,6 +94,7 @@ fi
 
 # Get the device IP address if not specified.
 if [[ "${target_addr}" == "" ]]; then
+  # explicitly pass the sdk here since the name filter arg must be $2.
   target_addr=$(get-device-ip-by-name "${FUCHSIA_SDK_PATH}" "${DEVICE_NAME_FILTER}")
   if [[ ! "$?" || -z "${target_addr}" ]]; then
     fx-error "Error finding device"

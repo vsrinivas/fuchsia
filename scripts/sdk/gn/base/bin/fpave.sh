@@ -15,8 +15,8 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
-FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
+FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
+FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 DEVICE_NAME_FILTER=""
 IMAGE_NAME="generic-x64"
@@ -95,13 +95,8 @@ esac
 shift
 done
 
-# Check for core SDK being present
-if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
-  exit 2
-fi
 
-SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
+SDK_ID="$(get-sdk-version)"
 
 if [[ "${IMAGE_NAME}" == "list" ]]; then
   IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
@@ -178,18 +173,18 @@ if [[ "${PREPARE_ONLY}" == "yes" ]]; then
   exit 0
 fi
 
-if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-  if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
-    AUTH_KEYS_FILE="${FUCHSIA_SDK_PATH}/authkeys.txt"
+if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
+  AUTH_KEYS_FILE="$(get-fuchsia-sdk-dir)/authkeys.txt"
+  if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
     # Store the SSL auth keys to a file for sending to the device.
     if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
       fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
       exit 1
     fi
-  else
+  fi
+elif [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
     fx-error "Argument --authorized-keys was specified as ${AUTH_KEYS_FILE} but it does not exist"
     exit 1
-  fi
 fi
 
 if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then
@@ -205,6 +200,7 @@ fi
 
 # Get the device IP address.  If we can't find it, it could be at the zedboot
 # page, so it is not fatal.
+# Explicitly pass the sdk path to match the device_filter.
 DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
 if [[ "$?" && -n "$DEVICE_IP" ]]; then
     SSH_ARGS+=( "${DEVICE_IP}" dm reboot-recovery )

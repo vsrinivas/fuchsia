@@ -16,9 +16,8 @@ source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 DEVTOOLS_VERSION="git_revision:unknown"
 DEVTOOLS_LABEL="$(echo "${DEVTOOLS_VERSION}" | tr ':/' '_')"
 
-
 # Verifies that the correct commands are run before starting Fuchsia DevTools
-TEST_fdevtools() {
+TEST_fdevtools_with_authkeys() {
   # Run command.
   BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
     --version "${DEVTOOLS_VERSION}" \
@@ -27,12 +26,35 @@ TEST_fdevtools() {
   # Verify that cipd was called to download the correct path
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
-  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools-${DEVTOOLS_LABEL}"
+  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
 
   # Verify that the executable is called, no arguments are passed
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/system_monitor.mock_state"
-  gn-test-check-mock-args "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/system_monitor"
+  source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/system_monitor.mock_state"
+  gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/system_monitor"
+}
+
+TEST_fdevtools_noargs() {
+
+  # Set the version file to match the mock
+   echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
+
+  # Mock authkeys
+  echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
+    >"${BT_TEMP_DIR}/scripts/sdk/gn/base/authkeys.txt"
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh"
+
+  # Verify that cipd was called to download the correct path
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
+  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
+
+  # Verify that the executable is called, no arguments are passed
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/system_monitor.mock_state"
+  gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/system_monitor/linux/system_monitor"
 }
 
 # Test initialization.
@@ -47,6 +69,10 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/images/fuchsia_devtools-"${DEVTOOLS_LABEL}"/system_monitor/linux/system_monitor
   scripts/sdk/gn/base/bin/cipd
 )
+
+BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+}
 
 BT_INIT_TEMP_DIR() {
   # Generate an invalid devtools.version that we will never see since --version overrides this

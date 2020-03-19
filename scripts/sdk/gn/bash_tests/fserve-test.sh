@@ -97,15 +97,15 @@ EOF
 set_up_sdk_stubs() {
   # The filename is constructed from the Core SDK version ("id") in the
   # manifest. See //scripts/sdk/gn/testdata/meta/manifest.json.
-  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image"
-  local tarball="${BT_TEMP_DIR}/scripts/sdk/gn/base/images/8890373976687374912_generic-x64.tgz"
+  mkdir -p "${FUCHSIA_WORK_DIR}/image"
+  local tarball="${FUCHSIA_WORK_DIR}/8890373976687374912_generic-x64.tgz"
 
   touch foo
   tar czf "${tarball}" foo
 
   local hash
   hash=$(run-md5 "${tarball}" | cut -d ' ' -f 1)
-  echo "${hash}  ${tarball}" >"${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5"
+  echo "${hash}  ${tarball}" >"${FUCHSIA_WORK_DIR}/image/image.md5"
 }
 
 # Helpers.
@@ -189,7 +189,7 @@ TEST_fserve_starts_package_server() {
 
   BT_EXPECT_EQ 6 ${#BT_MOCK_ARGS[@]}
   check_mock_has_args serve
-  check_mock_has_args -repo "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/packages/amber-files"
+  check_mock_has_args -repo "${FUCHSIA_WORK_DIR}/packages/amber-files"
   check_mock_has_args -l :8083
 
   # Verify that pm was only run once.
@@ -244,6 +244,10 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/pm
   ssh
 )
+
+BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+}
 
 BT_INIT_TEMP_DIR() {
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta"

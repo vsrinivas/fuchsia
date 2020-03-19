@@ -97,8 +97,8 @@ set_up_sdk_stubs() {
 
   # The filename is constructed from the Core SDK version ("id") in the
   # manifest. See //scripts/sdk/gn/testdata/meta/manifest.json.
-  local tarball="${BT_TEMP_DIR}/scripts/sdk/gn/base/images/8890373976687374912_generic-x64.tgz"
-  echo "${hash} ${tarball}" >"${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5"
+  local tarball="${FUCHSIA_WORK_DIR}/8890373976687374912_generic-x64.tgz"
+  echo "${hash} ${tarball}" >"${FUCHSIA_WORK_DIR}/image/image.md5"
 }
 
 
@@ -142,13 +142,13 @@ TEST_fpave_starts_paving() {
 
   # Verify that the pave.sh script from the Fuchsia SDK was started correctly.
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/pave.sh.mock_state"
+  source "${FUCHSIA_WORK_DIR}/image/pave.sh.mock_state"
 
   local expected_args=( _ANY_ --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" -1 )
   gn-test-check-mock-args "${expected_args[@]}"
 
   # Verify that pave.sh was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/pave.sh.mock_state.1"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${FUCHSIA_WORK_DIR}/image/pave.sh.mock_state.1"
 }
 
 # Verify image names are listed if the image is not found.
@@ -174,17 +174,17 @@ TEST_fpave_switch_types() {
 
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1.txt 2>&1
  BT_EXPECT_FILE_CONTAINS pave_image1.txt ""
- BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5" "8890373976687374912_image1.tgz"
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image1.tgz"
 
  # Same command, should skip download
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1_again.txt 2>&1
  BT_EXPECT_FILE_CONTAINS pave_image1_again.txt "Skipping download, image exists."
- BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5" "8890373976687374912_image1.tgz"
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image1.tgz"
 
  # Switch images, should delete old file.
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image2 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image2.txt 2>&1
  BT_EXPECT_FILE_CONTAINS  "pave_image2.txt" "WARNING: Removing old image files."
- BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5" "8890373976687374912_image2.tgz"
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image2.tgz"
 }
 
 # shellcheck disable=SC2034
@@ -204,8 +204,9 @@ BT_MOCKED_TOOLS=(
 )
 
 BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
-  tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image"  "."
+  tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${FUCHSIA_WORK_DIR}/image"  "."
 }
 
 BT_INIT_TEMP_DIR() {

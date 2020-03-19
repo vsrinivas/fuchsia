@@ -13,7 +13,7 @@ readonly MY_SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2
 # shellcheck disable=SC1090
 source "${MY_SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-readonly FUCHSIA_SDK_PATH="$(realpath "${MY_SCRIPT_SRC_DIR}/..")"
+readonly FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 
 function usage {
   echo "Usage: $0"
@@ -69,14 +69,9 @@ readonly POSITIONAL
 
 target_device_ip="${DEVICE_IP}"
 
-# Check for core SDK being present
-if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
-  exit 2
-fi
-
 # Get the device IP address.
 if [[ "${DEVICE_IP}" == "" ]]; then
+  # explicitly pass the sdk dir here.
   target_device_ip=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
   if [[ ! "$?" || -z "$target_device_ip" ]]; then
     fx-error "Error finding device"

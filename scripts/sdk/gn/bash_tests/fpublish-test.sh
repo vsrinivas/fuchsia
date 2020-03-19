@@ -29,7 +29,7 @@ TEST_fpublish() {
   local EXPECTED_PM_PUBLISH_ARGS=(
     publish
     -a
-    -r "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/packages/amber-files"
+    -r "${FUCHSIA_WORK_DIR}/packages/amber-files"
     -f "${PACKAGE_NAME}"
   )
 
@@ -44,7 +44,7 @@ TEST_fpublish() {
   done
 
   # Verify that pm was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/tools/pm.mock_state.1"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state.1"
 }
 
 # Test initialization.
@@ -58,5 +58,9 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/pm
 )
+
+BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+}
 
 BT_RUN_TESTS "$@"
