@@ -28,8 +28,8 @@ class unowned_ptr {
  public:
   constexpr unowned_ptr() noexcept : ptr_(nullptr) {}
   constexpr unowned_ptr(std::nullptr_t) noexcept : ptr_(nullptr) {}
-  unowned_ptr(const unowned_ptr<T>&) = default;
-  unowned_ptr(unowned_ptr<T>&&) = default;
+  unowned_ptr(const unowned_ptr<T>&) noexcept = default;
+  unowned_ptr(unowned_ptr<T>&&) noexcept = default;
   template <typename U = T>
   explicit unowned_ptr(U* ptr) noexcept : ptr_(ptr) {}
   // Enable static casting from types where it is possible on the underlying pointer.

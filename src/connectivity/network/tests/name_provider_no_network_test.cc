@@ -43,7 +43,7 @@ TEST(NameProviderTest, GetDeviceName) {
   auto result = std::move(response.Unwrap()->result);
 
   ASSERT_TRUE(!result.is_err()) << zx_status_get_string(result.err());
-  auto name = result.response().name;
+  auto& name = result.response().name;
 
   // regression test: ensure that no additional data is present past the last null byte
   EXPECT_EQ(name.size(), strlen(llcpp::fuchsia::device::DEFAULT_DEVICE_NAME));

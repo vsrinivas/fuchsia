@@ -470,7 +470,7 @@ void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
 
 void DataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                              WriteFirmwareCompleter::Sync completer) {
-  auto variant = sink_.WriteFirmware(type, std::move(payload));
+  auto variant = sink_.WriteFirmware(std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 
@@ -765,7 +765,7 @@ void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configura
 
 void DynamicDataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                                     WriteFirmwareCompleter::Sync completer) {
-  auto variant = sink_.WriteFirmware(type, std::move(payload));
+  auto variant = sink_.WriteFirmware(std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 

@@ -163,6 +163,13 @@ TEST(UnownedPtr, Comparison) {
   set.insert(lower);
 }
 
+TEST(UnownedPtr, Const) {
+  int32_t val = 1;
+  fidl::unowned_ptr<int32_t> ptr(&val);
+  fidl::unowned_ptr<const int32_t> const_ptr(ptr);
+  EXPECT_EQ(*const_ptr, val);
+}
+
 TEST(UnownedPtr, Casting) {
   class Base {};
   class Derived : public Base {};

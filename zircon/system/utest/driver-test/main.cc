@@ -52,7 +52,8 @@ void do_one_test(const IsolatedDevmgr& devmgr,
     return;
   }
 
-  auto result = test_root->CreateDevice({drv_libname, strlen(drv_libname)}, std::move(test_remote));
+  auto result = test_root->CreateDevice(fidl::unowned_str(drv_libname, strlen(drv_libname)),
+                                        std::move(test_remote));
   if (result.status() != ZX_OK) {
     printf("driver-tests: error %s during IPC for creating device for %s\n",
            zx_status_get_string(result.status()), drv_libname);

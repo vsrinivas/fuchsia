@@ -83,7 +83,7 @@ zx_status_t fd_matches_name(const fbl::unique_fd& fd, const char* dev_name, bool
     call_status = resp->result.err();
   } else {
     path_len = resp->result.response().path.size();
-    auto r = resp->result.response();
+    auto& r = resp->result.response();
     memcpy(path, r.path.data(), r.path.size());
   }
 

@@ -40,7 +40,7 @@ constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
   path_cursor += service.size();
   *path_cursor++ = '/';
   memcpy(path_cursor, instance.data(), instance.size());
-  return fit::ok(::fidl::StringView(buffer->data(), path_size));
+  return fit::ok(::fidl::unowned_str(buffer->data(), path_size));
 }
 
 }  // namespace
@@ -62,8 +62,8 @@ zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, ::fidl::StringView path,
 zx_status_t OpenNamedServiceAt(zx::unowned_channel dir, fit::string_view service,
                                fit::string_view instance, zx::channel remote) {
   ::fidl::Array<char, kMaxPath> path_buffer;
-  ::fidl::result<::fidl::StringView> path_result =
-      ValidateAndJoinPath(&path_buffer, ::fidl::StringView(service), ::fidl::StringView(instance));
+  ::fidl::result<::fidl::StringView> path_result = ValidateAndJoinPath(
+      &path_buffer, ::fidl::unowned_str(service), ::fidl::unowned_str(instance));
   if (!path_result.is_ok()) {
     return path_result.error();
   }

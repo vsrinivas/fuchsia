@@ -178,7 +178,7 @@ void DevfsConnection::GetDriverName(GetDriverNameCompleter::Sync completer) {
   if (name == nullptr) {
     name = "unknown";
   }
-  completer.Reply(ZX_OK, {name, strlen(name)});
+  completer.Reply(ZX_OK, fidl::unowned_str(name, strlen(name)));
 }
 
 void DevfsConnection::GetDeviceName(GetDeviceNameCompleter::Sync completer) {
@@ -196,8 +196,8 @@ void DevfsConnection::GetTopologicalPath(GetTopologicalPathCompleter::Sync compl
     // Remove the accounting for the null byte
     actual--;
   }
-  auto path = ::fidl::StringView(buf, actual);
-  completer.ReplySuccess(path);
+  auto path = ::fidl::unowned_str(buf, actual);
+  completer.ReplySuccess(std::move(path));
 }
 
 void DevfsConnection::GetEventHandle(GetEventHandleCompleter::Sync completer) {

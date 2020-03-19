@@ -80,7 +80,7 @@ static void populate_topo_path(const zx::channel& channel, blkinfo_t* info) {
   }
 
   path_len = resp->result.response().path.size();
-  auto r = resp->result.response();
+  auto& r = resp->result.response();
   memcpy(info->topo, r.path.data(), r.path.size());
 
   info->topo[path_len] = '\0';

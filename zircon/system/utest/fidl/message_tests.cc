@@ -5,6 +5,7 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
+#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -30,7 +31,7 @@ bool message_test() {
   fidl::StringView* view = builder.New<fidl::StringView>();
 
   char* data = builder.NewArray<char>(4);
-  view->set_data(data);
+  view->set_data(fidl::unowned(data));
   view->set_size(4);
 
   data[0] = 'a';

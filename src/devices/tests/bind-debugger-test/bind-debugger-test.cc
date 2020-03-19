@@ -45,7 +45,7 @@ class BindDebuggerTest : public testing::Test {
     ASSERT_EQ(zx::channel::create(0, &device_channel_, &remote), ZX_OK);
 
     // Create the root test device in /dev/test/test, and get its relative path from /dev.
-    auto result = root_device.CreateDevice(fidl::StringView{kDriverLibname}, std::move(remote));
+    auto result = root_device.CreateDevice(fidl::unowned_str(kDriverLibname), std::move(remote));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_EQ(result->status, ZX_OK);
 
@@ -57,7 +57,7 @@ class BindDebuggerTest : public testing::Test {
     // Bind the test driver to the new device.
     driver_libpath_ = kDriverTestDir + "/" + kDriverLibname;
     auto response = ::llcpp::fuchsia::device::Controller::Call::Bind(
-        zx::unowned_channel(device_channel_.get()), ::fidl::StringView(driver_libpath_));
+        zx::unowned_channel(device_channel_.get()), ::fidl::unowned_str(driver_libpath_));
     status = response.status();
     if (status == ZX_OK) {
       if (response->result.is_err()) {

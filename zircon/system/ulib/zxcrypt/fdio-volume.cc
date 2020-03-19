@@ -10,9 +10,9 @@
 #include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
@@ -186,9 +186,7 @@ FdioVolumeManager::FdioVolumeManager(zx::channel&& chan) : chan_(std::move(chan)
 zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_t slot) {
   zx_status_t rc;
   zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerUnseal(chan_.get(),
-                                                                 key, key_len,
-                                                                 slot,
+  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerUnseal(chan_.get(), key, key_len, slot,
                                                                  &call_status)) != ZX_OK) {
     xprintf("failed to call Unseal: %s\n", zx_status_get_string(rc));
     return rc;
@@ -219,8 +217,8 @@ zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
 zx_status_t FdioVolumeManager::Seal() {
   zx_status_t rc;
   zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerSeal(chan_.get(),
-                                                               &call_status)) != ZX_OK) {
+  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerSeal(chan_.get(), &call_status)) !=
+      ZX_OK) {
     xprintf("failed to call Seal: %s\n", zx_status_get_string(rc));
     return rc;
   }
@@ -233,8 +231,8 @@ zx_status_t FdioVolumeManager::Seal() {
 zx_status_t FdioVolumeManager::Shred() {
   zx_status_t rc;
   zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerShred(chan_.get(),
-                                                                &call_status)) != ZX_OK) {
+  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerShred(chan_.get(), &call_status)) !=
+      ZX_OK) {
     xprintf("failed to call Shred: %s\n", zx_status_get_string(rc));
     return rc;
   }
@@ -646,7 +644,7 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& calle
     // driver and waiting for it to appear.
     auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
         zx::unowned_channel(caller.borrow_channel()),
-        ::fidl::StringView(kDriverLib, strlen(kDriverLib)));
+        ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
     rc = resp.status();
     if (rc == ZX_OK) {
       if (resp->result.is_err()) {
@@ -680,7 +678,8 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& calle
   return ZX_OK;
 }
 
-zx_status_t FdioVolume::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& caller, fbl::String* out) {
+zx_status_t FdioVolume::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& caller,
+                                                fbl::String* out) {
   zx_status_t rc;
 
   // Get the full device path
@@ -694,7 +693,7 @@ zx_status_t FdioVolume::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& cal
     if (resp->result.is_err()) {
       rc = resp->result.err();
     } else {
-      auto r = resp->result.response();
+      auto& r = resp->result.response();
       path_len = r.path.size();
       memcpy(path.data(), r.path.data(), r.path.size());
     }

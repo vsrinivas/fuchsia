@@ -22,7 +22,7 @@ bool string_view_test() {
   EXPECT_TRUE(view->is_null());
 
   char* data = builder.NewArray<char>(3);
-  view->set_data(data);
+  view->set_data(fidl::unowned(data));
   view->set_size(3);
 
   EXPECT_FALSE(view->empty());

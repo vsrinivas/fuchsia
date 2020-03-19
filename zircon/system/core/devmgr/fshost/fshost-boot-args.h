@@ -109,7 +109,7 @@ class FshostBootArgs {
   bool blobfs_uncompressed_ = false;
 
   void InitParams() {
-    std::vector<llcpp::fuchsia::boot::BoolPair> defaults = {
+    llcpp::fuchsia::boot::BoolPair defaults[] = {
         {fidl::StringView{"netsvc.netboot"}, false},
         {fidl::StringView{"zircon.system.disable-automount"}, false},
         {fidl::StringView{"zircon.system.filesystem-check"}, false},

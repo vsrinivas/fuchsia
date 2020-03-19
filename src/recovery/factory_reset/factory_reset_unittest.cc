@@ -4,22 +4,23 @@
 
 #include "factory_reset.h"
 
-#include <fbl/algorithm.h>
 #include <fcntl.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/vmo.h>
-#include <ramdevice-client/ramdisk.h>
 #include <zircon/hw/gpt.h>
+
+#include <fbl/algorithm.h>
+#include <fs-management/fvm.h>
+#include <fs-management/mount.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 
 #include "gtest/gtest.h"
@@ -35,7 +36,7 @@ const uint32_t kSliceSize = (1 << 20);
 const size_t kDeviceSize = kBlockCount * kBlockSize;
 const char* kDataName = "fdr-data";
 const char* kRamCtlPath = "misc/ramctl";
-const size_t kKeyBytes = 32; // Generate a 256-bit key for the zxcrypt volume
+const size_t kKeyBytes = 32;  // Generate a 256-bit key for the zxcrypt volume
 
 class MockAdmin : public fuchsia::device::manager::Administrator {
  public:
@@ -106,7 +107,7 @@ class FactoryResetTest : public Test {
     zx_status_t call_status = ZX_OK;
     auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
         zx::unowned_channel(connection.borrow_channel()),
-        ::fidl::StringView(driver.data(), driver.length()));
+        ::fidl::unowned_str(driver.data(), driver.length()));
     zx_status_t io_status = resp.status();
     if (io_status != ZX_OK) {
       return io_status;
@@ -165,7 +166,8 @@ class FactoryResetTest : public Test {
     // available in the isolated test environment.
     crypto::Secret key;
     ASSERT_EQ(key.Generate(kKeyBytes), ZX_OK);
-    ASSERT_EQ(zxcrypt::FdioVolume::Create(fd.duplicate(), devfs_root(), key, &zxcrypt_volume), ZX_OK);
+    ASSERT_EQ(zxcrypt::FdioVolume::Create(fd.duplicate(), devfs_root(), key, &zxcrypt_volume),
+              ZX_OK);
 
     zx::channel zxc_manager_chan;
     ASSERT_EQ(zxcrypt_volume->OpenManager(zx::duration::infinite(),

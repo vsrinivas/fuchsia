@@ -67,14 +67,16 @@ class BufferAllocator final : public Allocator {
     destructor dtor;
   };
 
-  allocation_result allocate(size_t obj_size, uint32_t count, destructor dtor) override {
+  allocation_result allocate(size_t obj_size, size_t count, destructor dtor) override {
+    assert(count <= static_cast<size_t>(std::numeric_limits<uint32_t>::max()) &&
+           "fidl::BufferAllocator expects a count that can fit within uint32_t");
     size_t block_size = FIDL_ALIGN(obj_size * count);
     void* block = next_object_;
 
     if (dtor != trivial_destructor) {
       last_destructor_metadata_--;
       last_destructor_metadata_->offset = static_cast<uint32_t>(next_object_ - buf_);
-      last_destructor_metadata_->count = count;
+      last_destructor_metadata_->count = static_cast<uint32_t>(count);
       last_destructor_metadata_->dtor = dtor;
     }
 

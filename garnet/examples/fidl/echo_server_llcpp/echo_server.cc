@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-#include <string>
-#include <utility>
-
-#include <fidl/examples/echo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -20,6 +14,13 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <iostream>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include <fidl/examples/echo/llcpp/fidl.h>
+
 struct ConnectRequestContext {
   bool quiet;
   async_dispatcher_t* dispatcher;
@@ -29,7 +30,7 @@ struct ConnectRequestContext {
 class Server final : public llcpp::fidl::examples::echo::Echo::Interface {
  public:
   void EchoString(::fidl::StringView value, EchoStringCompleter::Sync completer) override {
-    completer.Reply(value);
+    completer.Reply(std::move(value));
   }
 };
 

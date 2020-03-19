@@ -134,7 +134,7 @@ zx_status_t BlockDevice::AttachDriver(const fbl::StringPiece& driver) {
   zx_status_t call_status = ZX_OK;
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
       zx::unowned_channel(connection.borrow_channel()),
-      ::fidl::StringView(driver.data(), driver.length()));
+      ::fidl::unowned_str(driver.data(), driver.length()));
   zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;
@@ -189,7 +189,7 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
     call_status = resp->result.err();
   } else {
     call_status = ZX_OK;
-    auto r = resp->result.response();
+    auto& r = resp->result.response();
     path_len = r.path.size();
     if (path_len > PATH_MAX) {
       return ZX_ERR_INTERNAL;

@@ -494,7 +494,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     env.push_back(kAsanEnvironment);
   }
 
-  auto devhost_env = boot_args()->Collect(fidl::StringView{"driver."});
+  auto devhost_env = boot_args()->Collect("driver.");
   if (!devhost_env.ok()) {
     return devhost_env.status();
   }
@@ -1139,12 +1139,12 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
           auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
 
           auto compat_test_enabled =
-              dev->coordinator->boot_args()->GetBool(fidl::StringView{bootarg}, false);
+              dev->coordinator->boot_args()->GetBool(fidl::unowned_str(bootarg), false);
           if (compat_test_enabled.ok() && compat_test_enabled->value &&
               (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
             bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
             auto test_wait_time =
-                dev->coordinator->boot_args()->GetString(fidl::StringView{bootarg});
+                dev->coordinator->boot_args()->GetString(fidl::unowned_str(bootarg));
             zx::duration test_time = kDefaultTestTimeout;
             if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
               auto test_timeout =

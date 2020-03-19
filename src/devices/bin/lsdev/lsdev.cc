@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
       status = resp->result.err();
     } else {
       actual_len = resp->result.response().path.size();
-      auto r = resp->result.response();
+      auto& r = resp->result.response();
       memcpy(path, r.path.data(), r.path.size());
     }
   }
