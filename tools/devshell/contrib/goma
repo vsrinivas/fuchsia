@@ -99,8 +99,16 @@ function main {
 
 # TODO(mcgrathr): Remove this after some period when old installs are gone.
 function check {
+  if [[ -n "$GOMA_DIR" ]]; then
+    echo "*** Detected GOMA_DIR environment variable."
+    echo "*** Remove GOMA_DIR from the environment and run \`fx goma\` again."
+    echo "*** \`unset GOMA_DIR\` will remove it from the running shell."
+    echo "*** But check your dot files to make sure it's not set at login."
+  fi
+
   local goma_dir="$("$GOMA_CTL" goma_dir 2> /dev/null)"
-  if [[ "$goma_dir" = "$PREBUILT_GOMA_DIR" ]]; then
+  if [[ -d "$goma_dir" && \
+        "$(cd "$goma_dir" && /bin/pwd)" = "$(cd "$PREBUILT_GOMA_DIR" && /bin/pwd)" ]]; then
     return 0
   fi
   echo "*** Detected old Goma installed in $goma_dir"
