@@ -13,5 +13,9 @@ fidl("remote-control") {
     "remote-control.fidl",
   ]
 
-  public_deps = []
+  public_deps = [
+    "//sdk/fidl/fuchsia.test:fuchsia.test",
+    "//sdk/fidl/fuchsia.url",
+    "//src/sys/test_manager/fidl:test_manager",
+  ]
 }

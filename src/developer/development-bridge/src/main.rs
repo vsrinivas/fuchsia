@@ -4,16 +4,17 @@
 
 #![allow(unused)]
 use {
-    crate::args::{Ffx, Subcommand},
+    crate::args::{Ffx, Subcommand, TestCommand},
     crate::config::command::exec_config,
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
-    anyhow::{Context, Error},
+    anyhow::{format_err, Context, Error},
     ffx_daemon::{is_daemon_running, start as start_daemon},
     fidl::endpoints::{create_proxy, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
+    fidl_fuchsia_test::CaseIteratorMarker,
     futures::{StreamExt, TryStreamExt},
     signal_hook,
     std::env,
@@ -79,7 +80,7 @@ impl Cli {
         panic!("No daemon found.")
     }
 
-    pub async fn echo<'a>(&'a self, text: Option<String>) -> Result<String, Error> {
+    pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {
         match self
             .daemon_proxy
             .echo_string(match text {
@@ -113,7 +114,7 @@ impl Cli {
         }
     }
 
-    pub async fn run_component<'a>(&'a self, url: String, args: &Vec<String>) -> Result<(), Error> {
+    pub async fn run_component(&self, url: String, args: &Vec<String>) -> Result<(), Error> {
         let (proxy, server_end) = create_proxy::<ComponentControllerMarker>()?;
         let (sout, cout) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -188,6 +189,49 @@ impl Cli {
         Ok(())
     }
 
+    async fn get_tests(&self, suite_url: &String) -> Result<(), Error> {
+        let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
+        let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
+
+        log::info!("launching test suite {}", suite_url);
+
+        self.daemon_proxy
+            .launch_suite(&suite_url, suite_server_end, controller_server_end)
+            .await
+            .context("launch_test call failed")?
+            .map_err(|e| format_err!("error launching test: {:?}", e))?;
+
+        log::info!("launched suite, getting tests");
+
+        let (case_iterator, test_server_end) = create_proxy::<CaseIteratorMarker>()?;
+        suite_proxy
+            .get_tests(test_server_end)
+            .map_err(|e| format_err!("Error getting test steps: {}", e))?;
+
+        loop {
+            let cases = case_iterator.get_next().await?;
+            if cases.is_empty() {
+                return Ok(());
+            }
+            println!("Tests in suite {}:\n", suite_url);
+            for case in cases {
+                match case.name {
+                    Some(n) => println!("{}", n),
+                    None => println!("<No name>"),
+                }
+            }
+        }
+    }
+
+    pub async fn test(&self, test: TestCommand) -> Result<(), Error> {
+        if (test.list) {
+            self.get_tests(&test.url).await
+        } else {
+            // TODO Run tests
+            Ok(())
+        }
+    }
+
     async fn spawn_daemon() -> Result<(), Error> {
         Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
         Ok(())
@@ -233,6 +277,17 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::Daemon(_) => start_daemon().await,
         Subcommand::Config(c) => exec_config(c),
+        Subcommand::Test(t) => {
+            match Cli::new().await.unwrap().test(t).await {
+                Ok(_) => {
+                    log::info!("Test successfully run");
+                }
+                Err(e) => {
+                    println!("ERROR: {:?}", e);
+                }
+            }
+            Ok(())
+        }
     }
 }
 
@@ -249,6 +304,38 @@ fn main() {
 mod test {
     use super::*;
     use fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequest};
+    use fidl_fuchsia_test::{
+        Case, CaseIteratorRequest, CaseIteratorRequestStream, SuiteRequest, SuiteRequestStream,
+    };
+
+    fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
+        let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
+        hoist::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(CaseIteratorRequest::GetNext { responder }) => {
+                        responder.send(&mut iter.by_ref().take(50));
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+    }
+
+    fn spawn_fake_suite_server(mut stream: SuiteRequestStream) {
+        hoist::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(SuiteRequest::GetTests { iterator, control_handle: _ }) => {
+                        let values = vec!["Test".to_string()];
+                        let iterator_request_stream = iterator.into_stream().unwrap();
+                        spawn_fake_iterator_server(values, iterator_request_stream);
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+    }
 
     fn setup_fake_daemon_service() -> DaemonProxy {
         let (proxy, mut stream) =
@@ -268,6 +355,11 @@ mod test {
                         controller: _,
                         responder,
                     }) => {
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    Some(DaemonRequest::LaunchSuite { test_url, suite, controller, responder }) => {
+                        let suite_request_stream = suite.into_stream().unwrap();
+                        spawn_fake_suite_server(suite_request_stream);
                         let _ = responder.send(&mut Ok(()));
                     }
                     _ => assert!(false),
@@ -309,6 +401,19 @@ mod test {
                 .unwrap();
         });
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_tests() -> Result<(), Error> {
+        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
+            .to_string();
+        let cmd = TestCommand { url, devices: None, list: true };
+        hoist::run(async move {
+            let response =
+                Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
+            assert_eq!(response, ());
+        });
         Ok(())
     }
 }

@@ -29,6 +29,7 @@ if (host_toolchain == current_toolchain) {
       ":daemon",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+      "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/remote-control/service:remote-control-rustc",
       "//src/lib/fidl/rust/fidl",
@@ -61,6 +62,7 @@ if (host_toolchain == current_toolchain) {
       "//src/lib/mdns/rust:mdns",
       "//src/lib/network/packet",
       "//src/lib/zerocopy",
+      "//src/sys/test_manager/fidl:test_manager-rustc",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
@@ -96,7 +98,12 @@ fidl("bridge") {
 
   sources = [ "fidl/daemon.fidl" ]
 
-  public_deps = [ "//src/developer/remote-control/service:remote-control" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.test:fuchsia.test",
+    "//sdk/fidl/fuchsia.url",
+    "//src/developer/remote-control/service:remote-control",
+    "//src/sys/test_manager/fidl:test_manager",
+  ]
 
   fuzzers = [
     {

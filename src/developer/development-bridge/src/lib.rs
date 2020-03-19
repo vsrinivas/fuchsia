@@ -16,6 +16,7 @@ use {
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
     fidl_fuchsia_overnet_protocol::NodeId,
+    fidl_fuchsia_test_manager as ftest_manager,
     futures::prelude::*,
     hoist::spawn,
     std::process::Command,
@@ -174,6 +175,17 @@ impl Daemon {
                     _ => format!("{:?}", targets.target_by_nodename(&value)),
                 };
                 responder.send(response.as_ref()).context("error sending response")?;
+            }
+            DaemonRequest::LaunchSuite { test_url, suite, controller, responder } => {
+                if !quiet {
+                    log::info!("Received launch suite request for '{:?}'", test_url);
+                }
+                match self.remote_control_proxy.launch_suite(&test_url, suite, controller).await {
+                    Ok(mut r) => responder.send(&mut r).context("sending LaunchSuite response")?,
+                    Err(_) => responder
+                        .send(&mut Err(ftest_manager::LaunchError::InternalError))
+                        .context("sending LaunchSuite error")?,
+                }
             }
             _ => {
                 log::info!("Unsupported method");

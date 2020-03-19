@@ -4,6 +4,10 @@
 
 library fuchsia.developer.remotecontrol;
 
+using fuchsia.url;
+using fuchsia.test as test;
+using fuchsia.test.manager as test_manager;
+
 // This is copied from `fuchsia.sys.types`.
 // Unfortunately we can't depend on it directly,
 // because this protocol needs to build on the host.
@@ -42,4 +46,11 @@ protocol RemoteControl {
     // TODO(fxb/43011) look into this.
     // TODO(fxb/43046) Add parameters for other reboot types.
     RebootDevice(RebootType reboot_type) -> ();
+
+    // Enumerate the test cases available in a test suite.
+    LaunchSuite(
+        fuchsia.url.Url test_url,
+        request<test.Suite> suite,
+        request<test_manager.SuiteController> controller) -> ()
+        error test_manager.LaunchError;
 };

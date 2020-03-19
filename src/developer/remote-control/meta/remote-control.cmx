@@ -9,7 +9,8 @@
             "fuchsia.net.stack.Stack",
             "fuchsia.overnet.Overnet",
             "fuchsia.overnet.ServicePublisher",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.test.manager.Harness"
         ]
     }
 }

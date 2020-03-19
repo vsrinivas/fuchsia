@@ -16,6 +16,22 @@ pub struct Ffx {
 pub struct DaemonCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "test", description = "run tests")]
+pub struct TestCommand {
+    #[argh(positional)]
+    /// test suite component URL
+    pub url: String,
+
+    #[argh(positional)]
+    /// target device
+    pub devices: Option<String>,
+
+    #[argh(switch)]
+    /// list tests in the Test Suite
+    pub list: bool,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "echo", description = "run echo test")]
 pub struct EchoCommand {
     #[argh(positional)]
@@ -49,6 +65,7 @@ pub enum Subcommand {
     List(ListCommand),
     RunComponent(RunComponentCommand),
     Config(ConfigCommand),
+    Test(TestCommand),
 }
 
 #[cfg(test)]

@@ -7,6 +7,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device_manager as fdevmgr,
     fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
+    fidl_fuchsia_test_manager as ftest_manager,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::prelude::*,
 };
@@ -16,19 +17,21 @@ mod component_control;
 pub struct RemoteControlService {
     admin_proxy: fdevmgr::AdministratorProxy,
     netstack_proxy: fnetstack::StackProxy,
+    harness_proxy: ftest_manager::HarnessProxy,
 }
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
-        let (admin_proxy, netstack_proxy) = Self::construct_proxies()?;
-        return Ok(Self::new_with_proxies(admin_proxy, netstack_proxy));
+        let (admin_proxy, netstack_proxy, harness_proxy) = Self::construct_proxies()?;
+        return Ok(Self::new_with_proxies(admin_proxy, netstack_proxy, harness_proxy));
     }
 
     pub fn new_with_proxies(
         admin_proxy: fdevmgr::AdministratorProxy,
         netstack_proxy: fnetstack::StackProxy,
+        harness_proxy: ftest_manager::HarnessProxy,
     ) -> Self {
-        return Self { admin_proxy, netstack_proxy };
+        return Self { admin_proxy, netstack_proxy, harness_proxy };
     }
 
     pub async fn serve_stream<'a>(
@@ -60,19 +63,39 @@ impl RemoteControlService {
                 rcs::RemoteControlRequest::IdentifyHost { responder } => {
                     self.identify_host(responder).await?;
                 }
+                rcs::RemoteControlRequest::LaunchSuite {
+                    test_url,
+                    suite,
+                    controller,
+                    responder,
+                } => {
+                    log::info!("launching test suite {}", test_url);
+                    let mut response = self
+                        .harness_proxy
+                        .launch_suite(&test_url, ftest_manager::LaunchOptions {}, suite, controller)
+                        .await
+                        .context("launch_test call failed")?;
+                    responder.send(&mut response).context("sending LaunchSuite response")?;
+                }
             }
         }
         Ok(())
     }
 
-    fn construct_proxies() -> Result<(fdevmgr::AdministratorProxy, fnetstack::StackProxy), Error> {
+    fn construct_proxies() -> Result<
+        (fdevmgr::AdministratorProxy, fnetstack::StackProxy, ftest_manager::HarnessProxy),
+        Error,
+    > {
         let admin_proxy =
             fuchsia_component::client::connect_to_service::<fdevmgr::AdministratorMarker>()
                 .map_err(|s| format_err!("Failed to connect to DevMgr service: {}", s))?;
         let netstack_proxy =
             fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
                 .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
-        return Ok((admin_proxy, netstack_proxy));
+        let harness_proxy =
+            fuchsia_component::client::connect_to_service::<ftest_manager::HarnessMarker>()
+                .map_err(|s| format_err!("Failed to connect to Harness service: {}", s))?;
+        return Ok((admin_proxy, netstack_proxy, harness_proxy));
     }
 
     pub fn spawn_component_async(
@@ -222,6 +245,21 @@ mod tests {
         proxy
     }
 
+    fn setup_fake_harness_service() -> ftest_manager::HarnessProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<ftest_manager::HarnessMarker>().unwrap();
+
+        fasync::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        proxy
+    }
+
     fn setup_fake_netstack_service() -> fnetstack::StackProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::StackMarker>().unwrap();
@@ -305,6 +343,7 @@ mod tests {
         service = RemoteControlService::new_with_proxies(
             setup_fake_admin_service(),
             setup_fake_netstack_service(),
+            setup_fake_harness_service(),
         );
 
         let (rcs_proxy, stream) =
