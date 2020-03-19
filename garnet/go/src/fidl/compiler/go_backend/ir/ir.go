@@ -792,18 +792,12 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
-	ty, rbtag := c.compileType(val.Type)
-	hasBounds := !rbtag.IsEmpty()
-	boundsTag := rbtag.String()
-	// TODO(fxb/43783) this value is not used but needs to exist since the
-	// bindings will ignore the first element before looking for the bounds
-	rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, val.FieldShapeV1.Offset)
 	tags := Tags{
-		FidlTag:         rbtag.String(),
 		FidlOffsetV1Tag: val.FieldShapeV1.Offset,
 	}
-	if hasBounds {
-		tags[FidlBoundsTag] = boundsTag
+	ty, rbtag := c.compileType(val.Type)
+	if !rbtag.IsEmpty() {
+		tags[FidlBoundsTag] = rbtag.String()
 	}
 	if handleRights, ok := c.computeHandleRights(val.Type); ok {
 		tags[FidlHandleRightsTag] = int(handleRights)
@@ -847,16 +841,12 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		if member.Reserved {
 			continue
 		}
-		ty, rbtag := c.compileType(member.Type)
-		hasBounds := !rbtag.IsEmpty()
-		boundsTag := rbtag.String()
-		rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, member.Ordinal)
 		tags := Tags{
-			FidlTag:        rbtag,
 			FidlOrdinalTag: member.Ordinal,
 		}
-		if hasBounds {
-			tags[FidlBoundsTag] = boundsTag
+		ty, rbtag := c.compileType(member.Type)
+		if !rbtag.IsEmpty() {
+			tags[FidlBoundsTag] = rbtag.String()
 		}
 		if handleRights, ok := c.computeHandleRights(member.Type); ok {
 			tags[FidlHandleRightsTag] = handleRights
@@ -900,15 +890,11 @@ func (c *compiler) compileTable(val types.Table) Table {
 			name        = c.compileIdentifier(member.Name, true, "")
 			privateName = c.compileIdentifier(member.Name, false, "")
 		)
-		hasBounds := rbtag.IsEmpty()
-		boundsTag := rbtag.String()
-		rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, member.Ordinal)
 		tags := Tags{
-			FidlTag:        rbtag.String(),
 			FidlOrdinalTag: member.Ordinal,
 		}
-		if hasBounds {
-			tags[FidlBoundsTag] = boundsTag
+		if rbtag.IsEmpty() {
+			tags[FidlBoundsTag] = rbtag.String()
 		}
 		if handleRights, ok := c.computeHandleRights(member.Type); ok {
 			tags[FidlHandleRightsTag] = handleRights

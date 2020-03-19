@@ -14,7 +14,7 @@ import (
 
 type StructWithNullableString struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Val *string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Val *string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mStructWithNullableString = _bindings.CreateLazyMarshaler(StructWithNullableString{})
@@ -25,7 +25,7 @@ func (msg *StructWithNullableString) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableVector struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Val *[]int32`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Val *[]int32`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mStructWithNullableVector = _bindings.CreateLazyMarshaler(StructWithNullableVector{})
@@ -36,7 +36,7 @@ func (msg *StructWithNullableVector) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableHandle struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Val _zx.VMO`fidl:"0,1" fidl_offset_v1:"0" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
+	Val _zx.VMO`fidl_offset_v1:"0" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
 }
 
 var _mStructWithNullableHandle = _bindings.CreateLazyMarshaler(StructWithNullableHandle{})
@@ -47,7 +47,7 @@ func (msg *StructWithNullableHandle) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableProtocol struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Val SimpleProtocolWithCtxInterface`fidl:"0" fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+	Val SimpleProtocolWithCtxInterface`fidl_offset_v1:"0" fidl_handle_subtype:"4"`
 }
 
 var _mStructWithNullableProtocol = _bindings.CreateLazyMarshaler(StructWithNullableProtocol{})
@@ -58,7 +58,7 @@ func (msg *StructWithNullableProtocol) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Val SimpleProtocolWithCtxInterfaceRequest`fidl:"0,1" fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"1"`
+	Val SimpleProtocolWithCtxInterfaceRequest`fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"1"`
 }
 
 var _mStructWithNullableRequest = _bindings.CreateLazyMarshaler(StructWithNullableRequest{})
@@ -69,7 +69,7 @@ func (msg *StructWithNullableRequest) Marshaler() _bindings.Marshaler {
 
 type Int32Wrapper struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Val int32`fidl:"0" fidl_offset_v1:"0"`
+	Val int32`fidl_offset_v1:"0"`
 }
 
 var _mInt32Wrapper = _bindings.CreateLazyMarshaler(Int32Wrapper{})
@@ -80,7 +80,7 @@ func (msg *Int32Wrapper) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableStruct struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Val *Int32Wrapper`fidl:"0" fidl_offset_v1:"0"`
+	Val *Int32Wrapper`fidl_offset_v1:"0"`
 }
 
 var _mStructWithNullableStruct = _bindings.CreateLazyMarshaler(StructWithNullableStruct{})
@@ -91,7 +91,7 @@ func (msg *StructWithNullableStruct) Marshaler() _bindings.Marshaler {
 
 type StructWithNullableUnion struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Val *SimpleUnion`fidl:"0" fidl_offset_v1:"0"`
+	Val *SimpleUnion`fidl_offset_v1:"0"`
 }
 
 var _mStructWithNullableUnion = _bindings.CreateLazyMarshaler(StructWithNullableUnion{})
@@ -102,8 +102,8 @@ func (msg *StructWithNullableUnion) Marshaler() _bindings.Marshaler {
 
 type simpleProtocolWithCtxAddRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	A int32`fidl:"0" fidl_offset_v1:"0"`
-	B int32`fidl:"4" fidl_offset_v1:"4"`
+	A int32`fidl_offset_v1:"0"`
+	B int32`fidl_offset_v1:"4"`
 }
 
 var _msimpleProtocolWithCtxAddRequest = _bindings.CreateLazyMarshaler(simpleProtocolWithCtxAddRequest{})
@@ -114,7 +114,7 @@ func (msg *simpleProtocolWithCtxAddRequest) Marshaler() _bindings.Marshaler {
 
 type simpleProtocolWithCtxAddResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Sum int32`fidl:"0" fidl_offset_v1:"0"`
+	Sum int32`fidl_offset_v1:"0"`
 }
 
 var _msimpleProtocolWithCtxAddResponse = _bindings.CreateLazyMarshaler(simpleProtocolWithCtxAddResponse{})
@@ -131,8 +131,8 @@ const (
 
 type SimpleUnion struct {
 	I_simpleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	A int32  `fidl:"1" fidl_ordinal:"1"`
-	B float32  `fidl:"2" fidl_ordinal:"2"`
+	A int32  `fidl_ordinal:"1"`
+	B float32  `fidl_ordinal:"2"`
 }
 
 func (_m *SimpleUnion) Which() I_simpleUnionTag {

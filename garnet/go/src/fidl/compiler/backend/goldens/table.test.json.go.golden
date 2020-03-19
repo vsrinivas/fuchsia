@@ -13,9 +13,9 @@ type EmptyTable struct {
 
 type SimpleTable struct {
 	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	X int64 `fidl:"1" fidl_bounds:"" fidl_ordinal:"1"`
+	X int64 `fidl_bounds:"" fidl_ordinal:"1"`
 	XPresent bool
-	Y int64 `fidl:"5" fidl_bounds:"" fidl_ordinal:"5"`
+	Y int64 `fidl_bounds:"" fidl_ordinal:"5"`
 	YPresent bool
 }
 
@@ -69,7 +69,7 @@ func (u *SimpleTable) ClearY() {
 
 type OlderSimpleTable struct {
 	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	X int64 `fidl:"1" fidl_bounds:"" fidl_ordinal:"1"`
+	X int64 `fidl_bounds:"" fidl_ordinal:"1"`
 	XPresent bool
 }
 
@@ -99,11 +99,11 @@ func (u *OlderSimpleTable) ClearX() {
 
 type NewerSimpleTable struct {
 	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	X int64 `fidl:"1" fidl_bounds:"" fidl_ordinal:"1"`
+	X int64 `fidl_bounds:"" fidl_ordinal:"1"`
 	XPresent bool
-	Y int64 `fidl:"5" fidl_bounds:"" fidl_ordinal:"5"`
+	Y int64 `fidl_bounds:"" fidl_ordinal:"5"`
 	YPresent bool
-	Z int64 `fidl:"6" fidl_bounds:"" fidl_ordinal:"6"`
+	Z int64 `fidl_bounds:"" fidl_ordinal:"6"`
 	ZPresent bool
 }
 
@@ -181,11 +181,11 @@ func (u *NewerSimpleTable) ClearZ() {
 
 type ReverseOrdinalTable struct {
 	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Z int64 `fidl:"1" fidl_bounds:"" fidl_ordinal:"1"`
+	Z int64 `fidl_bounds:"" fidl_ordinal:"1"`
 	ZPresent bool
-	Y int64 `fidl:"2" fidl_bounds:"" fidl_ordinal:"2"`
+	Y int64 `fidl_bounds:"" fidl_ordinal:"2"`
 	YPresent bool
-	X int64 `fidl:"3" fidl_bounds:"" fidl_ordinal:"3"`
+	X int64 `fidl_bounds:"" fidl_ordinal:"3"`
 	XPresent bool
 }
 

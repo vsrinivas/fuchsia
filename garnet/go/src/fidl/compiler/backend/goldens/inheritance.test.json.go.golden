@@ -14,7 +14,7 @@ import (
 
 type superWithCtxFooRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	S string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	S string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _msuperWithCtxFooRequest = _bindings.CreateLazyMarshaler(superWithCtxFooRequest{})
@@ -25,7 +25,7 @@ func (msg *superWithCtxFooRequest) Marshaler() _bindings.Marshaler {
 
 type superWithCtxFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Y int64`fidl:"0" fidl_offset_v1:"0"`
+	Y int64`fidl_offset_v1:"0"`
 }
 
 var _msuperWithCtxFooResponse = _bindings.CreateLazyMarshaler(superWithCtxFooResponse{})
@@ -36,7 +36,7 @@ func (msg *superWithCtxFooResponse) Marshaler() _bindings.Marshaler {
 
 type subWithCtxFooRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	S string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	S string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _msubWithCtxFooRequest = _bindings.CreateLazyMarshaler(subWithCtxFooRequest{})
@@ -47,7 +47,7 @@ func (msg *subWithCtxFooRequest) Marshaler() _bindings.Marshaler {
 
 type subWithCtxFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Y int64`fidl:"0" fidl_offset_v1:"0"`
+	Y int64`fidl_offset_v1:"0"`
 }
 
 var _msubWithCtxFooResponse = _bindings.CreateLazyMarshaler(subWithCtxFooResponse{})

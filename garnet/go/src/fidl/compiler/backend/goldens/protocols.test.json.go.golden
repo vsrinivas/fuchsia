@@ -29,9 +29,9 @@ func (x ErrorEnun) String() string {
 
 type WithErrorSyntaxResponseAsStructResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
-	C int64`fidl:"16" fidl_offset_v1:"16"`
+	A int64`fidl_offset_v1:"0"`
+	B int64`fidl_offset_v1:"8"`
+	C int64`fidl_offset_v1:"16"`
 }
 
 var _mWithErrorSyntaxResponseAsStructResponse = _bindings.CreateLazyMarshaler(WithErrorSyntaxResponseAsStructResponse{})
@@ -62,7 +62,7 @@ func (msg *WithErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 
 type withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Ret string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Ret string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mwithAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse{})
@@ -73,7 +73,7 @@ func (msg *withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse) Ma
 
 type withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Arg string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Arg string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mwithAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest{})
@@ -84,7 +84,7 @@ func (msg *withAndWithoutRequestResponseWithCtxWithRequestNoResponseRequest) Mar
 
 type withAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Arg string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Arg string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mwithAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest{})
@@ -95,7 +95,7 @@ func (msg *withAndWithoutRequestResponseWithCtxWithRequestEmptyResponseRequest) 
 
 type withAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Arg string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Arg string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mwithAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest{})
@@ -106,7 +106,7 @@ func (msg *withAndWithoutRequestResponseWithCtxWithRequestWithResponseRequest) M
 
 type withAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Ret string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Ret string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mwithAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse{})
@@ -117,7 +117,7 @@ func (msg *withAndWithoutRequestResponseWithCtxWithRequestWithResponseResponse) 
 
 type withAndWithoutRequestResponseWithCtxOnWithResponseResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Ret string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
+	Ret string`fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mwithAndWithoutRequestResponseWithCtxOnWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithCtxOnWithResponseResponse{})
@@ -128,7 +128,7 @@ func (msg *withAndWithoutRequestResponseWithCtxOnWithResponseResponse) Marshaler
 
 type withErrorSyntaxWithCtxResponseAsStructResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Result WithErrorSyntaxResponseAsStructResult`fidl:"0" fidl_offset_v1:"0"`
+	Result WithErrorSyntaxResponseAsStructResult`fidl_offset_v1:"0"`
 }
 
 var _mwithErrorSyntaxWithCtxResponseAsStructResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxWithCtxResponseAsStructResponse{})
@@ -139,7 +139,7 @@ func (msg *withErrorSyntaxWithCtxResponseAsStructResponse) Marshaler() _bindings
 
 type withErrorSyntaxWithCtxErrorAsPrimitiveResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Result WithErrorSyntaxErrorAsPrimitiveResult`fidl:"0" fidl_offset_v1:"0"`
+	Result WithErrorSyntaxErrorAsPrimitiveResult`fidl_offset_v1:"0"`
 }
 
 var _mwithErrorSyntaxWithCtxErrorAsPrimitiveResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxWithCtxErrorAsPrimitiveResponse{})
@@ -150,7 +150,7 @@ func (msg *withErrorSyntaxWithCtxErrorAsPrimitiveResponse) Marshaler() _bindings
 
 type withErrorSyntaxWithCtxErrorAsEnumResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Result WithErrorSyntaxErrorAsEnumResult`fidl:"0" fidl_offset_v1:"0"`
+	Result WithErrorSyntaxErrorAsEnumResult`fidl_offset_v1:"0"`
 }
 
 var _mwithErrorSyntaxWithCtxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxWithCtxErrorAsEnumResponse{})
@@ -161,8 +161,8 @@ func (msg *withErrorSyntaxWithCtxErrorAsEnumResponse) Marshaler() _bindings.Mars
 
 type channelProtocolWithCtxMethodARequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
+	A int64`fidl_offset_v1:"0"`
+	B int64`fidl_offset_v1:"8"`
 }
 
 var _mchannelProtocolWithCtxMethodARequest = _bindings.CreateLazyMarshaler(channelProtocolWithCtxMethodARequest{})
@@ -173,8 +173,8 @@ func (msg *channelProtocolWithCtxMethodARequest) Marshaler() _bindings.Marshaler
 
 type channelProtocolWithCtxEventAResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
+	A int64`fidl_offset_v1:"0"`
+	B int64`fidl_offset_v1:"8"`
 }
 
 var _mchannelProtocolWithCtxEventAResponse = _bindings.CreateLazyMarshaler(channelProtocolWithCtxEventAResponse{})
@@ -185,8 +185,8 @@ func (msg *channelProtocolWithCtxEventAResponse) Marshaler() _bindings.Marshaler
 
 type channelProtocolWithCtxMethodBRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A int64`fidl:"0" fidl_offset_v1:"0"`
-	B int64`fidl:"8" fidl_offset_v1:"8"`
+	A int64`fidl_offset_v1:"0"`
+	B int64`fidl_offset_v1:"8"`
 }
 
 var _mchannelProtocolWithCtxMethodBRequest = _bindings.CreateLazyMarshaler(channelProtocolWithCtxMethodBRequest{})
@@ -197,7 +197,7 @@ func (msg *channelProtocolWithCtxMethodBRequest) Marshaler() _bindings.Marshaler
 
 type channelProtocolWithCtxMethodBResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Result int64`fidl:"0" fidl_offset_v1:"0"`
+	Result int64`fidl_offset_v1:"0"`
 }
 
 var _mchannelProtocolWithCtxMethodBResponse = _bindings.CreateLazyMarshaler(channelProtocolWithCtxMethodBResponse{})
@@ -208,7 +208,7 @@ func (msg *channelProtocolWithCtxMethodBResponse) Marshaler() _bindings.Marshale
 
 type channelProtocolWithCtxMutateSocketRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	A _zx.Socket`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	A _zx.Socket`fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 }
 
 var _mchannelProtocolWithCtxMutateSocketRequest = _bindings.CreateLazyMarshaler(channelProtocolWithCtxMutateSocketRequest{})
@@ -219,7 +219,7 @@ func (msg *channelProtocolWithCtxMutateSocketRequest) Marshaler() _bindings.Mars
 
 type channelProtocolWithCtxMutateSocketResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	B _zx.Socket`fidl:"0,0" fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	B _zx.Socket`fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 }
 
 var _mchannelProtocolWithCtxMutateSocketResponse = _bindings.CreateLazyMarshaler(channelProtocolWithCtxMutateSocketResponse{})
@@ -236,8 +236,8 @@ const (
 
 type WithErrorSyntaxResponseAsStructResult struct {
 	I_withErrorSyntaxResponseAsStructResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Response WithErrorSyntaxResponseAsStructResponse  `fidl:"1" fidl_ordinal:"1"`
-	Err uint32  `fidl:"2" fidl_ordinal:"2"`
+	Response WithErrorSyntaxResponseAsStructResponse  `fidl_ordinal:"1"`
+	Err uint32  `fidl_ordinal:"2"`
 }
 
 func (_m *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
@@ -280,8 +280,8 @@ const (
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
 	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Response WithErrorSyntaxErrorAsPrimitiveResponse  `fidl:"1" fidl_ordinal:"1"`
-	Err uint32  `fidl:"2" fidl_ordinal:"2"`
+	Response WithErrorSyntaxErrorAsPrimitiveResponse  `fidl_ordinal:"1"`
+	Err uint32  `fidl_ordinal:"2"`
 }
 
 func (_m *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
@@ -324,8 +324,8 @@ const (
 
 type WithErrorSyntaxErrorAsEnumResult struct {
 	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Response WithErrorSyntaxErrorAsEnumResponse  `fidl:"1" fidl_ordinal:"1"`
-	Err ErrorEnun  `fidl:"2" fidl_ordinal:"2"`
+	Response WithErrorSyntaxErrorAsEnumResponse  `fidl_ordinal:"1"`
+	Err ErrorEnun  `fidl_ordinal:"2"`
 }
 
 func (_m *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {

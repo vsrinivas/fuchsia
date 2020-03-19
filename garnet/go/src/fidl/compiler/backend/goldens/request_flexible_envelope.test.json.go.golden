@@ -14,7 +14,7 @@ import (
 
 type protocolWithCtxRequestStrictResponseFlexibleRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S StrictFoo`fidl:"0" fidl_offset_v1:"0"`
+	S StrictFoo`fidl_offset_v1:"0"`
 }
 
 var _mprotocolWithCtxRequestStrictResponseFlexibleRequest = _bindings.CreateLazyMarshaler(protocolWithCtxRequestStrictResponseFlexibleRequest{})
@@ -25,7 +25,7 @@ func (msg *protocolWithCtxRequestStrictResponseFlexibleRequest) Marshaler() _bin
 
 type protocolWithCtxRequestStrictResponseFlexibleResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	F FlexibleFoo`fidl:"0" fidl_offset_v1:"0"`
+	F FlexibleFoo`fidl_offset_v1:"0"`
 }
 
 var _mprotocolWithCtxRequestStrictResponseFlexibleResponse = _bindings.CreateLazyMarshaler(protocolWithCtxRequestStrictResponseFlexibleResponse{})
@@ -36,7 +36,7 @@ func (msg *protocolWithCtxRequestStrictResponseFlexibleResponse) Marshaler() _bi
 
 type protocolWithCtxRequestFlexibleResponseStrictRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S FlexibleFoo`fidl:"0" fidl_offset_v1:"0"`
+	S FlexibleFoo`fidl_offset_v1:"0"`
 }
 
 var _mprotocolWithCtxRequestFlexibleResponseStrictRequest = _bindings.CreateLazyMarshaler(protocolWithCtxRequestFlexibleResponseStrictRequest{})
@@ -47,7 +47,7 @@ func (msg *protocolWithCtxRequestFlexibleResponseStrictRequest) Marshaler() _bin
 
 type protocolWithCtxRequestFlexibleResponseStrictResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	F StrictFoo`fidl:"0" fidl_offset_v1:"0"`
+	F StrictFoo`fidl_offset_v1:"0"`
 }
 
 var _mprotocolWithCtxRequestFlexibleResponseStrictResponse = _bindings.CreateLazyMarshaler(protocolWithCtxRequestFlexibleResponseStrictResponse{})
@@ -66,8 +66,8 @@ const (
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	S string  `fidl:"1," fidl_bounds:"" fidl_ordinal:"1"`
-	I int32  `fidl:"2" fidl_ordinal:"2"`
+	S string  `fidl_bounds:"" fidl_ordinal:"1"`
+	I int32  `fidl_ordinal:"2"`
 }
 
 func (_m *FlexibleFoo) Which() I_flexibleFooTag {
@@ -117,8 +117,8 @@ const (
 
 type StrictFoo struct {
 	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S string  `fidl:"1," fidl_bounds:"" fidl_ordinal:"1"`
-	I int32  `fidl:"2" fidl_ordinal:"2"`
+	S string  `fidl_bounds:"" fidl_ordinal:"1"`
+	I int32  `fidl_ordinal:"2"`
 }
 
 func (_m *StrictFoo) Which() I_strictFooTag {

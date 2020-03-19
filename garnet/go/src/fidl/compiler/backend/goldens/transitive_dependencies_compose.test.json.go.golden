@@ -15,7 +15,7 @@ import (
 
 type topWithCtxGetFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Foo bottom.Foo`fidl:"0" fidl_offset_v1:"0"`
+	Foo bottom.Foo`fidl_offset_v1:"0"`
 }
 
 var _mtopWithCtxGetFooResponse = _bindings.CreateLazyMarshaler(topWithCtxGetFooResponse{})
