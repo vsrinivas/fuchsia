@@ -29,7 +29,6 @@ import (
 // #include <zircon/types.h>
 import "C"
 
-const zxsioEthSignalStatus = zx.SignalUser0
 const tag = "eth"
 
 type FifoEntry = C.struct_eth_fifo_entry
@@ -595,7 +594,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 
 				for {
-					signals := zx.Signals(zx.SignalFIFOReadable | zx.SignalFIFOPeerClosed | zxsioEthSignalStatus)
+					signals := zx.Signals(zx.SignalFIFOReadable | zx.SignalFIFOPeerClosed | ethernet.SignalStatus)
 					if int(c.rx.inFlight()) != len(scratch) && c.rx.haveQueued() {
 						signals |= zx.SignalFIFOWritable
 					}
@@ -603,7 +602,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					if err != nil {
 						return err
 					}
-					if obs&zxsioEthSignalStatus != 0 {
+					if obs&zx.Signals(ethernet.SignalStatus) != 0 {
 						if status, err := c.GetStatus(); err != nil {
 							_ = syslog.WarnTf(tag, "status error: %s", err)
 						} else {
