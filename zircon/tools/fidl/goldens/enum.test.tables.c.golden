@@ -8,26 +8,18 @@
 // Coding tables for old wire format.
 
 extern const fidl_type_t test_name_MyStrictEnumTable;
-extern const fidl_type_t test_name_MyEnumTable;
 
 
 
 static bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const fidl_type_t test_name_MyStrictEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"}}};
 
-static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"}}};
-
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_test_name_MyStrictEnumTable;
-extern const fidl_type_t v1_test_name_MyEnumTable;
 
 
 
 static bool EnumValidatorFor_v1_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const fidl_type_t v1_test_name_MyStrictEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"}}};
-
-static bool EnumValidatorFor_v1_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_MyEnum, .name="test.name/MyEnum"}}};
 

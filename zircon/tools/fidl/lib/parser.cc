@@ -1225,9 +1225,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         case CASE_IDENTIFIER(Token::Subkind::kBits):
           [[fallthrough]];
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
-          if (maybe_strictness.value() == types::Strictness::kStrict) {
-            Fail(previous_token_,
-                 "enums and bits are strict by default, please remove the \"strict\" qualifier");
+          if (*maybe_strictness == types::Strictness::kFlexible &&
+              !experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kFlexibleBitsAndEnums)) {
+            std::string msg = "cannot specify flexible for " + std::string(Token::Name(Peek()));
+            Fail(msg);
             return More;
           }
           break;

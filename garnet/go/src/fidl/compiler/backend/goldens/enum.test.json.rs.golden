@@ -24,14 +24,6 @@ use fidl::{
 
 
 fidl_enum! {
-  MyEnum(u32) {
-    Foo = 1,
-    Bar = 2,
-  }
-}
-
-
-fidl_enum! {
   MyStrictEnum(u32) {
     Foo = 1,
     Bar = 2,

@@ -22,20 +22,6 @@ inline zx_status_t Clone(::test::name::MyStrictEnum value,
   return ZX_OK;
 }
 
-
-enum class MyEnum : uint32_t {
-  
-  FOO = 1u,
-  
-  BAR = 2u,
-};
-
-inline zx_status_t Clone(::test::name::MyEnum value,
-                         ::test::name::MyEnum* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -68,38 +54,6 @@ struct Equality<::test::name::MyStrictEnum> {
   static inline bool Equals(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) {
     // TODO(46638): Remove this when all clients have been transitioned to functor.
     return ::fidl::Equality<::test::name::MyStrictEnum>{}(_lhs, _rhs);
-  }
-};
-
-
-template <>
-struct CodingTraits<::test::name::MyEnum> {
-  static constexpr size_t inline_size_old = sizeof(::test::name::MyEnum);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyEnum);
-  static void Encode(Encoder* encoder, ::test::name::MyEnum* value, size_t offset) {
-    uint32_t underlying = static_cast<uint32_t>(*value);
-    ::fidl::Encode(encoder, &underlying, offset);
-  }
-  static void Decode(Decoder* decoder, ::test::name::MyEnum* value, size_t offset) {
-    uint32_t underlying = {};
-    ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::name::MyEnum>(underlying);
-  }
-};
-
-inline zx_status_t Clone(::test::name::MyEnum value,
-                         ::test::name::MyEnum* result) {
-  return ::test::name::Clone(value, result);
-}
-template<>
-struct Equality<::test::name::MyEnum> {
-  bool operator()(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) const {
-    return _lhs == _rhs;
-  }
-
-  static inline bool Equals(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::MyEnum>{}(_lhs, _rhs);
   }
 };
 

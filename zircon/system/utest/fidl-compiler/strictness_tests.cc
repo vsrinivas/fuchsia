@@ -29,26 +29,21 @@ bool invalid_strictness(const std::string& type, const std::string& definition) 
 }
 
 bool redundant_strictness(const std::string& strictness, const std::string& definition) {
-  BEGIN_TEST;
-
-  std::string fidl_library = "library example;\n\n" + definition + "\n";
-
-  TestLibrary library(fidl_library);
-  EXPECT_FALSE(library.Compile());
-
-  auto errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  const std::string& expected_error =
-      strictness + " by default, please remove the \"" + strictness + "\"" + " qualifier";
-  ASSERT_STR_STR(errors[0].c_str(), expected_error.c_str());
-
-  END_TEST;
+  // TODO(fxb/7847): Prepending a redundant "strict" qualifier is currently
+  // allowed for bits, enums and unions to more easily transition those FIDL
+  // types to be flexible by default. This test should be updated and re-enabled
+  // when that's done.
+  //
+  // The original code for this is at
+  // <https://fuchsia.git.corp.google.com/fuchsia/+/d66c40c674e1a37fc674c016e76cebd7c8edcd2d/zircon/system/utest/fidl-compiler/strictness_tests.cc#31>.
+  return true;
 }
 
 bool bits_strictness() {
   BEGIN_TEST;
 
-  TestLibrary library(R"FIDL(
+  TestLibrary library(
+      R"FIDL(
 library example;
 
 bits StrictFoo {
@@ -59,7 +54,8 @@ flexible bits FlexibleFoo {
     BAR = 0x1;
 };
 
-)FIDL");
+)FIDL",
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupBits("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupBits("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
@@ -70,7 +66,8 @@ flexible bits FlexibleFoo {
 bool enum_strictness() {
   BEGIN_TEST;
 
-  TestLibrary library(R"FIDL(
+  TestLibrary library(
+      R"FIDL(
 library example;
 
 enum StrictFoo {
@@ -81,7 +78,8 @@ flexible enum FlexibleFoo {
     BAR = 1;
 };
 
-)FIDL");
+)FIDL",
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupEnum("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupEnum("StrictFoo")->strictness, fidl::types::Strictness::kStrict);

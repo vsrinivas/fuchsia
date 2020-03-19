@@ -74,7 +74,6 @@ table ElementSpec {
     /// Runner should expose these capabilities to the launched component's incoming namespace.
     /// (This mechanism allows backward compatibility for Runners to launch v1 (`.cmx`) components
     /// that require additional services.)
-    [Transitional = "Until there are no more v1 components consuming CFv2 agent services"]
     3: AdditionalCapabilities additional_capabilities;
 };
 
@@ -83,7 +82,6 @@ table ElementSpec {
 // v2->v2 interactions.
 /// Provides a list of capabilities to be offered to a proposed element, and a Directory from which
 /// another component can connect to the implementations of those capabilities.
-[Transitional = "Until there are no more v1 components consuming CFv2 agent services"]
 struct AdditionalCapabilities {
     /// A list of capabilities by absolute path name, relative to the given host_directory (for
     /// example, "/svc/fuchsia.util.SomeService").

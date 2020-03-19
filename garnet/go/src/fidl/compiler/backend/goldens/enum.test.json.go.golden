@@ -7,21 +7,6 @@ package name
 
 
 
-type MyEnum uint32
-const (
-	MyEnumFoo MyEnum = 1
-	MyEnumBar MyEnum = 2
-)
-func (x MyEnum) String() string {
-	switch x {
-	case 1:
-		return "Foo"
-	case 2:
-		return "Bar"
-	}
-	return "Unknown"
-}
-
 type MyStrictEnum uint32
 const (
 	MyStrictEnumFoo MyStrictEnum = 1

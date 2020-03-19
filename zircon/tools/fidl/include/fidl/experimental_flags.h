@@ -13,7 +13,13 @@ namespace fidl {
 
 class ExperimentalFlags {
  public:
-  enum class Flag { kEnableHandleRights };
+  enum class Flag {
+    kEnableHandleRights = 0b01,
+    kFlexibleBitsAndEnums = 0b10,
+  };
+
+  ExperimentalFlags() {}
+  ExperimentalFlags(Flag flag) { SetFlag(flag); }
 
   bool SetFlagByName(const std::string_view flag);
   void SetFlag(Flag flag);

@@ -1639,7 +1639,8 @@ class Library {
   // Validates a single member of a bits or enum. On failure,
   // returns false and places an error message in the out parameter.
   template <typename MemberType>
-  using MemberValidator = fit::function<bool(const MemberType& member, std::string* out_error)>;
+  using MemberValidator = fit::function<bool(
+      const MemberType& member, const raw::AttributeList* attributes, std::string* out_error)>;
   template <typename DeclType, typename MemberType>
   bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
   template <typename MemberType>

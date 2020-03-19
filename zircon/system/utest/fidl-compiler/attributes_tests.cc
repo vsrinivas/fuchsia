@@ -398,6 +398,108 @@ protocol A {
   END_TEST;
 }
 
+bool transitional_invalid_placement() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+[Transitional]
+protocol MyProtocol {
+  MyMethod();
+};
+  )FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Transitional' disallowed here");
+
+  END_TEST;
+}
+
+bool unknown_invalid_placement_on_union() {
+  BEGIN_TEST;
+
+  TestLibrary library("library fidl.test; [Unknown] flexible union U { 1: int32 a; };");
+
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Unknown' disallowed here");
+
+  END_TEST;
+}
+
+bool unknown_invalid_placement_on_bits_member() {
+  BEGIN_TEST;
+
+  TestLibrary library(
+      "library fidl.test; flexible bits B : uint32 { [Unknown] A = 0x1; };",
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Unknown' disallowed here");
+
+  END_TEST;
+}
+
+bool unknown_invalid_on_strict_unions_enums() {
+  BEGIN_TEST;
+
+  {
+    TestLibrary library("library fidl.test; strict union U { [Unknown] 1: int32 a; };");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+                   "[Unknown] attribute can be only be used on flexible or [Transitional] types");
+  }
+
+  {
+    TestLibrary library("library fidl.test; strict enum E : uint32 { [Unknown] A = 1; };");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(),
+                   "[Unknown] attribute can be only be used on flexible or [Transitional] types");
+  }
+
+  END_TEST;
+}
+
+bool unknown_ok_on_flexible_or_transitional_enums_union_members() {
+  BEGIN_TEST;
+
+  {
+    TestLibrary library("library fidl.test; flexible union U { [Unknown] 1: int32 a; };");
+    EXPECT_TRUE(library.Compile());
+  }
+
+  {
+    TestLibrary library(
+        "library fidl.test; [Transitional] strict union U { [Unknown] 1: int32 a; };");
+    EXPECT_TRUE(library.Compile());
+  }
+
+  {
+    TestLibrary library(
+        "library fidl.test; flexible enum E : uint32 { [Unknown] A = 1; };",
+        fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+    EXPECT_TRUE(library.Compile());
+  }
+
+  {
+    TestLibrary library(
+        "library fidl.test; [Transitional] strict enum E : uint32 { [Unknown] A = 1; };");
+    EXPECT_TRUE(library.Compile());
+  }
+
+  END_TEST;
+}
+
 bool incorrect_placement_layout() {
   BEGIN_TEST;
 
@@ -703,4 +805,9 @@ RUN_TEST(max_handles)
 RUN_TEST(selector_incorrect_placement)
 RUN_TEST(no_attributes_on_reserved)
 RUN_TEST(parameter_attribute_incorrect_placement)
+RUN_TEST(transitional_invalid_placement)
+RUN_TEST(unknown_invalid_placement_on_union)
+RUN_TEST(unknown_invalid_placement_on_bits_member)
+RUN_TEST(unknown_invalid_on_strict_unions_enums)
+RUN_TEST(unknown_ok_on_flexible_or_transitional_enums_union_members)
 END_TEST_CASE(attributes_tests)

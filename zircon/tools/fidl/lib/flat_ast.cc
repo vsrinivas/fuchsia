@@ -104,6 +104,48 @@ class Compiling {
   Decl* decl_;
 };
 
+template <typename T>
+bool ValidateUnknownConstraints(const Decl& decl, types::Strictness decl_strictness,
+                                const std::vector<const T*>* members, SourceSpan* out_source_span,
+                                std::string* out_error) {
+  if (!members)
+    return true;
+
+  const bool is_transitional = decl.HasAttribute("Transitional");
+
+  const bool is_strict = [&] {
+    switch (decl_strictness) {
+      case types::Strictness::kStrict:
+        return true;
+      case types::Strictness::kFlexible:
+        return false;
+    }
+  }();
+
+  bool found_member = false;
+  for (const auto* member : *members) {
+    const bool has_unknown = member->attributes && member->attributes->HasAttribute("Unknown");
+    if (!has_unknown)
+      continue;
+
+    if (is_strict && !is_transitional) {
+      *out_source_span = member->name;
+      *out_error = "[Unknown] attribute can be only be used on flexible or [Transitional] types.";
+      return false;
+    }
+
+    if (found_member) {
+      *out_source_span = member->name;
+      *out_error = "[Unknown] attribute can be only applied to one member.";
+      return false;
+    }
+
+    found_member = true;
+  }
+
+  return true;
+}
+
 }  // namespace
 
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
@@ -965,11 +1007,25 @@ Libraries::Libraries() {
   }, {
       /* any value */
   }));
+  AddAttributeSchema("Transitional", AttributeSchema({
+    AttributeSchema::Placement::kMethod,
+    AttributeSchema::Placement::kBitsDecl,
+    AttributeSchema::Placement::kEnumDecl,
+    AttributeSchema::Placement::kUnionDecl,
+  }, {
+    /* any value */
+  }));
   AddAttributeSchema("Transport", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
   }, {
     /* any value */
   }, TransportConstraint));
+  AddAttributeSchema("Unknown", AttributeSchema({
+    AttributeSchema::Placement::kEnumMember,
+    AttributeSchema::Placement::kUnionMember,
+  }, {
+    ""
+  }));
   // clang-format on
 }
 
@@ -2902,6 +2958,18 @@ bool Library::CompileBits(Bits* bits_declaration) {
       return Fail(*bits_declaration, message);
   }
 
+  {
+    SourceSpan source_span;
+    std::string error;
+
+    // In the line below, `nullptr` needs an explicit cast to the pointer type due to
+    // C++ template mechanics.
+    if (!ValidateUnknownConstraints<const Bits::Member>(
+            *bits_declaration, bits_declaration->strictness, nullptr, &source_span, &error)) {
+      return Fail(source_span, error);
+    }
+  }
+
   return true;
 }
 
@@ -3177,6 +3245,21 @@ bool Library::CompileUnion(Union* union_declaration) {
     return Fail(span, msg_stream.str());
   }
 
+  {
+    std::vector<const Union::Member::Used*> used_members;
+    for (const auto& member : union_declaration->members) {
+      if (member.maybe_used)
+        used_members.push_back(member.maybe_used.get());
+    }
+
+    SourceSpan source_span;
+    std::string error;
+    if (!ValidateUnknownConstraints(*union_declaration, union_declaration->strictness,
+                                    &used_members, &source_span, &error)) {
+      return Fail(source_span, error);
+    }
+  }
+
   return true;
 }
 
@@ -3325,7 +3408,7 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
     }
 
     std::string validation_failure;
-    if (!validator(value, &validation_failure)) {
+    if (!validator(value, member.attributes.get(), &validation_failure)) {
       success = Fail(member.name, validation_failure);
     }
   }
@@ -3350,7 +3433,7 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
-  auto validator = [&mask](MemberType member, std::string* out_error) {
+  auto validator = [&mask](MemberType member, const raw::AttributeList*, std::string* out_error) {
     if (!IsPowerOfTwo(member)) {
       *out_error = "bits members must be powers of two";
       return false;
@@ -3369,9 +3452,59 @@ template <typename MemberType>
 bool Library::ValidateEnumMembers(Enum* enum_decl) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
-  // No additional validation is required for enums.
-  auto validator = [](MemberType member, std::string* out_error) { return true; };
-  return ValidateMembers<Enum, MemberType>(enum_decl, validator);
+
+  auto validator = [enum_decl](MemberType member, const raw::AttributeList* attributes,
+                               std::string* out_error) {
+    switch (enum_decl->strictness) {
+      case types::Strictness::kFlexible:
+        break;
+      case types::Strictness::kStrict:
+        // Strict enums cannot have [Unknown] attributes on members, but that will be validated by
+        // ValidateUnknownConstraints() (called later in this method).
+        return true;
+    }
+
+    constexpr auto kMax = std::numeric_limits<MemberType>::max();
+
+    if (member != kMax)
+      return true;
+
+    if (attributes && attributes->HasAttribute("Unknown"))
+      return true;
+
+    std::string max_value_string = std::to_string(kMax);
+
+    *out_error = "flexible enums must not have a member with a value of " + max_value_string +
+                 ", which is reserved for the unknown value. either: remove the member with the " +
+                 max_value_string + " value, change the member with the " + max_value_string +
+                 " value to something other than " + max_value_string +
+                 ", or explicitly specify the unknown value "
+                 "with the [Unknown] attribute. see "
+                 "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
+                 "language#unions> for more info.";
+
+    return false;
+  };
+
+  if (!ValidateMembers<Enum, MemberType>(enum_decl, validator))
+    return false;
+
+  {
+    std::vector<const Enum::Member*> members;
+    members.reserve(enum_decl->members.size());
+    for (const auto& member : enum_decl->members) {
+      members.push_back(&member);
+    }
+
+    SourceSpan source_span;
+    std::string error;
+    if (!ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members, &source_span,
+                                    &error)) {
+      return Fail(source_span, error);
+    }
+  }
+
+  return true;
 }
 
 bool Library::HasAttribute(std::string_view name) const {
