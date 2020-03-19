@@ -65,7 +65,7 @@ fn hexdump(data: &[u8]) {
 
 /// Walks the given `dir`, printing the full path to every file.
 async fn print_files(dir_proxy: &DirectoryProxy) -> Result<(), Error> {
-    let dir_entries = files_async::readdir_recursive(dir_proxy, /*timeout=*/ None).await?;
+    let dir_entries = files_async::readdir_recursive(dir_proxy, /*timeout=*/ None).await?.entries;
     for entry in dir_entries.iter() {
         if entry.kind == DirentKind::File {
             println!("{}", entry.name);

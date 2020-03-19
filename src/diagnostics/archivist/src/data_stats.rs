@@ -61,6 +61,7 @@ async fn get_data_directory_stats(
     let mut file_and_size = files_async::readdir_recursive(&proxy, None)
         .await
         .or(Err(zx::Status::INTERNAL))?
+        .entries
         .into_iter()
         .map(|val| {
             let pb = PathBuf::from(val.name);

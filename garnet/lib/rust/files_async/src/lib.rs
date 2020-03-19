@@ -25,16 +25,19 @@ pub enum Error {
     Fidl(&'static str, fidl::Error),
 
     #[error("`read_dirents` failed with status {:?}", _0)]
-    ReadDir(zx::Status),
+    ReadDirents(zx::Status),
 
     #[error("`unlink` failed with status {:?}", _0)]
     Unlink(zx::Status),
 
-    #[error("timeout while reading dir: {}", _0)]
-    Timeout(String),
+    #[error("timeout")]
+    Timeout,
 
     #[error("`rewind` failed with status {:?}", _0)]
     Rewind(zx::Status),
+
+    #[error("Failed to read directory {}: {:?}", name, err)]
+    ReadDir { name: String, err: anyhow::Error },
 }
 
 /// An error encountered while decoding a single directory entry.
@@ -91,6 +94,11 @@ impl DirEntry {
     }
 }
 
+pub struct ReaddirRecursiveResult {
+    pub entries: Vec<DirEntry>,
+    pub errors: Vec<Error>,
+}
+
 /// Returns a Vec of all non-directory nodes and all empty directory nodes in the given directory
 /// proxy. The returned entries will not include ".".
 /// |timeout| can be provided optionally to specify the maximum time to wait for a directory to be
@@ -98,9 +106,10 @@ impl DirEntry {
 pub async fn readdir_recursive(
     dir: &DirectoryProxy,
     timeout: Option<zx::Duration>,
-) -> Result<Vec<DirEntry>, anyhow::Error> {
+) -> Result<ReaddirRecursiveResult, anyhow::Error> {
     let mut directories: VecDeque<DirEntry> = VecDeque::new();
     let mut entries: Vec<DirEntry> = Vec::new();
+    let mut errors: Vec<Error> = Vec::new();
 
     // Prime directory queue with immediate descendants.
     {
@@ -126,15 +135,21 @@ pub async fn readdir_recursive(
         )
         .map_err(|e| Error::Fidl("open", e))?;
 
-        let subentries = match timeout {
+        let readdir_result = match timeout {
             Some(timeout_duration) => {
                 readdir(&subdir)
-                    .on_timeout(timeout_duration.after_now(), || {
-                        Err(Error::Timeout(entry.name.clone()))
-                    })
-                    .await?
+                    .on_timeout(timeout_duration.after_now(), || Err(Error::Timeout))
+                    .await
             }
-            None => readdir(&subdir).await?,
+            None => readdir(&subdir).await,
+        };
+
+        let subentries = match readdir_result {
+            Ok(subentries) => subentries,
+            Err(err) => {
+                errors.push(Error::ReadDir { name: entry.name, err: anyhow::Error::new(err) });
+                continue;
+            }
         };
 
         // Emit empty directories as a single entry.
@@ -153,7 +168,7 @@ pub async fn readdir_recursive(
         }
     }
 
-    Ok(entries)
+    Ok(ReaddirRecursiveResult { entries, errors })
 }
 
 /// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
@@ -167,7 +182,7 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     loop {
         let (status, buf) =
             dir.read_dirents(MAX_BUF).await.map_err(|e| Error::Fidl("read_dirents", e))?;
-        zx::Status::ok(status).map_err(Error::ReadDir)?;
+        zx::Status::ok(status).map_err(Error::ReadDirents)?;
 
         if buf.is_empty() {
             break;
@@ -423,7 +438,7 @@ mod tests {
         // run twice to check that seek offset is properly reset before reading the directory
         for _ in 0..2 {
             let entries =
-                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
+                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed").entries;
             assert_eq!(
                 entries,
                 vec![
@@ -461,12 +476,10 @@ mod tests {
                     i += 1;
                 }
             }
-        };
-
-        match result.as_ref().unwrap_err().downcast_ref::<Error>() {
-            Some(Error::Timeout(_)) => {}
-            _ => panic!(format!("unexpected result: {:?}", result)),
         }
+        .expect("readdir_recursive to succeed");
+
+        assert_eq!(result.errors.is_empty(), false);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -476,7 +489,7 @@ mod tests {
             let dir = create_nested_dir(&tempdir).await;
             remove_dir_recursive(&dir, "emptydir").await.expect("remove_dir_recursive to succeed");
             let entries =
-                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
+                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed").entries;
             assert_eq!(
                 entries,
                 vec![
@@ -493,7 +506,7 @@ mod tests {
             let dir = create_nested_dir(&tempdir).await;
             remove_dir_recursive(&dir, "subdir").await.expect("remove_dir_recursive to succeed");
             let entries =
-                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
+                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed").entries;
             assert_eq!(
                 entries,
                 vec![
@@ -516,7 +529,7 @@ mod tests {
                 .await
                 .expect("remove_dir_recursive to succeed");
             let entries =
-                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
+                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed").entries;
             assert_eq!(
                 entries,
                 vec![
@@ -540,7 +553,7 @@ mod tests {
                 .await
                 .expect("remove_dir_recursive to succeed");
             let entries =
-                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
+                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed").entries;
             assert_eq!(
                 entries,
                 vec![
