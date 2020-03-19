@@ -46,9 +46,9 @@ class EndpointImpl : public data::Consumer {
     config.tap_cfg.mac.Clone(&mac);
     config.tap_cfg.options = fuchsia::hardware::ethertap::OPT_REPORT_PARAM;
     config.devfs_root = context.ConnectDevfs();
-    ethertap_ = EthertapClient::Create(std::move(config));
-    if (!ethertap_) {
-      return ZX_ERR_INTERNAL;
+    zx_status_t status = EthertapClient::Create(std::move(config), &ethertap_);
+    if (status != ZX_OK) {
+      return status;
     }
 
     auto devfs_root = context.ConnectDevfs();
@@ -192,7 +192,7 @@ zx_status_t Endpoint::InstallSink(data::BusConsumer::Ptr sink, data::Consumer::P
   auto& sinks = impl_->sinks();
   for (auto& i : sinks) {
     if (i.get() == sink.get()) {
-      return ZX_ERR_ALREADY_EXISTS;
+      return ZX_ERR_ALREADY_BOUND;
     }
   }
   impl_->sinks().emplace_back(std::move(sink));

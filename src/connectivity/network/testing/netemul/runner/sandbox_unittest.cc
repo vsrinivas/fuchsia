@@ -15,6 +15,7 @@
 #include "lib/gtest/real_loop_fixture.h"
 #include "log_listener_test_helpers.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/testing/predicates/status.h"
 
 static const char* kBusName = "test-bus";
 static const char* kBusClientName = "sandbox_unittest";
@@ -642,7 +643,7 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
       auto& a = *attach++;
       std::cout << "checking endpoint " << a.second << " is in network" << std::endl;
       found_nets[a.first]->AttachEndpoint(a.second, [&check](zx_status_t status) {
-        ASSERT_EQ(status, ZX_ERR_ALREADY_EXISTS);
+        ASSERT_STATUS(status, ZX_ERR_ALREADY_BOUND);
         check();
       });
     } else {

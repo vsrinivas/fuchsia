@@ -91,6 +91,7 @@ executable("network_test_bin") {
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//zircon/public/lib/fzl",
   ]
 

@@ -133,6 +133,7 @@ executable("sandbox_unittest") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
+    "//src/lib/testing/predicates",
     "//third_party/rapidjson",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

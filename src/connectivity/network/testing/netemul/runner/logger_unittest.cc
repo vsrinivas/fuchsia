@@ -10,6 +10,7 @@
 #include "log_listener_test_helpers.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/predicates/status.h"
 
 namespace netemul {
 namespace testing {
@@ -41,7 +42,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     fuchsia::logger::LogSinkPtr sink;
     env->ConnectToService(sink.NewRequest(dispatcher()));
     zx::socket mine, remote;
-    ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &mine, &remote));
+    ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &mine, &remote));
     sink->Connect(std::move(remote));
     log_listener.reset(new internal::LogListenerLogSinkImpl(
         proxy.NewRequest(dispatcher()), std::move(env_name), std::move(mine), dispatcher()));

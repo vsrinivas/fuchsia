@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/connectivity/network/testing/netemul/lib/network/ethertap_client.h"
+
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
-#include <src/connectivity/network/testing/netemul/lib/network/ethertap_client.h>
-
+#include "src/connectivity/network/testing/netemul/lib/network/ethernet_client.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/predicates/status.h"
 
 namespace netemul {
 namespace testing {
@@ -49,8 +50,8 @@ class EthertapClientTest : public TestWithEnvironment {
 
     fuchsia::hardware::ethernet::MacAddress mac;
     config.tap_cfg.mac.Clone(&mac);
-    auto tap = EthertapClient::Create(std::move(config));
-    ASSERT_TRUE(tap);
+    std::unique_ptr<EthertapClient> tap;
+    ASSERT_OK(EthertapClient::Create(std::move(config), &tap));
     auto eth =
         EthernetClientFactory(EthernetClientFactory::kDevfsEthernetRoot, GetDevmgr().TakeChannel())
             .RetrieveWithMAC(mac);
@@ -59,7 +60,7 @@ class EthertapClientTest : public TestWithEnvironment {
 
     EthernetConfig eth_config{.nbufs = TEST_N_FIFO_BUFS, .buff_size = TEST_FIFO_SIZE};
     eth->Setup(eth_config, [&ok](zx_status_t status) {
-      ASSERT_EQ(status, ZX_OK);
+      ASSERT_OK(status);
       ok = true;
     });
     // wait until everything is set up correctly
@@ -108,7 +109,7 @@ TEST_F(EthertapClientTest, EthertapReceive) {
 
   for (int i = 0; i < 3; i++) {
     ok = false;
-    ASSERT_EQ(ZX_OK, eth()->AcquireAndSend([&testSend](void* buff, uint16_t* len) {
+    ASSERT_OK(eth()->AcquireAndSend([&testSend](void* buff, uint16_t* len) {
       ASSERT_TRUE(*len >= TEST_BUFF_SIZE);
       *len = TEST_BUFF_SIZE;
       memcpy(buff, testSend, TEST_BUFF_SIZE);
@@ -141,7 +142,7 @@ TEST_F(EthertapClientTest, EthertapSend) {
   // send data through tap a couple of times
   for (int i = 0; i < 3; i++) {
     ok = false;
-    ASSERT_EQ(ZX_OK, tap()->Send(testSend, TEST_BUFF_SIZE));
+    ASSERT_OK(tap()->Send(testSend, TEST_BUFF_SIZE));
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
   }
 }
@@ -186,8 +187,8 @@ TEST_F(EthertapClientTest, EthertapLink) {
   });
 
   // send test vector data on both interfaces
-  ASSERT_EQ(ZX_OK, eth(0)->Send(testSendA, TEST_BUFF_SIZE));
-  ASSERT_EQ(ZX_OK, eth(1)->Send(testSendB, TEST_BUFF_SIZE));
+  ASSERT_OK(eth(0)->Send(testSendA, TEST_BUFF_SIZE));
+  ASSERT_OK(eth(1)->Send(testSendB, TEST_BUFF_SIZE));
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&eth0Received, &eth1Received]() { return eth0Received && eth1Received; }, zx::sec(2)));

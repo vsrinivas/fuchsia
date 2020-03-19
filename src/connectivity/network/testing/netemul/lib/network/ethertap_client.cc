@@ -66,8 +66,8 @@ class EthertapClientImpl : public EthertapClient {
     peer_closed_callback_ = std::move(cb);
   }
 
-  static std::unique_ptr<EthertapClientImpl> Create(async_dispatcher_t* dispatcher,
-                                                    EthertapConfig config) {
+  static zx_status_t Create(async_dispatcher_t* dispatcher, EthertapConfig config,
+                            std::unique_ptr<EthertapClient>* out) {
     zx::socket sock;
 
     fidl::SynchronousInterfacePtr<TapControl> tapctl;
@@ -82,8 +82,7 @@ class EthertapClientImpl : public EthertapClient {
     }
 
     if (status != ZX_OK) {
-      fprintf(stderr, "could not open %s: %s\n", kTapctl, zx_status_get_string(status));
-      return nullptr;
+      return status;
     }
 
     fidl::InterfacePtr<TapDevice> tapdevice;
@@ -93,14 +92,14 @@ class EthertapClientImpl : public EthertapClient {
     status = tapctl->OpenDevice(config.name, config.tap_cfg, tapdevice.NewRequest(dispatcher),
                                 &o_status);
     if (status != ZX_OK) {
-      fprintf(stderr, "Could not open tap device: %s\n", zx_status_get_string(status));
-      return nullptr;
-    } else if (o_status != ZX_OK) {
-      fprintf(stderr, "Could not open tap device, tap error: %s\n", zx_status_get_string(o_status));
-      return nullptr;
+      return status;
+    }
+    if (o_status != ZX_OK) {
+      return o_status;
     }
 
-    return std::make_unique<EthertapClientImpl>(std::move(tapdevice), std::move(config));
+    out->reset(new EthertapClientImpl(std::move(tapdevice), std::move(config)));
+    return ZX_OK;
   }
 
   void Close() override { device_.Unbind(); }
@@ -113,12 +112,12 @@ class EthertapClientImpl : public EthertapClient {
   PeerClosedCallback peer_closed_callback_;
 };
 
-std::unique_ptr<EthertapClient> EthertapClient::Create(EthertapConfig config,
-                                                       async_dispatcher_t* dispatcher) {
+zx_status_t EthertapClient::Create(EthertapConfig config, std::unique_ptr<EthertapClient>* out,
+                                   async_dispatcher_t* dispatcher) {
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }
-  return EthertapClientImpl::Create(dispatcher, std::move(config));
+  return EthertapClientImpl::Create(dispatcher, std::move(config), out);
 }
 
 void EthertapConfig::RandomLocalUnicast(const std::string& str_seed) {

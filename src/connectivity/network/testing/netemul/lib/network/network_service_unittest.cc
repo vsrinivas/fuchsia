@@ -9,14 +9,12 @@
 
 #include <unordered_set>
 
-#include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
-#include <src/connectivity/network/testing/netemul/lib/network/fake_endpoint.h>
-#include <src/connectivity/network/testing/netemul/lib/network/netdump.h>
-#include <src/connectivity/network/testing/netemul/lib/network/netdump_parser.h>
-#include <src/connectivity/network/testing/netemul/lib/network/network_context.h>
-
-#define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
-#define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
+#include "src/connectivity/network/testing/netemul/lib/network/ethernet_client.h"
+#include "src/connectivity/network/testing/netemul/lib/network/fake_endpoint.h"
+#include "src/connectivity/network/testing/netemul/lib/network/netdump.h"
+#include "src/connectivity/network/testing/netemul/lib/network/netdump_parser.h"
+#include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
+#include "src/lib/testing/predicates/status.h"
 
 #define TEST_BUF_SIZE (512ul)
 #define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
@@ -311,20 +309,21 @@ TEST_F(NetworkServiceTest, BadEndpointConfigurations) {
   fidl::InterfaceHandle<FEndpoint> eph;
   // can't create endpoint with empty name
   ASSERT_OK(epm->CreateEndpoint("", GetDefaultEndpointConfig(), &status, &eph));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_INVALID_ARGS);
   ASSERT_FALSE(eph.is_valid());
 
   // can't create endpoint with unexisting backing
   auto badBacking = GetDefaultEndpointConfig();
   badBacking.backing = static_cast<fuchsia::netemul::network::EndpointBacking>(-1);
-  ASSERT_NOK(epm->CreateEndpoint(epname, std::move(badBacking), &status, &eph));
+  ASSERT_STATUS(epm->CreateEndpoint(epname, std::move(badBacking), &status, &eph),
+                ZX_ERR_INVALID_ARGS);
   ASSERT_FALSE(eph.is_valid());
 
   // can't create endpoint which violates maximum MTU
   auto badMtu = GetDefaultEndpointConfig();
   badMtu.mtu = 65535;  // 65k too large
   ASSERT_OK(epm->CreateEndpoint(epname, std::move(badMtu), &status, &eph));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_INVALID_ARGS);
   ASSERT_FALSE(eph.is_valid());
 
   // create a good endpoint:
@@ -334,7 +333,7 @@ TEST_F(NetworkServiceTest, BadEndpointConfigurations) {
   ASSERT_TRUE(good_eph.is_valid());
   // can't create another endpoint with same name:
   ASSERT_OK(epm->CreateEndpoint(epname, GetDefaultEndpointConfig(), &status, &eph));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_ALREADY_EXISTS);
   ASSERT_FALSE(eph.is_valid());
 }
 
@@ -346,7 +345,7 @@ TEST_F(NetworkServiceTest, BadNetworkConfigurations) {
   fidl::InterfaceHandle<FNetwork> neth;
   // can't create network with empty name
   ASSERT_OK(netm->CreateNetwork("", Network::Config(), &status, &neth));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_INVALID_ARGS);
   ASSERT_FALSE(neth.is_valid());
 
   const char* netname = "mynet";
@@ -359,7 +358,7 @@ TEST_F(NetworkServiceTest, BadNetworkConfigurations) {
 
   // can't create another network with same name:
   ASSERT_OK(netm->CreateNetwork(netname, Network::Config(), &status, &neth));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_ALREADY_EXISTS);
   ASSERT_FALSE(neth.is_valid());
 }
 
@@ -586,16 +585,16 @@ TEST_F(NetworkServiceTest, AttachRemove) {
   ASSERT_OK(status);
   // try to attach again:
   ASSERT_OK(net->AttachEndpoint(epname, &status));
-  // should return not OK cause endpoint was already attached:
-  ASSERT_NOK(status);
+  // should return error because endpoint was already attached
+  ASSERT_STATUS(status, ZX_ERR_ALREADY_BOUND);
 
   // remove endpoint:
   ASSERT_OK(net->RemoveEndpoint(epname, &status));
   ASSERT_OK(status);
   // remove endpoint again:
   ASSERT_OK(net->RemoveEndpoint(epname, &status));
-  // should return not OK cause endpoint was not attached
-  ASSERT_NOK(status);
+  // should return error because endpoint was not attached
+  ASSERT_STATUS(status, ZX_ERR_NOT_FOUND);
 }
 
 TEST_F(NetworkServiceTest, FakeEndpoints) {
@@ -758,10 +757,10 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   auto& repeated_cfg = repeated_net_name.emplace_back();
   repeated_cfg.name = "main_net";
   ASSERT_OK(context->Setup(std::move(repeated_net_name), &status, &dummy_handle));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_ALREADY_EXISTS);
   ASSERT_FALSE(dummy_handle.is_valid());
 
-  // check that attempting to setup with invalid ep name will fail, and all
+  // check that attempting to setup with invalid ep name (ep1 already exists) will fail, and all
   // setup is discarded
   std::vector<NetworkSetup> repeated_ep_name;
   auto& good_net = repeated_ep_name.emplace_back();
@@ -770,7 +769,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   repeated_ep1_setup.name = "ep1";
 
   ASSERT_OK(context->Setup(std::move(repeated_ep_name), &status, &dummy_handle));
-  ASSERT_NOK(status);
+  ASSERT_STATUS(status, ZX_ERR_ALREADY_EXISTS);
   ASSERT_FALSE(dummy_handle.is_valid());
   ASSERT_OK(net_manager_->GetNetwork("good_net", &network));
   ASSERT_FALSE(network.is_valid());
@@ -783,7 +782,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [this]() {
         fidl::InterfaceHandle<Network::FNetwork> network;
-        EXPECT_EQ(ZX_OK, net_manager_->GetNetwork("main_net", &network));
+        EXPECT_OK(net_manager_->GetNetwork("main_net", &network));
         return !network.is_valid();
       },
       zx::sec(2)));
@@ -805,7 +804,7 @@ TEST_F(NetworkServiceTest, CreateNetworkWithInvalidConfig) {
   zx_status_t status;
   fidl::InterfaceHandle<Network::FNetwork> net;
   ASSERT_OK(net_manager_->CreateNetwork("net", std::move(config), &status, &net));
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(status, ZX_ERR_INVALID_ARGS);
   ASSERT_FALSE(net.is_valid());
 }
 
@@ -820,7 +819,7 @@ TEST_F(NetworkServiceTest, NetworkSetInvalidConfig) {
   config.set_packet_loss(std::move(loss));
   zx_status_t status;
   ASSERT_OK(net->SetConfig(std::move(config), &status));
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(status, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(NetworkServiceTest, NetworkConfigChains) {

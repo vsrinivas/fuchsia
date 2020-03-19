@@ -9,6 +9,7 @@
 #include "log_listener.h"
 #include "log_listener_test_helpers.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/testing/predicates/status.h"
 
 namespace netemul {
 namespace testing {
@@ -29,7 +30,7 @@ class ManagedLoggerTest : public gtest::RealLoopFixture {
 
   void Write(const std::string& msg) {
     size_t actual = 0;
-    EXPECT_EQ(sock_.write(0, msg.c_str(), msg.length(), &actual), ZX_OK);
+    EXPECT_OK(sock_.write(0, msg.c_str(), msg.length(), &actual));
     EXPECT_EQ(actual, msg.length());
   }
 

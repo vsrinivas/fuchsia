@@ -5,10 +5,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include "src/lib/testing/predicates/status.h"
 #include "sync_manager.h"
-
-#define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
-#define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
 
 #define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
 #define WAIT_FOR_OK_AND_RESET(ok) \

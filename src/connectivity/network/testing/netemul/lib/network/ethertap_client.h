@@ -87,8 +87,8 @@ class EthertapClient {
 
   // Creates an EthertapClient with given configuration.
   // A null reference will be returned if the client can't be created.
-  static std::unique_ptr<EthertapClient> Create(EthertapConfig config,
-                                                async_dispatcher_t* dispatcher = nullptr);
+  static zx_status_t Create(EthertapConfig config, std::unique_ptr<EthertapClient>* out,
+                            async_dispatcher_t* dispatcher = nullptr);
 };
 
 }  // namespace netemul

@@ -40,6 +40,7 @@ executable("sync_test_bin") {
     ":sync_service",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//zircon/public/lib/fzl",
   ]
 }
