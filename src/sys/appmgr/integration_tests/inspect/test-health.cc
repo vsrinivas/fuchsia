@@ -21,6 +21,7 @@ namespace {
 
 using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
+using ::testing::_;
 using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
 using namespace inspect::testing;
@@ -93,13 +94,13 @@ TEST_F(InspectHealthTest, ReadHierarchy) {
 
   auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
 
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(NodeMatches(NameMatches("root")),
-            ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
-                NameMatches("fuchsia.inspect.Health"),
-                PropertyList(UnorderedElementsAre(StringIs("status", "UNHEALTHY"),
-                                                  StringIs("message", "Example failure"))))))))));
+  EXPECT_THAT(hierarchy,
+              AllOf(NodeMatches(NameMatches("root")),
+                    ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
+                        NameMatches("fuchsia.inspect.Health"),
+                        PropertyList(UnorderedElementsAre(
+                            StringIs("status", "UNHEALTHY"), StringIs("message", "Example failure"),
+                            IntIs("start_timestamp_nanos", _))))))))));
 }
 
 }  // namespace

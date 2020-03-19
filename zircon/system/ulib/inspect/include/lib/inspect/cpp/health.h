@@ -7,6 +7,7 @@
 
 #include <lib/fit/optional.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
 
 namespace inspect {
 
@@ -23,6 +24,10 @@ constexpr char kHealthStartingUp[] = "STARTING_UP";
 // Health status designating that the node is not healthy.
 constexpr char kHealthUnhealthy[] = "UNHEALTHY";
 
+// The metric representing timestamp in nanoseconds, at which this health node
+// has been initialized.
+const char kStartTimestamp[] = "start_timestamp_nanos";
+
 // Represents the health associated with a given inspect_deprecated::Node.
 //
 // This class supports adding a Node with name "fuchsia.inspect.Health" that
@@ -36,6 +41,11 @@ class NodeHealth final {
   //
   // The initial status is STARTING_UP.
   explicit NodeHealth(::inspect::Node* parent_node);
+
+  // Constructs a new NodeHealth object, which uses the passed-in clock to
+  // get the needed timestamps. Useful for testing, for example. Does not
+  // take ownership of the clock.
+  NodeHealth(::inspect::Node* parent_node, const std::function<zx_time_t()>& clock_fn);
 
   // Allow moving, disallow copying.
   NodeHealth(NodeHealth&&) = default;
@@ -64,6 +74,7 @@ class NodeHealth final {
   ::inspect::Node health_node_;
   ::inspect::StringProperty health_status_;
   fit::optional<::inspect::StringProperty> health_message_;
+  ::inspect::IntProperty timestamp_nanos_;
 };
 
 }  // namespace inspect

@@ -11,11 +11,13 @@
 
 namespace {
 
-const inspect::StringPropertyValue* GetStringPropertyValue(const inspect::NodeValue& node,
-                                                           const std::string& name) {
+// Example:
+// auto* value = GetPropertyValue<inspect::StringPropertyValue>(node, "name");
+template <class T>
+const T* GetPropertyValue(const inspect::NodeValue& node, const std::string& name) {
   for (const auto& property : node.properties()) {
-    if (property.name() == name && property.Contains<inspect::StringPropertyValue>()) {
-      return &property.Get<inspect::StringPropertyValue>();
+    if (property.name() == name && property.Contains<T>()) {
+      return &property.Get<T>();
     }
   }
   return nullptr;
@@ -33,17 +35,23 @@ bool ContainsProperty(const inspect::NodeValue& node, const std::string& name) {
 
 TEST(InspectHealth, Default) {
   auto inspector = inspect::Inspector();
-  auto health = inspect::NodeHealth(&inspector.GetRoot());
+  auto health = inspect::NodeHealth(&inspector.GetRoot(), []() -> zx_time_t { return 42; });
 
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
+  const auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
 
-  auto* status = GetStringPropertyValue(health_subtree->node(), "status");
+  const auto* status =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "status");
   ASSERT_TRUE(status != nullptr);
   ASSERT_FALSE(ContainsProperty(health_subtree->node(), "message"));
   EXPECT_STR_EQ(inspect::kHealthStartingUp, status->value().c_str());
+
+  const auto* start_time =
+      GetPropertyValue<inspect::IntPropertyValue>(health_subtree->node(), "start_timestamp_nanos");
+  ASSERT_TRUE(status != nullptr);
+  EXPECT_EQ(42L, start_time->value());
 }
 
 TEST(InspectHealth, Ok) {
@@ -51,12 +59,13 @@ TEST(InspectHealth, Ok) {
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.Ok();
 
-  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
+  const auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  const auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
 
-  auto* status = GetStringPropertyValue(health_subtree->node(), "status");
+  const auto* status =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "status");
   ASSERT_TRUE(status != nullptr);
   ASSERT_FALSE(ContainsProperty(health_subtree->node(), "message"));
   EXPECT_STR_EQ(inspect::kHealthOk, status->value().c_str());
@@ -68,12 +77,13 @@ TEST(InspectHealth, UnhealthyToStartingUp) {
   health.Unhealthy("test");
   health.StartingUp();
 
-  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
+  const auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  const auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
 
-  auto* status = GetStringPropertyValue(health_subtree->node(), "status");
+  const auto* status =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "status");
   ASSERT_TRUE(status != nullptr);
   ASSERT_FALSE(ContainsProperty(health_subtree->node(), "message"));
   EXPECT_STR_EQ(inspect::kHealthStartingUp, status->value().c_str());
@@ -85,12 +95,14 @@ TEST(InspectHealth, Unhealthy) {
   health.Unhealthy("test");
 
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
+  const auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
 
-  auto* status = GetStringPropertyValue(health_subtree->node(), "status");
-  auto* message = GetStringPropertyValue(health_subtree->node(), "message");
+  const auto* status =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "status");
+  const auto* message =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "message");
   ASSERT_TRUE(status != nullptr);
   ASSERT_TRUE(message != nullptr);
   EXPECT_STR_EQ(inspect::kHealthUnhealthy, status->value().c_str());
@@ -103,12 +115,14 @@ TEST(InspectHealth, StartingUpReason) {
   health.StartingUp("test");
 
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
+  const auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
 
-  auto* status = GetStringPropertyValue(health_subtree->node(), "status");
-  auto* message = GetStringPropertyValue(health_subtree->node(), "message");
+  const auto* status =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "status");
+  const auto* message =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "message");
   ASSERT_TRUE(status != nullptr);
   ASSERT_TRUE(message != nullptr);
   EXPECT_STR_EQ(inspect::kHealthStartingUp, status->value().c_str());
@@ -121,12 +135,14 @@ TEST(InspectHealth, CustomMessage) {
   health.SetStatus("BAD CONFIG", "test");
 
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
+  const auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
 
-  auto* status = GetStringPropertyValue(health_subtree->node(), "status");
-  auto* message = GetStringPropertyValue(health_subtree->node(), "message");
+  const auto* status =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "status");
+  const auto* message =
+      GetPropertyValue<inspect::StringPropertyValue>(health_subtree->node(), "message");
   ASSERT_TRUE(status != nullptr);
   ASSERT_TRUE(message != nullptr);
   EXPECT_STR_EQ("BAD CONFIG", status->value().c_str());

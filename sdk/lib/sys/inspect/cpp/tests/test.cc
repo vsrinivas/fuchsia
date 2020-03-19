@@ -22,9 +22,10 @@
 namespace {
 
 using ::fxl::Substitute;
-using sys::testing::EnclosingEnvironment;
 using ::testing::Contains;
 using ::testing::UnorderedElementsAre;
+using ::testing::_;
+using sys::testing::EnclosingEnvironment;
 using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
@@ -118,9 +119,11 @@ TEST_F(SysInspectTest, ReadHealth) {
 
   RunLoopUntil([&] { return done; });
 
-  EXPECT_THAT(result.value(), ChildrenMatch(Contains(NodeMatches(AllOf(
-                                  NameMatches("fuchsia.inspect.Health"),
-                                  PropertyList(UnorderedElementsAre(StringIs("status", "OK"))))))));
+  EXPECT_THAT(result.value(),
+              ChildrenMatch(Contains(NodeMatches(
+                  AllOf(NameMatches("fuchsia.inspect.Health"),
+                        PropertyList(UnorderedElementsAre(
+                            StringIs("status", "OK"), IntIs("start_timestamp_nanos", _))))))));
 }
 
 }  // namespace
