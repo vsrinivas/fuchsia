@@ -66,7 +66,7 @@ go_test("thinfs_zircon_rpc_test") {
   deps = [ ":thinfs_lib" ]
 }
 
-unittest_package("go_thinfs_tests") {
+test_package("go_thinfs_tests") {
   deps = [
     ":thinfs_bitops_test($host_toolchain)",
     ":thinfs_block_fake_test($host_toolchain)",
