@@ -131,9 +131,6 @@ pkg_resolver_config("enable_dynamic_configuration") {
   enable_dynamic_configuration = true
 }
 
-group("disable_dynamic_configuration") {
-}
-
 sysmgr_config("config") {
   source = "sysmgr.config"
 }
