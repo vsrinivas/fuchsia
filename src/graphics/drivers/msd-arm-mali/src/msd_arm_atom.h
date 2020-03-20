@@ -68,7 +68,10 @@ class MsdArmAtom {
   bool hard_stopped() const { return hard_stopped_; }
   void set_hard_stopped() { hard_stopped_ = true; }
   bool soft_stopped() const { return soft_stopped_; }
-  void set_soft_stopped(bool stopped) { soft_stopped_ = stopped; }
+  void set_soft_stopped(bool stopped) {
+    soft_stopped_ = stopped;
+    soft_stopped_time_ = stopped ? magma::get_monotonic_ns() : 0;
+  }
 
   // Preempted by a timer interrupt (not by a higher priority atom)
   bool preempted() const { return preempted_; }
@@ -136,6 +139,7 @@ class MsdArmAtom {
   std::chrono::time_point<std::chrono::steady_clock> tick_start_time_;
   bool hard_stopped_ = false;
   bool soft_stopped_ = false;
+  uint64_t soft_stopped_time_ = {};
   bool using_cycle_counter_ = false;
   bool preempted_ = false;
 };
