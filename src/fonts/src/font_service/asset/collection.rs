@@ -6,8 +6,10 @@ use {
     super::{cache::Cache, Asset, AssetId, AssetLoader},
     anyhow::Error,
     fidl_fuchsia_fonts::CacheMissPolicy,
-    fidl_fuchsia_io as io, fidl_fuchsia_mem as mem, fuchsia_inspect as finspect,
-    futures::lock::Mutex,
+    fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
+    fuchsia_inspect::{self as finspect, Property},
+    fuchsia_url::pkg_url::PkgUrl,
+    futures::{join, lock::Mutex},
     manifest::v2,
     std::{collections::BTreeMap, hash::Hash, path::PathBuf},
     thiserror::Error,
@@ -32,6 +34,25 @@ impl FullAssetLocation {
                 Some(locator.directory.join(self.file_name.clone()))
             }
             _ => None,
+        }
+    }
+
+    /// Returns a string representing either an absolute local path or an absolute package resource
+    /// URL, e.g. "/config/data/Alpha.ttf" or
+    /// "fuchsia-pkg://fuchsia.com/font-package-alpha-ttf#Alpha.ttf".
+    fn path_or_url(&self) -> String {
+        match &self.location {
+            v2::AssetLocation::LocalFile(locator) => {
+                locator.directory.join(&self.file_name).to_string_lossy().to_string()
+            }
+            v2::AssetLocation::Package(locator) => PkgUrl::new_resource(
+                locator.url.host().to_owned(),
+                locator.url.path().to_owned(),
+                locator.url.package_hash().map(|s| s.to_owned()),
+                self.file_name.to_owned(),
+            )
+            .unwrap()
+            .to_string(),
         }
     }
 }
@@ -83,7 +104,7 @@ where
             file_name_to_id_map: BTreeMap::new(),
             next_id: 0,
             // TODO(fxb/45391): Factor this out into AssectCollectionInspectData
-            inspect_node: parent_inspect_node.create_child("asset_collection"),
+            inspect_node: AssetCollectionInspectData::make_node(parent_inspect_node),
         }
     }
 
@@ -112,11 +133,15 @@ where
 
     /// Consumes the builder and creates an [`AssetCollection`].
     pub fn build(self) -> AssetCollection<L> {
+        let inspect_data =
+            AssetCollectionInspectData::new(self.inspect_node, &self.id_to_location_map);
+
         AssetCollection {
             asset_loader: self.asset_loader,
             id_to_location_map: self.id_to_location_map,
             id_to_dir_map: Mutex::new(BTreeMap::new()),
-            cache: Mutex::new(Cache::new(self.cache_capacity_bytes, &self.inspect_node)),
+            cache: Mutex::new(Cache::new(self.cache_capacity_bytes, &inspect_data.node)),
+            inspect_data: Mutex::new(inspect_data),
         }
     }
 }
@@ -142,6 +167,9 @@ pub struct AssetCollection<L: AssetLoader> {
 
     /// Cache of memory buffers
     cache: Mutex<Cache>,
+
+    /// Inspect nodes
+    inspect_data: Mutex<AssetCollectionInspectData>,
 }
 
 impl<L: AssetLoader> AssetCollection<L> {
@@ -180,12 +208,22 @@ impl<L: AssetLoader> AssetCollection<L> {
                         .await
                     }
                 }?;
-                let mut cache_lock = self.cache.lock().await;
-                let (asset, _, _) = cache_lock.push(Asset { id, buffer });
+
+                let (mut cache_lock, mut inspect_data_lock) =
+                    join!(self.cache.lock(), self.inspect_data.lock());
+
+                let (asset, is_cached, popped_assets) = cache_lock.push(Asset { id, buffer });
+                inspect_data_lock.update_after_cache_push(&asset, is_cached, &popped_assets);
                 asset.buffer
             }
         };
         Ok(buffer)
+    }
+
+    /// Looks up the local path or URL for a given asset ID.
+    #[allow(dead_code)]
+    pub fn get_asset_path_or_url(&self, asset_id: AssetId) -> Option<String> {
+        self.id_to_location_map.get(&asset_id).map(FullAssetLocation::path_or_url)
     }
 
     /// Returns the number of assets in the collection
@@ -289,4 +327,238 @@ pub enum AssetCollectionError {
         /// Package that we want to read
         package_locator: v2::PackageLocator,
     },
+}
+
+/// Inspect data for a single asset.
+#[allow(dead_code)]
+struct AssetInspectData {
+    node: finspect::Node,
+    caching: finspect::StringProperty,
+    size: Option<finspect::UintProperty>,
+}
+
+impl AssetInspectData {
+    const CACHING_CACHED: &'static str = "cached";
+    const CACHING_UNCACHED: &'static str = "uncached";
+
+    fn new(parent_node: &finspect::Node, asset_id: &AssetId, location: &FullAssetLocation) -> Self {
+        let node = parent_node.create_child(format!("{}", asset_id.0));
+        node.record_string("location", location.path_or_url());
+        let caching = node.create_string("caching", Self::CACHING_UNCACHED);
+        let size = None;
+        AssetInspectData { node, caching, size }
+    }
+}
+
+/// Inspect data for a [`Collection`].
+#[allow(dead_code)]
+pub struct AssetCollectionInspectData {
+    node: finspect::Node,
+
+    assets_node: finspect::Node,
+    assets: BTreeMap<AssetId, AssetInspectData>,
+}
+
+impl AssetCollectionInspectData {
+    /// Creates a new inspect data container with the given _self_ node (not parent node) and asset
+    /// locations.
+    fn new(
+        node: finspect::Node,
+        id_to_location_map: &BTreeMap<AssetId, FullAssetLocation>,
+    ) -> Self {
+        node.record_uint("count", id_to_location_map.len() as u64);
+
+        let assets_node = node.create_child("assets");
+        let mut assets = BTreeMap::new();
+
+        for (id, location) in id_to_location_map.iter() {
+            let asset_data = AssetInspectData::new(&assets_node, id, location);
+            assets.insert(id.clone(), asset_data);
+        }
+
+        AssetCollectionInspectData { node, assets_node, assets }
+    }
+
+    /// Creates an Inspect node to be passed into `new`.
+    fn make_node(parent_node: &finspect::Node) -> finspect::Node {
+        parent_node.create_child("asset_collection")
+    }
+
+    /// Updates the state of the inspect data based on the result of `Cache::push`.
+    fn update_after_cache_push(&mut self, asset: &Asset, is_cached: bool, popped_assets: &[Asset]) {
+        if is_cached {
+            self.set_file_cached(asset.id, asset.buffer.size as usize);
+        }
+        for popped_asset in popped_assets {
+            self.set_not_cached(popped_asset.id);
+        }
+    }
+
+    /// Marks the given asset as cached and keeps track of its size in bytes.
+    fn set_file_cached(&mut self, asset_id: AssetId, size: usize) {
+        self.assets.entry(asset_id).and_modify(|asset_data| {
+            asset_data.caching.set(AssetInspectData::CACHING_CACHED);
+            let node = &mut asset_data.node;
+            asset_data.size.get_or_insert_with(|| node.create_uint("size_bytes", size as u64));
+        });
+    }
+
+    /// Marks the given asset as no longer cached. (The size data is kept.)
+    fn set_not_cached(&mut self, asset_id: AssetId) {
+        self.assets.entry(asset_id).and_modify(|asset_data| {
+            asset_data.caching.set(AssetInspectData::CACHING_UNCACHED);
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, async_trait::async_trait, finspect::assert_inspect_tree, fuchsia_async as fasync,
+        fuchsia_zircon as zx, std::path::Path,
+    };
+
+    fn mock_vmo(vmo_size: u64, buffer_size: u64) -> mem::Buffer {
+        mem::Buffer { vmo: zx::Vmo::create(vmo_size).unwrap(), size: buffer_size }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() -> Result<(), Error> {
+        struct FakeAssetLoader {}
+
+        #[async_trait]
+        #[allow(dead_code, unused_variables)]
+        impl AssetLoader for FakeAssetLoader {
+            async fn fetch_package_directory(
+                &self,
+                package_locator: &v2::PackageLocator,
+            ) -> Result<io::DirectoryProxy, AssetCollectionError> {
+                unimplemented!()
+            }
+
+            fn load_vmo_from_path(&self, path: &Path) -> Result<mem::Buffer, AssetCollectionError> {
+                let size = match path.file_name().unwrap().to_str().unwrap() {
+                    "Alpha-Regular.ttf" => 2345,
+                    "Beta-Regular.ttf" => 4000,
+                    _ => unreachable!(),
+                };
+                Ok(mock_vmo(size * 2, size))
+            }
+
+            async fn load_vmo_from_directory_proxy(
+                &self,
+                directory_proxy: io::DirectoryProxy,
+                package_locator: &v2::PackageLocator,
+                file_name: &str,
+            ) -> Result<mem::Buffer, AssetCollectionError> {
+                unimplemented!()
+            }
+        }
+
+        let inspector = finspect::Inspector::new();
+
+        let assets = vec![
+            v2::Asset {
+                file_name: "Alpha-Regular.ttf".to_string(),
+                location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                    directory: "/config/data/assets".into(),
+                }),
+                typefaces: vec![],
+            },
+            v2::Asset {
+                file_name: "Beta-Regular.ttf".to_string(),
+                location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                    directory: "/config/data/assets".into(),
+                }),
+                typefaces: vec![],
+            },
+            v2::Asset {
+                file_name: "Alpha-Condensed.ttf".to_string(),
+                location: v2::AssetLocation::Package(v2::PackageLocator {
+                    url: PkgUrl::parse(
+                        "fuchsia-pkg://fuchsia.com/font-package-alpha-condensed-ttf",
+                    )?,
+                }),
+                typefaces: vec![],
+            },
+        ];
+        let cache_capacity_bytes = 5000;
+
+        let asset_loader = FakeAssetLoader {};
+        let mut builder =
+            AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes, inspector.root());
+        for asset in &assets {
+            builder.add_or_get_asset_id(asset);
+        }
+        let collection = builder.build();
+
+        // Note partial `contains` match. Cache is tested separately.
+        assert_inspect_tree!(inspector, root: {
+            asset_collection: {
+                assets: {
+                    "0": {
+                        caching: "uncached",
+                        location: "/config/data/assets/Alpha-Regular.ttf"
+                    },
+                    "1": {
+                        caching: "uncached",
+                        location: "/config/data/assets/Beta-Regular.ttf",
+                    },
+                    "2": {
+                        caching: "uncached",
+                        location: "fuchsia-pkg://fuchsia.com/font-package-alpha-condensed-ttf#Alpha-Condensed.ttf"
+                    }
+                },
+                asset_cache: contains {},
+                count: 3u64
+            }
+        });
+
+        collection.get_asset(AssetId(0), CacheMissPolicy::BlockUntilDownloaded).await?;
+
+        assert_inspect_tree!(inspector, root: {
+            asset_collection: contains {
+                assets: {
+                    "0": {
+                        caching: "cached",
+                        location: "/config/data/assets/Alpha-Regular.ttf",
+                        size_bytes: 2345u64,
+                    },
+                    "1": {
+                        caching: "uncached",
+                        location: "/config/data/assets/Beta-Regular.ttf",
+                    },
+                    "2": {
+                        caching: "uncached",
+                        location: "fuchsia-pkg://fuchsia.com/font-package-alpha-condensed-ttf#Alpha-Condensed.ttf"
+                    }
+                }
+            }
+        });
+
+        collection.get_asset(AssetId(1), CacheMissPolicy::BlockUntilDownloaded).await?;
+        // Asset 1 gets cached, asset 1 is evicted but size info is kept.
+        assert_inspect_tree!(inspector, root: {
+            asset_collection: contains {
+                assets: {
+                    "0": {
+                        caching: "uncached",
+                        location: "/config/data/assets/Alpha-Regular.ttf",
+                        size_bytes: 2345u64,
+                    },
+                    "1": {
+                        caching: "cached",
+                        location: "/config/data/assets/Beta-Regular.ttf",
+                        size_bytes: 4000u64,
+                    },
+                    "2": {
+                        caching: "uncached",
+                        location: "fuchsia-pkg://fuchsia.com/font-package-alpha-condensed-ttf#Alpha-Condensed.ttf"
+                    }
+                }
+            }
+        });
+
+        Ok(())
+    }
 }
