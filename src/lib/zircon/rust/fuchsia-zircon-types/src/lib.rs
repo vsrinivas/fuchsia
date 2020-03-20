@@ -372,6 +372,65 @@ multiconst!(zx_clock_t, [
     ZX_CLOCK_THREAD       = 2;
 ]);
 
+// from //src/zircon/system/public/zircon/syscalls/clock.h
+multiconst!(u64, [
+    ZX_CLOCK_OPT_MONOTONIC = 1 << 0;
+    ZX_CLOCK_OPT_CONTINUOUS = 1 << 1;
+    ZX_CLOCK_OPT_AUTO_START = 1 << 2;
+
+    ZX_CLOCK_UPDATE_OPTION_VALUE_VALID = 1 << 0;
+    ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID = 1 << 1;
+    ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID = 1 << 2;
+
+    ZX_CLOCK_ARGS_VERSION_1 = 1 << 58;
+]);
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct zx_clock_create_args_v1_t {
+    pub backstop_time: zx_time_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct zx_clock_rate_t {
+    pub synthetic_ticks: u32,
+    pub reference_ticks: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct zx_clock_transformation_t {
+    pub reference_offset: i64,
+    pub synthetic_offset: i64,
+    pub rate: zx_clock_rate_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct zx_clock_details_v1_t {
+    pub options: u64,
+    pub backstop_time: zx_time_t,
+    pub ticks_to_synthetic: zx_clock_transformation_t,
+    pub mono_to_synthetic: zx_clock_transformation_t,
+    pub error_bound: u64,
+    pub query_ticks: zx_ticks_t,
+    pub last_value_update_ticks: zx_ticks_t,
+    pub last_rate_adjust_update_ticks: zx_ticks_t,
+    pub last_error_bounds_update_ticks: zx_ticks_t,
+    pub generation_counter: u32,
+    pub padding1: [u8; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct zx_clock_update_args_v1_t {
+    pub rate_adjust: i32,
+    pub padding1: [u8; 4],
+    pub value: i64,
+    pub error_bound: u64,
+}
+
 multiconst!(zx_stream_seek_origin_t, [
     ZX_STREAM_SEEK_ORIGIN_START        = 0;
     ZX_STREAM_SEEK_ORIGIN_CURRENT      = 1;

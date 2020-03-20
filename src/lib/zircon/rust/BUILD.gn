@@ -67,6 +67,7 @@ rustc_test("fuchsia-zircon-unittest") {
     ":fuchsia-zircon",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-runtime",
+    "//third_party/rust_crates:matches",
   ]
 
   # TODO(46723): Fix the leaks and remove this.
