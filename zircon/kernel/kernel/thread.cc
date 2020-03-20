@@ -1389,11 +1389,11 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO, "\tstack.shadow_call_base 0x%lx, stack.shadow_call_vmar %p\n",
             t->stack_.shadow_call_base, t->stack_.shadow_call_vmar);
 #endif
-    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry_, t->arg_, t->flags_,
+    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s\n", t->entry_, t->arg_, t->flags_,
             (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
             (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
             (t->flags_ & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
-            (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "");
+            (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "", (t->flags_ & THREAD_FLAG_VCPU) ? "Vc" : "");
 
     dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, wait queues owned %s\n",
             t->blocking_wait_queue_, t->blocked_status_, t->interruptable_,

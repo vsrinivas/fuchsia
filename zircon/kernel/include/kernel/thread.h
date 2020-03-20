@@ -60,6 +60,7 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 #define THREAD_FLAG_REAL_TIME                (1 << 2)
 #define THREAD_FLAG_IDLE                     (1 << 3)
 #define THREAD_FLAG_NO_BOOST                 (1 << 4)
+#define THREAD_FLAG_VCPU                     (1 << 5)
 
 #define THREAD_SIGNAL_KILL                   (1 << 0)
 #define THREAD_SIGNAL_SUSPEND                (1 << 1)
