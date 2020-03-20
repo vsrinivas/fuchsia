@@ -79,6 +79,11 @@ std::vector<std::string> MsdArmAtom::DumpInformation() {
                                      gpu_address_, atom_number_, slot_, client_id, flags_,
                                      priority_, hard_stopped_, soft_stopped_, address_slot)
                        .c_str());
+  if (soft_stopped_) {
+    auto now = magma::get_monotonic_ns();
+    result.push_back(
+        fbl::StringPrintf("  Soft stopped %ld us ago", (now - soft_stopped_time_) / 1000).c_str());
+  }
   for (auto dependency : dependencies_) {
     if (dependency.atom) {
       result.push_back(fbl::StringPrintf("  Dependency on atom number %d type %d (result %d)",
