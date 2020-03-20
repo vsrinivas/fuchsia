@@ -89,10 +89,23 @@ void StreamImpl::AcknowledgeFrameError() {
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void StreamImpl::SetRegionOfInterest(float /*x_min*/, float /*y_min*/, float /*x_max*/,
-                                     float /*y_max*/, SetRegionOfInterestCallback /*callback*/) {
-  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
-  Shutdown(ZX_ERR_UNAVAILABLE);
+void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
+                                     SetRegionOfInterestCallback callback) {
+  zx_status_t status = ZX_OK;
+  auto cleanup = fbl::MakeAutoCall([&]() { callback(status); });
+
+  auto stream_type = output_node_.configured_streams().at(0);
+  auto* parent_node = output_node_.parent_node();
+  while (parent_node) {
+    if (parent_node->is_crop_region_supported(stream_type)) {
+      status = parent_node->OnSetCropRect(x_min, y_min, x_max, y_max);
+      break;
+    }
+    parent_node = parent_node->parent_node();
+  }
+  if (parent_node == nullptr) {
+    status = ZX_ERR_INVALID_ARGS;
+  }
 }
 
 void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {

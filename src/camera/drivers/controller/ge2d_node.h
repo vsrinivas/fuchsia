@@ -88,6 +88,12 @@ class Ge2dNode : public ProcessNode {
   // Notifies that the client has requested to change resolution.
   void OnResolutionChangeRequest(uint32_t output_format_index) override;
 
+  // Notifies that the client has requested a new crop rectangle.
+  // (x_min, y_min): Top left co-ordinates for the crop rectangle.
+  // (x_max, y_max): Bottom right coordinates for the crop rectangle.
+  // These are in the range [0.0f, 1.0f]
+  zx_status_t OnSetCropRect(float x_min, float y_min, float x_max, float y_max) override;
+
  private:
   // Protocol to talk to the GE2D driver.
   ddk::Ge2dProtocolClient ge2d_;

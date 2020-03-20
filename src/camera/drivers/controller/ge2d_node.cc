@@ -7,6 +7,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 
@@ -220,6 +222,50 @@ void Ge2dNode::OnResolutionChangeRequest(uint32_t output_format_index) {
     }
     set_current_image_format_index(output_format_index);
   }
+}
+
+zx_status_t Ge2dNode::OnSetCropRect(float x_min, float y_min, float x_max, float y_max) {
+  TRACE_DURATION("camera", "Ge2dNode::OnSetCropRect");
+  if (task_type_ != Ge2DConfig::GE2D_RESIZE) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (x_max < x_min) {
+    FX_LOGST(ERROR, kTag) << "Invalid crop parameters: x_max(" << x_min << ") < x_min(" << x_min
+                          << ")";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (y_max < y_min) {
+    FX_LOGST(ERROR, kTag) << "Invalid crop parameters: y_max(" << y_min << ") < y_min(" << y_min
+                          << ")";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  x_min = std::clamp(x_min, 0.0f, 1.0f);
+  x_max = std::clamp(x_max, 0.0f, 1.0f);
+  y_min = std::clamp(y_min, 0.0f, 1.0f);
+  y_max = std::clamp(y_max, 0.0f, 1.0f);
+
+  auto& input_image_format = parent_node()->output_image_formats().at(0);
+  uint32_t normalized_x_min = static_cast<uint32_t>(x_min * input_image_format.coded_width + 0.5f);
+  uint32_t normalized_y_min = static_cast<uint32_t>(y_min * input_image_format.coded_height + 0.5f);
+  uint32_t normalized_x_max = static_cast<uint32_t>(x_max * input_image_format.coded_width + 0.5f);
+  uint32_t normalized_y_max = static_cast<uint32_t>(y_max * input_image_format.coded_height + 0.5f);
+
+  if (enabled_) {
+    auto width = normalized_x_max - normalized_x_min;
+    auto height = normalized_y_max - normalized_y_min;
+
+    rect_t crop = {
+        .x = normalized_x_min,
+        .y = normalized_y_min,
+        .width = width,
+        .height = height,
+    };
+    ge2d_.SetCropRect(task_index_, &crop);
+  }
+  return ZX_OK;
 }
 
 }  // namespace camera

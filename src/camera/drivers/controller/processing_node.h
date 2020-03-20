@@ -74,6 +74,12 @@ class ProcessNode {
   // Notifies that the client has requested to change resolution.
   virtual void OnResolutionChangeRequest(uint32_t output_format_index) = 0;
 
+  // Notifies that the client has requested a new crop rectangle.
+  virtual zx_status_t OnSetCropRect(float /*x_min*/, float /*y_min*/, float /*x_max*/,
+                                    float /*y_max*/) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Notifies that the resolution has been changed.
   void OnResolutionChanged(const frame_available_info* info);
 
