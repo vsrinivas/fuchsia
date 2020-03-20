@@ -192,6 +192,18 @@ TEST_F(ControllerDeviceTest, GetConfigs) {
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
               break;
             }
+            case 3: {
+              // Config 3 (video conferencing with extended FOV)
+              EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
+                        fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
+                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                            fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                            fuchsia::camera2::CameraStreamType::EXTENDED_FOV);
+              EXPECT_EQ(configs->at(0).stream_configs.at(1).properties.stream_type(),
+                        fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
+                            fuchsia::camera2::CameraStreamType::EXTENDED_FOV);
+              break;
+            }
             default: {
               EXPECT_EQ(status, ZX_ERR_STOP);
               break;

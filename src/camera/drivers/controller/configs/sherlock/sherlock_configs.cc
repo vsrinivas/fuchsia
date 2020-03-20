@@ -18,6 +18,9 @@ std::vector<fuchsia::camera2::hal::Config> SherlockExternalConfigs() {
   // Video conferencing configuration.
   configs.push_back(VideoConferencingConfig(false));
 
+  // Video conferencing configuration with extended FOV enabled.
+  configs.push_back(VideoConferencingConfig(true));
+
   return configs;
 }
 
@@ -50,11 +53,18 @@ InternalConfigs SherlockInternalConfigs() {
                           },
                       },
               },
-              // Video conferencing configuration.
+              // Video conferencing configuration with extended FOV disabled.
               {
                   .streams_info =
                       {
                           VideoConfigFullRes(false),
+                      },
+              },
+              // Video conferencing configuration with extended FOV enabled.
+              {
+                  .streams_info =
+                      {
+                          VideoConfigFullRes(true),
                       },
               },
           },

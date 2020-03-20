@@ -22,7 +22,7 @@ constexpr auto kStreamTypeVideo = fuchsia::camera2::CameraStreamType::VIDEO_CONF
 constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONITORING;
 
 TEST(ConfigTest, ExternalConfiguration) {
-  constexpr uint32_t kExpectedConfigs = 3u;
+  constexpr uint32_t kExpectedConfigs = 4u;
   auto external_configs = SherlockExternalConfigs();
   auto internal_configs = SherlockInternalConfigs();
 

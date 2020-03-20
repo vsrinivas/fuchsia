@@ -32,6 +32,9 @@ namespace camera {
 // Config 2: Video conferencing configuration.
 //          Stream 0: ML | FR | VIDEO
 //          Stream 1: VIDEO
+// Config 3: Video conferencing configuration.
+//          Stream 0: ML | FR | VIDEO | EXTENDED_FOV
+//          Stream 1: VIDEO | | EXTENDED_FOV
 std::vector<fuchsia::camera2::hal::Config> SherlockExternalConfigs();
 
 // Returns the internal configuration corresponding to the

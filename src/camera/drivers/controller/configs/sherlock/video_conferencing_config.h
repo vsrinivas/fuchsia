@@ -17,6 +17,10 @@
 // Config 2: Video conferencing configuration.
 //          Stream 0: ML | FR | VIDEO
 //          Stream 1: VIDEO
+// Config 3: Video conferencing configuration.
+//          Stream 0: ML | FR | VIDEO | EXTENDED_FOV
+//          Stream 1: VIDEO | EXTENDED_FOV
+
 namespace camera {
 
 namespace {
