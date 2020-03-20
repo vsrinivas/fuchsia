@@ -8,7 +8,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::media_types::*,
+    bt_a2dp::{codec::MediaCodecConfig, media_types::*},
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
@@ -20,7 +20,7 @@ use {
         types::PeerId,
     },
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{self, AsyncWriteExt, StreamExt, TryStreamExt},
     parking_lot::Mutex,
@@ -107,9 +107,8 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
         SbcAllocation::MANDATORY_SRC,
         SbcCodecInfo::BITPOOL_MIN,
         SbcCodecInfo::BITPOOL_MAX,
-    )
-    .or(Err(avdtp::Error::OutOfRange))?;
-    fx_log_info!("Supported codec parameters: {:?}.", sbc_codec_info);
+    )?;
+    fx_vlog!(1, "Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
     let sbc_stream = avdtp::StreamEndpoint::new(
         SBC_SEID,
@@ -120,21 +119,21 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
             avdtp::ServiceCapability::MediaCodec {
                 media_type: avdtp::MediaType::Audio,
                 codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: sbc_codec_info.to_bytes(),
+                codec_extra: sbc_codec_info.to_bytes().to_vec(),
             },
         ],
     )?;
     streams.push(sbc_stream);
 
-    let aac_codec_info = AACMediaCodecInfo::new(
-        AACObjectType::MANDATORY_SRC,
-        AACSamplingFrequency::FREQ48000HZ,
-        AACChannels::TWO,
-        AACVariableBitRate::VBR_SUPPORTED,
+    let aac_codec_info = AacCodecInfo::new(
+        AacObjectType::MANDATORY_SRC,
+        AacSamplingFrequency::FREQ48000HZ,
+        AacChannels::TWO,
+        true,
         MAX_BITRATE_AAC,
-    )
-    .or(Err(avdtp::Error::OutOfRange))?;
-    fx_log_info!("Supported codec parameters: {:?}.", aac_codec_info);
+    )?;
+
+    fx_vlog!(1, "Supported AAC codec parameters: {:?}.", aac_codec_info);
 
     let aac_stream = avdtp::StreamEndpoint::new(
         AAC_SEID,
@@ -145,7 +144,7 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
             avdtp::ServiceCapability::MediaCodec {
                 media_type: avdtp::MediaType::Audio,
                 codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                codec_extra: aac_codec_info.to_bytes(),
+                codec_extra: aac_codec_info.to_bytes().to_vec(),
             },
         ],
     )?;
@@ -238,19 +237,6 @@ impl Peers {
     }
 }
 
-/// The number of frames in each SBC packet sent to the peer.
-/// 5 is chosen by default as it represents a low amount of latency and fits within the default
-/// L2CAP MTU.
-/// RTP Header (12 bytes) + 1 byte (SBC header) + 5 * SBC Frame (119 bytes) = 608 bytes < 672
-/// TODO(40986, 41449): Update this based on the input format and the codec settings.
-const ENCODED_FRAMES_PER_SBC_PACKET: u8 = 5;
-const PCM_FRAMES_PER_SBC_FRAME: u32 = 640;
-
-/// The number of frames in each AAC packet sent to the peer. Only one encoded AudioMuxElement is
-/// sent per RTP frame. 1024 is the most our current AAC encoder will put in a single AudioMuxElement.
-const ENCODED_FRAMES_PER_AAC_PACKET: u8 = 1;
-const PCM_FRAMES_PER_AAC_FRAME: u32 = 1024;
-
 /// Pick a reasonable quality bitrate to use by default. 64k average per channel.
 const PREFERRED_BITRATE_AAC: u32 = 128000;
 
@@ -260,9 +246,6 @@ struct SelectedStream<'a> {
     remote_stream: &'a avdtp::StreamEndpoint,
     codec_settings: avdtp::ServiceCapability,
     seid: u8,
-    encoded_frames_per_packet: u8,
-    pcm_frames_per_encoded_frame: u32,
-    frame_header: Vec<u8>,
 }
 
 impl<'a> SelectedStream<'a> {
@@ -271,34 +254,19 @@ impl<'a> SelectedStream<'a> {
         remote_streams: &'a Vec<avdtp::StreamEndpoint>,
     ) -> Result<SelectedStream<'_>, anyhow::Error> {
         // prefer AAC
-        if let Some(remote_stream) =
-            Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_AAC)
-        {
-            let codec_settings = Self::negotiate_codec_settings(remote_stream)?;
+        let (remote_stream, seid) =
+            match Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_AAC) {
+                Some(aac_stream) => (aac_stream, AAC_SEID),
+                None => (
+                    Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_SBC)
+                        .ok_or(format_err!("Couldn't find a compatible stream"))?,
+                    SBC_SEID,
+                ),
+            };
 
-            return Ok(SelectedStream {
-                remote_stream,
-                codec_settings,
-                seid: AAC_SEID,
-                encoded_frames_per_packet: ENCODED_FRAMES_PER_AAC_PACKET,
-                pcm_frames_per_encoded_frame: PCM_FRAMES_PER_AAC_FRAME,
-                frame_header: vec![],
-            });
-        }
-
-        // Find the SBC stream, which should exist (it is required)
-        let remote_stream = Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_SBC)
-            .ok_or(format_err!("Couldn't find a compatible stream"))?;
         let codec_settings = Self::negotiate_codec_settings(remote_stream)?;
 
-        Ok(SelectedStream {
-            remote_stream,
-            codec_settings,
-            seid: SBC_SEID,
-            encoded_frames_per_packet: ENCODED_FRAMES_PER_SBC_PACKET,
-            pcm_frames_per_encoded_frame: PCM_FRAMES_PER_SBC_FRAME,
-            frame_header: vec![ENCODED_FRAMES_PER_SBC_PACKET],
-        })
+        Ok(SelectedStream { remote_stream, codec_settings, seid })
     }
 
     /// From `stream` remote options, select our preferred and supported encoding options
@@ -309,22 +277,22 @@ impl<'a> SelectedStream<'a> {
             Some(&avdtp::MediaCodecType::AUDIO_AAC) => {
                 let codec_extra =
                     Self::lookup_codec_extra(stream).ok_or(format_err!("no codec extra found"))?;
-                let remote_codec_info = AACMediaCodecInfo::try_from(&codec_extra[..])?;
+                let remote_codec_info = AacCodecInfo::try_from(&codec_extra[..])?;
                 let negotiated_bitrate =
                     std::cmp::min(remote_codec_info.bitrate(), PREFERRED_BITRATE_AAC);
 
                 // Remote peers have to support these options
-                let aac_codec_info = AACMediaCodecInfo::new(
-                    AACObjectType::MPEG2_AAC_LC,
-                    AACSamplingFrequency::FREQ48000HZ,
-                    AACChannels::TWO,
-                    AACVariableBitRate::VBR_SUPPORTED,
+                let aac_codec_info = AacCodecInfo::new(
+                    AacObjectType::MPEG2_AAC_LC,
+                    AacSamplingFrequency::FREQ48000HZ,
+                    AacChannels::TWO,
+                    true,
                     negotiated_bitrate,
                 )?;
                 Ok(avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
                     codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                    codec_extra: aac_codec_info.to_bytes(),
+                    codec_extra: aac_codec_info.to_bytes().to_vec(),
                 })
             }
             Some(&avdtp::MediaCodecType::AUDIO_SBC) => {
@@ -342,7 +310,7 @@ impl<'a> SelectedStream<'a> {
                 Ok(avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
                     codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                    codec_extra: sbc_codec_info.to_bytes(),
+                    codec_extra: sbc_codec_info.to_bytes().to_vec(),
                 })
             }
             Some(t) => Err(format_err!("Unsupported codec {:?}", t)),
@@ -399,23 +367,17 @@ async fn start_streaming(
     };
 
     let source_stream = sources::build_stream(&peer.key(), pcm_format.clone(), source_type)?;
-
-    let mut encoded_stream = EncodedStream::build(
-        pcm_format,
-        &selected_stream.codec_settings,
-        source_stream,
-        selected_stream.pcm_frames_per_encoded_frame,
-        selected_stream.encoded_frames_per_packet,
-    )?;
+    let codec_config = MediaCodecConfig::try_from(&selected_stream.codec_settings)?;
+    let mut encoded_stream = EncodedStream::build(pcm_format, source_stream, &codec_config)?;
 
     let mut builder = RtpPacketBuilder::new(
-        selected_stream.encoded_frames_per_packet,
-        selected_stream.frame_header,
+        codec_config.frames_per_packet() as u8,
+        codec_config.rtp_frame_header().to_vec(),
     );
 
     while let Some(encoded) = encoded_stream.try_next().await? {
         if let Some(packet) =
-            builder.push_frame(encoded, selected_stream.pcm_frames_per_encoded_frame)?
+            builder.push_frame(encoded, codec_config.pcm_frames_per_encoded_frame() as u32)?
         {
             if let Err(e) = media_stream.write(&packet).await {
                 fx_log_info!("Failed sending packet to peer: {}", e);

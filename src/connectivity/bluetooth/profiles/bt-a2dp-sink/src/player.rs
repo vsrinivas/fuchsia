@@ -6,7 +6,8 @@ use {
     anyhow::{format_err, Context as _, Error},
     async_utils::hanging_get::client::HangingGetStream,
     bitfield::bitfield,
-    bt_avdtp::RtpHeader,
+    bt_a2dp::codec::MediaCodecConfig,
+    bt_avdtp::{MediaCodecType, RtpHeader},
     fidl_fuchsia_media::{
         AudioConsumerProxy, AudioConsumerStartFlags, AudioConsumerStatus, AudioSampleFormat,
         AudioStreamType, Compression, SessionAudioConsumerFactoryMarker,
@@ -19,7 +20,6 @@ use {
     futures::{io::AsyncWriteExt, select, stream::pending, FutureExt, Stream, StreamExt},
 };
 
-use crate::codec::CodecExtra;
 use crate::latm::AudioMuxElement;
 use crate::DEFAULT_SAMPLE_RATE;
 
@@ -33,7 +33,7 @@ pub type DecodedStream = Box<dyn Stream<Item = DecodedStreamItem> + Unpin>;
 pub struct Player {
     buffer: zx::Vmo,
     buffer_len: usize,
-    codec_extra: CodecExtra,
+    codec_config: MediaCodecConfig,
     current_offset: usize,
     stream_sink: StreamSinkProxy,
     audio_consumer: AudioConsumerProxy,
@@ -142,29 +142,33 @@ impl SbcHeader {
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
-    pub async fn new(session_id: u64, codec_extra: CodecExtra) -> Result<Player, Error> {
+    pub async fn new(session_id: u64, codec_config: MediaCodecConfig) -> Result<Player, Error> {
         let audio_consumer_factory =
             fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
                 .context("Failed to connect to audio consumer factory")?;
-        Self::from_proxy(session_id, codec_extra, audio_consumer_factory).await
+        Self::from_proxy(session_id, codec_config, audio_consumer_factory).await
     }
 
     /// Build a AudioConsumer given a SessionAudioConsumerFactoryProxy.
     /// Used in tests.
     async fn from_proxy(
         session_id: u64,
-        codec_extra: CodecExtra,
+        codec_config: MediaCodecConfig,
         audio_consumer_factory: SessionAudioConsumerFactoryProxy,
     ) -> Result<Player, Error> {
-        let (decoder, decoded_stream) = match &codec_extra {
-            CodecExtra::Sbc(codec_extra_data) => {
-                let mut decoder =
-                    StreamProcessor::create_decoder("audio/sbc", Some(codec_extra_data.to_vec()))?;
-                let decoded_stream = Box::new(decoder.take_output_stream()?);
-                (Some(decoder), decoded_stream as DecodedStream)
-            }
-            _ => (None, Box::new(pending::<DecodedStreamItem>()) as DecodedStream),
-        };
+        let mut decoder = None;
+        let mut decoded_stream = Box::new(pending::<DecodedStreamItem>()) as DecodedStream;
+        let mut compression = None;
+        if codec_config.codec_type() == &MediaCodecType::AUDIO_SBC {
+            let encoding = codec_config.stream_encoding();
+            let mut dec = StreamProcessor::create_decoder(
+                codec_config.mime_type(),
+                Some(codec_config.codec_extra().to_vec()),
+            )?;
+            decoded_stream = Box::new(dec.take_output_stream()?);
+            compression = Some(Compression { type_: encoding.to_string(), parameters: None });
+            decoder = Some(dec);
+        }
 
         let (audio_consumer, audio_consumer_server) = fidl::endpoints::create_proxy()?;
 
@@ -175,14 +179,7 @@ impl Player {
         let mut audio_stream_type = AudioStreamType {
             sample_format: AudioSampleFormat::Signed16,
             channels: 2, // Stereo
-            frames_per_second: codec_extra.sample_freq().unwrap_or(DEFAULT_SAMPLE_RATE),
-        };
-
-        let mut compression = match decoder {
-            None => {
-                Some(Compression { type_: codec_extra.stream_type().to_string(), parameters: None })
-            }
-            Some(_) => None,
+            frames_per_second: codec_config.sampling_frequency().unwrap_or(DEFAULT_SAMPLE_RATE),
         };
 
         let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
@@ -208,7 +205,7 @@ impl Player {
         let mut player = Player {
             buffer,
             buffer_len: DEFAULT_BUFFER_LEN,
-            codec_extra,
+            codec_config,
             stream_sink,
             audio_consumer,
             watch_status_stream,
@@ -264,14 +261,12 @@ impl Player {
 
         let mut offset = RtpHeader::LENGTH;
 
-        if let CodecExtra::Sbc(_) = self.codec_extra {
-            // TODO(40918) Handle SBC packet header
-            offset += 1;
-        }
+        // TODO(40918) Handle SBC packet header
+        offset += self.codec_config.rtp_frame_header().len();
 
         while offset < payload.len() {
-            match self.codec_extra {
-                CodecExtra::Sbc(_) => {
+            match self.codec_config.codec_type() {
+                &MediaCodecType::AUDIO_SBC => {
                     let len = Player::find_sbc_frame_len(&payload[offset..]).or_else(|e| {
                         self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
                         Err(e)
@@ -283,7 +278,10 @@ impl Player {
 
                     match &mut self.decoder {
                         Some(decoder) => {
-                            decoder.write(&payload[offset..offset + len]).await?;
+                            decoder
+                                .write(&payload[offset..offset + len])
+                                .await
+                                .context("writing to decoder")?;
                         }
                         None => {
                             self.send_frame(&payload[offset..offset + len])?;
@@ -292,26 +290,22 @@ impl Player {
 
                     offset += len;
                 }
-                CodecExtra::Aac(_) => {
-                    let audio_mux_element = AudioMuxElement::try_from_bytes(&payload[offset..])?;
+                &MediaCodecType::AUDIO_AAC => {
+                    let element = AudioMuxElement::try_from_bytes(&payload[offset..])?;
 
-                    if let Some(frame) = audio_mux_element.get_payload(0) {
-                        self.send_frame(frame)?;
-                    } else {
-                        return Err(format_err!("No payload found"));
-                    }
-
-                    offset = payload.len();
+                    let frame = element.get_payload(0).ok_or(format_err!("Payload not found"))?;
+                    self.send_frame(frame)?;
+                    // Only one payload per AAC RTP Pakcet.
+                    break;
                 }
                 _ => return Err(format_err!("Unrecognized codec!")),
             }
         }
 
-        if let Some(decoder) = &mut self.decoder {
-            decoder.flush()?;
-        }
-
-        Ok(())
+        // Flush the decoder if we have one.
+        self.decoder
+            .as_mut()
+            .map_or(Ok(()), |d| d.flush().map_err(|e| format_err!("failed flush: {:?}", e)))
     }
 
     /// Push an encoded media frame into the buffer and signal that it's there to media.
@@ -395,7 +389,6 @@ impl Drop for Player {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::codec::CodecExtra;
     use futures::future::{self, Either};
     use matches::assert_matches;
 
@@ -444,7 +437,7 @@ mod tests {
     /// the VMO payload buffer that was provided to the AudioConsumer.
     fn setup_player(
         exec: &mut fasync::Executor,
-        codec_extra: CodecExtra,
+        codec_config: MediaCodecConfig,
     ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
         const TEST_SESSION_ID: u64 = 1;
 
@@ -454,7 +447,7 @@ mod tests {
 
         let mut player_new_fut = Box::pin(Player::from_proxy(
             TEST_SESSION_ID,
-            codec_extra,
+            codec_config,
             audio_consumer_factory_proxy,
         ));
 
@@ -534,11 +527,21 @@ mod tests {
         (player, sink_request_stream, audio_consumer_request_stream, sink_vmo)
     }
 
+    fn build_config(codec_type: &MediaCodecType) -> MediaCodecConfig {
+        match codec_type {
+            &MediaCodecType::AUDIO_SBC => {
+                MediaCodecConfig::build(codec_type.clone(), &[0x82, 0x15, 2, 250])
+            }
+            &MediaCodecType::AUDIO_AAC => MediaCodecConfig::build(codec_type.clone(), &[0; 6]),
+            x => panic!("Can't build unknown codec type {:?}", x),
+        }
+        .expect("codec should build")
+    }
+
     #[test]
     fn test_player_setup() {
         let mut exec = fasync::Executor::new().expect("executor should build");
-
-        setup_player(&mut exec, CodecExtra::Unknown);
+        setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
     }
 
     #[test]
@@ -551,7 +554,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (mut player, mut sink_request_stream, _, sink_vmo) =
-            setup_player(&mut exec, CodecExtra::Unknown);
+            setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
         let payload = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -626,7 +629,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
-            setup_player(&mut exec, CodecExtra::Aac([0; 6]));
+            setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
         player.play().expect("player plays");
 
@@ -670,7 +673,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
-            setup_player(&mut exec, CodecExtra::Aac([0; 6]));
+            setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
         player.play().expect("player plays");
 
@@ -708,7 +711,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
-            setup_player(&mut exec, CodecExtra::Sbc([0x82, 0x00, 0x00, 0x00]));
+            setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_SBC));
 
         player.play().expect("player plays");
 
@@ -722,7 +725,7 @@ mod tests {
 
         // raw rtp header with sequence number of 1 followed by 1 sbc frame
         let raw = [
-            128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0x9c, 0xb1, 0x20, 0x3b, 0x80, 0x00, 0x00,
+            128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x9c, 0xb1, 0x20, 0x3b, 0x80, 0x00, 0x00,
             0x11, 0x7f, 0xfa, 0xab, 0xef, 0x7f, 0xfa, 0xab, 0xef, 0x80, 0x4a, 0xab, 0xaf, 0x80,
             0xf2, 0xab, 0xcf, 0x83, 0x8a, 0xac, 0x32, 0x8a, 0x78, 0x8a, 0x53, 0x90, 0xdc, 0xad,
             0x49, 0x96, 0xba, 0xaa, 0xe6, 0x9c, 0xa2, 0xab, 0xac, 0xa2, 0x72, 0xa9, 0x2d, 0xa8,

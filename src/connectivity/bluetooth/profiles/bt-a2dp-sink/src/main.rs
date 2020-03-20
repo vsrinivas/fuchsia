@@ -8,13 +8,12 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::media_types::*,
+    bt_a2dp::{codec::MediaCodecConfig, media_types::*},
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
-    fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC},
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
@@ -31,12 +30,10 @@ use {
     std::{collections::hash_map, collections::HashMap, convert::TryFrom, sync::Arc},
 };
 
-use crate::codec::CodecExtra;
 use crate::connected_peers::ConnectedPeers;
 use crate::inspect_types::StreamingInspectData;
 
 mod avrcp_relay;
-mod codec;
 mod connected_peers;
 mod inspect_types;
 mod latm;
@@ -105,26 +102,22 @@ const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(1);
 struct Stream {
     /// The AVDTP endpoint that this stream is associated with.
     endpoint: avdtp::StreamEndpoint,
-    /// The encoding that media sent to this endpoint should be encoded with.
-    /// This should be an encoding constant from fuchsia.media like AUDIO_ENCODING_SBC.
-    /// See //sdk/fidl/fuchsia.media/stream_type.fidl for valid encodings.
-    encoding: String,
     /// Some(sender) when a stream task is started.  Signaling on this sender will
     /// end the media streaming task.
     suspend_sender: Option<Sender<()>>,
 }
 
 impl Stream {
-    fn new(endpoint: avdtp::StreamEndpoint, encoding: String) -> Stream {
-        Stream { endpoint, encoding, suspend_sender: None }
+    fn new(endpoint: avdtp::StreamEndpoint) -> Stream {
+        Stream { endpoint, suspend_sender: None }
     }
 
     /// Get the currently configured extra codec data
-    fn configured_codec_extra(&self) -> Result<CodecExtra, avdtp::Error> {
+    fn configuration(&self) -> Result<MediaCodecConfig, avdtp::Error> {
         self.endpoint
             .get_configuration()?
             .iter()
-            .find_map(|cap| CodecExtra::try_from(cap).ok())
+            .find_map(|cap| MediaCodecConfig::try_from(cap).ok())
             .ok_or(avdtp::Error::InvalidState)
     }
 
@@ -142,11 +135,11 @@ impl Stream {
         let (send, receive) = mpsc::channel(1);
         self.suspend_sender = Some(send);
 
-        let codec_extra = self.configured_codec_extra()?;
+        let codec_config = self.configuration()?;
 
         fuchsia_async::spawn_local(decode_media_stream(
             self.endpoint.take_transport()?,
-            codec_extra,
+            codec_config,
             // TODO(42976) get real media session id
             DEFAULT_SESSION_ID,
             receive,
@@ -154,6 +147,14 @@ impl Stream {
             cobalt_sender,
         ));
         Ok(())
+    }
+
+    /// The encoding that media sent to this endpoint should be encoded with.
+    /// This should be an encoding constant from fuchsia.media like AUDIO_ENCODING_SBC.
+    /// See //sdk/fidl/fuchsia.media/stream_type.fidl for valid encodings.
+    fn encoding(&self) -> avdtp::Result<&str> {
+        let config = self.configuration()?;
+        Ok(config.stream_encoding().clone())
     }
 
     /// Signals to the media decoding task to end.
@@ -176,11 +177,7 @@ impl Stream {
 
 impl Clone for Stream {
     fn clone(&self) -> Self {
-        Stream {
-            endpoint: self.endpoint.as_new(),
-            encoding: self.encoding.clone(),
-            suspend_sender: None,
-        }
+        Stream { endpoint: self.endpoint.as_new(), suspend_sender: None }
     }
 }
 
@@ -200,11 +197,12 @@ impl Streams {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
         // SBC is required
-        if let Err(e) = player::Player::new(DEFAULT_SESSION_ID, CodecExtra::Sbc([0; 4])).await {
+        let sbc_config = MediaCodecConfig::min_sbc();
+        if let Err(e) = player::Player::new(DEFAULT_SESSION_ID, sbc_config).await {
             fx_log_warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
-        let sbc_media_codec_info = SbcCodecInfo::new(
+        let sbc_codec_info = SbcCodecInfo::new(
             SbcSamplingFrequency::MANDATORY_SNK,
             SbcChannelMode::MANDATORY_SNK,
             SbcBlockCount::MANDATORY_SNK,
@@ -213,7 +211,8 @@ impl Streams {
             SbcCodecInfo::BITPOOL_MIN,
             SbcCodecInfo::BITPOOL_MAX,
         )?;
-        fx_log_info!("Supported codec parameters: {:?}.", sbc_media_codec_info);
+
+        fx_vlog!(1, "Supported codec parameters: {:?}.", sbc_codec_info);
 
         let sbc_stream = avdtp::StreamEndpoint::new(
             SBC_SEID,
@@ -224,20 +223,21 @@ impl Streams {
                 avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
                     codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                    codec_extra: sbc_media_codec_info.to_bytes(),
+                    codec_extra: sbc_codec_info.to_bytes().to_vec(),
                 },
             ],
         )?;
-        s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+        s.insert(sbc_stream);
 
-        let aac_media_codec_info = AACMediaCodecInfo::new(
-            AACObjectType::MANDATORY_SNK,
-            AACSamplingFrequency::MANDATORY_SNK,
-            AACChannels::MANDATORY_SNK,
-            AACVariableBitRate::MANDATORY_SNK,
+        let aac_codec_info = AacCodecInfo::new(
+            AacObjectType::MANDATORY_SNK,
+            AacSamplingFrequency::MANDATORY_SNK,
+            AacChannels::MANDATORY_SNK,
+            true,
             0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
         )?;
-        fx_log_info!("Supported codec parameters: {:?}.", aac_media_codec_info);
+
+        fx_vlog!(1, "Supported codec parameters: {:?}.", aac_codec_info);
 
         let aac_stream = avdtp::StreamEndpoint::new(
             AAC_SEID,
@@ -248,11 +248,11 @@ impl Streams {
                 avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
                     codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                    codec_extra: aac_media_codec_info.to_bytes(),
+                    codec_extra: aac_codec_info.to_bytes().to_vec(),
                 },
             ],
         )?;
-        s.insert(aac_stream, AUDIO_ENCODING_AAC.to_string());
+        s.insert(aac_stream);
 
         s.construct_inspect_data(inspect);
         Ok(s)
@@ -269,15 +269,15 @@ impl Streams {
             let id = stream.endpoint.local_id();
             let capabilities = stream.endpoint.capabilities();
             let mut writer = writer.create_child(&format!("stream {}", id));
-            writer.create_string("encoding", &stream.encoding);
+            writer.create_string("encoding", stream.encoding().unwrap_or("Unknown"));
             writer.create_string("capabilities", capabilities.debug());
         }
     }
 
     /// Adds a stream, indexing it by the endpoint id, associated with an encoding,
     /// replacing any other stream with the same endpoint id.
-    fn insert(&mut self, stream: avdtp::StreamEndpoint, codec: String) {
-        self.0.insert(stream.local_id().clone(), Stream::new(stream, codec));
+    fn insert(&mut self, stream: avdtp::StreamEndpoint) {
+        self.0.insert(stream.local_id().clone(), Stream::new(stream));
     }
 
     /// Retrieves a mutable reference to the endpoint with the `id`.
@@ -311,13 +311,13 @@ impl Streams {
 /// Ends when signaled from `end_signal`, or when the media transport stream is closed.
 async fn decode_media_stream(
     mut stream: avdtp::MediaStream,
-    codec_extra: CodecExtra,
+    codec_config: MediaCodecConfig,
     session_id: u64,
     mut end_signal: Receiver<()>,
     mut inspect: StreamingInspectData,
     cobalt_sender: CobaltSender,
 ) -> () {
-    let mut player = match player::Player::new(session_id, codec_extra.clone()).await {
+    let mut player = match player::Player::new(session_id, codec_config.clone()).await {
         Ok(v) => v,
         Err(e) => {
             fx_log_info!("Can't setup player for Media: {:?}", e);
@@ -356,7 +356,7 @@ async fn decode_media_stream(
                     player::PlayerEvent::Closed => {
                         fx_log_info!("Rebuilding Player");
                         // The player died somehow? Attempt to rebuild the player.
-                        player = match player::Player::new(session_id, codec_extra.clone()).await {
+                        player = match player::Player::new(session_id, codec_config.clone()).await {
                             Ok(v) => v,
                             Err(e) => {
                                 fx_log_info!("Can't rebuild player: {:?}", e);
@@ -380,17 +380,25 @@ async fn decode_media_stream(
     }
     let end_time = zx::Time::get(zx::ClockId::Monotonic);
 
-    report_stream_metrics(cobalt_sender, &codec_extra, (end_time - start_time).into_seconds());
+    report_stream_metrics(
+        cobalt_sender,
+        &codec_config.codec_type(),
+        (end_time - start_time).into_seconds(),
+    );
 }
 
 fn report_stream_metrics(
     mut cobalt_sender: CobaltSender,
-    codec_extra: &CodecExtra,
+    codec_type: &avdtp::MediaCodecType,
     duration_seconds: i64,
 ) {
-    let codec = match codec_extra {
-        CodecExtra::Sbc(_) => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Sbc,
-        CodecExtra::Aac(_) => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac,
+    let codec = match codec_type {
+        &avdtp::MediaCodecType::AUDIO_SBC => {
+            metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Sbc
+        }
+        &avdtp::MediaCodecType::AUDIO_AAC => {
+            metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac
+        }
         _ => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Unknown,
     };
 
@@ -611,8 +619,8 @@ mod tests {
     use fidl::endpoints::{create_proxy_and_stream, RequestStream};
     use fidl_fuchsia_bluetooth::Status;
     use fidl_fuchsia_bluetooth_bredr::{Channel, ProfileControlHandle, ProtocolDescriptor};
-    use fidl_fuchsia_cobalt::CobaltEvent;
-    use fidl_fuchsia_cobalt::EventPayload;
+    use fidl_fuchsia_cobalt::{CobaltEvent, EventPayload};
+    use fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC};
     use fuchsia_bluetooth::types::PeerId;
     use futures::channel::mpsc;
     use futures::{pin_mut, task::Poll, StreamExt};
@@ -718,7 +726,7 @@ mod tests {
 
         assert_matches!(res, Err(avdtp::ErrorCode::BadAcpSeid));
 
-        streams.insert(s, encoding.clone());
+        streams.insert(s);
 
         assert!(streams.get_endpoint(&id).is_some());
         assert_eq!(&id, streams.get_endpoint(&id).unwrap().local_id());
@@ -742,12 +750,11 @@ mod tests {
             .expect("Failed to configure endpoint");
 
         let stream = streams.get_mut(&id).expect("stream");
-        let codec_extra = stream.configured_codec_extra().expect("codec extra");
-        assert_matches!(codec_extra, CodecExtra::Sbc([41, 245, 2, 53]));
-        assert_matches!(codec_extra.sample_freq(), Some(TEST_SAMPLE_FREQ));
+        let codec_config = stream.configuration().expect("media codec config");
+        assert_matches!(codec_config.sampling_frequency(), Ok(TEST_SAMPLE_FREQ));
 
         assert_matches!(stream.suspend_sender, None);
-        assert_eq!(encoding, stream.encoding);
+        assert_eq!(encoding, stream.encoding().expect("encoding"));
     }
 
     #[test]
@@ -780,10 +787,9 @@ mod tests {
         assert_matches!(streams.get_endpoint(&id), None);
 
         let res = streams.get_mut(&id);
-
         assert_matches!(res, Err(avdtp::ErrorCode::BadAcpSeid));
 
-        streams.insert(s, encoding.clone());
+        streams.insert(s);
 
         assert!(streams.get_endpoint(&id).is_some());
         assert_eq!(&id, streams.get_endpoint(&id).unwrap().local_id());
@@ -807,12 +813,11 @@ mod tests {
             .expect("Failed to configure endpoint");
 
         let stream = streams.get_mut(&id).expect("stream");
-        let codec_extra = stream.configured_codec_extra().expect("codec extra");
-        assert_matches!(codec_extra, CodecExtra::Aac([128, 1, 4, 4, 226, 0]));
-        assert_matches!(codec_extra.sample_freq(), Some(TEST_SAMPLE_FREQ));
+        let codec_extra = stream.configuration().expect("media codec config");
+        assert_matches!(codec_extra.sampling_frequency(), Ok(TEST_SAMPLE_FREQ));
 
         assert_matches!(stream.suspend_sender, None);
-        assert_eq!(encoding, stream.encoding);
+        assert_eq!(encoding, stream.encoding().expect("encoding"));
     }
 
     #[test]
@@ -837,7 +842,7 @@ mod tests {
         let (send, mut recv) = fake_cobalt_sender();
         const TEST_DURATION: i64 = 1;
 
-        report_stream_metrics(send, &CodecExtra::Aac([0; 6]), TEST_DURATION);
+        report_stream_metrics(send, &avdtp::MediaCodecType::AUDIO_AAC, TEST_DURATION);
 
         let event = recv.try_next().expect("no stream error").expect("event present");
 

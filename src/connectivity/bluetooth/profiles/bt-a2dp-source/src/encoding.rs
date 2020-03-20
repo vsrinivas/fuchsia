@@ -2,16 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use bitfield::bitfield;
-use bt_a2dp::media_types as a2dp;
-use bt_avdtp as avdtp;
-use fidl_fuchsia_media::{
-    AacAudioObjectType, AacBitRate, AacChannelMode, AacConstantBitRate, AacEncoderSettings,
-    AacTransport, AacTransportLatm, AacVariableBitRate, AudioFormat, AudioUncompressedFormat,
-    DomainFormat, EncoderSettings, PcmFormat, SbcAllocation, SbcBlockCount, SbcChannelMode,
-    SbcEncoderSettings, SbcSubBands,
-};
+use bt_a2dp as a2dp;
+use fidl_fuchsia_media::{AudioFormat, AudioUncompressedFormat, DomainFormat, PcmFormat};
 use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
 use futures::{
     io::AsyncWrite,
@@ -19,7 +13,7 @@ use futures::{
     task::{Context, Poll},
     Stream, StreamExt,
 };
-use std::{collections::VecDeque, convert::TryFrom, pin::Pin};
+use std::{collections::VecDeque, pin::Pin};
 
 use fuchsia_syslog::fx_log_info;
 
@@ -65,8 +59,8 @@ impl RtpPacketBuilder {
         }
     }
 
-    /// Add a frame that is `time` audio samples long into the builder.
-    /// Returns a serialized RTP packet if this frame fills the packet,
+    /// Add a frame that represents `time` pcm audio samples into the builder.
+    /// Returns a serialized RTP packet if this frame fills a packet.
     /// or an Error.
     pub fn push_frame(&mut self, frame: Vec<u8>, time: u32) -> Result<Option<Vec<u8>>, Error> {
         self.frames.push_back(frame);
@@ -110,97 +104,16 @@ pub struct EncodedStream {
 impl EncodedStream {
     pub fn build(
         input_format: PcmFormat,
-        codec_settings: &avdtp::ServiceCapability,
         source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
-        pcm_frames_per_encoded_frame: u32,
-        encoded_frames_per_packet: u8,
+        config: &a2dp::codec::MediaCodecConfig,
     ) -> Result<Self, Error> {
-        let encoder_settings = match codec_settings {
-            avdtp::ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra,
-            } => {
-                let codec_info = a2dp::SbcCodecInfo::try_from(&codec_extra[..])?;
-
-                let sub_bands = match a2dp::SbcSubBands::from_bits_truncate(codec_info.subbands()) {
-                    a2dp::SbcSubBands::FOUR => SbcSubBands::SubBands4,
-                    a2dp::SbcSubBands::EIGHT => SbcSubBands::SubBands8,
-                    _ => return Err(format_err!("out of range")),
-                };
-
-                let allocation =
-                    match a2dp::SbcAllocation::from_bits_truncate(codec_info.allocation_method()) {
-                        a2dp::SbcAllocation::SNR => SbcAllocation::AllocSnr,
-                        a2dp::SbcAllocation::LOUDNESS => SbcAllocation::AllocLoudness,
-                        _ => return Err(format_err!("out of range")),
-                    };
-
-                let block_count =
-                    match a2dp::SbcBlockCount::from_bits_truncate(codec_info.block_count()) {
-                        a2dp::SbcBlockCount::FOUR => SbcBlockCount::BlockCount4,
-                        a2dp::SbcBlockCount::EIGHT => SbcBlockCount::BlockCount8,
-                        a2dp::SbcBlockCount::TWELVE => SbcBlockCount::BlockCount12,
-                        a2dp::SbcBlockCount::SIXTEEN => SbcBlockCount::BlockCount16,
-                        _ => return Err(format_err!("out of range")),
-                    };
-
-                let channel_mode =
-                    match a2dp::SbcChannelMode::from_bits_truncate(codec_info.channel_mode()) {
-                        a2dp::SbcChannelMode::MONO => SbcChannelMode::Mono,
-                        a2dp::SbcChannelMode::DUAL_CHANNEL => SbcChannelMode::Dual,
-                        a2dp::SbcChannelMode::STEREO => SbcChannelMode::Stereo,
-                        a2dp::SbcChannelMode::JOINT_STEREO => SbcChannelMode::JointStereo,
-                        _ => return Err(format_err!("out of range")),
-                    };
-
-                EncoderSettings::Sbc(SbcEncoderSettings {
-                    sub_bands,
-                    allocation,
-                    block_count,
-                    channel_mode,
-                    bit_pool: codec_info.maxbitpoolval() as u64,
-                })
-            }
-            avdtp::ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                codec_extra,
-            } => {
-                let codec_info = a2dp::AACMediaCodecInfo::try_from(&codec_extra[..])?;
-                let bit_rate = match a2dp::AACVariableBitRate::from_bits_truncate(codec_info.vbr())
-                {
-                    a2dp::AACVariableBitRate::VBR_SUPPORTED => {
-                        // TODO(39321) Select VBR quality based on peak bitrate in codec info
-                        AacBitRate::Variable(AacVariableBitRate::V3)
-                    }
-                    _ => {
-                        AacBitRate::Constant(AacConstantBitRate { bit_rate: codec_info.bitrate() })
-                    }
-                };
-
-                let channel_mode =
-                    match a2dp::AACChannels::from_bits_truncate(codec_info.channels()) {
-                        a2dp::AACChannels::ONE => AacChannelMode::Mono,
-                        a2dp::AACChannels::TWO => AacChannelMode::Stereo,
-                        _ => return Err(format_err!("out of range")),
-                    };
-
-                EncoderSettings::Aac(AacEncoderSettings {
-                    transport: AacTransport::Latm(AacTransportLatm { mux_config_present: true }),
-                    channel_mode,
-                    bit_rate,
-                    aot: AacAudioObjectType::Mpeg2AacLc,
-                })
-            }
-            _ => return Err(format_err!("Unsupported codec {:?}", codec_settings)),
-        };
+        let encoder_settings = config.encoder_settings()?;
 
         let bytes_per_pcm_frame =
             (input_format.bits_per_sample / 8) as usize * input_format.channel_map.len();
-        let pcm_bytes_per_encoded_packet = pcm_frames_per_encoded_frame as usize
+        let pcm_bytes_per_encoded_packet = config.pcm_frames_per_encoded_frame()
             * bytes_per_pcm_frame
-            * encoded_frames_per_packet as usize;
+            * config.frames_per_packet();
 
         let pcm_input_format = DomainFormat::Audio(AudioFormat::Uncompressed(
             AudioUncompressedFormat::Pcm(input_format),
@@ -270,10 +183,12 @@ impl Stream for EncodedStream {
 mod tests {
     use super::*;
 
+    use bt_avdtp as avdtp;
     use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode};
     use fuchsia_async::{self as fasync, TimeoutExt};
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::FutureExt;
+    use std::convert::TryFrom;
 
     #[test]
     fn test_packet_builder_sbc() {
@@ -367,31 +282,31 @@ mod tests {
 
     const TIMEOUT: zx::Duration = zx::Duration::from_millis(5000);
 
-    #[test]
-    fn test_sbc_encodes_correctly() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
-        let pcm_format = PcmFormat {
+    fn pcm_format() -> PcmFormat {
+        PcmFormat {
             pcm_mode: AudioPcmMode::Linear,
             bits_per_sample: 16,
             frames_per_second: 48000,
             channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-        };
-        let sbc_settings = avdtp::ServiceCapability::MediaCodec {
+        }
+    }
+
+    #[test]
+    fn test_sbc_encodes_correctly() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let sbc_capability = &avdtp::ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_SBC,
             codec_extra: vec![0x11, 0x15, 2, 53],
         };
+
+        let sbc_config =
+            a2dp::codec::MediaCodecConfig::try_from(sbc_capability).expect("config builds");
         // Maybe just replace this with future::repeat(0)
-        let silence_source = SilenceStream::build(pcm_format.clone());
-        let mut encoder = EncodedStream::build(
-            pcm_format,
-            &sbc_settings,
-            silence_source.boxed(),
-            /*pcm_frames_per_packet=*/ 640,
-            /*encoded_frames_per_packet=*/ 5,
-        )
-        .expect("building Stream works");
+        let silence_source = SilenceStream::build(pcm_format());
+        let mut encoder = EncodedStream::build(pcm_format(), silence_source.boxed(), &sbc_config)
+            .expect("building Stream works");
         let mut next_frame_fut = encoder
             .next()
             .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder took too long"));
@@ -410,27 +325,17 @@ mod tests {
     fn test_aac_encodes_correctly() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let pcm_format = PcmFormat {
-            pcm_mode: AudioPcmMode::Linear,
-            bits_per_sample: 16,
-            frames_per_second: 48000,
-            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-        };
-        let aac_settings = avdtp::ServiceCapability::MediaCodec {
+        let aac_capability = &avdtp::ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_AAC,
             codec_extra: vec![128, 1, 4, 4, 226, 0],
         };
+        let aac_config =
+            a2dp::codec::MediaCodecConfig::try_from(aac_capability).expect("config builds");
         // Maybe just replace this with future::repeat(0)
-        let silence_source = SilenceStream::build(pcm_format.clone());
-        let mut encoder = EncodedStream::build(
-            pcm_format,
-            &aac_settings,
-            silence_source.boxed(),
-            /*pcm_frames_per_packet=*/ 1024,
-            /*encoded_frames_per_packet=*/ 1,
-        )
-        .expect("building Stream works");
+        let silence_source = SilenceStream::build(pcm_format());
+        let mut encoder = EncodedStream::build(pcm_format(), silence_source.boxed(), &aac_config)
+            .expect("building Stream works");
         let mut next_frame_fut = encoder
             .next()
             .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder took too long"));

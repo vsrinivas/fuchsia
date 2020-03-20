@@ -14,6 +14,8 @@ rustc_library("bt-a2dp") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:bitflags",

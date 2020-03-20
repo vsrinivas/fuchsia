@@ -159,7 +159,7 @@ impl ConnectedPeers {
         let sbc_settings = avdtp::ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-            codec_extra: sbc_media_codec_info.to_bytes(),
+            codec_extra: sbc_media_codec_info.to_bytes().to_vec(),
         };
 
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;

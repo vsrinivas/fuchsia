@@ -2,5 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Types for a2dp media.
+/// Types describing A2DP media codec information
 pub mod media_types;
+
+/// Types for codec configuration and integraion with Fuchsia media
+pub mod codec;

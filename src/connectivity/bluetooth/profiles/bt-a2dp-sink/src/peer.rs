@@ -475,7 +475,6 @@ mod tests {
         Channel, ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
     };
     use fidl_fuchsia_cobalt::CobaltEvent;
-    use fidl_fuchsia_media::AUDIO_ENCODING_SBC;
     use futures::channel::mpsc;
     use futures::pin_mut;
     use std::convert::TryInto;
@@ -516,12 +515,12 @@ mod tests {
                 avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
                     codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                    codec_extra: sbc_media_codec_info.to_bytes(),
+                    codec_extra: sbc_media_codec_info.to_bytes().to_vec(),
                 },
             ],
         )
         .expect("Building endpoint shoul work");
-        s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+        s.insert(sbc_stream);
         s
     }
 
