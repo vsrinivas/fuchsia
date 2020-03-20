@@ -18,22 +18,21 @@ namespace fidl {
 namespace internal {
 
 class AsyncTransaction;
-class AsyncBinding;
-
-using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx::channel)>;
 
 class AsyncBinding {
  public:
+  using DispatchFn =
+      fit::function<void(std::shared_ptr<AsyncBinding>&, fidl_msg_t*, bool*, zx_status_t*)>;
+
   // Creates a binding that remains bound until either it is explicitly unbound via |Unbind|,
   // a peer close is received in the channel from the remote end, or all transactions generated
   // from it are destructed and an error occurred (either Close() is called from a transaction or
   // an internal error like not being able to write to the channel occur).
   // The binding is destroyed once no more references are held, including the one returned by
   // this static method.
-  static std::shared_ptr<AsyncBinding> CreateSelfManagedBinding(
+  static std::shared_ptr<AsyncBinding> CreateSelfManagedServerBinding(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
+      TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
 
   ~AsyncBinding();
 
@@ -51,12 +50,11 @@ class AsyncBinding {
   }
 
  protected:
-  explicit AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                        TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
+  AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+               TypeErasedOnUnboundFn on_unbound_fn, DispatchFn dispatch_fn);
 
  private:
   friend fidl::internal::AsyncTransaction;
-  friend fidl::BindingRef;
 
   struct UnboundTask {
     async_task_t task;
@@ -111,8 +109,8 @@ class AsyncBinding {
   sync_completion_t* on_delete_ = nullptr;
   zx::channel channel_ = {};
   void* interface_ = nullptr;
-  TypeErasedDispatchFn dispatch_fn_ = {};
   TypeErasedOnUnboundFn on_unbound_fn_ = {};
+  DispatchFn dispatch_fn_ = {};
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
   zx::channel* out_channel_ = nullptr;
 

@@ -24,9 +24,11 @@ namespace internal {
 // The channel is owned by |AsyncBinding|, not the transaction.
 class AsyncTransaction final : public Transaction {
  public:
-  explicit AsyncTransaction(zx_txid_t txid, bool* binding_released, zx_status_t* resume_status)
+  explicit AsyncTransaction(zx_txid_t txid, TypeErasedServerDispatchFn dispatch_fn,
+                            bool* binding_released, zx_status_t* resume_status)
       : Transaction(),
         txid_(txid),
+        dispatch_fn_(dispatch_fn),
         binding_released_(binding_released),
         resume_status_(resume_status) {}
 
@@ -57,7 +59,7 @@ class AsyncTransaction final : public Transaction {
  private:
   friend fidl::internal::AsyncBinding;
 
-  void Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t msg);
+  void Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t* msg);
 
   void MoveImpl(AsyncTransaction&& other) noexcept {
     txid_ = other.txid_;
@@ -79,6 +81,7 @@ class AsyncTransaction final : public Transaction {
   // Dispatch() returning.
   std::shared_ptr<AsyncBinding> owned_binding_ = {};
   std::weak_ptr<AsyncBinding> unowned_binding_ = {};
+  TypeErasedServerDispatchFn dispatch_fn_ = {};
   bool* binding_released_ = nullptr;
   zx_status_t* resume_status_ = nullptr;
   bool* moved_ = nullptr;

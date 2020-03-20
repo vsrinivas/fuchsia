@@ -15,7 +15,7 @@ namespace fidl {
 namespace internal {
 
 AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                           TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn)
+                           TypeErasedOnUnboundFn on_unbound_fn, DispatchFn dispatch_fn)
     : wait_({{ASYNC_STATE_INIT},
              &AsyncBinding::OnMessage,
              channel.get(),
@@ -24,8 +24,8 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, 
       dispatcher_(dispatcher),
       channel_(std::move(channel)),
       interface_(impl),
-      dispatch_fn_(dispatch_fn),
-      on_unbound_fn_(std::move(on_unbound_fn)) {
+      on_unbound_fn_(std::move(on_unbound_fn)),
+      dispatch_fn_(std::move(dispatch_fn)) {
   ZX_ASSERT(channel_);
 }
 
@@ -104,11 +104,9 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
 
       // Flag indicating whether this thread still has access to the binding.
       bool binding_released = false;
-      auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
-      AsyncTransaction txn(hdr->txid, &binding_released, &status);
-      // Transfer keep_alive_ to the AsyncTransaction. If binding_released is false after Dispatch()
-      // returns, keep_alive_ is still valid and this thread may continue to access the binding.
-      txn.Dispatch(std::move(keep_alive_), msg);  // txn may be moved, cannot access after this.
+      // Dispatch the message. If binding_released is not set, keep_alive_ is still valid and this
+      // thread will continue to read messages on this binding.
+      dispatch_fn_(keep_alive_, &msg, &binding_released, &status);
       if (binding_released)
         return;
       // If there was any error enabling dispatch, destroy the binding.
@@ -216,20 +214,25 @@ void AsyncBinding::OnEnableNextDispatchError(zx_status_t error) {
   OnUnbind(error, UnboundReason::kInternalError);
 }
 
-std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedBinding(
+std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedServerBinding(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
+    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
   auto ret = std::shared_ptr<internal::AsyncBinding>(new internal::AsyncBinding(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn)));
+      dispatcher, std::move(channel), impl, std::move(on_unbound_fn),
+      [dispatch_fn](std::shared_ptr<internal::AsyncBinding>& binding, fidl_msg_t* msg,
+                    bool* binding_released, zx_status_t* status) {
+        auto hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+        AsyncTransaction txn(hdr->txid, dispatch_fn, binding_released, status);
+        txn.Dispatch(std::move(binding), msg);
+      }));
   ret->keep_alive_ = ret;  // We keep the binding alive until somebody decides to close the channel.
   return ret;
 }
 
-fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(async_dispatcher_t* dispatcher,
-                                                         zx::channel channel, void* impl,
-                                                         TypeErasedDispatchFn dispatch_fn,
-                                                         TypeErasedOnUnboundFn on_unbound_fn) {
-  auto internal_binding = internal::AsyncBinding::CreateSelfManagedBinding(
+fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
+  auto internal_binding = internal::AsyncBinding::CreateSelfManagedServerBinding(
       dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {

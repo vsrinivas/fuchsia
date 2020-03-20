@@ -40,12 +40,11 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 namespace internal {
 
 class AsyncBinding;
-using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
+using TypeErasedServerDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
 using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx::channel)>;
-fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(async_dispatcher_t* dispatcher,
-                                                         zx::channel channel, void* impl,
-                                                         TypeErasedDispatchFn dispatch_fn,
-                                                         TypeErasedOnUnboundFn on_unbound);
+fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
 
 }  // namespace internal
 
@@ -102,9 +101,9 @@ class BindingRef {
   void Close(zx_status_t epitaph);
 
  private:
-  friend fit::result<BindingRef, zx_status_t> internal::AsyncTypeErasedBind(
+  friend fit::result<BindingRef, zx_status_t> internal::AsyncTypeErasedBindServer(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      internal::TypeErasedDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound);
+      internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound);
 
   explicit BindingRef(std::weak_ptr<internal::AsyncBinding> internal_binding)
       : binding_(std::move(internal_binding)) {}
@@ -177,7 +176,7 @@ class BindingRef {
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl) {
-  return internal::AsyncTypeErasedBind(dispatcher, std::move(channel), impl,
+  return internal::AsyncTypeErasedBindServer(dispatcher, std::move(channel), impl,
                                        &Interface::_Outer::TypeErasedDispatch, nullptr);
 }
 
@@ -186,7 +185,7 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl, OnUnboundFn<Interface> on_unbound) {
-  return internal::AsyncTypeErasedBind(
+  return internal::AsyncTypeErasedBindServer(
       dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
       [fn = std::move(on_unbound)](void* impl, UnboundReason reason, zx::channel channel) mutable {
         fn(static_cast<Interface*>(impl), reason, std::move(channel));
@@ -198,7 +197,7 @@ template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                std::unique_ptr<Interface> impl) {
   Interface* impl_raw = impl.get();
-  return internal::AsyncTypeErasedBind(
+  return internal::AsyncTypeErasedBindServer(
       dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
       [intf = std::move(impl)](void*, UnboundReason, zx::channel) {});
 }

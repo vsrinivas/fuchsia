@@ -10,7 +10,7 @@ namespace fidl {
 
 namespace internal {
 
-void AsyncTransaction::Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t msg) {
+void AsyncTransaction::Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t* msg) {
   ZX_ASSERT(!owned_binding_);
   ZX_ASSERT(!moved_);
   bool moved = false;
@@ -18,7 +18,7 @@ void AsyncTransaction::Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_ms
   // Take ownership of the internal (dispatcher) reference to the AsyncBinding. Until code executed
   // in this scope releases ownership, no other thread may access the binding via keep_alive_.
   owned_binding_ = std::move(binding);
-  owned_binding_->dispatch_fn_(owned_binding_->interface_, &msg, this);
+  dispatch_fn_(owned_binding_->interface_, msg, this);
   if (moved)
     return;  // Return if `this` is no longer valid.
   moved_ = nullptr;
