@@ -53,8 +53,14 @@ TEST_F(VerbAttach, Koid) {
 }
 
 TEST_F(VerbAttach, Filter) {
+  // Note: the commands in this test issue a warning because there's no attached job. This warning
+  // is currently implemented to be output as a separate output event which we ignore separately to
+  // avoid having to hardcode the entire warning text in this test. If the implementation changes
+  // how this is output, this test may need to change somewhat.
+
   // Normal filter case.
   console().ProcessInputLine("attach foo");
+  console().GetOutputEvent();  // Eat warning.
   auto event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
@@ -62,7 +68,8 @@ TEST_F(VerbAttach, Filter) {
       "Type \"filter\" to see the current filters.",
       event.output.AsString());
 
-  // Don't allow attaching by wildcard without a job.
+  // Don't allow attaching by wildcard without a job. This one doesn't have the job warning since
+  // it's an error case.
   console().ProcessInputLine("attach *");
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
@@ -71,6 +78,7 @@ TEST_F(VerbAttach, Filter) {
 
   // Wildcard within a job is OK.
   console().ProcessInputLine("job 1 attach *");
+  console().GetOutputEvent();  // Eat warning.
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(

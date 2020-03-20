@@ -35,6 +35,9 @@ TEST_F(VerbsSharedTest, NewRm) {
   MockConsole console(&session());
 
   console.ProcessInputLine("attach foobar");
+  // This will issue a warning because there's no attached job. This comes as a separate output
+  // event. Ignore this.
+  console.GetOutputEvent();
 
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
@@ -71,6 +74,9 @@ TEST_F(VerbsSharedTest, NewRm) {
 
   // Create a new filter specifically for the new job.
   console.ProcessInputLine("job 2 attach ninjas");
+  // This will issue a warning because the job isn't attached. This comes as a separate output
+  // event. Ignore this.
+  console.GetOutputEvent();
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(

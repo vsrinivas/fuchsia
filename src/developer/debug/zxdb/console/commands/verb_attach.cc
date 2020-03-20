@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
 namespace zxdb {
@@ -88,6 +89,14 @@ Examples
       name.
 )";
 
+bool HasAttachedJob(const System* system) {
+  for (const JobContext* job : system->GetJobContexts()) {
+    if (job->GetState() == JobContext::State::kAttached)
+      return true;
+  }
+  return false;
+}
+
 Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
   // Only a process can be attached.
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob}); err.has_error())
@@ -122,6 +131,21 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
     // Bad things happen if we try to attach to all processes in the system, try to make this
     // more difficult by preventing attaching to * with no specific job.
     return Err("Use a specific job (\"job 3 attach *\") when attaching to all processes.");
+  }
+
+  // Display a warning if there are no attached jobs. The debugger tries to attach to the root job
+  // by default but if this fails (say there is more than one debug agent), attach will surprisingly
+  // fail.
+  if (!HasAttachedJob(&context->session()->system())) {
+    OutputBuffer warning;
+    warning.Append(Syntax::kWarning, GetExclamation());
+    warning.Append(
+        " There are currently no attached jobs. This could be because you\n"
+        "haven't attached to any, or because auto-attaching to the default jobs\n"
+        "failed (this can happen if there are more than one debug agents running).\n"
+        "Since attaching by name only applies to attached jobs, nothing will happen\n"
+        "until you attach to a job (\"attach-job <job-koid>\").\n\n");
+    Console::get()->Output(warning);
   }
 
   Filter* filter = context->session()->system().CreateNewFilter();

@@ -98,6 +98,9 @@ TEST_F(NounsTest, FilterTest) {
   ASSERT_EQ("\"filter\" may not be specified for this command.", event.output.AsString());
 
   console.ProcessInputLine("attach foobar");
+  // This will issue a warning because the job isn't attached. This comes as a separate output
+  // event. Ignore this.
+  console.GetOutputEvent();
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
@@ -106,6 +109,7 @@ TEST_F(NounsTest, FilterTest) {
       event.output.AsString());
 
   console.ProcessInputLine("job 1 attach boofar");
+  console.GetOutputEvent();  // Eat warning as above.
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
