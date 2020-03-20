@@ -646,8 +646,9 @@ With `tracking_ptr`, LLCPP makes it possible for your code to easily set a value
 about ownership: `tracking_ptr` will take care of freeing memory when it goes out of scope.
 
 These pointers have two states:
-- unowned (constructed from an `unowned_ptr_t`)
-- heap allocated and owned (constructed from a `std::unique_ptr`)
+
+*   unowned (constructed from an `unowned_ptr_t`)
+*   heap allocated and owned (constructed from a `std::unique_ptr`)
 
 When the contents is owned, a `tracking_ptr` behaves like a `unique_ptr` and the pointer is
 deleted on destruction. In the unowned state, `tracking_ptr` behaves like a raw pointer and
@@ -756,8 +757,15 @@ fidl::VectorView<uint32_t> vv = fidl::unowned_vec(vec);
 To create a `StringView` from unowned memory, use `unowned_str`.
 
 ```
-std::string_view str = "hello world";
-fidl::StringView sv = fidl::unowned_str(str);
+const char arr[] = {'h', 'e', 'l', 'l', 'o'};
+fidl::StringView sv = fidl::unowned_str(arr, 5);
+```
+
+A `StringView` can also be created directly from string literals without using
+`unowned_ptr`.
+
+```
+fidl::StringView sv = "hello world";
 ```
 
 ## Code generator
