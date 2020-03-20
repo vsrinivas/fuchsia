@@ -382,7 +382,12 @@ impl Painter {
 
                 if let Some(flusher) = flusher {
                     for slice in tile.iter_mut().take(len) {
-                        flusher.flush(&mut slice.as_mut_slice()[0..TILE_SIZE]);
+                        let slice = slice.as_mut_slice();
+                        flusher.flush(if let Some(subslice) = slice.get_mut(..TILE_SIZE) {
+                            subslice
+                        } else {
+                            slice
+                        });
                     }
                 }
             }

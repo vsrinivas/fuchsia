@@ -185,3 +185,47 @@ impl BufferLayout {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flusher() {
+        macro_rules! seg {
+            ( $j:expr, $i:expr ) => (CompactSegment::new(
+                0,
+                $j,
+                $i,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ));
+        }
+
+        struct WhiteFlusher;
+
+        impl Flusher for WhiteFlusher {
+            fn flush(&self, slice: &mut [[u8; 4]]) {
+                for color in slice {
+                    *color = [255u8; 4];
+                }
+            }
+        }
+
+        let size = TILE_SIZE + TILE_SIZE / 2;
+        let mut buffer = vec![[0u8; 4]; size * size];
+        let mut buffer_layout = BufferLayoutBuilder::new(size).set_flusher(Box::new(WhiteFlusher)).build(&mut buffer);
+
+        buffer_layout.print(&mut buffer, &[
+            seg!(0, 0),
+            seg!(0, 1),
+            seg!(1, 0),
+            seg!(1, 1),
+        ], [0.0; 4], |_| Style::default());
+
+        assert!(buffer.iter().all(|&color| color == [255u8; 4]));
+    }
+}
