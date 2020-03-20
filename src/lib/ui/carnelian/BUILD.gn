@@ -434,6 +434,7 @@ group("examples") {
     "//src/lib/ui/carnelian:clockface-rs",
     "//src/lib/ui/carnelian:infinite-scroll-rs",
     "//src/lib/ui/carnelian:ink-rs",
+    "//src/lib/ui/carnelian:shapes-rs",
     "//src/lib/ui/carnelian:spinning-square-rs",
   ]
 }

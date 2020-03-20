@@ -11,7 +11,7 @@
 
 mod app;
 mod canvas;
-mod geometry;
+pub mod geometry;
 mod label;
 mod message;
 pub mod render;

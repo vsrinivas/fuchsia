@@ -486,7 +486,7 @@ impl<T: PixelSink> Canvas<T> {
     #[inline]
     fn set_pixel_at_location(&mut self, location: &Point, value: u8, paint: &Paint) {
         let location = location.floor().to_i32();
-        if self.bounds.contains(&location) {
+        if self.bounds.contains(location) {
             let offset = self.offset_from_x_y(location.x, location.y);
             self.set_pixel_at_offset(offset, value, paint);
         }

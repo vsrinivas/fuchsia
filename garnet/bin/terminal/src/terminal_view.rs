@@ -217,7 +217,7 @@ impl TerminalViewAssistant {
     /// Checks if we need to perform a resize based on a new size.
     /// This method rounds pixels down to the next pixel value.
     fn needs_resize(prev_size: &Size, new_size: &Size) -> bool {
-        prev_size.floor().not_equal(&new_size.floor()).any()
+        prev_size.floor().not_equal(new_size.floor()).any()
     }
 
     /// Checks to see if the size of terminal has changed and resizes if it has.

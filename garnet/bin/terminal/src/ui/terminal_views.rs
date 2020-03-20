@@ -166,7 +166,7 @@ impl ScrollBar {
 
     pub fn begin_tracking_pointer_event(&mut self, point: Point) {
         if let Some(frame) = &self.thumb_frame {
-            if !frame.contains(&point) {
+            if !frame.contains(point) {
                 // jump the middle of the thumb to the middle of the point
                 let thumb_height = frame.size.height;
                 let conversion_factor = self.pixel_space_to_content_space_conversion_factor();

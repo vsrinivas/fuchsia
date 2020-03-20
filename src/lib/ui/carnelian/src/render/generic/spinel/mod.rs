@@ -7,7 +7,7 @@ use std::{
     mem::{self, MaybeUninit},
 };
 
-use euclid::Size2D;
+use euclid::default::Size2D;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use vk_sys as vk;

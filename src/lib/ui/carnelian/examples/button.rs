@@ -158,7 +158,7 @@ impl Button {
         // TODO: extend this to support multiple pointers
         match pointer_event.phase {
             PointerEventPhase::Down => {
-                self.active = self.bounds.contains(&Point::new(pointer_event.x, pointer_event.y));
+                self.active = self.bounds.contains(Point::new(pointer_event.x, pointer_event.y));
                 self.tracking = self.active;
             }
             PointerEventPhase::Add => {}
@@ -166,7 +166,7 @@ impl Button {
             PointerEventPhase::Move => {
                 if self.tracking {
                     self.active =
-                        self.bounds.contains(&Point::new(pointer_event.x, pointer_event.y));
+                        self.bounds.contains(Point::new(pointer_event.x, pointer_event.y));
                 }
             }
             PointerEventPhase::Up => {

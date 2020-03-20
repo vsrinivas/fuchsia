@@ -6,11 +6,11 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FontFace, Point,
-        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-        ViewMode,
+        geometry::Corners, make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color,
+        FontFace, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        ViewAssistantPtr, ViewKey, ViewMode,
     },
-    euclid::{Point2D, Rect, Size2D, Vector2D},
+    euclid::default::{Point2D, Rect, Size2D, Vector2D},
     fidl_fuchsia_input_report as hid_input_report, fuchsia_async as fasync,
     fuchsia_trace::{self, counter, duration},
     fuchsia_trace_provider,
@@ -309,7 +309,7 @@ impl Text {
                 };
 
                 // Expand bounding box.
-                let glyph_bounding_box = glyph.bounding_box.translate(&position.to_f32());
+                let glyph_bounding_box = glyph.bounding_box.translate(position.to_f32());
                 if bounding_box.is_empty() {
                     bounding_box = glyph_bounding_box;
                 } else {
@@ -510,7 +510,7 @@ impl Scene {
 
         Item {
             raster: raster.translate(offset),
-            bounding_box: bounding_box.translate(&offset.to_f32()),
+            bounding_box: bounding_box.translate(offset.to_f32()),
             bounding_box_raster: bounding_box_raster.translate(offset),
             color,
             id,

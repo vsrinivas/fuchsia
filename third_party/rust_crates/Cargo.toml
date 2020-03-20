@@ -124,7 +124,7 @@ ct-logs = "0.6"
 data-encoding = "2.1.2"
 derivative = "1.0.2"
 derp = "0.0.13"
-euclid = "0.19"
+euclid = "0.20.7"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 freetype = "0.4" # saved for future use
 getopts = "0.2"

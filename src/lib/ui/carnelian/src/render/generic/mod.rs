@@ -9,7 +9,7 @@ use std::{
     u32,
 };
 
-use euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D};
+use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;

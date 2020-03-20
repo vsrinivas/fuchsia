@@ -4,7 +4,7 @@
 
 use std::{cell::RefCell, ops::Add, rc::Rc};
 
-use euclid::{Transform2D, Vector2D};
+use euclid::default::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
 
 use crate::render::generic::{

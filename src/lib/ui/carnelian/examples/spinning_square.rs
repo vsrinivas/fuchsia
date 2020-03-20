@@ -4,6 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use carnelian::{
+    geometry::Corners,
     make_app_assistant, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,

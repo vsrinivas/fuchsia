@@ -15,7 +15,7 @@ use std::{
     rc::Rc,
 };
 
-use euclid::{Rect, Size2D};
+use euclid::default::{Rect, Size2D};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;

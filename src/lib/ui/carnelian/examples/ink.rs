@@ -10,7 +10,10 @@ use {
         RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
         ViewMode,
     },
-    euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
+    euclid::{
+        default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
+        Angle,
+    },
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
     fuchsia_trace::{self, duration},
     fuchsia_trace_provider,
@@ -605,7 +608,7 @@ impl InkStroke {
     }
 
     fn transform(&mut self, transform: &Transform2D<f32>) {
-        self.transform = self.transform.post_mul(transform);
+        self.transform = self.transform.post_transform(transform);
 
         // Re-create rasters during next call to update.
         for (_, segment) in self.segments.iter_mut() {

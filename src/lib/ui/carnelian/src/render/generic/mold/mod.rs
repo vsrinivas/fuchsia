@@ -4,7 +4,7 @@
 
 use crate::render::generic::Backend;
 
-use euclid::Size2D;
+use euclid::default::Size2D;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 

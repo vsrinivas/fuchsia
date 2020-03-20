@@ -4,7 +4,7 @@
 
 use std::{ops::RangeBounds, ptr, slice};
 
-use euclid::Rect;
+use euclid::default::Rect;
 use spinel_rs_sys::*;
 
 use crate::{

@@ -4,7 +4,7 @@
 
 use std::{cell::RefCell, collections::HashMap, mem, ptr, u32};
 
-use euclid::{Rect, Size2D, Vector2D};
+use euclid::default::{Rect, Size2D, Vector2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_sysmem::{
     AllocatorMarker, BufferCollectionConstraints, BufferCollectionSynchronousProxy,

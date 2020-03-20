@@ -94,7 +94,7 @@ impl TerminalScene {
         }
 
         let point = ctx.physical_to_logical(&Point::new(event.x, event.y));
-        if self.scroll_bar.frame.contains(&point) || self.scroll_bar.is_tracking() {
+        if self.scroll_bar.frame.contains(point) || self.scroll_bar.is_tracking() {
             return self.handle_primary_pointer_event_for_scroll_bar(&event, point);
         }
 
