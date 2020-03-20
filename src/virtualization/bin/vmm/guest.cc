@@ -23,6 +23,10 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
 
+#ifdef __aarch64__
+static constexpr uint8_t kSpiBase = 32;
+#endif
+
 static constexpr uint32_t trap_kind(TrapType type) {
   switch (type) {
     case TrapType::MMIO_SYNC:
@@ -184,6 +188,11 @@ zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
     if (status != ZX_OK) {
       return status;
     }
+#ifdef __aarch64__
+    if (vector >= kSpiBase) {
+      break;
+    }
+#endif
   }
   return ZX_OK;
 }
