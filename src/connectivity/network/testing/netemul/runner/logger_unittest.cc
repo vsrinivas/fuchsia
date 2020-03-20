@@ -15,15 +15,13 @@
 namespace netemul {
 namespace testing {
 
-constexpr const char* kLoggerUrl = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
-constexpr const char* kLoggerDisableKlog = "--disable-klog";
+constexpr const char* kLoggerUrl = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
 
 class LoggerTest : public sys::testing::TestWithEnvironment {
  protected:
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;
     ret.url = kLoggerUrl;
-    ret.arguments.emplace({kLoggerDisableKlog});
     return ret;
   }
 
@@ -206,13 +204,19 @@ TEST_F(LoggerTest, MultipleMessages) {
     proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%d", i)));
   }
 
-  int consumed = 0;
-  while (consumed < messages) {
+  std::vector<fuchsia::logger::LogMessage> consumed;
+  while (consumed.size() < messages) {
     auto msgs = WaitForMessages();
-    for (const auto& msg : msgs) {
-      ValidateMessage(msg, {"tag", env_name}, fxl::StringPrintf("Hello%d", consumed));
-      consumed++;
-    }
+    consumed.insert(consumed.end(), msgs.begin(), msgs.end());
+  }
+
+  // sort the received messages by their contents to account for out-of-order delivery by logger
+  std::sort(consumed.begin(), consumed.end(), [](auto a, auto b) { return a.msg < b.msg; });
+
+  int i = 0;
+  for (const auto& msg : consumed) {
+    ValidateMessage(msg, {"tag", env_name}, fxl::StringPrintf("Hello%d", i));
+    i++;
   }
 }
 
