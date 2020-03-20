@@ -62,8 +62,10 @@
 
 #define DEFINE_EACH_DEVICE(Test)                                                         \
   bool Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); } \
+  [[maybe_unused]]                                                                       \
   DEFINE_EACH(Test##Raw)                                                                 \
   bool Test##Fvm(Volume::Version version) { return Test(version, true /* FVM */); }      \
+  [[maybe_unused]]                                                                       \
   DEFINE_EACH(Test##Fvm)
 
 #define RUN_EACH_DEVICE(Test) \
