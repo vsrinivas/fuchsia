@@ -11,7 +11,7 @@ use mapped_vmo::Mapping;
 use rusttype::{Font, FontCollection, Scale};
 use std::sync::Arc;
 
-/// Struct representing an RGBA color value
+/// Struct representing an RGBA color value in un-premultiplied non-linear sRGB space
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub struct Color {
     /// Red
@@ -31,6 +31,16 @@ pub fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
     let b1 = (red << 3) | ((green & 0b11_1000) >> 3);
     let b2 = ((green & 0b111) << 5) | blue;
     [b2, b1]
+}
+
+fn srgb_to_linear(l: u8) -> f32 {
+    let l = l as f32 * 255.0f32.recip();
+
+    if l <= 0.04045 {
+        l * 12.92f32.recip()
+    } else {
+        ((l + 0.055) * 1.055f32.recip()).powf(2.4)
+    }
 }
 
 impl Color {
@@ -68,8 +78,24 @@ impl Color {
         to_565(&pixel)
     }
 
-    pub fn to_f32(&self) -> [f32; 4] {
-        [self.r as f32 / 255.0, self.g as f32 / 255.0, self.b as f32 / 255.0, self.a as f32 / 255.0]
+    pub fn to_linear_premult_rgba(&self) -> [f32; 4] {
+        let alpha = self.a as f32 * 255.0f32.recip();
+
+        [
+            srgb_to_linear(self.r) * alpha,
+            srgb_to_linear(self.g) * alpha,
+            srgb_to_linear(self.b) * alpha,
+            alpha,
+        ]
+    }
+
+    pub fn to_linear_brga(&self) -> [f32; 4] {
+        [
+            srgb_to_linear(self.b),
+            srgb_to_linear(self.g),
+            srgb_to_linear(self.r),
+            self.a as f32 * 255.0f32.recip(),
+        ]
     }
 }
 

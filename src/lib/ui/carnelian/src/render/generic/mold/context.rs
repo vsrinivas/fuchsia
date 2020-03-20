@@ -230,9 +230,7 @@ fn render_composition(
                         FillRule::WholeTile => mold_next::FillRule::NonZero,
                     },
                     fill: match layer.style.fill {
-                        Fill::Solid(color) => {
-                            mold_next::Fill::Solid([color.b, color.g, color.r, color.a])
-                        }
+                        Fill::Solid(color) => mold_next::Fill::Solid(color.to_linear_brga()),
                     },
                     blend_mode: match layer.style.blend_mode {
                         BlendMode::Over => mold_next::BlendMode::Over,
@@ -254,12 +252,7 @@ fn render_composition(
 
     mold_composition.render(
         buffer,
-        [
-            composition.background_color.b,
-            composition.background_color.g,
-            composition.background_color.r,
-            composition.background_color.a,
-        ],
+        composition.background_color.to_linear_brga(),
     );
 }
 

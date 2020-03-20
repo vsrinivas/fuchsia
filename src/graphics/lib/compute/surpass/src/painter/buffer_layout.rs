@@ -25,6 +25,7 @@ pub struct TileSlice {
 }
 
 impl TileSlice {
+    #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [[u8; 4]] {
         unsafe { slice::from_raw_parts_mut(self.ptr, self.len) }
     }
@@ -144,7 +145,7 @@ impl BufferLayout {
         &mut self,
         buffer: &mut [[u8; 4]],
         mut segments: &[CompactSegment],
-        clear_color: [u8; 4],
+        clear_color: [f32; 4],
         styles: F,
     ) where
         F: Fn(u16) -> Style + Send + Sync,

@@ -259,7 +259,7 @@ impl Context {
                                 Layers::Empty => vec![],
                                 _ => panic!("mismatched backends"),
                             },
-                            background_color: composition.background_color.to_f32(),
+                            background_color: composition.background_color.to_linear_premult_rgba(),
                         };
                         context.render_with_clip(&composition, clip, image, &ext);
                         Layers::Spinel(composition.layers)

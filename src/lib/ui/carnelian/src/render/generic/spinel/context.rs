@@ -819,7 +819,7 @@ impl Context<Spinel> for SpinelContext {
         }
 
         if let Some(PreClear { color }) = ext.pre_clear {
-            rs_clear_color.float32 = color.to_f32();
+            rs_clear_color.float32 = color.to_linear_premult_rgba();
             rs_image_clear.ext = rs_image_ext;
             rs_image_ext = &mut rs_image_clear as *mut _ as *mut c_void;
         }
@@ -1011,7 +1011,7 @@ impl Context<Spinel> for SpinelContext {
                 rs_image_post_process_params.extent = extent - exposure_amount;
                 rs_image_post_process_params.src_dims =
                     [image.width() as i32, image.height() as i32];
-                rs_image_post_process_params.border = color.to_f32();
+                rs_image_post_process_params.border = color.to_linear_premult_rgba();
                 const LOCAL_SIZE_X: u32 = 48;
                 // TODO: Clip output to extent instead of rounding up.
                 rs_image_post_process.group_count_x = (groups + LOCAL_SIZE_X - 1) / LOCAL_SIZE_X;

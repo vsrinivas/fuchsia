@@ -69,7 +69,7 @@ fn group_layers(
 
         match style.fill {
             Fill::Solid(color) => {
-                let color = color.to_f32();
+                let color = color.to_linear_premult_rgba();
                 unsafe {
                     spn_styling_layer_fill_rgba_encoder(&mut cmds[cursor], color.as_ptr());
                 }
@@ -209,14 +209,17 @@ impl SpinelComposition {
 
 impl Composition<Spinel> for SpinelComposition {
     fn new(background_color: Color) -> Self {
-        Self { layers: vec![], background_color: background_color.to_f32() }
+        Self { layers: vec![], background_color: background_color.to_linear_premult_rgba() }
     }
 
     fn with_layers(
         layers: impl IntoIterator<Item = Layer<Spinel>>,
         background_color: Color,
     ) -> Self {
-        Self { layers: layers.into_iter().collect(), background_color: background_color.to_f32() }
+        Self {
+            layers: layers.into_iter().collect(),
+            background_color: background_color.to_linear_premult_rgba(),
+        }
     }
 
     fn clear(&mut self) {

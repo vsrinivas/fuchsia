@@ -36,12 +36,12 @@ impl Default for FillRule {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Fill {
-    Solid([u8; 4]),
+    Solid([f32; 4]),
 }
 
 impl Default for Fill {
     fn default() -> Self {
-        Self::Solid([0x00, 0x00, 0x00, 0xFF])
+        Self::Solid([0.0, 0.0, 0.0, 1.0])
     }
 }
 
@@ -69,59 +69,80 @@ struct CoverCarry {
     layer: u16,
 }
 
+#[inline]
 fn col(x: usize) -> usize {
     x * TILE_SIZE
 }
 
+#[inline]
 fn entry(x: usize, y: usize) -> usize {
     x * TILE_SIZE + y
 }
 
-fn mul(a: u8, b: u8) -> u8 {
-    let product = u16::from(a) * u16::from(b);
-    // Bitwise approximation of division by 255.
-    ((product + 128 + (product >> 8)) >> 8) as u8
+#[inline]
+fn over(ca: f32, cb: f32, a: f32) -> f32 {
+    cb.mul_add(a, ca)
 }
 
-fn linear(a: u8, x: u8, b: u8, y: u8) -> u8 {
-    mul(a, x).saturating_add(mul(b, y))
-}
-
-fn from_area(mut area: i32, fill_rule: FillRule) -> u8 {
+#[inline]
+fn from_area(area: i32, fill_rule: FillRule) -> f32 {
     match fill_rule {
-        FillRule::NonZero => {
-            if area < 0 {
-                area = -area;
-            }
-
-            if area >= 256 {
-                u8::max_value()
-            } else {
-                area as u8
-            }
-        }
+        FillRule::NonZero => (area as f32 * 256.0f32.recip()).abs().max(0.0).min(1.0),
         FillRule::EvenOdd => {
             let number = area >> 8;
-
-            if area < 0 && area & LAST_BYTE_MASK != 0 {
-                area -= 1;
-            }
-
-            let capped = area & LAST_BYTE_MASK;
+            let capped = (area & LAST_BYTE_MASK) as f32 * 256.0f32.recip();
 
             if number & LAST_BIT_MASK == 0 {
-                capped as u8
+                capped
             } else {
-                u8::max_value() - capped as u8
+                1.0 - capped
             }
         }
     }
 }
 
+#[inline]
+fn linear_to_srgb_approx(l: f32) -> f32 {
+    let a = 0.20101772f32;
+    let b = -0.51280147f32;
+    let c = 1.344401f32;
+    let d = -0.030656587f32;
+
+    let s = l.sqrt();
+    let s2 = s * s;
+    let s3 = s2 * s;
+
+    let m = l * 12.92;
+    let n = a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)));
+
+    if l <= 0.0031308 {
+        m
+    } else {
+        n
+    }
+}
+
+#[inline]
+fn to_byte(n: f32) -> u8 {
+    n.mul_add(255.0, 0.5) as u8
+}
+
+#[inline]
+fn to_bytes(color: [f32; 4]) -> [u8; 4] {
+    let alpha_recip = color[3].recip();
+
+    [
+        to_byte(linear_to_srgb_approx(color[0] * alpha_recip)),
+        to_byte(linear_to_srgb_approx(color[1] * alpha_recip)),
+        to_byte(linear_to_srgb_approx(color[2] * alpha_recip)),
+        to_byte(color[3]),
+    ]
+}
+
 pub struct Painter {
     areas: [i16; TILE_SIZE * TILE_SIZE],
     covers: [i8; (TILE_SIZE + 1) * TILE_SIZE],
-    colors: [[u8; 4]; TILE_SIZE * TILE_SIZE],
+    colors: [[f32; 4]; TILE_SIZE * TILE_SIZE],
     queue: VecDeque<CoverCarry>,
     next_queue: VecDeque<CoverCarry>,
 }
@@ -131,7 +152,7 @@ impl Painter {
         Self {
             areas: [0; TILE_SIZE * TILE_SIZE],
             covers: [0; (TILE_SIZE + 1) * TILE_SIZE],
-            colors: [[0x00, 0x00, 0x00, 0xFF]; TILE_SIZE * TILE_SIZE],
+            colors: [[0.0, 0.0, 0.0, 1.0]; TILE_SIZE * TILE_SIZE],
             queue: VecDeque::with_capacity(8),
             next_queue: VecDeque::with_capacity(8),
         }
@@ -142,7 +163,7 @@ impl Painter {
         self.next_queue.clear();
     }
 
-    fn clear(&mut self, color: [u8; 4]) {
+    fn clear(&mut self, color: [f32; 4]) {
         self.colors.iter_mut().for_each(|pixel_color| *pixel_color = color);
     }
 
@@ -161,7 +182,8 @@ impl Painter {
         })
     }
 
-    fn fill_at(_x: usize, _y: usize, style: Style) -> [u8; 4] {
+    #[inline]
+    fn fill_at(_x: usize, _y: usize, style: Style) -> [f32; 4] {
         match style.fill {
             Fill::Solid(color) => color,
         }
@@ -183,7 +205,7 @@ impl Painter {
 
     fn compute_coverages(
         areas: &[i32; TILE_SIZE],
-        coverages: &mut [u8; TILE_SIZE],
+        coverages: &mut [f32; TILE_SIZE],
         fill_rule: FillRule,
     ) {
         for y in 0..TILE_SIZE {
@@ -194,43 +216,41 @@ impl Painter {
     fn compute_alphas(
         x: usize,
         style: Style,
-        coverages: &[u8; TILE_SIZE],
-        current_alphas: &mut [u8; TILE_SIZE],
-        new_alphas: &mut [u8; TILE_SIZE],
+        coverages: &[f32; TILE_SIZE],
+        alphas: &mut [f32; TILE_SIZE],
     ) {
         for y in 0..TILE_SIZE {
-            new_alphas[y] = mul(Self::fill_at(x, y, style)[3], coverages[y]);
-            current_alphas[y] = 255u8 - new_alphas[y];
+            alphas[y] = Self::fill_at(x, y, style)[3] * coverages[y];
         }
     }
 
     fn paint_layer(&mut self, style: Style) -> [i8; TILE_SIZE] {
         let mut covers = [0; TILE_SIZE];
         let mut areas = [0; TILE_SIZE];
-        let mut coverages = [0; TILE_SIZE];
-        let mut current_alphas = [0; TILE_SIZE];
-        let mut new_alphas = [0; TILE_SIZE];
+        let mut coverages = [0.0; TILE_SIZE];
+        let mut alphas = [0.0; TILE_SIZE];
 
         for x in 0..=TILE_SIZE {
             if x != 0 {
                 self.compute_areas(x - 1, &covers, &mut areas);
                 Self::compute_coverages(&areas, &mut coverages, style.fill_rule);
-                Self::compute_alphas(
-                    x - 1,
-                    style,
-                    &coverages,
-                    &mut current_alphas,
-                    &mut new_alphas,
-                );
+                Self::compute_alphas(x - 1, style, &coverages, &mut alphas);
 
                 let column = &mut self.colors[col(x - 1)..col(x)];
                 for y in 0..TILE_SIZE {
-                    let new_color = Self::fill_at(x - 1, y, style);
+                    let mut new_color = Self::fill_at(x - 1, y, style);
+                    let inv_alpha = 1.0 - alphas[y];
+
+                    new_color[0] *= alphas[y];
+                    new_color[1] *= alphas[y];
+                    new_color[2] *= alphas[y];
+                    new_color[3] = alphas[y];
+
                     column[y] = [
-                        linear(current_alphas[y], column[y][0], new_alphas[y], new_color[0]),
-                        linear(current_alphas[y], column[y][1], new_alphas[y], new_color[1]),
-                        linear(current_alphas[y], column[y][2], new_alphas[y], new_color[2]),
-                        linear(current_alphas[y], column[y][3], new_alphas[y], new_color[3]),
+                        over(new_color[0], column[y][0], inv_alpha),
+                        over(new_color[1], column[y][1], inv_alpha),
+                        over(new_color[2], column[y][2], inv_alpha),
+                        over(new_color[3], column[y][3], inv_alpha),
                     ];
                 }
             }
@@ -326,7 +346,7 @@ impl Painter {
         &mut self,
         mut segments: &[CompactSegment],
         styles: F,
-        clear_color: [u8; 4],
+        clear_color: [f32; 4],
         flusher: Option<&Box<dyn Flusher>>,
         row: ChunksExactMut<'_, TileSlice>,
     ) where
@@ -356,7 +376,7 @@ impl Painter {
                 for (y, slice) in tile.iter_mut().enumerate().take(len) {
                     let slice = slice.as_mut_slice();
                     for (x, color) in slice.iter_mut().enumerate() {
-                        *color = self.colors[entry(x, y)];
+                        *color = to_bytes(self.colors[entry(x, y)]);
                     }
                 }
 
@@ -395,12 +415,12 @@ mod tests {
 
     use crate::{point::Point, rasterizer::Rasterizer, LinesBuilder, Segment, TILE_SIZE};
 
-    const BLACK: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
-    const RED: [u8; 4] = [0xFF, 0x00, 0x00, 0xFF];
-    const RED_50: [u8; 4] = [0x80, 0x00, 0x00, 0xFF];
-    const GREEN: [u8; 4] = [0x00, 0xFF, 0x00, 0xFF];
-    const GREEN_50: [u8; 4] = [0x00, 0x80, 0x00, 0xFF];
-    const RED_GREEN_50: [u8; 4] = [0x80, 0x7F, 0x00, 0xFF];
+    const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+    const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+    const RED_50: [f32; 4] = [0.5, 0.0, 0.0, 1.0];
+    const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+    const GREEN_50: [f32; 4] = [0.0, 0.5, 0.0, 1.0];
+    const RED_GREEN_50: [f32; 4] = [0.5, 0.5, 0.0, 1.0];
 
     fn line_segments(points: &[(Point<f32>, Point<f32>)]) -> Vec<CompactSegment> {
         let mut builder = LinesBuilder::new();

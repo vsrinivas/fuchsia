@@ -148,7 +148,7 @@ struct Scene {
 impl Scene {
     fn new(context: &mut Context) -> Self {
         const HOUR_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 255 };
-        const MINUTE_HAND_COLOR: Color = Color { r: 127, g: 57, b: 66, a: 127 };
+        const MINUTE_HAND_COLOR: Color = Color { r: 255, g: 114, b: 132, a: 127 };
         const SECOND_HAND_COLOR: Color = Color::white();
         const RADIUS: f32 = 0.4;
 

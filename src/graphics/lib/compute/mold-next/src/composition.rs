@@ -142,7 +142,7 @@ impl Composition {
         }
     }
 
-    pub fn render(&mut self, mut buffer: Buffer<'_>, background_color: [u8; 4]) {
+    pub fn render(&mut self, mut buffer: Buffer<'_>, background_color: [f32; 4]) {
         self.remove_disabled();
 
         for (layer_id, layer) in &self.layers {
@@ -199,8 +199,10 @@ mod tests {
     use crate::{Fill, Point, Style};
 
     const RED: [u8; 4] = [0xFF, 0x0, 0x00, 0xFF];
+    const REDF: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
     const GREEN: [u8; 4] = [0x00, 0xFF, 0x00, 0xFF];
-    const RED_GREEN_50: [u8; 4] = [0x80, 0x7F, 0x00, 0xFF];
+    const GREENF: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+    const RED_GREEN_50: [u8; 4] = [0xBB, 0xBB, 0x00, 0xFF];
 
     fn pixel_path(x: i32, y: i32) -> Path {
         let mut path = Path::new();
@@ -218,7 +220,7 @@ mod tests {
         let mut buffer = [GREEN];
         let mut composition = Composition::new();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 1, ..Default::default() }, RED);
+        composition.render(Buffer { buffer: &mut buffer, width: 1, ..Default::default() }, REDF);
 
         assert_eq!(buffer, [GREEN]);
     }
@@ -231,9 +233,9 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -246,10 +248,10 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
         composition.insert_in_layer(layer_id, &pixel_path(2, 0));
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [GREEN, RED, RED]);
     }
@@ -262,10 +264,10 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() })
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() })
             .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [GREEN, RED_GREEN_50, RED_GREEN_50]);
     }
@@ -279,10 +281,10 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(-1, 1))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() })
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() })
             .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -297,18 +299,18 @@ mod tests {
         let layer_id2 = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id0, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
         composition
             .insert_in_layer(layer_id1, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
         composition
             .insert_in_layer(layer_id2, &pixel_path(2, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
         composition
             .insert_in_layer(layer_id2, &pixel_path(3, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 4, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 4, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [RED, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -318,7 +320,7 @@ mod tests {
 
         composition.get_mut(layer_id0).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [GREEN, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -328,7 +330,7 @@ mod tests {
 
         composition.get_mut(layer_id2).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREENF);
 
         assert_eq!(buffer, [GREEN, RED, GREEN, GREEN]);
         assert_eq!(composition.builder().len(), 4);
@@ -342,7 +344,7 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
 
         assert_eq!(composition.actual_len(), 4);
 
