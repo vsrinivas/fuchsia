@@ -96,7 +96,7 @@ declare_args() {
 
   # The allowlist file to load for /pkgfs/packages non-base packages
   pkgfs_packages_allowlist =
-      "//src/security/policy/pkgfs_non_static_pkgs_allowlist_userdebug.txt"
+      "//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"
 }
 
 assert(custom_signing_script == "" || !use_vboot,

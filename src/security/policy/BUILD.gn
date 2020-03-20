@@ -4,45 +4,36 @@
 
 import("//build/config.gni")
 
-config_data("appmgr_package_resolver_allowlist_user") {
+group("appmgr_policy_eng") {
+  deps = [
+    ":appmgr_component_event_provider_allowlist_eng",
+    ":appmgr_deprecated_shell_allowlist_eng",
+    ":appmgr_global_data_allowlist_eng",
+    ":appmgr_package_cache_allowlist_eng",
+    ":appmgr_package_resolver_allowlist_eng",
+    ":appmgr_pkgfs_versions_allowlist_eng",
+    ":appmgr_root_job_allowlist_eng",
+    ":appmgr_root_resource_allowlist_eng",
+    "//build/images:non_production_tag",
+  ]
+}
+
+config_data("appmgr_package_resolver_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "package_resolver_allowlist_user.txt" ]
+  sources = [ "package_resolver_allowlist_eng.txt" ]
   outputs = [ "allowlist/package_resolver.txt" ]
 }
 
-# The primary difference from _user is support for pkgctl.
-config_data("appmgr_package_resolver_allowlist_userdebug") {
+config_data("appmgr_package_cache_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "package_resolver_allowlist_userdebug.txt" ]
-  outputs = [ "allowlist/package_resolver.txt" ]
-  deps = [ "//build/images:non_production_tag" ]  # Ensure exclusion from _user
-                                                  # builds.
-}
-
-config_data("appmgr_package_cache_allowlist_user") {
-  for_pkg = "appmgr"
-  sources = [ "package_cache_allowlist_user.txt" ]
+  sources = [ "package_cache_allowlist_eng.txt" ]
   outputs = [ "allowlist/package_cache.txt" ]
 }
 
-config_data("appmgr_package_cache_allowlist_userdebug") {
+config_data("appmgr_pkgfs_versions_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "package_cache_allowlist_userdebug.txt" ]
-  outputs = [ "allowlist/package_cache.txt" ]
-  deps = [ "//build/images:non_production_tag" ]
-}
-
-config_data("appmgr_pkgfs_versions_allowlist_user") {
-  for_pkg = "appmgr"
-  sources = [ "pkgfs_versions_allowlist_user.txt" ]
+  sources = [ "pkgfs_versions_allowlist_eng.txt" ]
   outputs = [ "allowlist/pkgfs_versions.txt" ]
-}
-
-config_data("appmgr_pkgfs_versions_allowlist_userdebug") {
-  for_pkg = "appmgr"
-  sources = [ "pkgfs_versions_allowlist_userdebug.txt" ]
-  outputs = [ "allowlist/pkgfs_versions.txt" ]
-  deps = [ "//build/images:non_production_tag" ]
 }
 
 config_data("appmgr_global_data_allowlist_eng") {
@@ -54,20 +45,6 @@ config_data("appmgr_global_data_allowlist_eng") {
 config_data("appmgr_deprecated_shell_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "deprecated_shell_allowlist_eng.txt" ]
-  outputs = [ "allowlist/deprecated_shell.txt" ]
-}
-
-config_data("appmgr_deprecated_shell_allowlist_userdebug") {
-  for_pkg = "appmgr"
-  sources = [ "deprecated_shell_allowlist_userdebug.txt" ]
-  outputs = [ "allowlist/deprecated_shell.txt" ]
-  # TODO(benwright) - Enable non-production tag after integration step.
-  #deps = [ "//build/images:non_production_tag" ]
-}
-
-config_data("appmgr_deprecated_shell_allowlist_user") {
-  for_pkg = "appmgr"
-  sources = [ "deprecated_shell_allowlist_user.txt" ]
   outputs = [ "allowlist/deprecated_shell.txt" ]
 }
 
@@ -83,44 +60,14 @@ config_data("appmgr_component_event_provider_allowlist_eng") {
   outputs = [ "allowlist/component_event_provider.txt" ]
 }
 
-config_data("appmgr_root_resource_allowlist_user") {
-  for_pkg = "appmgr"
-  sources = [ "root_resource_allowlist_user.txt" ]
-  outputs = [ "allowlist/root_resource.txt" ]
-}
-
 config_data("appmgr_root_resource_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "root_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_resource.txt" ]
 }
 
-config_data("appmgr_root_resource_allowlist_userdebug") {
-  for_pkg = "appmgr"
-  sources = [ "root_resource_allowlist_userdebug.txt" ]
-  outputs = [ "allowlist/root_resource.txt" ]
-
-  # TODO(benwright) - Enable non-production tag after integration step.
-  #deps = [ "//build/images:non_production_tag" ]
-}
-
 config_data("appmgr_root_job_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "root_job_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_job.txt" ]
-}
-
-config_data("appmgr_root_job_allowlist_user") {
-  for_pkg = "appmgr"
-  sources = [ "root_job_allowlist_user.txt" ]
-  outputs = [ "allowlist/root_job.txt" ]
-}
-
-config_data("appmgr_root_job_allowlist_userdebug") {
-  for_pkg = "appmgr"
-  sources = [ "root_job_allowlist_userdebug.txt" ]
-  outputs = [ "allowlist/root_job.txt" ]
-
-  # TODO(benwright) - Enable non-production tag after integration step.
-  #deps = [ "//build/images:non_production_tag" ]
 }

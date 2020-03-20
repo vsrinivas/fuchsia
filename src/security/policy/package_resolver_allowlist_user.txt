@@ -1,3 +1,0 @@
-fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
-# TODO(fxb/48278): remove system-update-checker when Omaha Client is fetching updates.
-fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx

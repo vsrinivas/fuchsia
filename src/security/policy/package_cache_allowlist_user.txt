@@ -1,3 +1,0 @@
-# TODO(benwright) - Remove pkgctl, see fxb/43629.
-fuchsia-pkg://fuchsia.com/pkgctl#meta/pkgctl.cmx
-fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx
