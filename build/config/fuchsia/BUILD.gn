@@ -42,8 +42,8 @@ config("ccache") {
 
 config("compiler") {
   cflags = []
-  cflags_c = [ "-std=c11" ]
-  cflags_cc = [ "-std=c++17" ]
+  cflags_c = []
+  cflags_cc = []
   ldflags = [
     "-Wl,--threads",
     "-Wl,--pack-dyn-relocs=relr",

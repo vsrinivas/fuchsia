@@ -68,6 +68,22 @@ config("rust_panic_abort") {
   ]
 }
 
+config("language") {
+  cflags_c = [ "-std=c11" ]
+  cflags_cc = [ "-std=c++17" ]
+  if (current_os == "mac") {
+    # macOS needs this to not complain about C++17isms that older macOS
+    # system libc++ doesn't support.  But we use our own toolchain's static
+    # libc++ anyway.
+    cflags_cc += [ "-faligned-allocation" ]
+
+    # libc++ headers mark some symbols as unavailable on macOS by default
+    # because the system libc++ doesn't support them.  But we use our own
+    # toolchain's static libc++ anyway.
+    defines = [ "_LIBCPP_DISABLE_AVAILABILITY" ]
+  }
+}
+
 config("compiler") {
   asmflags = []
 
@@ -86,11 +102,7 @@ config("compiler") {
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
   } else {
-    cflags_c += [ "-std=c11" ]
-    cflags_cc += [
-      "-std=c++17",
-      "-stdlib=libc++",
-    ]
+    cflags_cc += [ "-stdlib=libc++" ]
     if (current_os == "linux") {
       configs += [ "//build/config/linux:compiler" ]
     } else if (current_os == "mac") {

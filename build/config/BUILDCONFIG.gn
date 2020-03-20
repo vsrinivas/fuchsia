@@ -174,6 +174,7 @@ shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 # All binary targets will get this list of configs by default.
 default_common_binary_configs = [
   "//build/config:compiler",
+  "//build/config:language",
   "//build/config:relative_paths",
   "//build/config:default_frame_pointers",
   "//build/config:default_include_dirs",
