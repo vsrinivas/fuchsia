@@ -118,6 +118,13 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
     EXPECT_EQ(buffer->start().Floor(), kBlockSize);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
+
+  {
+    // Check for a frame to verify we handle frame numbers > UINT32_MAX.
+    auto buffer = effects_stage->LockBuffer(zx::time(0), 0x100000000, 1);
+    EXPECT_EQ(buffer->start().Floor(), 0x100000000);
+    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+  }
 }
 
 TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
