@@ -94,12 +94,16 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                 }
             }
             if let Some(volume) = event.volume {
+                // TODO(fxb/48736): remove temporary logging.
+                fx_log_info!("[audio_controller] received volume button event");
                 *volume_button_event_clone.lock().await = volume;
                 if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
                     notifier.unbounded_send(SettingType::Audio).unwrap();
                 }
             }
         }
+        // TODO(fxb/48736): remove temporary logging.
+        fx_log_info!("[audio_controller] exited input event loop");
     });
 
     let priority_stream_playing_clone = priority_stream_playing.clone();
@@ -151,6 +155,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                                 .await;
                         }
                         SettingRequest::SetVolume(volume) => {
+                            // TODO(fxb/48736): remove temporary logging.
+                            fx_log_info!("[audio_controller] received SettingRequest::SetVolume");
                             // Connect to the SoundPlayer the first time a volume event occurs.
                             if sound_player_connection.is_none() {
                                 sound_player_connection =
@@ -165,6 +171,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                             .await
                             .is_err()
                             {
+                                // TODO(fxb/48736): remove temporary logging.
+                                fx_log_info!("[audio_controller] failed to bind volume controls");
                                 continue;
                             };
 
@@ -212,6 +220,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                         }
                         SettingRequest::Get => {
                             {
+                                // TODO(fxb/48736): remove temporary logging.
+                                fx_log_info!("[audio_controller] received SettingRequest::Get");
                                 if !*input_service_connected_clone.read() {
                                     let connected = monitor_mic_mute(
                                         service_context_handle.clone(),
@@ -250,6 +260,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                 }
             }
         }
+        // TODO(fxb/48736): remove temporary logging.
+        fx_log_info!("[audio_controller] exited service event loop");
     });
     audio_handler_tx
 }

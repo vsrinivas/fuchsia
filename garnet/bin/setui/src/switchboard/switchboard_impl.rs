@@ -9,6 +9,7 @@ use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::*;
 
 use anyhow::{format_err, Error};
+use fuchsia_syslog::fx_log_info;
 
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
@@ -124,6 +125,8 @@ impl SwitchboardImpl {
                 while let Ok(message_event) = receptor.watch().await {
                     // Wait for response
                     if let MessageEvent::Message(Payload::Event(event), _) = message_event {
+                        // TODO(fxb/48736): remove temporary logging.
+                        fx_log_info!("[switchboard] sending event for processing");
                         switchboard_clone.lock().await.process_event(event);
                     }
                 }
@@ -198,6 +201,8 @@ impl Switchboard for SwitchboardImpl {
         request: SettingRequest,
         callback: SettingRequestResponder,
     ) -> Result<(), Error> {
+        // TODO(fxb/48736): remove temporary logging.
+        fx_log_info!("[switchboard] received request for {:?}", setting_type);
         let messenger = self.registry_messenger_client.clone();
         let action_id = self.get_next_action_id();
 
@@ -220,6 +225,8 @@ impl Switchboard for SwitchboardImpl {
                     _,
                 ) = message_event
                 {
+                    // TODO(fxb/48736): remove temporary logging.
+                    fx_log_info!("[switchboard] answering request to {:?}", setting_type);
                     callback.send(response).ok();
                     return;
                 }
