@@ -6,16 +6,17 @@ use crate::context::LowpanCtlContext;
 use anyhow::{Context as _, Error};
 use argh::FromArgs;
 
-/// Contains the arguments decoded for the `leave` command.
+/// Contains the arguments decoded for the `reset` command.
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "leave")]
-pub struct LeaveCommand {}
+#[argh(subcommand, name = "reset")]
+pub struct ResetCommand {}
 
-impl LeaveCommand {
+impl ResetCommand {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        let device = context.get_default_device().await.context("Unable to get device instance")?;
+        let (_, _, device_test) =
+            context.get_default_device_proxies().await.context("Unable to get device instance")?;
 
-        device.leave_network().await.context("Unable to send leave command")?;
+        device_test.reset().await.context("Unable to send reset command")?;
 
         Ok(())
     }

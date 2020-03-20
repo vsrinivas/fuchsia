@@ -14,7 +14,7 @@ use std::default::Default;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["lowpan_dummy_driver"]).context("initialize logging")?;
+    fuchsia_syslog::init_with_tags(&["lowpan-dummy-driver"]).context("initialize logging")?;
 
     let name = "lowpan0";
 

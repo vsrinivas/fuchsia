@@ -15,11 +15,16 @@ test_package("tests") {
     "//src/connectivity/lowpan/drivers/lowpan_spinel_driver:tests",
     "//src/connectivity/lowpan/drivers/spinel_spi_driver:tests",
     "//src/connectivity/lowpan/service:tests",
+    "//src/connectivity/lowpan/tools/lowpanctl/test:lowpanctl_integration_test",
   ]
 
   tests = [
     {
       name = "lowpan_integration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "lowpanctl_integration_test"
       environments = basic_envs
     },
     {

@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.lowpan.Lowpan"
+            "fuchsia.lowpan.device.Lookup"
         ]
     }
 }

@@ -7,7 +7,9 @@ use argh::FromArgs;
 
 use crate::context::LowpanCtlContext;
 pub use crate::leave_command::*;
+pub use crate::list_command::*;
 pub use crate::provision_command::*;
+pub use crate::reset_command::*;
 pub use crate::status_command::*;
 
 /// This struct contains the arguments decoded from the command
@@ -17,16 +19,29 @@ pub use crate::status_command::*;
 /// the interactive command-line mode has been implemented.
 #[derive(FromArgs, PartialEq, Debug)]
 pub struct LowpanCtlInvocation {
+    #[argh(
+        option,
+        long = "server",
+        description = "package URL",
+        default = "\"fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx\".to_string()"
+    )]
+    pub server_url: String,
+
+    #[argh(option, long = "iface", description = "interface/device name")]
+    pub device_name: Option<String>,
+
     #[argh(subcommand)]
-    command: CommandEnum,
+    pub command: CommandEnum,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-enum CommandEnum {
+pub enum CommandEnum {
     Status(StatusCommand),
     Provision(ProvisionCommand),
     Leave(LeaveCommand),
+    List(ListCommand),
+    Reset(ResetCommand),
 }
 
 impl LowpanCtlInvocation {
@@ -35,6 +50,8 @@ impl LowpanCtlInvocation {
             CommandEnum::Status(x) => x.exec(context).await,
             CommandEnum::Provision(x) => x.exec(context).await,
             CommandEnum::Leave(x) => x.exec(context).await,
+            CommandEnum::List(x) => x.exec(context).await,
+            CommandEnum::Reset(x) => x.exec(context).await,
         }
     }
 }
