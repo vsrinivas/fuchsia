@@ -12,6 +12,7 @@
 #include <fbl/span.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/lib/testing/predicates/status.h"
 #include "tun_ctl.h"
 
 namespace network {
@@ -22,18 +23,6 @@ namespace {
 // Enable timeouts only to test things locally, committed code should not use timeouts.
 constexpr zx::duration kTimeout = zx::duration::infinite();
 }  // namespace
-
-#define ASSERT_OK(x)                                                        \
-  {                                                                         \
-    zx_status_t _result = x;                                                \
-    ASSERT_EQ(_result, ZX_OK) << #x " = " << zx_status_get_string(_result); \
-  }
-
-#define EXPECT_OK(x)                                                        \
-  {                                                                         \
-    zx_status_t _result = x;                                                \
-    EXPECT_EQ(_result, ZX_OK) << #x " = " << zx_status_get_string(_result); \
-  }
 
 constexpr uint32_t kDefaultMtu = 1500;
 
@@ -347,32 +336,32 @@ TEST_F(TunTest, InvalidConfigs) {
   // Zero MTU
   auto config = DefaultDeviceConfig();
   config.mutable_base()->set_mtu(0);
-  ASSERT_EQ(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
 
   // MTU too large
   config = DefaultDeviceConfig();
   config.mutable_base()->set_mtu(fuchsia::net::tun::MAX_MTU + 1);
-  ASSERT_EQ(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
 
   // No Rx frames
   config = DefaultDeviceConfig();
   config.mutable_base()->clear_rx_types();
-  ASSERT_EQ(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
 
   // No Tx frames
   config = DefaultDeviceConfig();
   config.mutable_base()->clear_tx_types();
-  ASSERT_EQ(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
 
   // Empty Rx frames
   config = DefaultDeviceConfig();
   config.mutable_base()->set_rx_types({});
-  ASSERT_EQ(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
 
   // Empty Tx frames
   config = DefaultDeviceConfig();
   config.mutable_base()->set_tx_types({});
-  ASSERT_EQ(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(TunTest, ConnectNetworkDevice) {
@@ -396,11 +385,11 @@ TEST_F(TunTest, Teardown) {
   bool device_dead = false;
   bool mac_dead = false;
   device.set_error_handler([&device_dead](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
     device_dead = true;
   });
   mac.set_error_handler([&mac_dead](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
     mac_dead = true;
   });
   // get rid of tun.
@@ -491,7 +480,7 @@ TEST_F(TunTest, NoMac) {
   // mac should be closed because we created tun without a mac information.
   // Wait for the error handler to report that back to us.
   mac.set_error_handler([&done](zx_status_t error) {
-    EXPECT_EQ(error, ZX_ERR_PEER_CLOSED);
+    EXPECT_STATUS(error, ZX_ERR_PEER_CLOSED);
     done = true;
   });
   ASSERT_TRUE(
@@ -524,10 +513,10 @@ TEST_F(TunTest, SimpleRxTx) {
   ASSERT_TRUE(read_frame_result.is_err())
       << "Got unexpected frame with " << read_frame_result.response().frame.data().size()
       << "bytes, should've errored";
-  ASSERT_EQ(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
-  ASSERT_EQ(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE),
-                             zx::time::infinite_past(), nullptr),
-            ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
+  ASSERT_STATUS(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE),
+                                 zx::time::infinite_past(), nullptr),
+                ZX_ERR_TIMED_OUT);
 
   ASSERT_OK(client.SendTx({0x00, 0x01}, true));
   ASSERT_OK(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE),
@@ -556,10 +545,10 @@ TEST_F(TunTest, SimpleRxTx) {
     frame.set_data({0xAA, 0xBB});
     ASSERT_OK(tun->WriteFrame(std::move(frame), &write_frame_result));
     ASSERT_TRUE(write_frame_result.is_err());
-    ASSERT_EQ(write_frame_result.err(), ZX_ERR_SHOULD_WAIT);
-    ASSERT_EQ(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE),
-                               zx::time::infinite_past(), nullptr),
-              ZX_ERR_TIMED_OUT);
+    ASSERT_STATUS(write_frame_result.err(), ZX_ERR_SHOULD_WAIT);
+    ASSERT_STATUS(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE),
+                                   zx::time::infinite_past(), nullptr),
+                  ZX_ERR_TIMED_OUT);
   }
 
   ASSERT_OK(client.SendRx({0x02}, true));
@@ -710,7 +699,7 @@ TEST_F(TunTest, PairInfallibleWrites) {
   ASSERT_OK(left.SendTx({0x00}, true));
 
   uint16_t desc;
-  ASSERT_EQ(left.FetchTx(&desc, nullptr, false), ZX_ERR_SHOULD_WAIT);
+  ASSERT_STATUS(left.FetchTx(&desc, nullptr, false), ZX_ERR_SHOULD_WAIT);
 
   ASSERT_OK(right.SendRx({0x01}, true));
   ASSERT_OK(right.WaitRx());
@@ -736,7 +725,7 @@ TEST_F(TunTest, RejectsIfOffline) {
     fuchsia::net::tun::Device_WriteFrame_Result result;
     ASSERT_OK(tun->WriteFrame(std::move(frame), &result));
     ASSERT_TRUE(result.is_err());
-    ASSERT_EQ(result.err(), ZX_ERR_BAD_STATE);
+    ASSERT_STATUS(result.err(), ZX_ERR_BAD_STATE);
   }
   // Can't send from client end.
   {
