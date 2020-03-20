@@ -26,6 +26,7 @@ import (
 	artifactory "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
 	build "go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
 const (
@@ -49,6 +50,10 @@ const (
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
 	buildIDsTxt = "build-ids.txt"
+
+	// Constants for upload retries.
+	uploadRetryBackoff = 1 * time.Second
+	maxUploadTries     = 3
 )
 
 type upCommand struct {
@@ -449,7 +454,12 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			}
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
-			if err := dest.write(ctx, upload.Destination, upload.Source, upload.Compress); err != nil {
+			if err := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadTries), func() error {
+				if err := dest.write(ctx, upload.Destination, upload.Source, upload.Compress); err != nil {
+					return fmt.Errorf("%s: %w", upload.Destination, err)
+				}
+				return nil
+			}, nil); err != nil {
 				errs <- fmt.Errorf("%s: %w", upload.Destination, err)
 				return
 			}

@@ -31,6 +31,7 @@ go_library("main") {
     "//tools/lib/color",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
+    "//tools/lib/retry",
   ]
 }
 
