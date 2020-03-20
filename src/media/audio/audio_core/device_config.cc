@@ -29,6 +29,10 @@ const PipelineConfig::Effect* FindEffectInMixGroup(const std::string& instance_n
 
 }  // namespace
 
+const std::shared_ptr<LoudnessTransform>& DeviceConfig::DeviceProfile::loudness_transform() const {
+  return ProcessConfig::instance().default_loudness_transform();
+}
+
 const std::shared_ptr<LoudnessTransform> DeviceConfig::OutputDeviceProfile::kNoOpTransform =
     std::make_shared<NoOpLoudnessTransform>();
 
@@ -38,7 +42,7 @@ const std::shared_ptr<LoudnessTransform>& DeviceConfig::OutputDeviceProfile::lou
     return kNoOpTransform;
   }
 
-  return ProcessConfig::instance().default_loudness_transform();
+  return DeviceProfile::loudness_transform();
 }
 
 const PipelineConfig::Effect* DeviceConfig::FindEffect(const std::string& instance_name) const {

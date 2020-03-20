@@ -100,7 +100,7 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
   // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
   // output's MinLeadTime, fully expecting this value to be reflected as-is to renderer+clients.
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddOutput(fake_output.get());
+  context().route_graph().AddDevice(fake_output.get());
 
   // SetPcmStreamType triggers the routing preparation completion, which connects output(s) to
   // renderer. Renderers react to new outputs in `OnLinkAdded` by recalculating minimum lead time.
@@ -121,7 +121,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
       &threading_model(), &context().device_manager(), &context().link_matrix());
 
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddOutput(fake_output.get());
+  context().route_graph().AddDevice(fake_output.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
   AddPayloadBuffer(0, PAGE_SIZE, fidl_renderer_.get());
@@ -163,7 +163,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 
   auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                  &context().link_matrix());
-  context().route_graph().AddOutput(output.get());
+  context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
   auto* renderer_raw = renderer_.get();
@@ -179,7 +179,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                  &context().link_matrix());
-  context().route_graph().AddOutput(output.get());
+  context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));

@@ -35,9 +35,7 @@ struct RoutingProfile {
 //
 // Renderers are routed by Usage to the most recently plugged output that supports their Usage.
 //
-// Capturers are routed to the most recently plugged input.
-//
-// Loopback capturers are routed to the most recently plugged output which supports loopback.
+// Capturers are routed to the most recently plugged device that supports their usage.
 class RouteGraph {
  public:
   // Constructs a graph from the given config and link matrix. Each parameter must outlive the
@@ -52,20 +50,12 @@ class RouteGraph {
   void SetThrottleOutput(ThreadingModel* threading_model,
                          std::shared_ptr<AudioOutput> throttle_output);
 
-  // Adds an |AudioOutput| to the route graph. An |AudioOutput| is allowed to receive
-  // postmix samples from |AudioRenderer|s.
-  void AddOutput(AudioDevice* output);
-
-  // Removes an |AudioOutput| from the route graph. Any connected |AudioRenderer|s and loopback
-  // |AudioCapturer|s will be rerouted.
-  void RemoveOutput(AudioDevice* output);
-
   // Adds an |AudioInput| to the route graph. An audio input may be connected to transmit samples
   // to an |AudioCapturer|.
-  void AddInput(AudioDevice* input);
+  void AddDevice(AudioDevice* input);
 
   // Removes an |AudioInput| from the route graph. Any connected |AudioCapturer|s will be rerouted.
-  void RemoveInput(AudioDevice* input);
+  void RemoveDevice(AudioDevice* input);
 
   // Adds an |AudioRenderer| to the route graph. An |AudioRenderer| may be connected to
   // |AudioOutput|s.
@@ -87,17 +77,6 @@ class RouteGraph {
 
   void RemoveCapturer(const AudioObject& capturer);
 
-  // Adds an |AudioCapturer| to the route graph which will receive the output mixed for the most
-  // recently added output device.
-  void AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_capturer);
-
-  // Sets the routing profile with which the route graph selects |AudioOutput|s for the
-  // loopback |AudioCapturer|.
-  void SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_capturer,
-                                         RoutingProfile profile);
-
-  void RemoveLoopbackCapturer(const AudioObject& loopback_capturer);
-
  private:
   struct RoutableOwnedObject {
     std::shared_ptr<AudioObject> ref;
@@ -105,7 +84,7 @@ class RouteGraph {
   };
 
   struct Target {
-    Target() {}
+    Target() = default;
 
     Target(AudioDevice* _device, std::shared_ptr<LoudnessTransform> _transform)
         : device(_device), transform(_transform) {
@@ -117,25 +96,10 @@ class RouteGraph {
     AudioDevice* device = nullptr;
     std::shared_ptr<LoudnessTransform> transform = nullptr;
   };
+  using Targets = std::array<Target, kStreamUsageCount>;
+  using UnlinkCommand = std::array<bool, kStreamUsageCount>;
 
-  // Cached targets for linking renderers and capturers.
-  struct Targets {
-    std::array<Target, kStreamRenderUsageCount> render = {};
-    Target loopback;
-    Target capture;
-  };
-
-  // A command to unlink components of the graph.
-  struct UnlinkCommand {
-    // Iff renderers[usage] is true, renderers of that usage should be unlinked.
-    std::array<bool, kStreamRenderUsageCount> renderers = {};
-    // Iff true, loopback capturers should be unlinked.
-    bool loopback_capturers = false;
-    /// Iff true, capturers, should be unlinked.
-    bool capturers = false;
-  };
-
-  const DeviceConfig::OutputDeviceProfile& OutputDeviceProfile(AudioDevice* device) const;
+  const DeviceConfig::DeviceProfile& LookupDeviceProfile(AudioDevice* device) const;
 
   void UpdateGraphForDeviceChange();
 
@@ -146,17 +110,16 @@ class RouteGraph {
 
   void Unlink(UnlinkCommand unlink_command);
 
-  Target OutputForUsage(const StreamUsage& usage) const;
+  Target TargetForUsage(const StreamUsage& usage) const;
 
   LinkMatrix& link_matrix_;
 
   DeviceConfig device_config_;
 
-  Targets targets_;
+  Targets targets_ = {};
 
   // TODO(39624): convert to weak_ptr when ownership is explicit.
-  std::deque<AudioDevice*> inputs_;
-  std::deque<AudioDevice*> outputs_;
+  std::deque<AudioDevice*> devices_;
 
   std::unordered_map<const AudioObject*, RoutableOwnedObject> capturers_;
   std::unordered_map<const AudioObject*, RoutableOwnedObject> renderers_;

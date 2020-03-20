@@ -19,11 +19,10 @@ class TestProcessConfig {
   TestProcessConfig()
       : TestProcessConfig(
             ProcessConfig::Builder()
-                .AddDeviceProfile({std::nullopt,
-                  DeviceConfig::OutputDeviceProfile(
-                     /* eligible_for_loopback */ true,
-                     StreamUsageSetFromRenderUsages(kFidlRenderUsages)
-                     )})
+                .AddDeviceProfile(
+                    {std::nullopt, DeviceConfig::OutputDeviceProfile(
+                                       /* eligible_for_loopback */ true,
+                                       StreamUsageSetFromRenderUsages(kFidlRenderUsages))})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
                 .Build()) {}

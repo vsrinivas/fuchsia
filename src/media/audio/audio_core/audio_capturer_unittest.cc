@@ -112,7 +112,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
       .max_channels = 100,
       .flags = 0,
   }});
-  context().route_graph().AddInput(input.get());
+  context().route_graph().AddDevice(input.get());
   RunLoopUntilIdle();
 
   fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));

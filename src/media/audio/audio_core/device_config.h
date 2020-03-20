@@ -18,8 +18,25 @@ namespace media::audio {
 
 class DeviceConfig {
  public:
+  class DeviceProfile {
+   public:
+    DeviceProfile(StreamUsageSet supported_usages)
+        : usage_support_set_(std::move(supported_usages)) {}
+
+    virtual ~DeviceProfile() = default;
+
+    virtual bool supports_usage(StreamUsage usage) const {
+      return usage_support_set_.find(usage) != usage_support_set_.end();
+    }
+
+    virtual const std::shared_ptr<LoudnessTransform>& loudness_transform() const;
+
+   private:
+    StreamUsageSet usage_support_set_;
+  };
+
   // A routing profile for a device.
-  class OutputDeviceProfile {
+  class OutputDeviceProfile : public DeviceProfile {
    public:
     OutputDeviceProfile()
         : OutputDeviceProfile(true, StreamUsageSetFromRenderUsages(kFidlRenderUsages)) {}
@@ -27,20 +44,31 @@ class DeviceConfig {
     OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages,
                         bool independent_volume_control = false,
                         PipelineConfig pipeline_config = PipelineConfig::Default())
-        : eligible_for_loopback_(eligible_for_loopback),
+        : DeviceProfile(std::move(supported_usages)),
+          eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
-          pipeline_config_(std::move(pipeline_config)),
-          usage_support_set_(std::move(supported_usages)) {}
+          pipeline_config_(std::move(pipeline_config)) {}
 
-    bool supports_usage(RenderUsage usage) const {
-      return usage_support_set_.find(StreamUsage::WithRenderUsage(usage)) !=
-             usage_support_set_.end();
+    bool supports_usage(StreamUsage usage) const override {
+      // Temporary, until configs stop specifying 'eligible_for_loopback'.
+      if (usage == StreamUsage::WithCaptureUsage(CaptureUsage::LOOPBACK) &&
+          eligible_for_loopback_) {
+        return true;
+      }
+      return DeviceProfile::supports_usage(usage);
     }
 
-    // Whether this device is eligible to be looped back to loopback capturers.
-    bool eligible_for_loopback() const { return eligible_for_loopback_; }
+    bool supports_usage(RenderUsage usage) const {
+      return supports_usage(StreamUsage::WithRenderUsage(usage));
+    }
 
-    const std::shared_ptr<LoudnessTransform>& loudness_transform() const;
+    const std::shared_ptr<LoudnessTransform>& loudness_transform() const override;
+
+    // Whether this device is eligible to be looped back to loopback capturers.
+    bool eligible_for_loopback() const {
+      return eligible_for_loopback_ ||
+             supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::LOOPBACK));
+    }
 
     // Whether this device has independent volume control, and should therefore
     // receive routed streams at unity gain.
@@ -50,20 +78,19 @@ class DeviceConfig {
 
    private:
     const static std::shared_ptr<LoudnessTransform> kNoOpTransform;
-
     bool eligible_for_loopback_ = true;
     bool independent_volume_control_ = false;
     PipelineConfig pipeline_config_ = PipelineConfig::Default();
-    StreamUsageSet usage_support_set_;
   };
 
-  class InputDeviceProfile {
+  class InputDeviceProfile : public DeviceProfile {
    public:
     static constexpr uint32_t kDefaultRate = 48000;
 
     InputDeviceProfile() : InputDeviceProfile(kDefaultRate) {}
 
-    InputDeviceProfile(uint32_t rate) : rate_(rate) {}
+    InputDeviceProfile(uint32_t rate)
+        : DeviceProfile(StreamUsageSetFromCaptureUsages(kFidlCaptureUsages)), rate_(rate) {}
 
     uint32_t rate() const { return rate_; }
 
@@ -87,14 +114,14 @@ class DeviceConfig {
   }
 
   const OutputDeviceProfile& output_device_profile(const audio_stream_unique_id_t& id) const {
-    return DeviceProfile(id, output_device_profiles_, default_output_device_profile_);
+    return FindDeviceProfile(id, output_device_profiles_, default_output_device_profile_);
   }
   const OutputDeviceProfile& default_output_device_profile() const {
     return default_output_device_profile_;
   }
 
   const InputDeviceProfile& input_device_profile(const audio_stream_unique_id_t& id) const {
-    return DeviceProfile(id, input_device_profiles_, default_input_device_profile_);
+    return FindDeviceProfile(id, input_device_profiles_, default_input_device_profile_);
   }
   const InputDeviceProfile& default_input_device_profile() const {
     return default_input_device_profile_;
@@ -108,7 +135,7 @@ class DeviceConfig {
   friend class ProcessConfigBuilder;
 
   template <typename Profile>
-  static const Profile& DeviceProfile(
+  static const Profile& FindDeviceProfile(
       const audio_stream_unique_id_t& id,
       const std::vector<std::pair<std::vector<audio_stream_unique_id_t>, Profile>>& profiles,
       const Profile& default_profile) {

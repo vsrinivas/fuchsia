@@ -80,6 +80,14 @@ enum class CaptureUsage : std::underlying_type_t<fuchsia::media::AudioCaptureUsa
 #undef EXPAND_CAPTURE_USAGE
 };
 
+constexpr std::array<CaptureUsage, fuchsia::media::CAPTURE_USAGE_COUNT> kFidlCaptureUsages = {{
+#define EXPAND_CAPTURE_USAGE(U) CaptureUsage::U,
+    EXPAND_EACH_FIDL_CAPTURE_USAGE
+#undef EXPAND_CAPTURE_USAGE
+}};
+
+static constexpr uint32_t kStreamUsageCount = kStreamRenderUsageCount + kStreamCaptureUsageCount;
+
 // Since we define the RenderUsage enum to have the same numeric values for each fidl enum entry,
 // we can convert by casting the underlying numeric value.
 static RenderUsage RenderUsageFromFidlRenderUsage(fuchsia::media::AudioRenderUsage u) {
@@ -108,12 +116,12 @@ FidlCaptureUsageFromCaptureUsage(CaptureUsage u) {
 
 class StreamUsage {
  public:
-  static StreamUsage WithRenderUsage(RenderUsage u) { return StreamUsage(u); }
-  static StreamUsage WithCaptureUsage(CaptureUsage u) { return StreamUsage(u); }
-  static StreamUsage WithRenderUsage(fuchsia::media::AudioRenderUsage u) {
+  static constexpr StreamUsage WithRenderUsage(RenderUsage u) { return StreamUsage(u); }
+  static constexpr StreamUsage WithCaptureUsage(CaptureUsage u) { return StreamUsage(u); }
+  static constexpr StreamUsage WithRenderUsage(fuchsia::media::AudioRenderUsage u) {
     return StreamUsage(RenderUsageFromFidlRenderUsage(u));
   }
-  static StreamUsage WithCaptureUsage(fuchsia::media::AudioCaptureUsage u) {
+  static constexpr StreamUsage WithCaptureUsage(fuchsia::media::AudioCaptureUsage u) {
     return StreamUsage(CaptureUsageFromFidlCaptureUsage(u));
   }
 
@@ -144,14 +152,37 @@ class StreamUsage {
     return std::get<CaptureUsage>(usage_);
   }
 
+  // A |StreamUsage| is empty if it contains neither a render usage or a capture usage. This state
+  // exists to be similar to the semantics of a FIDL union in C++.
+  bool is_empty() const { return std::holds_alternative<std::monostate>(usage_); }
+
  private:
   using Usage = std::variant<std::monostate, RenderUsage, CaptureUsage>;
 
-  explicit StreamUsage(RenderUsage usage) : usage_(usage) {}
-  explicit StreamUsage(CaptureUsage usage) : usage_(usage) {}
+  explicit constexpr StreamUsage(RenderUsage usage) : usage_(usage) {}
+  explicit constexpr StreamUsage(CaptureUsage usage) : usage_(usage) {}
 
   Usage usage_;
 };
+
+constexpr std::array<StreamUsage, kStreamUsageCount> kStreamUsages = {{
+#define EXPAND_RENDER_USAGE(U) StreamUsage::WithRenderUsage(RenderUsage::U),
+    EXPAND_EACH_RENDER_USAGE
+#undef EXPAND_RENDER_USAGE
+#define EXPAND_CAPTURE_USAGE(U) StreamUsage::WithCaptureUsage(CaptureUsage::U),
+        EXPAND_EACH_CAPTURE_USAGE
+#undef EXPAND_CAPTURE_USAGE
+}};
+
+static uint32_t HashStreamUsage(const StreamUsage& u) {
+  if (u.is_render_usage()) {
+    return static_cast<uint32_t>(u.render_usage());
+  }
+  if (u.is_capture_usage()) {
+    return static_cast<uint32_t>(u.capture_usage()) + kStreamRenderUsageCount;
+  }
+  return kStreamUsageCount;
+}
 
 namespace internal {
 
@@ -163,15 +194,7 @@ struct EnumHash {
 };
 
 struct StreamUsageHash {
-  size_t operator()(StreamUsage u) const {
-    if (u.is_render_usage()) {
-      return static_cast<size_t>(u.render_usage());
-    }
-    if (u.is_capture_usage()) {
-      return static_cast<size_t>(u.capture_usage()) + kStreamRenderUsageCount;
-    }
-    return std::numeric_limits<size_t>::max();
-  }
+  size_t operator()(StreamUsage u) const { return HashStreamUsage(u); }
 };
 
 }  // namespace internal

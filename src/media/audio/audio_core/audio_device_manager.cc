@@ -280,12 +280,7 @@ void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& d
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
 
-  if (device->is_input()) {
-    route_graph_.RemoveInput(device.get());
-  } else {
-    route_graph_.RemoveOutput(device.get());
-  }
-
+  route_graph_.RemoveDevice(device.get());
   UpdateDefaultDevice(device->is_input());
 }
 
@@ -296,12 +291,7 @@ void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& dev
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);
 
-  if (device->is_input()) {
-    route_graph_.AddInput(device.get());
-  } else {
-    route_graph_.AddOutput(device.get());
-  }
-
+  route_graph_.AddDevice(device.get());
   UpdateDefaultDevice(device->is_input());
 }
 

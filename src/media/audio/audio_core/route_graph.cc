@@ -36,50 +36,28 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 
   throttle_release_fence_ = {std::move(bridge.completer)};
   throttle_output_ = throttle_output;
-  AddOutput(throttle_output_.get());
+  AddDevice(throttle_output_.get());
 }
 
-void RouteGraph::AddOutput(AudioDevice* output) {
-  TRACE_DURATION("audio", "RouteGraph::AddOutput");
-  AUD_VLOG(TRACE) << "Added output device to route graph: " << output;
+void RouteGraph::AddDevice(AudioDevice* device) {
+  TRACE_DURATION("audio", "RouteGraph::AddDevice");
+  AUD_VLOG(TRACE) << "Added device to route graph: " << device;
 
-  outputs_.push_front(output);
+  devices_.push_front(device);
   UpdateGraphForDeviceChange();
 }
 
-void RouteGraph::RemoveOutput(AudioDevice* output) {
-  TRACE_DURATION("audio", "RouteGraph::RemoveOutput");
-  AUD_VLOG(TRACE) << "Removing output device from graph: " << output;
+void RouteGraph::RemoveDevice(AudioDevice* device) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveDevice");
+  AUD_VLOG(TRACE) << "Removing device from graph: " << device;
 
-  auto it = std::find(outputs_.begin(), outputs_.end(), output);
-  if (it == outputs_.end()) {
-    FX_LOGS(WARNING) << "Attempted to remove unregistered output device from the route graph.";
+  auto it = std::find(devices_.begin(), devices_.end(), device);
+  if (it == devices_.end()) {
+    FX_LOGS(WARNING) << "Attempted to remove unregistered device from the route graph.";
     return;
   }
 
-  outputs_.erase(it);
-  UpdateGraphForDeviceChange();
-}
-
-void RouteGraph::AddInput(AudioDevice* input) {
-  TRACE_DURATION("audio", "RouteGraph::AddInput");
-  AUD_VLOG(TRACE) << "Added input device to route graph: " << input;
-
-  inputs_.push_front(input);
-  UpdateGraphForDeviceChange();
-}
-
-void RouteGraph::RemoveInput(AudioDevice* input) {
-  TRACE_DURATION("audio", "RouteGraph::RemoveInput");
-  AUD_VLOG(TRACE) << "Removing input device to route graph: " << input;
-
-  auto it = std::find(inputs_.begin(), inputs_.end(), input);
-  if (it == inputs_.end()) {
-    FX_LOGS(WARNING) << "Attempted to remove unregistered input device from the route graph.";
-    return;
-  }
-
-  inputs_.erase(it);
+  devices_.erase(it);
   UpdateGraphForDeviceChange();
 }
 
@@ -112,7 +90,7 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
     return;
   }
 
-  auto output = OutputForUsage(it->second.profile.usage);
+  auto output = TargetForUsage(it->second.profile.usage);
   if (!output.is_linkable()) {
     FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no output for the given usage exist.";
     link_matrix_.Unlink(*it->second.ref);
@@ -169,20 +147,20 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
     return;
   }
 
-  if (!targets_.capture.is_linkable()) {
-    FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no inputs exist.";
+  auto target = TargetForUsage(it->second.profile.usage);
+  if (!target.is_linkable()) {
+    FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no input for the give usage exists.";
     link_matrix_.Unlink(*it->second.ref);
     return;
   }
 
-  if (link_matrix_.AreLinked(*it->second.ref, *targets_.capture.device)) {
+  if (link_matrix_.AreLinked(*it->second.ref, *target.device)) {
     return;
   }
 
   link_matrix_.Unlink(*it->second.ref);
 
-  link_matrix_.LinkObjects(targets_.capture.device->shared_from_this(), it->second.ref,
-                           targets_.capture.transform);
+  link_matrix_.LinkObjects(target.device->shared_from_this(), it->second.ref, target.transform);
 }
 
 void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
@@ -200,118 +178,40 @@ void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
   capturers_.erase(it);
 }
 
-// TODO(39627): Only accept capturers of loopback type.
-void RouteGraph::AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_capturer) {
-  TRACE_DURATION("audio", "RouteGraph::AddLoopbackCapturer");
-  FX_DCHECK(loopback_capturer->is_audio_capturer());
-  AUD_VLOG(TRACE) << "Adding loopback capturer to route graph: " << loopback_capturer.get();
-
-  loopback_capturers_.insert(
-      {loopback_capturer.get(),
-       RoutableOwnedObject{std::shared_ptr<AudioObject>(loopback_capturer.release()), {}}});
-}
-
-// TODO(39627): Only accept capturers of loopback type.
-void RouteGraph::SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_capturer,
-                                                   RoutingProfile profile) {
-  TRACE_DURATION("audio", "RouteGraph::SetLoopbackCapturerRoutingProfile");
-  FX_DCHECK(loopback_capturer.is_audio_capturer());
-  AUD_VLOG(TRACE) << "Setting loopback capturer route profile: " << &loopback_capturer;
-
-  auto it = loopback_capturers_.find(&loopback_capturer);
-  if (it == loopback_capturers_.end()) {
-    FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
-    return;
-  }
-
-  it->second.profile = std::move(profile);
-  if (!it->second.profile.routable || !it->second.profile.usage.is_capture_usage()) {
-    link_matrix_.Unlink(*it->second.ref);
-    return;
-  }
-
-  if (!targets_.loopback.is_linkable()) {
-    FX_LOGS(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
-    link_matrix_.Unlink(*it->second.ref);
-    return;
-  }
-
-  if (link_matrix_.AreLinked(*it->second.ref, *targets_.loopback.device)) {
-    return;
-  }
-
-  link_matrix_.Unlink(*it->second.ref);
-
-  link_matrix_.LinkObjects(targets_.loopback.device->shared_from_this(), it->second.ref,
-                           targets_.loopback.transform);
-}
-
-// TODO(39627): Only accept capturers of loopback type.
-void RouteGraph::RemoveLoopbackCapturer(const AudioObject& loopback_capturer) {
-  TRACE_DURATION("audio", "RouteGraph::RemoveLoopbackCapturer");
-  FX_DCHECK(loopback_capturer.is_audio_capturer());
-  AUD_VLOG(TRACE) << "Setting loopback capturer from route graph: " << &loopback_capturer;
-
-  auto it = loopback_capturers_.find(&loopback_capturer);
-  if (it == loopback_capturers_.end()) {
-    AUD_VLOG(TRACE) << "Loopback capturer " << &loopback_capturer << " was not present in graph.";
-    return;
-  }
-
-  link_matrix_.Unlink(*it->second.ref);
-  loopback_capturers_.erase(it);
-}
-
 void RouteGraph::UpdateGraphForDeviceChange() {
   TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange");
   auto [targets, unlink_command] = CalculateTargets();
   targets_ = targets;
   Unlink(unlink_command);
 
-  if (std::any_of(unlink_command.renderers.begin(), unlink_command.renderers.end(),
-                  [](auto unlink) { return unlink; })) {
+  {
     TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange.renderers");
     std::for_each(renderers_.begin(), renderers_.end(), [this](auto& renderer) {
-      Target output;
+      Target target;
       if (!renderer.second.profile.routable ||
-          !((output = OutputForUsage(renderer.second.profile.usage)).is_linkable()) ||
+          !((target = TargetForUsage(renderer.second.profile.usage)).is_linkable()) ||
           link_matrix_.DestLinkCount(*renderer.second.ref) > 0u) {
         return;
       }
 
-      link_matrix_.LinkObjects(renderer.second.ref, output.device->shared_from_this(),
-                               output.transform);
+      link_matrix_.LinkObjects(renderer.second.ref, target.device->shared_from_this(),
+                               target.transform);
     });
   }
 
-  if (unlink_command.loopback_capturers && targets_.loopback.is_linkable()) {
-    TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange.loopback_capturers");
-    std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
-                  [this, target = targets_.loopback](auto& loopback_capturer) {
-                    if (!loopback_capturer.second.profile.routable ||
-                        !loopback_capturer.second.profile.usage.is_capture_usage()) {
-                      return;
-                    }
-
-                    FX_DCHECK(link_matrix_.SourceLinkCount(*loopback_capturer.second.ref) == 0);
-                    link_matrix_.LinkObjects(target.device->shared_from_this(),
-                                             loopback_capturer.second.ref, target.transform);
-                  });
-  }
-
-  if (unlink_command.capturers && targets_.capture.is_linkable()) {
+  {
     TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange.capturers");
-    std::for_each(capturers_.begin(), capturers_.end(),
-                  [this, target = targets_.capture](auto& capturer) {
-                    if (!capturer.second.profile.routable ||
-                        !capturer.second.profile.usage.is_capture_usage()) {
-                      return;
-                    }
+    std::for_each(capturers_.begin(), capturers_.end(), [this](auto& capturer) {
+      Target target;
+      if (!capturer.second.profile.routable ||
+          !((target = TargetForUsage(capturer.second.profile.usage)).is_linkable()) ||
+          link_matrix_.DestLinkCount(*capturer.second.ref) > 0u) {
+        return;
+      }
 
-                    FX_DCHECK(link_matrix_.SourceLinkCount(*capturer.second.ref) == 0);
-                    link_matrix_.LinkObjects(target.device->shared_from_this(), capturer.second.ref,
-                                             target.transform);
-                  });
+      link_matrix_.LinkObjects(target.device->shared_from_this(), capturer.second.ref,
+                               target.transform);
+    });
   }
 }
 
@@ -320,98 +220,74 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
   // We generate a new set of targets.
   // We generate an unlink command to unlink anything linked to a target which has changed.
 
-  std::array<Target, kStreamRenderUsageCount> new_render_targets = {};
-  std::array<bool, kStreamRenderUsageCount> unlink_renderers = {};
-  for (const auto& usage : kRenderUsages) {
-    const auto idx = static_cast<std::underlying_type_t<RenderUsage>>(usage);
-    new_render_targets[idx] = [this, usage]() {
-      for (auto output : outputs_) {
-        if (output == throttle_output_.get()) {
+  Targets new_targets = {};
+  UnlinkCommand unlink;
+  for (const auto& usage : kStreamUsages) {
+    const auto idx = HashStreamUsage(usage);
+    new_targets[idx] = [this, usage]() {
+      for (auto device : devices_) {
+        if (device == throttle_output_.get()) {
           continue;
         }
 
-        const auto& profile = OutputDeviceProfile(output);
+        const auto& profile = LookupDeviceProfile(device);
         if (profile.supports_usage(usage)) {
-          return Target(output, profile.loudness_transform());
+          return Target(device, profile.loudness_transform());
         }
       }
 
-      return Target(throttle_output_.get(),
-                    OutputDeviceProfile(throttle_output_.get()).loudness_transform());
+      if (usage.is_render_usage()) {
+        return Target(throttle_output_.get(),
+                      LookupDeviceProfile(throttle_output_.get()).loudness_transform());
+      } else {
+        return Target();
+      }
     }();
 
-    unlink_renderers[idx] = targets_.render[idx].device != new_render_targets[idx].device;
+    unlink[idx] = targets_[idx].device != new_targets[idx].device;
   }
 
-  auto new_loopback_target = [this]() {
-    for (auto output : outputs_) {
-      if (output == throttle_output_.get()) {
-        continue;
-      }
-
-      const auto& profile = OutputDeviceProfile(output);
-      if (profile.eligible_for_loopback()) {
-        return Target(output, profile.loudness_transform());
-      }
-    }
-
-    return Target{};
-  }();
-
-  auto new_capture_device = inputs_.empty() ? nullptr : inputs_.front();
-  auto new_capture_target_transform =
-      new_capture_device ? OutputDeviceProfile(new_capture_device).loudness_transform() : nullptr;
-  auto new_capture_target = Target(new_capture_device, new_capture_target_transform);
-
-  return {
-      Targets{.render = new_render_targets,
-              .loopback = new_loopback_target,
-              .capture = new_capture_target},
-      UnlinkCommand{.renderers = unlink_renderers,
-                    .loopback_capturers = new_loopback_target.device != targets_.loopback.device,
-                    .capturers = new_capture_target.device != targets_.capture.device}};
+  return {new_targets, unlink};
 }
 
 void RouteGraph::Unlink(UnlinkCommand unlink_command) {
   TRACE_DURATION("audio", "RouteGraph::Unlink");
   std::for_each(renderers_.begin(), renderers_.end(), [this, &unlink_command](auto& renderer) {
-    if (renderer.second.profile.usage.is_render_usage() &&
-        unlink_command
-            .renderers[fidl::ToUnderlying(renderer.second.profile.usage.render_usage())]) {
+    auto usage = renderer.second.profile.usage;
+    if (!usage.is_empty() && unlink_command[HashStreamUsage(usage)]) {
       link_matrix_.Unlink(*renderer.second.ref);
     }
   });
-
-  if (unlink_command.loopback_capturers) {
-    std::for_each(
-        loopback_capturers_.begin(), loopback_capturers_.end(),
-        [this](auto& loopback_capturer) { link_matrix_.Unlink(*loopback_capturer.second.ref); });
-  }
-
-  if (unlink_command.capturers) {
-    std::for_each(capturers_.begin(), capturers_.end(),
-                  [this](auto& capturer) { link_matrix_.Unlink(*capturer.second.ref); });
-  }
+  std::for_each(capturers_.begin(), capturers_.end(), [this, &unlink_command](auto& capturer) {
+    auto usage = capturer.second.profile.usage;
+    if (!usage.is_empty() && unlink_command[HashStreamUsage(usage)]) {
+      link_matrix_.Unlink(*capturer.second.ref);
+    }
+  });
 }
 
-RouteGraph::Target RouteGraph::OutputForUsage(const StreamUsage& usage) const {
-  if (!usage.is_render_usage()) {
+RouteGraph::Target RouteGraph::TargetForUsage(const StreamUsage& usage) const {
+  if (usage.is_empty()) {
     return Target();
   }
-
-  auto idx = static_cast<std::underlying_type_t<RenderUsage>>(usage.render_usage());
-  return targets_.render[idx];
+  return targets_[HashStreamUsage(usage)];
 }
 
-const DeviceConfig::OutputDeviceProfile& RouteGraph::OutputDeviceProfile(
-    AudioDevice* device) const {
+const DeviceConfig::DeviceProfile& RouteGraph::LookupDeviceProfile(AudioDevice* device) const {
   auto driver = device->driver();
-  if (!driver) {
-    return device_config_.default_output_device_profile();
+  if (device->is_output()) {
+    if (!driver) {
+      return device_config_.default_output_device_profile();
+    }
+    const auto& device_id = driver->persistent_unique_id();
+    return device_config_.output_device_profile(device_id);
+  } else {
+    if (!driver) {
+      return device_config_.default_input_device_profile();
+    }
+    const auto& device_id = driver->persistent_unique_id();
+    return device_config_.input_device_profile(device_id);
   }
-
-  const auto& device_id = driver->persistent_unique_id();
-  return device_config_.output_device_profile(device_id);
 }
 
 }  // namespace media::audio

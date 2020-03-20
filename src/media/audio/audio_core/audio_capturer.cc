@@ -22,9 +22,7 @@ AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configur
                              std::optional<Format> format,
                              fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
                              Context* context)
-    : BaseCapturer(std::move(format), std::move(request), context,
-                   configuration.is_loopback() ? &RouteGraph::RemoveLoopbackCapturer
-                                               : &RouteGraph::RemoveCapturer),
+    : BaseCapturer(std::move(format), std::move(request), context),
       loopback_(configuration.is_loopback()),
       mute_(false),
       stream_gain_db_(kInitialCaptureGainDb) {
@@ -67,11 +65,7 @@ void AudioCapturer::OnStateChanged(State old_state, State new_state) {
 void AudioCapturer::SetRoutingProfile(bool routable) {
   auto profile =
       RoutingProfile{.routable = routable, .usage = StreamUsage::WithCaptureUsage(capture_usage())};
-  if (loopback_) {
-    context().route_graph().SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
-  } else {
-    context().route_graph().SetCapturerRoutingProfile(*this, std::move(profile));
-  }
+  context().route_graph().SetCapturerRoutingProfile(*this, std::move(profile));
 }
 
 void AudioCapturer::OnLinkAdded() {

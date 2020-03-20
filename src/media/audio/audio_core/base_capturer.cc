@@ -55,8 +55,7 @@ const Format kInitialFormat =
 
 BaseCapturer::BaseCapturer(
     std::optional<Format> format,
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context,
-    RouteGraphRemover remover)
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context)
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),
       context_(*context),
@@ -66,8 +65,7 @@ BaseCapturer::BaseCapturer(
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
       overflow_count_(0u),
-      partial_overflow_count_(0u),
-      route_graph_remover_(remover) {
+      partial_overflow_count_(0u) {
   FX_DCHECK(mix_domain_);
   REP(AddingCapturer(*this));
 
@@ -128,7 +126,7 @@ void BaseCapturer::CleanupFromMixThread() {
 void BaseCapturer::BeginShutdown() {
   context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
     ReportStop();
-    (context_.route_graph().*route_graph_remover_)(*this);
+    context_.route_graph().RemoveCapturer(*this);
   }));
 }
 

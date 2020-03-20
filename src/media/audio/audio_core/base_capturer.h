@@ -35,7 +35,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
   BaseCapturer(std::optional<Format> format,
                fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-               Context* context, RouteGraphRemover remover = &RouteGraph::RemoveCapturer);
+               Context* context);
 
   ~BaseCapturer() override;
 
@@ -237,8 +237,6 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::atomic<uint16_t> partial_overflow_count_;
 
   std::shared_ptr<MixStage> mix_stage_;
-
-  RouteGraphRemover route_graph_remover_;
 
   // This clock is created and tuned by audio_core
   zx::clock optimal_clock_;
