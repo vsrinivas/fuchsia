@@ -110,7 +110,13 @@ zx_status_t FakeController::SendFrameViaLegacyStream(fuchsia::camera2::FrameAvai
 }
 
 void FakeController::GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCallback callback) {
-  callback(DefaultConfigs(), ZX_OK);
+  if (get_configs_call_count_ >= DefaultConfigs().size()) {
+    callback(nullptr, ZX_ERR_STOP);
+    return;
+  }
+  fidl::VectorPtr<fuchsia::camera2::hal::Config> configs(1u);
+  configs->at(0) = std::move(DefaultConfigs()[get_configs_call_count_++]);
+  callback(std::move(configs), ZX_OK);
 }
 
 void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,

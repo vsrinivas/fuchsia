@@ -55,30 +55,42 @@ fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
       });
 
   zx_status_t get_configs_status = ZX_OK;
-  device->controller_->GetConfigs([&, device = device.get()](
-                                      fidl::VectorPtr<fuchsia::camera2::hal::Config> configs,
-                                      zx_status_t status) {
-    get_configs_status = status;
-    if (status == ZX_OK) {
-      if (configs.has_value() && !configs.value().empty()) {
-        device->configs_ = std::move(configs.value());
-        for (const auto& config : device->configs_) {
-          auto result = Convert(config);
-          if (result.is_error()) {
-            get_configs_status = result.error();
-            FX_PLOGS(ERROR, get_configs_status);
-            break;
-          }
-          device->configurations_.push_back(result.take_value());
-        }
-      } else {
-        get_configs_status = ZX_ERR_INTERNAL;
-        FX_PLOGS(ERROR, get_configs_status) << "Controller returned null or empty configs list.";
-      }
-    }
-    device->SetConfiguration(0);
-    ZX_ASSERT(event.signal(0, kGetConfigsReturned) == ZX_OK);
-  });
+  fit::function<void(fidl::VectorPtr<fuchsia::camera2::hal::Config>, zx_status_t)>
+      get_configs_callback =
+          [&, device = device.get()](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs,
+                                     zx_status_t status) {
+            get_configs_status = status;
+            if (status == ZX_OK && configs.has_value() && !configs.value().empty()) {
+              for (auto& config : configs.value()) {
+                auto result = Convert(config);
+                if (result.is_error()) {
+                  get_configs_status = result.error();
+                  FX_PLOGS(ERROR, get_configs_status);
+                  break;
+                }
+                device->configurations_.push_back(result.take_value());
+                device->configs_.push_back(std::move(config));
+              }
+              // TODO(msandy): remove once pagination change is merged
+              if (configs.value().size() > 1) {
+                device->SetConfiguration(0);
+              } else {
+                // Call again to get remaining configs.
+                device->controller_->GetConfigs(get_configs_callback.share());
+              }
+            } else {
+              if (status == ZX_ERR_STOP) {
+                get_configs_status = ZX_OK;
+                device->SetConfiguration(0);
+              } else {
+                get_configs_status = ZX_ERR_INTERNAL;
+                FX_PLOGS(ERROR, status)
+                    << "Controller unexpectedly returned error or null/empty configs list.";
+              }
+              ZX_ASSERT(event.signal(0, kGetConfigsReturned) == ZX_OK);
+            }
+          };
+  device->controller_->GetConfigs(get_configs_callback.share());
 
   // Start the device thread and begin processing messages.
 

@@ -39,6 +39,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   void GetDeviceInfo(fuchsia::camera2::hal::Controller::GetDeviceInfoCallback callback) override;
 
   async::Loop loop_;
+  uint32_t get_configs_call_count_ = 0;
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::unique_ptr<camera::FakeLegacyStream> stream_;
 };
