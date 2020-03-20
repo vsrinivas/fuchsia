@@ -32,6 +32,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-041](ftp-041.md) | 2019-04-08 | 2019-04-23 | Support for Unifying Services and Devices
 [FTP-043](ftp-043.md) | 2019-05-06 | 2019-05-30 | Documentation Comment Format &mdash; Mark me up, mark me down
 [FTP-048](ftp-048.md) | 2019-08-25 | 2019-09-26 | Explicit Union Ordinals
+[FTP-054](ftp-054.md) | 2019-11-21 | 2019-12-12 | Parameter Attributes &mdash; A Chance to Write Self Documenting APIs
 [FTP-049](ftp-049.md) | 2019-11-20 | 2019-12-19 | FIDL Tuning Process Evolution
 
 ## Rejected proposals
