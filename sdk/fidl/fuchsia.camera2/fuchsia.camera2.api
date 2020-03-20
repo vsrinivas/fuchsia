@@ -1,4 +1,4 @@
 {
   "fidl/fuchsia.camera2/manager.fidl": "5973698ea243dbd784ee2618b80bf5ff",
-  "fidl/fuchsia.camera2/stream.fidl": "3244d8cede6000a0292151c097435019"
+  "fidl/fuchsia.camera2/stream.fidl": "e27d1f9f6733e1d826fa5964d3f09859"
 }

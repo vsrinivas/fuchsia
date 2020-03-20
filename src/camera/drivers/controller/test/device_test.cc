@@ -158,7 +158,7 @@ TEST_F(ControllerDeviceTest, GetConfigs) {
       [&](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs, zx_status_t status) {
         ASSERT_EQ(status, ZX_OK);
         EXPECT_TRUE(configs.has_value());
-        EXPECT_GT(configs->size(), 0u);
+        EXPECT_EQ(configs->size(), 3u);
         // Config 0 (debug)
         EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
                   fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
@@ -172,6 +172,15 @@ TEST_F(ControllerDeviceTest, GetConfigs) {
                       fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
         EXPECT_EQ(configs->at(1).stream_configs.at(2).properties.stream_type(),
                   fuchsia::camera2::CameraStreamType::MONITORING);
+
+        // Config 2 (video conferencing)
+        EXPECT_EQ(configs->at(2).stream_configs.at(0).properties.stream_type(),
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
+                      fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                      fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+        EXPECT_EQ(configs->at(2).stream_configs.at(1).properties.stream_type(),
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
         configs_populated = true;
       });
   while (!configs_populated) {

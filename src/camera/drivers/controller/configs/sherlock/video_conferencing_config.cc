@@ -25,10 +25,12 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> MLFRImageFormats() {
   };
 }
 
-static fuchsia::camera2::hal::StreamConfig MLVideoFRConfig() {
-  StreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                           fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+static fuchsia::camera2::hal::StreamConfig MLVideoFRConfig(bool extended_fov) {
+  auto stream_properties = extended_fov
+                               ? kMlStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                               : kMlStreamType;
+
+  StreamConstraints stream(stream_properties);
   stream.AddImageFormat(kMlFRWidth, kMlFRHeight, kFramePixelFormat);
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
@@ -50,8 +52,12 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> VideoImageFormats() {
   };
 }
 
-static fuchsia::camera2::hal::StreamConfig VideoConfig() {
-  StreamConstraints stream(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
+  auto stream_properties = extended_fov
+                               ? kVideoStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                               : kVideoStreamType;
+
+  StreamConstraints stream(stream_properties);
   stream.AddImageFormat(kVideoWidth, kVideoHeight, kFramePixelFormat);
   stream.AddImageFormat(kVideoWidth1, kVideoHeight1, kFramePixelFormat);
   stream.AddImageFormat(kVideoWidth2, kVideoHeight2, kFramePixelFormat);
@@ -67,16 +73,16 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig() {
  *****************************
  */
 
-fuchsia::camera2::hal::Config VideoConferencingConfig() {
+fuchsia::camera2::hal::Config VideoConferencingConfig(bool extended_fov) {
   fuchsia::camera2::hal::Config config;
-  config.stream_configs.push_back(MLVideoFRConfig());
-  config.stream_configs.push_back(VideoConfig());
+  config.stream_configs.push_back(MLVideoFRConfig(extended_fov));
+  config.stream_configs.push_back(VideoConfig(extended_fov));
   return config;
 }
 
 // ================== INTERNAL CONFIGURATION ======================== //
 
-static InternalConfigNode OutputMLFR() {
+static InternalConfigNode OutputMLFR(bool extended_fov) {
   return {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kMlFRFrameRate,
@@ -84,9 +90,9 @@ static InternalConfigNode OutputMLFR() {
       .supported_streams =
           {
               {
-                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kMlStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kMlStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
               },
@@ -95,7 +101,7 @@ static InternalConfigNode OutputMLFR() {
   };
 }
 
-static InternalConfigNode OutputVideoConferencing() {
+static InternalConfigNode OutputVideoConferencing(bool extended_fov) {
   return {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
@@ -103,7 +109,9 @@ static InternalConfigNode OutputVideoConferencing() {
       .supported_streams =
           {
               {
-                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kVideoStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kVideoStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
               },
@@ -121,7 +129,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo2Constraints() {
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
-static InternalConfigNode GdcVideo2() {
+static InternalConfigNode GdcVideo2(bool extended_fov) {
   return {
       .type = kGdc,
       .output_frame_rate.frames_per_sec_numerator = kMlFRFrameRate,
@@ -129,9 +137,9 @@ static InternalConfigNode GdcVideo2() {
       .supported_streams =
           {
               {
-                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kMlStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kMlStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
               },
@@ -139,7 +147,7 @@ static InternalConfigNode GdcVideo2() {
       .child_nodes =
           {
               {
-                  OutputMLFR(),
+                  OutputMLFR(extended_fov),
               },
           },
       .gdc_info.config_type =
@@ -163,7 +171,7 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dConstraints() {
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
-static InternalConfigNode Ge2d() {
+static InternalConfigNode Ge2d(bool extended_fov) {
   return {
       .type = kGe2d,
       .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
@@ -171,7 +179,9 @@ static InternalConfigNode Ge2d() {
       .supported_streams =
           {
               {
-                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kVideoStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kVideoStreamType,
                   .supports_dynamic_resolution = true,
                   .supports_crop_region = true,
               },
@@ -179,7 +189,7 @@ static InternalConfigNode Ge2d() {
       .child_nodes =
           {
               {
-                  OutputVideoConferencing(),
+                  OutputVideoConferencing(extended_fov),
               },
           },
       .ge2d_info.config_type = Ge2DConfig::GE2D_RESIZE,
@@ -226,7 +236,12 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> GdcVideo1ImageFormats() {
   };
 }
 
-static InternalConfigNode GdcVideo1() {
+static InternalConfigNode GdcVideo1(bool extended_fov) {
+  auto gdc_config = GdcConfig::VIDEO_CONFERENCE;
+  if (extended_fov) {
+    gdc_config = GdcConfig::VIDEO_CONFERENCE_EXTENDED_FOV;
+  }
+
   return {
       .type = kGdc,
       .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
@@ -234,15 +249,17 @@ static InternalConfigNode GdcVideo1() {
       .supported_streams =
           {
               {
-                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kMlStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kMlStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
 
               },
               {
-                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kVideoStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kVideoStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
               },
@@ -250,15 +267,15 @@ static InternalConfigNode GdcVideo1() {
       .child_nodes =
           {
               {
-                  GdcVideo2(),
+                  GdcVideo2(extended_fov),
               },
               {
-                  Ge2d(),
+                  Ge2d(extended_fov),
               },
           },
       .gdc_info.config_type =
           {
-              GdcConfig::VIDEO_CONFERENCE,
+              gdc_config,
           },
       .input_constraints = GdcVideo1InputConstraints(),
       .output_constraints = GdcVideo1OutputConstraints(),
@@ -281,7 +298,7 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspImageFormats() {
   };
 }
 
-InternalConfigNode VideoConfigFullRes() {
+InternalConfigNode VideoConfigFullRes(bool extended_fov) {
   return {
       .type = kInputStream,
       .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
@@ -290,23 +307,25 @@ InternalConfigNode VideoConfigFullRes() {
       .supported_streams =
           {
               {
-                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kMlStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kMlStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
-
               },
               {
-                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .type = extended_fov
+                              ? kVideoStreamType | fuchsia::camera2::CameraStreamType::EXTENDED_FOV
+                              : kVideoStreamType,
                   .supports_dynamic_resolution = false,
                   .supports_crop_region = false,
               },
-          },
+          }  // namespace camera
+      ,
       .child_nodes =
           {
               {
-                  GdcVideo1(),
+                  GdcVideo1(extended_fov),
               },
           },
       .input_constraints = InvalidConstraints(),

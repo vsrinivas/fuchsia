@@ -48,13 +48,18 @@ constexpr uint32_t kVideoWidth2 = 640;
 constexpr uint32_t kVideoHeight2 = 360;
 constexpr uint32_t kVideoFrameRate = 30;
 
+constexpr auto kMlStreamType = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                               fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                               fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
+constexpr auto kVideoStreamType = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
+
 }  // namespace
 
 // Returns the internal video conferencing configuration (FR).
-InternalConfigNode VideoConfigFullRes();
+InternalConfigNode VideoConfigFullRes(bool extended_fov);
 
 // Return the external video conferencing configuration.
-fuchsia::camera2::hal::Config VideoConferencingConfig();
+fuchsia::camera2::hal::Config VideoConferencingConfig(bool extended_fov);
 
 }  // namespace camera
 

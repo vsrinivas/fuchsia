@@ -16,7 +16,7 @@ std::vector<fuchsia::camera2::hal::Config> SherlockExternalConfigs() {
   configs.push_back(MonitoringConfig());
 
   // Video conferencing configuration.
-  configs.push_back(VideoConferencingConfig());
+  configs.push_back(VideoConferencingConfig(false));
 
   return configs;
 }
@@ -54,7 +54,7 @@ InternalConfigs SherlockInternalConfigs() {
               {
                   .streams_info =
                       {
-                          VideoConfigFullRes(),
+                          VideoConfigFullRes(false),
                       },
               },
           },
