@@ -144,6 +144,11 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
           });
 
   executor_.schedule_task(std::move(p));
+
+  // TODO(48596): Scenic sometimes gets stuck for consecutive 60 seconds.
+  // Here we set up a Watchdog polling Scenic status every 15 seconds.
+  constexpr uint32_t kTimeoutMs = 15000u;
+  watchdog_ = std::make_unique<Watchdog>(kTimeoutMs, async_get_default_dispatcher());
 }
 
 void App::InitializeServices(escher::EscherUniquePtr escher,

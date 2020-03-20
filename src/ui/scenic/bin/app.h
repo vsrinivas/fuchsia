@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
+#include "src/ui/scenic/lib/watchdog/watchdog.h"
 
 namespace scenic_impl {
 
@@ -59,6 +60,7 @@ class App {
   std::optional<gfx::Engine> engine_;
   Scenic scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
+  std::unique_ptr<Watchdog> watchdog_;
 
   AnnotationRegistry annotation_registry_;
 
