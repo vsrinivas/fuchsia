@@ -321,6 +321,9 @@ void File::Accept(TreeVisitor* visitor) const {
   for (auto& i : protocol_declaration_list) {
     visitor->OnProtocolDeclaration(i);
   }
+  for (auto& i : service_declaration_list) {
+    visitor->OnServiceDeclaration(i);
+  }
   for (auto& i : struct_declaration_list) {
     visitor->OnStructDeclaration(i);
   }
