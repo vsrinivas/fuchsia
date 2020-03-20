@@ -105,21 +105,14 @@ start the tracking test from a known zero state.
 Note that at the moment the only supported upgrade mode is
 `-upgrade-builder-name $BUILDER_NAME`.
 
-## Running the tests locally in QEMU (experimental)
+## Running the tests locally in the Fuchsia Emulator (experimental)
 
 At the moment, the builtin `fx emu` does not bring up a configuration that can be
 OTA-ed. Until this is implemented, the `bin/` directory contains some helper
-scripts that bring up an OTA-able QEMU image. Follow these instructions to use
-them.
+scripts that bring up an OTA-able Fuchsia emulator. Follow these instructions to
+it.
 
-First you need to build or install the [OVMF] UEFI firmware. On Debian, this can
-be done with:
-
-```
-% apt install ovmf
-```
-
-Next, you need to create an EFI Fuchsia image. This can be done by running:
+First, you need to create an EFI Fuchsia image. This can be done by running:
 
 ```
 % mkdir /tmp/ota-test
@@ -130,19 +123,14 @@ Next, you need to create an EFI Fuchsia image. This can be done by running:
 This script is just a wrapper around `fx make-fuchsia-vol` to simplify creating
 an image that's appropriate for OTA testing.
 
-Finally, run QEMU with:
+Finally, run the emulator with:
 
 ```
-% ./bin/run-qemu.sh \
-  --ovmf-dir /usr/share/OVMF \
-  --image /tmp/ota-test/fuchsia-efi.bin
+% ./bin/run-emu --image /tmp/ota-test/fuchsia-efi.bin
 ```
 
-Note: run-qemu.sh expects to find `OVMF_CODE.fd` and `OVMF_VARS.fd` in the
-`--ovmf-dir` directory.
-
-One thing to note, by default, you won't see any terminal output in QEMU after
-an OTA. To restore this behavior, you need an extra build argument to send
+One thing to note, by default, you won't see any terminal output in the emulator
+after an OTA. To restore this behavior, you need an extra build argument to send
 output to the terminal:
 
 ```

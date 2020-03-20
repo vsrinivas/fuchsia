@@ -3,16 +3,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Helper script for launching QEMU in a way that this can be used for local OTA
-# testing, until `fx emu` is modified to support OTA.
+## usage: run-emu -i <path-to-image>
+##
+## Helper script for launching a Fuchsia emulator in a way that this can be used
+## for local OTA testing, until `fx emu` is modified to support OTA.
+##
+## Options:
+##   -h|--help                Print out this message.
+##   -i|--image <image-path>  Path to the fuchsia image created by `make-vol.sh`.
+##   -e <directory>           Location of emulator, defaults to looking in
+##                            prebuilt/third_partyqemu/PLATFORM
+##   --ovmf-dir <directory>   Location of OVMF, defaults to looking in
+##                            prebuilt/third_party/ovmf/PLATFORM
 
 set -e
 
-OVMF_DIR=""
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/vars.sh" || exit $?
+
+function usage() {
+  fx-command-help
+}
+
 FUCHSIA_IMG=""
+EMU="bin/qemu-system-x86_64"
+QEMU_IMG="bin/qemu-img"
+EMU_DIR=""
 
 while (($#)); do
   case "$1" in
+    -e)
+      EMU_DIR="$2"
+      shift
+      ;;
     --ovmf-dir)
       OVMF_DIR="$2"
       shift
@@ -21,35 +43,36 @@ while (($#)); do
       FUCHSIA_IMG="$2"
       shift
       ;;
-    *)
-      echo "Unrecognized option: $1"
-      exit 1
-      ;;
+    -h|--help) usage && exit 0 ;;
+    *) fx-error echo "Unrecognized flag: '$1'" && exit 1 ;;
   esac
   shift
 done
-
-if [[ -z "${OVMF_DIR}" ]]; then
-  echo "--ovmf-dir must be specified"
-  exit 1
-fi
 
 if [[ -z "${FUCHSIA_IMG}" ]]; then
   echo "--image must be specified"
   exit 1
 fi
 
+if [[ -z "$EMU_DIR" && -d "$PREBUILT_QEMU_DIR" ]]; then
+  EMU_DIR="$PREBUILT_QEMU_DIR"
+fi
+
+if [[ -z "${OVMF_DIR}" ]]; then
+  OVMF_DIR="$PREBUILT_OVMF_DIR"
+fi
+
 # Make sure the OVMF directory contains the expected EFI images.
-OVMF_CODE="${OVMF_DIR}/OVMF_CODE.fd"
-OVMF_VARS="${OVMF_DIR}/OVMF_VARS.fd"
+OVMF_CODE="${PREBUILT_OVMF_DIR}/OVMF_CODE.fd"
+OVMF_VARS="${PREBUILT_OVMF_DIR}/OVMF_VARS.fd"
 
 if [[ ! -f "${OVMF_CODE}" ]]; then
-  echo "OVMF_CODE.fd not found in ${OVMF_DIR}"
+  echo "OVMF_CODE.fd not found in ${PREBUILT_OVMF_DIR}"
   exit 1
 fi
 
 if [[ ! -f "${OVMF_VARS}" ]]; then
-  echo "OVMF_VARS.fd not found in ${OVMF_DIR}"
+  echo "OVMF_VARS.fd not found in ${PREBUILT_OVMF_DIR}"
   exit 1
 fi
 
@@ -65,20 +88,16 @@ HASH=$(echo $IFNAME | shasum)
 SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
 MAC="52:54:00$SUFFIX"
 
-FUCHSIA_DIR=$(fx exec bash -c 'echo $FUCHSIA_DIR')
-source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
-QEMU_DIR="${PREBUILT_QEMU_DIR}/bin"
-
 set -u
 
 log() {
-  printf "$(date '+%Y-%m-%d %H:%M:%S') [run-qemu] $@\n"
+  printf "$(date '+%Y-%m-%d %H:%M:%S') [run-emu] $@\n"
 }
 
 TMPDIR="$(mktemp -d)"
 if [[ ! -d "${TMPDIR}" ]]; then
-  echo >&2 "Failed to create temporary directory"
-  exit 1
+  fx-error "Failed to create temporary directory"
+  exit 11
 fi
 
 cleanup() {
@@ -98,10 +117,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Construction of a qcow image prevents qemu from writing back to the
-# build-produced image file, which could cause timestamp issues with that file.
+# Create a copy-on-write image on top of the fuchsia image. This prevents state
+# from being preserved across executions, which could make tests
+# non-reproducible.
 FUCHSIA_IMG_QCOW="${TMPDIR}/fuchsia.qcow2"
-"${QEMU_DIR}/qemu-img" create \
+"${EMU_DIR}/${QEMU_IMG}" create \
   -f qcow2 \
   -b "${FUCHSIA_IMG}" \
   "${FUCHSIA_IMG_QCOW}"
@@ -109,11 +129,14 @@ FUCHSIA_IMG_QCOW="${TMPDIR}/fuchsia.qcow2"
 # Copy in the OMVF_VARS.fd into our temp directory, which allows EFI data to be
 # persisted across reboots.
 OVMF_VARS_TMP="${TMPDIR}/OVMF_VARS.fd"
-cp "${OVMF_VARS}" $OVMF_VARS_TMP
+cp "${OVMF_VARS}" "$OVMF_VARS_TMP"
 
-"${QEMU_DIR}/qemu-system-x86_64" \
+# Make sure the OVMF_VARS file is writable.
+chmod +w "$OVMF_VARS_TMP"
+
+"${EMU_DIR}/${EMU}" \
   -enable-kvm \
-  -m 1024 \
+  -m 2048 \
   -nographic \
   -drive "if=pflash,format=raw,readonly,file=${OVMF_CODE}" \
   -drive "if=pflash,format=raw,file=${OVMF_VARS_TMP}" \
