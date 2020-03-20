@@ -7,54 +7,46 @@
 #include <algorithm>
 
 #include <disk_inspector/inspector_transaction_handler.h>
+#include <disk_inspector/vmo_buffer_factory.h>
 #include <fs/journal/internal/inspector_parser.h>
 #include <fs/trace.h>
 #include <minfs/format.h>
-#include <storage/buffer/vmo_buffer.h>
 
 #include "loader.h"
 #include "parser.h"
 
 namespace minfs {
 
-zx_status_t MinfsInspector::Create(std::unique_ptr<block_client::BlockDevice> device,
-                                   std::unique_ptr<MinfsInspector>* out) {
-  std::unique_ptr<disk_inspector::InspectorTransactionHandler> handler;
-  zx_status_t status = disk_inspector::InspectorTransactionHandler::Create(
-      std::move(device), kMinfsBlockSize, &handler);
-  if (status != ZX_OK) {
-    return status;
+MinfsInspector::MinfsInspector(std::unique_ptr<fs::TransactionHandler> handler,
+                               std::unique_ptr<disk_inspector::BufferFactory> buffer_factory)
+    : handler_(std::move(handler)), buffer_factory_(std::move(buffer_factory)) {}
+
+fit::result<std::unique_ptr<MinfsInspector>, zx_status_t> MinfsInspector::Create(
+    std::unique_ptr<fs::TransactionHandler> handler,
+    std::unique_ptr<disk_inspector::BufferFactory> factory) {
+  auto inspector =
+      std::unique_ptr<MinfsInspector>(new MinfsInspector(std::move(handler), std::move(factory)));
+  auto result = inspector->buffer_factory_->CreateBuffer(1);
+  if (result.is_error()) {
+    return result.take_error_result();
   }
-  auto* inspector = new MinfsInspector(std::move(handler));
-  status = inspector->buffer_.Initialize(inspector->handler_.get(), 1, kMinfsBlockSize,
-                                         "scratch-buffer");
+  inspector->buffer_ = result.take_value();
+  zx_status_t status = inspector->ReloadSuperblock();
   if (status != ZX_OK) {
-    return status;
+    return fit::error(status);
   }
-  status = inspector->ReloadSuperblock();
-  if (status != ZX_OK) {
-    return status;
-  }
-  out->reset(inspector);
-  return ZX_OK;
+  return fit::ok(std::move(inspector));
 }
 
 zx_status_t MinfsInspector::ReloadSuperblock() {
   Loader loader(handler_.get());
-  storage::VmoBuffer superblock;
-  zx_status_t status = ZX_OK;
-  status = superblock.Initialize(handler_.get(), kSuperblockBlocks, kMinfsBlockSize,
-                                 "superblock-buffer");
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Cannot create superblock buffer. err: %d\n", status);
-    return status;
-  }
-  status = loader.LoadSuperblock(kSuperblockStart, &superblock);
+  zx_status_t status;
+  status = loader.LoadSuperblock(kSuperblockStart, buffer_.get());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot load superblock. err: %d\n", status);
     return status;
   }
-  superblock_ = GetSuperblock(&superblock);
+  superblock_ = GetSuperblock(buffer_.get());
   return ZX_OK;
 }
 
@@ -75,7 +67,6 @@ fit::result<std::vector<Inode>, zx_status_t> MinfsInspector::InspectInodeRange(u
                                                                                uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
   Loader loader(handler_.get());
-  storage::VmoBuffer inode_buffer;
 
   // Since there are multiple inodes in a block, we first perform calculations
   // to find the block range of only the desired inode range to load.
@@ -85,12 +76,14 @@ fit::result<std::vector<Inode>, zx_status_t> MinfsInspector::InspectInodeRange(u
   // end index - 1 to get the last inclusive value, and add 1 to the length
   // to prevent off-by-one.
   uint64_t block_length = (end_index - 1) / kMinfsInodesPerBlock - start_block_offset + 1;
-  zx_status_t status;
-  status = inode_buffer.Initialize(handler_.get(), block_length, kMinfsBlockSize, "inode-buffer");
-  if (status != ZX_OK) {
-    return fit::error(status);
+
+  auto result = buffer_factory_->CreateBuffer(block_length);
+  if (result.is_error()) {
+    return result.take_error_result();
   }
-  status = loader.RunReadOperation(&inode_buffer, 0, start_block, block_length);
+  std::unique_ptr<storage::BlockBuffer> inode_buffer = result.take_value();
+
+  zx_status_t status = loader.RunReadOperation(inode_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot load inode. err: %d\n", status);
     return fit::error(status);
@@ -103,7 +96,7 @@ fit::result<std::vector<Inode>, zx_status_t> MinfsInspector::InspectInodeRange(u
   uint64_t count = end_index - start_index;
   std::vector<Inode> inodes;
   for (uint64_t i = 0; i < count; ++i) {
-    inodes.emplace_back(GetInodeElement(&inode_buffer, buffer_offset + i));
+    inodes.emplace_back(GetInodeElement(inode_buffer.get(), buffer_offset + i));
   }
   return fit::ok(inodes);
 }
@@ -112,8 +105,6 @@ fit::result<std::vector<uint64_t>, zx_status_t> MinfsInspector::InspectInodeAllo
     uint64_t start_index, uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
   Loader loader(handler_.get());
-  storage::VmoBuffer bit_buffer;
-
   // Since there are multiple bits in a block, we first perform calculations
   // to find the block range of only the desired bit range to load.
   uint64_t start_block_offset = start_index / kMinfsBlockBits;
@@ -122,13 +113,14 @@ fit::result<std::vector<uint64_t>, zx_status_t> MinfsInspector::InspectInodeAllo
   // end index - 1 to get the last inclusive value, and add 1 to the length
   // to prevent off-by-one.
   uint64_t block_length = (end_index - 1) / kMinfsBlockBits - start_block_offset + 1;
-  zx_status_t status;
-  status = bit_buffer.Initialize(handler_.get(), block_length, kMinfsBlockSize, "inode-bit-buffer");
-  if (status != ZX_OK) {
-    return fit::error(status);
-  }
 
-  status = loader.RunReadOperation(&bit_buffer, 0, start_block, block_length);
+  auto result = buffer_factory_->CreateBuffer(block_length);
+  if (result.is_error()) {
+    return fit::error(result.take_error());
+  }
+  std::unique_ptr<storage::BlockBuffer> bit_buffer = result.take_value();
+
+  zx_status_t status = loader.RunReadOperation(bit_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot load allocation bits. err: %d\n", status);
     return fit::error(status);
@@ -141,7 +133,7 @@ fit::result<std::vector<uint64_t>, zx_status_t> MinfsInspector::InspectInodeAllo
   uint64_t count = end_index - start_index;
   std::vector<uint64_t> allocated_indices;
   for (uint64_t i = 0; i < count; ++i) {
-    if (GetBitmapElement(&bit_buffer, buffer_offset + i)) {
+    if (GetBitmapElement(bit_buffer.get(), buffer_offset + i)) {
       allocated_indices.emplace_back(start_index + i);
     }
   }
@@ -154,60 +146,60 @@ static_assert(fs::kJournalMetadataBlocks == 1);
 
 fit::result<fs::JournalInfo, zx_status_t> MinfsInspector::InspectJournalSuperblock() {
   Loader loader(handler_.get());
-  zx_status_t status = loader.RunReadOperation(&buffer_, 0, JournalStartBlock(superblock_),
+  zx_status_t status = loader.RunReadOperation(buffer_.get(), 0, JournalStartBlock(superblock_),
                                                fs::kJournalMetadataBlocks);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot load journal superblock. err: %d\n", status);
     return fit::error(status);
   }
-  return fit::ok(fs::GetJournalSuperblock(&buffer_));
+  return fit::ok(fs::GetJournalSuperblock(buffer_.get()));
 }
 
 template <>
 fit::result<fs::JournalPrefix, zx_status_t> MinfsInspector::InspectJournalEntryAs(uint64_t index) {
-  zx_status_t status = LoadJournalEntry(&buffer_, index);
+  zx_status_t status = LoadJournalEntry(buffer_.get(), index);
   if (status != ZX_OK) {
     return fit::error(status);
   }
-  return fit::ok(*reinterpret_cast<fs::JournalPrefix*>(buffer_.Data(0)));
+  return fit::ok(*reinterpret_cast<fs::JournalPrefix*>(buffer_->Data(0)));
 }
 
 template <>
 fit::result<fs::JournalHeaderBlock, zx_status_t> MinfsInspector::InspectJournalEntryAs(
     uint64_t index) {
-  zx_status_t status = LoadJournalEntry(&buffer_, index);
+  zx_status_t status = LoadJournalEntry(buffer_.get(), index);
   if (status != ZX_OK) {
     return fit::error(status);
   }
-  return fit::ok(*reinterpret_cast<fs::JournalHeaderBlock*>(buffer_.Data(0)));
+  return fit::ok(*reinterpret_cast<fs::JournalHeaderBlock*>(buffer_->Data(0)));
 }
 
 template <>
 fit::result<fs::JournalCommitBlock, zx_status_t> MinfsInspector::InspectJournalEntryAs(
     uint64_t index) {
-  zx_status_t status = LoadJournalEntry(&buffer_, index);
+  zx_status_t status = LoadJournalEntry(buffer_.get(), index);
   if (status != ZX_OK) {
     return fit::error(status);
   }
-  return fit::ok(*reinterpret_cast<fs::JournalCommitBlock*>(buffer_.Data(0)));
+  return fit::ok(*reinterpret_cast<fs::JournalCommitBlock*>(buffer_->Data(0)));
 }
 
 fit::result<Superblock, zx_status_t> MinfsInspector::InspectBackupSuperblock() {
   Loader loader(handler_.get());
   uint32_t backup_location =
       GetMinfsFlagFvm(superblock_) ? kFvmSuperblockBackup : kNonFvmSuperblockBackup;
-  zx_status_t status = loader.LoadSuperblock(backup_location, &buffer_);
+  zx_status_t status = loader.LoadSuperblock(backup_location, buffer_.get());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot load backup superblock. err: %d\n", status);
     return fit::error(status);
   }
-  return fit::ok(GetSuperblock(&buffer_));
+  return fit::ok(GetSuperblock(buffer_.get()));
 }
 
 fit::result<void, zx_status_t> MinfsInspector::WriteSuperblock(Superblock superblock) {
   Loader loader(handler_.get());
-  *static_cast<Superblock*>(buffer_.Data(0)) = superblock;
-  zx_status_t status = loader.RunWriteOperation(&buffer_, 0, 0, 1);
+  *static_cast<Superblock*>(buffer_->Data(0)) = superblock;
+  zx_status_t status = loader.RunWriteOperation(buffer_.get(), 0, 0, 1);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot write superblock. err: %d\n", status);
     return fit::error(status);
@@ -216,7 +208,7 @@ fit::result<void, zx_status_t> MinfsInspector::WriteSuperblock(Superblock superb
   return fit::ok();
 }
 
-zx_status_t MinfsInspector::LoadJournalEntry(storage::VmoBuffer* buffer, uint64_t index) {
+zx_status_t MinfsInspector::LoadJournalEntry(storage::BlockBuffer* buffer, uint64_t index) {
   Loader loader(handler_.get());
   uint64_t start_block = JournalStartBlock(superblock_) + fs::kJournalMetadataBlocks + index;
   zx_status_t status = loader.RunReadOperation(buffer, 0, start_block, 1);

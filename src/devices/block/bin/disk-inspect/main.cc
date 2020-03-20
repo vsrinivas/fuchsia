@@ -9,6 +9,7 @@
 #include <zircon/status.h>
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 #include <block-client/cpp/block-device.h>
@@ -16,12 +17,23 @@
 #include <disk_inspector/command.h>
 #include <disk_inspector/command_handler.h>
 #include <disk_inspector/disk_inspector.h>
+#include <disk_inspector/inspector_transaction_handler.h>
+#include <disk_inspector/vmo_buffer_factory.h>
 #include <fbl/unique_fd.h>
+#include <fs/transaction/block_transaction.h>
 #include <minfs/command-handler.h>
+#include <minfs/minfs-inspector.h>
 
 namespace {
 
 namespace fuchsia_partition = llcpp::fuchsia::hardware::block::partition;
+
+fit::result<uint32_t, std::string> GetBlockSize(const std::string& name) {
+  if (name == "minfs") {
+    return fit::ok(minfs::kMinfsBlockSize);
+  }
+  return fit::error("FS with label \"" + name + "\" is not supported for inspection.\n");
+}
 
 std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path) {
   fbl::unique_fd fd(open(path, O_RDONLY));
@@ -55,20 +67,34 @@ std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path) {
     std::cerr << "Cannot create remote device: " << status << "\n";
     return nullptr;
   }
+  auto size_result = GetBlockSize(name);
+
+  if (size_result.is_error()) {
+    std::cerr << size_result.take_error();
+    return nullptr;
+  }
+  uint32_t block_size = size_result.take_value();
+  std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
+  status = disk_inspector::InspectorTransactionHandler::Create(std::move(device), block_size,
+                                                               &inspector_handler);
+  if (status != ZX_OK) {
+    std::cerr << "Cannot create TransactionHandler.\n";
+    return nullptr;
+  }
+  auto buffer_factory =
+      std::make_unique<disk_inspector::VmoBufferFactory>(inspector_handler.get(), block_size);
 
   std::unique_ptr<disk_inspector::CommandHandler> handler;
 
   if (name == "minfs") {
-    status = minfs::CommandHandler::Create(std::move(device), &handler);
-  } else {
-    std::cerr << "FS with label " << name << " is not supported for inspection.\n";
-    return nullptr;
+    auto result =
+        minfs::MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
+    if (result.is_error()) {
+      return nullptr;
+    }
+    handler = std::make_unique<minfs::CommandHandler>(result.take_value());
   }
 
-  if (status != ZX_OK) {
-    std::cerr << "Could not create inspector for FS with error: " << status << "\n";
-    return nullptr;
-  }
   return handler;
 }
 

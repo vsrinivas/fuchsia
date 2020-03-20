@@ -6,15 +6,14 @@
 #define MINFS_MINFS_INSPECTOR_H_
 
 #include <string>
-#include <variant>
 #include <vector>
 
 #include <block-client/cpp/block-device.h>
+#include <disk_inspector/buffer_factory.h>
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <fs/journal/format.h>
 #include <minfs/format.h>
-#include <storage/buffer/vmo_buffer.h>
 
 namespace minfs {
 
@@ -26,11 +25,11 @@ namespace minfs {
 // information from this class.
 class MinfsInspector {
  public:
-  // Creates a MinfsInspector from a block device. Tries to load the fs
-  // metadata from disk into buffers upon creation by calling both
-  // ReloadSuperblock() and ReloadMetadataFromSuperblock() in succession.
-  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice>,
-                            std::unique_ptr<MinfsInspector>* out);
+  // Creates a MinfsInspector from a block device. Tries to load the
+  // superblock from disk upon creation by calling ReloadSuperblock().
+  static fit::result<std::unique_ptr<MinfsInspector>, zx_status_t> Create(
+      std::unique_ptr<fs::TransactionHandler> handler,
+      std::unique_ptr<disk_inspector::BufferFactory> factory);
 
   // This function is used to initialize minfs metadata buffers and to load the relavent data.
   zx_status_t Initialize();
@@ -95,18 +94,19 @@ class MinfsInspector {
   fit::result<void, zx_status_t> WriteSuperblock(Superblock superblock);
 
  private:
-  explicit MinfsInspector(std::unique_ptr<disk_inspector::InspectorTransactionHandler> handler)
-      : handler_(std::move(handler)) {}
+  explicit MinfsInspector(std::unique_ptr<fs::TransactionHandler> handler,
+                          std::unique_ptr<disk_inspector::BufferFactory> buffer_factory);
 
-  zx_status_t LoadJournalEntry(storage::VmoBuffer* buffer, uint64_t index);
+  zx_status_t LoadJournalEntry(storage::BlockBuffer* buffer, uint64_t index);
 
-  std::unique_ptr<disk_inspector::InspectorTransactionHandler> handler_;
+  std::unique_ptr<fs::TransactionHandler> handler_;
+  std::unique_ptr<disk_inspector::BufferFactory> buffer_factory_;
   Superblock superblock_;
   // Scratch buffer initialized to be a single block in the Create method.
   // Functions that use this buffer should try to treat it as an initialized
   // buffer only valid for the duration of the function without any presaved
   // state or ability for the function to save state.
-  storage::VmoBuffer buffer_;
+  std::unique_ptr<storage::BlockBuffer> buffer_;
 };
 
 }  // namespace minfs

@@ -29,9 +29,6 @@ using FieldType = disk_inspector::FieldType;
 // CommandHandler for Minfs commands.
 class CommandHandler : public disk_inspector::CommandHandler {
  public:
-  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device,
-                            std::unique_ptr<disk_inspector::CommandHandler>* out);
-
   explicit CommandHandler(std::unique_ptr<MinfsInspector> inspector)
       : inspector_(std::move(inspector)) {
     InitializeCommands();

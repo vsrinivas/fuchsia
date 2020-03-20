@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include <block-client/cpp/fake-device.h>
+#include <disk_inspector/vmo_buffer_factory.h>
 #include <minfs/format.h>
 #include <zxtest/zxtest.h>
 
@@ -93,6 +94,17 @@ std::vector<std::vector<std::string>> test_commands = {{"InvalidCommand", "1", "
                                                        {"PrintBackupSuperblock"},
                                                        {"WriteSuperblockField", "magic0", "0"}};
 
+void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
+                          std::unique_ptr<MinfsInspector>* out) {
+  std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
+  ASSERT_OK(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
+                                                                &inspector_handler));
+  auto buffer_factory =
+      std::make_unique<disk_inspector::VmoBufferFactory>(inspector_handler.get(), kMinfsBlockSize);
+  auto result = MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
+  ASSERT_TRUE(result.is_ok());
+  *out = result.take_value();
+}
 // Make sure commands don't fail when running on an unformatted device.
 TEST(MinfsCommandHandler, CheckSupportedCommandsNoFail) {
   for (auto command : test_commands) {
@@ -100,7 +112,7 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsNoFail) {
         [&command]() {
           auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
           std::unique_ptr<MinfsInspector> inspector;
-          ASSERT_OK(MinfsInspector::Create(std::move(temp), &inspector));
+          CreateMinfsInspector(std::move(temp), &inspector);
           CommandHandler handler(std::move(inspector));
 
           // Hide output since the output will mostly be garbage from using
@@ -136,7 +148,7 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsSuccess) {
   // so we destroy the minfs/bcache used to format it.
   bcache = Minfs::Destroy(std::move(fs));
   std::unique_ptr<MinfsInspector> inspector;
-  ASSERT_OK(MinfsInspector::Create(Bcache::Destroy(std::move(bcache)), &inspector));
+  CreateMinfsInspector(Bcache::Destroy(std::move(bcache)), &inspector);
 
   CommandHandler handler(std::move(inspector));
 

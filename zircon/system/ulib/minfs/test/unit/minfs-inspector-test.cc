@@ -10,6 +10,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <disk_inspector/inspector_transaction_handler.h>
+#include <disk_inspector/vmo_buffer_factory.h>
 #include <fs/journal/format.h>
 #include <minfs/format.h>
 #include <zxtest/zxtest.h>
@@ -23,6 +24,18 @@ using block_client::FakeBlockDevice;
 
 constexpr uint64_t kBlockCount = 1 << 15;
 constexpr uint32_t kBlockSize = 512;
+
+void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
+                          std::unique_ptr<MinfsInspector>* out) {
+  std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
+  ASSERT_OK(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
+                                                                &inspector_handler));
+  auto buffer_factory =
+      std::make_unique<disk_inspector::VmoBufferFactory>(inspector_handler.get(), kMinfsBlockSize);
+  auto result = MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
+  ASSERT_TRUE(result.is_ok());
+  *out = result.take_value();
+}
 
 // Initialize a MinfsInspector from a created fake block device formatted
 // into a fresh minfs partition and journal entries.
@@ -46,7 +59,7 @@ void SetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector) {
   // We only care about the disk format written into the fake block device,
   // so we destroy the minfs/bcache used to format it.
   bcache = Minfs::Destroy(std::move(fs));
-  ASSERT_OK(MinfsInspector::Create(Bcache::Destroy(std::move(bcache)), inspector));
+  CreateMinfsInspector(Bcache::Destroy(std::move(bcache)), inspector);
 }
 
 // Initialize a MinfsInspector from an zero-ed out block device. This simulates
@@ -74,7 +87,7 @@ void BadSetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector, void* da
     }};
     ASSERT_OK(temp->FifoTransaction(reqs.data(), 1));
   }
-  ASSERT_OK(MinfsInspector::Create(std::move(temp), inspector));
+  CreateMinfsInspector(std::move(temp), inspector);
 }
 
 TEST(MinfsInspector, CreateWithoutError) {

@@ -21,18 +21,6 @@ namespace minfs {
 
 using ParsedCommand = disk_inspector::ParsedCommand;
 
-zx_status_t CommandHandler::Create(std::unique_ptr<block_client::BlockDevice> device,
-                                   std::unique_ptr<disk_inspector::CommandHandler>* out) {
-  std::unique_ptr<MinfsInspector> inspector;
-  zx_status_t status = MinfsInspector::Create(std::move(device), &inspector);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Cannot create minfs command handler.\n");
-    return status;
-  }
-  *out = std::make_unique<CommandHandler>(std::move(inspector));
-  return ZX_OK;
-}
-
 void CommandHandler::PrintSupportedCommands() {
   *output_ << disk_inspector::PrintCommandList(command_list_);
 }

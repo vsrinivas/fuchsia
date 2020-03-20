@@ -14,12 +14,15 @@ zx_library("disk_inspector") {
     "disk_inspector/disk_struct.h",
     "disk_inspector/supported_types.h",
     "disk_inspector/type_utils.h",
+    "disk_inspector/buffer_factory.h",
+    "disk_inspector/vmo_buffer_factory.h",
   ]
   static = true
   sources = [
     "command.cc",
     "disk_inspector.cc",
     "disk_struct.cc",
+    "vmo_buffer_factory.cc",
   ]
 
   public_deps = [ "$zx/system/ulib/fbl:headers" ]
