@@ -471,8 +471,11 @@ func TestListDevices_emptyData(t *testing.T) {
 			subtest{ipv4: true},
 			nbDiscover),
 	}
-	// Must not crash.
-	cmd.listDevices(context.Background())
+
+	_, err := cmd.listDevices(context.Background())
+	if err != nil {
+		t.Fatalf("listDevices: %s", err)
+	}
 }
 
 func TestListDevices_duplicateDevices(t *testing.T) {
@@ -496,7 +499,7 @@ func TestListDevices_duplicateDevices(t *testing.T) {
 		}
 		got, err := cmd.listDevices(context.Background())
 		if err != nil {
-			t.Fatalf("listDevices: %v", err)
+			t.Fatalf("listDevices: %s", err)
 		}
 		want := []*fuchsiaDevice{
 			{
@@ -651,7 +654,7 @@ func TestResolveDevices(t *testing.T) {
 		}
 		got, err := cmd.resolveDevices(context.Background(), s.node)
 		if err != nil {
-			t.Fatalf("listDevices: %v", err)
+			t.Fatalf("listDevices: %s", err)
 		}
 		want := []*fuchsiaDevice{
 			{
@@ -753,7 +756,7 @@ func TestOutputJSON(t *testing.T) {
 
 		var got jsonOutput
 		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
-			t.Fatalf("json.Unmarshal: %v", err)
+			t.Fatalf("json.Unmarshal: %s", err)
 		}
 		want := jsonOutput{
 			Devices: []jsonDevice{
@@ -777,7 +780,7 @@ func TestOutputJSON(t *testing.T) {
 
 		var got jsonOutput
 		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
-			t.Fatalf("json.Unmarshal: %v", err)
+			t.Fatalf("json.Unmarshal: %s", err)
 		}
 
 		want := jsonOutput{
@@ -824,7 +827,7 @@ func TestIsIPv6LinkLocal(t *testing.T) {
 	}
 	for _, test := range tests {
 		if got := isIPv6LinkLocal(test.bytes); got != test.want {
-			t.Errorf("Address %v returns %v for link local, expect %v", test.bytes, got, test.want)
+			t.Errorf("Address %v returns %t for link local, expect %t", test.bytes, got, test.want)
 		}
 	}
 }
@@ -926,7 +929,7 @@ func TestDNSSDFinder_resolveCallback(t *testing.T) {
 		resolveCallback(0, fmt.Sprintf("%s.local.", fuchsiaMDNSNodename1), s.defaultMDNSIP().String(), fakeIface, ctx)
 		target := <-c
 		if target.err != nil {
-			t.Errorf("unexpected error: %v", target.err)
+			t.Errorf("unexpected error: %s", target.err)
 		}
 		domainWant := fuchsiaMDNSNodename1
 		addrWant := s.defaultMDNSIP()
@@ -934,7 +937,7 @@ func TestDNSSDFinder_resolveCallback(t *testing.T) {
 			t.Errorf("expected domain %q, got %q", domainWant, target.domain)
 		}
 		if addrWant.String() != target.addr.String() {
-			t.Errorf("expected addr %v, got %v", addrWant, target.addr)
+			t.Errorf("expected addr %s, got %s", addrWant, target.addr)
 		}
 		if zoneWant != target.zone {
 			t.Errorf("expected zone %q, got %q", zoneWant, target.zone)
@@ -950,7 +953,7 @@ func TestDNSContextStoreAndLookup(t *testing.T) {
 		go func() {
 			t.Helper()
 			defer w.Done()
-			want := fmt.Sprintf("%v", i)
+			want := fmt.Sprintf("%d", i)
 			ctx := newDNSSDContext(makeDNSSDFinderForTest(want), func(unsafe.Pointer) dnsSDError { return 0 })
 			ctx = getDNSSDContext(ctx.idx)
 			got := <-ctx.finder.deviceChannel

@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 
 	"github.com/google/subcommands"
@@ -48,9 +47,7 @@ func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(devices) == 0 {
-		return nil, fmt.Errorf("no devices found")
-	}
+
 	return devices, nil
 }
 

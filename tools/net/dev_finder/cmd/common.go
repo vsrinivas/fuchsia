@@ -221,7 +221,7 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 	m.SetAddress(address)
 	m.SetAcceptUnicastResponses(cmd.acceptUnicast)
 	if err := m.SetMCastTTL(cmd.ttl); err != nil {
-		log.Fatalf("unable to set mcast TTL: %v", err)
+		log.Fatalf("unable to set mcast TTL: %s", err)
 	}
 	return m
 }
@@ -260,7 +260,7 @@ func startMDNSHandlers(ctx context.Context, cmd *devFinderCmd, packet mdns.Packe
 				f <- &fuchsiaDevice{err: err}
 			})
 			m.AddWarningHandler(func(addr net.Addr, err error) {
-				log.Printf("from: %s warn: %v\n", addr, err)
+				log.Printf("from: %s warn: %s\n", addr, err)
 			})
 			if err := m.Start(ctx, p); err != nil {
 				lastErr = fmt.Errorf("starting mdns: %w", err)
@@ -289,7 +289,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 	for _, s := range strings.Split(cmd.mdnsPorts, ",") {
 		p, err := strconv.ParseUint(s, 10, 16)
 		if err != nil {
-			return fmt.Errorf("could not parse port number %v: %v\n", s, err)
+			return fmt.Errorf("could not parse port number %s: %w\n", s, err)
 		}
 		ports = append(ports, int(p))
 	}
@@ -397,11 +397,12 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 func (cmd *devFinderCmd) outputNormal(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
 	for _, device := range filteredDevices {
 		if includeDomain {
-			fmt.Fprintf(cmd.Output(), "%v %v\n", device.addrString(), device.domain)
+			fmt.Fprintf(cmd.Output(), "%s %s\n", device.addrString(), device.domain)
 		} else {
-			fmt.Fprintf(cmd.Output(), "%v\n", device.addrString())
+			fmt.Fprintf(cmd.Output(), "%s\n", device.addrString())
 		}
 	}
+
 	return nil
 }
 
