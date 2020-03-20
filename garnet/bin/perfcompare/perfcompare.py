@@ -7,9 +7,11 @@
 # Fuchsia.  It can also compare binary sizes.
 
 import argparse
+import glob
 import json
 import math
 import os
+import subprocess
 import sys
 import tarfile
 
@@ -412,6 +414,52 @@ def ComparePerf(parser, args, out_fh):
     FormatTable(heading_row, all_rows, out_fh)
 
 
+def PrintMultibootDatasetTable(multiboot_dataset, out_fh):
+    stats_map = StatsFromMultiBootDataset(multiboot_dataset)
+    heading_row = ['Test case', 'Mean']
+    rows = []
+    for name, stats in sorted(stats_map.iteritems()):
+        rows.append([name, stats.FormatConfidenceInterval()])
+    FormatTable(heading_row, rows, out_fh)
+
+
+def RunLocal(args, out_fh, run_cmd):
+    if glob.glob(args.iter_file) != []:
+        # We check for this case so that we don't accidentally treat
+        # pre-existing files the same as files newly outputted by
+        # args.iter_cmd.
+        raise AssertionError(
+            'Temporary output file(s) %r already exist: try deleting them first'
+            % args.iter_file)
+    if os.path.exists(args.dest):
+        raise AssertionError(
+            'Destination path %r already exists: either delete it or use'
+            ' a different destination, because run_local will not'
+            ' overwrite it or append to it' % args.dest)
+
+    by_boot_dir = os.path.join(args.dest, 'by_boot')
+    os.mkdir(args.dest)
+    os.mkdir(by_boot_dir)
+
+    for boot_idx in xrange(args.boots):
+        run_cmd(args.reboot_cmd, shell=True)
+        run_cmd(args.iter_cmd, shell=True)
+        boot_dir = os.path.join(by_boot_dir, 'boot%06d' % boot_idx)
+        os.mkdir(boot_dir)
+        dataset_files = sorted(glob.glob(args.iter_file))
+        for idx, dataset_file in enumerate(dataset_files):
+            new_filename = os.path.join(
+                boot_dir, 'results%06d.fuchsiaperf.json' % idx)
+            os.rename(dataset_file, new_filename)
+
+        # Print a table of the results so far.  This prints confidence
+        # intervals, which requires having results from at least 2 boots.
+        if boot_idx >= 1:
+            out_fh.write('\nResults after %d boots:\n\n' % (boot_idx + 1))
+            PrintMultibootDatasetTable(MultiBootDataset(args.dest), out_fh)
+            out_fh.write('\n')
+
+
 def MakeCombinedPerfDatasetFile(args, out_fh):
     def ConvertToJson(dir_path):
         return {
@@ -503,7 +551,7 @@ def CompareSizes(args):
         print 'Factor of:    %f' % (float(sizes[1]) / sizes[0])
 
 
-def Main(argv, out_fh):
+def Main(argv, out_fh, run_cmd=subprocess.check_call):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
@@ -517,6 +565,37 @@ def Main(argv, out_fh):
     parser_compare_perf.add_argument('results_dir_after', nargs='?')
     parser_compare_perf.set_defaults(
         func=lambda args: ComparePerf(parser, args, out_fh))
+
+    parser_run_local = subparsers.add_parser(
+        'run_local',
+        help='Gather a multi-boot dataset of performance test results'
+        ' from a single version of Fuchsia by locally running the command'
+        ' specified by --iter_cmd')
+    parser_run_local.add_argument(
+        '--boots', type=int, required=True,
+        help='Number of (re)boots of Fuchsia to run')
+    parser_run_local.add_argument(
+        '--iter_cmd', required=True,
+        help='Command for running a performance test. '
+        ' This command is run locally: it is passed to the shell. '
+        ' This command is expected to write its output to the file (or files)'
+        ' specified by --iter_file')
+    parser_run_local.add_argument(
+        '--iter_file', required=True,
+        help='File(s) that the performance test will write its results to. '
+        ' This is a glob expression, so it may specify multiple files. '
+        ' Each file is expected to be a process dataset in the'
+        ' *.fuchsiaperf.json format.  These files will be removed (renamed)'
+        ' by this tool')
+    parser_run_local.add_argument(
+        '--reboot_cmd', default='fx reboot && fx wait',
+        help='Command to use for rebooting Fuchsia.  This is optional. '
+        ' The default is %(default)r')
+    parser_run_local.add_argument(
+        '--dest', required=True,
+        help='Destination directory for writing the multi-boot dataset')
+    parser_run_local.set_defaults(
+        func=lambda args: RunLocal(args, out_fh, run_cmd))
 
     parser_make_combined = subparsers.add_parser(
         'make_combined_perf_dataset_file',

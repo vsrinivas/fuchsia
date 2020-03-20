@@ -153,6 +153,30 @@ fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    992 +/- 2
 fuchsia.example: SecondExample        removed           -              1975 +/- 78 ns  -
 
 
+### run_local
+
+Results after 2 boots:
+
+Test case              Mean
+---------------------  --------------
+example_suite: MyTest  1010 +/- 82 ns
+
+
+Results after 3 boots:
+
+Test case              Mean
+---------------------  --------------
+example_suite: MyTest  1009 +/- 10 ns
+
+
+Results after 4 boots:
+
+Test case              Mean
+---------------------  -------------
+example_suite: MyTest  999 +/- 60 ns
+
+
+
 ### validate_perfcompare
 Rate of mismatches (non-intersections) of confidence intervals for each test:
 0.512821 fuchsia.example: ClockGetTimeExample

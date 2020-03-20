@@ -161,29 +161,30 @@ class FormatConfidenceIntervalTest(unittest.TestCase):
         self.assertEquals(Format(numpy.nan, 0.1234), 'nan +/- 0.12')
 
 
+# Generate some example perf test data, allowing variation at each level of
+# the sampling process (per boot, per process, and per iteration within
+# each process).  This follows a random effects model.  Returns a list of
+# lists of lists of values.
+def GenerateData(mean=1000,
+                 stddev_across_boots=0,
+                 stddev_across_processes=0,
+                 stddev_across_iters=0):
+    it = iter(TEST_VALUES)
+
+    def GenerateValues(mean, stddev, count):
+        return [next(it) * stddev + mean for _ in xrange(count)]
+
+    # This reads 4**3 + 4**2 + 4 = 84 values from TEST_VALUES, so it does
+    # not exceed the number of values in TEST_VALUES.
+    return [[SLOW_INITIAL_RUN
+             + GenerateValues(mean_within_process, stddev_across_iters, 4)
+             for mean_within_process in GenerateValues(
+                     mean_within_boot, stddev_across_processes, 4)]
+            for mean_within_boot in GenerateValues(
+                    mean, stddev_across_boots, 4)]
+
+
 class StatisticsTest(TempDirTestCase):
-
-    # Generate some example perf test data, allowing variation at each
-    # level of the sampling process (per boot, per process, and per
-    # iteration within each process).  This follows a random effects model.
-    # Returns a list of lists of lists of values.
-    def GenerateData(self, mean=1000,
-                     stddev_across_boots=0,
-                     stddev_across_processes=0,
-                     stddev_across_iters=0):
-        it = iter(TEST_VALUES)
-
-        def GenerateValues(mean, stddev, count):
-            return [next(it) * stddev + mean for _ in xrange(count)]
-
-        # This reads 4**3 + 4**2 + 4 = 84 values from TEST_VALUES, so
-        # it does not exceed the number of values in TEST_VALUES.
-        return [[SLOW_INITIAL_RUN
-                 + GenerateValues(mean_within_process, stddev_across_iters, 4)
-                 for mean_within_process in GenerateValues(
-                         mean_within_boot, stddev_across_processes, 4)]
-                for mean_within_boot in GenerateValues(
-                        mean, stddev_across_boots, 4)]
 
     def ResultsDictForValues(self, run_values):
         return {'label': 'ExampleTest',
@@ -250,16 +251,13 @@ class StatisticsTest(TempDirTestCase):
     # Test the CIs produced with variation at different levels of the
     # multi-level sampling process.
     def test_confidence_intervals(self):
-        self.CheckConfidenceInterval(self.GenerateData(), '1000 +/- 0 ns')
+        self.CheckConfidenceInterval(GenerateData(), '1000 +/- 0 ns')
         self.CheckConfidenceInterval(
-            self.GenerateData(stddev_across_boots=100),
-            '1021 +/- 452 ns')
+            GenerateData(stddev_across_boots=100), '1021 +/- 452 ns')
         self.CheckConfidenceInterval(
-            self.GenerateData(stddev_across_processes=100),
-            '1012 +/- 151 ns')
+            GenerateData(stddev_across_processes=100), '1012 +/- 151 ns')
         self.CheckConfidenceInterval(
-            self.GenerateData(stddev_across_iters=100),
-            '981 +/- 74 ns')
+            GenerateData(stddev_across_iters=100), '981 +/- 74 ns')
 
     # Test the case where just a single value is produced per process run.
     def test_confidence_interval_with_single_value_per_process(self):
@@ -460,6 +458,63 @@ class PerfCompareTest(TempDirTestCase):
                          + results_dirs, stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('validate_perfcompare', output)
+
+
+class RunLocalTest(TempDirTestCase):
+
+    # Test basic operation of the "run_local" subcommand.
+    def test_run_local(self):
+        # Destination directory for the full multiboot dataset.  Use a
+        # destination path that does not exist yet.
+        dest_dir = os.path.join(self.MakeTempDir(), 'new_dir')
+
+        # Destination pathnames for process dataset files.
+        iter_temp_dir = self.MakeTempDir()
+        iter_temp_file = os.path.join(iter_temp_dir, 'result.fuchsiaperf.json')
+        iter_temp_glob = os.path.join(iter_temp_dir, '*.fuchsiaperf.json')
+
+        data = GenerateData(mean=1000,
+                            stddev_across_boots=10,
+                            stddev_across_processes=10,
+                            stddev_across_iters=10)
+        commands = []
+        # Dummy version of subprocess.check_call() for testing.
+        def DummyRunCmd(cmd, shell=False):
+            self.assertEquals(shell, True)
+            commands.append(cmd)
+            if cmd == 'my_iter_cmd':
+                WriteJsonFile(iter_temp_file,
+                              [{'label': 'MyTest',
+                                'test_suite': 'example_suite',
+                                'unit': 'nanoseconds',
+                                'values': data.pop(0)[0]}])
+
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['run_local',
+                          '--boots=4',
+                          '--iter_file', iter_temp_glob,
+                          '--iter_cmd', 'my_iter_cmd',
+                          '--reboot_cmd', 'my_reboot_cmd',
+                          '--dest', dest_dir],
+                         stdout, run_cmd=DummyRunCmd)
+        self.assertEquals(commands, ['my_reboot_cmd', 'my_iter_cmd'] * 4)
+        GOLDEN.AssertCaseEq('run_local', stdout.getvalue())
+
+    # "run_local" should give an error if the temporary files specified by
+    # --iter_file already exist.
+    def test_error_if_dest_files_already_exist(self):
+        dest_dir = os.path.join(self.MakeTempDir(), 'new_dir')
+        iter_temp_file = os.path.join(
+            self.MakeTempDir(), 'result.fuchsiaperf.json')
+        WriteJsonFile(iter_temp_file, [])
+        args = ['run_local',
+                '--boots=4',
+                '--iter_file', iter_temp_file,
+                '--iter_cmd', 'my_iter_cmd',
+                '--reboot_cmd', 'my_reboot_cmd',
+                '--dest', dest_dir]
+        self.assertRaises(AssertionError,
+                          lambda: perfcompare.Main(args, sys.stdout))
 
 
 if __name__ == '__main__':
