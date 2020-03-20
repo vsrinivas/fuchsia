@@ -24,14 +24,14 @@ class SwipeRecognizerBase : public GestureRecognizer {
  public:
   // Minimum distance (in NDC) between finger down and finger up events for gesture to be
   // considered a swipe.
-  static constexpr float kMinSwipeDistance = 3.f / 8;
+  static constexpr float kMinSwipeDistance = 2.f / 8;
 
   // Max distance (in NDC) between finger down and finger up events for gesture to be considered
   // a swipe.
-  static constexpr float kMaxSwipeDistance = 3.f / 4;
+  static constexpr float kMaxSwipeDistance = 1;
 
   // Maximum duration of swipe (in milliseconds).
-  static constexpr zx::duration kDefaultSwipeGestureTimeout = zx::msec(500);
+  static constexpr zx::duration kDefaultSwipeGestureTimeout = zx::msec(1000);
 
   // Callback which will be invoked when swipe gesture has been recognized.
   using SwipeGestureCallback = fit::function<void(GestureContext)>;

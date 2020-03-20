@@ -116,17 +116,18 @@ TEST_F(SwipeRecognizerBaseTest, RejectWhenDistanceTooSmall) {
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
 }
 
-// Tests rejection case in which swipe gesture covers too large a distance.
-TEST_F(SwipeRecognizerBaseTest, RejectWhenDistanceTooLarge) {
+// Tests case in which swipe gesture covers a large distance. We are using the entire upper range,
+// so there is no case where distance between Up and Down is more than 1NDC.
+TEST_F(SwipeRecognizerBaseTest, AcceptWhenDistanceIsLarge) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}));
-  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // UP event must be between .25 and 1 NDC from DOWN event for gesture to be considered
   // a swipe.
   SendPointerEvent({1, Phase::UP, {0, 1}});
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
 }
 
 TEST_F(SwipeRecognizerBaseTest, Timeout) {
