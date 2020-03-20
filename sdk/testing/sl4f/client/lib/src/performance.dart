@@ -419,6 +419,8 @@ class TraceSession {
 
   TraceSession(this._sl4f, this._dump) : _closed = false;
 
+  bool get closed => _closed;
+
   /// Start tracing.
   Future<void> start() async {
     if (_closed) {
