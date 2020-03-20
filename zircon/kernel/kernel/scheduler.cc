@@ -446,8 +446,9 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   if (is_active && unlikely(needs_migration)) {
     // The current CPU is not in the thread's affinity mask, find a new CPU
     // and move it to that queue.
-    current_thread->state_ = THREAD_READY;
+    DEBUG_ASSERT(current_thread->curr_cpu_ == current_cpu);
     Remove(current_thread);
+    current_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
 
     const cpu_num_t target_cpu = FindTargetCpu(current_thread);
     Scheduler* const target = Get(target_cpu);
@@ -668,6 +669,11 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                 ToString(next_thread->state_), timeslice_expired, total_runtime_ns.raw_value(),
                 fair_run_queue_.is_empty() ? "[none]" : fair_run_queue_.front().name_,
                 deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name_);
+
+  // Call the migrate function if the thread has moved between CPUs.
+  if (next_thread->last_cpu_ != INVALID_CPU && next_thread->last_cpu_ != next_thread->curr_cpu_) {
+    next_thread->CallMigrateFnLocked(Thread::MigrateStage::After);
+  }
 
   // Update the state of the current and next thread.
   current_thread->preempt_pending_ = false;
@@ -1321,6 +1327,7 @@ void Scheduler::MigrateUnpinnedThreads(cpu_num_t current_cpu) {
     } else {
       // Move unpinned threads to another available CPU.
       current->Remove(thread);
+      thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
 
       const cpu_num_t target_cpu = FindTargetCpu(thread);
       Scheduler* const target = Get(target_cpu);
@@ -1343,6 +1350,7 @@ void Scheduler::MigrateUnpinnedThreads(cpu_num_t current_cpu) {
     } else {
       // Move unpinned threads to another available CPU.
       current->Remove(thread);
+      thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
 
       const cpu_num_t target_cpu = FindTargetCpu(thread);
       Scheduler* const target = Get(target_cpu);

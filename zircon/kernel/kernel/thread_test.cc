@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <lib/unittest/unittest.h>
+#include <pow2.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -263,6 +264,76 @@ bool thread_conflicting_soft_and_hard_affinity() {
   END_TEST;
 }
 
+bool set_migrate_fn_test() {
+  BEGIN_TEST;
+
+  cpu_mask_t active_cpus = mp_get_active_mask();
+  if (active_cpus == 0 || ispow2(active_cpus)) {
+    printf("Expected multiple CPUs to be active.\n");
+    return true;
+  }
+
+  // The worker thread will attempt to migrate to another CPU.
+  // NOTE: We force a conversion to a function pointer for the lambda below.
+  auto worker_body = +[](void* arg) -> int {
+    cpu_num_t current_cpu = arch_curr_cpu_num();
+    Thread* self = Thread::Current::Get();
+    self->SetCpuAffinity(mp_get_active_mask() ^ cpu_num_to_mask(current_cpu));
+
+    cpu_num_t target_cpu = arch_curr_cpu_num();
+    if (current_cpu == target_cpu) {
+      UNITTEST_FAIL_TRACEF("Expected to be running on CPU %u, but actually running on %u.",
+                           target_cpu, current_cpu);
+      return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+  };
+  Thread* worker =
+      Thread::Create("set_migrate_fn_test_worker", worker_body, nullptr, DEFAULT_PRIORITY);
+  ASSERT_NONNULL(worker, "thread_create failed.");
+
+  // Set the migrate function, and begin execution.
+  struct {
+    int count = 0;
+    cpu_num_t last_cpu = INVALID_CPU;
+    Thread::MigrateStage next_stage = Thread::MigrateStage::Before;
+    bool success = true;
+  } migrate_state;
+  worker->SetMigrateFn([&migrate_state](Thread::MigrateStage stage) {
+    ++migrate_state.count;
+
+    cpu_num_t current_cpu = arch_curr_cpu_num();
+    if (migrate_state.last_cpu == current_cpu) {
+      UNITTEST_FAIL_TRACEF("Expected to have migrated CPU.");
+      migrate_state.success = false;
+    }
+    migrate_state.last_cpu = current_cpu;
+
+    if (migrate_state.next_stage != stage) {
+      UNITTEST_FAIL_TRACEF("Expected migrate stage %d, but received migrate stage %d.",
+                           static_cast<int>(migrate_state.next_stage), static_cast<int>(stage));
+      migrate_state.success = false;
+    }
+    migrate_state.next_stage = Thread::MigrateStage::After;
+
+    if (!thread_lock_held()) {
+      UNITTEST_FAIL_TRACEF("Expected the thread lock to be held.");
+      migrate_state.success = false;
+    }
+  });
+  worker->Resume();
+
+  // Wait for the worker thread to test itself.
+  int worker_retcode;
+  ASSERT_EQ(worker->Join(&worker_retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join thread.");
+  EXPECT_EQ(worker_retcode, ZX_OK, "Worker thread failed.");
+  EXPECT_EQ(migrate_state.count, 2, "Migrate function was not called 2 times.");
+  EXPECT_TRUE(migrate_state.success, "Migrate function was not called with the expected state.")
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
@@ -272,4 +343,5 @@ UNITTEST("thread_last_cpu_new_thread", thread_last_cpu_new_thread)
 UNITTEST("thread_last_cpu_running_thread", thread_last_cpu_running_thread)
 UNITTEST("thread_empty_soft_affinity_mask", thread_empty_soft_affinity_mask)
 UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_and_hard_affinity)
+UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

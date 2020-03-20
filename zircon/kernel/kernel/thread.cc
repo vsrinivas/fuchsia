@@ -700,6 +700,12 @@ void Thread::Current::MigrateToCpu(const cpu_num_t target_cpu) {
   Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(target_cpu));
 }
 
+void Thread::SetMigrateFn(MigrateFn migrate_fn) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  migrate_fn_ = std::move(migrate_fn);
+}
+
 // Returns true if it decides to kill the thread. The thread_lock must be held
 // when calling this function.
 static bool check_kill_signal(Thread* current_thread) TA_REQ(thread_lock) {

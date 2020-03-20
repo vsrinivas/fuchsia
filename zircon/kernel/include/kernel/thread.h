@@ -19,6 +19,7 @@
 #include <arch/exception.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <kernel/cpu.h>
@@ -177,6 +178,25 @@ struct Thread {
   cpu_mask_t GetCpuAffinity() const TA_EXCL(thread_lock);
   void SetSoftCpuAffinity(cpu_mask_t affinity) TA_EXCL(thread_lock);
   cpu_mask_t GetSoftCpuAffinity() const TA_EXCL(thread_lock);
+
+  enum class MigrateStage {
+    // The stage before the thread has migrated. Called from the old CPU.
+    Before,
+    // The stage after the thread has migrated. Called from the new CPU.
+    After,
+  };
+  // The migrate function will be invoked twice when a thread is migrate between
+  // CPUs. Firstly when the thread is removed from the old CPUs scheduler,
+  // secondly when the thread is rescheduled on the new CPU. When the migrate
+  // function is called, |thread_lock| is held.
+  using MigrateFn = fbl::Function<void(MigrateStage stage)> TA_REQ(thread_lock);
+
+  void SetMigrateFn(MigrateFn migrate_fn) TA_EXCL(thread_lock);
+  void CallMigrateFnLocked(MigrateStage stage) const TA_REQ(thread_lock) {
+    if (unlikely(migrate_fn_)) {
+      migrate_fn_(stage);
+    }
+  }
 
   static Thread* IdToThreadSlow(uint64_t tid);
 
@@ -511,6 +531,9 @@ struct Thread {
   //
   // See also |thread_is_user_state_saved_locked()| and |ScopedThreadExceptionContext|.
   bool user_state_saved_;
+
+  // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
+  MigrateFn migrate_fn_;
 };
 
 // For the moment, the arch-specific current thread implementations need to come here, after the
