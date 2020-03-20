@@ -31,8 +31,7 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   using OnInitializeCallback = fit::function<void()>;
 
   // Called after SessionUserProviderImpl successfully logs in a user.
-  using OnLoginCallback = fit::function<void(fuchsia::modular::auth::AccountPtr account,
-                                             fuchsia::auth::TokenManagerPtr agent_token_manager)>;
+  using OnLoginCallback = fit::function<void(fuchsia::modular::auth::AccountPtr account)>;
 
   // |account_manager| Used to register SessionUserProviderImpl as an
   // |AccountListener| to receive updates on newly added/removed accounts. Must
@@ -51,7 +50,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // |on_login| Callback  invoked when a persona is ready to be logged into a
   // new session. Must be present.
   SessionUserProviderImpl(fuchsia::identity::account::AccountManager* const account_manager,
-                          fuchsia::auth::TokenManagerFactory* const token_manager_factory,
                           fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
                           OnInitializeCallback on_initialize, OnLoginCallback on_login);
 
@@ -80,10 +78,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) override;
 
-  // Returns a new |fuchsia::auth::TokenManager| handle for the given user
-  // account |account_id|.
-  fuchsia::auth::TokenManagerPtr CreateTokenManager(std::string account_id);
-
   // OnInitialize, session_user_provider_impl will invoke |on_initialize_|.
   // OnAccountAdded, session_user_provider_impl will call |on_login_|.
   //
@@ -102,7 +96,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
   fuchsia::identity::account::AccountManager* const account_manager_;  // Neither owned nor copied.
-  fuchsia::auth::TokenManagerFactory* const token_manager_factory_;    // Neither owned nor copied.
   fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider_;
 
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>

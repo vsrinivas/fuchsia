@@ -51,10 +51,6 @@ namespace {
 // The key for factory reset toggles.
 constexpr char kFactoryResetKey[] = "FactoryReset";
 
-constexpr char kTokenManagerFactoryUrl[] =
-    "fuchsia-pkg://fuchsia.com/token_manager_factory#meta/"
-    "token_manager_factory.cmx";
-
 }  // namespace
 
 BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
@@ -143,16 +139,6 @@ FuturePtr<> BasemgrImpl::StopBaseShell() {
   return did_stop;
 }
 
-FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
-  if (token_manager_factory_app_) {
-    // Force kill;  token manager does not implement |fuchsia::modular::Lifecycle|.
-    token_manager_factory_app_.reset();
-  } else {
-    FX_DLOGS(INFO) << "StopTokenManagerFactoryApp(): TokenManagerFactory already not running.";
-  }
-  return Future<>::CreateCompleted("StopTokenManagerFactoryApp completed");
-}
-
 FuturePtr<> BasemgrImpl::StopScenic() {
   auto fut = Future<>::Create("StopScenic");
   if (!presenter_) {
@@ -217,23 +203,12 @@ void BasemgrImpl::Start() {
 }
 
 void BasemgrImpl::InitializeUserProvider() {
-  token_manager_factory_app_.release();
-  fuchsia::modular::AppConfig token_manager_config;
-  token_manager_config.url = kTokenManagerFactoryUrl;
-  token_manager_factory_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_.get(), CloneStruct(token_manager_config));
-  token_manager_factory_app_->services().ConnectToService(token_manager_factory_.NewRequest());
-
   session_user_provider_impl_ = std::make_unique<SessionUserProviderImpl>(
-      account_manager_.get(), token_manager_factory_.get(),
-      authentication_context_provider_binding_.NewBinding().Bind(),
+      account_manager_.get(), authentication_context_provider_binding_.NewBinding().Bind(),
       /* on_initialize= */
       [this] { ShowSetupOrLogin(); },
       /* on_login= */
-      [this](fuchsia::modular::auth::AccountPtr account,
-             fuchsia::auth::TokenManagerPtr agent_token_manager) {
-        OnLogin(std::move(account), std::move(agent_token_manager));
-      });
+      [this](fuchsia::modular::auth::AccountPtr account) { OnLogin(std::move(account)); });
 }
 
 void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
@@ -256,12 +231,9 @@ void BasemgrImpl::Shutdown() {
       FX_DLOGS(INFO) << "- fuchsia::modular::BaseShell down";
       session_user_provider_impl_.reset();
       FX_DLOGS(INFO) << "- fuchsia::modular::UserProvider down";
-      StopTokenManagerFactoryApp()->Then([this] {
-        FX_DLOGS(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-        StopScenic()->Then([this] {
-          FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
-          on_shutdown_();
-        });
+      StopScenic()->Then([this] {
+        FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
+        on_shutdown_();
       });
     });
   });
@@ -277,11 +249,10 @@ void BasemgrImpl::GetAuthenticationUIContext(
   base_shell_->GetAuthenticationUIContext(std::move(request));
 }
 
-void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
-                          fuchsia::auth::TokenManagerPtr agent_token_manager) {
+void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto did_start_session = session_provider_->StartSession(
-      std::move(view_token), std::move(account), std::move(agent_token_manager));
+  auto did_start_session =
+      session_provider_->StartSession(std::move(view_token), std::move(account));
   if (!did_start_session) {
     FX_LOGS(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";

@@ -13,26 +13,11 @@ namespace modular {
 
 namespace {
 
-// Url of the application launching token manager
-constexpr char kSessionUserProviderAppUrl[] = "session_user_provider_url";
-
 // Dev auth provider configuration
 constexpr char kDevAuthProviderType[] = "dev";
-constexpr char kDevAuthProviderUrl[] =
-    "fuchsia-pkg://fuchsia.com/dev_auth_provider#meta/"
-    "dev_auth_provider.cmx";
 
 // Google auth provider configuration
 constexpr char kGoogleAuthProviderType[] = "google";
-constexpr char kGoogleAuthProviderUrl[] =
-    "fuchsia-pkg://fuchsia.com/google_auth_provider#meta/"
-    "google_auth_provider.cmx";
-
-std::string GetRandomId() {
-  uint32_t random_number = 0;
-  zx_cprng_draw(&random_number, sizeof random_number);
-  return std::to_string(random_number);
-}
 
 // Returns the corresponding |auth_provider_type| string that maps to
 // |fuchsia::modular::auth::IdentityProvider| value.
@@ -49,34 +34,13 @@ std::string MapIdentityProviderToAuthProviderType(
   FX_DCHECK(false) << "Unrecognized IDP.";
 }
 
-// Returns a list of supported auth provider configurations that includes the
-// type, startup parameters and the url of the auth provider component.
-// TODO(ukode): This list will be derived from a config package in the future.
-std::vector<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
-  fuchsia::auth::AuthProviderConfig dev_auth_provider_config;
-  dev_auth_provider_config.auth_provider_type = kDevAuthProviderType;
-  dev_auth_provider_config.url = kDevAuthProviderUrl;
-
-  fuchsia::auth::AuthProviderConfig google_auth_provider_config;
-  google_auth_provider_config.auth_provider_type = kGoogleAuthProviderType;
-  google_auth_provider_config.url = kGoogleAuthProviderUrl;
-
-  std::vector<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
-  auth_provider_configs.push_back(std::move(google_auth_provider_config));
-  auth_provider_configs.push_back(std::move(dev_auth_provider_config));
-
-  return auth_provider_configs;
-}
-
 }  // namespace
 
 SessionUserProviderImpl::SessionUserProviderImpl(
     fuchsia::identity::account::AccountManager* const account_manager,
-    fuchsia::auth::TokenManagerFactory* const token_manager_factory,
     fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider,
     OnInitializeCallback on_initialize, OnLoginCallback on_login)
     : account_manager_(account_manager),
-      token_manager_factory_(token_manager_factory),
       authentication_context_provider_(std::move(authentication_context_provider)),
       authentication_context_provider_binding_(this),
       account_listener_binding_(this),
@@ -84,7 +48,6 @@ SessionUserProviderImpl::SessionUserProviderImpl(
       on_login_(std::move(on_login)),
       weak_factory_(this) {
   FX_CHECK(account_manager_);
-  FX_CHECK(token_manager_factory_);
   FX_CHECK(authentication_context_provider_);
   FX_CHECK(on_initialize_);
   FX_CHECK(on_login_);
@@ -163,17 +126,7 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
   bool login_as_guest = params.account_id.value_or("") == "";
   if (login_as_guest) {
     FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as guest";
-    // If requested, login as guest  by creating token managers with token
-    // manager factory.
-    auto account_id = GetRandomId();
-
-    // Instead of passing token_manager_factory all the way to agents and
-    // runners with all auth provider configurations, send a
-    // |fuchsia::auth::TokenManager| handle for agents for the given user
-    // account |account_id|.
-    fuchsia::auth::TokenManagerPtr agent_token_manager = CreateTokenManager(account_id);
-
-    on_login_(/* account= */ nullptr, std::move(agent_token_manager));
+    on_login_(/* account= */ nullptr);
   } else {
     FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as "
                      "authenticated user";
@@ -189,12 +142,6 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
       FX_LOGS(INFO) << "Got default persona with error: " << (uint32_t)result.err();
     });
 
-    fuchsia::auth::TokenManagerPtr agent_token_manager;
-    persona->GetTokenManager(
-        kSessionUserProviderAppUrl, agent_token_manager.NewRequest(), [](auto result) {
-          FX_LOGS(INFO) << "Got token manager with error: " << (uint32_t)result.err();
-        });
-
     auto account_deprecated = fuchsia::modular::auth::Account::New();
     account_deprecated->id = params.account_id->c_str();
 
@@ -204,7 +151,7 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     };
     joined_personas_.emplace_back(std::move(joined_persona));
 
-    on_login_(std::move(account_deprecated), std::move(agent_token_manager));
+    on_login_(std::move(account_deprecated));
   }
 }
 
@@ -242,21 +189,6 @@ void SessionUserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
 void SessionUserProviderImpl::GetAuthenticationUIContext(
     fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {
   authentication_context_provider_->GetAuthenticationUIContext(std::move(request));
-}
-
-fuchsia::auth::TokenManagerPtr SessionUserProviderImpl::CreateTokenManager(std::string account_id) {
-  FX_CHECK(token_manager_factory_);
-
-  fuchsia::auth::TokenManagerPtr token_mgr;
-  token_manager_factory_->GetTokenManager(
-      account_id, kSessionUserProviderAppUrl, GetAuthProviderConfigs(),
-      authentication_context_provider_binding_.NewBinding(), token_mgr.NewRequest());
-
-  token_mgr.set_error_handler([account_id](zx_status_t status) {
-    FX_LOGS(INFO) << "Token Manager for account:" << account_id << " disconnected";
-  });
-
-  return token_mgr;
 }
 
 void SessionUserProviderImpl::OnInitialize(

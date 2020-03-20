@@ -59,7 +59,6 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
                      fuchsia::modular::AppConfig session_shell_config,
                      fuchsia::modular::AppConfig story_shell_config,
                      bool use_session_shell_for_story_shell_factory,
-                     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
                      fuchsia::ui::views::ViewToken view_token,
                      fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,
                      GetPresentationCallback get_presentation,

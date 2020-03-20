@@ -109,8 +109,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Invoked when a user has been logged in. Starts a new session for the given
   // |account|.
-  void OnLogin(fuchsia::modular::auth::AccountPtr account,
-               fuchsia::auth::TokenManagerPtr agent_token_manager);
+  void OnLogin(fuchsia::modular::auth::AccountPtr account);
 
   // Returns the session shell config of the active session shell, or returns
   // the a default config if there is no active one.
@@ -173,8 +172,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> token_manager_factory_app_;
-  fuchsia::auth::TokenManagerFactoryPtr token_manager_factory_;
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
   bool base_shell_running_{};
