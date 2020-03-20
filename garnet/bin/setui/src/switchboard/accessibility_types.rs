@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::switchboard::base::Merge;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AccessibilityInfo {

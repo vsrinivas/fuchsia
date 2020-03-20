@@ -7,7 +7,6 @@ use fidl_fuchsia_images::{AlphaFormat, ColorSpace, ImageInfo, PixelFormat, Tilin
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon::Vmo;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
 // FIDL request/response definitions.

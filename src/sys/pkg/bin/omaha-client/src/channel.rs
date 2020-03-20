@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use omaha_client::protocol::Cohort;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 

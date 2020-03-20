@@ -11,7 +11,7 @@ use crate::stash::Stash;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use fuchsia_zircon::Status;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt;

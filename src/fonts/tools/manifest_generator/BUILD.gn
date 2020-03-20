@@ -25,7 +25,6 @@ rustc_binary("font_manifest_generator") {
     "//third_party/rust_crates:json5",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",

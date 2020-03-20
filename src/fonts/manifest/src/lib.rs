@@ -18,10 +18,10 @@ use {
     fuchsia_url::pkg_url::PkgUrl,
     offset_string::OffsetString,
     serde::{
-        de::{self, Deserialize, Deserializer, Error as DeError},
-        ser::{Serialize, Serializer},
+        de::{self, Deserializer, Error as DeError},
+        ser::Serializer,
     },
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     serde_json,
     std::{
         convert::TryFrom,

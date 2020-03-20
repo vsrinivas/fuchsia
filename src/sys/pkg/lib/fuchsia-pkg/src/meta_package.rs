@@ -4,7 +4,7 @@
 
 use crate::errors::MetaPackageError;
 use crate::path::{check_package_name, check_package_variant};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::io;
 
 #[cfg(test)]

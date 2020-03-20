@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_bluetooth_control::{ControlMarker, InputCapabilityType, OutputCapabilityType},
     fuchsia_component::client::connect_to_service,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     serde_json,
     std::{fs::OpenOptions, io::Read},
 };

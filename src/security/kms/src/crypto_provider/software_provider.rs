@@ -10,7 +10,7 @@ use bincode;
 use crypto::{aead::AeadDecryptor, aead::AeadEncryptor, aes::KeySize, aes_gcm::AesGcm};
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
 use mundane;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::convert::{TryFrom, TryInto};
 

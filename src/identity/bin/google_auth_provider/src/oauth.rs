@@ -26,7 +26,7 @@ use fuchsia_zircon::Duration;
 use futures::prelude::*;
 use hyper::StatusCode;
 use log::warn;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use serde_json::from_str;
 use std::borrow::Cow;
 use std::collections::HashMap;

@@ -9,7 +9,7 @@ use anyhow::Error;
 use fuchsia_syslog::fx_log_warn;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::switchboard::accessibility_types::AccessibilityInfo;

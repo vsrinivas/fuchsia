@@ -17,8 +17,8 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::path::PathBuf;
 
-use serde::de::{Deserialize, Deserializer};
-use serde_derive::Deserialize;
+use serde::de::Deserializer;
+use serde::Deserialize;
 use serde_json::Value;
 
 mod colors;

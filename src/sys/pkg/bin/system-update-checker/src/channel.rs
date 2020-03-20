@@ -17,7 +17,7 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 use std::io;

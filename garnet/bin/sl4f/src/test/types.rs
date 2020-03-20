@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde::{Serialize, Serializer};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 
 /// Result from each test step. Usually each step denotes a separate test case

@@ -57,7 +57,7 @@ impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
 #[cfg(test)]
 pub mod testing {
     use super::*;
-    use serde_derive::Deserialize;
+    use serde::Deserialize;
 
     #[derive(Clone, Deserialize)]
     struct TestConfigData {

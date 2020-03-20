@@ -11,7 +11,7 @@ pub use volume::EncryptedVolumeStorageManager;
 use account_common::AccountManagerError;
 use async_trait::async_trait;
 use fidl_fuchsia_io::DirectoryProxy;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// An enumeration of the possible key configurations for securing the
 /// data contained in a `StorageManager`.

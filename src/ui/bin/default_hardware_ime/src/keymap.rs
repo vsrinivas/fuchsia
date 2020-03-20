@@ -8,7 +8,6 @@ use fidl_fuchsia_ui_input2 as ui_input;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
 use serde::{Deserialize, Deserializer};
-use serde_derive::Deserialize;
 use serde_json::{self as json};
 use std::collections::HashMap;
 use std::fs;

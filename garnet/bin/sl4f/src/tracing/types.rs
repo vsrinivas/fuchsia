@@ -4,7 +4,7 @@
 
 use std::default::Default;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Enum for supported Tracing commands.
 pub enum TracingMethod {

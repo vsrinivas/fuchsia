@@ -292,7 +292,7 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::lock::Mutex;
     use futures::prelude::*;
-    use serde_derive::{Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
     use testing::*;
 
     const VALUE0: i32 = 3;

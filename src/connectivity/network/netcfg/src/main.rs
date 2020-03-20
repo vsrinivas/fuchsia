@@ -18,7 +18,7 @@ use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
 use futures::{future::try_join, TryFutureExt, TryStreamExt};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 mod interface;
 mod matchers;

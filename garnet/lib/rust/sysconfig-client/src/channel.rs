@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{read_partition, write_partition, SysconfigPartition};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use zerocopy::{AsBytes, FromBytes, LayoutVerified};
 

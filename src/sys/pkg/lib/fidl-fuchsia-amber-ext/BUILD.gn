@@ -18,7 +18,6 @@ rustc_library("fidl-fuchsia-amber-ext") {
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
   ]
 }

@@ -7,7 +7,7 @@ use {
     anyhow::Error,
     fidl::endpoints::DiscoverableService,
     fuchsia_syslog as syslog,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     serde_json::{self, value::Value},
     std::{collections::HashMap, default::Default, io},
 };

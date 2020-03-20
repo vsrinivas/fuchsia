@@ -5,8 +5,8 @@
 use {
     crate::{address::LifIpAddr, error, lifmgr, ElementId},
     eui48::MacAddress,
-    serde::{de, Deserialize, Deserializer},
-    serde_derive::{Deserialize, Serialize},
+    serde::{de, Deserializer},
+    serde::{Deserialize, Serialize},
     serde_json::Value,
     std::collections::HashSet,
     std::convert::{TryFrom, TryInto},

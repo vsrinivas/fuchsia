@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 use futures::lock::Mutex;
 use itertools::Itertools;
 use log::error;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt;
 use std::rc::Rc;

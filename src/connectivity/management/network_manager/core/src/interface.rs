@@ -5,7 +5,7 @@
 use {
     anyhow::Context as _,
     fidl_fuchsia_hardware_ethernet_ext::MacAddress,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{fs, io, path},
 };
 

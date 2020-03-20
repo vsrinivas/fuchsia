@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 use crate::config::failure_default;
 use crate::term::color::Rgb;

@@ -10,7 +10,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{ffi::CString, fmt, fs, fs::File, io::BufReader, str::from_utf8},
     // TODO(anmittal): don't add this dependency in runner.
     uuid::Uuid,

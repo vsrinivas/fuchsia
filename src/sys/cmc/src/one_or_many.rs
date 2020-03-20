@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{
         fmt::{self, Display, Formatter},
         slice, vec,

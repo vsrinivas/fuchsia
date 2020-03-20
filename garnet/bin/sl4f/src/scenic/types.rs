@@ -9,8 +9,7 @@ use fidl_fuchsia_intl::{CalendarId, LocaleId, Profile, TemperatureUnit, TimeZone
 use fidl_fuchsia_mem::Buffer;
 use fidl_fuchsia_ui_app::ViewConfig;
 use fidl_fuchsia_ui_scenic::ScreenshotData;
-use serde::{Deserialize, Deserializer, Serializer};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Enum for supported FIDL commands.
 pub enum ScenicMethod {

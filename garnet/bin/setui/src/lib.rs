@@ -48,7 +48,7 @@ use {
     futures::channel::oneshot::Receiver,
     futures::lock::Mutex,
     futures::StreamExt,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::collections::HashSet,
     std::iter::FromIterator,

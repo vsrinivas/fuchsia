@@ -13,10 +13,10 @@ use {
     itertools::Itertools,
     offset_string::OffsetString,
     serde::{
-        de::{Deserialize, Deserializer, Error as DeError},
-        ser::{Serialize, Serializer},
+        de::{Deserializer, Error as DeError},
+        ser::Serializer,
     },
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{convert::TryFrom, iter, ops::Deref, path::PathBuf},
     unicase::UniCase,
 };

@@ -1,6 +1,5 @@
 use serde::de::Deserializer;
 use serde::Deserialize;
-use serde_derive::Deserialize;
 
 use crate::config::failure_default;
 use crate::term::color::Rgb;

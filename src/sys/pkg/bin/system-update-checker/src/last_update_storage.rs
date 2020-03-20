@@ -6,7 +6,7 @@ use {
     anyhow::Context as _,
     fuchsia_merkle::Hash,
     fuchsia_syslog::fx_log_err,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{
         fs::{self, File},
         io,

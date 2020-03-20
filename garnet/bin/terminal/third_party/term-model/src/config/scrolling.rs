@@ -1,5 +1,4 @@
-use serde::de::{Deserialize, Deserializer};
-use serde_derive::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 use crate::config::{failure_default, MAX_SCROLLBACK_LINES};
 

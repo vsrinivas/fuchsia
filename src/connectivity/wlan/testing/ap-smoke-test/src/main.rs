@@ -14,7 +14,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
-use serde_derive::Serialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::process;
 use structopt::StructOpt;

@@ -5,7 +5,7 @@
 use {
     crate::config::configuration::ConfigLevel,
     anyhow::{anyhow, Error},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
     std::{
         collections::HashMap,

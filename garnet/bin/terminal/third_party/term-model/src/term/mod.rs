@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 use std::{io, mem, ptr, str};
 
 use log::{debug, trace};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use unicode_width::UnicodeWidthChar;
 
 use crate::ansi::{

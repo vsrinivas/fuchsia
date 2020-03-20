@@ -19,7 +19,7 @@ use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, warn};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Error as IOError, ErrorKind};

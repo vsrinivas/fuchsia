@@ -9,7 +9,7 @@ use {
         metrics::{MetricState, MetricValue, Metrics},
     },
     anyhow::{format_err, Error},
-    serde_derive::Deserialize,
+    serde::Deserialize,
     serde_json as json,
     std::collections::HashMap,
 };

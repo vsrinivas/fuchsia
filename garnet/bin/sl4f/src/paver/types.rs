@@ -4,7 +4,7 @@
 
 use anyhow::Error;
 use fidl_fuchsia_paver as paver;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Enum for supported paver related commands.
 #[derive(Debug)]

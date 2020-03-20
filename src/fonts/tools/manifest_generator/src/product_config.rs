@@ -7,7 +7,7 @@
 use {
     crate::{font_catalog::TypefaceInAssetIndex, serde_ext},
     anyhow::Error,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::path::Path,
 };
 

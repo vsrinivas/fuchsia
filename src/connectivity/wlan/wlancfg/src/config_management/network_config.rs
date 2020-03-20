@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{
         collections::VecDeque,
         convert::TryFrom,

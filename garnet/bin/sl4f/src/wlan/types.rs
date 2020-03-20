@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Enums and structs for wlan client status.
 /// These definitions come from fuchsia.wlan.policy/client_provider.fidl

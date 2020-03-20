@@ -10,7 +10,7 @@ use {
         Options,
     },
     anyhow::{bail, format_err, Error},
-    serde_derive::Deserialize,
+    serde::Deserialize,
     serde_json as json,
     std::{collections::HashMap, fs, path::Path, str::FromStr},
 };

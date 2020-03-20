@@ -7,8 +7,7 @@
 use {
     lazy_static::lazy_static,
     regex::Regex,
-    serde::{Deserialize, Deserializer},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Deserializer, Serialize},
     std::collections::BTreeMap,
 };
 

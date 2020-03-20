@@ -13,7 +13,7 @@ use {
     fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
     futures::io::{copy, AllowStdIo},
-    serde_derive::Serialize,
+    serde::Serialize,
     std::process,
     structopt::StructOpt,
 };

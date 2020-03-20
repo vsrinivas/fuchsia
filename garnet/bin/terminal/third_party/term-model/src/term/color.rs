@@ -4,8 +4,7 @@ use std::str::FromStr;
 
 use log::{error, trace};
 use serde::de::Visitor;
-use serde::de::{Deserialize, Deserializer};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::ansi;
 use crate::config::Colors;

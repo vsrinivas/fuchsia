@@ -23,7 +23,7 @@ use {
     fuchsia_url::pkg_url::RepoUrl,
     futures::prelude::*,
     parking_lot::Mutex,
-    serde_derive::Serialize,
+    serde::Serialize,
     std::sync::Arc,
     std::{convert::TryInto, fs::File},
 };

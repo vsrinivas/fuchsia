@@ -12,7 +12,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     regex::Regex,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{ffi::CString, str::from_utf8},
 };
 

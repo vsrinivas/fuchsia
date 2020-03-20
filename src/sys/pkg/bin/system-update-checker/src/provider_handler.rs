@@ -9,7 +9,7 @@ use {
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{fs::File, io, path::PathBuf},
 };
 

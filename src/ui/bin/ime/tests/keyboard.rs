@@ -15,7 +15,6 @@ use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use serde::{Deserialize, Deserializer};
-use serde_derive::Deserialize;
 use serde_json::{self as json};
 use std::fs;
 use std::sync::{Arc, Once};

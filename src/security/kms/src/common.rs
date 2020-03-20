@@ -12,7 +12,7 @@ use fidl_fuchsia_kms::{
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon as zx;
 use log::error;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Different type of key request.
 pub enum KeyRequestType<'a> {

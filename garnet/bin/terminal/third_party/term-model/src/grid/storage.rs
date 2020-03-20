@@ -2,7 +2,7 @@ use std::cmp::{max, PartialEq};
 use std::ops::{Index, IndexMut};
 use std::vec::Drain;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use super::Row;
 use crate::grid::GridCell;

@@ -19,7 +19,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog as syslog;
 use futures::prelude::*;
 use log::{error, info};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 use std::sync::Arc;

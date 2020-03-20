@@ -19,8 +19,8 @@ use {
         v2::{FontFamilyAliasSet, Style},
     },
     rayon::prelude::*,
-    serde::de::{Deserialize, Deserializer},
-    serde_derive::Deserialize,
+    serde::de::Deserializer,
+    serde::Deserialize,
     std::{
         collections::{BTreeMap, HashSet},
         path::{Path, PathBuf},

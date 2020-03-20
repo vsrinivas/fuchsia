@@ -14,7 +14,7 @@ use {
     argh::FromArgs,
     fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
-    serde_derive::Serialize,
+    serde::Serialize,
     std::str::FromStr,
 };
 

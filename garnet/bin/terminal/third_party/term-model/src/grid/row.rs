@@ -19,7 +19,7 @@ use std::ops::{Index, IndexMut};
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo, RangeToInclusive};
 use std::slice;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::grid::GridCell;
 use crate::index::Column;

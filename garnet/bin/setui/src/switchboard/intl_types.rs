@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_settings::IntlSettings;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::switchboard::base::Merge;
 

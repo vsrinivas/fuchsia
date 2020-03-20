@@ -11,7 +11,7 @@ use {
             block_type::BlockType,
         },
     },
-    serde_derive::Serialize,
+    serde::Serialize,
     std::{self, collections::HashMap},
 };
 

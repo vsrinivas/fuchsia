@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::fs,
     std::fs::File,

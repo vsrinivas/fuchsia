@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
-    serde_derive::Serialize,
+    serde::Serialize,
     std::collections::HashMap,
     std::process,
     std::thread::sleep,

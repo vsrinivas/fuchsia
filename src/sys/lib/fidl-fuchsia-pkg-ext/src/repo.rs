@@ -6,7 +6,7 @@ use {
     crate::errors::RepositoryParseError,
     fidl_fuchsia_pkg as fidl, fuchsia_inspect as inspect,
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::convert::TryFrom,
     std::{fmt, mem},
 };

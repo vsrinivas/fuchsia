@@ -5,7 +5,7 @@
 use {
     crate::one_or_many::{OneOrMany, OneOrManyBorrow},
     cm_json::cm,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     serde_json::{Map, Value},
     std::{collections::HashMap, fmt, str::FromStr},
     thiserror::Error,

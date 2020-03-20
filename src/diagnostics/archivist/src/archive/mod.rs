@@ -18,7 +18,7 @@ use {
     lazy_static::lazy_static,
     parking_lot::{Mutex, RwLock},
     regex::Regex,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     serde_json::Deserializer,
     std::collections::BTreeMap,
     std::ffi::{OsStr, OsString},

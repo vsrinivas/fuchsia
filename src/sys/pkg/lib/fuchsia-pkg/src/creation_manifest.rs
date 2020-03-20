@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::errors::CreationManifestError;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::io;
 

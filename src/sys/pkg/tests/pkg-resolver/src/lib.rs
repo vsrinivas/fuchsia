@@ -30,7 +30,7 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
-    serde_derive::Serialize,
+    serde::Serialize,
     std::{
         convert::TryInto,
         fs::File,

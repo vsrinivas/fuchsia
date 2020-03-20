@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use num_derive::FromPrimitive;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::iter::Iterator;

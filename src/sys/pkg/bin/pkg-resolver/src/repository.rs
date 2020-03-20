@@ -15,7 +15,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex as AsyncMutex,
     hyper_rustls::HttpsConnector,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::sync::Arc,
     tuf::{
         client::Config,

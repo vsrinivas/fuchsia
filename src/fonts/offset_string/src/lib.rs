@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{iter::Iterator, ops::RangeInclusive},
 };
 

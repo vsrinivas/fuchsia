@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_diagnostics::Selector,
     fuchsia_inspect as inspect, json5,
     selectors::parse_selector_file,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::path::{Path, PathBuf},
     std::{collections::BTreeMap, fs},
 };

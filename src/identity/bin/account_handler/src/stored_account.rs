@@ -5,7 +5,7 @@
 use account_common::{AccountManagerError, GlobalAccountId, LocalPersonaId};
 use fidl_fuchsia_identity_account::Error as ApiError;
 use log::warn;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};

@@ -20,7 +20,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:rayon",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_derive",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:structopt",
       "//third_party/rust_crates:tempfile",

@@ -3,7 +3,6 @@ use std::ops::{Add, Mul};
 
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer};
-use serde_derive::Deserialize;
 
 use crate::config::{failure_default, Delta};
 

@@ -5,7 +5,7 @@
 use {
     crate::io_packet::{IoPacket, IoPacketType},
     crate::operations::OperationType,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{io::ErrorKind, ops::Range, result::Result, sync::Arc, time::Instant},
     thiserror::Error,
 };

@@ -1,6 +1,6 @@
 use log::LevelFilter;
 use serde::de::Deserializer;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 use crate::config::failure_default;
 

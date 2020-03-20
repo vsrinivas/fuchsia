@@ -4,7 +4,7 @@
 
 use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{
         fs::File,
         io::{BufReader, Read},

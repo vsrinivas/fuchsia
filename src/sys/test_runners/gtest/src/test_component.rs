@@ -24,7 +24,7 @@ use {
     rand::rngs::ThreadRng,
     rand::Rng,
     runner::component::ComponentNamespace,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{
         convert::TryFrom,
         fs,

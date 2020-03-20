@@ -9,7 +9,7 @@ use {
     },
     anyhow::Error,
     log::*,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::collections::HashMap,
 };
 

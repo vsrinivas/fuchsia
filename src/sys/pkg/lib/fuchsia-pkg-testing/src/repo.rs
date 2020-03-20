@@ -15,7 +15,7 @@ use {
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
     maybe_owned::MaybeOwned,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{
         collections::{BTreeMap, BTreeSet},
         fmt,

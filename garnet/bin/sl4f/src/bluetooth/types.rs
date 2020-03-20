@@ -8,7 +8,7 @@ use fidl_fuchsia_bluetooth_control::RemoteDevice;
 use fidl_fuchsia_bluetooth_gatt::{
     AttributePermissions, Characteristic, Descriptor, SecurityRequirements, ServiceInfo,
 };
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Handling different sessions.

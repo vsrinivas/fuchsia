@@ -7,7 +7,6 @@ mod tests;
 
 use crate::protocol::Cohort;
 use serde::Deserialize;
-use serde_derive::Deserialize;
 use serde_json::{Map, Value};
 
 /// An Omaha protocol response.

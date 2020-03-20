@@ -7,7 +7,7 @@ use {
     crate::Rule,
     anyhow::{format_err, Error},
     pest::iterators::{Pair, Pairs},
-    serde_derive::Serialize,
+    serde::Serialize,
     std::collections::{BTreeMap, HashSet, VecDeque},
     std::fmt,
     std::str::FromStr,

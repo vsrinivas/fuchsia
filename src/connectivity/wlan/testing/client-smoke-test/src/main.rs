@@ -18,7 +18,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     fuchsia_zircon::DurationNum,
-    serde_derive::Serialize,
+    serde::Serialize,
     std::{collections::HashMap, process},
     structopt::StructOpt,
 };

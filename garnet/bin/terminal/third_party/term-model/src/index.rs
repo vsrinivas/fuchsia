@@ -19,7 +19,7 @@ use std::cmp::{Ord, Ordering};
 use std::fmt;
 use std::ops::{self, Add, AddAssign, Deref, Range, Sub, SubAssign};
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::term::RenderableCell;
 

@@ -18,7 +18,7 @@ use std::io;
 use std::str;
 
 use log::{debug, trace};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use vte;
 

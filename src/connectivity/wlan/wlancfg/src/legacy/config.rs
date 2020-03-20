@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_wlan_device as wlan,
     log::info,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{
         collections::BTreeMap,
         fs::File,

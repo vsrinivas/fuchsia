@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_intl::{LocaleId, RegulatoryDomain},
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
     fuchsia_syslog::{self, fx_log_err, fx_log_warn},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{fs::File, io, path::Path},
 };
 

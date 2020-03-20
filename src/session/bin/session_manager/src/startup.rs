@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx, realm_management,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     serde_json,
     std::fs,
     thiserror::{self, Error},

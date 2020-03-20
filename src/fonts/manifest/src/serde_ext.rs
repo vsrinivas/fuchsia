@@ -9,7 +9,7 @@
 
 use {
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Style2 as FidlStyle, Width},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
 };
 
 /// Generates Serde serialize and deserialize methods for types of `Option<T>`, where `T` is a type
@@ -31,7 +31,7 @@ use {
 /// ```
 /// mod local_crate {
 ///     use remote_crate::Magic8BallResponse;
-///     use serde_derive::{Deserialize, Serialize};
+///     use serde::{Deserialize, Serialize};
 ///
 ///     #[derive(Deserialize, Serialize)]
 ///     #[serde(with = "Magic8BallResponse")]
@@ -67,7 +67,6 @@ macro_rules! derive_opt {
             use {
                 super::*,
                 serde::{Deserialize, Deserializer, Serialize, Serializer},
-                serde_derive::{Deserialize, Serialize},
             };
 
             #[doc = "Implementation of Serde's serialize"]

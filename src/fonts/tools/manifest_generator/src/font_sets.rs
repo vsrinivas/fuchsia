@@ -9,7 +9,7 @@
 
 use {
     crate::serde_ext::{self, LoadError},
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{
         collections::{btree_map::Iter as BTreeMapIter, BTreeMap, BTreeSet},
         path::Path,

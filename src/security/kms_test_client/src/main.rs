@@ -16,7 +16,7 @@ use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog as syslog;
 use fuchsia_zircon as zx;
 use log::info;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 

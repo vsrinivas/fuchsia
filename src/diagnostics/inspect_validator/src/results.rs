@@ -4,7 +4,7 @@
 
 use {
     super::{metrics::Metrics, validate::*, DiffType},
-    serde_derive::Serialize,
+    serde::Serialize,
     std::collections::HashSet,
 };
 

@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Macros used to serialize bonding data FIDL types for persistent storage.
-#[macro_use]
-extern crate serde_derive;
-
 use {
     anyhow::{format_err, Context as _, Error},
     async_helpers::hanging_get::server as hanging_get,

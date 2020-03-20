@@ -16,7 +16,7 @@ use {
     crate::verifier::{run_verifier, VerifierArgs},
     anyhow::Error,
     log::debug,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::{
         clone::Clone,
         collections::HashMap,

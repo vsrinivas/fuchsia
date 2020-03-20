@@ -5,7 +5,7 @@
 use crate::server::Facade;
 use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::test::facade::TestFacade;

@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_stash as fidl_stash,
     fuchsia_component::client::connect_to_service,
     log::error,
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
     wlan_stash::{StashNode, NODE_SEPARATOR},
 };

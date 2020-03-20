@@ -6,7 +6,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Duration,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{cmp, fs::File, io::Read, num::NonZeroU64},
     thiserror::Error,
 };

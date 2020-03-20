@@ -4,7 +4,7 @@
 
 //use serde::{Deserialize, Deserializer};
 use anyhow::format_err;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Supported setUi commands.
 pub enum SetUiMethod {

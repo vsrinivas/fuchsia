@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::slice::Iter,
 };
 

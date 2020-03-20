@@ -13,7 +13,7 @@ use {
         AddressType, BondingData, BredrData, HostData, LeConnectionParameters, LeData, LocalKey,
         Ltk, RemoteKey, SecurityProperties,
     },
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
 };
 
 #[derive(Serialize, Deserialize)]

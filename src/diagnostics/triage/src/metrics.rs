@@ -7,7 +7,7 @@ mod fetch;
 use {
     super::config,
     super::config::InspectData,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{clone::Clone, collections::HashMap},
 };
 

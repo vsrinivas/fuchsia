@@ -4,7 +4,7 @@
 
 use anyhow::Error;
 use futures::future::LocalBoxFuture;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{fmt::Debug, str::FromStr, sync::mpsc};
 use thiserror::Error;

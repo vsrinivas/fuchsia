@@ -6,7 +6,7 @@ use crate::{AuthDbError, CredentialValue};
 
 use anyhow::{format_err, Error};
 use log::warn;
-use serde_derive::Serialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::io::{Read, Write};
 use std::result;

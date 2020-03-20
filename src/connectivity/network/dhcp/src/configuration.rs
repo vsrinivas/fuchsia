@@ -4,7 +4,7 @@
 
 use crate::protocol::{FidlCompatible, FromFidlExt, IntoFidlExt};
 use anyhow::Context;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::convert::TryFrom;

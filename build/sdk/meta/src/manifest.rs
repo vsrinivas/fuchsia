@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::common::{ElementType, TargetArchitecture};
 use crate::json::JsonObject;

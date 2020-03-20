@@ -6,7 +6,7 @@ use {
     crate::errors::{RuleDecodeError, RuleParseError},
     fidl_fuchsia_pkg_rewrite as fidl, fuchsia_inspect as inspect,
     fuchsia_url::pkg_url::{ParseError, PkgUrl},
-    serde_derive::{Deserialize, Serialize},
+    serde::{Deserialize, Serialize},
     std::convert::TryFrom,
 };
 

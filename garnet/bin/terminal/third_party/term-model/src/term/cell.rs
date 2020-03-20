@@ -13,7 +13,7 @@
 // limitations under the License.
 use bitflags::bitflags;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::ansi::{Color, NamedColor};
 use crate::grid::{self, GridCell};

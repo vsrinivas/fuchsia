@@ -4,7 +4,7 @@
 
 //use fidl_fuchsia_hardware_ethernet::MacAddress;
 use fidl_fuchsia_net_stack::{AdministrativeStatus, InterfaceInfo, PhysicalStatus};
-use serde_derive::Serialize;
+use serde::Serialize;
 //use std::net::IpAddr;
 use fidl_fuchsia_net::IpAddress;
 

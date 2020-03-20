@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_update::CheckNotStartedReason;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Enum for supported update related commands.
 pub enum UpdateMethod {

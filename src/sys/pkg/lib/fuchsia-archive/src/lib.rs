@@ -49,7 +49,7 @@
 
 use anyhow::{format_err, Error};
 use bincode::{deserialize_from, serialize_into};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::io::{copy, Read, Seek, SeekFrom, Write};
 use std::mem;

@@ -87,7 +87,7 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
 
 #[cfg(test)]
 mod tests {
-    use serde_derive::{Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
 
     use super::*;
 

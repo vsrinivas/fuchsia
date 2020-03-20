@@ -11,7 +11,7 @@ use {
     },
     anyhow::Error,
     rayon::prelude::*,
-    serde_derive::Deserialize,
+    serde::Deserialize,
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},

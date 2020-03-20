@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_hwinfo::{BoardInfo, DeviceInfo, ProductInfo};
-use serde_derive::Serialize;
+use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SerializableDeviceInfo {

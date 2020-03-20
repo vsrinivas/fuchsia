@@ -8,7 +8,7 @@
 
 use {
     serde::de,
-    serde_derive::Serialize,
+    serde::Serialize,
     std::{borrow::Cow, fmt, str::FromStr},
     thiserror::Error,
     url,

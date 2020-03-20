@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::protocol::Cohort;
-use serde_derive::Serialize;
+use serde::Serialize;
 use serde_repr::Serialize_repr;
 
 #[cfg(test)]

@@ -8,7 +8,7 @@ use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
 use parking_lot::RwLock;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use super::types::{Asset, Configuration, ConfigurationStatus};
 

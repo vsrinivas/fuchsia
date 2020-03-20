@@ -18,7 +18,7 @@ use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use splines::{Interpolation, Key, Spline};
 use std::{fs, io};
