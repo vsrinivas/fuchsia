@@ -6,7 +6,8 @@ use {
     anyhow::Error,
     fidl_fuchsia_net_http as net_http, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_hyper as fhyper, fuchsia_zircon as zx,
+    fuchsia_hyper as fhyper,
+    fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
         future::BoxFuture,
@@ -107,7 +108,38 @@ async fn to_success_response(
         let mut hyper_body = hyper_response.body_mut().compat();
         while let Some(chunk) = hyper_body.next().await {
             if let Ok(chunk) = chunk {
-                let _ = tx.write(&chunk);
+                let mut offset: usize = 0;
+                while offset < chunk.len() {
+                    let pending = match tx.wait_handle(
+                        zx::Signals::SOCKET_PEER_CLOSED | zx::Signals::SOCKET_WRITABLE,
+                        zx::Time::INFINITE,
+                    ) {
+                        Err(status) => {
+                            error!("tx.wait() failed - status: {}", status);
+                            return;
+                        }
+                        Ok(pending) => pending,
+                    };
+                    if pending.contains(zx::Signals::SOCKET_PEER_CLOSED) {
+                        info!("tx.wait() saw signal SOCKET_PEER_CLOSED");
+                        return;
+                    }
+                    assert!(pending.contains(zx::Signals::SOCKET_WRITABLE));
+                    let written = match tx.write(&chunk[offset..]) {
+                        Err(status) => {
+                            // Because of the wait above, we shouldn't ever see SHOULD_WAIT here, but to avoid
+                            // brittle-ness, continue and wait again in that case.
+                            if status == zx::Status::SHOULD_WAIT {
+                                error!("Saw SHOULD_WAIT despite waiting first - expected now? - continuing");
+                                continue;
+                            }
+                            info!("tx.write() failed - status: {}", status);
+                            return;
+                        }
+                        Ok(written) => written,
+                    };
+                    offset += written;
+                }
             }
         }
     });

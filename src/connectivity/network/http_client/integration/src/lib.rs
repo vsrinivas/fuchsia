@@ -12,14 +12,15 @@ use {
         client::{launch, launcher, App},
         fuchsia_single_component_package_url,
     },
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
     rouille::{self, router, Request, Response},
-    std::thread,
+    std::{thread, time},
 };
 
 const SERVER_IP: &str = "[::]";
 const ROOT_DOCUMENT: &str = "Root document\n";
+const BIG_STREAM_SIZE: usize = 32usize * 1024 * 1024;
 
 pub fn serve_request(request: &Request) -> Response {
     router!(request,
@@ -37,6 +38,13 @@ pub fn serve_request(request: &Request) -> Response {
         },
         (GET) (/loop2) => {
             rouille::Response::redirect_301("/loop1")
+        },
+        (GET) (/big_stream) => {
+            let mut big_vec: Vec<u8> = Vec::with_capacity(BIG_STREAM_SIZE);
+            for n in 0..BIG_STREAM_SIZE {
+                big_vec.push((n % 256usize) as u8);
+            }
+            rouille::Response::from_data("application/octet-stream", big_vec)
         },
         _ => {
             rouille::Response::text("File not found\n").with_status_code(404)
@@ -71,9 +79,8 @@ fn make_request(method: &str, url: Vec<u8>) -> http::Request {
     http::Request { url: Some(url), method: Some(method.to_string()), headers: None, body: None }
 }
 
-fn check_response(response: &http::Response) {
+fn check_response_common(response: &http::Response, expected_header_names: &[&str]) {
     assert_eq!(response.status_code.unwrap(), 200);
-    let expected_header_names = ["server", "date", "content-type", "content-length"];
     // If the webserver started above ever returns different headers, or changes the order, this
     // assertion will fail. Note that case doesn't matter, and can vary across HTTP client
     // implementations, so we lowercase all the header keys before checking.
@@ -85,6 +92,14 @@ fn check_response(response: &http::Response) {
         .map(|h| std::str::from_utf8(&h.name).unwrap().to_lowercase())
         .collect();
     assert_eq!(&response_headers, &expected_header_names);
+}
+
+fn check_response(response: &http::Response) {
+    check_response_common(response, &["server", "date", "content-type", "content-length"]);
+}
+
+fn check_response_big(response: &http::Response) {
+    check_response_common(response, &["server", "date", "content-type", "transfer-encoding"]);
 }
 
 fn check_body(body: Option<zx::Socket>) {
@@ -101,6 +116,49 @@ fn check_body(body: Option<zx::Socket>) {
         }
     }
     assert_eq!(&buf, ROOT_DOCUMENT.as_bytes());
+}
+
+fn check_body_big(body: Option<zx::Socket>) {
+    let body = body.unwrap();
+    let mut c: u8 = 0;
+    let mut buf_count = 0;
+    const BUF_SIZE: usize = 1024;
+    let mut buf = [0u8; BUF_SIZE];
+    const MIN_SLEEPS: usize = 16;
+    loop {
+        if buf_count % (BIG_STREAM_SIZE / BUF_SIZE / MIN_SLEEPS) == 0 {
+            // Don't read too fast - let the sender be forced to see some partial writes.
+            thread::sleep(time::Duration::from_millis(100));
+        }
+        buf_count += 1;
+        match body.read(&mut buf) {
+            Ok(bytes_read) => {
+                for n in 0..bytes_read {
+                    assert_eq!(c, buf[n]);
+                    c = ((c as u32) + 1) as u8;
+                }
+            }
+            Err(zx::Status::SHOULD_WAIT) => {
+                match body.wait_handle(
+                    zx::Signals::SOCKET_READABLE | zx::Signals::SOCKET_PEER_CLOSED,
+                    zx::Time::INFINITE,
+                ) {
+                    Err(status) => {
+                        // complain about the specific status
+                        assert_eq!(zx::Status::OK, status);
+                    }
+                    Ok(_) => {}
+                };
+            }
+            Err(zx::Status::PEER_CLOSED) => {
+                break;
+            }
+            Err(status) => {
+                // unexpected error
+                assert_eq!(zx::Status::OK, status);
+            }
+        }
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -293,6 +351,18 @@ async fn test_start_redirect_loop() -> Result<(), Error> {
     let redirect = response.redirect.unwrap();
     assert_eq!(redirect.method.unwrap(), "GET");
     assert_eq!(redirect.url.unwrap(), make_url(server_port, "/loop1"));
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_fetch_http_big_stream() -> Result<(), Error> {
+    let (server_port, _http_client, loader) = setup()?;
+
+    let response = loader.fetch(make_request("GET", make_url(server_port, "/big_stream"))).await?;
+
+    check_response_big(&response);
+    check_body_big(response.body);
 
     Ok(())
 }
