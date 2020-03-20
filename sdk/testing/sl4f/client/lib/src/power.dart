@@ -174,13 +174,7 @@ class Power {
     final testCaseResults =
         TestCaseResults('power', Unit.watts, [powerSummary.averagePower]);
     final List<Map<String, dynamic>> results = [
-      {
-        'label': testCaseResults.label,
-        'test_suite': 'fuchsia.power.assistant_power',
-        'unit': unitToCatapultConverterString(testCaseResults.unit),
-        'values': testCaseResults.values,
-        'split_first': testCaseResults.splitFirst,
-      }
+      testCaseResults.toJson(testSuite: 'fuchsia.power.assistant_power')
     ];
     final perfFile = await _dump.writeAsString(
         'power', 'fuchsiaperf.json', json.encode(results));

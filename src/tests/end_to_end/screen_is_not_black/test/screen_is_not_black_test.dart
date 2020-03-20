@@ -60,13 +60,7 @@ void main() {
 
     List<Map<String, dynamic>> results = [];
     for (final result in rebootResults) {
-      results.add({
-        'label': result.label,
-        'test_suite': testSuite,
-        'unit': sl4f.unitToCatapultConverterString(result.unit),
-        'values': result.values,
-        'split_first': result.splitFirst,
-      });
+      results.add(result.toJson(testSuite: testSuite));
     }
 
     File fuchsiaPerfFile = await sl4f.Dump().writeAsString(

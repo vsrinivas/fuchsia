@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:meta/meta.dart';
+
 // This file implements the perf test results schema.
 //
 // See https://fuchsia.dev/fuchsia-src/development/benchmarking/results_schema
@@ -60,4 +62,12 @@ class TestCaseResults {
 
   TestCaseResults(this.label, this.unit, this.values,
       {this.splitFirst = false});
+
+  Map<String, dynamic> toJson({@required String testSuite}) => {
+        'label': label,
+        'test_suite': testSuite,
+        'unit': unitToCatapultConverterString(unit),
+        'values': values,
+        'split_first': splitFirst,
+      };
 }

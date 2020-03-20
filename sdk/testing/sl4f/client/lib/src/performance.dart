@@ -12,7 +12,6 @@ import 'package:path/path.dart' as path;
 import 'dump.dart';
 import 'sl4f_client.dart';
 import 'storage.dart';
-import 'trace_processing/metrics_results.dart';
 import 'trace_processing/metrics_spec.dart';
 import 'trace_processing/trace_importing.dart';
 
@@ -298,13 +297,7 @@ class Performance {
       final testCaseResultss =
           processMetrics(model, metricsSpec, registry: registry);
       for (final testCaseResults in testCaseResultss) {
-        results.add({
-          'label': testCaseResults.label,
-          'test_suite': metricsSpecSet.testName,
-          'unit': unitToCatapultConverterString(testCaseResults.unit),
-          'values': testCaseResults.values,
-          'split_first': testCaseResults.splitFirst,
-        });
+        results.add(testCaseResults.toJson(testSuite: metricsSpecSet.testName));
       }
     }
 
