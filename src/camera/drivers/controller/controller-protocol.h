@@ -82,6 +82,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   std::vector<fuchsia::camera2::hal::Config> configs_;
   InternalConfigs internal_configs_;
   PipelineManager pipeline_manager_;
+  uint32_t config_count_ = 0;
 };
 
 }  // namespace camera

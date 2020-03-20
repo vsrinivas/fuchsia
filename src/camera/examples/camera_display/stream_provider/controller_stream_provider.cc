@@ -73,16 +73,25 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
 
   // Get the list of valid configs as reported by the controller.
   zx_status_t status_return = ZX_OK;
-  status = provider->controller_->GetConfigs(&provider->configs_, &status_return);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
-    return nullptr;
-  }
-  if (status_return != ZX_OK) {
-    FX_PLOGS(ERROR, status_return) << "Failed to get configs";
-    return nullptr;
-  }
+  bool all_configs_received = false;
 
+  while (!all_configs_received) {
+    fidl::VectorPtr<fuchsia::camera2::hal::Config> configs;
+    status = provider->controller_->GetConfigs(&configs, &status_return);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
+      return nullptr;
+    }
+    if (status_return == ZX_ERR_STOP) {
+      all_configs_received = true;
+      break;
+    }
+    if (status_return != ZX_OK || configs->size() == 0) {
+      FX_PLOGS(ERROR, status_return) << "Failed to get configs";
+      return nullptr;
+    }
+    provider->configs_->push_back(std::move(configs->at(0)));
+  }
   return std::move(provider);
 }
 

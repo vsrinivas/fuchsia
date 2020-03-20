@@ -14,7 +14,9 @@
 
 class ControllerStreamProvider : public StreamProvider {
  public:
-  ~ControllerStreamProvider();
+  ControllerStreamProvider() : configs_(std::vector<fuchsia::camera2::hal::Config>()) {}
+
+  ~ControllerStreamProvider() override;
   static std::unique_ptr<StreamProvider> Create();
   fit::result<
       std::tuple<fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2, bool>,

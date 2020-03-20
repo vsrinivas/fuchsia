@@ -27,6 +27,7 @@ ControllerImpl::ControllerImpl(zx_device_t* device,
                         shutdown_event) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
+  PopulateConfigurations();
   binding_.Bind(std::move(control), dispatcher);
 }
 
@@ -41,8 +42,15 @@ zx_status_t ControllerImpl::GetInternalConfiguration(uint32_t config_index,
 }
 
 void ControllerImpl::GetConfigs(GetConfigsCallback callback) {
-  PopulateConfigurations();
-  callback(fidl::Clone(configs_), ZX_OK);
+  std::vector<fuchsia::camera2::hal::Config> configs;
+
+  if (config_count_ >= configs_.size()) {
+    callback(std::move(configs), ZX_ERR_STOP);
+    return;
+  }
+  configs.push_back(fidl::Clone(configs_.at(config_count_)));
+  callback(std::move(configs), ZX_OK);
+  config_count_++;
 }
 
 static InternalConfigNode* GetStreamConfigNode(
@@ -67,6 +75,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   TRACE_DURATION("camera", "ControllerImpl::CreateStream");
   zx_status_t status = ZX_OK;
   auto cleanup = fbl::MakeAutoCall([&stream, &status]() { stream.Close(status); });
+  auto external_configs = camera::SherlockExternalConfigs();
 
   // Input Validations
   if (config_index >= configs_.size()) {

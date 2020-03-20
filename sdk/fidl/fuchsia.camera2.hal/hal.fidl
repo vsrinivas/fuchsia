@@ -44,7 +44,11 @@ struct Config {
 /// and setting up a stream.
 [Discoverable]
 protocol Controller {
-    /// Get a list of all available configurations which the camera driver supports.
+    // TODO(48707): Change to GetConfig() which returns a single configuration instead
+    /// of a vector of Configs.
+    /// Get an available configurations which the camera driver supports.
+    /// Clients need to keep calling GetConfigs() to get all available configurations.
+    /// Returns |nullptr| if no new configurations are supported.
     GetConfigs() -> (vector<Config>:MAX_CONFIGURATIONS? configs, zx.status status);
 
     /// Set a particular configuration and create the requested stream.
