@@ -24,9 +24,9 @@ exposed in a manner suitable to your needs, prefer to extract the necessary
 parts into a common dependency.
 
 Avoid unhandled errors and APIs which inherently disallow proper error handling;
-for a common example, consider [`fuchsia_async::executor::spawn`][spawn] which
-doesn't allow the passed future to return an error, forcing an end to error
-propagation. In most cases `spawn` can be replaced with a future that is later
+for a common example, consider [`fuchsia_async::executor::spawn`][spawn].
+`spawn` inherently precludes error passing (since the flow of execution is
+severed). In most cases `spawn` can be replaced with a future that is later
 included in a [`select`][select] expression ([example commit][spawn_select]) or
 simply `await`ed on directly ([example commit][spawn_await]).
 
