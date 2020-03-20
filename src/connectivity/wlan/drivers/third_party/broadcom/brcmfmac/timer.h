@@ -33,7 +33,7 @@ typedef struct brcmf_timer_info {
   async_dispatcher_t* dispatcher;
   void* data;
   brcmf_timer_callback_t* callback_function;
-  bool scheduled;
+  bool scheduled = false;
   sync_completion_t finished;
   std::mutex lock;
   zx_duration_t delay;

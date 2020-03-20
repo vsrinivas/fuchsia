@@ -48,7 +48,8 @@
 #define BRCMF_ESCAN_BUF_SIZE   65000
 #define BRCMF_ESCAN_TIMER_INTERVAL_MS 10000 /* E-Scan timeout */
 
-#define BRCMF_DISCONNECT_TIMEOUT  ZX_MSEC(50) /* Wait for disconnect to complete */
+#define BRCMF_DISCONNECT_TIMER_DUR_MS     ZX_MSEC(50) /* disconnect timer dur */
+#define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
@@ -349,10 +350,10 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  * @extra_buf: mainly to grab assoc information.
  * @debugfsdir: debugfs folder for this device.
  * @escan_info: escan information.
- * @escan_timeout: Timer for catch scan timeout.
+ * @escan_timer: Timer for catch scan timeout.
  * @escan_timeout_work: scan timeout worker.
  * @disconnect_mode: indicates type of disconnect requested (BRCMF_DISCONNECT_*)
- * @disconnect_timeout: timer for disconnection completion.
+ * @disconnect_timer: timer for disconnection completion.
  * @disconnect_timeout_work: associated work structure for disassociation timer.
  * @vif_list: linked list of vif instances.
  * @vif_cnt: number of vif instances.
@@ -360,6 +361,9 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  * @vif_event_pending_action: If vif_event is set, this is what it's waiting for.
  * @wowl: wowl related information.
  * @pno: information of pno module.
+ * @ap_started: Boolean indicating if SoftAP has been started.
+ * @signal_report_timer: Timer to periodically update signal report to SME.
+ * @signal_report_work: Work structure for signal report timer.
  */
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
@@ -381,10 +385,10 @@ struct brcmf_cfg80211_info {
   uint8_t* extra_buf;
   zx_handle_t debugfsdir;
   struct escan_info escan_info;
-  brcmf_timer_info_t escan_timeout;
+  brcmf_timer_info_t escan_timer;
   WorkItem escan_timeout_work;
   uint8_t disconnect_mode;
-  brcmf_timer_info_t disconnect_timeout;
+  brcmf_timer_info_t disconnect_timer;
   WorkItem disconnect_timeout_work;
   struct list_node vif_list;
   struct brcmf_cfg80211_vif_event vif_event;
@@ -395,6 +399,8 @@ struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_wowl wowl;
   struct brcmf_pno_info* pno;
   bool ap_started;
+  brcmf_timer_info_t signal_report_timer;
+  WorkItem signal_report_work;
 };
 
 /**

@@ -54,6 +54,10 @@ static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* ta
 
 void brcmf_timer_init(brcmf_timer_info_t* timer, async_dispatcher_t* dispatcher,
                       brcmf_timer_callback_t* callback, void* data, bool periodic) {
+  if (timer->scheduled) {
+    BRCMF_ERR("Timer init called when scheduled\n");
+    return;
+  }
   memset(&timer->task.state, 0, sizeof(timer->task.state));
   timer->task.handler = brcmf_timer_handler;
   timer->dispatcher = dispatcher;

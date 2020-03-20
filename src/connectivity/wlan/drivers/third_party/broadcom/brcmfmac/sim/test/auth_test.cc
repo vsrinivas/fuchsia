@@ -123,6 +123,8 @@ wlanif_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
         [](void* cookie, const wlanif_assoc_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnAssocConf(resp);
         },
+    .signal_report =
+    [](void* cookie, const wlanif_signal_report_indication* ind) {},
 };
 
 void AuthTest::Init() {
