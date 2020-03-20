@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is used when publishing to crates.io
+
+[package]
+name = "never"
+version = "0.1.0"
+authors = ["Joshua Liebow-Feeser <joshlf@google.com>"]
+edition = "2018"
+description = "A stable version of the unstable never type (!)"
+repository = "https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/rust/never"
+license = "BSD-3-Clause"
+keywords = ["never", "void", "unstable", "stable"]
+categories = ["no-std", "rust-patterns"]
+
+[features]
+std = []
+default = ["std"]
