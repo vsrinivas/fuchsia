@@ -51,8 +51,10 @@ void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::
 }
 
 void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path, zx::channel directory) {
-  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
+  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end()) {
+    FXL_LOG(INFO) << "Namespace conflict for " << ns_id << ": " << path;
     return;
+  }
   PushDirectoryFromChannel(path, std::move(directory));
 }
 
