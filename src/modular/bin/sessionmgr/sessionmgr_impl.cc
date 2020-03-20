@@ -176,7 +176,7 @@ void SessionmgrImpl::Initialize(
     called = true;
 
     InitializeLedger();
-    InitializeIntlPropertyProvider();
+
     InitializeModular(std::move(session_shell_url), std::move(story_shell_config),
                       use_session_shell_for_story_shell_factory);
     ConnectSessionShellToStoryProvider();
@@ -190,6 +190,7 @@ void SessionmgrImpl::Initialize(
   InitializeSessionEnvironment(session_id);
   InitializeAgentRunner();
   InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
+  InitializeIntlPropertyProvider();
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
