@@ -6,7 +6,11 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("vmo_store") {
-  sources = [ "growable_slab.h" ]
+  sources = [
+    "growable_slab.h",
+    "stored_vmo.h",
+    "vmo_store.h",
+  ]
 
   public_deps = [
     "//zircon/public/lib/fbl",
@@ -18,7 +22,10 @@ source_set("vmo_store") {
 executable("test_bin") {
   testonly = true
   output_name = "vmo-store-test"
-  sources = [ "growable_slab_test.cc" ]
+  sources = [
+    "growable_slab_test.cc",
+    "typed_store_test.cc",
+  ]
   deps = [
     ":vmo_store",
     "//src/lib/fxl/test:gtest_main",
