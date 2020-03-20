@@ -38,10 +38,12 @@ class InputInterpreter {
   void RegisterDevices();
   void RegisterTouchscreen(const fuchsia::input::report::DeviceDescriptor& descriptor);
   void RegisterConsumerControl(const fuchsia::input::report::DeviceDescriptor& descriptor);
+  void RegisterMouse(const fuchsia::input::report::DeviceDescriptor& descriptor);
 
   void DispatchReport(const fuchsia::ui::input::InputDevicePtr& device,
                       fuchsia::ui::input::InputReport report);
   void DispatchTouchReport(const fuchsia::input::report::InputReport& report);
+  void DispatchMouseReport(const fuchsia::input::report::InputReport& report);
   void DispatchConsumerControlReport(const fuchsia::input::report::InputReport& report);
 
   fuchsia::input::report::InputDevice_SyncProxy device_;
@@ -53,6 +55,7 @@ class InputInterpreter {
   std::string name_;
   fuchsia::ui::input::InputDevicePtr touch_ptr_;
   fuchsia::ui::input::InputDevicePtr consumer_control_ptr_;
+  fuchsia::ui::input::InputDevicePtr mouse_ptr_;
 };
 
 }  // namespace ui_input

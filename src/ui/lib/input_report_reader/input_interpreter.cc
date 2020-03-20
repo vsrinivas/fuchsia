@@ -18,6 +18,28 @@
 
 namespace ui_input {
 
+namespace {
+
+fuchsia::ui::input::Axis ConvertAxis(fuchsia::input::report::Axis axis) {
+  fuchsia::ui::input::Axis a = {};
+  a.range.min = axis.range.min;
+  a.range.max = axis.range.max;
+  return a;
+}
+
+// Sets the fuchsia::ui::input Mouse button bit vector.
+// prev_buttons represents the current button bit vector.
+// button_id is the new button to set.
+// The function returns the new button bit vector.
+uint32_t SetMouseButton(uint32_t prev_buttons, uint8_t button_id) {
+  if (button_id == 0 || button_id > 32) {
+    return prev_buttons;
+  }
+  return prev_buttons | (1 << (button_id - 1));
+}
+
+}  // namespace
+
 InputInterpreter::InputInterpreter(zx::channel channel,
                                    fuchsia::ui::input::InputDeviceRegistry* registry,
                                    std::string name)
@@ -85,6 +107,33 @@ void InputInterpreter::RegisterConsumerControl(
   registry_->RegisterDevice(std::move(ui_descriptor), consumer_control_ptr_.NewRequest());
 }
 
+void InputInterpreter::RegisterMouse(const fuchsia::input::report::DeviceDescriptor& descriptor) {
+  fuchsia::ui::input::DeviceDescriptor ui_descriptor;
+
+  if (descriptor.has_device_info()) {
+    auto info = std::make_unique<fuchsia::ui::input::DeviceInfo>();
+    info->vendor_id = descriptor.device_info().vendor_id;
+    info->product_id = descriptor.device_info().product_id;
+    info->version = descriptor.device_info().version;
+    ui_descriptor.device_info = std::move(info);
+  }
+
+  auto mouse = std::make_unique<fuchsia::ui::input::MouseDescriptor>();
+  if (descriptor.mouse().input().has_movement_x()) {
+    mouse->rel_x = ConvertAxis(descriptor.mouse().input().movement_x());
+  }
+  if (descriptor.mouse().input().has_movement_y()) {
+    mouse->rel_y = ConvertAxis(descriptor.mouse().input().movement_y());
+  }
+  if (descriptor.mouse().input().has_buttons()) {
+    for (uint8_t button : descriptor.mouse().input().buttons()) {
+      mouse->buttons = SetMouseButton(mouse->buttons, button);
+    }
+  }
+  ui_descriptor.mouse = std::move(mouse);
+  registry_->RegisterDevice(std::move(ui_descriptor), mouse_ptr_.NewRequest());
+}
+
 void InputInterpreter::RegisterTouchscreen(
     const fuchsia::input::report::DeviceDescriptor& descriptor) {
   fuchsia::ui::input::DeviceDescriptor ui_descriptor;
@@ -130,6 +179,10 @@ void InputInterpreter::RegisterDevices() {
     }
   }
 
+  if (descriptor.has_mouse() && descriptor.mouse().has_input()) {
+    RegisterMouse(descriptor);
+  }
+
   if (descriptor.has_consumer_control() && descriptor.consumer_control().has_input()) {
     RegisterConsumerControl(descriptor);
   }
@@ -158,6 +211,27 @@ void InputInterpreter::DispatchTouchReport(const fuchsia::input::report::InputRe
   }
   input_report.touchscreen = std::move(input_touchscreen);
   DispatchReport(touch_ptr_, std::move(input_report));
+}
+
+void InputInterpreter::DispatchMouseReport(const fuchsia::input::report::InputReport& report) {
+  fuchsia::ui::input::InputReport input_report;
+  if (report.has_event_time()) {
+    input_report.event_time = report.event_time();
+  }
+  auto input_mouse = std::make_unique<fuchsia::ui::input::MouseReport>();
+  if (report.mouse().has_movement_x()) {
+    input_mouse->rel_x = report.mouse().movement_x();
+  }
+  if (report.mouse().has_movement_y()) {
+    input_mouse->rel_y = report.mouse().movement_y();
+  }
+  if (report.mouse().has_pressed_buttons()) {
+    for (uint8_t button : report.mouse().pressed_buttons()) {
+      input_mouse->pressed_buttons = SetMouseButton(input_mouse->pressed_buttons, button);
+    }
+  }
+  input_report.mouse = std::move(input_mouse);
+  DispatchReport(mouse_ptr_, std::move(input_report));
 }
 
 void InputInterpreter::DispatchConsumerControlReport(
@@ -215,6 +289,9 @@ bool InputInterpreter::Read(bool discard) {
     }
     if (report.has_consumer_control()) {
       DispatchConsumerControlReport(report);
+    }
+    if (report.has_mouse()) {
+      DispatchMouseReport(report);
     }
   }
 

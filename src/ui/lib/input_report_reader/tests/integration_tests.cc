@@ -67,32 +67,38 @@ class ReaderInterpreterInputTest : public ReaderInterpreterTest {
   fuchsia::ui::input::InputReport last_report_;
   MockInputDevice* last_device_ = nullptr;
 
- private:
-  void SetUp() override { StartInputReader(&input_reader_); }
-
+ protected:
   MockInputDeviceRegistry registry_;
   InputReader input_reader_;
-};
-
-TEST_F(ReaderInterpreterInputTest, TouchScreen) {
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
   std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
 
-  // Make the channels and the fake device.
-  zx::channel token_server, token_client;
-  ASSERT_EQ(zx::channel::create(0, &token_server, &token_client), ZX_OK);
-  fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>();
+  void StartDevice() { AddDevice(std::move(token_client_)); }
 
-  // Make and run the thread for the fake device's FIDL interface.
-  loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop_->StartThread("test-print-input-report-loop"), ZX_OK);
-  fidl::Bind(loop_->dispatcher(), std::move(token_server), fake_device_.get());
-  auto cancel_loop = fbl::MakeAutoCall([&]() {
+ private:
+  zx::channel token_client_;
+  void SetUp() override {
+    StartInputReader(&input_reader_);
+
+    // Make the channels and the fake device.
+    zx::channel token_server;
+    ASSERT_EQ(zx::channel::create(0, &token_server, &token_client_), ZX_OK);
+    fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>();
+
+    // Make and run the thread for the fake device's FIDL interface.
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_EQ(loop_->StartThread("test-print-input-report-loop"), ZX_OK);
+    fidl::Bind(loop_->dispatcher(), std::move(token_server), fake_device_.get());
+  }
+
+  void TearDown() override {
     loop_->Quit();
     loop_->JoinThreads();
-  });
+  }
+};
 
+TEST_F(ReaderInterpreterInputTest, TouchScreen) {
   // Add a touchscreen descriptor.
   {
     hid_input_report::TouchDescriptor touch_desc = {};
@@ -120,7 +126,7 @@ TEST_F(ReaderInterpreterInputTest, TouchScreen) {
   }
 
   // Add the device.
-  AddDevice(std::move(token_client));
+  StartDevice();
   RunLoopUntilIdle();
 
   // Check the touchscreen descriptor.
@@ -162,24 +168,6 @@ TEST_F(ReaderInterpreterInputTest, TouchScreen) {
 }
 
 TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
-  std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
-  std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
-
-  // Make the channels and the fake device.
-  zx::channel token_server, token_client;
-  ASSERT_EQ(zx::channel::create(0, &token_server, &token_client), ZX_OK);
-  fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>();
-
-  // Make and run the thread for the fake device's FIDL interface.
-  loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop_->StartThread("test-print-input-report-loop"), ZX_OK);
-  fidl::Bind(loop_->dispatcher(), std::move(token_server), fake_device_.get());
-  auto cancel_loop = fbl::MakeAutoCall([&]() {
-    loop_->Quit();
-    loop_->JoinThreads();
-  });
-
   // Add a descriptor.
   {
     hid_input_report::ConsumerControlDescriptor consumer_desc = {};
@@ -198,7 +186,7 @@ TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
   }
 
   // Add the device.
-  AddDevice(std::move(token_client));
+  StartDevice();
   RunLoopUntilIdle();
 
   // Check the descriptor.
@@ -238,6 +226,74 @@ TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
     ASSERT_TRUE(last_report_.media_buttons->mic_mute);
     ASSERT_TRUE(last_report_.media_buttons->reset);
     ASSERT_TRUE(last_report_.media_buttons->pause);
+  }
+}
+
+TEST_F(ReaderInterpreterInputTest, Mouse) {
+  // Add a descriptor.
+  {
+    hid_input_report::MouseDescriptor mouse_desc = {};
+    mouse_desc.input = hid_input_report::MouseInputDescriptor();
+
+    fuchsia_input_report::Axis axis;
+    axis.unit = fuchsia_input_report::Unit::NONE;
+    axis.range.min = -100;
+    axis.range.max = 100;
+    mouse_desc.input->movement_x = axis;
+
+    axis.range.min = -200;
+    axis.range.max = 200;
+    mouse_desc.input->movement_y = axis;
+
+    mouse_desc.input->num_buttons = 2;
+    mouse_desc.input->buttons[0] = 1;
+    mouse_desc.input->buttons[1] = 3;
+
+    hid_input_report::ReportDescriptor desc;
+    desc.descriptor = mouse_desc;
+
+    fake_device_->SetDescriptor(desc);
+  }
+
+  // Add the device.
+  StartDevice();
+  RunLoopUntilIdle();
+
+  // Check the descriptor.
+  {
+    ASSERT_NE(last_device_, nullptr);
+    fuchsia::ui::input::DeviceDescriptor* descriptor = last_device_->descriptor();
+    ASSERT_NE(descriptor, nullptr);
+    ASSERT_NE(descriptor->mouse, nullptr);
+    ASSERT_EQ(descriptor->mouse->buttons, 0b101U);
+    ASSERT_EQ(descriptor->mouse->rel_x.range.min, -100);
+    ASSERT_EQ(descriptor->mouse->rel_x.range.max, 100);
+    ASSERT_EQ(descriptor->mouse->rel_y.range.min, -200);
+    ASSERT_EQ(descriptor->mouse->rel_y.range.max, 200);
+  }
+
+  // Send a report.
+  {
+    hid_input_report::MouseInputReport mouse = {};
+    mouse.num_buttons_pressed = 2;
+    mouse.buttons_pressed[0] = 1;
+    mouse.buttons_pressed[1] = 3;
+    mouse.movement_x = 100;
+    mouse.movement_y = 200;
+
+    hid_input_report::InputReport report;
+    report.report = mouse;
+
+    fake_device_->SetReport(report);
+  }
+  RunLoopUntilIdle();
+
+  // Check the report.
+  {
+    ASSERT_EQ(report_count_, 1);
+    ASSERT_EQ(last_report_.mouse->pressed_buttons, 0b101U);
+    ASSERT_EQ(last_report_.mouse->rel_x, 100);
+    ASSERT_EQ(last_report_.mouse->rel_y, 200);
   }
 }
 
