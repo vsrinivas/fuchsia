@@ -1,0 +1,48 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("cpp") {
+  public_deps = [ ":client" ]
+}
+
+source_set("client") {
+  sources = [
+    "network_device_client.cc",
+    "network_device_client.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+executable("cpp-test") {
+  testonly = true
+
+  sources = [ "network_device_client_test.cc" ]
+
+  deps = [
+    ":client",
+    "//sdk/lib/sys/cpp",
+    "//src/connectivity/network/tun/fidl",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/lib/testing/predicates",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":cpp-test" ]
+}

@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/cpp-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.tun.Control"
+        ]
+    }
+}
