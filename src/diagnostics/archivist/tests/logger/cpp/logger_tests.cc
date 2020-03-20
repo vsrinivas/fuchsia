@@ -97,37 +97,6 @@ bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback
   return true;
 }
 
-// This function will fail to build when zircon ABI changes
-// and we will need to manually roll changes.
-TEST(CAbi, Abi) {
-  static_assert(FX_LOG_MAX_DATAGRAM_LEN == 2032, "");
-  static_assert(sizeof(fx_log_metadata_t) == 32, "");
-  fx_log_packet_t packet;
-  static_assert(sizeof(packet.data) == 2000, "");
-
-  // test alignment
-  static_assert(offsetof(fx_log_packet_t, data) == 32, "");
-  static_assert(offsetof(fx_log_packet_t, metadata) == 0, "");
-  static_assert(offsetof(fx_log_metadata_t, pid) == 0, "");
-  static_assert(offsetof(fx_log_metadata_t, tid) == 8, "");
-  static_assert(offsetof(fx_log_metadata_t, time) == 16, "");
-  static_assert(offsetof(fx_log_metadata_t, severity) == 24, "");
-  static_assert(offsetof(fx_log_metadata_t, dropped_logs) == 28, "");
-}
-
-// This function will fail to build when zircon ABI changes
-// and we will need to manually roll changes.
-TEST(CAbi, LogRecordAbi) {
-  static_assert(ZX_LOG_RECORD_MAX == 256, "");
-  static_assert(ZX_LOG_FLAG_READABLE == 0x40000000, "");
-
-  // test alignment
-  static_assert(offsetof(zx_log_record_t, timestamp) == 8, "");
-  static_assert(offsetof(zx_log_record_t, pid) == 16, "");
-  static_assert(offsetof(zx_log_record_t, tid) == 24, "");
-  static_assert(offsetof(zx_log_record_t, data) == 32, "");
-}
-
 using LoggerIntegrationTest = sys::testing::TestWithEnvironment;
 
 TEST_F(LoggerIntegrationTest, ListenFiltered) {
@@ -154,30 +123,10 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   EXPECT_THAT(logs[0].msg, testing::EndsWith(message));
 }
 
-TEST_F(LoggerIntegrationTest, DumpLogs) {
-  auto svcs = CreateServices();
-  fuchsia::sys::LaunchInfo linfo;
-  linfo.url = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
-  svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
-  auto env = CreateNewEnclosingEnvironment("dump_logs", std::move(svcs));
-
-  auto logger_service = env->ConnectToService<fuchsia::logger::Log>();
-
-  StubLogListener log_listener;
-  bool done = false;
-  ASSERT_TRUE(log_listener.DumpLogs(std::move(logger_service), [&done]() { done = true; }));
-
-  RunLoopUntil([&done] { return done; });
-  auto& logs = log_listener.GetLogs();
-  ASSERT_GE(logs.size(), 1u);
-  EXPECT_EQ(logs[0].tags[0], "klog");
-}
-
 TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto svcs = CreateServices();
   fuchsia::sys::LaunchInfo linfo;
-  linfo.url = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
-  linfo.arguments.emplace({"--disable-klog"});
+  linfo.url = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
   fuchsia::sys::LaunchInfo linfo_dup;
   ASSERT_EQ(ZX_OK, linfo.Clone(&linfo_dup));
   svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
