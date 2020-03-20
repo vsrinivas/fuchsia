@@ -52,6 +52,7 @@ class TestMsdArmDevice {
     EXPECT_TRUE(IsStringInDump(
         dump_string, "Fault source_id 0, access type \"unknown\", exception type: \"Unknown\""));
     EXPECT_TRUE(IsStringInDump(dump_string, "Time since last IRQ handler"));
+    EXPECT_TRUE(IsStringInDump(dump_string, "Last job interrupt time:"));
   }
 
   void MockDump() {

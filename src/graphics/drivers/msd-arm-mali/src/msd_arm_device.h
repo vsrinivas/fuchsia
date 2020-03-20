@@ -83,6 +83,7 @@ class MsdArmDevice : public msd_device_t,
     bool handling_job_interrupt{};
     uint64_t job_interrupt_delay{};
     uint64_t job_interrupt_time{};
+    uint64_t job_interrupt_time_processed{};
 
     uint32_t mmu_irq_rawstat;
     uint32_t mmu_irq_status;
@@ -178,7 +179,7 @@ class MsdArmDevice : public msd_device_t,
 
   magma::Status ProcessDumpStatusToLog();
   magma::Status ProcessPerfCounterSampleCompleted();
-  magma::Status ProcessJobInterrupt();
+  magma::Status ProcessJobInterrupt(uint64_t time);
   magma::Status ProcessMmuInterrupt();
   magma::Status ProcessScheduleAtoms();
   magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
@@ -219,6 +220,7 @@ class MsdArmDevice : public msd_device_t,
   std::atomic<uint64_t> job_interrupt_time_{};
   std::atomic<uint64_t> gpu_interrupt_time_{};
   std::atomic<uint64_t> mmu_interrupt_time_{};
+  uint64_t job_interrupt_time_processed_ = {};
 
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
   std::unique_ptr<magma::PlatformPort> device_port_;

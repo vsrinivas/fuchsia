@@ -58,10 +58,15 @@ class MsdArmDevice::PerfCounterSampleCompletedRequest : public DeviceRequest {
 
 class MsdArmDevice::JobInterruptRequest : public DeviceRequest {
  public:
-  JobInterruptRequest() {}
+  JobInterruptRequest(uint64_t time) : time_(time) {}
 
  protected:
-  magma::Status Process(MsdArmDevice* device) override { return device->ProcessJobInterrupt(); }
+  magma::Status Process(MsdArmDevice* device) override {
+    return device->ProcessJobInterrupt(time_);
+  }
+
+ private:
+  uint64_t time_;
 };
 
 class MsdArmDevice::MmuInterruptRequest : public DeviceRequest {
@@ -478,14 +483,15 @@ int MsdArmDevice::JobInterruptThreadLoop() {
     job_interrupt_->Wait();
     DLOG("Job Returned from interrupt wait!");
     job_interrupt_delay_ = job_interrupt_->GetMicrosecondsSinceLastInterrupt();
-    job_interrupt_time_ = magma::get_monotonic_ns();
+    auto now = magma::get_monotonic_ns();
+    job_interrupt_time_ = now;
     // Resets flag at end of loop iteration.
     handling_job_interrupt_ = true;
     auto ac = fbl::MakeAutoCall([&]() { handling_job_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;
-    auto request = std::make_unique<JobInterruptRequest>();
+    auto request = std::make_unique<JobInterruptRequest>(now);
     auto reply = request->GetReply();
     EnqueueDeviceRequest(std::move(request), true);
     reply->Wait();
@@ -525,8 +531,10 @@ static bool IsHardwareResultCode(uint32_t result) {
   }
 }
 
-magma::Status MsdArmDevice::ProcessJobInterrupt() {
+magma::Status MsdArmDevice::ProcessJobInterrupt(uint64_t time) {
   TRACE_DURATION("magma", "MsdArmDevice::ProcessJobInterrupt");
+  job_interrupt_time_processed_ = time;
+
   while (true) {
     auto irq_status = registers::JobIrqFlags::GetRawStat().ReadFrom(register_io_.get());
     if (!irq_status.reg_value())
@@ -833,6 +841,7 @@ void MsdArmDevice::Dump(DumpState* dump_state, bool on_device_thread) {
   dump_state->gpu_interrupt_time = gpu_interrupt_time_;
   dump_state->job_interrupt_time = job_interrupt_time_;
   dump_state->mmu_interrupt_time = mmu_interrupt_time_;
+  dump_state->job_interrupt_time_processed = job_interrupt_time_processed_;
 
   if (on_device_thread) {
     std::chrono::steady_clock::duration total_time;
@@ -959,6 +968,10 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::vector<std::string>* d
                         (now - dump_state.job_interrupt_time) / 1000,
                         (now - dump_state.mmu_interrupt_time) / 1000)
           .c_str());
+  dump_string->push_back(fbl::StringPrintf("Last job interrupt time: %ld Processed: %ld",
+                                           dump_state.job_interrupt_time,
+                                           dump_state.job_interrupt_time_processed)
+                             .c_str());
 
   dump_string->push_back(
       fbl::StringPrintf("Last interrupt delays - GPU: %ld us, Job: %ld us, Mmu: %ld us",
