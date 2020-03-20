@@ -59,9 +59,6 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
     if (surface_info.surface_relation) {
       surface_info2.set_surface_relation(*surface_info.surface_relation);
     }
-    if (surface_info.module_manifest) {
-      surface_info2.set_module_manifest(std::move(*surface_info.module_manifest));
-    }
     surface_info2.set_module_source(surface_info.module_source);
     AddSurface3(std::move(view_connection), std::move(surface_info2));
   }
@@ -134,7 +131,7 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
 
 int main(int /*argc*/, const char** /*argv*/) {
   syslog::InitLogger({"test_story_shell"});
-  
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();

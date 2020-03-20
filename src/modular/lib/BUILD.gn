@@ -9,7 +9,6 @@ group("lib") {
   testonly = true
   deps = [
     ":just_fidl",
-    ":maxwell_internal",
     ":services",
     "app_driver",
     "async",
@@ -21,7 +20,6 @@ group("lib") {
     "integration_testing",
     "ledger_client",
     "lifecycle",
-    "module_manifest_source",
     "pseudo_dir",
     "scoped_tmpfs",
     "testing",
@@ -52,13 +50,4 @@ executable("modular_lib_unittests") {
     "//src/modular/lib/scoped_tmpfs:unittests",
     "//src/modular/lib/string_escape:unittests",
   ]
-}
-
-fidl("maxwell_internal") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
-  name = "fuchsia.maxwell.internal"
-
-  sources = [ "module_manifest_source/fidl/module_package_indexer.fidl" ]
 }

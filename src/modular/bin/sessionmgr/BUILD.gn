@@ -223,7 +223,6 @@ source_set("startup_agent_launcher") {
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/lib/syslog/cpp",
     "//src/modular/bin/basemgr/cobalt",
-    "//src/modular/lib:maxwell_internal",
     "//src/modular/lib/connect",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]

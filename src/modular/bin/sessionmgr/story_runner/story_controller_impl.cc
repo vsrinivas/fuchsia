@@ -504,9 +504,6 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     if (module_data_.has_surface_relation()) {
       surface_info.set_surface_relation(fidl::Clone(module_data_.surface_relation()));
     }
-    if (module_manifest_) {
-      surface_info.set_module_manifest(std::move(*module_manifest_));
-    }
     surface_info.set_module_source(module_data_.module_source());
 
     // If this is a root module, or the anchor module is connected to the story shell,
@@ -546,7 +543,6 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request_;
 
   fuchsia::modular::ModuleControllerPtr module_controller_;
-  fuchsia::modular::ModuleManifestPtr module_manifest_;
 
   OperationQueue operation_queue_;
 };
