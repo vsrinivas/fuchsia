@@ -335,6 +335,10 @@ const char kSetHelp[] =
   See which settings are available, their names and current values with
   the "get" command (see "help get").
 
+  As a special-case, the syntax "set <setting-name> =" (with no value) will
+  clear the setting back to its default value. This can also be used for thread-
+  or process-specific settings to case a fallback to the global value.
+
 Arguments
 
   <object>
@@ -401,6 +405,9 @@ Examples
   New value build-dirs system-wide:
   • /other/build/location
   • /other/build2
+
+  [zxdb] set build-dirs =
+      Clears the build-dirs variable.
 )";
 
 Err SetBool(SettingStore* store, const std::string& setting_name, const std::string& value) {
@@ -480,6 +487,15 @@ Err SetSetting(ConsoleContext* console_context, const Frame* optional_frame,
   Err err;
   if (setting_context.op != ParsedSetCommand::kAssign && !setting_context.value.is_list())
     return Err("Appending/removing only works for list options.");
+
+  if (values.empty()) {
+    if (err = store->ClearValue(setting_context.name); err.has_error())
+      return err;
+
+    // When clearing, report the new value is the default reported by the store.
+    *out = store->GetValue(setting_context.name);
+    return Err();
+  }
 
   switch (setting_context.value.type()) {
     case SettingType::kBoolean:
@@ -645,7 +661,7 @@ void CompleteSet(const Command& cmd, const std::string& prefix,
 }  // namespace
 
 // Grammar:
-//   command := <name> [ <whitespace> ] [ <operator> <whitespace> ] <value> *
+//   command := <name> [ <whitespace> ] [ <operator> <whitespace> ] [ <value> * ]
 //   name := ('A' - 'Z') | ('a' - 'z') | '-'  // See IsSettingNameChar() for qualifications.
 //   operator := "=" | '+=' | '-='
 //
@@ -672,7 +688,9 @@ ErrOr<ParsedSetCommand> ParseSetCommand(const std::string& input) {
     ++cur;
   }
 
-  // Special-case the error message for no value to be more helpful.
+  // Special-case the error message for no value to be more helpful. To clear the value we require
+  // "=" so the command is more explicit ("set foo" may be typed by somebody who doesn't know what
+  // they're doing).
   if (cur == input.size())
     return Err("Expecting a value to set. Use \"set setting-name setting-value\".");
 
@@ -701,11 +719,13 @@ ErrOr<ParsedSetCommand> ParseSetCommand(const std::string& input) {
 
   // Value(s) parsed as a command token. This handles the various types of escaping and quoting
   // supported by the interactive command line.
+  //
+  // The value can be omitted for sets which clears the value to the default.
   std::vector<CommandToken> value_tokens;
   if (Err err = TokenizeCommand(input.substr(cur), &value_tokens); err.has_error())
     return err;
-  if (value_tokens.empty())
-    return Err("Expected a value to set.");
+  if (result.op != ParsedSetCommand::kAssign && value_tokens.empty())
+    return Err("Expected a value to add/remove.");
 
   for (const auto& token : value_tokens)
     result.values.push_back(std::move(token.str));

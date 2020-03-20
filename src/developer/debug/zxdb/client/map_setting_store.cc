@@ -54,4 +54,14 @@ Err MapSettingStore::SetStorageValue(const std::string& key, SettingValue value)
   return Err();
 }
 
+Err MapSettingStore::ClearStorageValue(const std::string& key) {
+  auto found = values_.find(key);
+  if (found == values_.end())
+    return Err();  // Already gone.
+
+  values_.erase(found);
+  NotifySettingChanged(key);
+  return Err();
+}
+
 }  // namespace zxdb

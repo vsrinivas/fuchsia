@@ -756,8 +756,31 @@ TEST_F(FormatValueConsoleTest, RustVector) {
 
   vec.SetValue(fast_vec_value);
   vec.set_type("FastVector<i32>");
+  vec.set_state(FormatNode::kDescribed);
   options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   EXPECT_EQ("FastVector<i32>[42, 19]", FormatNodeForConsole(vec, options).AsString());
+}
+
+// This tests some constant expressions for simplicity since we assume evaluation is already tested.
+TEST_F(FormatValueConsoleTest, FormatExpressionsForConsole) {
+  ConsoleFormatOptions options;
+  options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
+
+  // Should be a single line of output.
+  fxl::RefPtr<AsyncOutputBuffer> async_out =
+      FormatExpressionsForConsole({"0", "0x5678", "(int*)12345"}, options, eval_context());
+  OutputBuffer out = LoopUntilAsyncOutputBufferComplete(async_out);
+  EXPECT_EQ("0 = 0, 0x5678 = 22136, (int*)12345 = (*)0x3039", out.AsString());
+
+  async_out = FormatExpressionsForConsole(
+      {"0", "0x5678", "(int*)12345", "\"Some string that won't fit.\""}, options, eval_context());
+  out = LoopUntilAsyncOutputBufferComplete(async_out);
+  EXPECT_EQ(
+      "0 = 0\n"
+      "0x5678 = 22136\n"
+      "(int*)12345 = (*)0x3039\n"
+      "\"Some string that won't fit.\" = \"Some string that won\\'t fit.\"\n",
+      out.AsString());
 }
 
 }  // namespace zxdb

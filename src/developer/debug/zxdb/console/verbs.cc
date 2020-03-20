@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_disable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disassemble.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disconnect.h"
+#include "src/developer/debug/zxdb/console/commands/verb_display.h"
 #include "src/developer/debug/zxdb/console/commands/verb_down.h"
 #include "src/developer/debug/zxdb/console/commands/verb_enable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_finish.h"
@@ -123,6 +124,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kDisable] = GetDisableVerbRecord();
     all_verbs[Verb::kDisconnect] = GetDisconnectVerbRecord();
     all_verbs[Verb::kDisassemble] = GetDisassembleVerbRecord();
+    all_verbs[Verb::kDisplay] = GetDisplayVerbRecord();
     all_verbs[Verb::kDown] = GetDownVerbRecord();
     all_verbs[Verb::kEnable] = GetEnableVerbRecord();
     all_verbs[Verb::kFinish] = GetFinishVerbRecord();

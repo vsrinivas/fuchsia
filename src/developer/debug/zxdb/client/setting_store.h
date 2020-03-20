@@ -50,6 +50,11 @@ class SettingStore {
   SettingValue GetValue(const std::string& key) const;
   Err SetValue(const std::string& key, SettingValue value);
 
+  // Resets the value back the default value. For hierarchical stores this should put it in a state
+  // to fall back to the parent store's value. Not all stores support this since there might not be
+  // an obvious default value.
+  Err ClearValue(const std::string& key);
+
  protected:
   // Implemented by the override of the SettingStore to actually get/set values to/from the backend.
   // The key (and new value for the setter) will have been validated against the schema prior to
@@ -57,8 +62,18 @@ class SettingStore {
   //
   // The implementation for GetStorageValue() can return a null SettingValue to indicate not found,
   // in which case GetValue() will return the default value from the schema.
+  //
+  // The setter should erase or reset back to the default the setting if it's null.
   virtual SettingValue GetStorageValue(const std::string& key) const = 0;
   virtual Err SetStorageValue(const std::string& key, SettingValue value) = 0;
+
+  // Resets the value back the default value. For hierarchical stores this should put it in a state
+  // to fall back to the parent store's value.
+  //
+  // Not all store implementations might have the ability to reset a value (values might not have an
+  // obvious default value) and these implementations can leave this function unimplemented. This
+  // default implementation will return an error about clear not being supported.
+  virtual Err ClearStorageValue(const std::string& key);
 
  private:
   // Should always exist. All settings are validated against this.

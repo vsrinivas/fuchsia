@@ -59,6 +59,9 @@ struct ClientSettings {
   struct Thread {
     static const char* kDebugStepping;
     static const char* kDebugSteppingDescription;
+
+    static const char* kDisplay;
+    static const char* kDisplayDescription;
   };
 
   struct Breakpoint {

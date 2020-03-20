@@ -75,6 +75,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
       ClientSettings::Target::kVectorFormat, ClientSettings::Target::kVectorFormatDescription,
       kVectorRegisterFormatStr_Double, ClientSettings::Target::GetVectorFormatOptions());
 
+  schema->AddList(ClientSettings::Thread::kDisplay, ClientSettings::Thread::kDisplayDescription);
+
   return schema;
 }
 

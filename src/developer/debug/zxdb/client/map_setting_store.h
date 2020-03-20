@@ -34,6 +34,7 @@ class MapSettingStore : public SettingStore {
   // SettingStore implementation.
   virtual SettingValue GetStorageValue(const std::string& key) const override;
   virtual Err SetStorageValue(const std::string& key, SettingValue value) override;
+  virtual Err ClearStorageValue(const std::string& key) override;
 
  private:
   void NotifySettingChanged(const std::string& setting_name) const;

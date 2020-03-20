@@ -97,6 +97,11 @@ TEST(MapSettingStore, Overrides) {
   err = store.SetInt("int", kNewInt);
   ASSERT_FALSE(err.has_error());
   EXPECT_EQ(store.GetInt("int"), kNewInt);
+
+  // Clear value
+  err = store.ClearValue("int");
+  ASSERT_FALSE(err.has_error());
+  EXPECT_EQ(store.GetInt("int"), kDefaultInt);
 }
 
 TEST(MapSettingStore, ListOptions) {

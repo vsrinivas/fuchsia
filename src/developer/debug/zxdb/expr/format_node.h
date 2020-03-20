@@ -72,6 +72,7 @@ class FormatNode {
   // state according to what it evaluated to.
   enum DescriptionKind {
     kNone = 0,
+    kGroup,  // List of bare children with no overall description, type, or brackets.
     kArray,
     kBaseType,         // Integers, characters, bools, etc.
     kCollection,       // Structs, classes.
@@ -135,6 +136,10 @@ class FormatNode {
 
   // Constructor for a programatically-filled value.
   FormatNode(const std::string& name, GetProgramaticValue get_value);
+
+  // Constructor for a group. The creator should set the children.
+  struct GroupTag {};
+  explicit FormatNode(GroupTag);
 
   // Not copyable nor moveable since this doesn't work with the weak ptr factory.
 

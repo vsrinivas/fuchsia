@@ -104,15 +104,17 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",
                     {"rust", "c++", "auto"});
 
+  // Target ones.
   schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
                   {});
-
-  schema->AddBool(ClientSettings::Thread::kDebugStepping,
-                  ClientSettings::Thread::kDebugSteppingDescription, false);
-
   schema->AddString(
       ClientSettings::Target::kVectorFormat, ClientSettings::Target::kVectorFormatDescription,
       kVectorRegisterFormatStr_Double, ClientSettings::Target::GetVectorFormatOptions());
+
+  // Thread ones.
+  schema->AddBool(ClientSettings::Thread::kDebugStepping,
+                  ClientSettings::Thread::kDebugSteppingDescription, false);
+  schema->AddList(ClientSettings::Thread::kDisplay, ClientSettings::Thread::kDisplayDescription);
 
   return schema;
 }

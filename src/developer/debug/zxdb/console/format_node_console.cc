@@ -114,27 +114,27 @@ void RecursiveDescribeFormatNode(FormatNode* node, fxl::RefPtr<EvalContext> cont
   if (state.tree_depth == state.options.max_depth)
     return;  // Reached max depth, give up.
 
-  FillFormatNodeDescription(
-      node, state.options, context,
-      fit::defer_callback([weak_node = node->GetWeakPtr(), context, cb = std::move(cb),
-                           state = state.Advance()]() mutable {
-        // Description is complete.
-        if (!weak_node || weak_node->children().empty())
-          return;
+  auto on_complete = fit::defer_callback([weak_node = node->GetWeakPtr(), context,
+                                          cb = std::move(cb), state = state.Advance()]() mutable {
+    // Description is complete.
+    if (!weak_node || weak_node->children().empty())
+      return;
 
-        // Check for pointer expansion to avoid recursing into too many.
-        if (weak_node->description_kind() == FormatNode::kPointer) {
-          if (state.pointer_depth == state.options.pointer_expand_depth)
-            return;  // Don't recurse into another level of pointer.
-          state.pointer_depth++;
-        }
+    // Check for pointer expansion to avoid recursing into too many.
+    if (weak_node->description_kind() == FormatNode::kPointer) {
+      if (state.pointer_depth == state.options.pointer_expand_depth)
+        return;  // Don't recurse into another level of pointer.
+      state.pointer_depth++;
+    }
 
-        // Recurse into children.
-        auto aggregator = fxl::MakeRefCounted<AggregateDeferredCallback>(std::move(cb));
-        for (const auto& child : weak_node->children()) {
-          RecursiveDescribeFormatNode(child.get(), context, state, aggregator->MakeSubordinate());
-        }
-      }));
+    // Recurse into children.
+    auto aggregator = fxl::MakeRefCounted<AggregateDeferredCallback>(std::move(cb));
+    for (const auto& child : weak_node->children())
+      RecursiveDescribeFormatNode(child.get(), context, state, aggregator->MakeSubordinate());
+  });
+
+  if (node->state() != FormatNode::kDescribed)
+    FillFormatNodeDescription(node, state.options, context, std::move(on_complete));
 }
 
 bool IsRust(const FormatNode* node) {
@@ -288,29 +288,32 @@ void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, 
 }
 
 // Writes the node's children. The caller sets up how it wants the children to be formatted by
-// passing bothe the recursive state for the node, and the state it wants to use for the children.
+// passing both the recursive state for the node, and the state it wants to use for the children.
 //
-// The opening and closing character are used to wrap the contents, e.g. '{' and '}'.
-void AppendNodeChildren(const FormatNode* node, const RecursiveState& node_state, char opening_char,
-                        char closing_char, const RecursiveState& child_state, OutputBuffer* out) {
-  out->Append(std::string(1, opening_char));
+// The opening and closing strings are used to wrap the contents, e.g. "{" and "}". If these are
+// empty it's assumed that the first line doesn't need a newline after it in multiline mode
+// (normally the opening character would be followed by a newline and an indent in multiline mode).
+void AppendNodeChildren(const FormatNode* node, const RecursiveState& node_state,
+                        const std::string& opening, const std::string& closing,
+                        const RecursiveState& child_state, OutputBuffer* out) {
+  out->Append(opening);
 
   if (child_state.DepthTooDeep()) {
     // Don't print the child names if those children will be elided. Otherwise this prints a
     // whole struct out with no data: "{foo=…, bar=…, baz=…}" which is wasteful of space and not
     // helpful.
     out->Append(Syntax::kComment, "…");
-    out->Append(std::string(1, closing_char));
+    out->Append(closing);
     return;
   }
 
   // Special-case empty ones because we never want wrapping.
   if (node->children().empty()) {
-    out->Append(std::string(1, closing_char));
+    out->Append(closing);
     return;
   }
 
-  if (node_state.ShouldExpand())
+  if (!opening.empty() && node_state.ShouldExpand())
     out->Append("\n");
 
   int child_indent = child_state.GetIndentAmount();
@@ -329,7 +332,7 @@ void AppendNodeChildren(const FormatNode* node, const RecursiveState& node_state
     AppendItemSuffix(node_state, i + 1 == node->children().size(), out);
   }
 
-  out->Append(node_state.GetIndentString() + closing_char);
+  out->Append(node_state.GetIndentString() + closing);
 }
 
 OutputBuffer DoFormatArrayOrTupleNode(const FormatNode* node, const RecursiveState& state) {
@@ -346,9 +349,9 @@ OutputBuffer DoFormatArrayOrTupleNode(const FormatNode* node, const RecursiveSta
     if (IsRust(node)) {
       // Rust sequences use "[...]".
       AppendRustCollectionName(node, state, &out);
-      AppendNodeChildren(node, state, '[', ']', child_state, &out);
+      AppendNodeChildren(node, state, "[", "]", child_state, &out);
     } else {
-      AppendNodeChildren(node, state, '{', '}', child_state, &out);
+      AppendNodeChildren(node, state, "{", "}", child_state, &out);
     }
   } else {
     // Rust tuple or tuple struct. These should not be empty.
@@ -369,7 +372,7 @@ OutputBuffer DoFormatArrayOrTupleNode(const FormatNode* node, const RecursiveSta
     if (node->children().size() == 1)
       child_state.inhibit_one_name = true;
 
-    AppendNodeChildren(node, state, '(', ')', child_state, &out);
+    AppendNodeChildren(node, state, "(", ")", child_state, &out);
   }
 
   return out;
@@ -389,7 +392,7 @@ OutputBuffer DoFormatCollectionNode(const FormatNode* node, const RecursiveState
     return out;
   }
 
-  AppendNodeChildren(node, state, '{', '}', state.Advance(), &out);
+  AppendNodeChildren(node, state, "{", "}", state.Advance(), &out);
   return out;
 }
 
@@ -488,6 +491,13 @@ OutputBuffer DoFormatStandardNode(const FormatNode* node, const RecursiveState& 
   return OutputBuffer(node->description());
 }
 
+// Groups have no heading, they're always just a list of children.
+OutputBuffer DoFormatGroupNode(const FormatNode* node, const RecursiveState& state) {
+  OutputBuffer out;
+  AppendNodeChildren(node, state, std::string(), std::string(), state, &out);
+  return out;
+}
+
 // Inner implementation for DoFormatNode() (see that for more). This does the actual formatting one
 // time according to the current formatting options and state.
 //
@@ -519,6 +529,9 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
       case FormatNode::kString:
         // All these things just print the description only.
         out.Append(DoFormatStandardNode(node, state));
+        break;
+      case FormatNode::kGroup:
+        out.Append(DoFormatGroupNode(node, state));
         break;
       case FormatNode::kArray:
       case FormatNode::kRustTuple:
@@ -627,6 +640,31 @@ fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
           out->Complete(FormatValueForConsole(value.take_value(), options, context, name));
         }
       });
+  return out;
+}
+
+fxl::RefPtr<AsyncOutputBuffer> FormatExpressionsForConsole(
+    const std::vector<std::string>& expressions, const ConsoleFormatOptions& options,
+    fxl::RefPtr<EvalContext> context) {
+  // Put all of the expressions in a "group" node and then evaluate and format this node. This will
+  // allow single- and multi-line formatting for the values and also handles all of the asynchronous
+  // state across all of the expressions automatically.
+  auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
+  auto list_node = std::make_unique<FormatNode>(FormatNode::GroupTag());
+  FormatNode* list_node_ptr = list_node.get();
+
+  for (const std::string& expr : expressions) {
+    // Use the expression as the description.
+    auto child_node = std::make_unique<FormatNode>(expr, expr);
+    list_node->children().push_back(std::move(child_node));
+  }
+
+  DescribeFormatNodeForConsole(
+      list_node_ptr, options, context,
+      fit::defer_callback([list_node = std::move(list_node), options, out]() {
+        RecursiveState state(options);
+        out->Complete(FormatNodeForConsole(*list_node, options));
+      }));
   return out;
 }
 

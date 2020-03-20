@@ -19,13 +19,22 @@ const char* ClientSettings::Thread::kDebugSteppingDescription =
   This is used by developers working on the debugger's internal thread
   controllers.)";
 
+const char* ClientSettings::Thread::kDisplay = "display";
+const char* ClientSettings::Thread::kDisplayDescription =
+    R"(  Lists expressions and variables to print every time the debugger stops.
+
+  An alternative to modifying this list is the "display" verb which appends
+  an expression to the global list. It's an alias for:
+    global set display += "<expression>"
+)";
+
 namespace {
 
 static fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
-
+  schema->AddList(ClientSettings::Thread::kDisplay, ClientSettings::Thread::kDisplayDescription);
   return schema;
 }
 

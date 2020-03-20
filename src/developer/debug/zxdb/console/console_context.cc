@@ -22,6 +22,7 @@
 #include "src/developer/debug/zxdb/console/format_context.h"
 #include "src/developer/debug/zxdb/console/format_exception.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
+#include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -392,6 +393,27 @@ void ConsoleContext::OutputThreadContext(const Thread* thread, const StopInfo& i
   }
 }
 
+void ConsoleContext::ScheduleDisplayExpressions(Thread* thread) const {
+  std::vector<std::string> exprs = thread->settings().GetList(ClientSettings::Thread::kDisplay);
+  if (exprs.empty())
+    return;
+
+  // Thread stops should always have a frame.
+  const Stack& stack = thread->GetStack();
+  if (stack.empty())
+    return;
+  const Frame* frame = stack[0];
+  fxl::RefPtr<EvalContext> eval_context = frame->GetEvalContext();
+
+  // When something is printed every time, assume the user wants to see relatively little detail.
+  ConsoleFormatOptions options;
+  options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
+  options.pointer_expand_depth = 2;
+
+  Console::get()->Output(FormatExpressionsForConsole(exprs, options, eval_context));
+}
+
 Err ConsoleContext::FillOutCommand(Command* cmd) const {
   // JobContext.
   Err result = FillOutJobContext(cmd);
@@ -744,6 +766,8 @@ void ConsoleContext::OnThreadStopped(Thread* thread, const StopInfo& info) {
 
   // Show the location information.
   OutputThreadContext(thread, info);
+
+  ScheduleDisplayExpressions(thread);
 }
 
 void ConsoleContext::OnThreadFramesInvalidated(Thread* thread) {

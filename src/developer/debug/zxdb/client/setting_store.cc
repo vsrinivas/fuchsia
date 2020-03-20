@@ -91,4 +91,14 @@ Err SettingStore::SetValue(const std::string& key, SettingValue value) {
   return SetStorageValue(key, value);
 }
 
+Err SettingStore::ClearValue(const std::string& key) {
+  if (!schema_->HasSetting(key))
+    return Err("Setting \"%s\" not found in the given context.", key.c_str());
+  return ClearStorageValue(key);
+}
+
+Err SettingStore::ClearStorageValue(const std::string& key) {
+  return Err("This value can not be reset.");
+}
+
 }  // namespace zxdb

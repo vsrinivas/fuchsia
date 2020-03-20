@@ -85,6 +85,12 @@ fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
                                                         const ConsoleFormatOptions& options,
                                                         fxl::RefPtr<EvalContext> context);
 
+// Outputs all of the given expressions. The expressions themselves will be displayed as the
+// "variable name" of each resulting value.
+fxl::RefPtr<AsyncOutputBuffer> FormatExpressionsForConsole(
+    const std::vector<std::string>& expressions, const ConsoleFormatOptions& options,
+    fxl::RefPtr<EvalContext> context);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_NODE_CONSOLE_H_

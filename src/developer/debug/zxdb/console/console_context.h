@@ -105,6 +105,10 @@ class ConsoleContext : public ProcessObserver,
   // given reasons for stopping.
   void OutputThreadContext(const Thread* thread, const StopInfo& info) const;
 
+  // Schedules evaluation and subsequent display of the "display" expressions. These are the things
+  // printed out for every thread stop.
+  void ScheduleDisplayExpressions(Thread* thread) const;
+
   // Fills the current effective process, thread, etc. into the given Command
   // structure based on what the command specifies and the current context.
   // Returns an error if any of the referenced IDs are invalid.

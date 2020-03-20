@@ -45,6 +45,12 @@ FormatNode::FormatNode(const std::string& name, GetProgramaticValue get_value)
   FXL_DCHECK(get_programatic_value_);  // Caller must specify nonempty func.
 }
 
+FormatNode::FormatNode(GroupTag)
+    : source_(kValue),  // Don't compute a value, there is none.
+      state_(kDescribed),
+      description_kind_(kGroup),
+      weak_factory_(this) {}
+
 FormatNode::~FormatNode() = default;
 
 fxl::WeakPtr<FormatNode> FormatNode::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -65,7 +71,10 @@ void FormatNode::FillProgramaticValue(const fxl::RefPtr<EvalContext>& context,
   });
 }
 
-void FormatNode::SetValue(ExprValue v) { value_ = std::move(v); }
+void FormatNode::SetValue(ExprValue v) {
+  value_ = std::move(v);
+  set_state(kHasValue);
+}
 
 void FormatNode::SetDescribedError(const Err& e) {
   set_err(e);

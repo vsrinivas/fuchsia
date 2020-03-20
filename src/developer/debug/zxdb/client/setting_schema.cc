@@ -72,7 +72,7 @@ bool SettingSchema::HasSetting(const std::string& key) {
 Err SettingSchema::ValidateSetting(const std::string& key, const SettingValue& value) const {
   auto it = settings_.find(key);
   if (it == settings_.end())
-    return Err("Setting \"%s\" not found in the given context.", key.data());
+    return Err("Setting \"%s\" not found in the given context.", key.c_str());
 
   const auto& record = it->second;
   if (record.default_value.type() != value.type()) {
