@@ -53,6 +53,8 @@ rustc_test("ot-stack-ncp-ver-query") {
   deps = [
     "//src/connectivity/openthread/tests/lib",
     "//src/connectivity/openthread/tests/test-code",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
