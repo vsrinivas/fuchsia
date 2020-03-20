@@ -5,6 +5,9 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_OPTIONS_H_
 #define SRC_STORAGE_VOLUME_IMAGE_OPTIONS_H_
 
+#include <lib/fit/result.h>
+
+#include <string>
 #include <unordered_map>
 
 namespace storage::volume_image {
@@ -34,6 +37,14 @@ struct CompressionOptions {
   // 'schema' specific options and parameters.
   std::unordered_map<std::string, uint64_t> options;
 };
+
+// Template specialization provided in options.cc where the stringified version of the enums are
+// defined.
+template <typename OptionEnum>
+std::string EnumAsString(OptionEnum option);
+
+template <typename OptionEnum>
+fit::result<OptionEnum, std::string> StringAsEnum(std::string_view option);
 
 }  // namespace storage::volume_image
 

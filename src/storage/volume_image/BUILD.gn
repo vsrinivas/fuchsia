@@ -6,9 +6,13 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("volume-descriptor") {
-  sources = [ "volume_descriptor.cc" ]
+  sources = [
+    "options.cc",
+    "volume_descriptor.cc",
+  ]
   public = [
     "block_io.h",
+    "options.h",
     "volume_descriptor.h",
   ]
   public_deps = [
@@ -20,11 +24,15 @@ source_set("volume-descriptor") {
 
 executable("volume-descriptor-test") {
   testonly = true
-  sources = [ "volume_descriptor_test.cc" ]
+  sources = [
+    "options_test.cc",
+    "volume_descriptor_test.cc",
+  ]
   deps = [
     ":volume-descriptor",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
   ]
 }
 
