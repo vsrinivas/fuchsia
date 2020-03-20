@@ -49,9 +49,4 @@ struct Equality<::escapeme::DocCommentWithQuotes> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::escapeme::DocCommentWithQuotes& _lhs, const ::escapeme::DocCommentWithQuotes& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::escapeme::DocCommentWithQuotes>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

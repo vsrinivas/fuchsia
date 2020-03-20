@@ -502,11 +502,6 @@ struct Equality<::test::fidl::unionsandwich::UnionSize8Alignment4> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::UnionSize8Alignment4& _lhs, const ::test::fidl::unionsandwich::UnionSize8Alignment4& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::UnionSize8Alignment4>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4>
@@ -530,11 +525,6 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::SandwichUnionSize8Alignment4& _lhs, const ::test::fidl::unionsandwich::SandwichUnionSize8Alignment4& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -590,11 +580,6 @@ struct Equality<::test::fidl::unionsandwich::UnionSize36Alignment4> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::UnionSize36Alignment4& _lhs, const ::test::fidl::unionsandwich::UnionSize36Alignment4& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::UnionSize36Alignment4>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4>
@@ -618,11 +603,6 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::SandwichUnionSize36Alignment4& _lhs, const ::test::fidl::unionsandwich::SandwichUnionSize36Alignment4& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -678,11 +658,6 @@ struct Equality<::test::fidl::unionsandwich::UnionSize12Alignment4> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::UnionSize12Alignment4& _lhs, const ::test::fidl::unionsandwich::UnionSize12Alignment4& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::UnionSize12Alignment4>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4>
@@ -707,11 +682,6 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::SandwichUnionSize12Alignment4& _lhs, const ::test::fidl::unionsandwich::SandwichUnionSize12Alignment4& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::StructSize16Alignment8>
@@ -732,11 +702,6 @@ struct Equality<::test::fidl::unionsandwich::StructSize16Alignment8> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::StructSize16Alignment8& _lhs, const ::test::fidl::unionsandwich::StructSize16Alignment8& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::StructSize16Alignment8>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -792,11 +757,6 @@ struct Equality<::test::fidl::unionsandwich::UnionSize24Alignment8> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::UnionSize24Alignment8& _lhs, const ::test::fidl::unionsandwich::UnionSize24Alignment8& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::UnionSize24Alignment8>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize24Alignment8>
@@ -820,10 +780,5 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize24Alignment8> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::fidl::unionsandwich::SandwichUnionSize24Alignment8& _lhs, const ::test::fidl::unionsandwich::SandwichUnionSize24Alignment8& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::fidl::unionsandwich::SandwichUnionSize24Alignment8>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

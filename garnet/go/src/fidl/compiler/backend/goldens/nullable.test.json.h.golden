@@ -466,11 +466,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableVector> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableVector& _lhs, const ::fidl::test::nullable::StructWithNullableVector& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableVector>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableUnion>
@@ -488,11 +483,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableUnion> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableUnion& _lhs, const ::fidl::test::nullable::StructWithNullableUnion& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableUnion>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -512,11 +502,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableStruct> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableStruct& _lhs, const ::fidl::test::nullable::StructWithNullableStruct& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableStruct>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableString>
@@ -534,11 +519,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableString> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableString& _lhs, const ::fidl::test::nullable::StructWithNullableString& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableString>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -558,11 +538,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableRequest> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableRequest& _lhs, const ::fidl::test::nullable::StructWithNullableRequest& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableRequest>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableProtocol>
@@ -581,11 +556,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableProtocol> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableProtocol& _lhs, const ::fidl::test::nullable::StructWithNullableProtocol& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableProtocol>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableHandle>
@@ -603,11 +573,6 @@ struct Equality<::fidl::test::nullable::StructWithNullableHandle> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::nullable::StructWithNullableHandle& _lhs, const ::fidl::test::nullable::StructWithNullableHandle& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::StructWithNullableHandle>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -665,11 +630,6 @@ struct Equality<::fidl::test::nullable::SimpleUnion> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::fidl::test::nullable::SimpleUnion& _lhs, const ::fidl::test::nullable::SimpleUnion& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::SimpleUnion>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::nullable::Int32Wrapper>
@@ -687,10 +647,5 @@ struct Equality<::fidl::test::nullable::Int32Wrapper> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::nullable::Int32Wrapper& _lhs, const ::fidl::test::nullable::Int32Wrapper& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::nullable::Int32Wrapper>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

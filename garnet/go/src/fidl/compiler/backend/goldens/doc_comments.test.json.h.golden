@@ -573,11 +573,6 @@ struct Equality<::test::name::Union> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::Union>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::name::Table>
@@ -602,11 +597,6 @@ struct Equality<::test::name::Table> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::test::name::Table& _lhs, const ::test::name::Table& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::Table>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::name::Struct>
@@ -624,11 +614,6 @@ struct Equality<::test::name::Struct> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::Struct>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -654,11 +639,6 @@ template<>
 struct Equality<::test::name::MyEnum> {
   bool operator()(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) const {
     return _lhs == _rhs;
-  }
-
-  static inline bool Equals(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::MyEnum>{}(_lhs, _rhs);
   }
 };
 
@@ -689,10 +669,5 @@ struct Equality<::test::name::MyBits> {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
-  }
-
-  static inline bool Equals(const ::test::name::MyBits& _lhs, const ::test::name::MyBits& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::MyBits>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

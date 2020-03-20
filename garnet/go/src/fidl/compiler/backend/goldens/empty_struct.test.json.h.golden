@@ -263,9 +263,4 @@ struct Equality<::fidl::test::json::Empty> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::json::Empty& _lhs, const ::fidl::test::json::Empty& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::Empty>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

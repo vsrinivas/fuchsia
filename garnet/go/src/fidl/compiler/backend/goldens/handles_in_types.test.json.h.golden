@@ -257,11 +257,6 @@ struct Equality<::test::name::UnionWithHandle> {
         return *_lhs.UnknownData() == *_rhs.UnknownData();
       }
     }
-
-  static inline bool Equals(const ::test::name::UnionWithHandle& _lhs, const ::test::name::UnionWithHandle& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::UnionWithHandle>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::test::name::TableWithHandle>
@@ -285,11 +280,6 @@ struct Equality<::test::name::TableWithHandle> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::name::TableWithHandle& _lhs, const ::test::name::TableWithHandle& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::TableWithHandle>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -323,10 +313,5 @@ struct Equality<::test::name::HandlesInTypes> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::test::name::HandlesInTypes& _lhs, const ::test::name::HandlesInTypes& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::HandlesInTypes>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

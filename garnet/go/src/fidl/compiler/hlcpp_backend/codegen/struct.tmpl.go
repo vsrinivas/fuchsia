@@ -116,11 +116,6 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
     {{- end }}
     return true;
   }
-
-  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>{}(_lhs, _rhs);
-  }
 };
 
 {{- end }}

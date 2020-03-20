@@ -63,9 +63,4 @@ struct Equality<::example::ByteAndBytes> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::example::ByteAndBytes& _lhs, const ::example::ByteAndBytes& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ByteAndBytes>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

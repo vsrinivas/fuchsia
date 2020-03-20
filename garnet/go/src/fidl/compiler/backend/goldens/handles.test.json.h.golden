@@ -348,9 +348,4 @@ struct Equality<::fidl::test::handles::Handles> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::handles::Handles& _lhs, const ::fidl::test::handles::Handles& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::handles::Handles>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

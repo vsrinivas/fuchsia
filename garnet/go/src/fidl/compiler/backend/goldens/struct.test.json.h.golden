@@ -80,11 +80,6 @@ struct Equality<::fidl::test::json::Simple> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::json::Simple& _lhs, const ::fidl::test::json::Simple& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::Simple>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::BasicStruct>
@@ -105,10 +100,5 @@ struct Equality<::fidl::test::json::BasicStruct> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::json::BasicStruct& _lhs, const ::fidl::test::json::BasicStruct& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::BasicStruct>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

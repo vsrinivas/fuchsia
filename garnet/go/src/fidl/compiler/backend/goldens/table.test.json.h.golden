@@ -567,11 +567,6 @@ struct Equality<::fidl::test::json::SimpleTable> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::json::SimpleTable& _lhs, const ::fidl::test::json::SimpleTable& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::SimpleTable>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::ReverseOrdinalTable>
@@ -616,11 +611,6 @@ struct Equality<::fidl::test::json::ReverseOrdinalTable> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::json::ReverseOrdinalTable& _lhs, const ::fidl::test::json::ReverseOrdinalTable& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::ReverseOrdinalTable>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::OlderSimpleTable>
@@ -644,11 +634,6 @@ struct Equality<::fidl::test::json::OlderSimpleTable> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::json::OlderSimpleTable& _lhs, const ::fidl::test::json::OlderSimpleTable& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::OlderSimpleTable>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -694,11 +679,6 @@ struct Equality<::fidl::test::json::NewerSimpleTable> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::json::NewerSimpleTable& _lhs, const ::fidl::test::json::NewerSimpleTable& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::NewerSimpleTable>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::EmptyTable>
@@ -712,10 +692,5 @@ template<>
 struct Equality<::fidl::test::json::EmptyTable> {
   bool operator()(const ::fidl::test::json::EmptyTable& _lhs, const ::fidl::test::json::EmptyTable& _rhs) const {
     return true;
-  }
-
-  static inline bool Equals(const ::fidl::test::json::EmptyTable& _lhs, const ::fidl::test::json::EmptyTable& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::EmptyTable>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

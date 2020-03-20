@@ -50,11 +50,6 @@ struct Equality<::test::name::MyStrictEnum> {
   bool operator()(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) const {
     return _lhs == _rhs;
   }
-
-  static inline bool Equals(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::test::name::MyStrictEnum>{}(_lhs, _rhs);
-  }
 };
 
 }  // namespace fidl

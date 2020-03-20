@@ -49,9 +49,4 @@ struct Equality<::top::Baz> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::top::Baz& _lhs, const ::top::Baz& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::top::Baz>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

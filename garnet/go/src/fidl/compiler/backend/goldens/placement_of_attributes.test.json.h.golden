@@ -549,11 +549,6 @@ struct Equality<::example::ExampleXUnion> {
         return *_lhs.UnknownData() == *_rhs.UnknownData();
       }
     }
-
-  static inline bool Equals(const ::example::ExampleXUnion& _lhs, const ::example::ExampleXUnion& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleXUnion>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct IsFidlXUnion<::example::ExampleUnion> : public std::true_type {};
@@ -608,11 +603,6 @@ struct Equality<::example::ExampleUnion> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::example::ExampleUnion& _lhs, const ::example::ExampleUnion& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleUnion>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::example::ExampleTable>
@@ -637,11 +627,6 @@ struct Equality<::example::ExampleTable> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::example::ExampleTable& _lhs, const ::example::ExampleTable& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleTable>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::example::ExampleStruct>
@@ -659,11 +644,6 @@ struct Equality<::example::ExampleStruct> {
       return false;
     }
     return true;
-  }
-
-  static inline bool Equals(const ::example::ExampleStruct& _lhs, const ::example::ExampleStruct& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleStruct>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -689,11 +669,6 @@ template<>
 struct Equality<::example::ExampleEnum> {
   bool operator()(const ::example::ExampleEnum& _lhs, const ::example::ExampleEnum& _rhs) const {
     return _lhs == _rhs;
-  }
-
-  static inline bool Equals(const ::example::ExampleEnum& _lhs, const ::example::ExampleEnum& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleEnum>{}(_lhs, _rhs);
   }
 };
 
@@ -724,10 +699,5 @@ struct Equality<::example::ExampleBits> {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
-  }
-
-  static inline bool Equals(const ::example::ExampleBits& _lhs, const ::example::ExampleBits& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleBits>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

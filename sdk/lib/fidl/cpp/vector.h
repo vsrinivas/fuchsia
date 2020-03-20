@@ -261,11 +261,6 @@ struct Equality<VectorPtr<T>> {
     }
     return ::fidl::Equality<std::vector<T>>{}(lhs.value(), rhs.value());
   }
-
-  // TODO(46638): Remove this when all clients have been transitioned to functor.
-  static inline bool Equals(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-    return ::fidl::Equality<VectorPtr<T>>{}(lhs, rhs);
-  }
 };
 
 }  // namespace fidl

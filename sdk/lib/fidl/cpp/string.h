@@ -189,11 +189,6 @@ struct Equality<StringPtr> {
     }
     return rhs.has_value() && lhs.value() == rhs.value();
   }
-
-  // TODO(46638): Remove this when all clients have been transitioned to functor.
-  static inline bool Equals(const StringPtr& lhs, const StringPtr& rhs) {
-    return ::fidl::Equality<StringPtr>{}(lhs, rhs);
-  }
 };
 
 inline bool operator==(const StringPtr& lhs, const StringPtr& rhs) {

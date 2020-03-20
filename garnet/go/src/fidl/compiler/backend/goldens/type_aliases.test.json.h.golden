@@ -94,9 +94,4 @@ struct Equality<::example::ExampleOfUseOfAliases> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::example::ExampleOfUseOfAliases& _lhs, const ::example::ExampleOfUseOfAliases& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::example::ExampleOfUseOfAliases>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

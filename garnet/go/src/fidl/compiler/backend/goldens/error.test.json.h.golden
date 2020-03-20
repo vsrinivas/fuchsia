@@ -346,11 +346,6 @@ struct Equality<::fidl::test::json::Example_foo_Response> {
     }
     return true;
   }
-
-  static inline bool Equals(const ::fidl::test::json::Example_foo_Response& _lhs, const ::fidl::test::json::Example_foo_Response& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::Example_foo_Response>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::Example_foo_Result> : public std::true_type {};
@@ -407,9 +402,4 @@ struct Equality<::fidl::test::json::Example_foo_Result> {
         return false;
       }
     }
-
-  static inline bool Equals(const ::fidl::test::json::Example_foo_Result& _lhs, const ::fidl::test::json::Example_foo_Result& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::Example_foo_Result>{}(_lhs, _rhs);
-  }
 };}  // namespace fidl

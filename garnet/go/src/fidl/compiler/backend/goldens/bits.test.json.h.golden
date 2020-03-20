@@ -155,11 +155,6 @@ struct Equality<::fidl::test::json::StrictBits> {
     uint64_t _rhs_underlying = static_cast<uint64_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
-
-  static inline bool Equals(const ::fidl::test::json::StrictBits& _lhs, const ::fidl::test::json::StrictBits& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::StrictBits>{}(_lhs, _rhs);
-  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::MyBits> {
@@ -187,10 +182,5 @@ struct Equality<::fidl::test::json::MyBits> {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
-  }
-
-  static inline bool Equals(const ::fidl::test::json::MyBits& _lhs, const ::fidl::test::json::MyBits& _rhs) {
-    // TODO(46638): Remove this when all clients have been transitioned to functor.
-    return ::fidl::Equality<::fidl::test::json::MyBits>{}(_lhs, _rhs);
   }
 };}  // namespace fidl
