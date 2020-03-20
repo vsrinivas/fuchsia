@@ -12,6 +12,7 @@ source_set("volume-descriptor") {
     "volume_descriptor.h",
   ]
   public_deps = [
+    "utils:guid",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
@@ -28,11 +29,18 @@ executable("volume-descriptor-test") {
 }
 
 unittest_package("storage-volume-image-tests") {
-  deps = [ ":volume-descriptor-test" ]
+  deps = [
+    ":volume-descriptor-test",
+    "utils:utils-test",
+  ]
 
   tests = [
     {
       name = "volume-descriptor-test"
+      environments = basic_envs
+    },
+    {
+      name = "utils-test"
       environments = basic_envs
     },
   ]
