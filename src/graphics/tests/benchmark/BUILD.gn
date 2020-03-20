@@ -41,6 +41,8 @@ executable("memcpy") {
 executable("vkcopy") {
   testonly = true
 
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
   sources = [ "test_vkcopy.cc" ]
 
   deps = [ "//src/lib/vulkan" ]

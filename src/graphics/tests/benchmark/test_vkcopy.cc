@@ -10,14 +10,19 @@
 #include <chrono>
 #include <vector>
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
-#define PRINT_STDERR(format, ...) \
-  fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#define RTN_MSG(err, ...)                          \
+  {                                                \
+    fprintf(stderr, "%s:%d ", __FILE__, __LINE__); \
+    fprintf(stderr, __VA_ARGS__);                  \
+    fflush(stderr);                                \
+    return err;                                    \
+  }
 
 class VkCopyTest {
  public:
-  VkCopyTest(uint32_t buffer_size) : buffer_size_(buffer_size) {}
+  explicit VkCopyTest(uint32_t buffer_size) : buffer_size_(buffer_size) {}
 
   bool Initialize();
   bool Exec();
@@ -28,27 +33,32 @@ class VkCopyTest {
 
   bool is_initialized_ = false;
   uint32_t buffer_size_;
-  VkPhysicalDevice vk_physical_device_;
-  VkDevice vk_device_;
-  VkQueue vk_queue_;
-  VkBuffer vk_buffer_[2];
-  VkDeviceMemory vk_device_memory_[0];
-  VkCommandPool vk_command_pool_;
-  VkCommandBuffer vk_command_buffer_;
+  vk::UniqueInstance instance_;
+  vk::PhysicalDevice physical_device_;
+  vk::UniqueDevice device_;
+  vk::Queue queue_;
+
+  struct Buffer {
+    vk::BufferUsageFlagBits usage;
+    vk::UniqueBuffer buffer;
+    vk::UniqueDeviceMemory memory;
+  };
+  std::array<Buffer, 2> buffers_;
+  vk::UniqueCommandPool command_pool_;
+  std::vector<vk::UniqueCommandBuffer> command_buffers_;
 };
 
 bool VkCopyTest::Initialize() {
-  if (is_initialized_)
-    return false;
-
-  if (!InitVulkan()) {
-    PRINT_STDERR("failed to initialize Vulkan");
+  if (is_initialized_) {
     return false;
   }
 
+  if (!InitVulkan()) {
+    RTN_MSG(false, "Failed to initialize Vulkan.\n");
+  }
+
   if (!InitBuffers(buffer_size_)) {
-    PRINT_STDERR("InitBuffers failed");
-    return false;
+    RTN_MSG(false, "InitBuffers failed.\n");
   }
 
   is_initialized_ = true;
@@ -57,274 +67,192 @@ bool VkCopyTest::Initialize() {
 }
 
 bool VkCopyTest::InitVulkan() {
-  VkInstanceCreateInfo create_info{
-      VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
-      nullptr,                                 // const void*                 pNext;
-      0,                                       // VkInstanceCreateFlags       flags;
-      nullptr,                                 // const VkApplicationInfo*    pApplicationInfo;
-      0,                                       // uint32_t                    enabledLayerCount;
-      nullptr,                                 // const char* const*          ppEnabledLayerNames;
-      0,                                       // uint32_t                    enabledExtensionCount;
-      nullptr,  // const char* const*          ppEnabledExtensionNames;
-  };
-  VkAllocationCallbacks* allocation_callbacks = nullptr;
-  VkInstance instance;
-  VkResult result;
-
-  result = vkCreateInstance(&create_info, allocation_callbacks, &instance);
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkCreateInstance failed %d", result);
-    return false;
+  // All vulkan hpp create functions will follow the pattern below.
+  // An 'auto' declaration of a result value type specific to the call. e.g. below:
+  //   ResultValueType<UniqueHandle<class Instance, class DispatchLoaderStatic>>::type
+  // is the type of rvt_instance.
+  vk::InstanceCreateInfo instance_info;
+  auto rvt_instance = vk::createInstanceUnique(instance_info);
+  if (vk::Result::eSuccess != rvt_instance.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Create instance.\n", rvt_instance.result);
   }
+  instance_ = std::move(rvt_instance.value);
 
-  uint32_t physical_device_count;
-  result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
-    return false;
+  auto [rv, physical_devices] = instance_->enumeratePhysicalDevices();
+  if (vk::Result::eSuccess != rv || physical_devices.empty()) {
+    RTN_MSG(false, "VK Error: 0x%x - No physical device found.\n", rv);
   }
+  physical_device_ = physical_devices[0];
 
-  if (physical_device_count < 1) {
-    PRINT_STDERR("unexpected physical_device_count %d", physical_device_count);
-    return false;
-  }
-
-  std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-  result = vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices.data());
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
-    return false;
-  }
-
-  uint32_t queue_family_count;
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
-
-  if (queue_family_count < 1) {
-    PRINT_STDERR("invalid queue_family_count %d", queue_family_count);
-    return false;
-  }
-
-  std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
-                                           queue_family_properties.data());
-
-  int32_t queue_family_index = -1;
-  for (uint32_t i = 0; i < queue_family_count; i++) {
-    if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+  const auto queue_families = physical_device_.getQueueFamilyProperties();
+  size_t queue_family_index = queue_families.size();
+  for (size_t i = 0; i < queue_families.size(); ++i) {
+    if (queue_families[i].queueFlags & vk::QueueFlagBits::eGraphics) {
       queue_family_index = i;
       break;
     }
   }
-
-  if (queue_family_index < 0) {
-    PRINT_STDERR("couldn't find an appropriate queue");
-    return false;
+  if (queue_family_index == queue_families.size()) {
+    RTN_MSG(false, "Couldn't find an appropriate queue.\n");
   }
 
-  float queue_priorities[1] = {0.0};
+  float queue_priority = 0.0f;
+  vk::DeviceQueueCreateInfo queue_info;
+  queue_info.queueCount = 1;
+  queue_info.queueFamilyIndex = queue_family_index;
+  queue_info.pQueuePriorities = &queue_priority;
 
-  VkDeviceQueueCreateInfo queue_create_info = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                               .pNext = nullptr,
-                                               .flags = 0,
-                                               .queueFamilyIndex = 0,
-                                               .queueCount = 1,
-                                               .pQueuePriorities = queue_priorities};
-  VkDeviceCreateInfo createInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                                   .pNext = nullptr,
-                                   .flags = 0,
-                                   .queueCreateInfoCount = 1,
-                                   .pQueueCreateInfos = &queue_create_info,
-                                   .enabledLayerCount = 0,
-                                   .ppEnabledLayerNames = nullptr,
-                                   .enabledExtensionCount = 0,
-                                   .ppEnabledExtensionNames = nullptr,
-                                   .pEnabledFeatures = nullptr};
-  VkDevice vkdevice;
+  vk::DeviceCreateInfo device_info;
+  device_info.queueCreateInfoCount = 1;
+  device_info.pQueueCreateInfos = &queue_info;
 
-  if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS) {
-    PRINT_STDERR("vkCreateDevice failed: %d", result);
-    return false;
+  auto rvt_device = physical_device_.createDeviceUnique(device_info);
+  if (vk::Result::eSuccess != rvt_device.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Create device.\n", rvt_device.result);
   }
-
-  vk_physical_device_ = physical_devices[0];
-  vk_device_ = vkdevice;
-
-  vkGetDeviceQueue(vkdevice, queue_family_index, 0, &vk_queue_);
+  device_ = std::move(rvt_device.value);
+  queue_ = device_->getQueue(queue_family_index, 0);
 
   return true;
 }
 
 bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
-  VkResult result;
+  vk::Result rv;
 
-  VkPhysicalDeviceMemoryProperties memory_props;
-  vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_props);
-
+  vk::PhysicalDeviceMemoryProperties memory_props;
+  physical_device_.getMemoryProperties(&memory_props);
   uint32_t memory_type = 0;
-  for (; memory_type < 32; memory_type++) {
-    if (memory_props.memoryTypes[memory_type].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+  for (; memory_type < memory_props.memoryTypeCount; memory_type++) {
+    if (memory_props.memoryTypes[memory_type].propertyFlags &
+        vk::MemoryPropertyFlagBits::eHostVisible) {
       break;
+    }
+  }
+  if (memory_type >= memory_props.memoryTypeCount) {
+    RTN_MSG(false, "Can't find compatible mappable memory for image.\n");
   }
 
-  if (memory_type >= 32) {
-    PRINT_STDERR("Can't find compatible mappable memory for image");
-    return false;
-  }
+  buffers_[0].usage = vk::BufferUsageFlagBits::eTransferSrc;
+  buffers_[1].usage = vk::BufferUsageFlagBits::eTransferDst;
+  for (auto &buffer : buffers_) {
+    vk::BufferCreateInfo buffer_info;
+    buffer_info.size = buffer_size;
+    buffer_info.usage = buffer.usage;
+    buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
-  for (uint32_t i = 0; i < 2; i++) {
-    VkBufferCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .size = buffer_size,
-        .usage = (i == 0) ? VK_BUFFER_USAGE_TRANSFER_SRC_BIT : VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices = nullptr,
-    };
+    auto rvt_buffer = device_->createBufferUnique(buffer_info);
+    if (vk::Result::eSuccess != rvt_buffer.result) {
+      RTN_MSG(false, "VK Error: 0x%x - Create buffer.\n", rvt_buffer.result);
+    }
+    buffer.buffer = std::move(rvt_buffer.value);
 
-    result = vkCreateBuffer(vk_device_, &create_info, nullptr, &vk_buffer_[i]);
-    if (result != VK_SUCCESS) {
-      PRINT_STDERR("vkCreateBuffer failed: %d", result);
-      return false;
+    vk::MemoryAllocateInfo alloc_info;
+    alloc_info.allocationSize = buffer_size;
+    alloc_info.memoryTypeIndex = memory_type;
+
+    auto rvt_memory = device_->allocateMemoryUnique(alloc_info);
+    if (vk::Result::eSuccess != rvt_memory.result) {
+      RTN_MSG(false, "VK Error: 0x%x - Create buffer memory.\n", rvt_memory.result);
+    }
+    buffer.memory = std::move(rvt_memory.value);
+
+    void *addr;
+    rv = device_->mapMemory(*(buffer.memory), 0 /* offset */, buffer_size, vk::MemoryMapFlags(),
+                            &addr);
+    if (vk::Result::eSuccess != rv) {
+      RTN_MSG(false, "VK Error: 0x%x - Map buffer memory.\n", rv);
     }
 
-    VkMemoryAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = nullptr,
-        .allocationSize = buffer_size,
-        .memoryTypeIndex = memory_type,
-    };
+    uint8_t index = (buffer.usage == vk::BufferUsageFlagBits::eTransferSrc) ? 0 : 1;
+    memset(addr, static_cast<uint8_t>(index), buffer_size);
+    device_->unmapMemory(*(buffer.memory));
 
-    result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_[i]);
-    if (result != VK_SUCCESS) {
-      PRINT_STDERR("vkAllocateMemory failed: %d", result);
-      return false;
-    }
-
-    void* addr;
-    result = vkMapMemory(vk_device_, vk_device_memory_[i], 0, VK_WHOLE_SIZE, 0, &addr);
-    if (result != VK_SUCCESS) {
-      PRINT_STDERR("vkMapMeory failed: %d", result);
-      return false;
-    }
-
-    memset(addr, (uint8_t)i, buffer_size);
-
-    vkUnmapMemory(vk_device_, vk_device_memory_[i]);
-
-    result = vkBindBufferMemory(vk_device_, vk_buffer_[i], vk_device_memory_[i], 0);
-    if (result != VK_SUCCESS) {
-      PRINT_STDERR("vkBindBufferMemory failed: %d", result);
-      return false;
+    rv = device_->bindBufferMemory(*(buffer.buffer), *(buffer.memory), 0 /* offset */);
+    if (rv != vk::Result::eSuccess) {
+      RTN_MSG(false, "VK Error: 0x%x - Bind buffer memory.\n", rv);
     }
   }
 
-  VkCommandPoolCreateInfo command_pool_create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .queueFamilyIndex = 0,
-  };
+  vk::CommandPoolCreateInfo command_pool_info;
+  command_pool_info.queueFamilyIndex = 0;
 
-  result = vkCreateCommandPool(vk_device_, &command_pool_create_info, nullptr, &vk_command_pool_);
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkCreateCommandPool failed: %d", result);
-    return false;
+  auto rvt_command_pool = device_->createCommandPoolUnique(command_pool_info);
+  if (vk::Result::eSuccess != rvt_command_pool.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Create command pool.\n", rvt_command_pool.result);
+  }
+  command_pool_ = std::move(rvt_command_pool.value);
+
+  vk::CommandBufferAllocateInfo command_buffer_allocate_info;
+  command_buffer_allocate_info.commandPool = *command_pool_;
+  command_buffer_allocate_info.level = vk::CommandBufferLevel::ePrimary;
+  command_buffer_allocate_info.commandBufferCount = 1;
+  auto rvt_command_buffers = device_->allocateCommandBuffersUnique(command_buffer_allocate_info);
+  if (vk::Result::eSuccess != rvt_command_buffers.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Allocate command buffers.\n", rvt_command_buffers.result);
+  }
+  command_buffers_ = std::move(rvt_command_buffers.value);
+  vk::UniqueCommandBuffer &command_buffer = command_buffers_[0];
+
+  rv = command_buffer->begin(vk::CommandBufferBeginInfo{});
+  if (vk::Result::eSuccess != rv) {
+    RTN_MSG(false, "VK Error: 0x%x - Begin command buffer.\n", rv);
   }
 
-  VkCommandBufferAllocateInfo command_buffer_create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .commandPool = vk_command_pool_,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = 1};
-  result = vkAllocateCommandBuffers(vk_device_, &command_buffer_create_info, &vk_command_buffer_);
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkAllocateCommandBuffers failed: %d", result);
-    return false;
-  }
+  vk::BufferCopy copy_region(0 /* srcOffset */, 0 /* dstOffset */, buffer_size);
+  command_buffer->copyBuffer(*buffers_[0].buffer, *buffers_[1].buffer, 1 /* region_count */,
+                             &copy_region);
 
-  VkCommandBufferBeginInfo begin_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .pInheritanceInfo = nullptr,  // ignored for primary buffers
-  };
-  result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info);
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkBeginCommandBuffer failed: %d", result);
-    return false;
-  }
-
-  VkBufferCopy copy_region = {
-      .srcOffset = 0,
-      .dstOffset = 0,
-      .size = buffer_size,
-  };
-
-  vkCmdCopyBuffer(vk_command_buffer_, vk_buffer_[0], vk_buffer_[1], 1, &copy_region);
-
-  result = vkEndCommandBuffer(vk_command_buffer_);
-  if (result != VK_SUCCESS) {
-    PRINT_STDERR("vkEndCommandBuffer failed: %d", result);
-    return false;
+  rv = command_buffer->end();
+  if (rv != vk::Result::eSuccess) {
+    RTN_MSG(false, "VK Error: 0x%x - End command buffer.\n", rv);
   }
 
   return true;
 }
 
 bool VkCopyTest::Exec() {
-  VkSubmitInfo submit_info = {
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = nullptr,
-      .waitSemaphoreCount = 0,
-      .pWaitSemaphores = nullptr,
-      .pWaitDstStageMask = nullptr,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &vk_command_buffer_,
-      .signalSemaphoreCount = 0,
-      .pSignalSemaphores = nullptr,
-  };
+  auto &command_buffer = command_buffers_[0];
+  vk::SubmitInfo submit_info;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &(command_buffer.get());
 
-  VkResult result;
-  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS) {
-    PRINT_STDERR("vkQueueSubmit failed");
-    return false;
+  auto rv = queue_.submit(1, &submit_info, nullptr /* fence */);
+  if (rv != vk::Result::eSuccess) {
+    RTN_MSG(false, "VK Error: 0x%x - vk::Queue submit failed.\n", rv);
   }
 
-  vkQueueWaitIdle(vk_queue_);
+  queue_.waitIdle();
 
   return true;
 }
 
-int main(void) {
-  uint32_t buffer_size = 60 * 1024 * 1024;
-  uint32_t iterations = 1000;
+int main() {
+  const uint32_t kBufferSize = 60 * 1024 * 1024;
+  const uint32_t kIterations = 1000;
 
-  VkCopyTest app(buffer_size);
+  VkCopyTest app(kBufferSize);
 
   if (!app.Initialize()) {
-    PRINT_STDERR("could not initialize app");
-    return -1;
+    RTN_MSG(-1, "Could not initialize app.\n");
   }
 
-  printf("Copying buffer_size %u iterations %u...", buffer_size, iterations);
+  printf("Copying buffer size: %u  Iterations: %u...\n", kBufferSize, kIterations);
   fflush(stdout);
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  for (uint32_t iter = 0; iter < iterations; iter++) {
+  for (uint32_t iter = 0; iter < kIterations; iter++) {
     if (!app.Exec()) {
-      PRINT_STDERR("Exec failed");
-      return -1;
+      RTN_MSG(-1, "Exec failed.\n");
     }
   }
 
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
 
-  printf("copy rate %g MB/s", (double)buffer_size * iterations / 1024 / 1024 / elapsed.count());
+  const uint32_t kMB = 1024 * 1024;
+  printf("Copy rate %g MB/s\n",
+         static_cast<double>(kBufferSize) * kIterations / kMB / elapsed.count());
+  fflush(stdout);
 
   return 0;
 }
