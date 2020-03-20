@@ -9,14 +9,10 @@
 
 namespace component {
 
-AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path,
-                     AllowList::Expectation expected) : allow_all_(false) {
+AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path) : allow_all_(false) {
   std::string result;
   if (!files::ReadFileToStringAt(dir.get(), path, &result)) {
-    if (expected == AllowList::kExpected) {
-      FXL_LOG(ERROR) << "Failed to read allowlist " << path;
-    }
-    file_found_ = false;
+    FXL_LOG(ERROR) << "Failed to read allowlist at " << path << ", will deny all usage attempts";
     return;
   }
 
@@ -36,7 +32,6 @@ AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path,
       internal_set_.insert(std::move(line));
     }
   }
-  file_found_ = true;
 }
 
 }  // namespace component

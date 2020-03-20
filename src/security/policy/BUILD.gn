@@ -7,6 +7,7 @@ import("//build/config.gni")
 group("appmgr_policy_eng") {
   deps = [
     ":appmgr_component_event_provider_allowlist_eng",
+    ":appmgr_deprecated_ambient_replace_as_executable_allowlist_eng",
     ":appmgr_deprecated_shell_allowlist_eng",
     ":appmgr_global_data_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",

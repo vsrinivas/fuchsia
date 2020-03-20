@@ -76,52 +76,42 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
 }
 
 bool PolicyChecker::CheckDeprecatedAmbientReplaceAsExecutable(std::string ns_id) {
-  AllowList deprecated_exec_allowlist(config_, kDeprecatedAmbientReplaceAsExecAllowList,
-                                      AllowList::kOptional);
-  // We treat the absence of the allowlist as an indication that we should be
-  // permissive and allow all components to use replace-as-executable.  We add
-  // the allowlist in user builds to ensure we are enforcing policy.
-  // TODO(fxb/47836) to remove this behavior
-  if (!deprecated_exec_allowlist.WasFilePresent()) {
-    return true;
-  }
-  // Otherwise, enforce the allowlist.
+  AllowList deprecated_exec_allowlist(config_, kDeprecatedAmbientReplaceAsExecAllowList);
   return deprecated_exec_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckComponentEventProvider(std::string ns_id) {
-  AllowList component_event_provider_allowlist(config_, kComponentEventProviderAllowList,
-                                               AllowList::kExpected);
+  AllowList component_event_provider_allowlist(config_, kComponentEventProviderAllowList);
   return component_event_provider_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckDeprecatedShell(std::string ns_id) {
-  AllowList deprecated_shell_allowlist(config_, kDeprecatedShellAllowList, AllowList::kExpected);
+  AllowList deprecated_shell_allowlist(config_, kDeprecatedShellAllowList);
   return deprecated_shell_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckPackageResolver(std::string ns_id) {
-  AllowList package_resolver_allowlist(config_, kPackageResolverAllowList, AllowList::kExpected);
+  AllowList package_resolver_allowlist(config_, kPackageResolverAllowList);
   return package_resolver_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckPackageCache(std::string ns_id) {
-  AllowList package_cache_allowlist(config_, kPackageCacheAllowList, AllowList::kExpected);
+  AllowList package_cache_allowlist(config_, kPackageCacheAllowList);
   return package_cache_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckPkgFsVersions(std::string ns_id) {
-  AllowList pkgfs_versions_allowlist(config_, kPkgFsVersionsAllowList, AllowList::kExpected);
+  AllowList pkgfs_versions_allowlist(config_, kPkgFsVersionsAllowList);
   return pkgfs_versions_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckRootJob(std::string ns_id) {
-  AllowList root_job_allowlist(config_, kRootJobAllowList, AllowList::kExpected);
+  AllowList root_job_allowlist(config_, kRootJobAllowList);
   return root_job_allowlist.IsAllowed(ns_id);
 }
 
 bool PolicyChecker::CheckRootResource(std::string ns_id) {
-  AllowList root_resource_allowlist(config_, kRootResourceAllowList, AllowList::kExpected);
+  AllowList root_resource_allowlist(config_, kRootResourceAllowList);
   return root_resource_allowlist.IsAllowed(ns_id);
 }
 

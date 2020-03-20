@@ -65,14 +65,15 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyAbsent) {
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
 
-  // No allowlist present in this test.
+  // No allowlist present in this test.  This means that all packages should be
+  // disallowed ambient replace-as-exec.
 
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   PolicyChecker policy_checker(std::move(dirfd));
 
-  EXPECT_TRUE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
+  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
       "fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx"));
-  EXPECT_TRUE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
+  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
       "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"));
 }
 

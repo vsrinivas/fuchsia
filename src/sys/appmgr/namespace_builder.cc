@@ -170,7 +170,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   }
 
   if (sandbox.HasInternalFeature("global-data")) {
-    AllowList global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowList, AllowList::kExpected);
+    AllowList global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowList);
     if (global_data_allowlist.IsAllowed(ns_id)) {
       PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
                                              O_DIRECTORY | O_RDONLY | O_ADMIN);

@@ -45,8 +45,7 @@ TEST_F(AllowListTest, Parse) {
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
-  AllowList allowlist(dirfd, filename, AllowList::kExpected);
-  EXPECT_TRUE(allowlist.WasFilePresent());
+  AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(allowlist.IsAllowed("test_one"));
   EXPECT_TRUE(allowlist.IsAllowed("test_two"));
   EXPECT_FALSE(allowlist.IsAllowed(""));
@@ -55,8 +54,7 @@ TEST_F(AllowListTest, Parse) {
 
 TEST_F(AllowListTest, MissingFile) {
   fxl::UniqueFD dirfd(open(".", O_RDONLY));
-  AllowList allowlist(dirfd, "/does/not/exist", AllowList::kExpected);
-  EXPECT_FALSE(allowlist.WasFilePresent());
+  AllowList allowlist(dirfd, "/does/not/exist");
   EXPECT_FALSE(allowlist.IsAllowed("test_one"));
   EXPECT_FALSE(allowlist.IsAllowed("test_two"));
   EXPECT_FALSE(allowlist.IsAllowed(""));
@@ -72,8 +70,7 @@ TEST_F(AllowListTest, ParsePackageUrls) {
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
-  AllowList allowlist(dirfd, filename, AllowList::kExpected);
-  EXPECT_TRUE(allowlist.WasFilePresent());
+  AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
   EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"));
   EXPECT_FALSE(allowlist.IsAllowed(""));
@@ -91,8 +88,7 @@ TEST_F(AllowListTest, WildcardAllow) {
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
-  AllowList allowlist(dirfd, filename, AllowList::kExpected);
-  EXPECT_TRUE(allowlist.WasFilePresent());
+  AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
   EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"));
   EXPECT_TRUE(allowlist.IsAllowed("literally-anything-at-all"));
@@ -112,8 +108,7 @@ TEST_F(AllowListTest, CommentsAreOmitted) {
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
-  AllowList allowlist(dirfd, filename, AllowList::kExpected);
-  EXPECT_TRUE(allowlist.WasFilePresent());
+  AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(allowlist.IsAllowed("test_one"));
   EXPECT_TRUE(allowlist.IsAllowed("test_two"));
   EXPECT_TRUE(allowlist.IsAllowed("File#Name"));

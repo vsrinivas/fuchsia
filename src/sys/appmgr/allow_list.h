@@ -16,27 +16,19 @@ namespace component {
 // Represents a list of component URLs that are allowed to use a certain feature.
 class AllowList {
  public:
-  enum Expectation {
-    kExpected,
-    kOptional,
-  };
-
   // Parses the given file as an allowlist.
   //
   // The file should consist of Component URLs, one per line.
   // No validation is done on the format of the file.
-  explicit AllowList(const fxl::UniqueFD& dir, const std::string& file_path, Expectation expected);
+  explicit AllowList(const fxl::UniqueFD& dir, const std::string& file_path);
 
   bool IsAllowed(const std::string& url) const {
     return allow_all_ || internal_set_.find(url) != internal_set_.end();
   }
 
-  bool WasFilePresent() const { return file_found_; }
-
  private:
   std::unordered_set<std::string> internal_set_;
   bool allow_all_;
-  bool file_found_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AllowList);
 };
