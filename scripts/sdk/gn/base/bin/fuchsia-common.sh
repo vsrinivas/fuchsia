@@ -148,12 +148,13 @@ function run-gsutil {
     GSUTIL_BIN="$(command -v gsutil.py)"
   fi
 
-
   if [[ "${GSUTIL_BIN}" == "" ]]; then
     fx-error "Cannot find gsutil."
     exit 2
   fi
-  "${GSUTIL_BIN}" "$@"
+
+  # Prevent gsutil prompting for updates by making stdin not a TTY
+  "${GSUTIL_BIN}" "$@" < /dev/null
 }
 
 # Run cipd from the directory of this script if it exists, otherwise
