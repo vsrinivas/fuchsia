@@ -79,6 +79,7 @@ group("tests") {
     "mundane:tests",
     "network:tests",
     "process_builder:tests",
+    "scoped_task:tests",
     "shared-buffer:tests",
     "storage:tests",
     "streammap:tests",

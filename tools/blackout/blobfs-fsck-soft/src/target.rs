@@ -20,6 +20,7 @@ use {
     fdio,
     fs_management::{Blobfs, Filesystem},
     fuchsia_zircon::{self as zx, AsHandleRef},
+    scoped_task::{self, Scoped},
     std::ffi::CString,
     structopt::StructOpt,
 };
@@ -47,7 +48,7 @@ fn test_spawn(
     blobfs: &mut Filesystem<Blobfs>,
     seed: u64,
     num_ops: u64,
-) -> Result<zx::Process, Error> {
+) -> Result<Scoped<zx::Process>, Error> {
     let root = format!("/test-fs-root-{}", seed);
 
     println!("mounting blobfs into default namespace");
@@ -61,6 +62,7 @@ fn test(blobfs: &mut Filesystem<Blobfs>, seed: u64) -> Result<(), Error> {
     let process = test_spawn(blobfs, seed, 0)?;
 
     let _signals = process
+        .into_inner()
         .wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)
         .context("failed to wait for blobfs load generator process")?;
 
@@ -89,7 +91,11 @@ fn main() -> Result<(), Error> {
     }
 }
 
-fn launch_generator_process(seed: u64, root: &str, num_ops: u64) -> Result<zx::Process, Error> {
+fn launch_generator_process(
+    seed: u64,
+    root: &str,
+    num_ops: u64,
+) -> Result<Scoped<zx::Process>, Error> {
     let seed_cstring = CString::new(seed.to_string()).context("failed to make seed cstring")?;
     let root_cstring = CString::new(root).context("failed to make mount point cstring")?;
     let num_ops_cstring =
@@ -100,8 +106,8 @@ fn launch_generator_process(seed: u64, root: &str, num_ops: u64) -> Result<zx::P
         root_cstring.as_c_str(),
         num_ops_cstring.as_c_str(),
     ];
-    match fdio::spawn_etc(
-        &zx::Handle::invalid().into(),
+    match scoped_task::spawn_etc(
+        &scoped_task::job_default(),
         fdio::SpawnOptions::CLONE_ALL,
         argv[0],
         argv,
@@ -124,7 +130,7 @@ mod tests {
     use {
         super::{setup, test_spawn, verify},
         fs_management::Blobfs,
-        fuchsia_zircon::{self as zx, AsHandleRef, Task},
+        fuchsia_zircon::{self as zx, AsHandleRef},
         ramdevice_client::RamdiskClient,
     };
 
@@ -177,6 +183,7 @@ mod tests {
         let process = test_spawn(&mut blobfs, 4321, 1000).expect("failed to run process");
 
         let _signals = process
+            .into_inner()
             .wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)
             .expect("failed to wait for blobfs load generator process");
 

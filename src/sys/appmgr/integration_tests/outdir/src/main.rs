@@ -9,9 +9,9 @@ use {
     directory_broker, fdio,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    fuchsia_runtime::{job_default, HandleInfo, HandleType},
+    fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::HandleBased,
-    io_util,
+    io_util, scoped_task,
     std::{ffi::CString, path::Path},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -131,16 +131,15 @@ async fn main() -> Result<(), Error> {
     spawn_options.insert(fdio::SpawnOptions::CLONE_STDIO);
 
     let appmgr_bin_path_c_str = CString::new(APPMGR_BIN_PATH).unwrap();
-    let res = fdio::spawn_etc(
-        &job_default(),
+    let _process = scoped_task::spawn_etc(
+        scoped_task::job_default(),
         spawn_options,
         &appmgr_bin_path_c_str,
         &[&appmgr_bin_path_c_str],
         None,
         spawn_actions.as_mut_slice(),
-    );
-    let _ =
-        res.map_err(|(status, msg)| format_err!("failed to spawn appmgr ({}): {:?}", status, msg))?;
+    )
+    .map_err(|(status, msg)| format_err!("failed to spawn appmgr ({}): {:?}", status, msg))?;
 
     let echo_service_node = io_util::open_node(
         &appmgr_out_dir_proxy,

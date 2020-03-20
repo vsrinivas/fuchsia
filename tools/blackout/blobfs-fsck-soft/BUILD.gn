@@ -36,6 +36,7 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
   deps = [
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/scoped_task",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",

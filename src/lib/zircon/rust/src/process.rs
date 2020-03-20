@@ -154,6 +154,7 @@ mod tests {
         let binpath = CString::new("/pkg/bin/sleep_forever_util").unwrap();
         let process = fdio::spawn(
             &fuchsia_runtime::job_default(),
+            // Careful not to clone stdio here, or the test runner can hang.
             fdio::SpawnOptions::DEFAULT_LOADER,
             &binpath,
             &[&binpath],

@@ -10,7 +10,8 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon::{AsHandleRef, Task},
+    fuchsia_zircon::AsHandleRef,
+    scoped_task::{self, Scoped},
     std::ffi::{CStr, CString},
 };
 
@@ -56,7 +57,7 @@ impl PkgfsRamdiskBuilder {
 pub struct PkgfsRamdisk {
     blobfs: BlobfsRamdisk,
     proxy: DirectoryProxy,
-    process: KillOnDrop<fuchsia_zircon::Process>,
+    process: Scoped<fuchsia_zircon::Process>,
     system_image_merkle: Option<String>,
 }
 
@@ -103,8 +104,8 @@ impl PkgfsRamdisk {
             argv.push(system_image_flag)
         }
 
-        let process = fdio::spawn_etc(
-            &fuchsia_runtime::job_default(),
+        let process = scoped_task::spawn_etc(
+            scoped_task::job_default(),
             SpawnOptions::CLONE_ALL,
             &pkgsvr_bin,
             &argv,
@@ -123,7 +124,7 @@ impl PkgfsRamdisk {
         .map_err(|(status, _)| status)
         .context("spawning 'pkgsvr'")?;
 
-        Ok(PkgfsRamdisk { blobfs, proxy, process: process.into(), system_image_merkle })
+        Ok(PkgfsRamdisk { blobfs, proxy, process, system_image_merkle })
     }
 
     /// Starts a package server backed by the provided blobfs.
@@ -169,23 +170,9 @@ impl PkgfsRamdisk {
         Ok(dir)
     }
 
-    /// Kills the pkgfs process and waits for it to terminate.
-    fn kill_pkgfs(&self) -> Result<(), Error> {
-        self.process.kill().context("killing pkgfs")?;
-
-        self.process
-            .wait_handle(
-                fuchsia_zircon::Signals::PROCESS_TERMINATED,
-                fuchsia_zircon::Time::after(fuchsia_zircon::Duration::from_seconds(30)),
-            )
-            .context("waiting for 'pkgfs' to terminate")?;
-
-        Ok(())
-    }
-
     /// Restarts pkgfs with the same backing blobfs.
     pub fn restart(self) -> Result<Self, Error> {
-        self.kill_pkgfs()?;
+        kill_pkgfs(self.process)?;
         drop(self.proxy);
         Self::start_with_blobfs(self.blobfs, self.system_image_merkle)
     }
@@ -194,33 +181,23 @@ impl PkgfsRamdisk {
     ///
     /// This also shuts down blobfs and deletes the backing ramdisk.
     pub async fn stop(self) -> Result<(), Error> {
-        self.kill_pkgfs()?;
+        kill_pkgfs(self.process)?;
         self.blobfs.stop().await
     }
 }
 
-/// An owned zircon job or process that is silently killed when dropped.
-struct KillOnDrop<T: Task> {
-    task: T,
-}
+/// Kills the pkgfs process and waits for it to terminate.
+fn kill_pkgfs(process: Scoped<fuchsia_zircon::Process>) -> Result<(), Error> {
+    process
+        .kill()
+        .context("killing pkgfs")?
+        .wait_handle(
+            fuchsia_zircon::Signals::PROCESS_TERMINATED,
+            fuchsia_zircon::Time::after(fuchsia_zircon::Duration::from_seconds(30)),
+        )
+        .context("waiting for 'pkgfs' to terminate")?;
 
-impl<T: Task> Drop for KillOnDrop<T> {
-    fn drop(&mut self) {
-        let _ = self.task.kill();
-    }
-}
-
-impl<T: Task> std::ops::Deref for KillOnDrop<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.task
-    }
-}
-
-impl<T: Task> From<T> for KillOnDrop<T> {
-    fn from(task: T) -> Self {
-        Self { task }
-    }
+    Ok(())
 }
 
 #[cfg(test)]

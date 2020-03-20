@@ -348,6 +348,7 @@ mod tests {
 
         let binpath = CString::new("/pkg/bin/sleep_forever_util").unwrap();
         let process =
+            // Careful not to clone stdio here, or the test runner can hang.
             fdio::spawn(&child_job, fdio::SpawnOptions::DEFAULT_LOADER, &binpath, &[&binpath])
                 .expect("Failed to spawn process");
 

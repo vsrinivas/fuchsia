@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/scoped_task_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
