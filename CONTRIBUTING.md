@@ -22,7 +22,7 @@ again.
 
 All submissions, including submissions by project members, require review. We
 use [Gerrit](https://fuchsia-review.googlesource.com/) for this purpose. Consult
-[Gerrit User Guide](https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html) for more
+[Gerrit User Guide](https://gerrit-review.googlesource.com/Documentation/intro-user.html) for more
 information on using Gerrit.
 
 ## Community Guidelines
