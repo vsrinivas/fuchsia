@@ -25,12 +25,6 @@ test_package("feedback_utils_tests") {
       name = "cobalt_unittest"
     },
     {
-      name = "rotating_file_set_unittest"
-    },
-    {
-      name = "write_only_file_unittest"
-    },
-    {
       name = "inspect_node_manager_unittest"
     },
     {
@@ -43,10 +37,16 @@ test_package("feedback_utils_tests") {
       name = "promise_unittest"
     },
     {
+      name = "rotating_file_set_unittest"
+    },
+    {
       name = "time_unittest"
     },
     {
       name = "utc_time_provider_unittest"
+    },
+    {
+      name = "write_only_file_unittest"
     },
   ]
 

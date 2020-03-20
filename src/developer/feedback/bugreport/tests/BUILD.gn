@@ -25,10 +25,10 @@ group("tests") {
 test_package("bugreport_tests") {
   tests = [
     {
-      name = "bugreport_unittest"
+      name = "bugreport_integration_test"
     },
     {
-      name = "bugreport_integration_test"
+      name = "bugreport_unittest"
     },
     {
       name = "command_line_options_unittest"
@@ -45,6 +45,25 @@ test_package("bugreport_tests") {
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("bugreport_integration_test") {
+  testonly = true
+
+  sources = [ "bug_reporter_integration_test.cc" ]
+
+  deps = [
+    "//src/developer/feedback/bugreport:src",
+    "//src/developer/feedback/utils:archive",
+    "//src/lib/files",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+
+  # TODO(46542): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
 executable("bugreport_unittest") {
   testonly = true
 
@@ -68,25 +87,6 @@ executable("bugreport_unittest") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
-  ]
-
-  # TODO(46542): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-executable("bugreport_integration_test") {
-  testonly = true
-
-  sources = [ "bug_reporter_integration_test.cc" ]
-
-  deps = [
-    "//src/developer/feedback/bugreport:src",
-    "//src/developer/feedback/utils:archive",
-    "//src/lib/files",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 
   # TODO(46542): Fix the leaks and remove this.

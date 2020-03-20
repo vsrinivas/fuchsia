@@ -38,31 +38,11 @@ group("tests") {
 test_package("crashpad_agent_tests") {
   tests = [
     {
-      name = "crashpad_agent_unittest"
-    },
-    {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_config_unittest"
 
       # Component and binary name on the target. Confined to the package so no risk of collisions.
       dest = "config_unittest"
-    },
-    {
-      name = "crashpad_agent_integration_test"
-    },
-    {
-      # Binary name on the host. Shared across all integration test components.
-      name = "crashpad_agent_integration_test"
-
-      # Component and binary name on the target. Specific to each integration test component.
-      dest = "crashpad_agent_integration_test_valid_override_config"
-    },
-    {
-      # Binary name on the host. Shared across all integration test components.
-      name = "crashpad_agent_integration_test"
-
-      # Component and binary name on the target. Specific to each integration test component.
-      dest = "crashpad_agent_integration_test_invalid_override_config"
     },
     {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
@@ -72,9 +52,6 @@ test_package("crashpad_agent_tests") {
       dest = "database_unittest"
     },
     {
-      name = "feedback_data_provider_unittest"
-    },
-    {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_inspect_manager_unittest"
 
@@ -82,10 +59,33 @@ test_package("crashpad_agent_tests") {
       dest = "inspect_manager_unittest"
     },
     {
-      name = "queue_unittest"
+      name = "crashpad_agent_integration_test"
+    },
+    {
+      # Binary name on the host. Shared across all integration test components.
+      name = "crashpad_agent_integration_test"
+
+      # Component and binary name on the target. Specific to each integration test component.
+      dest = "crashpad_agent_integration_test_invalid_override_config"
+    },
+    {
+      # Binary name on the host. Shared across all integration test components.
+      name = "crashpad_agent_integration_test"
+
+      # Component and binary name on the target. Specific to each integration test component.
+      dest = "crashpad_agent_integration_test_valid_override_config"
+    },
+    {
+      name = "crashpad_agent_unittest"
+    },
+    {
+      name = "feedback_data_provider_unittest"
     },
     {
       name = "privacy_settings_ptr_unittest"
+    },
+    {
+      name = "queue_unittest"
     },
   ]
 
@@ -177,6 +177,28 @@ executable("config_unittest") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+executable("crashpad_agent_integration_test") {
+  testonly = true
+
+  sources = [ "crashpad_agent_integration_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/testing:fake_cobalt",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+
+  # TODO(46559): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
 executable("crashpad_agent_unittest") {
   testonly = true
 
@@ -210,28 +232,6 @@ executable("crashpad_agent_unittest") {
     "//src/lib/timekeeper:testing",
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/crashpad/util",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-executable("crashpad_agent_integration_test") {
-  testonly = true
-
-  sources = [ "crashpad_agent_integration_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/testing:fake_cobalt",
-    "//src/developer/feedback/utils:cobalt",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -366,18 +366,18 @@ executable("queue_unittest") {
 ###############################################################################
 # CONFIGS
 ###############################################################################
-config_data("valid_override_config") {
-  for_pkg = "fake_crashpad_agent_valid_override_config"
-
-  sources = [ "configs/valid_override.json" ]
-
-  outputs = [ "override_config.json" ]
-}
-
 config_data("invalid_override_config") {
   for_pkg = "fake_crashpad_agent_invalid_override_config"
 
   sources = [ "configs/invalid_override.json" ]
+
+  outputs = [ "override_config.json" ]
+}
+
+config_data("valid_override_config") {
+  for_pkg = "fake_crashpad_agent_valid_override_config"
+
+  sources = [ "configs/valid_override.json" ]
 
   outputs = [ "override_config.json" ]
 }

@@ -41,14 +41,14 @@ test_package("feedback_agent_tests") {
       name = "channel_provider_unittest"
     },
     {
-      name = "data_provider_unittest"
-    },
-    {
       # Binary name on the host. We prefix it with "data_provider" to reduce collisions.
       name = "data_provider_config_unittest"
 
       # Component and binary name on the target. Confined to the package so no risk of collisions.
       dest = "config_unittest"
+    },
+    {
+      name = "data_provider_unittest"
     },
     {
       name = "data_register_unittest"
@@ -75,9 +75,6 @@ test_package("feedback_agent_tests") {
       name = "kernel_log_ptr_integration_test"
     },
     {
-      name = "system_log_recorder_unittest"
-    },
-    {
       name = "product_info_provider_unittest"
     },
     {
@@ -86,10 +83,13 @@ test_package("feedback_agent_tests") {
     {
       name = "system_log_ptr_unittest"
     },
+    {
+      name = "system_log_recorder_unittest"
+    },
   ]
 
   binaries = [
-    # needed for data_provider_unittest and inspect_ptr_unittest
+    # needed for inspect_ptr_unittest and feedback_agent_integration_test
     {
       name = "inspect_exe"
     },
