@@ -170,7 +170,7 @@ def ReadJsonFile(filename):
 
 
 def IsResultsFilename(name):
-    return name.endswith('.json') and name != 'summary.json'
+    return name.endswith('.fuchsiaperf.json')
 
 
 class SingleBootDataset(object):

@@ -202,7 +202,8 @@ class StatisticsTest(TempDirTestCase):
             os.mkdir(boot_dir)
             for process_idx, run_values in enumerate(results_for_boot):
                 dest_file = os.path.join(
-                    boot_dir, 'example_process%06d.json' % process_idx)
+                    boot_dir,
+                    'example_process%06d.fuchsiaperf.json' % process_idx)
                 WriteJsonFile(dest_file, [self.ResultsDictForValues(run_values)])
         return dir_path
 
@@ -294,7 +295,8 @@ class PerfCompareTest(TempDirTestCase):
         for test_name, values in results:
             for idx, value in enumerate(values):
                 dest_dir = os.path.join(dir_path, 'by_boot', 'boot%06d' % idx)
-                dest_file = os.path.join(dest_dir, '%s.json' % test_name)
+                dest_file = os.path.join(
+                    dest_dir, '%s.fuchsiaperf.json' % test_name)
                 if not os.path.exists(dest_dir):
                     os.makedirs(dest_dir)
                     self.AddIgnoredFiles(dest_dir)
