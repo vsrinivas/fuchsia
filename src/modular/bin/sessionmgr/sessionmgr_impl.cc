@@ -265,6 +265,11 @@ zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
 }
 
 void SessionmgrImpl::InitializeLedger() {
+  // Initialize the Ledger Repository directory before launching the ledger process,
+  // ensuring that, in the case the directory is hosted in-memory by us, it is
+  // destroyed after the ledger process has terminated.
+  auto ledger_repository_dir = GetLedgerRepositoryDirectory();
+
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 
@@ -295,7 +300,7 @@ void SessionmgrImpl::InitializeLedger() {
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
-  ledger_repository_factory_->GetRepository(GetLedgerRepositoryDirectory(), nullptr, "",
+  ledger_repository_factory_->GetRepository(std::move(ledger_repository_dir), nullptr, "",
                                             std::move(repository_request));
 
   // If ledger state is erased from underneath us (happens when the cloud store
