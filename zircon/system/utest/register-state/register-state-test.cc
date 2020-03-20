@@ -137,10 +137,7 @@ __attribute__((target("fsgsbase"))) static void write_fs_base(uintptr_t fs_base)
 // context switch, to avoid leaking their values and to match what happens
 // on an interrupt.
 TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
-  set_ds(1);
-  set_es(1);
   set_gs(1);
-
   uintptr_t orig_fs_base = 0;
   if (x86_feature_fsgsbase()) {
     // libc uses fs_base so we must save its original value before setting it.  Also, once we've set
@@ -156,8 +153,14 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
     // Now that we've set fs_base, we must not touch any TLS (thread-local storage) call anything
     // that might touch TLS until we have stored the original value.
   }
+  set_es(1);
+  set_ds(1);
 
-  // Sleep repeatedly until the segment selector registers have been cleared.
+  // Now that all the registers have now been set to 1, sleep repeatedly until
+  // the segment selector registers have been cleared. Of course it's possible
+  // that a context switch has already occured and cleared some or all of them
+  // so be sure to only terminate the loop once we have observed the last one
+  // set (ds) was cleared.
   //
   // Sleeping should cause a context switch away from this thread (to the
   // kernel's idle thread) and another context switch back.
@@ -172,7 +175,7 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
   // the chance of that happening.
   zx_duration_t duration = ZX_MSEC(1);
   zx_status_t status = ZX_OK;
-  while (get_gs() == 1 && duration < ZX_SEC(10)) {
+  while (get_ds() == 1 && duration < ZX_SEC(10)) {
     status = zx_nanosleep(zx_deadline_after(duration));
     if (status != ZX_OK) {
       break;
@@ -193,11 +196,11 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
   }
   ASSERT_OK(status);
 
-  // See that ds, es, gs, and fs are cleared by a context switch.
+  // See that ds, es, fs, and gs are cleared by a context switch.
   EXPECT_EQ(get_ds(), 0);
   EXPECT_EQ(get_es(), 0);
-  EXPECT_EQ(get_gs(), 0);
   EXPECT_EQ(get_fs(), 0);
+  EXPECT_EQ(get_gs(), 0);
 }
 
 #endif
