@@ -42,9 +42,9 @@ class MultiLibEffectsLoader {
 
 std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
                                                 uint32_t alignment) {
-  auto mask = ~(alignment - 1);
-  auto aligned_frame = frame & mask;
-  auto aligned_length = (length + alignment - 1) & mask;
+  uint64_t mask = ~(static_cast<uint64_t>(alignment) - 1);
+  int64_t aligned_frame = frame & mask;
+  uint32_t aligned_length = (length + alignment - 1) & mask;
   return {aligned_frame, aligned_length};
 }
 
