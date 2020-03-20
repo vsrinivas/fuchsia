@@ -18,7 +18,7 @@ pub(crate) struct Print {
     pub(crate) transform: Transform2D<f32>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct MoldRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,
     pub(crate) layer_id: Rc<RefCell<Option<mold_next::LayerId>>>,
@@ -55,6 +55,16 @@ impl Add for MoldRaster {
         self.prints.extend(other.prints);
         self.layer_id = Rc::new(RefCell::new(None));
         self
+    }
+}
+
+impl Clone for MoldRaster {
+    fn clone(&self) -> Self {
+        Self {
+            prints: self.prints.clone(),
+            layer_id: Rc::new(RefCell::new(None)),
+            translation: self.translation.clone(),
+        }
     }
 }
 
