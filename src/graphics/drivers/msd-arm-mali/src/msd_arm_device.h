@@ -74,6 +74,7 @@ class MsdArmDevice : public msd_device_t,
     uint32_t gpu_irq_mask;
     bool handling_gpu_interrupt{};
     uint64_t gpu_interrupt_delay{};
+    uint64_t gpu_interrupt_time{};
 
     uint32_t job_irq_rawstat;
     uint32_t job_irq_status;
@@ -81,12 +82,14 @@ class MsdArmDevice : public msd_device_t,
     uint32_t job_irq_js_state;
     bool handling_job_interrupt{};
     uint64_t job_interrupt_delay{};
+    uint64_t job_interrupt_time{};
 
     uint32_t mmu_irq_rawstat;
     uint32_t mmu_irq_status;
     uint32_t mmu_irq_mask;
     bool handling_mmu_interrupt{};
     uint64_t mmu_interrupt_delay{};
+    uint64_t mmu_interrupt_time{};
 
     struct JobSlotStatus {
       uint32_t status;
@@ -213,6 +216,9 @@ class MsdArmDevice : public msd_device_t,
   std::atomic<uint64_t> job_interrupt_delay_{};
   std::atomic<uint64_t> gpu_interrupt_delay_{};
   std::atomic<uint64_t> mmu_interrupt_delay_{};
+  std::atomic<uint64_t> job_interrupt_time_{};
+  std::atomic<uint64_t> gpu_interrupt_time_{};
+  std::atomic<uint64_t> mmu_interrupt_time_{};
 
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
   std::unique_ptr<magma::PlatformPort> device_port_;
