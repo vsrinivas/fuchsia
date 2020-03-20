@@ -360,6 +360,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     gpu_interrupt_->Wait();
     DLOG("GPU Returned from interrupt wait!");
     gpu_interrupt_delay_ = gpu_interrupt_->GetMicrosecondsSinceLastInterrupt();
+    gpu_interrupt_time_ = magma::get_monotonic_ns();
     // Resets flag at end of loop iteration.
     handling_gpu_interrupt_ = true;
     auto ac = fbl::MakeAutoCall([&]() { handling_gpu_interrupt_ = false; });
@@ -477,6 +478,7 @@ int MsdArmDevice::JobInterruptThreadLoop() {
     job_interrupt_->Wait();
     DLOG("Job Returned from interrupt wait!");
     job_interrupt_delay_ = job_interrupt_->GetMicrosecondsSinceLastInterrupt();
+    job_interrupt_time_ = magma::get_monotonic_ns();
     // Resets flag at end of loop iteration.
     handling_job_interrupt_ = true;
     auto ac = fbl::MakeAutoCall([&]() { handling_job_interrupt_ = false; });
@@ -653,6 +655,7 @@ int MsdArmDevice::MmuInterruptThreadLoop() {
     mmu_interrupt_->Wait();
     DLOG("MMU Returned from interrupt wait!");
     mmu_interrupt_delay_ = mmu_interrupt_->GetMicrosecondsSinceLastInterrupt();
+    mmu_interrupt_time_ = magma::get_monotonic_ns();
     // Resets flag at end of loop iteration.
     handling_mmu_interrupt_ = true;
     auto ac = fbl::MakeAutoCall([&]() { handling_mmu_interrupt_ = false; });
@@ -827,6 +830,9 @@ void MsdArmDevice::Dump(DumpState* dump_state, bool on_device_thread) {
   dump_state->gpu_interrupt_delay = gpu_interrupt_delay_;
   dump_state->job_interrupt_delay = job_interrupt_delay_;
   dump_state->mmu_interrupt_delay = mmu_interrupt_delay_;
+  dump_state->gpu_interrupt_time = gpu_interrupt_time_;
+  dump_state->job_interrupt_time = job_interrupt_time_;
+  dump_state->mmu_interrupt_time = mmu_interrupt_time_;
 
   if (on_device_thread) {
     std::chrono::steady_clock::duration total_time;
@@ -940,12 +946,20 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::vector<std::string>* d
                                            dump_state.mmu_irq_rawstat, dump_state.mmu_irq_status,
                                            dump_state.mmu_irq_mask)
                              .c_str());
+  dump_string->push_back(fbl::StringPrintf("IRQ handlers running - GPU: %d Job: %d Mmu: %d",
+                                           dump_state.handling_gpu_interrupt,
+                                           dump_state.handling_job_interrupt,
+                                           dump_state.handling_mmu_interrupt)
+                             .c_str());
+
+  auto now = magma::get_monotonic_ns();
   dump_string->push_back(
-      fbl::StringPrintf(
-          "GPU IRQ handler running: %d Job IRQ handler running: %d Mmu IRQ handler running: %d",
-          dump_state.handling_gpu_interrupt, dump_state.handling_job_interrupt,
-          dump_state.handling_mmu_interrupt)
+      fbl::StringPrintf("Time since last IRQ handler - GPU: %ld us, Job: %ld us, Mmu: %ld us",
+                        (now - dump_state.gpu_interrupt_time) / 1000,
+                        (now - dump_state.job_interrupt_time) / 1000,
+                        (now - dump_state.mmu_interrupt_time) / 1000)
           .c_str());
+
   dump_string->push_back(
       fbl::StringPrintf("Last interrupt delays - GPU: %ld us, Job: %ld us, Mmu: %ld us",
                         dump_state.gpu_interrupt_delay, dump_state.job_interrupt_delay,

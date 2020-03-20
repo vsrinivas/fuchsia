@@ -51,6 +51,7 @@ class TestMsdArmDevice {
     EXPECT_TRUE(IsStringInDump(dump_string, "AS 7 status 0x0 fault status 0x0 fault address 0x0"));
     EXPECT_TRUE(IsStringInDump(
         dump_string, "Fault source_id 0, access type \"unknown\", exception type: \"Unknown\""));
+    EXPECT_TRUE(IsStringInDump(dump_string, "Time since last IRQ handler"));
   }
 
   void MockDump() {
