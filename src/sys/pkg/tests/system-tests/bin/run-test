@@ -1,0 +1,172 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+## usage: run-test [-o DIR] [-a] [-d DEVICE] [-tty TTY] [SHELL-COMMAND]
+##
+## Debugging an E2E system test like the OTA tests typically requires analysis
+## of the test output, the system logs, and the serial logs. This tool sets up a
+## tmux session to simplify capturing these logs for future analysis.
+##
+## It creates 3 tmux windows:
+##
+## * `e2e`: A window for running the E2E tests.
+## * `syslog`: A window that captures the device system logs
+## * `serial`: A window that captures the device serial logs if a TTY is
+##   specified, otherwise the device kernel logs.
+##
+## If the `--out-dir` is specified, then all output from each window is saved to
+## a log file in the specified directory.
+##
+## Options:
+##   -h|--help                Print out this message.
+##   -d NAME                  The name of the device to run on. Defaults to the
+##                            device specified with `fx set-device`.
+##   -s|--session-name NAME   Name of the tmux session.
+##   -o|--log-dir DIR         Write logs from every window to this directory.
+##   -a|--append              Append to the logs, do not overwrite.
+##   -t|--tty NAME            If specified, capture serial logs from this TTY
+##                            device. Otherwise try to capture logs with `fx klog`.
+##
+## Arguments:
+##   SHELL_COMMAND            Run this shell command in the `e2e` window if
+##                            specified.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../../../../../tools/devshell/lib/vars.sh || exit $?
+
+function usage() {
+  fx-command-help
+}
+
+SESSION_NAME=""
+DEVICE_NAME="$(get-device-name)"
+TTY=""
+LOG_DIR=""
+APPEND=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -s|--session-name)
+      if [[ $# -lt 2 ]]; then
+        fx-command-help
+        exit 1
+      fi
+      SESSION_NAME="$2"
+      shift
+      ;;
+    -d)
+      if [[ $# -lt 2 ]]; then
+        fx-command-help
+        exit 1
+      fi
+      DEVICE_NAME="$2"
+      shift
+      ;;
+    -t|--tty)
+      if [[ $# -lt 2 ]]; then
+        fx-command-help
+        exit 1
+      fi
+      TTY="$2"
+      shift
+      ;;
+    -o|--log-dir)
+      if [[ $# -lt 2 ]]; then
+        fx-command-help
+        exit 1
+      fi
+      LOG_DIR="$2"
+      shift
+      ;;
+    -a|--append)
+      APPEND=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      usage
+      fx-error "Unknown flag '$1'\n"
+      exit 1
+      ;;
+    *)
+      break
+  esac
+  shift
+done
+
+if ! which tmux > /dev/null 2>&1; then
+  fx-error "The command \`tmux\` was not found!"
+  if [[ "$(uname)" == "Linux" ]]; then
+    fx-error "  maybe \`apt install tmux\`"
+  else
+    fx-error "  maybe \`brew install tmux\`"
+  fi
+  exit 1
+fi
+
+args=( tmux new-session )
+
+if [[ ! -z "$SESSION_NAME" ]]; then
+  args+=( -d "$SESSION_NAME" )
+fi
+
+device_args=()
+if [[ ! -z "$DEVICE_NAME" ]]; then
+  device_args+=( -d="$DEVICE_NAME" )
+fi
+
+# Create a new window, then use it to capture the syslog.
+#
+# Note: this uses `send-keys` to run the command, which just seeds the shell
+# session with an initial `fx log` execution. This was done becuase it allows
+# the logs to still be seen if `fx log` dies for any reason. We could
+# theoretically launch the window with a command, and set the option
+# `remain-on-exit`, but then that requires the user to `CTRL-A : kill-session`
+# to quit tmux, which requires a bit of tmux familiarity to use.
+args+=(
+  -n "syslog" \;
+  send-keys "fx ${device_args[@]} log" C-m \;
+)
+
+# Create a new window, then use it to capture the serial log, or the kernel logs
+# if a TTY wasn't specified.
+if [[ ! -z "$TTY" ]]; then
+  args+=( new-window -n "serial" \; send-keys "fx serial $TTY" C-m \; )
+else
+  args+=( new-window -n "serial" \; send-keys "fx ${device_args[@]} klog" C-m \; )
+fi
+
+# Create a window for the end to end test.
+args+=(
+  new-window -n "e2e" \;
+)
+
+# Launch the e2e shell command if one was specified.
+if [ $# -gt 0 ]; then
+  args+=( send-keys "$@" C-m \; )
+fi
+
+# Capture the log files if requested.
+if [[ ! -z "$LOG_DIR" ]]; then
+  concat=">"
+  if [[ "$APPEND" -eq 1 ]]; then
+    concat=">>"
+  fi
+  args+=(
+    pipe-pane -t syslog "cat $concat $LOG_DIR/$DEVICE_NAME.syslog" \;
+    pipe-pane -t serial "cat $concat $LOG_DIR/$DEVICE_NAME.serial" \;
+    pipe-pane -t e2e "cat $concat $LOG_DIR/$DEVICE_NAME.e2e" \;
+  )
+fi
+
+args+=(
+  select-window -t e2e \;
+  attach-session \;
+)
+
+exec "${args[@]}"

@@ -105,6 +105,29 @@ start the tracking test from a known zero state.
 Note that at the moment the only supported upgrade mode is
 `-upgrade-builder-name $BUILDER_NAME`.
 
+## Running the Tests
+
+When running the system tests, it's helpful to capture the serial logs, and
+system logs, and the test output to a file in order to triage any failures. This
+is especially handy when cycle testing. To simplify the setup, the system-tests
+come with a helper script `run-test` that can setup a `tmux` session
+for you. You can run it like this:
+
+```
+% ~/fuchsia/src/sys/pkg/tests/system-tests/bin/run-test \
+  -o ~/logs \
+  --tty /dev/ttyUSB0 \
+  $(fx get-build-dir)/host_x64/system_tests_upgrade \
+  -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
+  -upgrade-fuchsia-build-dir $(fx get-build-dir)
+```
+
+This will setup a `tmux` with 3 windows, one for the serial session on
+`/dev/ttyUSB0`, one for the system logs, and one for the test. All output from
+the `tmux` windows will be saved into `~/logs`.
+
+See the `run-test --help` for more options.
+
 ## Running the tests locally in the Fuchsia Emulator (experimental)
 
 At the moment, the builtin `fx emu` does not bring up a configuration that can be
