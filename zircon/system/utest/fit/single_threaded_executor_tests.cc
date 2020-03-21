@@ -118,6 +118,7 @@ bool suspending_and_resuming_tasks() {
   END_TEST;
 }
 
+[[maybe_unused]]
 bool abandoning_tasks() {
   BEGIN_TEST;
 

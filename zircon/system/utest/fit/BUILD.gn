@@ -65,7 +65,6 @@ test("fit") {
   } else {
     deps += [ "//zircon/public/lib/unittest-static" ]
   }
-  public_configs = [ ":no_unused_function" ]
 
   # TODO(48668): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
@@ -75,10 +74,6 @@ config("shadow") {
   # chromium uses this library, and enables the following flag,
   # so these tests should work with this flag enabled
   cflags_cc = [ "-Wshadow" ]
-}
-
-config("no_unused_function") {
-  cflags = [ "-Wno-unused-function" ]
 }
 
 migrated_manifest("fit-manifest") {
