@@ -50,8 +50,24 @@ recovery_packages = [
   "//src/sys/timekeeper",
 ]
 
+recovery_eng_packages =
+    recovery_packages + [
+      # So components can be launched:
+      "//src/sys/tools/run",
+
+      # Basic command-line tools:
+      "//garnet/packages/prod:sbase",
+
+      # Command-line interface to wlan stack:
+      "//src/connectivity/wlan/wlancfg/tool:donut",
+
+      # Device side of zxdb & fidlcat, including required policies:
+      "//src/developer/debug/debug_agent",
+      "//src/security/policy:appmgr_root_job_allowlist_eng",
+    ]
+
 assemble_system("recovery-eng") {
-  base_packages = recovery_packages
+  base_packages = recovery_eng_packages
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
