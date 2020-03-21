@@ -13,7 +13,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 )
 
 var (
@@ -27,7 +27,7 @@ var (
 	mode testsharder.Mode = testsharder.Normal
 
 	// Tags are keys on which to filter environments, which are labeled.
-	tags command.StringsFlag
+	tags flagmisc.StringsValue
 
 	// The path to the json manifest file containing the tests to mutiply.
 	multipliersPath string

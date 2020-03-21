@@ -23,7 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
@@ -79,7 +79,7 @@ type RunCommand struct {
 	netboot bool
 
 	// ZirconArgs are kernel command-line arguments to pass on boot.
-	zirconArgs command.StringsFlag
+	zirconArgs flagmisc.StringsValue
 
 	// Timeout is the duration allowed for the command to finish execution.
 	timeout time.Duration

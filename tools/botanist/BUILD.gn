@@ -48,6 +48,8 @@ go_library("main") {
     "//src/sys/pkg/lib/repo",
     "//tools/lib/color",
     "//tools/lib/command",
+    "//tools/lib/flagmisc",
+    "//tools/lib/tarutil",
     "//tools/testing/runtests",
   ]
 }

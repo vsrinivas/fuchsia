@@ -24,7 +24,7 @@ go_library("main") {
     "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/cache",
     "//tools/lib/color",
-    "//tools/lib/command",
+    "//tools/lib/flagmisc",
     "//tools/lib/logger",
     "//tools/testing/runtests",
   ]

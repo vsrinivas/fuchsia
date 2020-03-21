@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "//tools/lib/cache:cache_tests",
     "//tools/lib/color:color_tests",
+    "//tools/lib/flagmisc:tests",
     "//tools/lib/iomisc:tests",
     "//tools/lib/logger:logger_tests",
     "//tools/lib/osmisc:tests",

@@ -17,6 +17,7 @@ go_library("main") {
   deps = [
     ":testsharder_lib",
     "//tools/lib/command",
+    "//tools/lib/flagmisc",
   ]
 }
 

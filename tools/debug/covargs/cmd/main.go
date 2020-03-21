@@ -21,20 +21,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/cache"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
-
-type argList []string
-
-func (a *argList) String() string {
-	return fmt.Sprintf("%s", []string(*a))
-}
-
-func (a *argList) Set(value string) error {
-	*a = append(*a, value)
-	return nil
-}
 
 const (
 	symbolCacheSize   = 100
@@ -44,13 +34,13 @@ const (
 var (
 	colors            color.EnableColor
 	level             logger.LogLevel
-	summaryFile       argList
-	buildIDDirPaths   argList
+	summaryFile       flagmisc.StringsValue
+	buildIDDirPaths   flagmisc.StringsValue
 	idsFile           string
-	idsPaths          argList
-	symbolServers     argList
+	idsPaths          flagmisc.StringsValue
+	symbolServers     flagmisc.StringsValue
 	symbolCache       string
-	symbolizeDumpFile argList
+	symbolizeDumpFile flagmisc.StringsValue
 	dryRun            bool
 	outputDir         string
 	llvmCov           string

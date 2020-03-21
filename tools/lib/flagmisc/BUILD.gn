@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("flagmisc"){
+    name = "go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
+}
+
+go_test("tests") {
+    output_name = "flagmisc_tests"
+    gopackages=["go.fuchsia.dev/fuchsia/tools/lib/flagmisc"]
+    deps = [":flagmisc"]
+}
