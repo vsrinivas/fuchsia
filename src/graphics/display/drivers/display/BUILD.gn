@@ -26,6 +26,7 @@ source_set("shared") {
     "controller.cc",
     "fence.cc",
     "image.cc",
+    "layer.cc",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.display.capture",

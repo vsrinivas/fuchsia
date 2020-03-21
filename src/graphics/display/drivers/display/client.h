@@ -36,68 +36,12 @@
 #include "fence.h"
 #include "id-map.h"
 #include "image.h"
+#include "layer.h"
 #include "lib/fidl-async/cpp/async_bind.h"
 #include "lib/fidl-async/cpp/bind.h"
 #include "lib/fidl/llcpp/array.h"
 
 namespace display {
-
-class Layer;
-class Client;
-
-typedef struct layer_node : public fbl::SinglyLinkedListable<layer_node*> {
-  Layer* layer;
-} layer_node_t;
-
-// Almost-POD used by Client to manage layer state. Public state is used by Controller.
-class Layer : public IdMappable<std::unique_ptr<Layer>> {
- public:
-  fbl::RefPtr<Image> current_image() const { return displayed_image_; }
-  uint32_t z_order() const { return current_layer_.z_index; }
-  bool is_skipped() const { return is_skipped_; }
-
- private:
-  layer_t pending_layer_;
-  layer_t current_layer_;
-  // flag indicating that there are changes in pending_layer that
-  // need to be applied to current_layer.
-  bool config_change_;
-
-  // Event ids passed to SetLayerImage which haven't been applied yet.
-  uint64_t pending_wait_event_id_;
-  uint64_t pending_signal_event_id_;
-
-  // The image given to SetLayerImage which hasn't been applied yet.
-  fbl::RefPtr<Image> pending_image_;
-
-  // Image which are waiting to be displayed
-  list_node_t waiting_images_ = LIST_INITIAL_VALUE(waiting_images_);
-  // The image which has most recently been sent to the display controller impl
-  fbl::RefPtr<Image> displayed_image_;
-
-  // Counters used for keeping track of when the layer's images need to be dropped.
-  uint64_t pending_image_config_gen_ = 0;
-  uint64_t current_image_config_gen_ = 0;
-
-  int32_t pending_cursor_x_;
-  int32_t pending_cursor_y_;
-  int32_t current_cursor_x_;
-  int32_t current_cursor_y_;
-
-  // Storage for a color layer's color data bytes.
-  uint8_t pending_color_bytes_[4];
-  uint8_t current_color_bytes_[4];
-
-  layer_node_t pending_node_;
-  layer_node_t current_node_;
-
-  // The display this layer was most recently displayed on
-  uint64_t current_display_id_;
-
-  bool is_skipped_;
-
-  friend Client;
-};
 
 // Almost-POD used by Client to manage display configuration. Public state is used by Controller.
 class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {

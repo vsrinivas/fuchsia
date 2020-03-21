@@ -50,26 +50,6 @@ bool frame_contains(const frame_t& a, const frame_t& b) {
 // layers, so we limit the total number of layers to prevent blowing the stack.
 static constexpr uint64_t kMaxLayers = 65536;
 
-static constexpr uint32_t kInvalidLayerType = UINT32_MAX;
-
-// Removes and invokes EarlyRetire on all entries before end.
-static void do_early_retire(list_node_t* list, display::image_node_t* end = nullptr) {
-  display::image_node_t* node;
-  while ((node = list_peek_head_type(list, display::image_node_t, link)) != end) {
-    node->self->EarlyRetire();
-    node->self.reset();
-    list_remove_head(list);
-  }
-}
-
-static void populate_image(const fhd::ImageConfig& image, image_t* image_out) {
-  static_assert(offsetof(image_t, width) == offsetof(fhd::ImageConfig, width), "Struct mismatch");
-  static_assert(offsetof(image_t, height) == offsetof(fhd::ImageConfig, height), "Struct mismatch");
-  static_assert(offsetof(image_t, pixel_format) == offsetof(fhd::ImageConfig, pixel_format),
-                "Struct mismatch");
-  static_assert(offsetof(image_t, type) == offsetof(fhd::ImageConfig, type), "Struct mismatch");
-  memcpy(image_out, &image, sizeof(fhd::ImageConfig));
-}
 }  // namespace
 
 namespace display {
@@ -344,21 +324,12 @@ void Client::CreateLayer(CreateLayerCompleter::Sync _completer) {
   }
 
   fbl::AllocChecker ac;
-  auto new_layer = fbl::make_unique_checked<Layer>(&ac);
+  uint64_t layer_id = next_layer_id++;
+  auto new_layer = fbl::make_unique_checked<Layer>(&ac, layer_id);
   if (!ac.check()) {
+    --layer_id;
     return _completer.Reply(ZX_ERR_NO_MEMORY, 0);
   }
-  uint64_t layer_id = next_layer_id++;
-
-  memset(&new_layer->pending_layer_, 0, sizeof(layer_t));
-  memset(&new_layer->current_layer_, 0, sizeof(layer_t));
-  new_layer->config_change_ = false;
-  new_layer->pending_node_.layer = new_layer.get();
-  new_layer->current_node_.layer = new_layer.get();
-  new_layer->current_display_id_ = INVALID_DISPLAY_ID;
-  new_layer->id = layer_id;
-  new_layer->current_layer_.type = kInvalidLayerType;
-  new_layer->pending_layer_.type = kInvalidLayerType;
 
   layers_.insert(std::move(new_layer));
 
@@ -372,22 +343,13 @@ void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _comple
     TearDown();
     return;
   }
-  if (layer->current_node_.InContainer() || layer->pending_node_.InContainer()) {
+  if (layer->in_use()) {
     zxlogf(ERROR, "Destroyed layer %ld which was in use\n", layer_id);
     TearDown();
     return;
   }
 
-  auto destroyed = layers_.erase(layer_id);
-  if (destroyed->pending_image_) {
-    destroyed->pending_image_->DiscardAcquire();
-  }
-  do_early_retire(&destroyed->waiting_images_);
-  if (destroyed->displayed_image_) {
-    fbl::AutoLock lock(controller_->mtx());
-    controller_->AssertMtxAliasHeld(destroyed->displayed_image_->mtx());
-    destroyed->displayed_image_->StartRetire();
-  }
+  layers_.erase(layer_id);
 }
 
 void Client::SetDisplayMode(uint64_t display_id, fhd::Mode mode,
@@ -464,13 +426,16 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
   config->pending_layers_.clear();
   for (uint64_t i = layer_ids.count() - 1; i != UINT64_MAX; i--) {
     auto layer = layers_.find(layer_ids[i]);
-    if (!layer.IsValid() || layer->pending_node_.InContainer()) {
+    if (!layer.IsValid()) {
+      zxlogf(ERROR, "Unknown layer %lu\n", layer_ids[i]);
+      TearDown();
+      return;
+    }
+    if (!layer->AddToConfig(&config->pending_layers_, /*z_index=*/static_cast<uint32_t>(i))) {
       zxlogf(ERROR, "Tried to reuse an in-use layer\n");
       TearDown();
       return;
     }
-    layer->pending_layer_.z_index = static_cast<uint32_t>(i);
-    config->pending_layers_.push_front(&layer->pending_node_);
   }
   config->pending_.layer_count = static_cast<int32_t>(layer_ids.count());
   pending_config_valid_ = false;
@@ -485,26 +450,7 @@ void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_con
     return;
   }
 
-  layer->pending_layer_.type = LAYER_TYPE_PRIMARY;
-  primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
-
-  populate_image(image_config, &primary_layer->image);
-
-  // Initialize the src_frame and dest_frame with the default, full-image frame.
-  frame_t new_frame = {
-      .x_pos = 0,
-      .y_pos = 0,
-      .width = image_config.width,
-      .height = image_config.height,
-  };
-  memcpy(&primary_layer->src_frame, &new_frame, sizeof(frame_t));
-  memcpy(&primary_layer->dest_frame, &new_frame, sizeof(frame_t));
-
-  primary_layer->transform_mode = FRAME_TRANSFORM_IDENTITY;
-
-  layer->pending_image_config_gen_++;
-  layer->pending_image_ = nullptr;
-  layer->config_change_ = true;
+  layer->SetPrimaryConfig(image_config);
   pending_config_valid_ = false;
   // no Reply defined
 }
@@ -513,7 +459,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform
                                      fhd::Frame src_frame, fhd::Frame dest_frame,
                                      SetLayerPrimaryPositionCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
-  if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
+  if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
     zxlogf(ERROR, "SetLayerPrimaryPosition on invalid layer\n");
     TearDown();
     return;
@@ -523,19 +469,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform
     TearDown();
     return;
   }
-  primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
-
-  static_assert(sizeof(fhd::Frame) == sizeof(frame_t), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, x_pos) == offsetof(frame_t, x_pos), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, y_pos) == offsetof(frame_t, y_pos), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, width) == offsetof(frame_t, width), "Struct mismatch");
-  static_assert(offsetof(fhd::Frame, height) == offsetof(frame_t, height), "Struct mismatch");
-
-  memcpy(&primary_layer->src_frame, &src_frame, sizeof(frame_t));
-  memcpy(&primary_layer->dest_frame, &dest_frame, sizeof(frame_t));
-  primary_layer->transform_mode = static_cast<uint8_t>(transform);
-
-  layer->config_change_ = true;
+  layer->SetPrimaryPosition(transform, src_frame, dest_frame);
   pending_config_valid_ = false;
   // no Reply defined
 }
@@ -543,7 +477,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform
 void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
                                   SetLayerPrimaryAlphaCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
-  if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
+  if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
     zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer\n");
     TearDown();
     return;
@@ -554,19 +488,7 @@ void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float 
     TearDown();
     return;
   }
-
-  primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
-
-  static_assert(static_cast<alpha_t>(fhd::AlphaMode::DISABLE) == ALPHA_DISABLE, "Bad constant");
-  static_assert(static_cast<alpha_t>(fhd::AlphaMode::PREMULTIPLIED) == ALPHA_PREMULTIPLIED,
-                "Bad constant");
-  static_assert(static_cast<alpha_t>(fhd::AlphaMode::HW_MULTIPLY) == ALPHA_HW_MULTIPLY,
-                "Bad constant");
-
-  primary_layer->alpha_mode = static_cast<alpha_t>(mode);
-  primary_layer->alpha_layer_val = val;
-
-  layer->config_change_ = true;
+  layer->SetPrimaryAlpha(mode, val);
   pending_config_valid_ = false;
   // no Reply defined
 }
@@ -580,15 +502,7 @@ void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_conf
     return;
   }
 
-  layer->pending_layer_.type = LAYER_TYPE_CURSOR;
-  layer->pending_cursor_x_ = layer->pending_cursor_y_ = 0;
-
-  cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
-  populate_image(image_config, &cursor_layer->image);
-
-  layer->pending_image_config_gen_++;
-  layer->pending_image_ = nullptr;
-  layer->config_change_ = true;
+  layer->SetCursorConfig(image_config);
   pending_config_valid_ = false;
   // no Reply defined
 }
@@ -596,16 +510,13 @@ void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_conf
 void Client::SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
                                     SetLayerCursorPositionCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
-  if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
+  if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_CURSOR) {
     zxlogf(ERROR, "SetLayerCursorPosition on invalid layer\n");
     TearDown();
     return;
   }
 
-  layer->pending_cursor_x_ = x;
-  layer->pending_cursor_y_ = y;
-
-  layer->config_change_ = true;
+  layer->SetCursorPosition(x, y);
   // no Reply defined
 }
 
@@ -623,17 +534,8 @@ void Client::SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
     TearDown();
     return;
   }
-  // Increase the size of the static array when large color formats are introduced
-  ZX_ASSERT(color_bytes.count() <= sizeof(layer->pending_color_bytes_));
 
-  layer->pending_layer_.type = LAYER_TYPE_COLOR;
-  color_layer_t* color_layer = &layer->pending_layer_.cfg.color;
-
-  color_layer->format = pixel_format;
-  memcpy(layer->pending_color_bytes_, color_bytes.data(), sizeof(layer->pending_color_bytes_));
-
-  layer->pending_image_ = nullptr;
-  layer->config_change_ = true;
+  layer->SetColorConfig(pixel_format, std::move(color_bytes));
   pending_config_valid_ = false;
   // no Reply defined
 }
@@ -646,8 +548,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
     TearDown();
     return;
   }
-  if (layer->pending_layer_.type != LAYER_TYPE_PRIMARY &&
-      layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
+  if (layer->pending_type() != LAYER_TYPE_PRIMARY && layer->pending_type() != LAYER_TYPE_CURSOR) {
     zxlogf(ERROR, "SetLayerImage ordinal with bad layer type\n");
     TearDown();
     return;
@@ -658,9 +559,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
     TearDown();
     return;
   }
-  image_t* cur_image = layer->pending_layer_.type == LAYER_TYPE_PRIMARY
-                           ? &layer->pending_layer_.cfg.primary.image
-                           : &layer->pending_layer_.cfg.cursor.image;
+  const image_t* cur_image = layer->pending_image();
   if (!image->HasSameConfig(*cur_image)) {
     zxlogf(ERROR, "SetLayerImage with mismatch layer config\n");
     if (image.IsValid()) {
@@ -670,13 +569,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
     return;
   }
 
-  if (layer->pending_image_) {
-    layer->pending_image_->DiscardAcquire();
-  }
-
-  layer->pending_image_ = image.CopyPointer();
-  layer->pending_wait_event_id_ = wait_event_id;
-  layer->pending_signal_event_id_ = signal_event_id;
+  layer->SetImage(image.CopyPointer(), wait_event_id, signal_event_id);
   // no Reply defined
 }
 
@@ -689,21 +582,7 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) {
   if (discard) {
     // Go through layers and release any pending resources they claimed
     for (auto& layer : layers_) {
-      layer.pending_image_config_gen_ = layer.current_image_config_gen_;
-      if (layer.pending_image_) {
-        layer.pending_image_->DiscardAcquire();
-        layer.pending_image_ = nullptr;
-      }
-      if (layer.config_change_) {
-        layer.pending_layer_ = layer.current_layer_;
-        layer.config_change_ = false;
-
-        layer.pending_cursor_x_ = layer.current_cursor_x_;
-        layer.pending_cursor_y_ = layer.current_cursor_y_;
-      }
-
-      memcpy(layer.pending_color_bytes_, layer.current_color_bytes_,
-             sizeof(layer.pending_color_bytes_));
+      layer.DiscardChanges();
     }
     // Reset each config's pending layers to their current layers. Clear
     // all displays first in case layers were moved between displays.
@@ -758,45 +637,9 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
     // Update any image layers. This needs to be done before migrating layers, as
     // that needs to know if there are any waiting images.
     for (auto layer_node : display_config.pending_layers_) {
-      Layer* layer = layer_node.layer;
-      // If the layer's image configuration changed, get rid of any current images
-      if (layer->pending_image_config_gen_ != layer->current_image_config_gen_) {
-        layer->current_image_config_gen_ = layer->pending_image_config_gen_;
-
-        if (layer->pending_image_ == nullptr) {
-          zxlogf(ERROR, "Tried to apply configuration with missing image\n");
-          TearDown();
-          return;
-        }
-
-        while (!list_is_empty(&layer->waiting_images_)) {
-          do_early_retire(&layer->waiting_images_);
-        }
-        if (layer->displayed_image_ != nullptr) {
-          {
-            fbl::AutoLock lock(controller_->mtx());
-            controller_->AssertMtxAliasHeld(layer->displayed_image_->mtx());
-            layer->displayed_image_->StartRetire();
-          }
-          layer->displayed_image_ = nullptr;
-        }
-      }
-
-      if (layer->pending_image_) {
-        auto wait_fence = fences_.GetFence(layer->pending_wait_event_id_);
-        if (wait_fence && wait_fence->InContainer()) {
-          zxlogf(ERROR, "Tried to wait with a busy event\n");
-          TearDown();
-          return;
-        }
-        layer_node.layer->pending_image_->PrepareFences(
-            std::move(wait_fence), fences_.GetFence(layer->pending_signal_event_id_));
-        {
-          fbl::AutoLock lock(controller_->mtx());
-          controller_->AssertMtxAliasHeld(layer->pending_image_->mtx());
-          list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
-          layer->pending_image_->node.self = std::move(layer->pending_image_);
-        }
+      if (!layer_node.layer->ResolvePendingImage(&fences_)) {
+        TearDown();
+        return;
       }
     }
 
@@ -835,41 +678,7 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
 
     // Apply any pending configuration changes to active layers.
     for (auto layer_node : display_config.current_layers_) {
-      Layer* layer = layer_node.layer;
-      if (layer->config_change_) {
-        layer->current_layer_ = layer->pending_layer_;
-        layer->config_change_ = false;
-
-        image_t* new_image_config = nullptr;
-        if (layer->current_layer_.type == LAYER_TYPE_PRIMARY) {
-          new_image_config = &layer->current_layer_.cfg.primary.image;
-        } else if (layer->current_layer_.type == LAYER_TYPE_CURSOR) {
-          new_image_config = &layer->current_layer_.cfg.cursor.image;
-
-          layer->current_cursor_x_ = layer->pending_cursor_x_;
-          layer->current_cursor_y_ = layer->pending_cursor_y_;
-
-          display_mode_t* mode = &display_config.current_.mode;
-          layer->current_layer_.cfg.cursor.x_pos = fbl::clamp(
-              layer->current_cursor_x_, -static_cast<int32_t>(new_image_config->width) + 1,
-              static_cast<int32_t>(mode->h_addressable) - 1);
-          layer->current_layer_.cfg.cursor.y_pos = fbl::clamp(
-              layer->current_cursor_y_, -static_cast<int32_t>(new_image_config->height) + 1,
-              static_cast<int32_t>(mode->v_addressable) - 1);
-        } else if (layer->current_layer_.type == LAYER_TYPE_COLOR) {
-          memcpy(layer->current_color_bytes_, layer->pending_color_bytes_,
-                 sizeof(layer->current_color_bytes_));
-          layer->current_layer_.cfg.color.color_list = layer->current_color_bytes_;
-          layer->current_layer_.cfg.color.color_count = 4;
-        } else {
-          // type is validated in ::CheckConfig, so something must be very wrong.
-          ZX_ASSERT(false);
-        }
-
-        if (new_image_config && layer->displayed_image_) {
-          new_image_config->handle = layer->displayed_image_->info().handle;
-        }
-      }
+      layer_node.layer->ApplyChanges(display_config.current_.mode);
     }
   }
   // Overflow doesn't matter, since stamps only need to be unique until
@@ -1205,49 +1014,21 @@ void Client::ApplyConfig() {
     // after it updates its own image tracking logic.
 
     for (auto layer_node : display_config.current_layers_) {
-      // Find the newest image which has become ready
       Layer* layer = layer_node.layer;
-      image_node_t* node = list_peek_tail_type(&layer->waiting_images_, image_node_t, link);
-      while (node != nullptr && !node->self->IsReady()) {
-        node = list_prev_type(&layer->waiting_images_, &node->link, image_node_t, link);
-      }
-      if (node != nullptr) {
-        if (layer->displayed_image_ != nullptr) {
-          // Start retiring the image which had been displayed
-          fbl::AutoLock lock(controller_->mtx());
-          controller_->AssertMtxAliasHeld(layer->displayed_image_->mtx());
-          layer->displayed_image_->StartRetire();
-        } else {
-          // Turning on a new layer is a (pseudo) layer change
-          display_config.pending_apply_layer_change_ = true;
-        }
-
-        // Drop any images older than node.
-        do_early_retire(&layer->waiting_images_, node);
-
-        layer->displayed_image_ = std::move(node->self);
-        list_remove_head(&layer->waiting_images_);
-
-        uint64_t handle = layer->displayed_image_->info().handle;
-        if (layer->current_layer_.type == LAYER_TYPE_PRIMARY) {
-          layer->current_layer_.cfg.primary.image.handle = handle;
-        } else if (layer->current_layer_.type == LAYER_TYPE_CURSOR) {
-          layer->current_layer_.cfg.cursor.image.handle = handle;
-        } else {
-          // type is validated in ::CheckConfig, so something must be very wrong.
-          ZX_ASSERT(false);
-        }
+      const bool activated = layer->ActivateLatestReadyImage();
+      if (activated && layer->current_image()) {
+        display_config.pending_apply_layer_change_ = true;
       }
 
       if (is_vc_) {
-        if (layer->displayed_image_) {
+        auto fb = layer->current_image();
+        if (fb) {
           // If the virtcon is displaying an image, set it as the kernel's framebuffer
           // vmo. If the virtcon is displaying images on multiple displays, this ends
           // executing multiple times, but the extra work is okay since the virtcon
           // shouldn't be flipping images.
           console_fb_display_id_ = display_config.id;
 
-          auto fb = layer->displayed_image_;
           uint32_t stride = fb->stride_px();
           uint32_t size =
               fb->info().height * ZX_PIXEL_FORMAT_BYTES(fb->info().pixel_format) * stride;
@@ -1269,7 +1050,7 @@ void Client::ApplyConfig() {
       layers[layer_idx++] = &layer->current_layer_;
       if (layer->current_layer_.type != LAYER_TYPE_COLOR) {
         display_config.vsync_layer_count_++;
-        if (layer->displayed_image_ == nullptr) {
+        if (layer->current_image() == nullptr) {
           config_missing_image = true;
         }
       }
@@ -1550,35 +1331,7 @@ bool Client::CleanUpImage(Image* image) {
   // Clean up any layer state associated with the images
   bool current_config_change = false;
   for (auto& layer : layers_) {
-    if (layer.pending_image_ && (image == nullptr || layer.pending_image_.get() == image)) {
-      layer.pending_image_->DiscardAcquire();
-      layer.pending_image_ = nullptr;
-    }
-    if (image == nullptr) {
-      do_early_retire(&layer.waiting_images_, nullptr);
-    } else {
-      image_node_t* waiting;
-      list_for_every_entry (&layer.waiting_images_, waiting, image_node_t, link) {
-        if (waiting->self.get() == image) {
-          list_delete(&waiting->link);
-          waiting->self->EarlyRetire();
-          waiting->self.reset();
-          break;
-        }
-      }
-    }
-    if (layer.displayed_image_ && (image == nullptr || layer.displayed_image_.get() == image)) {
-      {
-        fbl::AutoLock lock(controller_->mtx());
-        controller_->AssertMtxAliasHeld(layer.displayed_image_->mtx());
-        layer.displayed_image_->StartRetire();
-      }
-      layer.displayed_image_ = nullptr;
-
-      if (layer.current_node_.InContainer()) {
-        current_config_change = true;
-      }
-    }
+    current_config_change |= layer.CleanUpImage(image);
   }
 
   // Clean up the image id map
