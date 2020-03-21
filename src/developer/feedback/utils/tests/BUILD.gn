@@ -107,7 +107,7 @@ executable("cobalt_unittest") {
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
@@ -206,15 +206,12 @@ executable("time_unittest") {
 executable("utc_time_provider_unittest") {
   testonly = true
 
-  sources = [
-    "stub_utc.cc",
-    "stub_utc.h",
-    "utc_time_provider_unittest.cc",
-  ]
+  sources = [ "utc_time_provider_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:utc_provider",
     "//src/developer/feedback/utils:utc_time_provider",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",

@@ -14,7 +14,7 @@
 
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils//cobalt_metrics.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -43,7 +43,7 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     fit::result<ScreenshotData> result;
@@ -121,7 +121,7 @@ TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
   auto screenshot_provider = std::make_unique<StubScenic>();
   screenshot_provider->set_take_screenshot_responses(std::move(screenshot_provider_responses));
   SetUpScreenshotProvider(std::move(screenshot_provider));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

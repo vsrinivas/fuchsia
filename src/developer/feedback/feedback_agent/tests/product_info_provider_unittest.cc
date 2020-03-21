@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -56,7 +56,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
 
   Annotations GetProductInfo(const AnnotationKeys& annotations_to_get = {},
                              const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
@@ -206,7 +206,7 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
 
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
   SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({})));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

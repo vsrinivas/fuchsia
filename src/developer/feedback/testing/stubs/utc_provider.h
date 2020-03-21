@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_TESTS_STUB_UTC_H_
-#define SRC_DEVELOPER_FEEDBACK_UTILS_TESTS_STUB_UTC_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_UTC_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_UTC_PROVIDER_H_
 
 #include <fuchsia/time/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/zx/time.h>
@@ -14,32 +14,33 @@
 #include <vector>
 
 namespace feedback {
-
-struct Response {
-  enum class Value {
-    kBackstop,
-    kExternal,
-    kNoResponse,
-  };
-
-  constexpr explicit Response(Value value) : value(value), delay(zx::nsec(0)) {}
-
-  constexpr Response(Value value, zx::duration delay) : value(value), delay(delay) {}
-
-  Value value;
-  zx::duration delay;
-};
+namespace stubs {
 
 // Stub fuchsia.time.Utc service that returns canned responses for
 // fuchsia::time::Utc::WatchState().
-class StubUtc : public fuchsia::time::Utc {
+class UtcProvider : public fuchsia::time::Utc {
  public:
-  StubUtc(async_dispatcher_t* dispatcher, const std::vector<Response>& responses)
+  struct Response {
+    enum class Value {
+      kBackstop,
+      kExternal,
+      kNoResponse,
+    };
+
+    constexpr explicit Response(Value value) : value(value), delay(zx::nsec(0)) {}
+
+    constexpr Response(Value value, zx::duration delay) : value(value), delay(delay) {}
+
+    Value value;
+    zx::duration delay;
+  };
+
+  UtcProvider(async_dispatcher_t* dispatcher, const std::vector<Response>& responses)
       : dispatcher_(dispatcher), responses_(responses) {
     next_reponse_ = responses_.cbegin();
   }
 
-  ~StubUtc();
+  ~UtcProvider();
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::time::Utc> GetHandler() {
@@ -59,6 +60,7 @@ class StubUtc : public fuchsia::time::Utc {
   std::vector<Response>::const_iterator next_reponse_;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_TESTS_STUB_UTC_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_UTC_PROVIDER_H_

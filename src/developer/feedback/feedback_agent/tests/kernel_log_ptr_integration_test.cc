@@ -17,7 +17,7 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -108,7 +108,7 @@ TEST_F(CollectKernelLogTest, Fail_CallGetLogTwice) {
 
 TEST_F(CollectKernelLogTest, Check_CobaltLogsTimeout) {
   auto services = CreateServices();
-  StubCobaltLoggerFactory logger_factory;
+  stubs::CobaltLoggerFactory logger_factory;
   services->AddService(logger_factory.GetHandler());
 
   auto enclosing_environment = CreateNewEnclosingEnvironment(

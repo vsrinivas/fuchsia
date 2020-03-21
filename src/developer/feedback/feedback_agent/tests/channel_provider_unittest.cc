@@ -15,7 +15,7 @@
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
@@ -41,7 +41,7 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   std::optional<std::string> RetrieveCurrentChannel(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     std::optional<std::string> channel;
@@ -119,7 +119,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
 
 TEST_F(ChannelProviderTest, Fail_CallGetCurrentTwice) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

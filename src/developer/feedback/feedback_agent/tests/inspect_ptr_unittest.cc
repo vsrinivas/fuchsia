@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -44,7 +44,7 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
   }
 
   fit::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     fit::result<AttachmentValue> result;
@@ -155,7 +155,7 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

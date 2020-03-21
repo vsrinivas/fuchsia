@@ -15,7 +15,7 @@
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/tests/crashpad_database_gremlin.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/files/directory.h"
@@ -102,7 +102,7 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
 
     ASSERT_TRUE(SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb));
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
   }
 

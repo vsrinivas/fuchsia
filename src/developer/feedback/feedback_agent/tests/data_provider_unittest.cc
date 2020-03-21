@@ -25,7 +25,7 @@
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fsl/vmo/file.h"
@@ -145,7 +145,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     clock_ = new timekeeper::TestClock();
     cobalt_ = std::make_unique<Cobalt>(dispatcher(), services(),
                                        std::unique_ptr<timekeeper::TestClock>(clock_));
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   }
 
  protected:

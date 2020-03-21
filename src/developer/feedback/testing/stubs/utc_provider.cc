@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/utils/tests/stub_utc.h"
+#include "src/developer/feedback/testing/stubs/utc_provider.h"
 
 #include <lib/async/cpp/task.h>
 
@@ -10,18 +10,19 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
+namespace stubs {
 
 using fuchsia::time::UtcSource;
 using fuchsia::time::UtcState;
 
-StubUtc::~StubUtc() {
+UtcProvider::~UtcProvider() {
   FXL_CHECK(Done()) << fxl::StringPrintf(
       "Expected %ld more calls to WatchState() (%ld/%lu calls made)",
       std::distance(next_reponse_, responses_.cend()),
       std::distance(responses_.cbegin(), next_reponse_), responses_.size());
 }
 
-void StubUtc::WatchState(WatchStateCallback callback) {
+void UtcProvider::WatchState(WatchStateCallback callback) {
   FXL_CHECK(!Done()) << fxl::StringPrintf(
       "No more calls to WatchState() expected (%lu/%lu calls made)", responses_.size(),
       responses_.size());
@@ -49,6 +50,7 @@ void StubUtc::WatchState(WatchStateCallback callback) {
   ++next_reponse_;
 }
 
-bool StubUtc::Done() { return next_reponse_ == responses_.cend(); }
+bool UtcProvider::Done() { return next_reponse_ == responses_.cend(); }
 
+}  // namespace stubs
 }  // namespace feedback

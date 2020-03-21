@@ -10,8 +10,7 @@
 
 #include <memory>
 
-#include "sdk/lib/sys/cpp/service_directory.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/logging.h"
@@ -23,7 +22,7 @@ class CobaltTestFixture {
   CobaltTestFixture(UnitTestFixture* unit_test_fixture) : unit_test_fixture_(unit_test_fixture) {}
 
  protected:
-  void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory) {
+  void SetUpCobaltLoggerFactory(std::unique_ptr<stubs::CobaltLoggerFactoryBase> logger_factory) {
     logger_factory_ = std::move(logger_factory);
     if (logger_factory_ && unit_test_fixture_) {
       unit_test_fixture_->InjectServiceProvider(logger_factory_.get());
@@ -39,7 +38,7 @@ class CobaltTestFixture {
   void CloseLoggerConnection() { logger_factory_->CloseLoggerConnection(); }
 
  private:
-  std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory_;
+  std::unique_ptr<stubs::CobaltLoggerFactoryBase> logger_factory_;
   UnitTestFixture* unit_test_fixture_;
 };
 

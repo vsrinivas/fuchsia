@@ -12,7 +12,7 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/feedback/bugreport/tests/stub_feedback_data_provider.h"
+#include "src/developer/feedback/testing/stubs/data_provider.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -39,10 +39,9 @@ class BugReporterTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  void SetUpFeedbackDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
-    feedback_data_provider_ =
-        std::make_unique<StubFeedbackDataProvider>(std::move(attachment_bundle));
-    ASSERT_EQ(service_directory_provider_.AddService(feedback_data_provider_->GetHandler()), ZX_OK);
+  void SetUpDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
+    data_provider_ = std::make_unique<stubs::DataProvider>(std::move(attachment_bundle));
+    ASSERT_EQ(service_directory_provider_.AddService(data_provider_->GetHandler()), ZX_OK);
   }
 
  private:
@@ -53,7 +52,7 @@ class BugReporterTest : public gtest::TestLoopFixture {
   std::string bugreport_path_;
 
  private:
-  std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
+  std::unique_ptr<stubs::DataProvider> data_provider_;
   files::ScopedTempDir tmp_dir_;
 };
 
@@ -63,7 +62,7 @@ TEST_F(BugReporterTest, Basic) {
   fuchsia::feedback::Attachment attachment_bundle;
   attachment_bundle.key = "unused";
   ASSERT_TRUE(fsl::VmoFromString(payload, &attachment_bundle.value));
-  SetUpFeedbackDataProvider(std::move(attachment_bundle));
+  SetUpDataProvider(std::move(attachment_bundle));
 
   ASSERT_TRUE(
       MakeBugReport(service_directory_provider_.service_directory(), bugreport_path_.data()));

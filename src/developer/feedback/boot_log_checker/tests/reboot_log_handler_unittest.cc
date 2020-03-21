@@ -14,11 +14,11 @@
 #include <optional>
 #include <vector>
 
-#include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/crash_reporter.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -50,7 +50,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   RebootLogHandlerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpCrashReporter(std::unique_ptr<StubCrashReporter> crash_reporter) {
+  void SetUpCrashReporter(std::unique_ptr<stubs::CrashReporter> crash_reporter) {
     crash_reporter_ = std::move(crash_reporter);
     if (crash_reporter_) {
       InjectServiceProvider(crash_reporter_.get());
@@ -76,7 +76,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   async::Executor executor_;
 
  protected:
-  std::unique_ptr<StubCrashReporter> crash_reporter_;
+  std::unique_ptr<stubs::CrashReporter> crash_reporter_;
   std::string reboot_log_path_;
 
  private:
@@ -157,8 +157,8 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   const auto param = GetParam();
 
   WriteRebootLogContents(param.input_reboot_log);
-  SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCrashReporter(std::make_unique<stubs::CrashReporter>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
@@ -171,7 +171,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
 
 TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
   WriteRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002");
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
@@ -180,7 +180,7 @@ TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
 }
 
 TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
@@ -189,7 +189,7 @@ TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
 }
 
 TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   WriteRebootLogContents("");
   EXPECT_EQ(HandleRebootLog().state(), kError);
 
@@ -199,7 +199,7 @@ TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   WriteRebootLogContents();
   SetUpCrashReporter(nullptr);
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
@@ -209,8 +209,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
   WriteRebootLogContents();
-  SetUpCrashReporter(std::make_unique<StubCrashReporterClosesConnection>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCrashReporter(std::make_unique<stubs::CrashReporterClosesConnection>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
@@ -220,8 +220,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
   WriteRebootLogContents();
-  SetUpCrashReporter(std::make_unique<StubCrashReporterAlwaysReturnsError>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCrashReporter(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);

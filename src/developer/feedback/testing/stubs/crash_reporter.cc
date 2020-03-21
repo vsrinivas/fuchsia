@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
+#include "src/developer/feedback/testing/stubs/crash_reporter.h"
 
 #include <lib/fit/result.h>
 #include <lib/zx/time.h>
@@ -14,14 +14,15 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace stubs {
 
-void StubCrashReporter::CloseConnection() {
+void CrashReporter::CloseConnection() {
   if (binding_) {
     binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
-void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
+void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   FX_CHECK(report.has_specific_report());
   FX_CHECK(report.specific_report().is_generic());
   FX_CHECK(report.specific_report().generic().has_crash_signature());
@@ -45,14 +46,15 @@ void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback
   callback(fit::ok());
 }
 
-void StubCrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,
-                                               FileCallback callback) {
+void CrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,
+                                           FileCallback callback) {
   callback(fit::error(ZX_ERR_INTERNAL));
 }
 
-void StubCrashReporterNoFileExpected::File(fuchsia::feedback::CrashReport report,
-                                           FileCallback callback) {
+void CrashReporterNoFileExpected::File(fuchsia::feedback::CrashReport report,
+                                       FileCallback callback) {
   FX_CHECK(false) << "No call to File() expected";
 }
 
+}  // namespace stubs
 }  // namespace feedback

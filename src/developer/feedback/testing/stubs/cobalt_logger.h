@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
 // file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_H_
-#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
@@ -13,11 +13,12 @@
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
+namespace stubs {
 
 // Defines the interface all stub loggers must implement and provides common functionality.
-class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
+class CobaltLoggerBase : public fuchsia::cobalt::Logger {
  public:
-  virtual ~StubCobaltLoggerBase() = default;
+  virtual ~CobaltLoggerBase() = default;
 
   const CobaltEvent& LastEvent() const { return events_.back(); }
   const std::vector<CobaltEvent>& Events() const { return events_; }
@@ -143,7 +144,7 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
 };
 
 // Always record |metric_id| and |event_code| and call callback with |Status::OK|.
-class StubCobaltLogger : public StubCobaltLoggerBase {
+class CobaltLogger : public CobaltLoggerBase {
   void LogEvent(uint32_t metric_id, uint32_t event_code,
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
   void LogEventCount(uint32_t metric_id, uint32_t event_code, ::std::string component,
@@ -155,15 +156,15 @@ class StubCobaltLogger : public StubCobaltLoggerBase {
 };
 
 // Fail to acknowledge that LogEvent() was called and return |Status::INVALID_ARGUMENTS|.
-class StubCobaltLoggerFailsLogEvent : public StubCobaltLoggerBase {
+class CobaltLoggerFailsLogEvent : public CobaltLoggerBase {
   void LogEvent(uint32_t metric_id, uint32_t event_code,
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
 };
 
 // Will not execute the callback for the first n events.
-class StubCobaltLoggerIgnoresFirstEvents : public StubCobaltLoggerBase {
+class CobaltLoggerIgnoresFirstEvents : public CobaltLoggerBase {
  public:
-  StubCobaltLoggerIgnoresFirstEvents(size_t n) : to_ignore_(n) {}
+  CobaltLoggerIgnoresFirstEvents(size_t n) : to_ignore_(n) {}
 
  private:
   void LogEvent(uint32_t metric_id, uint32_t event_code,
@@ -173,6 +174,7 @@ class StubCobaltLoggerIgnoresFirstEvents : public StubCobaltLoggerBase {
   size_t num_calls_ = 0;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_H_

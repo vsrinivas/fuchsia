@@ -67,17 +67,13 @@ executable("bugreport_integration_test") {
 executable("bugreport_unittest") {
   testonly = true
 
-  sources = [
-    "bug_reporter_unittest.cc",
-    "stub_feedback_data_provider.cc",
-    "stub_feedback_data_provider.h",
-  ]
+  sources = [ "bug_reporter_unittest.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/bugreport:src",
+    "//src/developer/feedback/testing/stubs:data_provider",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",

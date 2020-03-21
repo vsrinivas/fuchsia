@@ -203,8 +203,6 @@ executable("crashpad_agent_unittest") {
   testonly = true
 
   sources = [
-    "//src/developer/feedback/utils/tests/stub_utc.cc",
-    "//src/developer/feedback/utils/tests/stub_utc.h",
     "crashpad_agent_unittest.cc",
     "fake_privacy_settings.cc",
     "fake_privacy_settings.h",
@@ -225,7 +223,8 @@ executable("crashpad_agent_unittest") {
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:utc_provider",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -260,7 +259,7 @@ executable("database_unittest") {
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl:fsl",
     "//src/lib/timekeeper:testing",
@@ -352,7 +351,7 @@ executable("queue_unittest") {
     "//src/developer/feedback/crashpad_agent/info:info",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:stub_network_reachability_provider",
+    "//src/developer/feedback/testing/stubs:network_reachability_provider",
     "//src/lib/fsl:fsl",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",

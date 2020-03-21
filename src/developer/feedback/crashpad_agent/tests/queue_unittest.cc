@@ -13,7 +13,7 @@
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
-#include "src/developer/feedback/testing/stubs/stub_network_reachability_provider.h"
+#include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -83,7 +83,7 @@ class QueueTest : public UnitTestFixture {
 
  protected:
   void SetUpNetworkReachabilityProvider(
-      std::unique_ptr<StubConnectivity> network_reachability_provider) {
+      std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider) {
     network_reachability_provider_ = std::move(network_reachability_provider);
     if (network_reachability_provider_) {
       InjectServiceProvider(network_reachability_provider_.get());
@@ -101,7 +101,7 @@ class QueueTest : public UnitTestFixture {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
 
-    SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+    SetUpNetworkReachabilityProvider(std::make_unique<stubs::NetworkReachabilityProvider>());
 
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
@@ -197,7 +197,7 @@ class QueueTest : public UnitTestFixture {
 
   std::unique_ptr<Queue> queue_;
   std::vector<UUID> expected_queue_contents_;
-  std::unique_ptr<StubConnectivity> network_reachability_provider_;
+  std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
 
  private:
   void AddExpectedReport(const UUID& uuid) {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
-#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -12,18 +12,18 @@
 #include <limits>
 #include <memory>
 
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
+namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
-class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
+class CobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
  public:
-  StubCobaltLoggerFactoryBase(std::unique_ptr<StubCobaltLoggerBase> logger)
-      : logger_(std::move(logger)) {}
-  virtual ~StubCobaltLoggerFactoryBase() {}
+  CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
+  virtual ~CobaltLoggerFactoryBase() {}
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::cobalt::LoggerFactory> GetHandler() {
@@ -64,17 +64,16 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
     FXL_NOTIMPLEMENTED();
   }
 
-  std::unique_ptr<StubCobaltLoggerBase> logger_;
+  std::unique_ptr<CobaltLoggerBase> logger_;
   std::unique_ptr<fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
   std::unique_ptr<fidl::Binding<fuchsia::cobalt::LoggerFactory>> factory_binding_;
 };
 
 // Always succeed in setting up the logger.
-class StubCobaltLoggerFactory : public StubCobaltLoggerFactoryBase {
+class CobaltLoggerFactory : public CobaltLoggerFactoryBase {
  public:
-  StubCobaltLoggerFactory(
-      std::unique_ptr<StubCobaltLoggerBase> logger = std::make_unique<StubCobaltLogger>())
-      : StubCobaltLoggerFactoryBase(std::move(logger)) {}
+  CobaltLoggerFactory(std::unique_ptr<CobaltLoggerBase> logger = std::make_unique<CobaltLogger>())
+      : CobaltLoggerFactoryBase(std::move(logger)) {}
 
  private:
   void CreateLoggerFromProjectId(
@@ -83,10 +82,10 @@ class StubCobaltLoggerFactory : public StubCobaltLoggerFactoryBase {
 };
 
 // Always close the connection before setting up the logger.
-class StubCobaltLoggerFactoryClosesConnection : public StubCobaltLoggerFactoryBase {
+class CobaltLoggerFactoryClosesConnection : public CobaltLoggerFactoryBase {
  public:
-  StubCobaltLoggerFactoryClosesConnection()
-      : StubCobaltLoggerFactoryBase(std::make_unique<StubCobaltLoggerBase>()) {}
+  CobaltLoggerFactoryClosesConnection()
+      : CobaltLoggerFactoryBase(std::make_unique<CobaltLoggerBase>()) {}
 
  private:
   void CreateLoggerFromProjectId(
@@ -95,10 +94,10 @@ class StubCobaltLoggerFactoryClosesConnection : public StubCobaltLoggerFactoryBa
 };
 
 // Fail to create the logger.
-class StubCobaltLoggerFactoryFailsToCreateLogger : public StubCobaltLoggerFactoryBase {
+class CobaltLoggerFactoryFailsToCreateLogger : public CobaltLoggerFactoryBase {
  public:
-  StubCobaltLoggerFactoryFailsToCreateLogger()
-      : StubCobaltLoggerFactoryBase(std::make_unique<StubCobaltLoggerBase>()) {}
+  CobaltLoggerFactoryFailsToCreateLogger()
+      : CobaltLoggerFactoryBase(std::make_unique<CobaltLoggerBase>()) {}
 
  private:
   void CreateLoggerFromProjectId(
@@ -107,11 +106,10 @@ class StubCobaltLoggerFactoryFailsToCreateLogger : public StubCobaltLoggerFactor
 };
 
 // Fail to create the logger until |succeed_after_| attempts have been made.
-class StubCobaltLoggerFactoryCreatesOnRetry : public StubCobaltLoggerFactoryBase {
+class CobaltLoggerFactoryCreatesOnRetry : public CobaltLoggerFactoryBase {
  public:
-  StubCobaltLoggerFactoryCreatesOnRetry(uint64_t succeed_after)
-      : StubCobaltLoggerFactoryBase(std::make_unique<StubCobaltLogger>()),
-        succeed_after_(succeed_after) {}
+  CobaltLoggerFactoryCreatesOnRetry(uint64_t succeed_after)
+      : CobaltLoggerFactoryBase(std::make_unique<CobaltLogger>()), succeed_after_(succeed_after) {}
 
  private:
   void CreateLoggerFromProjectId(
@@ -123,11 +121,11 @@ class StubCobaltLoggerFactoryCreatesOnRetry : public StubCobaltLoggerFactoryBase
 };
 
 // Delay calling the callee provided callback by the specified delay.
-class StubCobaltLoggerFactoryDelaysCallback : public StubCobaltLoggerFactoryBase {
+class CobaltLoggerFactoryDelaysCallback : public CobaltLoggerFactoryBase {
  public:
-  StubCobaltLoggerFactoryDelaysCallback(std::unique_ptr<StubCobaltLoggerBase> logger,
-                                        async_dispatcher_t* dispatcher, zx::duration delay)
-      : StubCobaltLoggerFactoryBase(std::move(logger)), dispatcher_(dispatcher), delay_(delay) {}
+  CobaltLoggerFactoryDelaysCallback(std::unique_ptr<CobaltLoggerBase> logger,
+                                    async_dispatcher_t* dispatcher, zx::duration delay)
+      : CobaltLoggerFactoryBase(std::move(logger)), dispatcher_(dispatcher), delay_(delay) {}
 
  private:
   void CreateLoggerFromProjectId(
@@ -138,6 +136,7 @@ class StubCobaltLoggerFactoryDelaysCallback : public StubCobaltLoggerFactoryBase
   zx::duration delay_;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_

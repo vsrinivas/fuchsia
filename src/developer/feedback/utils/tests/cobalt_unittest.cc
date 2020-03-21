@@ -12,8 +12,8 @@
 
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
@@ -65,7 +65,7 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
 };
 
 TEST_F(CobaltTest, Check_Log) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   for (size_t i = 0; i < 5; ++i) {
     LogCount();
@@ -80,7 +80,7 @@ TEST_F(CobaltTest, Check_Timer) {
   constexpr zx::time kStartTime(0);
   constexpr zx::time kEndTime(kStartTime + zx::usec(5));
 
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   clock_->Set(kStartTime);
   const uint64_t timer_id = cobalt_->StartTimer();
@@ -98,7 +98,7 @@ TEST_F(CobaltTest, Check_Timer) {
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   CloseLoggerConnection();
 
@@ -112,7 +112,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   for (size_t i = 0; i < 5; ++i) {
     LogOccurrence();
@@ -135,8 +135,8 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
 }
 
 TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
-  auto stub_logger = std::make_unique<StubCobaltLoggerIgnoresFirstEvents>(5u);
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>(std::move(stub_logger)));
+  auto stub_logger = std::make_unique<stubs::CobaltLoggerIgnoresFirstEvents>(5u);
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>(std::move(stub_logger)));
 
   for (size_t i = 0; i < 5; ++i) {
     LogOccurrence();
@@ -155,7 +155,7 @@ TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
 }
 
 TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
   CloseLoggerConnection();
 
@@ -175,7 +175,8 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
 
 TEST_F(CobaltTest, Check_ExponentialBackoff) {
   constexpr uint64_t num_attempts = 10u;
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryCreatesOnRetry>(num_attempts));
+  SetUpCobaltLoggerFactory(
+      std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
   CloseLoggerConnection();
 
   // We need to conservatively approximate the exponential backoff used by |logger_| so we don't
@@ -201,7 +202,8 @@ TEST_F(CobaltTest, Check_LoopOutlivesCobalt) {
   // fuchsia.cobalt/Logger and then is freed. This test should trigger ASAN if the task is not
   // cancelled.
   constexpr uint64_t num_attempts = 10u;
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryCreatesOnRetry>(num_attempts));
+  SetUpCobaltLoggerFactory(
+      std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
   CloseLoggerConnection();
 
   zx::duration delay = kLoggerBackoffInitialDelay;

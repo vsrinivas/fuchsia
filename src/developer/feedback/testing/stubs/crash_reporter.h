@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_CRASH_REPORTER_H_
-#define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_CRASH_REPORTER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CRASH_REPORTER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CRASH_REPORTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -13,8 +13,9 @@
 #include <optional>
 
 namespace feedback {
+namespace stubs {
 
-class StubCrashReporter : public fuchsia::feedback::CrashReporter {
+class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> GetHandler() {
@@ -40,23 +41,24 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
   std::optional<zx::duration> uptime_;
 };
 
-class StubCrashReporterClosesConnection : public StubCrashReporter {
+class CrashReporterClosesConnection : public CrashReporter {
  public:
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override {
     CloseConnection();
   }
 };
 
-class StubCrashReporterAlwaysReturnsError : public StubCrashReporter {
+class CrashReporterAlwaysReturnsError : public CrashReporter {
  public:
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 };
 
-class StubCrashReporterNoFileExpected : public StubCrashReporter {
+class CrashReporterNoFileExpected : public CrashReporter {
  public:
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_CRASH_REPORTER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CRASH_REPORTER_H_

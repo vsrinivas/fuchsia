@@ -2,63 +2,64 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/internal/stub.h>
 #include <zircon/errors.h>
 
-#include "fuchsia/cobalt/cpp/fidl.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace stubs {
 
 using fuchsia::cobalt::Status;
 using CreateLoggerFromProjectIdCallback =
     fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback;
 using fuchsia::cobalt::Logger;
 
-void StubCobaltLoggerFactoryBase::CloseFactoryConnection() {
+void CobaltLoggerFactoryBase::CloseFactoryConnection() {
   if (factory_binding_) {
     factory_binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
-void StubCobaltLoggerFactoryBase::CloseLoggerConnection() {
+void CobaltLoggerFactoryBase::CloseLoggerConnection() {
   if (logger_binding_) {
     logger_binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
-void StubCobaltLoggerFactoryBase::CloseAllConnections() {
+void CobaltLoggerFactoryBase::CloseAllConnections() {
   CloseFactoryConnection();
   CloseLoggerConnection();
 }
 
-void StubCobaltLoggerFactory::CreateLoggerFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
-    CreateLoggerFromProjectIdCallback callback) {
+void CobaltLoggerFactory::CreateLoggerFromProjectId(uint32_t project_id,
+                                                    fidl::InterfaceRequest<Logger> logger,
+                                                    CreateLoggerFromProjectIdCallback callback) {
   logger_binding_ =
       std::make_unique<fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
   callback(Status::OK);
 }
 
-void StubCobaltLoggerFactoryClosesConnection::CreateLoggerFromProjectId(
+void CobaltLoggerFactoryClosesConnection::CreateLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   CloseFactoryConnection();
 }
 
-void StubCobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectId(
+void CobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   callback(Status::INVALID_ARGUMENTS);
 }
 
-void StubCobaltLoggerFactoryCreatesOnRetry::CreateLoggerFromProjectId(
+void CobaltLoggerFactoryCreatesOnRetry::CreateLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   ++num_calls_;
@@ -72,7 +73,7 @@ void StubCobaltLoggerFactoryCreatesOnRetry::CreateLoggerFromProjectId(
   callback(Status::INVALID_ARGUMENTS);
 }
 
-void StubCobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
+void CobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   logger_binding_ =
@@ -81,4 +82,5 @@ void StubCobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
       dispatcher_, [cb = std::move(callback)]() { cb(Status::OK); }, delay_);
 }
 
+}  // namespace stubs
 }  // namespace feedback

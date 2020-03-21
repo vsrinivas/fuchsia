@@ -32,20 +32,16 @@ test_package("boot_log_checker_tests") {
 executable("reboot_log_handler_unittest") {
   testonly = true
 
-  sources = [
-    "reboot_log_handler_unittest.cc",
-    "stub_crash_reporter.cc",
-    "stub_crash_reporter.h",
-  ]
+  sources = [ "reboot_log_handler_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/boot_log_checker:src",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:crash_reporter",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/files",
     "//third_party/googletest:gmock",

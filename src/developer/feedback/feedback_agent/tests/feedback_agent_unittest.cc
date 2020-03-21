@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -39,7 +39,7 @@ class FeedbackAgentTest : public UnitTestFixture, public CobaltTestFixture {
   FeedbackAgentTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
   void SetUp() {
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
     inspector_ = std::make_unique<inspect::Inspector>();
     feedback_agent_ = FeedbackAgent::TryCreate(dispatcher(), services(), &inspector_->GetRoot());

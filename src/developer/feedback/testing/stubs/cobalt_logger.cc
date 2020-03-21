@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
 // file.
 
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
 
 namespace feedback {
+namespace stubs {
 namespace {
 
 using fuchsia::cobalt::Status;
@@ -29,42 +30,40 @@ CobaltEventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_code
 
 }  // namespace
 
-void StubCobaltLoggerBase::SetLastEvent(uint32_t metric_id, uint32_t event_code, uint64_t count) {
+void CobaltLoggerBase::SetLastEvent(uint32_t metric_id, uint32_t event_code, uint64_t count) {
   events_.push_back(
       CobaltEvent(DetermineCobaltEventType(metric_id, event_code), metric_id, event_code, count));
 }
 
-void StubCobaltLogger::LogEvent(uint32_t metric_id, uint32_t event_code,
-                                LogEventCallback callback) {
+void CobaltLogger::LogEvent(uint32_t metric_id, uint32_t event_code, LogEventCallback callback) {
   MarkLogEventAsCalled();
   SetLastEvent(metric_id, event_code, /*count=*/0);
   callback(Status::OK);
 }
 
-void StubCobaltLogger::LogEventCount(uint32_t metric_id, uint32_t event_code,
-                                     ::std::string component, int64_t period_duration_micros,
-                                     int64_t count,
-                                     fuchsia::cobalt::Logger::LogEventCountCallback callback) {
+void CobaltLogger::LogEventCount(uint32_t metric_id, uint32_t event_code, ::std::string component,
+                                 int64_t period_duration_micros, int64_t count,
+                                 fuchsia::cobalt::Logger::LogEventCountCallback callback) {
   MarkLogEventCountAsCalled();
   SetLastEvent(metric_id, event_code, count);
   callback(Status::OK);
 }
 
-void StubCobaltLogger::LogElapsedTime(uint32_t metric_id, uint32_t event_code,
-                                      ::std::string component, int64_t elapsed_micros,
-                                      fuchsia::cobalt::Logger::LogEventCountCallback callback) {
+void CobaltLogger::LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::std::string component,
+                                  int64_t elapsed_micros,
+                                  fuchsia::cobalt::Logger::LogEventCountCallback callback) {
   MarkLogElapsedTimeAsCalled();
   SetLastEvent(metric_id, event_code, elapsed_micros);
   callback(Status::OK);
 }
 
-void StubCobaltLoggerFailsLogEvent::LogEvent(uint32_t metric_id, uint32_t event_code,
-                                             LogEventCallback callback) {
+void CobaltLoggerFailsLogEvent::LogEvent(uint32_t metric_id, uint32_t event_code,
+                                         LogEventCallback callback) {
   callback(Status::INVALID_ARGUMENTS);
 }
 
-void StubCobaltLoggerIgnoresFirstEvents::LogEvent(
-    uint32_t metric_id, uint32_t event_code, fuchsia::cobalt::Logger::LogEventCallback callback) {
+void CobaltLoggerIgnoresFirstEvents::LogEvent(uint32_t metric_id, uint32_t event_code,
+                                              fuchsia::cobalt::Logger::LogEventCallback callback) {
   ++num_calls_;
   if (num_calls_ <= to_ignore_) {
     return;
@@ -74,4 +73,5 @@ void StubCobaltLoggerIgnoresFirstEvents::LogEvent(
   callback(Status::OK);
 }
 
+}  // namespace stubs
 }  // namespace feedback

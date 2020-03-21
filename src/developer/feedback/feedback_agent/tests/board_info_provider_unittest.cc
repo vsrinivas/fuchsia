@@ -17,7 +17,7 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -51,7 +51,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
 
   Annotations GetBoardInfo(const AnnotationKeys& annotations_to_get = {},
                            const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
@@ -174,7 +174,7 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
 
 TEST_F(BoardInfoProviderTest, Fail_CallGetBoardInfoTwice) {
   SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo({})));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

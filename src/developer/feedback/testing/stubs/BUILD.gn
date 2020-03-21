@@ -5,42 +5,117 @@
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("stub_cobalt_logger_factory") {
+source_set("cobalt") {
   testonly = true
 
-  public = [
-    "stub_cobalt_logger.h",
-    "stub_cobalt_logger_factory.h",
+  sources = [
+    "cobalt_logger.cc",
+    "cobalt_logger.h",
+    "cobalt_logger_factory.cc",
+    "cobalt_logger_factory.h",
   ]
 
-  sources = [
-    "stub_cobalt_logger.cc",
-    "stub_cobalt_logger.h",
-    "stub_cobalt_logger_factory.cc",
-    "stub_cobalt_logger_factory.h",
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fxl",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 
   deps = [
-    "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
-    "//zircon/system/fidl/fuchsia-cobalt",
+    "//zircon/public/lib/zx",
   ]
 
   visibility = [ "//src/developer/feedback/*" ]
 }
 
-source_set("stub_network_reachability_provider") {
+source_set("crash_reporter") {
   testonly = true
 
-  public = [ "stub_network_reachability_provider.h" ]
+  sources = [
+    "crash_reporter.cc",
+    "crash_reporter.h",
+  ]
 
-  sources = [ "stub_network_reachability_provider.h" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("data_provider") {
+  testonly = true
+
+  sources = [
+    "data_provider.cc",
+    "data_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("network_reachability_provider") {
+  testonly = true
+
+  sources = [
+    "network_reachability_provider.cc",
+    "network_reachability_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//zircon/system/fidl/fuchsia-net",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("utc_provider") {
+  testonly = true
+
+  sources = [
+    "utc_provider.cc",
+    "utc_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/sys/timekeeper:fuchsia.time",
+    "//zircon/public/lib/zx",
+  ]
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/public/lib/async-cpp",
   ]
 
   visibility = [ "//src/developer/feedback/*" ]
