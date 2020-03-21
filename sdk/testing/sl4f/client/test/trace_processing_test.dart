@@ -407,8 +407,7 @@ void main(List<String> args) {
     final metricsSpec = MetricsSpec(name: 'scenic_frame_stats');
     final results = scenicFrameStatsMetricsProcessor(model, metricsSpec);
 
-    expect(results[0].values[0], _closeTo(51.194623115724056));
-    expect(computeMean(results[1].values), _closeTo(1.0750221759999996));
+    expect(computeMean(results[0].values), _closeTo(1.0750221759999996));
   });
 
   test('DRM FPS metric', () async {
