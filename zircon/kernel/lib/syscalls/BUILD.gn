@@ -7,8 +7,8 @@
 library("syscalls") {
   visibility = [
     "$zx/kernel/*",
+    "$zx/system/ulib/syscalls-headers:*",
     "$zx/system/ulib/zircon:*",
-    "$zx/system/utest/core/bad-syscall:*",
   ]
 
   # This can be used for headers only by the vDSO and test code.

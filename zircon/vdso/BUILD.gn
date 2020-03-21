@@ -96,6 +96,7 @@ config("public.config") {
 group("private") {
   visibility = [
     "$zx/kernel/lib/syscalls/*",
+    "$zx/system/ulib/syscalls-headers/*",
     "$zx/system/ulib/zircon/*",
   ]
   public_configs = [ ":private.config" ]
