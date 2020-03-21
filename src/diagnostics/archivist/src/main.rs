@@ -52,17 +52,14 @@ fn main() -> Result<(), Error> {
 
     let opt: Args = argh::from_env();
     let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
+    if !opt.disable_klog {
+        log_manager.spawn_klogger()?;
+    }
 
     let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
         Ok(config) => config,
         Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
     };
-
-    let num_threads = archivist_configuration.num_threads;
-    if !opt.disable_klog {
-        let wait_for_initial_drain = log_manager.spawn_klog_drainer()?;
-        executor.run(wait_for_initial_drain, num_threads)?;
-    }
 
     let mut fs = ServiceFs::new();
     diagnostics::serve(&mut fs)?;
@@ -101,6 +98,7 @@ fn main() -> Result<(), Error> {
         data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
     }
 
+    let num_threads = archivist_configuration.num_threads;
     let archivist_state = archive::ArchivistState::new(
         archivist_configuration,
         all_inspect_repository.clone(),
@@ -111,12 +109,8 @@ fn main() -> Result<(), Error> {
     let log_manager3 = log_manager.clone();
 
     fs.dir("svc")
-        .add_fidl_service(move |stream| {
-            log_manager2.spawn_log_handler(stream);
-        })
-        .add_fidl_service(move |stream| {
-            log_manager3.spawn_log_sink_handler(stream);
-        })
+        .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
+        .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream))
         .add_fidl_service(move |stream| {
             let all_archive_accessor =
                 archive_accessor::ArchiveAccessor::new(all_inspect_repository.clone());

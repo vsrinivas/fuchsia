@@ -64,31 +64,8 @@ impl KernelLogger {
         }
     }
 
-    pub fn existing_logs(&mut self) -> KernelLogsIterator<'_> {
+    pub fn log_stream<'a>(&'a mut self) -> KernelLogsIterator<'a> {
         KernelLogsIterator { klogger: self }
-    }
-
-    pub fn listen(self) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {
-        stream::unfold((true, self), move |(mut is_readable, mut klogger)| async move {
-            loop {
-                if !is_readable {
-                    if let Err(e) =
-                        fasync::OnSignals::new(&klogger.debuglogger, zx::Signals::LOG_READABLE)
-                            .await
-                    {
-                        break Some((Err(e), (is_readable, klogger)));
-                    }
-                }
-                is_readable = true;
-                match klogger.read_log() {
-                    Err(zx::Status::SHOULD_WAIT) => {
-                        is_readable = false;
-                        continue;
-                    }
-                    x => break Some((x, (is_readable, klogger))),
-                }
-            }
-        })
     }
 }
 
@@ -107,4 +84,28 @@ impl<'a> Iterator for KernelLogsIterator<'a> {
             }
         }
     }
+}
+
+pub fn listen(
+    klogger: KernelLogger,
+) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {
+    stream::unfold((true, klogger), move |(mut is_readable, mut klogger)| async move {
+        loop {
+            if !is_readable {
+                if let Err(e) =
+                    fasync::OnSignals::new(&klogger.debuglogger, zx::Signals::LOG_READABLE).await
+                {
+                    break Some((Err(e), (is_readable, klogger)));
+                }
+            }
+            is_readable = true;
+            match klogger.read_log() {
+                Err(zx::Status::SHOULD_WAIT) => {
+                    is_readable = false;
+                    continue;
+                }
+                x => break Some((x, (is_readable, klogger))),
+            }
+        }
+    })
 }

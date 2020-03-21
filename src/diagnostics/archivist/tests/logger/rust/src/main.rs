@@ -68,9 +68,7 @@ mod tests {
             }
             executor.run_one_step(&mut futures::future::pending::<()>());
         }
-        let mut logs = logs.lock();
-        // sort logs to account for out-of-order arrival
-        logs.sort_by(|a, b| a.time.cmp(&b.time));
+        let logs = logs.lock();
         assert_eq!(2, logs.len());
         assert_eq!(logs[0].tags, vec![tag.clone()]);
         assert_eq!(logs[0].severity, LogLevelFilter::Info as i32);
