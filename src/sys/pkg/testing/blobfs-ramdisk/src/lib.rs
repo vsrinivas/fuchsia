@@ -28,7 +28,7 @@ mod test;
 /// A ramdisk-backed blobfs instance
 pub struct BlobfsRamdisk {
     backing_ramdisk: Ramdisk,
-    process: KillOnDrop<fuchsia_zircon::Process>,
+    process: scoped_task::Scoped<fuchsia_zircon::Process>,
     proxy: DirectoryAdminProxy,
 }
 
@@ -51,8 +51,8 @@ impl BlobfsRamdisk {
         let block_handle = ramdisk.clone_channel().context("cloning ramdisk channel")?;
 
         let (proxy, blobfs_server_end) = fidl::endpoints::create_proxy::<DirectoryAdminMarker>()?;
-        let process = fdio::spawn_etc(
-            &fuchsia_runtime::job_default(),
+        let process = scoped_task::spawn_etc(
+            &scoped_task::job_default(),
             SpawnOptions::CLONE_ALL,
             &CString::new("/pkg/bin/blobfs").unwrap(),
             &[&CString::new("blobfs").unwrap(), &CString::new("mount").unwrap()],
@@ -65,7 +65,7 @@ impl BlobfsRamdisk {
         .map_err(|(status, _)| status)
         .context("spawning 'blobfs mount'")?;
 
-        Ok(Self { backing_ramdisk: ramdisk, process: process.into(), proxy })
+        Ok(Self { backing_ramdisk: ramdisk, process, proxy })
     }
 
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
@@ -280,30 +280,6 @@ fn wait_for_process(proc: fuchsia_zircon::Process) -> Result<(), Error> {
 
 fn mkblobfs(ramdisk: &Ramdisk) -> Result<(), Error> {
     mkblobfs_block(ramdisk.clone_handle()?)
-}
-
-/// An owned zircon job or process that is silently killed when dropped.
-struct KillOnDrop<T: fuchsia_zircon::Task> {
-    task: T,
-}
-
-impl<T: fuchsia_zircon::Task> Drop for KillOnDrop<T> {
-    fn drop(&mut self) {
-        let _ = self.task.kill();
-    }
-}
-
-impl<T: fuchsia_zircon::Task> std::ops::Deref for KillOnDrop<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.task
-    }
-}
-
-impl<T: fuchsia_zircon::Task> From<T> for KillOnDrop<T> {
-    fn from(task: T) -> Self {
-        Self { task }
-    }
 }
 
 #[cfg(test)]
