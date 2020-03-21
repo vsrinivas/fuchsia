@@ -11,6 +11,7 @@ import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
+import("//build/info/info.gni")
 
 # Assembles a Fuchsia system.
 #
@@ -294,6 +295,15 @@ template("assemble_system") {
 
       "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
       "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
+      "--reset-rewrite",
+    ]
+
+    # Add the backstop UTC value from the integration repo latest commit
+    args += [
+      "--contents",
+      "--entry=clock.backstop=" +
+          rebase_path(build_info_files.minimum_utc_stamp, root_build_dir),
+      "--no-contents",
       "--reset-rewrite",
     ]
 
