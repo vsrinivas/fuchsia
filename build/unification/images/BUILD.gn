@@ -476,7 +476,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.bootsvc-unit-test",
 #------------------
 #------------------
-    ":test.sys.channel-fatal-test",
 #------------------
 #------------------
     ":test.sys.console-test-test",
@@ -1035,7 +1034,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.bootsvc-unit-test",
 #------------------
 #------------------
-    ":test.sys.channel-fatal-test",
 #------------------
 #------------------
     ":test.sys.console-test-test",
@@ -2798,7 +2796,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.bootsvc-unit-test",
 #------------------
 #------------------
-    #":test.sys.channel-fatal-test",
+    "//zircon/system/utest/channel-fatal:channel-fatal-manifest",
 #------------------
     "//zircon/system/utest/chromeos-disk-setup:chromeos-disk-setup-manifest",
     "//zircon/system/utest/cleanup:cleanup-manifest",
@@ -3460,7 +3458,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.bootsvc-unit-test",
 #------------------
 #------------------
-    #":test.sys.channel-fatal-test",
+    "//zircon/system/utest/channel-fatal:channel-fatal-manifest",
 #------------------
     "//zircon/system/utest/chromeos-disk-setup:chromeos-disk-setup-manifest",
     "//zircon/system/utest/cleanup:cleanup-manifest",

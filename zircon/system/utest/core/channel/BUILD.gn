@@ -13,9 +13,9 @@ source_set("channel") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/mini-process",
+    "$zx/system/ulib/vdso-code-header",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
-    "$zx/system/utest/channel-fatal:vdso-code-header",
   ]
 }

@@ -2,20 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-zx_test("channel-fatal") {
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("channel-fatal") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "channel-fatal-test.cc" ]
   deps = [
-    ":vdso-code-header",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/test-utils",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/test-utils",
+    "//zircon/public/lib/vdso-code-header",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
-environment_redirect("vdso-code-header") {
-  environment_label = "$zx/kernel"
-  deps = [ "$zx/kernel/lib/userabi:vdso-code-header" ]
+migrated_manifest("channel-fatal-manifest") {
+  deps = [ ":channel-fatal" ]
 }

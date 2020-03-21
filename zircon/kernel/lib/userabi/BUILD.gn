@@ -222,6 +222,32 @@ if (is_kernel) {
   group("vdso-code-header") {
     deps = [ ":vdso-code.h" ]
     public_configs = [ ":vdso-code-header.config" ]
+
+    # The following metadata allows the vDSO header to be exposed to the GN
+    # build under //zircon/public/lib/vdso-code-header.
+    metadata = {
+      legacy_barrier = []
+      legacy_dirs = [ "lib/vdso-code-header" ]
+      legacy_targets = [
+        {
+          _zircon_public = "lib"
+          import = "//build/zircon/zircon_library.gni"
+          target_type = "zircon_library"
+          target_name = "vdso-code-header"
+          include_dirs = [ target_gen_dir ]
+          compilation_include_dirs = []
+          compilation_defines = []
+          disable_ubsan = false
+          headers = [ "$target_gen_dir/vdso-code.h" ]
+          publishable = false
+          sources = []
+          deps = []
+          public_deps = []
+          install = []
+          debug = []
+        }
+      ]
+    }
   }
 
   config("vdso-code-header.config") {
