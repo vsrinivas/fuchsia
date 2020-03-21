@@ -888,7 +888,7 @@ zx_status_t Sdhci::Init() {
   if (caps1.sdr50_support()) {
     info_.caps |= SDMMC_HOST_CAP_SDR50;
   }
-  if (caps1.ddr50_support()) {
+  if (caps1.ddr50_support() && !(quirks_ & SDHCI_QUIRK_NO_DDR)) {
     info_.caps |= SDMMC_HOST_CAP_DDR50;
   }
   if (caps1.sdr104_support()) {
@@ -903,6 +903,9 @@ zx_status_t Sdhci::Init() {
   if (quirks_ & SDHCI_QUIRK_NON_STANDARD_TUNING) {
     // Disable HS200 and HS400 if tuning cannot be performed as per the spec.
     info_.prefs |= SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400;
+  }
+  if (quirks_ & SDHCI_QUIRK_NO_DDR) {
+    info_.prefs |= SDMMC_HOST_PREFS_DISABLE_HSDDR | SDMMC_HOST_PREFS_DISABLE_HS400;
   }
 
   // Perform a software reset against both the DAT and CMD interface.

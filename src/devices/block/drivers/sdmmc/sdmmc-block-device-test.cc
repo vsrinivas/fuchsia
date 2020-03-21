@@ -789,4 +789,43 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitionOutOfRange) {
   EXPECT_OK(op6->private_storage()->status);
 }
 
+TEST_F(SdmmcBlockDeviceTest, ProbeUsesPrefsHs) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_DEVICE_TYPE] = 0b0101'0110;  // Card supports HS200/400, HS/DDR.
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  sdmmc_.set_host_info({
+      .prefs = SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400 |
+               SDMMC_HOST_PREFS_DISABLE_HSDDR,
+  });
+
+  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_OK(dut.Init());
+  EXPECT_OK(dut.ProbeMmc());
+
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HS);
+}
+
+TEST_F(SdmmcBlockDeviceTest, ProbeUsesPrefsHsDdr) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_DEVICE_TYPE] = 0b0101'0110;  // Card supports HS200/400, HS/DDR.
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  sdmmc_.set_host_info({
+      .prefs = SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400,
+  });
+
+  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_OK(dut.Init());
+  EXPECT_OK(dut.ProbeMmc());
+
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HSDDR);
+}
+
 }  // namespace sdmmc

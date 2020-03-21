@@ -117,6 +117,7 @@ enum SdmmcHostCap : uint64 {
 enum SdmmcHostPrefs : uint64 {
     DISABLE_HS400 = 0x1;
     DISABLE_HS200 = 0x2;
+    DISABLE_HSDDR = 0x4;
 };
 
 struct SdmmcHostInfo {

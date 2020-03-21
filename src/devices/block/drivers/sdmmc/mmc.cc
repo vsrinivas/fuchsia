@@ -20,7 +20,7 @@ namespace {
 
 constexpr uint32_t kFreq200MHz = 200'000'000;
 constexpr uint32_t kFreq52MHz = 52'000'000;
-constexpr uint32_t kFreq25MHz = 25'000'000;
+constexpr uint32_t kFreq26MHz = 26'000'000;
 
 constexpr uint64_t kMmcSectorSize = 512;  // physical sector size
 constexpr uint64_t kMmcBlockSize = 512;   // block size is 512 bytes always because it is the
@@ -351,7 +351,8 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
         return st;
       }
 
-      if (MmcSupportsHsDdr() && (bus_width_ != SDMMC_BUS_WIDTH_ONE)) {
+      if (MmcSupportsHsDdr() && (bus_width_ != SDMMC_BUS_WIDTH_ONE) &&
+          !(sdmmc_.host_info().prefs & SDMMC_HOST_PREFS_DISABLE_HSDDR)) {
         if ((st = MmcSwitchTiming(SDMMC_TIMING_HSDDR)) != ZX_OK) {
           return st;
         }
@@ -369,7 +370,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
     }
   } else {
     // Set the bus frequency to legacy timing
-    if ((st = MmcSwitchFreq(kFreq25MHz)) != ZX_OK) {
+    if ((st = MmcSwitchFreq(kFreq26MHz)) != ZX_OK) {
       return st;
     }
     timing_ = SDMMC_TIMING_LEGACY;

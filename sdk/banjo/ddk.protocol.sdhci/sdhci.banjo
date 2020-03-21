@@ -28,6 +28,8 @@ enum SdhciQuirk : uint64 {
     NON_STANDARD_TUNING = 0x8;
     /// Force 1-bit bus, disallow 4- and 8-bit modes.
     BUS_WIDTH_1 = 0x10;
+    /// Don't use DDR modes even if the SDHCI capabilites register indicates it is supported.
+    NO_DDR = 0x20;
 };
 
 [Layout = "ddk-protocol"]
