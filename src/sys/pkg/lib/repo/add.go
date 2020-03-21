@@ -13,7 +13,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"os"
+	"time"
 
 	tuf_data "github.com/flynn/go-tuf/data"
 	"github.com/pkg/sftp"
@@ -27,6 +29,11 @@ const (
 	repoAddCmdTemplate = "pkgctl repo add --file %s"
 	defaultInstallPath = "/tmp/config.json"
 	rootJSON           = "root.json"
+
+	// Exponentially backoff in retrying fetching root.json at times 0.5s, 1s, 2s, 4s, 8s.
+	backoffFloor      = 500 * time.Millisecond
+	backoffCeiling    = 8 * time.Second
+	backoffMultiplier = 2.0
 )
 
 // AddInsecurely configures a provided repository as an update source, though
@@ -140,7 +147,7 @@ func (sh remoteShell) run(cmd string) error {
 func getRepoRoot(repoURL string) (*tuf_data.Root, error) {
 	url := fmt.Sprintf("%s/%s", repoURL, rootJSON)
 	var resp *http.Response
-	b := retry.WithMaxRetries(&retry.ZeroBackoff{}, 5)
+	b := retry.WithMaxRetries(retry.NewExponentialBackoff(backoffFloor, backoffCeiling, backoffMultiplier), 5)
 	err := retry.Retry(context.Background(), b, func() error {
 		var err error
 		resp, err = http.Get(url)
@@ -150,6 +157,16 @@ func getRepoRoot(repoURL string) (*tuf_data.Root, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		dump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to dump %s response: %w", rootJSON, err)
+		}
+		log.Printf("%s response dump: %s", rootJSON, dump)
+		return nil, fmt.Errorf("received a non-200 %s response: %d", rootJSON, resp.StatusCode)
+	}
+
 	var signed tuf_data.Signed
 	if err := json.NewDecoder(resp.Body).Decode(&signed); err != nil {
 		return nil, err
