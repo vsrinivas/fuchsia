@@ -1,0 +1,204 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zbi.gni")
+import("//build/config/fuchsia/zircon.gni")
+import("//build/unification/images/migrated_manifest.gni")
+import("//build/unification/zbi/tests.gni")
+import("//zircon/public/gn/test/zbi_test_success.gni")
+
+# Composes a test zbi out of Zircon artifacts.
+#
+# Parameters
+#
+#   args (optional)
+#     [list of strings] Command line arguments for the resulting zbi.
+#
+#   reference (optional)
+#     [string] Name of the Zircon zbi test this target mimics.
+#
+#   device_types
+#     [list of strings] Devices the test should run on.
+#     Allowable values are those among the entries in
+#     //build/testing/platforms.gni; others will be ignored.
+#     Defaults to [ "QEMU" ].
+#
+#   replace, complete, compress
+#     See zbi.gni.
+template("migrated_zbi_test") {
+  main_target = target_name
+  arg_target = "${target_name}_args"
+  rsp_target = "${target_name}_manifest"
+  zbi_target = "${target_name}_zbi"
+
+  group_deps = []
+
+  rsp_file = "$target_gen_dir/$target_name.zbi.rsp"
+
+  zbi_args = []
+  if (defined(invoker.args)) {
+    zbi_args += invoker.args
+  }
+  zbi_args += [ "userboot.shutdown" ]
+
+  group(arg_target) {
+    metadata = {
+      migrated_zbi_barrier = []
+      migrated_zbi_input_args = [ "--type=cmdline" ]
+      foreach(arg, zbi_args) {
+        migrated_zbi_input_args += [ "--entry=$arg" ]
+      }
+    }
+  }
+
+  generated_file(rsp_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = invoker.deps + [ ":$arg_target" ]
+    data_keys = [ "migrated_zbi_input_args" ]
+    walk_keys = [ "migrated_zbi_barrier" ]
+    output_conversion = "list lines"
+    outputs = [ rsp_file ]
+  }
+
+  output_file = "$target_out_dir/$target_name.zbi"
+  zbi_tool = "$zircon_tools_dir/zbi"
+
+  action(zbi_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    script = "//build/unification/zbi/run_zbi.py"
+
+    deps = [
+      ":$rsp_target",
+      "//zircon/public/tool/zbi($host_toolchain)",
+    ]
+
+    inputs = [
+      rsp_file,
+      zbi_tool,
+    ]
+    outputs = [
+      output_file,
+      "$output_file.intermediate.d",
+    ]
+    depfile = "$output_file.d"
+
+    args = [
+      "--zbi",
+      rebase_path(zbi_tool, root_build_dir),
+      "--original-depfile",
+      rebase_path(outputs[1], root_build_dir),
+      "--final-depfile",
+      rebase_path(depfile, root_build_dir),
+      "--rspfile",
+      rebase_path(rsp_file, root_build_dir),
+
+      # The remaining arguments are passed to the zbi tool along with the
+      # contents of the response file.
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+
+    if (defined(invoker.replace) && invoker.replace) {
+      args += [ "--replace" ]
+    }
+
+    if (!defined(invoker.complete) || invoker.complete) {
+      args += [ "--complete=" + current_cpu ]
+    }
+
+    if (defined(invoker.compress) && !invoker.compress) {
+      args += [ "--uncompressed" ]
+    } else {
+      args += [ "--compressed=$zbi_compression" ]
+    }
+  }
+
+  group_deps += [ ":$zbi_target" ]
+
+  if (defined(invoker.reference)) {
+    reference = invoker.reference
+    reference_zbi = false
+    foreach(test, zircon_zbi_tests) {
+      if (test.name == reference) {
+        assert(reference_zbi == false, "Duplicate zbi test: $reference")
+        reference_zbi = test.path
+      }
+    }
+    assert(reference_zbi != false, "Could not find zbi test $reference")
+
+    reference_target = "${target_name}_reference"
+
+    action(reference_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      script = "//build/unification/zbi/compare_zbis.py"
+
+      deps = [
+        ":$zbi_target",
+        "//zircon/public/tool/zbi($host_toolchain)",
+      ]
+
+      inputs = [
+        output_file,
+        reference_zbi,
+        zbi_tool,
+      ]
+      outputs = [ "$target_gen_dir/$target_name.stamp" ]
+
+      args = [
+        "--tool",
+        rebase_path(zbi_tool, root_build_dir),
+        "--reference-zbi",
+        rebase_path(reference_zbi, root_build_dir),
+        "--generated-zbi",
+        rebase_path(output_file, root_build_dir),
+        "--stamp",
+        rebase_path(outputs[0], root_build_dir),
+      ]
+    }
+
+    group_deps += [ ":$reference_target" ]
+  }
+
+  if (defined(invoker.device_types)) {
+    _device_types = invoker.device_types
+  } else {
+    _device_types = [ "QEMU" ]
+  }
+
+  group(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "assert_no_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = group_deps
+
+    metadata = {
+      zbi_tests = [
+        {
+          cpu = current_cpu
+          disabled = false
+          name = main_target
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          path = rebase_path(output_file, root_build_dir)
+          bootserver_netboot = [ "--boot" ]
+          success_string = zbi_test_success_string
+          device_types = _device_types
+        },
+      ]
+    }
+  }
+}

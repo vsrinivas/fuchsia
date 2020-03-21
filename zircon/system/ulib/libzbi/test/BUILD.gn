@@ -29,6 +29,7 @@ test("zbi") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
+  output_name = "libzbi-test"
   sources = [ "zbi.cc" ]
   deps = [
     "//zircon/public/lib/fbl",
@@ -42,9 +43,7 @@ test("zbi") {
       "//zircon/public/lib/zx",
     ]
   } else {
-    deps += [
-      "//zircon/public/lib/unittest-static",
-    ]
+    deps += [ "//zircon/public/lib/unittest-static" ]
     output_dir = "$root_out_dir/zircon-migrated"
   }
 }

@@ -8,5 +8,6 @@ group("unification") {
   deps = [
     "fuzzing",
     "tests:host-metadata",
+    "zbi",
   ]
 }

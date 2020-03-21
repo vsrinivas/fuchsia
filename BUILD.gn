@@ -450,6 +450,7 @@ build_api_module("zbi_tests") {
   deps = [
     ":zbi_tests.zircon",
     "build/images",
+    "build/unification/zbi:tests",
   ]
 }
 

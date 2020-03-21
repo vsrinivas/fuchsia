@@ -14,6 +14,10 @@
 #   deps (required)
 #     [list of labels] The targets to generate a manifest for.
 #
+#   zbi (optional)
+#     [boolean] Whether to allow manifest contents to be added to ZBI files.
+#     Defaults to false.
+#
 #   testonly (optional)
 #     Same as for any GN target.
 template("migrated_manifest") {
@@ -21,7 +25,10 @@ template("migrated_manifest") {
          "Need deps to generate a manifest for")
 
   if (is_fuchsia) {
-    generated_file(target_name) {
+    main_target = target_name
+    manifest_file = "$target_out_dir/$target_name.unification.manifest"
+
+    generated_file(main_target) {
       forward_variables_from(invoker,
                              [
                                "deps",
@@ -38,7 +45,22 @@ template("migrated_manifest") {
 
       # Use the same naming scheme as for other unification manifest templates,
       # this makes them interoperable.
-      outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
+      outputs = [ manifest_file ]
+    }
+
+    if (defined(invoker.zbi) && invoker.zbi) {
+      group("$target_name-zbi") {
+        deps = [ ":$main_target" ]
+
+        metadata = {
+          migrated_zbi_barrier = []
+          migrated_zbi_input_args = [
+            "--prefix=",
+            "--files",
+            rebase_path(manifest_file, root_build_dir),
+          ]
+        }
+      }
     }
   } else {
     # This template does nothing on non-Fuchsia platforms.

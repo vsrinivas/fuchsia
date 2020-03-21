@@ -210,15 +210,17 @@ class FileDataSet(object):
 
 class ZbiTest(object):
 
-    def __init__(self, name, bootfs, cmdline):
+    def __init__(self, name, bootfs, cmdline, extras):
         self.name = name
         self.bootfs = sorted(bootfs)
         self.cmdline = sorted(cmdline)
+        self.extras = extras
 
     def __eq__(self, other):
         return (self.name == other.name and
                 self.bootfs == other.bootfs and
-                self.cmdline == other.cmdline)
+                self.cmdline == other.cmdline and
+                self.extras == other.extras)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -227,9 +229,10 @@ class ZbiTest(object):
         return 'Z[' + self.name + ']'
 
     def __hash__(self):
-        return (hash(self.name) +
-                7 * hash(tuple(b for b in self.bootfs)) +
-                49 * hash(tuple(c for c in self.cmdline)))
+        return hash((self.name,
+                     tuple(b for b in self.bootfs),
+                     tuple(c for c in self.cmdline),
+                     json.dumps(self.extras, sort_keys=True)))
 
     def diff_bootfs(self, other):
         removed = set(self.bootfs) - set(other.bootfs)
@@ -246,11 +249,13 @@ class ZbiTest(object):
             'name': self.name,
             'bootfs': self.bootfs,
             'cmdline': self.cmdline,
+            'extras': self.extras,
         }
 
     @classmethod
     def from_json(cls, input):
-        return ZbiTest(input['name'], input['bootfs'], input['cmdline'])
+        return ZbiTest(input['name'], input['bootfs'], input['cmdline'],
+                       input['extras'])
 
     @classmethod
     def extract(cls, build_dir, data):
@@ -258,7 +263,10 @@ class ZbiTest(object):
         zbi_tool = os.path.join(build_dir, 'host_x64', 'zbi')
         contents = run_command([zbi_tool, '-tv', zbi_path])
         bootfs, cmdline = cls._parse_zbi(contents)
-        return ZbiTest(data['name'], bootfs, cmdline)
+        extras = dict((i, data[i]) for i in ['bootserver_netboot', 'cpu',
+                                             'device_types', 'disabled',
+                                             'success_string'])
+        return ZbiTest(data['name'], bootfs, cmdline, extras)
 
     @classmethod
     def _parse_zbi(cls, data):
@@ -476,6 +484,11 @@ def compare_summaries(reference, current):
             for element in added:
                 report(Type.ZBI_TESTS, True,
                        'added to ' + name + ' cmdline: ' + element)
+        if reference_test.extras != current_test.extras:
+            report(Type.ZBI_TESTS, True, 'different params for ' + name + ': ' +
+                                         json.dumps(reference_test.extras) +
+                                         ' vs. ' +
+                                         json.dumps(current_test.extras))
 
     if has_errors:
         print('Error: summaries do not match!')
