@@ -55,18 +55,39 @@ ConfigurationManagerImpl::ConfigurationManagerImpl()
     : config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {}
 
 ConfigurationManagerImpl::ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context)
-    : config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {
-  context_ = std::move(context);
-  _Init();
+    : context_(std::move(context)),
+      config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {
+  FXL_CHECK(_Init() == WEAVE_NO_ERROR) << "Failed to init configuration manager.";
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_Init() {
+  WEAVE_ERROR err;
   if (!context_) {
     context_ = sys::ComponentContext::Create();
   }
-  zx_status_t status = context_->svc()->Connect(wlan_device_service_.NewRequest());
-  FXL_CHECK(status == ZX_OK) << "Failed to connect to wlan service.";
+
+  FXL_CHECK(context_->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
+      << "Failed to connect to wlan service.";
+  FXL_CHECK(context_->svc()->Connect(hwinfo_device_ptr_.NewRequest()) == ZX_OK)
+      << "Failed to connect to hwinfo device service.";
+
+  err = ConfigurationManagerImpl::GetAndStoreHWInfo();
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
   return WEAVE_NO_ERROR;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreHWInfo() {
+  fuchsia::hwinfo::DeviceInfo device_info;
+  FXL_CHECK(ZX_OK == hwinfo_device_ptr_->GetInfo(&device_info))
+      << "Failed to get device information";
+  if (device_info.has_serial_number()) {
+    return StoreSerialNumber(device_info.serial_number().c_str(),
+                             device_info.serial_number().length());
+  }
+  return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendorId) {

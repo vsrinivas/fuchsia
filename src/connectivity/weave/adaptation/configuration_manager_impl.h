@@ -9,6 +9,7 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.h>
 // clang-format on
 
+#include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -75,8 +76,11 @@ class ConfigurationManagerImpl final
       ::nl::Weave::Profiles::NetworkProvisioning::WiFiSecurityType secType);
 
   std::unique_ptr<sys::ComponentContext> context_;
+  fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_ptr_;
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
   std::unique_ptr<Internal::WeaveConfigReader> config_data_reader_;
+
+  WEAVE_ERROR GetAndStoreHWInfo();
 
  public:
   ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);

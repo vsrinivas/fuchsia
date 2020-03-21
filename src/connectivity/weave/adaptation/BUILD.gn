@@ -35,6 +35,7 @@ openweave_adaptation_layer("adaptation") {
   deps = [ "//src/lib/syslog/cpp" ]
   public_configs = [ ":adaptation_config" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.wlan.device.service",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",

@@ -15,13 +15,16 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
+#include <fuchsia/hwinfo/cpp/fidl.h>
+#include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <fuchsia/wlan/device/service/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/test_loop_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <net/ethernet.h>
+#include <thread>
 
 #include "configuration_manager_impl.h"
 #include "gtest/gtest.h"
@@ -42,9 +45,12 @@ constexpr char kExpectedPath[] = "/dev/wifi/wlanphy";
 constexpr uint16_t kExpectedVendorId = 5050;
 constexpr uint16_t kExpectedProductId = 60209;
 constexpr char kExpectedFirmwareRevision[] = "prerelease-1";
+constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
 
 constexpr uint16_t kMaxFirmwareRevisionSize =
     nl::Weave::DeviceLayer::ConfigurationManager::kMaxFirmwareRevisionLength + 1;
+constexpr uint16_t kMaxSerialNumberSize =
+    nl::Weave::DeviceLayer::ConfigurationManager::kMaxSerialNumberLength + 1;
 
 }  // namespace
 
@@ -86,60 +92,125 @@ class FakeWlanStack : public fuchsia::wlan::device::service::testing::DeviceServ
   async_dispatcher_t* dispatcher_;
 };
 
-class ConfigurationManagerTest : public ::gtest::TestLoopFixture {
+// This fake class hosts device protocol in the backgroud thread
+class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
  public:
-  ConfigurationManagerTest() : context_provider_(), cfg_mgr_(context_provider_.TakeContext()) {
-    context_provider_.service_directory_provider()->AddService(
-        fake_wlan_stack_.GetHandler(loop_.dispatcher()));
-    loop_.StartThread();
+  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
+
+  void GetInfo(fuchsia::hwinfo::Device::GetInfoCallback callback) override {
+    fuchsia::hwinfo::DeviceInfo device_info;
+    device_info.set_serial_number(kExpectedSerialNumber);
+    callback(std::move(device_info));
   }
-  ~ConfigurationManagerTest() {
-    loop_.Quit();
+
+  fidl::InterfaceRequestHandler<fuchsia::hwinfo::Device> GetHandler(
+      async_dispatcher_t* dispatcher = nullptr) {
+    dispatcher_ = dispatcher;
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::hwinfo::Device> request) {
+      binding_.Bind(std::move(request), dispatcher);
+    };
   }
-  void SetUp() override { TestLoopFixture::SetUp(); }
 
  private:
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  sys::testing::ComponentContextProvider context_provider_;
-  FakeWlanStack fake_wlan_stack_;
+  fidl::Binding<fuchsia::hwinfo::Device> binding_{this};
+  async_dispatcher_t* dispatcher_;
+};
 
+class ConfigurationManagerTest : public ::gtest::RealLoopFixture {
  public:
-  nl::Weave::DeviceLayer::ConfigurationManagerImpl cfg_mgr_;
+  ConfigurationManagerTest() {
+    context_provider_.service_directory_provider()->AddService(
+        fake_wlan_stack_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
+        fake_hwinfo_.GetHandler(dispatcher()));
+  }
+  ~ConfigurationManagerTest() { QuitLoop(); }
+
+  void SetUp() {
+    RealLoopFixture::SetUp();
+    RunLoopAsync();
+    cfg_mgr_ = std::make_unique<nl::Weave::DeviceLayer::ConfigurationManagerImpl>(
+        context_provider_.TakeContext());
+    WaitOnLoop(true);
+  }
+
+  void RunLoopAsync() {
+    if (test_loop_bg_thread_) {
+      FAIL() << "Already running the background thread.";
+    }
+    test_loop_bg_trigger_.store(false);
+    test_loop_bg_thread_ = std::make_unique<std::thread>(
+        [this] { RunLoopUntil([this] { return test_loop_bg_trigger_.load(); }); });
+  }
+
+  void WaitOnLoop(bool trigger = false) {
+    if (!test_loop_bg_thread_) {
+      FAIL() << "Background thread was not started, nothing to wait on.";
+    }
+    if (trigger) {
+      TriggerCondition();
+    }
+    test_loop_bg_thread_->join();
+    test_loop_bg_thread_.reset();
+  }
+
+  void TriggerCondition() { test_loop_bg_trigger_.store(true); }
+
+ protected:
+  std::unique_ptr<nl::Weave::DeviceLayer::ConfigurationManagerImpl> cfg_mgr_;
+
+ private:
+  std::unique_ptr<std::thread> test_loop_bg_thread_;
+  std::atomic_bool test_loop_bg_trigger_;
+
+  sys::testing::ComponentContextProvider context_provider_;
+
+  FakeHwinfo fake_hwinfo_;
+  FakeWlanStack fake_wlan_stack_;
 };
 
 TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
   const uint64_t fabric_id = 123456789U;
   uint64_t stored_fabric_id = 0U;
-  EXPECT_EQ(cfg_mgr_.StoreFabricId(fabric_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(cfg_mgr_.GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(cfg_mgr_->StoreFabricId(fabric_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(cfg_mgr_->GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_fabric_id, fabric_id);
 }
 
 TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
   uint8_t mac[ETH_ALEN];
-  RunLoopUntilIdle();
-  EXPECT_EQ(cfg_mgr_.GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
+  RunLoopAsync();
+  EXPECT_EQ(cfg_mgr_->GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
+  WaitOnLoop(true);
   EXPECT_TRUE(std::equal(std::begin(kExpectedMac), std::end(kExpectedMac), std::begin(mac)));
 }
 
 TEST_F(ConfigurationManagerTest, GetVendorId) {
   uint16_t vendor_id;
-  EXPECT_EQ(cfg_mgr_.GetVendorId(vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(cfg_mgr_->GetVendorId(vendor_id), WEAVE_NO_ERROR);
   EXPECT_EQ(vendor_id, kExpectedVendorId);
 }
 
 TEST_F(ConfigurationManagerTest, GetProductId) {
   uint16_t product_id;
-  EXPECT_EQ(cfg_mgr_.GetProductId(product_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(cfg_mgr_->GetProductId(product_id), WEAVE_NO_ERROR);
   EXPECT_EQ(product_id, kExpectedProductId);
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {
   char firmware_revision[kMaxFirmwareRevisionSize];
-  size_t outlen;
-  EXPECT_EQ(cfg_mgr_.GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), outlen),
+  size_t out_len;
+  EXPECT_EQ(cfg_mgr_->GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevision, outlen), 0);
+  EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevision, out_len), 0);
+}
+
+TEST_F(ConfigurationManagerTest, GetSerialNumber) {
+  char serial_num[kMaxSerialNumberSize];
+  size_t serial_num_len;
+  EXPECT_EQ(cfg_mgr_->GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
+            WEAVE_NO_ERROR);
+  EXPECT_STREQ(serial_num, kExpectedSerialNumber);
 }
 
 }  // namespace testing

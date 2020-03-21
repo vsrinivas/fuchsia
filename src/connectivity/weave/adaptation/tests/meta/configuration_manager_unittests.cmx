@@ -8,6 +8,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.hwinfo.Device",
             "fuchsia.wlan.device.service.DeviceService"
         ]
     }
