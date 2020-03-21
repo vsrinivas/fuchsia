@@ -81,7 +81,7 @@ bool ReadFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
   return true;
 }
 
-bool WriteFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
+bool WriteFile(const fbl::unique_fd& fd, const uint8_t* data, size_t size) {
   auto* buf = data;
   ssize_t count = size;
   while (count > 0) {
@@ -93,6 +93,68 @@ bool WriteFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
     buf += len;
   }
   lseek(fd.get(), 0, SEEK_SET);
+  return true;
+}
+
+bool WriteProfile(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8_t* buf, uint64_t size) {
+  fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_RDWR | O_CREAT, 0666)};
+  if (!fd) {
+    fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", filename, strerror(errno));
+    return false;
+  }
+
+  struct stat stat;
+  if (fstat(fd.get(), &stat) == -1) {
+    fprintf(stderr, "FAILURE: Cannot stat data-sink file \"%s\": %s\n", filename, strerror(errno));
+    return false;
+  }
+  if (auto file_size = static_cast<uint64_t>(stat.st_size); file_size == 0) {
+    if (!WriteFile(fd, buf, size)) {
+      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(errno));
+      return false;
+    }
+  } else {
+    if (file_size != size) {
+      fprintf(stderr, "WARNING: Mismatch between file and content for \"%s\": %lu != %lu\n",
+              filename, file_size, size);
+      ZX_ASSERT(size == file_size);
+    }
+
+    auto dst = std::make_unique<uint8_t[]>(file_size);
+    if (!ReadFile(fd, dst.get(), file_size)) {
+      fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", filename, strerror(errno));
+      return false;
+    }
+
+    // Ensure that profiles are structuraly compatible.
+    if (!ProfilesCompatible(buf, dst.get(), file_size)) {
+      fprintf(stderr, "FAILURE: Unable to merge profile data: %s\n",
+              "source profile file is not compatible");
+      return false;
+    }
+
+    // Write the merged profile.
+    if (!WriteFile(fd, MergeProfiles(buf, dst.get(), file_size), file_size)) {
+      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(errno));
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool WriteData(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8_t* buf, uint64_t size) {
+  fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
+  if (!fd) {
+    fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", filename, strerror(errno));
+    return false;
+  }
+
+  if (!WriteFile(fd, buf, size)) {
+    fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(errno));
+    return false;
+  }
+
   return true;
 }
 
@@ -125,8 +187,8 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
     snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
   }
 
-  uint64_t vmo_size;
-  status = data.file_data.get_size(&vmo_size);
+  uint64_t size;
+  status = data.file_data.get_size(&size);
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n", name,
             data.sink_name.c_str(), zx_status_get_string(status));
@@ -134,8 +196,8 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   }
 
   fzl::VmoMapper mapper;
-  if (vmo_size > 0) {
-    zx_status_t status = mapper.Map(data.file_data, 0, vmo_size, ZX_VM_PERM_READ);
+  if (size > 0) {
+    zx_status_t status = mapper.Map(data.file_data, 0, size, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name,
               data.sink_name.c_str(), zx_status_get_string(status));
@@ -149,60 +211,17 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   char filename[ZX_MAX_NAME_LEN];
   if (data.sink_name == "llvm-profile") {
     strncpy(filename, name, ZX_MAX_NAME_LEN);
+    if (!WriteProfile(sink_dir_fd, filename, reinterpret_cast<uint8_t*>(mapper.start()), size)) {
+      return {};
+    }
   } else {
     snprintf(filename, sizeof(filename), "%s.%" PRIu64, data.sink_name.c_str(), info.koid);
-  }
-  fbl::String dump_file = JoinPath(data.sink_name, filename);
-
-  struct stat stat;
-  if (data.sink_name == "llvm-profile" && fstatat(sink_dir_fd.get(), filename, &stat, 0) != -1) {
-    uint64_t file_size = static_cast<uint64_t>(stat.st_size);
-    ZX_ASSERT(vmo_size == file_size);
-
-    fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_RDWR | O_EXCL, 0666)};
-    if (!fd) {
-      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", dump_file.c_str(),
-              strerror(errno));
-      return {};
-    }
-
-    auto dst = std::make_unique<uint8_t[]>(file_size);
-    if (!ReadFile(fd, dst.get(), file_size)) {
-      fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", dump_file.c_str(),
-              strerror(errno));
-      return {};
-    }
-
-    // Ensure that profiles are structuraly compatible.
-    auto* src = reinterpret_cast<uint8_t*>(mapper.start());
-    if (!ProfilesCompatible(src, dst.get(), file_size)) {
-      fprintf(stderr, "FAILURE: Unable to merge profile data: %s\n",
-              "source profile file is not compatible");
-      return {};
-    }
-
-    // Write the merged profile.
-    if (!WriteFile(fd, MergeProfiles(src, dst.get(), file_size), file_size)) {
-      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", dump_file.c_str(),
-              strerror(errno));
-      return {};
-    }
-  } else {
-    fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
-    if (!fd) {
-      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", dump_file.c_str(),
-              strerror(errno));
-      return {};
-    }
-
-    if (!WriteFile(fd, reinterpret_cast<uint8_t*>(mapper.start()), vmo_size)) {
-      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", dump_file.c_str(),
-              strerror(errno));
+    if (!WriteData(sink_dir_fd, filename, reinterpret_cast<uint8_t*>(mapper.start()), size)) {
       return {};
     }
   }
 
-  return DumpFile{name, dump_file.c_str()};
+  return DumpFile{name, JoinPath(data.sink_name, filename).c_str()};
 }
 
 }  // namespace
