@@ -1,0 +1,73 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Volume Descriptor Serialized Format",
+    "description": "Configuration for processing a volume image.",
+    "definitions": {
+        "guid": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36
+        },
+        "volume_descriptor": {
+            "type": "object",
+            "properties": {
+                "magic": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "instance_guid": {
+                    "$ref": "#/definitions/guid"
+                },
+                "type_guid": {
+                    "$ref": "#/definitions/guid"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "block_size": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "encryption_type": {
+                    "type": "string",
+                    "enum": [
+                        "ENCRYPTION_TYPE_NONE",
+                        "ENCRYPTION_TYPE_ZXCRYPT"
+                    ],
+                    "default": "ENCRYPTION_TYPE_NONE"
+                },
+                "compression_schema": {
+                    "type": "string",
+                    "enum": [
+                        "COMPRESSION_SCHEMA_NONE",
+                        "COMPRESSION_SCHEMA_LZ4"
+                    ],
+                    "default": "COMPRESSION_SCHEMA_NONE"
+                },
+                "compression_options": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "uniqueItems": true
+                }
+            },
+            "required": [
+                "magic",
+                "instance_guid",
+                "type_guid",
+                "block_size",
+                "name"
+            ]
+        }
+    },
+}
