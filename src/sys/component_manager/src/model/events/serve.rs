@@ -39,7 +39,7 @@ pub async fn serve_event_source_sync(
                         // Convert the FIDL event types into standard event types
                         let event_types = event_types
                             .into_iter()
-                            .map(|event_type| convert_fidl_event_type_to_std(event_type))
+                            .map(|event_type| EventType::from(event_type))
                             .collect();
 
                         // Subscribe to events.
@@ -148,7 +148,7 @@ fn maybe_create_event_payload(
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
 fn create_event_fidl_object(event: Event) -> fevents::Event {
-    let event_type = Some(convert_std_event_type_to_fidl(event.event.payload.type_()));
+    let event_type = Some(event.event.payload.type_().into());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
@@ -264,28 +264,4 @@ fn serve_handler_async(event: Event) -> ClientEnd<fevents::HandlerMarker> {
         }
     });
     client_end
-}
-
-fn convert_fidl_event_type_to_std(event_type: fevents::EventType) -> EventType {
-    match event_type {
-        fevents::EventType::CapabilityRouted => EventType::CapabilityRouted,
-        fevents::EventType::Destroyed => EventType::Destroyed,
-        fevents::EventType::Discovered => EventType::Discovered,
-        fevents::EventType::MarkedForDestruction => EventType::MarkedForDestruction,
-        fevents::EventType::Resolved => EventType::Resolved,
-        fevents::EventType::Started => EventType::Started,
-        fevents::EventType::Stopped => EventType::Stopped,
-    }
-}
-
-fn convert_std_event_type_to_fidl(event_type: EventType) -> fevents::EventType {
-    match event_type {
-        EventType::CapabilityRouted => fevents::EventType::CapabilityRouted,
-        EventType::Destroyed => fevents::EventType::Destroyed,
-        EventType::Discovered => fevents::EventType::Discovered,
-        EventType::MarkedForDestruction => fevents::EventType::MarkedForDestruction,
-        EventType::Resolved => fevents::EventType::Resolved,
-        EventType::Started => fevents::EventType::Started,
-        EventType::Stopped => fevents::EventType::Stopped,
-    }
 }

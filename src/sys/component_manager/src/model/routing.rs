@@ -93,30 +93,9 @@ pub(super) async fn route_use_capability<'a>(
 pub(super) async fn route_use_event_capability<'a>(
     use_decl: &'a UseDecl,
     target_realm: &'a Arc<Realm>,
-) -> Result<(), ModelError> {
+) -> Result<CapabilitySource, ModelError> {
     let (source, _cap_state) = find_used_capability_source(use_decl, target_realm).await?;
-
-    let capability_provider = Arc::new(Mutex::new(None));
-    let event = Event::new(
-        target_realm.abs_moniker.clone(),
-        EventPayload::CapabilityRouted {
-            source: source.clone(),
-            // The provider shouldn't be populated.
-            capability_provider: capability_provider.clone(),
-        },
-    );
-
-    target_realm.hooks.dispatch(&event).await?;
-
-    let capability_provider = { capability_provider.lock().await.take() };
-    if capability_provider.is_some() {
-        return Err(ModelError::EventCapabilityProviderError {
-            moniker: target_realm.abs_moniker.clone(),
-            event: source.name().map(|name| name.to_string()).unwrap_or("".to_string()),
-        });
-    }
-
-    Ok(())
+    Ok(source)
 }
 
 /// Finds the source of the expose capability used at `source_path` by

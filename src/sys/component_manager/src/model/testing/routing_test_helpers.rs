@@ -9,7 +9,7 @@ use {
         model::{
             binding::Binder,
             error::ModelError,
-            hooks::HooksRegistration,
+            hooks::{EventType, HooksRegistration},
             model::{ComponentManagerConfig, Model, ModelParams},
             moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
             resolver::ResolverRegistry,
@@ -27,7 +27,7 @@ use {
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_events as fevents, fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -75,8 +75,7 @@ pub enum CheckUse {
         from_cm_namespace: bool,
     },
     Event {
-        name: CapabilityName,
-        scope_moniker: AbsoluteMoniker,
+        names: Vec<CapabilityName>,
         should_be_allowed: bool,
     },
 }
@@ -409,13 +408,11 @@ impl RoutingTest {
                     }
                 }
             }
-            CheckUse::Event { name, scope_moniker, should_be_allowed } => {
-                let is_allowed = self
-                    .builtin_environment
-                    .event_source_factory
-                    .is_event_allowed(&moniker, &name, &scope_moniker)
+            CheckUse::Event { names, should_be_allowed } => {
+                // Fails if the component did not use the protocol EventSource or if the event is
+                // not allowed.
+                capability_util::subscribe_to_event_stream(&namespace, should_be_allowed, names)
                     .await;
-                assert_eq!(is_allowed, should_be_allowed)
             }
         }
     }
@@ -641,8 +638,11 @@ impl RoutingTest {
 
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
-    use super::*;
-    use {cm_rust::NativeIntoFidl, std::path::PathBuf};
+    use {
+        super::*, crate::model::events::core::EVENT_SOURCE_SYNC_SERVICE_PATH,
+        cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
+        fidl_fuchsia_test_events::EventSourceSyncMarker, std::path::PathBuf,
+    };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
     /// should contain the string "hippo".
@@ -746,13 +746,10 @@ pub mod capability_util {
         assert_eq!("hippos can be stored here".to_string(), res.expect("failed to read file"));
     }
 
-    /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
-    /// to be fidl.examples.echo.Echo.
-    pub async fn call_echo_svc_from_namespace(
+    async fn connect_to_svc_in_namespace<T: ServiceMarker>(
         namespace: &ManagedNamespace,
-        path: CapabilityPath,
-        should_succeed: bool,
-    ) {
+        path: &CapabilityPath,
+    ) -> T::Proxy {
         let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
@@ -761,7 +758,44 @@ pub mod capability_util {
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");
-        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+        let client_end = ClientEnd::<T>::new(node_proxy.into_channel().unwrap().into_zx_channel());
+        client_end.into_proxy().unwrap()
+    }
+
+    /// Verifies that it's possible to subscribe to the given `events` by connecting to an
+    /// `EventSourceSync` on the given `namespace`. Used to test eventcapability routing.
+    /// Testing of usage of the stream lives in the integration tests in:
+    /// //src/sys/component_manager/tests/events/integration_test.rs
+    pub async fn subscribe_to_event_stream(
+        namespace: &ManagedNamespace,
+        should_succeed: bool,
+        events: Vec<CapabilityName>,
+    ) {
+        let event_source_proxy = connect_to_svc_in_namespace::<EventSourceSyncMarker>(
+            namespace,
+            &*EVENT_SOURCE_SYNC_SERVICE_PATH,
+        )
+        .await;
+        let mut event_types =
+            events.into_iter().map(|event| EventType::try_from(event.to_string()).unwrap().into());
+        let (client_end, _stream) =
+            fidl::endpoints::create_request_stream::<fevents::EventStreamMarker>()
+                .expect("create client");
+        let res = event_source_proxy
+            .subscribe(&mut event_types, client_end)
+            .await
+            .expect("failed to use service");
+        assert_eq!(res.is_ok(), should_succeed);
+    }
+
+    /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
+    /// to be fidl.examples.echo.Echo.
+    pub async fn call_echo_svc_from_namespace(
+        namespace: &ManagedNamespace,
+        path: CapabilityPath,
+        should_succeed: bool,
+    ) {
+        let echo_proxy = connect_to_svc_in_namespace::<echo::EchoMarker>(namespace, &path).await;
         let res = echo_proxy.echo_string(Some("hippos")).await;
 
         match should_succeed {

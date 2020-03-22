@@ -230,9 +230,13 @@ mod tests {
         );
         mock_resolver.add_component("system", component_decl_with_test_runner());
 
+        let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+
         let events = vec![EventType::Started];
-        let event_source_factory = Arc::new(EventSourceFactory::new());
-        let event_source = event_source_factory.create_for_test(AbsoluteMoniker::root()).await;
+        // TODO(fxb/48771): use BuiltinEnvironment.event_source_factory.
+        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
+        let mut event_source =
+            event_source_factory.create_for_debug().await.expect("create event source");
 
         let mut event_stream =
             event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
@@ -241,8 +245,7 @@ mod tests {
             events,
             event_source.registry() as Weak<dyn Hook>,
         )];
-        let (model, _builtin_environment) =
-            new_model_with(mock_resolver, mock_runner.clone(), hooks).await;
+        model.root_realm.hooks.install(hooks).await;
 
         // Bind to "system", pausing before it starts.
         let model_copy = model.clone();

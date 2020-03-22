@@ -756,7 +756,7 @@ macro_rules! create_event {
                     format_err!("Missing event_type from Event object")
                 )?;
                 if event_type != Self::TYPE {
-                    return Err(format_err!("Incorrect event type"));
+                    return Err(format_err!("Incorrect event type. Expected: {:?}. Got: {:?}", Self::TYPE, event_type));
                 }
                 let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")

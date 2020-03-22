@@ -28,7 +28,6 @@ use {
         future::{join_all, BoxFuture, Either, FutureExt},
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
-    log::*,
     std::convert::TryInto,
     std::iter::Iterator,
     std::{
@@ -298,36 +297,6 @@ impl Realm {
             Ok(Arc::new(NullRunner {}) as Arc<dyn Runner>)
         }
         .boxed()
-    }
-
-    pub async fn register_events(self: &Arc<Self>) -> Result<(), ModelError> {
-        let decl = {
-            let state = self.lock_state().await;
-            state.as_ref().expect("register_events: not registered").decl().clone()
-        };
-
-        for use_decl in decl.uses {
-            match &use_decl {
-                UseDecl::Event(event_decl) => {
-                    let res = routing::route_use_event_capability(
-                        &UseDecl::Event(event_decl.clone()),
-                        self,
-                    )
-                    .await;
-                    if let Err(e) = res {
-                        error!(
-                            "failed to route event {} from {}: {:?}",
-                            use_decl.name().unwrap(),
-                            &self.abs_moniker,
-                            e
-                        );
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        Ok(())
     }
 
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once

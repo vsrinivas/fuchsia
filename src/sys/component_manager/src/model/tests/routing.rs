@@ -8,6 +8,7 @@ use {
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
+            events::core::EVENT_SOURCE_SYNC_SERVICE_PATH,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
             rights, routing,
@@ -2278,6 +2279,11 @@ async fn use_event_from_framework() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "started".into(),
@@ -2289,11 +2295,7 @@ async fn use_event_from_framework() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event {
-            name: "started".into(),
-            scope_moniker: AbsoluteMoniker::new(vec!["b:0".into()]),
-            should_be_allowed: true,
-        },
+        CheckUse::Event { names: vec!["started".into()], should_be_allowed: true },
     )
     .await;
 }
@@ -2323,6 +2325,11 @@ async fn use_event_from_parent() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Realm,
                     source_name: "started_on_a".into(),
@@ -2334,11 +2341,7 @@ async fn use_event_from_parent() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event {
-            name: "started".into(),
-            scope_moniker: AbsoluteMoniker::root(),
-            should_be_allowed: true,
-        },
+        CheckUse::Event { names: vec!["started".into()], should_be_allowed: true },
     )
     .await;
 }
@@ -2352,9 +2355,9 @@ async fn use_event_from_parent() {
 /// a: uses framework event "started" and offers to b as "started_on_a"
 /// a: uses framework event "stopped" and offers to b as "stopped_on_a"
 /// b: offers realm event "started_on_a" to c
-/// b: offers realm event "capability_ready" from framework
+/// b: offers realm event "destroyed" from framework
 /// c: uses realm event "started_on_a"
-/// c: uses realm event "capability_ready"
+/// c: uses realm event "destroyed"
 /// c: uses realm event "stopped_on_a" but fails to do so
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_event_from_grandparent() {
@@ -2381,6 +2384,11 @@ async fn use_event_from_grandparent() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Realm,
                     source_name: "started_on_a".into(),
@@ -2389,8 +2397,8 @@ async fn use_event_from_grandparent() {
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Framework,
-                    source_name: "capability_ready".into(),
-                    target_name: "capability_ready".into(),
+                    source_name: "destroyed".into(),
+                    target_name: "destroyed".into(),
                     target: OfferTarget::Child("c".to_string()),
                 }))
                 .add_lazy_child("c")
@@ -2400,6 +2408,11 @@ async fn use_event_from_grandparent() {
         (
             "c",
             ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Realm,
                     source_name: "started_on_a".into(),
@@ -2407,8 +2420,8 @@ async fn use_event_from_grandparent() {
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Realm,
-                    source_name: "capability_ready".into(),
-                    target_name: "capability_ready".into(),
+                    source_name: "destroyed".into(),
+                    target_name: "destroyed".into(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Realm,
@@ -2422,28 +2435,14 @@ async fn use_event_from_grandparent() {
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Event {
-            name: "started".into(),
-            scope_moniker: AbsoluteMoniker::root(),
+            names: vec!["started".into(), "destroyed".into()],
             should_be_allowed: true,
         },
     )
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Event {
-            name: "stopped".into(),
-            scope_moniker: AbsoluteMoniker::root(),
-            should_be_allowed: false,
-        },
-    )
-    .await;
-    test.check_use(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Event {
-            name: "capability_ready".into(),
-            scope_moniker: vec!["b:0"].into(),
-            should_be_allowed: true,
-        },
+        CheckUse::Event { names: vec!["stopped".into()], should_be_allowed: false },
     )
     .await;
 }

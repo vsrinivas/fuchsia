@@ -12,12 +12,15 @@ use {
                 serve::serve_event_source_sync,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            model::Model,
             moniker::AbsoluteMoniker,
+            realm::Realm,
+            routing,
         },
     },
     anyhow::format_err,
     async_trait::async_trait,
-    cm_rust::{CapabilityName, CapabilityPath},
+    cm_rust::{CapabilityName, CapabilityPath, UseDecl, UseEventDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -34,7 +37,7 @@ use {
 };
 
 lazy_static! {
-    pub static ref EVENT_SOURCE_SYNC_SERVICE: CapabilityPath =
+    pub static ref EVENT_SOURCE_SYNC_SERVICE_PATH: CapabilityPath =
         "/svc/fuchsia.test.events.EventSourceSync".try_into().unwrap();
 }
 
@@ -47,14 +50,18 @@ pub struct EventSourceFactory {
     /// routes them to subscribers.
     // TODO(fxb/48512): instead of using a global registry integrate more with the hooks model.
     event_registry: Arc<EventRegistry>,
+
+    /// The component model, needed to route events.
+    model: Weak<Model>,
 }
 
 impl EventSourceFactory {
     /// Creates a new event source factory.
-    pub fn new() -> Self {
+    pub fn new(model: Weak<Model>) -> Self {
         Self {
             event_source_registry: Mutex::new(HashMap::new()),
             event_registry: Arc::new(EventRegistry::new()),
+            model,
         }
     }
 
@@ -75,9 +82,19 @@ impl EventSourceFactory {
         hooks
     }
 
+    /// Creates a debug event source.
+    pub async fn create_for_debug(&self) -> Result<EventSource, ModelError> {
+        EventSource::new_for_debug(
+            self.model.clone(),
+            AbsoluteMoniker::root(),
+            &self.event_registry,
+        )
+        .await
+    }
+
     /// Creates a `EventSource` for the given `target_moniker`.
-    pub async fn create(&self, target_moniker: AbsoluteMoniker) -> EventSource {
-        EventSource::new(target_moniker, &self.event_registry).await
+    pub async fn create(&self, target_moniker: AbsoluteMoniker) -> Result<EventSource, ModelError> {
+        EventSource::new(self.model.clone(), target_moniker, &self.event_registry).await
     }
 
     /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
@@ -86,56 +103,27 @@ impl EventSourceFactory {
         self: Arc<Self>,
         capability_decl: &FrameworkCapability,
         target_moniker: AbsoluteMoniker,
-        scope_moniker: AbsoluteMoniker,
+        _scope_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
             (None, FrameworkCapability::Protocol(source_path))
-                if *source_path == *EVENT_SOURCE_SYNC_SERVICE =>
+                if *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
             {
-                let event_source_registry = self.event_source_registry.lock().await;
-                if let Some(system) = event_source_registry.get(&target_moniker) {
-                    return Ok(Some(Box::new(system.clone()) as Box<dyn CapabilityProvider>));
-                } else {
-                    return Err(ModelError::capability_discovery_error(format_err!(
-                        "Unable to find EventSource in registry for {}",
-                        scope_moniker
-                    )));
-                }
-            }
-            (None, FrameworkCapability::Event(source_name)) => {
                 let mut event_source_registry = self.event_source_registry.lock().await;
-                let key = target_moniker;
-                if event_source_registry.get(&key).is_none() {
-                    let event_source = self.create(key.clone()).await;
-                    event_source_registry.insert(key.clone(), event_source);
-                }
-                let event_source = event_source_registry.get_mut(&key).unwrap();
-                event_source.allow_event(source_name.clone(), scope_moniker);
-                Ok(None)
+                let event_source = match event_source_registry.get(&target_moniker) {
+                    // If no EventSource is present, first create it.
+                    None => {
+                        let event_source = self.create(target_moniker.clone()).await?;
+                        event_source_registry.insert(target_moniker.clone(), event_source.clone());
+                        event_source
+                    }
+                    Some(event_source) => event_source.clone(),
+                };
+                Ok(Some(Box::new(event_source) as Box<dyn CapabilityProvider>))
             }
             (c, _) => return Ok(c),
         }
-    }
-
-    #[cfg(test)]
-    pub async fn create_for_test(&self, target_moniker: AbsoluteMoniker) -> EventSource {
-        let mut event_source = self.create(target_moniker).await;
-        event_source.allow_all_events(AbsoluteMoniker::root());
-        event_source
-    }
-
-    pub async fn is_event_allowed(
-        &self,
-        target_moniker: &AbsoluteMoniker,
-        event_name: &CapabilityName,
-        scope_moniker: &AbsoluteMoniker,
-    ) -> bool {
-        let registry = self.event_source_registry.lock().await;
-        registry
-            .get(target_moniker)
-            .map(|event_source| event_source.is_event_allowed(event_name, scope_moniker))
-            .unwrap_or(false)
     }
 }
 
@@ -167,7 +155,10 @@ impl Hook for EventSourceFactory {
 /// A system responsible for implementing basic events functionality on a scoped realm.
 #[derive(Clone)]
 pub struct EventSource {
-    /// The moniker that identifies the component that requested this event source.
+    /// The component model, needed to route events.
+    model: Weak<Model>,
+
+    /// The moniker identifying the realm that requested this event source
     target_moniker: AbsoluteMoniker,
 
     /// A shared reference to the event registry used to subscribe and dispatche events.
@@ -177,33 +168,52 @@ pub struct EventSource {
     // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
     resolve_instance_event_stream: Arc<Mutex<Option<EventStream>>>,
 
-    /// The set of events this EventSource can subscribe to and their scopes.
-    allowed_events: HashMap<CapabilityName, HashSet<AbsoluteMoniker>>,
+    /// Whether or not this is a debug instance.
+    debug: bool,
 }
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum EventsError {
-    #[error("Events not allowed for subscription {:?}", names)]
-    NotAvailable { names: Vec<String> },
-
     #[error("Registry not found")]
     RegistryNotFound,
+
+    #[error("Events not allowed for subscription {:?}", names)]
+    NotAvailable { names: Vec<CapabilityName> },
+
+    // TODO(fxb/48720): use dedicated RoutingError type.
+    #[error("Routing failed")]
+    RoutingFailed(#[source] ModelError),
 }
 
 impl EventSource {
     /// Creates a new `EventSource` that will be used by the component identified with the given
     /// `target_moniker`.
-    pub async fn new(target_moniker: AbsoluteMoniker, registry: &Arc<EventRegistry>) -> Self {
+    pub async fn new(
+        model: Weak<Model>,
+        target_moniker: AbsoluteMoniker,
+        registry: &Arc<EventRegistry>,
+    ) -> Result<Self, ModelError> {
         // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
         let resolve_instance_event_stream = Arc::new(Mutex::new(Some(
             registry.subscribe(vec![(EventType::Resolved, hashset!(target_moniker.clone()))]).await,
         )));
-        Self {
-            target_moniker,
+        Ok(Self {
             registry: Arc::downgrade(&registry),
+            model,
+            target_moniker,
             resolve_instance_event_stream,
-            allowed_events: HashMap::new(),
-        }
+            debug: false,
+        })
+    }
+
+    async fn new_for_debug(
+        model: Weak<Model>,
+        target_moniker: AbsoluteMoniker,
+        registry: &Arc<EventRegistry>,
+    ) -> Result<Self, ModelError> {
+        let mut event_source = Self::new(model, target_moniker, registry).await?;
+        event_source.debug = true;
+        Ok(event_source)
     }
 
     /// Drops the `Resolved` event stream, thereby permitting components within the
@@ -213,29 +223,37 @@ impl EventSource {
         *resolve_instance_event_stream = None;
     }
 
-    /// Subscribes to events provided in the `events` vector if they have been previously allowed
-    /// (`allow_event`) on this event source under the scopes they were allowed.
-    pub async fn subscribe(&self, events: Vec<EventType>) -> Result<EventStream, EventsError> {
-        // The client might request to subscribe to events that it's not allowed to see. Events
-        // that are allowed should have been defined in its manifest and either offered to it or
-        // requested from the current realm.
-        let (allowed, not_allowed) = events.into_iter().fold(
-            (Vec::new(), Vec::new()),
-            |(mut allowed, mut not_allowed), event| {
-                if let Some(scopes) = self.allowed_events.get(&event.to_string().into()) {
-                    allowed.push((event, scopes.clone()));
-                } else {
-                    not_allowed.push(event.to_string());
-                }
-                (allowed, not_allowed)
-            },
-        );
-        if !not_allowed.is_empty() {
-            return Err(EventsError::NotAvailable { names: not_allowed });
-        }
+    /// Subscribes to events provided in the `events` vector.
+    ///
+    /// The client might request to subscribe to events that it's not allowed to see. Events
+    /// that are allowed should have been defined in its manifest and either offered to it or
+    /// requested from the current realm.
+    // TODO(fxb/48721): this should take a vector of strings not event types. Lots of cleanup can
+    // be done in this function once that is done.
+    pub async fn subscribe(&mut self, events: Vec<EventType>) -> Result<EventStream, EventsError> {
+        // Register event capabilities if any. It identifies the sources of these events (might be the
+        // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
+        // realms.
+        let events = if self.debug {
+            events.into_iter().map(|event| (event, hashset!(AbsoluteMoniker::root()))).collect()
+        } else {
+            let routed_events =
+                self.route_events(&events).await.map_err(|e| EventsError::RoutingFailed(e))?;
+            if routed_events.len() != events.len() {
+                let names = events
+                    .into_iter()
+                    .filter(|event| !routed_events.contains_key(&event))
+                    .map(|event| event.to_string().into())
+                    .collect();
+                return Err(EventsError::NotAvailable { names });
+            }
+            routed_events.into_iter().collect()
+        };
+
         // Create an event stream for the given events
         if let Some(registry) = self.registry.upgrade() {
-            return Ok(registry.subscribe(allowed).await);
+            // TODO(fxb/48721): we should also pass the target name
+            return Ok(registry.subscribe(events).await);
         }
         Err(EventsError::RegistryNotFound)
     }
@@ -247,33 +265,67 @@ impl EventSource {
         });
     }
 
-    /// Allows all events for this event source with the given scope for all of them.
-    pub fn allow_all_events(&mut self, scope_moniker: AbsoluteMoniker) {
-        for event in EventType::values() {
-            self.allow_event(event.to_string().into(), scope_moniker.clone());
-        }
-    }
-
-    /// Allows an event under the given scope.
-    pub fn allow_event(&mut self, source_name: CapabilityName, scope_moniker: AbsoluteMoniker) {
-        self.allowed_events.entry(source_name).or_insert(HashSet::new()).insert(scope_moniker);
-    }
-
     /// Returns a reference to the event registry.
     #[cfg(test)]
     pub fn registry(&self) -> Weak<EventRegistry> {
         self.registry.clone()
     }
 
-    pub fn is_event_allowed(
+    async fn route_events(
         &self,
-        event_name: &CapabilityName,
-        scope_moniker: &AbsoluteMoniker,
-    ) -> bool {
-        self.allowed_events
-            .get(event_name)
-            .map(|scopes| scopes.contains(scope_moniker))
-            .unwrap_or(false)
+        events: &Vec<EventType>,
+    ) -> Result<HashMap<EventType, HashSet<AbsoluteMoniker>>, ModelError> {
+        let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+        let realm = model.look_up_realm(&self.target_moniker).await?;
+        let decl = {
+            let state = realm.lock_state().await;
+            state.as_ref().expect("route_events: not registered").decl().clone()
+        };
+
+        let mut result = HashMap::new();
+        let events = events
+            .into_iter()
+            .map(|event| event.to_string().into())
+            .collect::<Vec<CapabilityName>>();
+        for use_decl in decl.uses {
+            match &use_decl {
+                UseDecl::Event(event_decl) => {
+                    if !events.contains(&event_decl.target_name) {
+                        continue;
+                    }
+                    let (source_name, scope_moniker) = self.route_event(event_decl, &realm).await?;
+                    result
+                        .entry(source_name.to_string().try_into().map_err(|e| {
+                            ModelError::capability_discovery_error(format_err!(
+                                "Unknown event: {}",
+                                e
+                            ))
+                        })?)
+                        .or_insert(HashSet::new())
+                        .insert(scope_moniker);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Routes an event and returns its source name and scope on success.
+    async fn route_event(
+        &self,
+        event_decl: &UseEventDecl,
+        realm: &Arc<Realm>,
+    ) -> Result<(CapabilityName, AbsoluteMoniker), ModelError> {
+        routing::route_use_event_capability(&UseDecl::Event(event_decl.clone()), &realm).await.map(
+            |source| match source {
+                CapabilitySource::Framework {
+                    capability: FrameworkCapability::Event(source_name),
+                    scope_moniker: Some(scope_moniker),
+                } => (source_name, scope_moniker),
+                _ => unreachable!(),
+            },
+        )
     }
 }
 
@@ -291,26 +343,5 @@ impl CapabilityProvider for EventSource {
             .expect("could not convert channel into stream");
         self.serve_async(stream);
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[fasync::run_singlethreaded(test)]
-    async fn subscribe_fails_when_not_allowed() {
-        let event_source_factory = Arc::new(EventSourceFactory::new());
-        let mut event_source = event_source_factory.create(AbsoluteMoniker::root()).await;
-        event_source.allow_event(EventType::Started.to_string().into(), AbsoluteMoniker::root());
-        let events = vec![EventType::Destroyed, EventType::Stopped];
-        let result = event_source.subscribe(events.clone()).await;
-        assert!(result.is_err());
-        assert_eq!(
-            result.err(),
-            Some(EventsError::NotAvailable {
-                names: vec!["destroyed".to_string(), "stopped".to_string()]
-            })
-        );
     }
 }

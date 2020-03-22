@@ -10,15 +10,17 @@ use {
             routing_facade::RoutingFacade,
         },
     },
+    anyhow::format_err,
     async_trait::async_trait,
     cm_rust::ComponentDecl,
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
-    fuchsia_trace as trace,
+    fidl_fuchsia_test_events as fevents, fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
     io_util,
     rand::random,
     std::{
         collections::HashMap,
+        convert::TryFrom,
         fmt,
         sync::{Arc, Weak},
     },
@@ -46,6 +48,39 @@ macro_rules! events {
                     )*
                 }
                 .to_string()
+            }
+        }
+
+        impl TryFrom<String> for EventType {
+            type Error = anyhow::Error;
+
+            fn try_from(string: String) -> Result<EventType, Self::Error> {
+                match string.as_str() {
+                    $(
+                        stringify!($string_name) => Ok(EventType::$name),
+                    )*
+                    other => Err(format_err!("invalid string for event type: {:?}", other))
+                }
+            }
+        }
+
+        impl Into<fevents::EventType> for EventType {
+            fn into(self) -> fevents::EventType {
+                match self {
+                    $(
+                        EventType::$name => fevents::EventType::$name,
+                    )*
+                }
+            }
+        }
+
+        impl From<fevents::EventType> for EventType {
+            fn from(fidl_event_type: fevents::EventType) -> Self {
+                match fidl_event_type {
+                    $(
+                        fevents::EventType::$name => EventType::$name,
+                    )*
+                }
             }
         }
 

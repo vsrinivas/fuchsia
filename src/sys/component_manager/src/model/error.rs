@@ -89,8 +89,6 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
-    #[error("unexpected event capability provider for {} on {}", event, moniker)]
-    EventCapabilityProviderError { moniker: AbsoluteMoniker, event: String },
 }
 
 impl ModelError {

@@ -336,7 +336,10 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                events::core::EventSourceFactory,
+                events::{
+                    core::{EventSource, EventSourceFactory},
+                    registry::EventStream,
+                },
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
@@ -363,6 +366,14 @@ mod tests {
         pub builtin_environment: Arc<BuiltinEnvironment>,
         realm: Arc<Realm>,
         realm_proxy: fsys::RealmProxy,
+        hook: Arc<TestHook>,
+        events_data: Option<EventsData>,
+    }
+
+    struct EventsData {
+        _event_source_factory: EventSourceFactory,
+        _event_source: EventSource,
+        event_stream: EventStream,
     }
 
     impl RealmCapabilityTest {
@@ -370,7 +381,7 @@ mod tests {
             mock_resolver: MockResolver,
             mock_runner: Arc<MockRunner>,
             realm_moniker: AbsoluteMoniker,
-            hooks: Vec<HooksRegistration>,
+            events: Vec<EventType>,
         ) -> Self {
             // Init model.
             let mut resolver = ResolverRegistry::new();
@@ -399,6 +410,31 @@ mod tests {
                 .expect("failed to set up builtin environment"),
             );
             let builtin_environment_inner = builtin_environment.clone();
+
+            let hook = Arc::new(TestHook::new());
+            let mut hooks = hook.hooks();
+
+            let events_data = if events.is_empty() {
+                None
+            } else {
+                // TODO(fxb/48771): use BuiltinEnvironment.event_source_factory.
+                let event_source_factory = EventSourceFactory::new(Arc::downgrade(&model));
+                let mut event_source =
+                    event_source_factory.create_for_debug().await.expect("created event source");
+                hooks.push(HooksRegistration::new(
+                    "EventRegistry",
+                    events.clone(),
+                    event_source.registry() as Weak<dyn Hook>,
+                ));
+                let event_stream =
+                    event_source.subscribe(events).await.expect("subscribe to event stream");
+                Some(EventsData {
+                    _event_source_factory: event_source_factory,
+                    _event_source: event_source,
+                    event_stream,
+                })
+            };
+
             model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.
@@ -416,7 +452,18 @@ mod tests {
                         .expect("failed serving realm service");
                 });
             }
-            RealmCapabilityTest { model, builtin_environment, realm, realm_proxy }
+            RealmCapabilityTest {
+                model,
+                builtin_environment,
+                realm,
+                realm_proxy,
+                hook,
+                events_data,
+            }
+        }
+
+        fn event_stream(&mut self) -> Option<&mut EventStream> {
+            self.events_data.as_mut().map(|data| &mut data.event_stream)
         }
     }
 
@@ -439,12 +486,11 @@ mod tests {
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         );
-        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             mock_runner.clone(),
             vec!["system:0"].into(),
-            hook.hooks(),
+            vec![],
         )
         .await;
 
@@ -463,7 +509,7 @@ mod tests {
         expected_children.insert("coll:a".into());
         expected_children.insert("coll:b".into());
         assert_eq!(actual_children, expected_children);
-        assert_eq!("(system(coll:a,coll:b))", hook.print());
+        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -484,12 +530,11 @@ mod tests {
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         );
-        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),
             vec!["system:0"].into(),
-            hook.hooks(),
+            vec![],
         )
         .await;
 
@@ -588,27 +633,12 @@ mod tests {
         mock_resolver.add_component("a", component_decl_with_test_runner());
         mock_resolver.add_component("b", component_decl_with_test_runner());
 
-        let hook = Arc::new(TestHook::new());
-
         let events = vec![EventType::MarkedForDestruction, EventType::Destroyed];
-
-        let event_source_factory = Arc::new(EventSourceFactory::new());
-        let event_source = event_source_factory.create_for_test(AbsoluteMoniker::root()).await;
-        let mut event_stream =
-            event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
-
-        let mut hooks = vec![];
-        hooks.append(&mut hook.hooks());
-        hooks.append(&mut vec![HooksRegistration::new(
-            "EventRegistry",
-            events,
-            event_source.registry() as Weak<dyn Hook>,
-        )]);
-        let test = RealmCapabilityTest::new(
+        let mut test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),
             vec!["system:0"].into(),
-            hooks,
+            events,
         )
         .await;
 
@@ -630,7 +660,7 @@ mod tests {
 
         let child_realm = get_live_child(&test.realm, "coll:a").await;
         let instance_id = get_instance_id(&test.realm, "coll:a").await;
-        assert_eq!("(system(coll:a,coll:b))", hook.print());
+        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
         assert_eq!(child_realm.component_url, "test:///a".to_string());
         assert_eq!(instance_id, 1);
 
@@ -641,7 +671,9 @@ mod tests {
         let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
         fasync::spawn(f);
 
-        let event = event_stream
+        let event = test
+            .event_stream()
+            .unwrap()
             .wait_until(EventType::MarkedForDestruction, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
@@ -670,11 +702,13 @@ mod tests {
             let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
             expected_children.insert("coll:b".into());
             assert_eq!(actual_children, expected_children);
-            assert_eq!("(system(coll:b))", hook.print());
+            assert_eq!("(system(coll:b))", test.hook.print());
         }
 
         // Wait until 'PostDestroy' event for "a"
-        let event = event_stream
+        let event = test
+            .event_stream()
+            .unwrap()
             .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
@@ -694,7 +728,7 @@ mod tests {
         let res = test.realm_proxy.create_child(&mut collection_ref, child_decl).await;
         let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
 
-        assert_eq!("(system(coll:a,coll:b))", hook.print());
+        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
         let child_realm = get_live_child(&test.realm, "coll:a").await;
         let instance_id = get_instance_id(&test.realm, "coll:a").await;
         assert_eq!(child_realm.component_url, "test:///a_alt".to_string());
@@ -718,12 +752,11 @@ mod tests {
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         );
-        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),
             vec!["system:0"].into(),
-            hook.hooks(),
+            vec![],
         )
         .await;
 
@@ -788,14 +821,9 @@ mod tests {
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-        let hook = Arc::new(TestHook::new());
-        let test = RealmCapabilityTest::new(
-            mock_resolver,
-            mock_runner.clone(),
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let test =
+            RealmCapabilityTest::new(mock_resolver, mock_runner.clone(), vec![].into(), vec![])
+                .await;
 
         // Bind to child and use exposed service.
         let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
@@ -821,7 +849,7 @@ mod tests {
             "test:///eager_resolved".to_string(),
         ];
         assert_eq!(mock_runner.urls_run(), expected_urls);
-        assert_eq!("(system(eager))", hook.print());
+        assert_eq!("(system(eager))", test.hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -850,14 +878,9 @@ mod tests {
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-        let hook = Arc::new(TestHook::new());
-        let test = RealmCapabilityTest::new(
-            mock_resolver,
-            mock_runner.clone(),
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let test =
+            RealmCapabilityTest::new(mock_resolver, mock_runner.clone(), vec![].into(), vec![])
+                .await;
 
         // Add "system" to collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -885,7 +908,7 @@ mod tests {
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
         assert_eq!(mock_runner.urls_run(), expected_urls);
-        assert_eq!("(coll:system)", hook.print());
+        assert_eq!("(coll:system)", test.hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -904,9 +927,8 @@ mod tests {
         mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         mock_runner.cause_failure("unrunnable");
-        let hook = Arc::new(TestHook::new());
         let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
 
         // Instance not found.
         {
@@ -950,9 +972,8 @@ mod tests {
         mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         mock_runner.cause_failure("unrunnable");
-        let hook = Arc::new(TestHook::new());
         let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
 
         let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
         let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
@@ -989,9 +1010,8 @@ mod tests {
         );
         mock_resolver.add_component("static", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
-        let hook = Arc::new(TestHook::new());
         let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
 
         // Create children "a" and "b" in collection 1, "c" in collection 2.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -1050,9 +1070,8 @@ mod tests {
                 .build(),
         );
         let mock_runner = Arc::new(MockRunner::new());
-        let hook = Arc::new(TestHook::new());
         let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
 
         // Collection not found.
         {

@@ -21,7 +21,6 @@ use {
             events::core::EventSourceFactory,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
-            moniker::AbsoluteMoniker,
             runner::Runner,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
@@ -174,7 +173,7 @@ impl BuiltinEnvironment {
         model.root_realm.hooks.install(hub.hooks()).await;
 
         // Set up the event source factory.
-        let event_source_factory = Arc::new(EventSourceFactory::new());
+        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
         model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
         Ok(BuiltinEnvironment {
@@ -213,9 +212,7 @@ impl BuiltinEnvironment {
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
         if self.is_debug {
-            let mut event_source = self.event_source_factory.create(AbsoluteMoniker::root()).await;
-            event_source.allow_all_events(AbsoluteMoniker::root());
-
+            let event_source = self.event_source_factory.create_for_debug().await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
                 event_source.serve_async(stream);
