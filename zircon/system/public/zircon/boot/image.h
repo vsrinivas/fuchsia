@@ -126,7 +126,6 @@ typedef struct {
     macro(ZBI_TYPE_EFI_MEMORY_MAP, "EFI_MEMORY_MAP", ".bin") \
     macro(ZBI_TYPE_EFI_SYSTEM_TABLE, "EFI_SYSTEM_TABLE", ".bin") \
     macro(ZBI_TYPE_E820_TABLE, "E820_TABLE", ".bin") \
-    macro(ZBI_TYPE_DEBUG_UART, "DEBUG_UART", ".bin") \
     macro(ZBI_TYPE_FRAMEBUFFER, "FRAMEBUFFER", ".bin") \
     macro(ZBI_TYPE_DRV_MAC_ADDRESS, "DRV_MAC_ADDRESS", ".bin") \
     macro(ZBI_TYPE_DRV_PARTITION_MAP, "DRV_PARTITION_MAP", ".bin") \
@@ -524,19 +523,6 @@ typedef struct {
     { 'c', 'r', 'a', 's', 'h', 'l', 'o', 'g', 0 }
 #define ZIRCON_CRASHLOG_EFIATTR \
     (EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS)
-
-// Debug serial port, a zbi_uart_t entry.
-#define ZBI_TYPE_DEBUG_UART             (0x54524155) // UART
-#ifndef __ASSEMBLER__
-typedef struct {
-    uint64_t base;
-    uint32_t type;
-    uint32_t irq;
-} zbi_uart_t;
-#endif
-#define ZBI_UART_NONE                   (0)
-#define ZBI_UART_PC_PORT                (1)
-#define ZBI_UART_PC_MMIO                (2)
 
 // Framebuffer parameters, a zbi_swfb_t entry.
 #define ZBI_TYPE_FRAMEBUFFER            (0x42465753) // SWFB

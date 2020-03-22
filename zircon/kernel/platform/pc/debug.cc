@@ -46,7 +46,7 @@
 // for kernel debugging. We support configuring serial from several sources of information:
 //
 //   1. The kernel command line ("kernel.serial=...")
-//   2. Information passed in via the ZBI (ZBI_TYPE_DEBUG_UART)
+//   2. Information passed in via the ZBI (KDRV_I8250_*_UART)
 //   3. From ACPI (the "DBG2" ACPI table)
 //
 // On system boot, we try each of these sources in decreasing order of priority.
@@ -343,24 +343,21 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, SerialConfig* config) 
   return ZX_OK;
 }
 
-// Update the ZBI_TYPE_DEBUG_UART entry in the "bootloader" global to contain details in "port".
+// Update the uart entry in the "bootloader" global to contain details in "port".
 static void update_zbi_uart(const DebugPort& port) {
   switch (port.type) {
     case DebugPort::Type::IoPort:
-      bootloader.uart.type = ZBI_UART_PC_PORT;
-      bootloader.uart.base = port.io_port;
-      bootloader.uart.irq = port.irq;
+      bootloader.uart =
+          dcfg_simple_pio_t{.base = static_cast<uint16_t>(port.io_port), .irq = port.irq};
       break;
 
     case DebugPort::Type::Mmio:
-      bootloader.uart.type = ZBI_UART_PC_MMIO;
-      bootloader.uart.base = port.phys_addr;
-      bootloader.uart.irq = port.irq;
+      bootloader.uart = dcfg_simple_t{.mmio_phys = port.phys_addr, .irq = port.irq};
       break;
 
     case DebugPort::Type::Unknown:
     case DebugPort::Type::Disabled:
-      bootloader.uart.type = ZBI_UART_NONE;
+      bootloader.uart = ktl::monostate{};
       break;
   }
 }
@@ -429,36 +426,32 @@ static bool handle_serial_cmdline(SerialConfig* config) {
 //
 // Return "true" if a debug port was found.
 static bool handle_serial_zbi() {
-  switch (bootloader.uart.type) {
-    case ZBI_UART_PC_PORT: {
-      DebugPort port;
-      port.type = DebugPort::Type::IoPort;
-      port.io_port = static_cast<uint32_t>(bootloader.uart.base);
-      mark_pio_region_to_reserve(port.io_port, 8);
-      port.irq = bootloader.uart.irq;
-      dprintf(INFO, "UART: kernel serial enabled via ZBI entry: port=%#x, irq=%#x\n", port.io_port,
-              port.irq);
-      setup_uart(port);
-      return true;
-    }
-
-    case ZBI_UART_PC_MMIO: {
-      DebugPort port;
-      port.type = DebugPort::Type::Mmio;
-      port.phys_addr = bootloader.uart.base;
-      port.mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(bootloader.uart.base));
-      mark_mmio_region_to_reserve(port.phys_addr, PAGE_SIZE);
-      port.irq = bootloader.uart.irq;
-      dprintf(INFO, "UART: kernel serial enabled via ZBI entry: mmio=%#lx, irq=%#x\n",
-              port.phys_addr, port.irq);
-      setup_uart(port);
-      return true;
-    }
-
-    case ZBI_UART_NONE:
-    default:
-      return false;
+  if (auto pio_uart = ktl::get_if<dcfg_simple_pio_t>(&bootloader.uart)) {
+    DebugPort port;
+    port.type = DebugPort::Type::IoPort;
+    port.io_port = static_cast<uint32_t>(pio_uart->base);
+    mark_pio_region_to_reserve(port.io_port, 8);
+    port.irq = pio_uart->irq;
+    dprintf(INFO, "UART: kernel serial enabled via ZBI entry: port=%#x, irq=%#x\n", port.io_port,
+            port.irq);
+    setup_uart(port);
+    return true;
   }
+
+  if (auto mmio_uart = ktl::get_if<dcfg_simple_t>(&bootloader.uart)) {
+    DebugPort port;
+    port.type = DebugPort::Type::Mmio;
+    port.phys_addr = mmio_uart->mmio_phys;
+    port.mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(mmio_uart->mmio_phys));
+    mark_mmio_region_to_reserve(port.phys_addr, PAGE_SIZE);
+    port.irq = mmio_uart->irq;
+    dprintf(INFO, "UART: kernel serial enabled via ZBI entry: mmio=%#lx, irq=%#x\n", port.phys_addr,
+            port.irq);
+    setup_uart(port);
+    return true;
+  }
+
+  return false;
 }
 
 // Attempt to read information about a debug UART out of the ZBI.

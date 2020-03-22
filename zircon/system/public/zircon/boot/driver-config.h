@@ -26,13 +26,22 @@
 #define KDRV_AS370_POWER 0x50303733             // '370P'
 #define KDRV_AMLOGIC_RNG 0x484C4D52             // 'AMLR'
 #define KDRV_GENERIC_32BIT_WATCHDOG 0x32334457  // 'WD32'
+#define KDRV_I8250_PIO_UART 0x30353238          // '8250'
+#define KDRV_I8250_MMIO_UART 0x4d353238         // '825M'
 
-// kernel driver struct that can be used for simple drivers
-// used by KDRV_PL011_UART, KDRV_AMLOGIC_UART and KDRV_NXP_IMX_UART
+// Kernel driver struct that can be used for simple drivers.
+// Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, KDRV_NXP_IMX_UART,
+// and KDRV_I8250_MMIO_UART.
 typedef struct {
   uint64_t mmio_phys;
   uint32_t irq;
 } dcfg_simple_t;
+
+// Used by KDRV_I8250_PIO_UART.
+typedef struct {
+  uint16_t base;
+  uint32_t irq;
+} dcfg_simple_pio_t;
 
 // for KDRV_MT8167_UART
 typedef struct {

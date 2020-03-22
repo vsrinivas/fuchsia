@@ -30,6 +30,7 @@
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/boot/driver-config.h>
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 #include <zircon/pixelformat.h>
@@ -149,9 +150,22 @@ zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
         platform_set_ram_crashlog_location(info.base, info.length);
       }
       break;
-    case ZBI_TYPE_DEBUG_UART:
-      if (hdr->length >= sizeof(zbi_uart_t)) {
-        memcpy(&bootloader.uart, payload, sizeof(zbi_uart_t));
+    case ZBI_TYPE_KERNEL_DRIVER:
+      switch (hdr->extra) {
+        case KDRV_I8250_PIO_UART:
+          if (hdr->length >= sizeof(dcfg_simple_pio_t)) {
+            dcfg_simple_pio_t pio;
+            memcpy(&pio, payload, sizeof(pio));
+            bootloader.uart = pio;
+          }
+          break;
+        case KDRV_I8250_MMIO_UART:
+          if (hdr->length >= sizeof(dcfg_simple_t)) {
+            dcfg_simple_t mmio;
+            memcpy(&mmio, payload, sizeof(mmio));
+            bootloader.uart = mmio;
+          }
+          break;
       }
       break;
     case ZBI_TYPE_CRASHLOG:
@@ -514,16 +528,29 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
     }
   }
 
-  if (bootloader.uart.type != ZBI_UART_NONE) {
-    result = image.AppendSection(sizeof(bootloader.uart), ZBI_TYPE_DEBUG_UART, kNoZbiExtra,
-                                 kNoZbiFlags, (uint8_t*)&bootloader.uart);
+  auto add_uart = [&image, len](uint32_t extra, auto&& uart) {
+    auto result = image.AppendSection(sizeof(uart), ZBI_TYPE_KERNEL_DRIVER, extra, kNoZbiFlags,
+                                      reinterpret_cast<uint8_t*>(&uart));
     if (result != ZBI_RESULT_OK) {
       printf(
-          "mexec: Failed to append uart data to bootdata. len = %lu, "
-          "section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.uart), result);
+          "mexec: Failed to append uart data to bootdata. len = %zu, "
+          "section length = %zu, retcode = %d\n",
+          len, sizeof(uart), result);
+      return false;
+    }
+    return true;
+  };
+  if (auto pio_uart = ktl::get_if<dcfg_simple_pio_t>(&bootloader.uart)) {
+    if (!add_uart(KDRV_I8250_PIO_UART, *pio_uart)) {
       return ZX_ERR_INTERNAL;
     }
+  } else if (auto mmio_uart = ktl::get_if<dcfg_simple_t>(&bootloader.uart)) {
+    if (!add_uart(KDRV_I8250_MMIO_UART, *mmio_uart)) {
+      return ZX_ERR_INTERNAL;
+    }
+  } else {
+    ZX_DEBUG_ASSERT_MSG(ktl::get_if<ktl::monostate>(&bootloader.uart),
+                        "bootloader.uart in impossible ktl::variant state???");
   }
 
   if (bootloader.nvram.base) {

@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/arch/x64/i8250.h"
 
 #include <stdio.h>
+#include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 
 #include <libzbi/zbi.h>
@@ -144,12 +145,11 @@ zx_status_t I8250Group::Init(Guest* guest) {
 }
 
 zx_status_t I8250Group::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
-  zbi_uart_t zbi_uart = {
+  dcfg_simple_pio_t zbi_uart = {
       .base = kI8250Base0,
-      .type = ZBI_UART_PC_PORT,
       .irq = 4,
   };
-  zbi_result_t res =
-      zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart), ZBI_TYPE_DEBUG_UART, 0, 0, &zbi_uart);
+  zbi_result_t res = zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart), ZBI_TYPE_KERNEL_DRIVER,
+                                        KDRV_I8250_PIO_UART, 0, &zbi_uart);
   return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
 }
