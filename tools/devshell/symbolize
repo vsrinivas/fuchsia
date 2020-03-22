@@ -96,9 +96,9 @@ done
 if [[ "${is_remote}" -eq 1 ]]; then
   extra_args+=(
     "-symbol-cache" "$HOME/.fuchsia-symbol-cache"
-    "-symbol-server" "fuchsia-debug-symbols-shortlived"
-    "-symbol-server" "fuchsia-debug-symbols-shortlived-internal"
-    "-symbol-server" "fuchsia-infra-debug-symbols"
+    "-symbol-server" "gs://fuchsia-artifacts/debug"
+    "-symbol-server" "gs://fuchsia-artifacts-internal/debug"
+    "-symbol-server" "gs://fuchsia-artifacts-release/debug"
   )
 fi
 
