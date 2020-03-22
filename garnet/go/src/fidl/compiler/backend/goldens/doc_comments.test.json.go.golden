@@ -117,7 +117,7 @@ type Table struct {
 	// table field comment #1
 	//
 	// table field comment #3
-	Field int32 `fidl_bounds:"" fidl_ordinal:"1"`
+	Field int32 `fidl_ordinal:"1"`
 	FieldPresent bool
 }
 

@@ -893,7 +893,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 		tags := Tags{
 			FidlOrdinalTag: member.Ordinal,
 		}
-		if rbtag.IsEmpty() {
+		if !rbtag.IsEmpty() {
 			tags[FidlBoundsTag] = rbtag.String()
 		}
 		if handleRights, ok := c.computeHandleRights(member.Type); ok {
