@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	symbolize "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
@@ -52,7 +53,7 @@ func init() {
 	colors = color.ColorAuto
 	level = logger.InfoLevel
 
-	flag.Var(&symbolServers, "symbol-server", "name of a GCS bucket that contains debug binaries indexed by build ID")
+	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.StringVar(&llvmSymboPath, "llvm-symbolizer", "llvm-symbolizer", "path to llvm-symbolizer")
@@ -95,6 +96,10 @@ func main() {
 		}
 	}
 	for _, symbolServer := range symbolServers {
+		// TODO(atyfto): Remove when all consumers are passing GCS URLs.
+		if !strings.HasPrefix(symbolServer, "gs://") {
+			symbolServer = "gs://" + symbolServer
+		}
 		cloudRepo, err := symbolize.NewCloudRepo(ctx, symbolServer, filecache)
 		if err != nil {
 			log.Fatalf("%v\n", err)

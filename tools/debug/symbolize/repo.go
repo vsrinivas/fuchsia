@@ -8,8 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,24 +53,30 @@ func (b buildIDKey) Hash() string {
 	return string(b)
 }
 
-// CloudRepo represents a repository stored in a GCS bucket.
+// CloudRepo represents a repository stored in a GCS path.
 type CloudRepo struct {
-	client  *storage.Client
-	bucket  *storage.BucketHandle
-	cache   *cache.FileCache
-	timeout *time.Duration
+	client    *storage.Client
+	bucket    *storage.BucketHandle
+	namespace string
+	cache     *cache.FileCache
+	timeout   *time.Duration
 }
 
-// NewCloudRepo creates a CloudRepo using bucketName. The connection to the bucket
+// NewCloudRepo creates a CloudRepo using gcsURL. The connection to the bucket
 // will be ended when ctx is canceled. No timeout on GetBuildObject is set until
 // SetTimeout is called.
-func NewCloudRepo(ctx context.Context, bucketName string, cache *cache.FileCache) (*CloudRepo, error) {
+func NewCloudRepo(ctx context.Context, gcsURL string, cache *cache.FileCache) (*CloudRepo, error) {
 	var out CloudRepo
 	var err error
 	if out.client, err = storage.NewClient(ctx); err != nil {
 		return nil, err
 	}
-	out.bucket = out.client.Bucket(bucketName)
+	u, err := url.Parse(gcsURL)
+	if err != nil {
+		return nil, err
+	}
+	out.bucket = out.client.Bucket(u.Host)
+	out.namespace = strings.TrimPrefix(u.Path, "/")
 	out.cache = cache
 	return &out, nil
 }
@@ -86,7 +95,7 @@ func (c *CloudRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	if err == nil {
 		return out, nil
 	}
-	obj := c.bucket.Object(buildID + ".debug")
+	obj := c.bucket.Object(path.Join(c.namespace, buildID+".debug"))
 	ctx := context.Background()
 	if c.timeout != nil {
 		var cancel func()

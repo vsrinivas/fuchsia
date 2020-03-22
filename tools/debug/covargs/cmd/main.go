@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/lib"
@@ -59,7 +60,7 @@ func init() {
 	flag.Var(&summaryFile, "summary", "path to summary.json file")
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.Var(&idsPaths, "ids", "path to ids.txt")
-	flag.Var(&symbolServers, "symbol-server", "name of a GCS bucket that contains debug binaries indexed by build ID")
+	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
 	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
@@ -329,6 +330,10 @@ func main() {
 		}
 	}
 	for _, symbolServer := range symbolServers {
+		// TODO(atyfto): Remove when all consumers are passing GCS URLs.
+		if !strings.HasPrefix(symbolServer, "gs://") {
+			symbolServer = "gs://" + symbolServer
+		}
 		cloudRepo, err := symbolize.NewCloudRepo(ctx, symbolServer, fileCache)
 		if err != nil {
 			log.Fatalf("%v\n", err)
