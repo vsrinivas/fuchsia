@@ -13,6 +13,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
 
@@ -84,7 +85,10 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       clock_(std::move(clock)),
       cpu_stats_fetcher_(std::move(cpu_stats_fetcher)),
       temperature_fetcher_(std::move(temperature_fetcher)),
-      activity_listener_(std::move(activity_listener)) {}
+      activity_listener_(std::move(activity_listener)),
+      inspector_(context),
+      metric_temperature_node_(inspector_.root().CreateChild(kInspectNodeName)),
+      inspect_readings_(metric_temperature_node_.CreateIntArray(kReadingPropertyName, kTempArraySize)) {}
 
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
@@ -429,14 +433,15 @@ std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
   TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
   if (TemperatureFetchStatus::SUCCEED != status) {
     FX_LOGS(ERROR) << "Temperature fetch failed.";
+    return std::chrono::minutes(1);
   }
   uint32_t bucket_index = temperature_bucket_config_->BucketIndex(temperature);
   temperature_map_[bucket_index]++;
-  temperature_map_size_++;
-  if (temperature_map_size_ == 6) {  // Flush every minute.
+  inspect_readings_.Set(num_temps_++, temperature);
+  if (num_temps_ == kTempArraySize) {  // Flush every minute.
     LogTemperatureToCobalt();
     temperature_map_.clear();  // Drop the data even if logging does not succeed.
-    temperature_map_size_ = 0;
+    num_temps_ = 0;
   }
   return std::chrono::seconds(10);
 }

@@ -10,7 +10,9 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/sys/cpp/component_context.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <chrono>
 #include <memory>
@@ -47,6 +49,12 @@ class SystemMetricsDaemon {
   // Starts asynchronously logging all system metrics.
   void StartLogging();
 
+  // Reader side must use the exact name to read from Inspect.
+  // TODO(fxb/48884): Add a link to a config file after created.
+  // Design doc in go/fuchsia-metrics-to-inspect-design.
+  static constexpr const char* kInspectNodeName = "metrics_temperature";
+  static constexpr const char* kReadingPropertyName = "readings";
+  static constexpr size_t kTempArraySize = 6;
  private:
   friend class SystemMetricsDaemonTest;
   friend class SystemMetricsDaemonInitializationTest;
@@ -173,6 +181,10 @@ class SystemMetricsDaemon {
   fuchsia::ui::activity::State current_state_ = fuchsia::ui::activity::State::UNKNOWN;
   fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
 
+  sys::ComponentInspector inspector_;
+  inspect::Node metric_temperature_node_;
+  inspect::IntArray inspect_readings_;
+
   template <typename T>
   T GetCobaltEventCodeForDeviceState(fuchsia::ui::activity::State state) {
     switch (state) {
@@ -191,7 +203,7 @@ class SystemMetricsDaemon {
   std::unordered_map<fuchsia::ui::activity::State, std::unordered_map<uint32_t, uint32_t>>
       activity_state_to_cpu_map_;
   std::unordered_map<uint32_t, uint32_t> temperature_map_;
-  uint32_t temperature_map_size_ = 0;
+  uint32_t num_temps_ = 0;
   uint32_t cpu_data_stored_ = 0;
   // This bucket config is used to calculate the histogram bucket index for a given cpu percentage.
   // Usage: cpu_bucket_config_->BucketIndex(cpu_percentage * 100)

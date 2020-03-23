@@ -7,7 +7,10 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl_test_base.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <future>
@@ -51,9 +54,9 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   // Note that we first save an unprotected pointer in fake_clock_ and then
   // give ownership of the pointer to daemon_.
   SystemMetricsDaemonTest()
-      : fake_clock_(new FakeSteadyClock()),
+      : executor_(dispatcher()), context_provider_(), fake_clock_(new FakeSteadyClock()),
         daemon_(new SystemMetricsDaemon(
-            dispatcher(), nullptr, &fake_logger_, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
+            dispatcher(), context_provider_.context(), &fake_logger_, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
             std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
@@ -64,6 +67,16 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
         fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsFloor,
         fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsNumBuckets,
         fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsStepSize);
+  }
+
+  inspect::Inspector Inspector(){ return *(daemon_->inspector_.inspector()); }
+
+  // Run a promise to completion on the default async executor.
+  void RunPromiseToCompletion(fit::promise<> promise) {
+    bool done = false;
+    executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(done);
   }
 
   void UpdateState(fuchsia::ui::activity::State state) { daemon_->UpdateState(state); }
@@ -106,7 +119,7 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     daemon_->temperature_map_[45] = 2;
     daemon_->temperature_map_[48] = 1;
     daemon_->temperature_map_[50] = 1;
-    daemon_->temperature_map_size_ = 5;
+    daemon_->num_temps_ = kLastItemInTemperatureBuffer;
     return daemon_->LogTemperature();
   }
 
@@ -201,10 +214,40 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   void SetClockToDaemonStartTime() { fake_clock_->set_time(daemon_->start_time_); }
 
  protected:
+  async::Executor executor_;
+  sys::testing::ComponentContextProvider context_provider_;
   FakeSteadyClock* fake_clock_;
   FakeLogger_Sync fake_logger_;
   std::unique_ptr<SystemMetricsDaemon> daemon_;
+  const size_t kLastItemInTemperatureBuffer = SystemMetricsDaemon::kTempArraySize - 1;
 };
+
+// Tests the method LogTemperature(). Uses a local FakeTemperatureFetcher and
+// then read from inspect
+TEST_F(SystemMetricsDaemonTest, InspectTemperature) {
+  fake_logger_.reset();
+  // This is already set in the constructor. Setting it again just in case people
+  // change the order of tests in the future.
+  SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()));
+  EXPECT_EQ(seconds(10).count(), LogTemperature().count());
+
+  // [START get_hierarchy]
+  fit::result<inspect::Hierarchy> hierarchy;
+  RunPromiseToCompletion(inspect::ReadFromInspector( Inspector()).then(
+      [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+  ASSERT_TRUE(hierarchy.is_ok());
+  // [END get_hierarchy]
+
+  // [START assertions]
+  auto* metric_temperature = hierarchy.value().GetByPath({"metrics_temperature"});
+  ASSERT_TRUE(metric_temperature);
+  auto* temp_readings = metric_temperature->node().get_property<inspect::IntArrayValue>("readings");
+  ASSERT_TRUE(temp_readings);
+
+  // Expect 6 readings in the array
+  EXPECT_EQ(SystemMetricsDaemon::kTempArraySize, temp_readings->value().size());
+  EXPECT_EQ(38u, temp_readings->value()[kLastItemInTemperatureBuffer]);
+}
 
 // Tests the method LogFuchsiaUptime(). Uses a local FakeLogger_Sync and
 // does not use FIDL. Does not use the message loop.
