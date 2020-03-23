@@ -13,5 +13,5 @@
   "fidl/fuchsia.media/stream_processor.fidl": "067883769294d51675a5424968f73f9e",
   "fidl/fuchsia.media/stream_type.fidl": "0ce4b7bb67ad89c7d6a4437d78c0486f",
   "fidl/fuchsia.media/timeline_function.fidl": "10e9c5225e1b4596150724cf45d2a8a4",
-  "fidl/fuchsia.media/usage_reporter.fidl": "314162c3dc1bd5d73b502a5b69a22a04"
+  "fidl/fuchsia.media/usage_reporter.fidl": "6986d76273aa3d8708028f0081408241"
 }
