@@ -555,66 +555,64 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    parser_compare_perf = subparsers.add_parser(
+    subparser = subparsers.add_parser(
         'compare_perf',
         help='Compare two sets of perf test results')
-    parser_compare_perf.add_argument(
+    subparser.add_argument(
         '-f', '--dataset_file',
         help='Input file: a JSON file containing a before-after dataset')
-    parser_compare_perf.add_argument('results_dir_before', nargs='?')
-    parser_compare_perf.add_argument('results_dir_after', nargs='?')
-    parser_compare_perf.set_defaults(
-        func=lambda args: ComparePerf(parser, args, out_fh))
+    subparser.add_argument('results_dir_before', nargs='?')
+    subparser.add_argument('results_dir_after', nargs='?')
+    subparser.set_defaults(func=lambda args: ComparePerf(parser, args, out_fh))
 
-    parser_run_local = subparsers.add_parser(
+    subparser = subparsers.add_parser(
         'run_local',
         help='Gather a multi-boot dataset of performance test results'
         ' from a single version of Fuchsia by locally running the command'
         ' specified by --iter_cmd')
-    parser_run_local.add_argument(
+    subparser.add_argument(
         '--boots', type=int, required=True,
         help='Number of (re)boots of Fuchsia to run')
-    parser_run_local.add_argument(
+    subparser.add_argument(
         '--iter_cmd', required=True,
         help='Command for running a performance test. '
         ' This command is run locally: it is passed to the shell. '
         ' This command is expected to write its output to the file (or files)'
         ' specified by --iter_file')
-    parser_run_local.add_argument(
+    subparser.add_argument(
         '--iter_file', required=True,
         help='File(s) that the performance test will write its results to. '
         ' This is a glob expression, so it may specify multiple files. '
         ' Each file is expected to be a process dataset in the'
         ' *.fuchsiaperf.json format.  These files will be removed (renamed)'
         ' by this tool')
-    parser_run_local.add_argument(
+    subparser.add_argument(
         '--reboot_cmd', default='fx reboot && fx wait',
         help='Command to use for rebooting Fuchsia.  This is optional. '
         ' The default is %(default)r')
-    parser_run_local.add_argument(
+    subparser.add_argument(
         '--dest', required=True,
         help='Destination directory for writing the multi-boot dataset')
-    parser_run_local.set_defaults(
-        func=lambda args: RunLocal(args, out_fh, run_cmd))
+    subparser.set_defaults(func=lambda args: RunLocal(args, out_fh, run_cmd))
 
-    parser_make_combined = subparsers.add_parser(
+    subparser = subparsers.add_parser(
         'make_combined_perf_dataset_file',
         help='Converts a before-after dataset from the directory-based format'
         ' to a single JSON file.  This subcommand is intended to be invoked by'
         ' the fuchsia_perfcompare.py recipe.')
-    parser_make_combined.add_argument('results_dir_before')
-    parser_make_combined.add_argument('results_dir_after')
-    parser_make_combined.set_defaults(
+    subparser.add_argument('results_dir_before')
+    subparser.add_argument('results_dir_after')
+    subparser.set_defaults(
         func=lambda args: MakeCombinedPerfDatasetFile(args, out_fh))
 
-    parser_validate_perfcompare = subparsers.add_parser(
+    subparser = subparsers.add_parser(
         'validate_perfcompare',
         help='Outputs statistics given multiple sets of perf test results'
         ' that come from the same build.  This is for validating the'
         ' statistics used by the perfcompare tool.  It can be used to check'
         ' the rate at which the tool will falsely indicate that performance'
         ' of a test case has regressed or improved.')
-    parser_validate_perfcompare.add_argument(
+    subparser.add_argument(
         '-g', '--group_size', type=int, required=True,
         help='Number of boots to put in each group.  To get realistic'
         ' results that reflect how the perfcompare trybots would behave,'
@@ -622,16 +620,15 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         ' fuchsia_perfcompare.py recipe.  (Since that code is currently'
         ' not part of the Fuchsia checkout, we cannot make the settings'
         ' match automatically.)')
-    parser_validate_perfcompare.add_argument('results_dirs', nargs='+')
-    parser_validate_perfcompare.set_defaults(
-        func=lambda args: ValidatePerfCompare(args, out_fh))
+    subparser.add_argument('results_dirs', nargs='+')
+    subparser.set_defaults(func=lambda args: ValidatePerfCompare(args, out_fh))
 
-    parser_compare_sizes = subparsers.add_parser(
+    subparser = subparsers.add_parser(
         'compare_sizes',
         help='Compare file sizes specified by two system.snapshot files')
-    parser_compare_sizes.add_argument('snapshot_before')
-    parser_compare_sizes.add_argument('snapshot_after')
-    parser_compare_sizes.set_defaults(func=CompareSizes)
+    subparser.add_argument('snapshot_before')
+    subparser.add_argument('snapshot_after')
+    subparser.set_defaults(func=CompareSizes)
 
     args = parser.parse_args(argv)
     args.func(args)
