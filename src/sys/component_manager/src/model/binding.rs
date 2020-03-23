@@ -129,8 +129,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 actions::{Action, ActionSet},
-                events::core::EventSourceFactory,
-                hooks::{EventType, Hook, HooksRegistration},
+                hooks::{EventType, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
                 resolver::ResolverRegistry,
@@ -144,7 +143,7 @@ mod tests {
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::prelude::*,
-        std::{collections::HashSet, convert::TryFrom, sync::Weak},
+        std::{collections::HashSet, convert::TryFrom},
     };
 
     async fn new_model(
@@ -230,22 +229,18 @@ mod tests {
         );
         mock_resolver.add_component("system", component_decl_with_test_runner());
 
-        let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+        let (model, builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
 
         let events = vec![EventType::Started];
-        // TODO(fxb/48771): use BuiltinEnvironment.event_source_factory.
-        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
-        let mut event_source =
-            event_source_factory.create_for_debug().await.expect("create event source");
+        let mut event_source = builtin_environment
+            .event_source_factory
+            .create_for_debug()
+            .await
+            .expect("create event source");
 
         let mut event_stream =
             event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
-        let hooks = vec![HooksRegistration::new(
-            "bind_concurrent",
-            events,
-            event_source.registry() as Weak<dyn Hook>,
-        )];
-        model.root_realm.hooks.install(hooks).await;
+        event_source.start_component_tree().await;
 
         // Bind to "system", pausing before it starts.
         let model_copy = model.clone();

@@ -336,10 +336,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                events::{
-                    core::{EventSource, EventSourceFactory},
-                    registry::EventStream,
-                },
+                events::{core::EventSource, registry::EventStream},
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
@@ -371,7 +368,6 @@ mod tests {
     }
 
     struct EventsData {
-        _event_source_factory: EventSourceFactory,
         _event_source: EventSource,
         event_stream: EventStream,
     }
@@ -412,27 +408,20 @@ mod tests {
             let builtin_environment_inner = builtin_environment.clone();
 
             let hook = Arc::new(TestHook::new());
-            let mut hooks = hook.hooks();
+            let hooks = hook.hooks();
 
             let events_data = if events.is_empty() {
                 None
             } else {
-                // TODO(fxb/48771): use BuiltinEnvironment.event_source_factory.
-                let event_source_factory = EventSourceFactory::new(Arc::downgrade(&model));
-                let mut event_source =
-                    event_source_factory.create_for_debug().await.expect("created event source");
-                hooks.push(HooksRegistration::new(
-                    "EventRegistry",
-                    events.clone(),
-                    event_source.registry() as Weak<dyn Hook>,
-                ));
+                let mut event_source = builtin_environment_inner
+                    .event_source_factory
+                    .create_for_debug()
+                    .await
+                    .expect("created event source");
                 let event_stream =
                     event_source.subscribe(events).await.expect("subscribe to event stream");
-                Some(EventsData {
-                    _event_source_factory: event_source_factory,
-                    _event_source: event_source,
-                    event_stream,
-                })
+                event_source.start_component_tree().await;
+                Some(EventsData { _event_source: event_source, event_stream })
             };
 
             model.root_realm.hooks.install(hooks).await;

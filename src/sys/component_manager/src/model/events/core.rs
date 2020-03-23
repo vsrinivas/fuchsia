@@ -265,12 +265,6 @@ impl EventSource {
         });
     }
 
-    /// Returns a reference to the event registry.
-    #[cfg(test)]
-    pub fn registry(&self) -> Weak<EventRegistry> {
-        self.registry.clone()
-    }
-
     async fn route_events(
         &self,
         events: &Vec<EventType>,
