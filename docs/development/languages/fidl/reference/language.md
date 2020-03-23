@@ -570,6 +570,35 @@ Unions are denoted by their declared name (e.g. **Result**) and nullability:
 *   **`Result`** : non-nullable Result
 *   **`Result?`** : nullable Result
 
+Unions can also be declared as strict or flexible. If neither strict nor flexible
+is specified, the union is considered to be strict.
+
+```fidl
+strict union StrictEither {
+    1: Left left;
+    2: Right right;
+};
+
+union ImplicitlyStrictEither {
+    1: Left left;
+    2: Right right;
+}
+
+flexible union FlexibleEither {
+    1: Left left;
+    2: Right right;
+};
+```
+
+Seralizing or deserializing a union from a value with an ordinal that is not
+defined is a validation error for strict unions, but is allowed and exposed to
+the user as unknown data for flexible unions. In the above example, it is
+possible for `FlexibleEither` to evolve to carry a third variant. A client aware
+of the previous definition of `FlexibleEither` without the third variant can
+still receive a union from a server which has been updated to contain the larger
+set of variants. If the union is of the unknown variant, the data is exposed as
+unknown data by the bindings.
+
 ### Protocols
 
 *   Describe methods which can be invoked by sending messages over a channel.
