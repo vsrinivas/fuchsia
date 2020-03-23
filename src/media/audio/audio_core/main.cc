@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
+#include "src/media/audio/audio_core/profile_provider.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -57,6 +58,10 @@ int main(int argc, const char** argv) {
 
   AudioCoreImpl audio_core(context.get());
   auto thermal_agent = ThermalAgent::CreateAndServe(context.get());
+
+  ProfileProvider profile_provider(context->component_context());
+  context->component_context().outgoing()->AddPublicService(
+      profile_provider.GetFidlRequestHandler());
 
   context->threading_model().RunAndJoinAllThreads();
   return 0;

@@ -242,7 +242,7 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
     }
 
     res = fdio_service_connect(
-        (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(), ch0.get());
+        (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(), ch0.release());
     if (res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to connect to ProfileProvider, res=" << res;
       return res;
@@ -277,14 +277,14 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
   return high_priority_profile.duplicate(ZX_RIGHT_SAME_RIGHTS, profile);
 }
 
-void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
-                                 fit::function<void(zx::profile)> callback) {
+void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* context,
+                                    fit::function<void(zx::profile)> callback) {
   auto nonce = TRACE_NONCE();
-  TRACE_DURATION("audio", "AcquireAudioCoreImplProfile");
+  TRACE_DURATION("audio", "AcquireRelativePriorityProfile");
   TRACE_FLOW_BEGIN("audio", "GetProfile", nonce);
   auto profile_provider = context->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   profile_provider->GetProfile(
-      24 /* HIGH_PRIORITY in LK */, "src/media/audio/audio_core/audio_core_impl",
+      priority, "src/media/audio/audio_core/audio_core_impl",
       // Note we move the FIDL ptr into the closure to ensure we keep the channel open until we
       // receive the callback, otherwise it will be impossible to get a response.
       [profile_provider = std::move(profile_provider), callback = std::move(callback), nonce](
@@ -297,6 +297,11 @@ void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
           callback(zx::profile());
         }
       });
+}
+
+void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
+                                 fit::function<void(zx::profile)> callback) {
+  AcquireRelativePriorityProfile(/* HIGH_PRIORITY in zircon */ 24, context, std::move(callback));
 }
 
 }  // namespace media::audio

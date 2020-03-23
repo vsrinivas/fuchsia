@@ -72,6 +72,9 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile);
 void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
                                  fit::function<void(zx::profile)> callback);
 
+void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* context,
+                                    fit::function<void(zx::profile)> callback);
+
 }  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_UTILS_H_
