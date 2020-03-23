@@ -427,8 +427,6 @@ static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
 }
 
 zx_status_t dlog_shutdown(zx_time_t deadline) {
-  DEBUG_ASSERT(!arch_ints_disabled());
-
   dprintf(INFO, "Shutting down debuglog\n");
 
   // Shutdown the notifier thread first. Ordering is important because the notifier thread is
