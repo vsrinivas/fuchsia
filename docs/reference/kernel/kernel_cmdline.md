@@ -56,10 +56,6 @@ Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
 The clock will be set by the device coordinator at boot time, and then later,
 if an RTC is present, the RTC clock will be sanitized to at least this time.
 
-## console\.shell=\<bool\>
-If this option is set to true driver_manager will launch the shell if
-kernel.shell has not already been launched. Defaults to false.
-
 ## cpu\.hwp=\<bool\>
 
 This settings enables HWP (hardware P-states) on supported chips. This feature

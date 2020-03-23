@@ -16,7 +16,6 @@ kernel_cmdline_args = [
   "kernel.oom.behavior=jobkill",
   "netsvc.all-features=true",
   "netsvc.disable=false",
-  "console.shell=true",
 ]
 
 meta_package_labels = []
