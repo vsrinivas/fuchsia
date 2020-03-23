@@ -64,7 +64,7 @@ When writing TODOs:
    another contributor to pick up the TODO without consulting any external
    sources, including the referenced issue.
 
-### Error messages
+### Error Messages
 
 As with code comments, consider the future reader of the error messages emitted
 by your code. Ensure that your error messages are actionable. For example, avoid
