@@ -6,11 +6,6 @@
 
 #include <unittest/unittest.h>
 
-// #include <fidl/flat_ast.h>
-// #include <fidl/lexer.h>
-// #include <fidl/parser.h>
-// #include <fidl/source_file.h>
-
 #include "test_library.h"
 
 namespace {
@@ -725,7 +720,6 @@ bool BadConstTestAssignTypeName() {
            "bits Example { A = 1; };",
            "enum Example { A = 1; };",
            "union Example { 1: bool A; };",
-           "xunion Example { 1: bool A; };",
            "using Example = string;",
        }) {
     std::ostringstream ss;
@@ -916,17 +910,17 @@ const MyBits bitsValue = MyBits.A | ( ( ( MyBits.A | MyBits.B ) | MyBits.D ) | M
   ASSERT_TRUE(library.Compile());
 
   EXPECT_TRUE(CheckConstEq<uint8_t>(library, "three", 3,
-                                     fidl::flat::Constant::Kind::kBinaryOperator,
-                                     fidl::flat::ConstantValue::Kind::kUint8));
+                                    fidl::flat::Constant::Kind::kBinaryOperator,
+                                    fidl::flat::ConstantValue::Kind::kUint8));
   EXPECT_TRUE(CheckConstEq<uint8_t>(library, "seven", 7,
-                                     fidl::flat::Constant::Kind::kBinaryOperator,
-                                     fidl::flat::ConstantValue::Kind::kUint8));
+                                    fidl::flat::Constant::Kind::kBinaryOperator,
+                                    fidl::flat::ConstantValue::Kind::kUint8));
   EXPECT_TRUE(CheckConstEq<uint8_t>(library, "fifteen", 15,
-                                     fidl::flat::Constant::Kind::kBinaryOperator,
-                                     fidl::flat::ConstantValue::Kind::kUint8));
+                                    fidl::flat::Constant::Kind::kBinaryOperator,
+                                    fidl::flat::ConstantValue::Kind::kUint8));
   EXPECT_TRUE(CheckConstEq<uint8_t>(library, "bitsValue", 15,
-                                     fidl::flat::Constant::Kind::kBinaryOperator,
-                                     fidl::flat::ConstantValue::Kind::kUint8));
+                                    fidl::flat::Constant::Kind::kBinaryOperator,
+                                    fidl::flat::ConstantValue::Kind::kUint8));
 
   END_TEST;
 }
@@ -1022,8 +1016,9 @@ const AnotherEnum b = a;
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot define a constant or default value of type "
-                                    "AnotherEnum using a value of type OneEnum");
+  ASSERT_STR_STR(errors[0].c_str(),
+                 "cannot define a constant or default value of type "
+                 "AnotherEnum using a value of type OneEnum");
   ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
 
   END_TEST;
@@ -1050,8 +1045,9 @@ const OneEnum a = AnotherEnum.B;
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot define a constant or default value of type "
-                                    "OneEnum using a value of type AnotherEnum");
+  ASSERT_STR_STR(errors[0].c_str(),
+                 "cannot define a constant or default value of type "
+                 "OneEnum using a value of type AnotherEnum");
   ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
 
   END_TEST;

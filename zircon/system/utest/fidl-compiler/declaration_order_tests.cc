@@ -190,7 +190,7 @@ protocol #Protocol# {
   END_TEST;
 }
 
-bool nonnullable_xunion() {
+bool nonnullable_union() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
@@ -198,7 +198,7 @@ bool nonnullable_xunion() {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-xunion #Xunion# {
+union #Xunion# {
   1: request<#Protocol#> req;
   2: #Payload# foo;
 };
@@ -225,7 +225,7 @@ struct #Payload# {
   END_TEST;
 }
 
-bool nullable_xunion() {
+bool nullable_union() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
@@ -233,7 +233,7 @@ bool nullable_xunion() {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-xunion #Xunion# {
+union #Xunion# {
   1: request<#Protocol#> req;
   2: #Payload# foo;
 };
@@ -276,7 +276,7 @@ struct #Payload# {
   END_TEST;
 }
 
-bool nonnullable_xunion_in_struct() {
+bool nonnullable_union_in_struct() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
@@ -296,7 +296,7 @@ struct #Request# {
   #Xunion# xu;
 };
 
-xunion #Xunion# {
+union #Xunion# {
   1: #Payload# foo;
 };
 
@@ -315,7 +315,7 @@ xunion #Xunion# {
   END_TEST;
 }
 
-bool nullable_xunion_in_struct() {
+bool nullable_union_in_struct() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
@@ -335,7 +335,7 @@ struct #Request# {
   #Xunion#? xu;
 };
 
-xunion #Xunion# {
+union #Xunion# {
   1: #Payload# foo;
 };
 
@@ -491,10 +491,10 @@ BEGIN_TEST_CASE(declaration_order_test)
 RUN_TEST(nonnullable_ref)
 RUN_TEST(nullable_ref_breaks_dependency)
 RUN_TEST(request_type_breaks_dependency_graph)
-RUN_TEST(nonnullable_xunion)
-RUN_TEST(nullable_xunion)
-RUN_TEST(nonnullable_xunion_in_struct)
-RUN_TEST(nullable_xunion_in_struct)
+RUN_TEST(nonnullable_union)
+RUN_TEST(nullable_union)
+RUN_TEST(nonnullable_union_in_struct)
+RUN_TEST(nullable_union_in_struct)
 RUN_TEST(decls_across_libraries);
 RUN_TEST(const_type_comes_first);
 RUN_TEST(enum_ordinal_type_comes_first);

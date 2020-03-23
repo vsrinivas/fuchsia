@@ -79,12 +79,6 @@ union ExampleUnion {
     1: uint32 variant;
 };
 
-[OnXUnion]
-xunion ExampleXUnion {
-    [OnXUnionMember]
-    1: uint32 variant;
-};
-
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
@@ -138,12 +132,6 @@ xunion ExampleXUnion {
   ASSERT_NONNULL(example_union);
   EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
   EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
-
-  auto example_xunion = library.LookupUnion("ExampleXUnion");
-  ASSERT_NONNULL(example_xunion);
-  EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
-  EXPECT_TRUE(
-      example_xunion->members.front().maybe_used->attributes->HasAttribute("OnXUnionMember"));
 
   END_TEST;
 }
@@ -734,18 +722,6 @@ union Foo {
   ASSERT_FALSE(on_union.Compile());
   ASSERT_EQ(on_union.errors().size(), 1);
   ASSERT_STR_STR(on_union.errors()[0].c_str(), "Cannot attach attributes to reserved ordinals");
-
-  TestLibrary on_xunion(R"FIDL(
-library fidl.test;
-
-xunion Foo {
-  [Foo]
-  1: reserved;
-};
-)FIDL");
-  ASSERT_FALSE(on_xunion.Compile());
-  ASSERT_EQ(on_xunion.errors().size(), 1);
-  ASSERT_STR_STR(on_xunion.errors()[0].c_str(), "Cannot attach attributes to reserved ordinals");
 
   TestLibrary on_table(R"FIDL(
 library fidl.test;

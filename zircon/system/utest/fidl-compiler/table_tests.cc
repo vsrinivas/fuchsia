@@ -226,7 +226,7 @@ table Bar {
 
 )FIDL"));
 
-  // Tables in xunions are valid.
+  // Tables in unions are valid.
   EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
@@ -234,7 +234,7 @@ table Foo {
     1: int64 t;
 };
 
-xunion OptionalTableContainer {
+flexible union OptionalTableContainer {
     1: Foo foo;
 };
 

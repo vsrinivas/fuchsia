@@ -87,33 +87,6 @@ flexible enum FlexibleFoo {
   END_TEST;
 }
 
-bool union_strictness() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-union Foo {
-    1: int32 i;
-};
-
-flexible union FlexibleFoo {
-    1: int32 i;
-};
-
-strict union StrictFoo {
-    1: int32 i;
-};
-
-)FIDL");
-  ASSERT_TRUE(library.Compile());
-  EXPECT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
-  EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
-  EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
-
-  END_TEST;
-}
-
 bool strict_enum_redundant() {
   return redundant_strictness("strict", R"FIDL(
 strict enum Foo {
@@ -145,41 +118,46 @@ strict table StrictFoo {
 )FIDL");
 }
 
-bool xunion_strictness() {
+bool union_strictness() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
 library example;
 
-xunion FlexibleFoo {
+union Foo {
     1: int32 i;
 };
 
-strict xunion StrictFoo {
+flexible union FlexibleFoo {
+    1: int32 i;
+};
+
+strict union StrictFoo {
     1: int32 i;
 };
 
 )FIDL");
   ASSERT_TRUE(library.Compile());
+  EXPECT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
 
   END_TEST;
 }
 
-bool flexible_xunion_redundant() {
+bool strict_union_redundant() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
 library example;
 
-flexible xunion Foo {
+strict union Foo {
   1: int32 i;
 };
 
 )FIDL");
   ASSERT_TRUE(library.Compile());
-  ASSERT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kFlexible);
+  ASSERT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
 
   END_TEST;
 }
@@ -194,6 +172,5 @@ RUN_TEST(union_strictness);
 RUN_TEST(strict_enum_redundant);
 RUN_TEST(invalid_strictness_table);
 RUN_TEST(invalid_strictness_struct);
-RUN_TEST(xunion_strictness);
-RUN_TEST(flexible_xunion_redundant);
+RUN_TEST(strict_union_redundant);
 END_TEST_CASE(strictness_tests)

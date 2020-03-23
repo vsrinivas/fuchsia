@@ -413,31 +413,47 @@ union Foo {
   END_TEST;
 }
 
-bool deprecated_xunion_warning() {
+bool deprecated_xunion_error() {
   BEGIN_TEST;
 
-  TestLibrary library(R"FIDL(
+  TestLibrary xunion_library(R"FIDL(
 library test;
 
 xunion Foo {
   1: string foo;
 };
 
+)FIDL");
+  ASSERT_FALSE(xunion_library.Compile());
+  auto errors = xunion_library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "xunion is deprecated, please use `flexible union` instead");
+
+  TestLibrary flexible_xunion_library(R"FIDL(
+library test;
+
 flexible xunion FlexibleFoo {
   1: string foo;
 };
+
+)FIDL");
+  ASSERT_FALSE(flexible_xunion_library.Compile());
+  errors = flexible_xunion_library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "xunion is deprecated, please use `flexible union` instead");
+
+  TestLibrary strict_xunion_library(R"FIDL(
+library test;
 
 strict xunion StrictFoo {
   1: string foo;
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
-  auto warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 3);
-  ASSERT_STR_STR(warnings[0].c_str(), "xunion is deprecated, please use `flexible union` instead");
-  ASSERT_STR_STR(warnings[1].c_str(), "xunion is deprecated, please use `flexible union` instead");
-  ASSERT_STR_STR(warnings[2].c_str(),
+  ASSERT_FALSE(strict_xunion_library.Compile());
+  errors = strict_xunion_library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(),
                  "strict xunion is deprecated, please use `strict union` instead");
 
   END_TEST;
@@ -462,5 +478,5 @@ RUN_TEST(no_directly_recursive_unions)
 RUN_TEST(invalid_empty_unions)
 RUN_TEST(error_syntax_explicit_ordinals)
 RUN_TEST(no_selector)
-RUN_TEST(deprecated_xunion_warning)
+RUN_TEST(deprecated_xunion_error)
 END_TEST_CASE(union_tests)

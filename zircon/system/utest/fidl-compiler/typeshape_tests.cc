@@ -926,7 +926,7 @@ table TableWithOptionalUnion {
                                  .contains_union = true,
                              },
                              Expected{
-                                 // because |UnionOfThings| xunion header is inline
+                                 // because |UnionOfThings| union header is inline
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 16,
@@ -1552,13 +1552,13 @@ table TableWithNullableHandleArray {
   END_TEST;
 }
 
-static bool xunions() {
+static bool flexible_unions() {
   BEGIN_TEST;
 
   TestLibrary test_library(R"FIDL(
 library example;
 
-xunion XUnionWithOneBool {
+flexible union XUnionWithOneBool {
   1: bool b;
 };
 
@@ -1566,7 +1566,7 @@ struct StructWithOptionalXUnionWithOneBool {
   XUnionWithOneBool? opt_xunion_with_bool;
 };
 
-xunion XUnionWithBoundedOutOfLineObject {
+flexible union XUnionWithBoundedOutOfLineObject {
   // smaller than |v| below, so will not be selected for max-out-of-line
   // calculation.
   1: bool b;
@@ -1584,15 +1584,15 @@ xunion XUnionWithBoundedOutOfLineObject {
   2: vector<vector<int32>:5>:6 v;
 };
 
-xunion XUnionWithUnboundedOutOfLineObject {
+flexible union XUnionWithUnboundedOutOfLineObject {
   1: string s;
 };
 
-xunion XUnionWithoutPayloadPadding {
+flexible union XUnionWithoutPayloadPadding {
   1: array<uint64>:7 a;
 };
 
-xunion PaddingCheck {
+flexible union PaddingCheck {
   1: array<uint8>:3 three;
   2: array<uint8>:5 five;
 };
@@ -1750,34 +1750,34 @@ bool envelope_strictness() {
   TestLibrary test_library(R"FIDL(
 library example;
 
-strict xunion StrictLeafXUnion {
+strict union StrictLeafXUnion {
     1: int64 a;
 };
 
-xunion FlexibleLeafXUnion {
+flexible union FlexibleLeafXUnion {
     1: int64 a;
 };
 
-xunion FlexibleXUnionOfStrictXUnion {
+flexible union FlexibleXUnionOfStrictXUnion {
     1: StrictLeafXUnion xu;
 };
 
-xunion FlexibleXUnionOfFlexibleXUnion {
+flexible union FlexibleXUnionOfFlexibleXUnion {
     1: FlexibleLeafXUnion xu;
 };
 
-strict xunion StrictXUnionOfStrictXUnion {
+strict union StrictXUnionOfStrictXUnion {
     1: StrictLeafXUnion xu;
 };
 
-strict xunion StrictXUnionOfFlexibleXUnion {
+strict union StrictXUnionOfFlexibleXUnion {
     1: FlexibleLeafXUnion xu;
 };
 
 table FlexibleLeafTable {
 };
 
-strict xunion StrictXUnionOfFlexibleTable {
+strict union StrictXUnionOfFlexibleTable {
     1: FlexibleLeafTable ft;
 };
 
@@ -3050,22 +3050,22 @@ struct ContainsUnion {
   END_TEST;
 }
 
-bool transitive_union_xunion() {
+bool transitive_strict_flexible_union() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
 library test;
 
-xunion InnerXUnion {
+flexible union InnerXUnion {
   1: int32 foo;
 };
 
-union MiddleUnion {
+strict union MiddleUnion {
   1: int32 foo;
   2: InnerXUnion bar;
 };
 
-xunion OuterXUnion {
+flexible union OuterXUnion {
   1: MiddleUnion foo;
 };
 
@@ -3107,7 +3107,7 @@ RUN_TEST(vectors_with_handles)
 RUN_TEST(strings)
 RUN_TEST(arrays)
 RUN_TEST(arrays_with_handles)
-RUN_TEST(xunions)
+RUN_TEST(flexible_unions)
 // RUN_TEST(xunions_with_handles) TODO(pascallouis): write it.
 RUN_TEST(envelope_strictness)
 RUN_TEST(protocols_and_request_of_protocols)
@@ -3131,5 +3131,5 @@ RUN_TEST(no_transitive_unions)
 RUN_TEST(transitive_union_result_type)
 RUN_TEST(transitive_union_nested)
 RUN_TEST(transitive_union_layered)
-RUN_TEST(transitive_union_xunion)
+RUN_TEST(transitive_strict_flexible_union)
 END_TEST_CASE(typeshape_tests)

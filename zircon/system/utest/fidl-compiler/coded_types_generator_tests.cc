@@ -204,16 +204,16 @@ protocol UseOfRequestOfProtocol {
   END_TEST;
 }
 
-// The code between |CodedTypesOfXUnions| and |CodedTypesOfNullableXUnions| is now very similar
-// because the compiler emits both the non-nullable and nullable xunion types regardless of whether
+// The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar
+// because the compiler emits both the non-nullable and nullable union types regardless of whether
 // it is used in the library in which it was defined.
-bool CodedTypesOfXUnions() {
+bool CodedTypesOfUnions() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
 library example;
 
-xunion MyXUnion {
+union MyXUnion {
   1: bool foo;
   2: int32 bar;
 };
@@ -268,16 +268,16 @@ xunion MyXUnion {
   END_TEST;
 }
 
-// The code between |CodedTypesOfXUnions| and |CodedTypesOfNullableXUnions| is now very similar
-// because the compiler emits both the non-nullable and nullable xunion types regardless of whether
+// The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar
+// because the compiler emits both the non-nullable and nullable union types regardless of whether
 // it is used in the library in which it was defined.
-bool CodedTypesOfNullableXUnions() {
+bool CodedTypesOfNullableUnions() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
 library example;
 
-xunion MyXUnion {
+union MyXUnion {
   1: bool foo;
   2: int32 bar;
 };
@@ -330,7 +330,7 @@ bool CodedTypesOfStaticUnions() {
   TestLibrary library(R"FIDL(
 library example;
 
-xunion MyXUnion {
+union MyXUnion {
   1: bool foo;
   2: int32 bar;
 };
@@ -386,7 +386,7 @@ bool CodedTypesOfStaticUnionPointers() {
   TestLibrary library(R"FIDL(
 library example;
 
-xunion MyXUnion {
+union MyXUnion {
   1: bool foo;
   2: int32 bar;
 };
@@ -449,7 +449,7 @@ union MyUnion {
   2: int32 bar;
 };
 
-xunion MyXUnion {
+flexible union MyXUnion {
   1: bool foo;
   2: int32 bar;
 };
@@ -1024,8 +1024,8 @@ RUN_TEST(CodedTypesOfProtocol);
 RUN_TEST(CodedTypesOfRequestOfProtocol);
 RUN_TEST(CodedTypesOfStaticUnions);
 RUN_TEST(CodedTypesOfStaticUnionPointers);
-RUN_TEST(CodedTypesOfXUnions);
-RUN_TEST(CodedTypesOfNullableXUnions);
+RUN_TEST(CodedTypesOfUnions);
+RUN_TEST(CodedTypesOfNullableUnions);
 RUN_TEST(CodedTypesOfNullablePointers);
 RUN_TEST(CodedTypesOfStructsWithPaddings);
 RUN_TEST(CodedTypesOfTables);

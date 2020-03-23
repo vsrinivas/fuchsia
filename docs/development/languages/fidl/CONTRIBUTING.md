@@ -190,6 +190,13 @@ fx build system/utest:host
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
 ```
 
+To run a specific test case, use the `--case` flag:
+
+```sh
+fx build system/utest:host
+$FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug -- --case attributes_tests
+```
+
 To regenerate the FIDL definitions used in unit testing, run:
 ```sh
 fx build zircon/tools
