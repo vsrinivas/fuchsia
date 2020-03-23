@@ -158,15 +158,15 @@ impl Player {
     ) -> Result<Player, Error> {
         let mut decoder = None;
         let mut decoded_stream = Box::new(pending::<DecodedStreamItem>()) as DecodedStream;
-        let mut compression = None;
+        let encoding = codec_config.stream_encoding();
+        let mut compression = Some(Compression { type_: encoding.to_string(), parameters: None });
         if codec_config.codec_type() == &MediaCodecType::AUDIO_SBC {
-            let encoding = codec_config.stream_encoding();
             let mut dec = StreamProcessor::create_decoder(
                 codec_config.mime_type(),
                 Some(codec_config.codec_extra().to_vec()),
             )?;
             decoded_stream = Box::new(dec.take_output_stream()?);
-            compression = Some(Compression { type_: encoding.to_string(), parameters: None });
+            compression = None;
             decoder = Some(dec);
         }
 
@@ -440,6 +440,7 @@ mod tests {
         codec_config: MediaCodecConfig,
     ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
         const TEST_SESSION_ID: u64 = 1;
+        let codec_type = codec_config.codec_type().clone();
 
         let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
             create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
@@ -484,11 +485,20 @@ mod tests {
             x => panic!("expected audio consumer request message but got {:?}", x),
         };
 
-        let (stream_sink_request, mut buffers) = match audio_consumer_req {
-            AudioConsumerRequest::CreateStreamSink { stream_sink_request, buffers, .. } => {
-                (stream_sink_request, buffers)
-            }
-            _ => panic!("should be CreateElementarySource"),
+        let (stream_sink_request, mut buffers, compression) = match audio_consumer_req {
+            AudioConsumerRequest::CreateStreamSink {
+                stream_sink_request,
+                buffers,
+                compression,
+                ..
+            } => (stream_sink_request, buffers, compression),
+            _ => panic!("should be CreateStreamSink"),
+        };
+
+        match codec_type {
+            MediaCodecType::AUDIO_SBC => assert_matches!(compression, None),
+            MediaCodecType::AUDIO_AAC => assert_matches!(compression, Some(_)),
+            _ => panic!("Unknown codec type"),
         };
 
         let sink_vmo = buffers.remove(0);
