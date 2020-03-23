@@ -5,9 +5,13 @@
 # https://opensource.org/licenses/MIT
 
 zx_library("cmdline") {
+  sdk = "source"
+  sdk_name = "kcmdline"
+  sdk_headers = [ "lib/cmdline.h" ]
   # For use only in the kernel and its own unit tests.
   visibility = [
     "$zx/kernel/*",
+    "$zx/system/ulib",
     "$zx/system/utest/kernel-cmdline/*",
   ]
   kernel = true

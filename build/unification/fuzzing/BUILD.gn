@@ -11,7 +11,6 @@ zircon_fuzzers =
 # _migrated_fuzzers in //garnet/tests/zircon/BUILD.gn.
 fuzzer_names = [
   "hermetic-decompressor",
-  "kernel-cmdline",
   "lz4",
   "lz4-decompress",
   "zbi-bootfs",

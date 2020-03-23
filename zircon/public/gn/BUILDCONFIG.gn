@@ -324,6 +324,11 @@ template("shared_library") {
 #     available at all to legacy/SDK users of the library.
 #     Type: list(string)
 #
+#   sdk_name
+#     Optional: Name under which the library is published to the GN build.
+#     Type: string
+#     Default: target_name
+#
 #   See source_set() for other parameters.
 #
 # Subtargets
@@ -364,6 +369,10 @@ template("library") {
     # meant to be very clean, just to do what works in the legacy build.
     sdk = invoker.sdk
     sdk_headers = invoker.sdk_headers
+    sdk_name = _library_name
+    if (defined(invoker.sdk_name)) {
+      sdk_name = invoker.sdk_name
+    }
     sdk_publishable =
         defined(invoker.sdk_publishable) && invoker.sdk_publishable
     if (sdk != false) {
@@ -386,6 +395,7 @@ template("library") {
   } else {
     sdk = false
     sdk_headers = []
+    sdk_name = _library_name
     sdk_publishable = false
   }
   _library_params = [
@@ -393,6 +403,7 @@ template("library") {
     "host",
     "sdk",
     "sdk_headers",
+    "sdk_name",
     "sdk_publishable",
     "shared",
     "static",
@@ -441,9 +452,9 @@ template("library") {
     if (sdk != "source") {
       if (defined(invoker.output_prefix_override) &&
           invoker.output_prefix_override) {
-        libfile = _library_name
+        libfile = sdk_name
       } else {
-        libfile = "lib$_library_name"
+        libfile = "lib$sdk_name"
       }
       libfile = "$target_out_dir/$libfile"
       if (sdk == "static") {
@@ -492,15 +503,15 @@ template("library") {
 
     legacy_metadata = {
       legacy_barrier = []
-      legacy_dirs = [ "lib/$_library_name" ]
+      legacy_dirs = [ "lib/$sdk_name" ]
       legacy_targets = [
         {
-          _label = get_label_info(":$_library_name", "label_with_toolchain")
+          _label = get_label_info(":$sdk_name", "label_with_toolchain")
           _zircon_public = "lib"
           forward_variables_from(invoker, [ "testonly" ])
           import = "//build/zircon/zircon_library.gni"
           target_type = "zircon_library"
-          target_name = "$_library_name"
+          target_name = "$sdk_name"
           dir = "//zircon/" + rebase_path(".", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
           compilation_include_dirs = local_include_dirs
@@ -627,14 +638,14 @@ template("library") {
         public_deps = [ ":${_library_name}.headers" ]
         metadata = {
           legacy_barrier = []
-          legacy_dirs = [ "lib/$_library_name" ]
+          legacy_dirs = [ "lib/$sdk_name" ]
           legacy_targets = [
             {
-              _label = get_label_info(":$_library_name", "label_with_toolchain")
+              _label = get_label_info(":$sdk_name", "label_with_toolchain")
               _zircon_public = "lib"
               import = "//build/zircon/zircon_header_library.gni"
               target_type = "zircon_header_library"
-              target_name = "$_library_name"
+              target_name = "$sdk_name"
               include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
             },
           ]

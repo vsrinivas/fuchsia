@@ -80,6 +80,7 @@ _migrated_fuzzers = [
   "//zircon/system/ulib/tftp/test:tftp-fuzzer",
   "//zircon/system/ulib/utf_conversion/test:utf_conversion-fuzzer",
   "//zircon/system/ulib/zircon-crypto/test:hmac-fuzzer",
+  "//zircon/system/utest/kernel-cmdline:kernel-cmdline-fuzzer",
   "//zircon/system/utest/noop-fuzzer",
 ]
 

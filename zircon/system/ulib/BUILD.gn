@@ -15,6 +15,9 @@ group("ulib") {
   testonly = true
   deps = [
 #------------------
+    "$zx/kernel/lib/cmdline",
+#------------------
+#------------------
     "$zx/kernel/lib/counters",
 #------------------
 #------------------

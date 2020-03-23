@@ -247,13 +247,10 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.kernel-cmdline-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.kernel-cmdline-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.kernel-cmdline-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.lz4-decompress-fuzzer.asan",
@@ -529,7 +526,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.kcounter-test",
 #------------------
 #------------------
-    ":test.sys.kernel-cmdline-test",
 #------------------
 #------------------
 #------------------
@@ -814,13 +810,10 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":bin.kernel-cmdline-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.kernel-cmdline-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.kernel-cmdline-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.lz4-decompress-fuzzer.asan",
@@ -1087,7 +1080,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.kcounter-test",
 #------------------
 #------------------
-    ":test.sys.kernel-cmdline-test",
 #------------------
 #------------------
 #------------------
@@ -1744,13 +1736,10 @@ aggregate_manifest("migrated-aux") {
 #------------------
 #------------------
 #------------------
-    #":bin.kernel-cmdline-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.kernel-cmdline-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.kernel-cmdline-fuzzer.ubsan",
 #------------------
 #------------------
     #":bin.lz4-decompress-fuzzer.asan",
@@ -2929,7 +2918,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/kernel-clocks:kernel-clocks-manifest",
 #------------------
-    #":test.sys.kernel-cmdline-test",
+    "//zircon/system/utest/kernel-cmdline:kernel-cmdline-manifest",
 #------------------
 #------------------
     "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-manifest",
@@ -3204,13 +3193,10 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
 #------------------
-    #":bin.kernel-cmdline-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.kernel-cmdline-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.kernel-cmdline-fuzzer.ubsan",
 #------------------
 #------------------
     #":bin.lz4-decompress-fuzzer.asan",
@@ -3591,7 +3577,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/kernel-clocks:kernel-clocks-manifest",
 #------------------
-    #":test.sys.kernel-cmdline-test",
+    "//zircon/system/utest/kernel-cmdline:kernel-cmdline-manifest",
 #------------------
 #------------------
     "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-manifest",
