@@ -55,6 +55,7 @@ source_set("tests") {
   sources = [
     "mutex_tests.cc",
     "semaphore_tests.cc",
+    "spinlock_tests.cc",
     "thread_test.cc",
   ]
   deps = [

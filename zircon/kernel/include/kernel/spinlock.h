@@ -102,6 +102,8 @@ class TA_CAP("mutex") SpinLock {
     spin_unlock_restore(&spinlock_, state, flags);
   }
 
+  void AssertHeld() TA_ASSERT() { DEBUG_ASSERT(IsHeld()); }
+
   spin_lock_t* GetInternal() TA_RET_CAP(spinlock_) { return &spinlock_; }
 
   // suppress default constructors
@@ -168,6 +170,9 @@ struct NoIrqSavePolicy<SpinLock> {
     return true;
   }
   static void Release(SpinLock* lock, State*) TA_REL(lock) { lock->Release(); }
+  static void AssertHeld(const SpinLock& lock) TA_ASSERT(lock) {
+    const_cast<SpinLock*>(&lock)->AssertHeld();
+  }
 };
 
 // Configure Guard<SpinLock, NoIrqSave> to use the above policy to acquire and
@@ -222,6 +227,9 @@ struct IrqSavePolicy<SpinLock> {
   }
   static void Release(SpinLock* lock, State* state) TA_REL(lock) {
     lock->ReleaseIrqRestore(state->state, state->flags);
+  }
+  static void AssertHeld(const SpinLock& lock) TA_ASSERT(lock) {
+    const_cast<SpinLock*>(&lock)->AssertHeld();
   }
 };
 
