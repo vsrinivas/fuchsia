@@ -50,6 +50,10 @@ DEFAULT_NINJA_BIN = os.path.join(
     THIRD_PARTY_DIR, 'ninja', DEFAULT_HOST, 'ninja')
 DEFAULT_CLANG_DIR = os.path.join(THIRD_PARTY_DIR, 'clang', DEFAULT_HOST)
 
+# host test constants
+HOST_TEST_PATH = os.path.join(SCRIPT_DIR, 'tests', 'run-host-tests.sh')
+HOST_TEST_LIST_PATH = os.path.join(DEFAULT_OUT_DIR, 'all_host_tests.txt')
+
 
 class GnTester(object):
     """Class for GN SDK test setup, execution, and cleanup."""
@@ -141,14 +145,16 @@ class GnTester(object):
         invocation.append('-C')
         # Add output directory to command
         invocation.append(self.out_dir)
+        # Build the default and test targets
+        invocation.append("default")
+        invocation.append("tests")
         print 'Running ninja: "%s"' % ' '.join(invocation)
         return self._run_cmd(invocation, cwd=self.proj_dir)
 
     def _verify_package_depfile(self):
         print('Running package dep file verification test')
         # Build test project
-        self._invoke_gn()
-        self._invoke_ninja()
+        self._build_test_project()
         # Verify package dep file for built project
         package_dep_file_contents = "gen/tests/package/package/package.archive_manifest: lib/libfdio.so lib/libunwind.so.1 lib/libc++abi.so.1 hello_bin lib/ld.so.1 lib/libc++.so.2"
         dep_filepath = os.path.join(
@@ -163,8 +169,7 @@ class GnTester(object):
 
     def _verify_rebuild_noop(self):
         # Build test project initially
-        self._invoke_gn()
-        self._invoke_ninja()
+        self._build_test_project()
         # Build test project a second time
         self._invoke_gn()
         (stdout, stderr) = self._invoke_ninja()
@@ -176,22 +181,32 @@ class GnTester(object):
             msg += '"%s"' % stdout
             raise AssertionError(msg)
         print "Test project rebuilt successfully"
-    
+
     def _run_build_tests(self):
         self._run_test("_build_test_project")
         self._run_test("_verify_package_depfile")
         self._run_test("_verify_rebuild_noop")
+        self._run_test("_host_tests")
+
+    def _host_tests(self):
+        # Build test project to generate far archives
+        self._build_test_project()
+
+        # Run host test script
+        invocation = []
+        invocation.append(HOST_TEST_PATH)  # path to test script
+        invocation.append(HOST_TEST_LIST_PATH)  # path to list of tests to run
+        print 'Running run-host-tests.sh: "%s"' % ' '.join(invocation)
+        self._run_cmd(invocation, cwd=self.proj_dir)
 
     def run(self):
         self._run_test("_generate_test")
         self._run_test("_gen_fild_resp_file_unittest")
         self._run_test("_bash_tests")
- 
         if platform.system() == 'Darwin':
             print "The GN SDK does not support building on macOS."
         else:
             self._run_build_tests()
-            
         return self._test_failed
 
 

@@ -15,3 +15,22 @@ group("default") {
     "tests/package",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "build:far_test_script",
+    "tests/package:tests",
+  ]
+}
+
+# A generated file that lists all of the test files.
+generated_file("all_host_tests") {
+  testonly = true
+  deps = [
+    "//:default",
+    "//:tests",
+  ]
+  outputs = [ "$root_build_dir/all_host_tests.txt" ]
+  data_keys = [ "host_test_name" ]
+}

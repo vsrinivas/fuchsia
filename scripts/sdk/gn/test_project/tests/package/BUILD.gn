@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/far_analysis.gni")
 import("//third_party/fuchsia-sdk/build/component.gni")
 import("//third_party/fuchsia-sdk/build/package.gni")
 
@@ -59,4 +60,14 @@ fuchsia_package("package") {
     ":test_component_renamed_cm",
     ":test_component_renamed_cmx",
   ]
+}
+
+far_analysis("package_analysis_test") {
+  data_deps = [ ":package" ]
+  package_name = "package"
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":package_analysis_test" ]
 }

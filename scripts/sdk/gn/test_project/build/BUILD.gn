@@ -8,3 +8,13 @@ config("executable_ldconfig") {
     "-Wl,-rpath-link=",
   ]
 }
+
+copy("far_test_script") {
+  sources = [ "//tests/far.sh" ]
+  outputs = [ "${root_out_dir}/tests/{{source_file_part}}" ]
+}
+
+copy("far_binary") {
+  sources = [ "//third_party/fuchsia-sdk/tools/far" ]
+  outputs = [ "${root_out_dir}/tests/tools/{{source_file_part}}" ]
+}

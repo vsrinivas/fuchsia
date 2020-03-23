@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+template("far_analysis") {
+  package_name = invoker.package_name
+
+  cmd_contents = [
+    "#!/bin/bash",
+    rebase_path("${root_out_dir}/tests/far.sh") + " " +
+        rebase_path("${root_out_dir}/tests/tools/far") + " " +
+        rebase_path("${target_gen_dir}/${package_name}/${package_name}.far"),
+  ]
+
+  write_file("${target_out_dir}/run_${target_name}.sh", cmd_contents)
+
+  group(target_name) {
+    testonly = true
+    metadata = {
+      host_test_name =
+          [ rebase_path("${target_out_dir}/run_${target_name}.sh") ]
+    }
+    if (defined(invoker.data_deps)) {
+      data_deps = invoker.data_deps
+    }
+    data_deps += [
+      "//build:far_binary",
+      "//build:far_test_script",
+    ]
+  }
+}
