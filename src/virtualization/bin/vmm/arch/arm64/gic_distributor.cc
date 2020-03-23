@@ -68,19 +68,19 @@ enum class GicdRegister : uint64_t {
     IGROUP31      = 0x0FC,
     ISENABLE0     = 0x100,
     ISENABLE1     = 0x104,
-    ISENABLE31    = 0x11c,
+    ISENABLE7     = 0x11c,
     ICENABLE0     = 0x180,
     ICENABLE1     = 0x184,
-    ICENABLE31    = 0x19c,
+    ICENABLE7     = 0x19c,
     ICPEND0       = 0x280,
-    ICPEND31      = 0x2bc,
+    ICPEND15      = 0x2bc,
     ICFG0         = 0xc00,
     ICFG1         = 0xc04,
     ICFG31        = 0xc7c,
     ICACTIVE0     = 0x380,
     ICACTIVE15    = 0x3bc,
     IPRIORITY0    = 0x400,
-    IPRIORITY255  = 0x4fc,
+    IPRIORITY63   = 0x4fc,
     ITARGETS0     = 0x800,
     ITARGETS7     = 0x81c,
     ITARGETS8     = 0x820,
@@ -111,7 +111,7 @@ enum class GicrRegister : uint64_t {
     ICPEND0       = 0x10280,
     ICACTIVE0     = 0x10380,
     IPRIORITY0    = 0x10400,
-    IPRIORITY255  = 0x104fc,
+    IPRIORITY63   = 0x104fc,
     ICFG0         = 0x10c00,
     ICFG1         = 0x10c04,
 };
@@ -322,7 +322,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       std::lock_guard<std::mutex> lock(mutex_);
       return redistributors_[id].Read(static_cast<uint64_t>(GicrRegister::ISENABLE0), value);
     }
-    case GicdRegister::ISENABLE1... GicdRegister::ISENABLE31: {
+    case GicdRegister::ISENABLE1... GicdRegister::ISENABLE7: {
       std::lock_guard<std::mutex> lock(mutex_);
       const uint8_t* enable = &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE1)];
       value->u32 = *reinterpret_cast<const uint32_t*>(enable);
@@ -436,7 +436,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       std::lock_guard<std::mutex> lock(mutex_);
       return redistributors_[id].Write(static_cast<uint64_t>(GicrRegister::ISENABLE0), value);
     }
-    case GicdRegister::ISENABLE1... GicdRegister::ISENABLE31: {
+    case GicdRegister::ISENABLE1... GicdRegister::ISENABLE7: {
       std::lock_guard<std::mutex> lock(mutex_);
       uint8_t* enable = &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE1)];
       *reinterpret_cast<uint32_t*>(enable) |= value.u32;
@@ -447,7 +447,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       std::lock_guard<std::mutex> lock(mutex_);
       return redistributors_[id].Write(static_cast<uint64_t>(GicrRegister::ICENABLE0), value);
     }
-    case GicdRegister::ICENABLE1... GicdRegister::ICENABLE31: {
+    case GicdRegister::ICENABLE1... GicdRegister::ICENABLE7: {
       std::lock_guard<std::mutex> lock(mutex_);
       uint8_t* enable = &enabled_[addr - static_cast<uint64_t>(GicdRegister::ICENABLE1)];
       *reinterpret_cast<uint32_t*>(enable) &= ~value.u32;
@@ -481,8 +481,8 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     }
     case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
     case GicdRegister::ICFG0:
-    case GicdRegister::ICPEND0... GicdRegister::ICPEND31:
-    case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY255:
+    case GicdRegister::ICPEND0... GicdRegister::ICPEND15:
+    case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY63:
     case GicdRegister::IGROUP0... GicdRegister::IGROUP31:
     case GicdRegister::IGRPMOD0... GicdRegister::IGRPMOD31:
       return ZX_OK;
@@ -636,7 +636,7 @@ zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
     case GicrRegister::IGROUP0:
     case GicrRegister::ICPEND0:
     case GicrRegister::ICACTIVE0:
-    case GicrRegister::IPRIORITY0... GicrRegister::IPRIORITY255:
+    case GicrRegister::IPRIORITY0... GicrRegister::IPRIORITY63:
     case GicrRegister::ICFG0:
     case GicrRegister::ICFG1:
       return ZX_OK;
