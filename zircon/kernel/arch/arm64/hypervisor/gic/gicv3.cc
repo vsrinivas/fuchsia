@@ -64,15 +64,10 @@ static void gicv3_write_gich_state(IchState* state, uint32_t hcr) {
       // We are translating the physical timer interrupt to the virtual
       // timer interrupt, therefore we are marking the virtual timer interrupt
       // as active on the GIC distributor for the guest to deactivate.
-      uint32_t reg = vector / 32;
       uint32_t mask = 1u << (vector % 32);
-      // Since we use affinity routing, if this vector is associated with an
-      // SGI or PPI, we should talk to the redistributor for the current CPU.
-      if (vector < 32) {
-        GICREG(0, GICR_ISACTIVER0(cpu_num)) = mask;
-      } else {
-        GICREG(0, GICD_ISACTIVER(reg)) = mask;
-      }
+      // Since we use affinity routing, and this vector is associated with a
+      // PPI, we talk to the redistributor for the current CPU.
+      GICREG(0, GICR_ISACTIVER0(cpu_num)) = mask;
     }
   }
   arm64_el2_gicv3_write_gich_state(physmap_to_paddr(state), hcr);
