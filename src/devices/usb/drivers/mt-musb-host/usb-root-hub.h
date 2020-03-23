@@ -226,59 +226,23 @@ class UsbRootHub : public UsbDevice {
       0x09, 0x04,     // .bString (EN-US as the only supported language)
   };
 
+  // clang-format off
   static constexpr uint8_t string_mfr_descriptor_[] = {
-      14,             // .bLength
-      USB_DT_STRING,  // .bDescriptorType
-      'Z',
-      0,
-      'i',
-      0,
-      'r',
-      0,  // .bString
-      'c',
-      0,
-      'o',
-      0,
-      'n',
-      0,  // "Zircon", UTF-16LE
+      14,                      // .bLength
+      USB_DT_STRING,           // .bDescriptorType
+      'Z', 0, 'i', 0, 'r', 0,  // .bString
+      'c', 0, 'o', 0, 'n', 0,  // "Zircon", UTF-16LE
   };
 
   static constexpr uint8_t string_product_descriptor_[] = {
-      34,             // .bLength
-      USB_DT_STRING,  // .bDescriptorType
-      'U',
-      0,
-      'S',
-      0,
-      'B',
-      0,
-      ' ',
-      0,  // .bString
-      '2',
-      0,
-      '.',
-      0,
-      '0',
-      0,
-      ' ',
-      0,
-      'R',
-      0,
-      'o',
-      0,
-      'o',
-      0,
-      't',
-      0,
-      ' ',
-      0,
-      'H',
-      0,
-      'u',
-      0,
-      'b',
-      0,  // "USB 2.0 Root Hub", UTF-16LE
+      34,                              // .bLength
+      USB_DT_STRING,                   // .bDescriptorType
+      'U', 0, 'S', 0, 'B', 0, ' ', 0,  // .bString
+      '2', 0, '.', 0, '0', 0, ' ', 0,
+      'R', 0, 'o', 0, 'o', 0, 't', 0,
+      ' ', 0, 'H', 0, 'u', 0, 'b', 0,  // "USB 2.0 Root Hub", UTF-16LE
   };
+  // clang-format on
 
   const usb_string_descriptor_t* const string_descriptor_[3] = {
       reinterpret_cast<const usb_string_descriptor_t*>(&string_lang_descriptor_),
