@@ -523,7 +523,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.hermetic-decompressor-test",
 #------------------
 #------------------
-    ":test.sys.kcounter-test",
 #------------------
 #------------------
 #------------------
@@ -1077,7 +1076,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.hermetic-decompressor-test",
 #------------------
 #------------------
-    ":test.sys.kcounter-test",
 #------------------
 #------------------
 #------------------
@@ -2914,7 +2912,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
     "//src/devices/tests/isolateddevmgr:isolateddevmgr-manifest",
 #------------------
-    #":test.sys.kcounter-test",
+    "//zircon/system/utest/kcounter:kcounter-manifest",
 #------------------
     "//zircon/system/utest/kernel-clocks:kernel-clocks-manifest",
 #------------------
@@ -3573,7 +3571,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
     "//src/devices/tests/isolateddevmgr:isolateddevmgr-manifest",
 #------------------
-    #":test.sys.kcounter-test",
+    "//zircon/system/utest/kcounter:kcounter-manifest",
 #------------------
     "//zircon/system/utest/kernel-clocks:kernel-clocks-manifest",
 #------------------

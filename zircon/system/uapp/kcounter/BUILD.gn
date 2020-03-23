@@ -14,6 +14,14 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/images/migrated_manifest.gni")
 
+source_set("cmdline") {
+  visibility = [
+    ":kcounter",
+    "//zircon/system/utest/kcounter",
+  ]
+  sources = [ "kcounter_cmdline.cc" ]
+}
+
 executable("kcounter") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -24,11 +32,9 @@ executable("kcounter") {
       configs -= fdio_config
     }
   }
-  sources = [
-    "kcounter.cc",
-    "kcounter_cmdline.cc",
-  ]
+  sources = [ "kcounter.cc" ]
   deps = [
+    ":cmdline",
     "//zircon/public/lib/counters",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
