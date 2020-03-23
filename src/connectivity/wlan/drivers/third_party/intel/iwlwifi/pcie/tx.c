@@ -1505,8 +1505,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
     if (cmd->dataflags[i] & IWL_HCMD_DFL_NOCOPY) {
       had_nocopy = true;
       if (WARN_ON(cmd->dataflags[i] & IWL_HCMD_DFL_DUP)) {
-        status = ZX_ERR_INVALID_ARGS;
-        goto free_dup_buf;
+        return ZX_ERR_INVALID_ARGS;
       }
     } else if (cmd->dataflags[i] & IWL_HCMD_DFL_DUP) {
       /*
@@ -1517,16 +1516,14 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
 
       /* only allowed once */
       if (WARN_ON(had_dup_flag)) {
-        status = ZX_ERR_INVALID_ARGS;
-        goto free_dup_buf;
+        return ZX_ERR_INVALID_ARGS;
       }
 
       had_dup_flag = true;
     } else {
       /* NOCOPY must not be followed by normal! */
       if (WARN_ON(had_nocopy)) {
-        status = ZX_ERR_INVALID_ARGS;
-        goto free_dup_buf;
+        return ZX_ERR_INVALID_ARGS;
       }
       copy_size += cmdlen[i];
     }
@@ -1542,19 +1539,16 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
   if (copy_size > TFD_MAX_PAYLOAD_SIZE) {
     IWL_WARN(trans, "Command %s (%#x) is too large (%d bytes, expect <= %lu bytes)\n",
              iwl_get_cmd_string(trans, cmd->id), cmd->id, copy_size, TFD_MAX_PAYLOAD_SIZE);
-    status = ZX_ERR_INVALID_ARGS;
-    goto free_dup_buf;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   mtx_lock(&txq->lock);
 
   if (iwl_queue_space(trans, txq) < ((cmd->flags & CMD_ASYNC) ? 2 : 1)) {
     mtx_unlock(&txq->lock);
-
     IWL_ERR(trans, "No space in command queue\n");
     iwl_op_mode_cmd_queue_full(trans->op_mode);
-    status = ZX_ERR_NO_RESOURCES;
-    goto free_dup_buf;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
@@ -1662,8 +1656,8 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
     // Assume only one fragment needs DUP and NOCOPY. Needs to extend the txq_entry.dup_io_buf to 2
     // if we need to support 2 NOCOPY fragments.
     if (used_dup_io_buf) {
-      IWL_ERR(trans, "Cannot have 2 NOCOPY or DUP fragments in one command.\n");
       mtx_unlock(&txq->lock);
+      IWL_ERR(trans, "Cannot have 2 NOCOPY or DUP fragments in one command.\n");
       return ZX_ERR_IO_INVALID;
     } else {
       used_dup_io_buf = true;
@@ -1719,22 +1713,21 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
   status = iwl_pcie_set_cmd_in_flight(trans, cmd);
   if (status != ZX_OK) {
     mtx_unlock(&trans_pcie->reg_lock);
-    goto out;
+    mtx_unlock(&txq->lock);
+    return status;
   }
 
   /* Increment and update queue's write index */
   txq->write_ptr = iwl_queue_inc_wrap(trans, txq->write_ptr);
   iwl_pcie_txq_inc_wr_ptr(trans, txq);
-
   mtx_unlock(&trans_pcie->reg_lock);
-
-out:
   mtx_unlock(&txq->lock);
-free_dup_buf:
+
   if (cmd_idx_out) {
     *cmd_idx_out = cmd_idx;
   }
-  return status;
+
+  return ZX_OK;
 }
 
 /*
