@@ -6,6 +6,7 @@
 use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io, fuchsia_async as fasync,
+    fuchsia_merkle::Hash,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
     io_util,
     matches::assert_matches,
@@ -655,11 +656,11 @@ async fn test_pkgfs_with_empty_static_index() {
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     verify_contents(&system_image_package, subdir_proxy(&d, "packages/system_image/0"))
@@ -685,9 +686,13 @@ async fn test_pkgfs_with_system_image_meta_far_missing() {
     let blobfs = BlobfsRamdisk::start().unwrap();
 
     // Arbitrarily pick a system_image merkle (that isn't present)
-    let system_image_merkle = "22e41860aa333dec2aea3899aa764a53a6ea7c179e6c47bf3a8163d89024343e";
-    let pkgfs =
-        PkgfsRamdisk::start_with_blobfs(blobfs, Some(system_image_merkle)).expect("starting pkgfs");
+    let system_image_merkle: Hash =
+        "22e41860aa333dec2aea3899aa764a53a6ea7c179e6c47bf3a8163d89024343e".parse().unwrap();
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(&system_image_merkle)
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     assert_error_kind!(d.open_file("packages/system_image/0/meta"), io::ErrorKind::NotFound);
@@ -710,11 +715,11 @@ async fn test_pkgfs_with_system_image_base_package_missing() {
 
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     verify_contents(&system_image_package, subdir_proxy(&d, "system"))
@@ -740,11 +745,11 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     blobfs.add_blob_from(&pkg.meta_far_merkle_root(), pkg.meta_far().unwrap()).unwrap();
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     verify_contents(&system_image_package, subdir_proxy(&d, "system"))
@@ -782,11 +787,11 @@ async fn test_pkgfs_install_update() {
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
 
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -909,11 +914,11 @@ async fn test_pkgfs_with_cache_index() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     verify_contents(&system_image_package, subdir_proxy(&d, "system"))
@@ -940,11 +945,11 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
 
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     verify_contents(&system_image_package, subdir_proxy(&d, "system"))
@@ -975,11 +980,11 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     blobfs.add_blob_from(&pkg.meta_far_merkle_root(), pkg.meta_far().unwrap()).unwrap();
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     verify_contents(&system_image_package, subdir_proxy(&d, "system"))
@@ -1010,11 +1015,11 @@ async fn test_pkgfs_shadowed_cache_package() {
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
 
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -1095,11 +1100,11 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
 
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -1258,11 +1263,11 @@ async fn test_pkgfs_with_system_image() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let mut file_contents = String::new();
@@ -1306,12 +1311,12 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs_and_argv(
-        blobfs,
-        Some(system_image_package.meta_far_merkle_root().to_string()),
-        &["--enforcePkgfsPackagesNonStaticAllowlist=true"],
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_packages_non_static_allowlist(true) // turn on allowlist enforcement
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     // We've put the 'example' package on the allowlist, so we should be
@@ -1355,12 +1360,12 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs_and_argv(
-        blobfs,
-        Some(system_image_package.meta_far_merkle_root().to_string()),
-        &["--enforcePkgfsPackagesNonStaticAllowlist=true"],
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_packages_non_static_allowlist(true) // turn on allowlist enforcement
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     // Test the 'Open' path - we shouldn't be able to open a file in our
@@ -1405,12 +1410,12 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::start_with_blobfs_and_argv(
-        blobfs,
-        Some(system_image_package.meta_far_merkle_root().to_string()),
-        &["--enforcePkgfsPackagesNonStaticAllowlist=false"], // turn off allowlist enforcement
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
+        .start()
+        .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let mut file_contents = String::new();
@@ -1441,11 +1446,11 @@ async fn test_pkgfs_open_executable() {
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
 
     // Now try to open a file as executable.
     let root_dir_proxy = pkgfs.root_dir_proxy().expect("retrieving root dir proxy");

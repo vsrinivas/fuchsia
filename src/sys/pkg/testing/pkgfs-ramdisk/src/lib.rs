@@ -9,24 +9,55 @@ use {
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fuchsia_merkle::Hash,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::AsHandleRef,
     scoped_task::{self, Scoped},
     std::ffi::{CStr, CString},
 };
 
-pub use blobfs_ramdisk::BlobfsRamdisk;
+pub use blobfs_ramdisk::{BlobfsRamdisk, BlobfsRamdiskBuilder};
+
+const PKGSVR_PATH: &str = "/pkg/bin/pkgsvr";
+
+#[derive(Debug, Default)]
+pub struct PkgfsArgs {
+    enforce_packages_non_static_allowlist: Option<bool>,
+    system_image_merkle: Option<Hash>,
+}
+
+impl PkgfsArgs {
+    fn to_vec(&self) -> Vec<CString> {
+        let mut argv = vec![CString::new(PKGSVR_PATH).unwrap()];
+
+        if let Some(value) = &self.enforce_packages_non_static_allowlist {
+            argv.push(
+                CString::new(format!("--enforcePkgfsPackagesNonStaticAllowlist={}", value))
+                    .unwrap(),
+            );
+        }
+
+        // golang's flag library is very specific about the fact that it wants positional args _last_,
+        // so specify other_args first, and the system image arg last.
+        if let Some(system_image_merkle) = &self.system_image_merkle {
+            argv.push(CString::new(system_image_merkle.to_string().as_bytes()).unwrap());
+        }
+
+        argv
+    }
+}
 
 /// A helper to construct PkgfsRamdisk instances.
 pub struct PkgfsRamdiskBuilder {
     blobfs: Option<BlobfsRamdisk>,
-    system_image_merkle: Option<String>,
+    args: PkgfsArgs,
 }
 
 impl PkgfsRamdiskBuilder {
-    /// Creates a new PkgfsRamdiskBuilder with no configured `blobfs` instance or `system_image_merkle`.
+    /// Creates a new PkgfsRamdiskBuilder with no configured `blobfs` and default command line
+    /// arguments.
     fn new() -> Self {
-        Self { blobfs: None, system_image_merkle: None }
+        Self { blobfs: None, args: PkgfsArgs::default() }
     }
 
     /// Use the given blobfs when constructing the PkgfsRamdisk.
@@ -35,79 +66,31 @@ impl PkgfsRamdiskBuilder {
         self
     }
 
+    /// Specify whether or not pkgfs should enforce the /pkgfs/packages non-static allowlist.
+    pub fn enforce_packages_non_static_allowlist(mut self, value: impl Into<Option<bool>>) -> Self {
+        self.args.enforce_packages_non_static_allowlist = value.into();
+        self
+    }
+
     /// Use the given system_image_merkle when constructing the PkgfsRamdisk.
-    pub fn system_image_merkle(mut self, system_image_merkle: impl Into<String>) -> Self {
-        self.system_image_merkle = Some(system_image_merkle.into());
+    pub fn system_image_merkle(mut self, system_image_merkle: &Hash) -> Self {
+        self.args.system_image_merkle = Some(system_image_merkle.clone());
         self
     }
 
     /// Attempt to start the PkgfsRamdisk, consuming this builder.
     pub fn start(self) -> Result<PkgfsRamdisk, Error> {
         let blobfs = if let Some(blobfs) = self.blobfs { blobfs } else { BlobfsRamdisk::start()? };
-
-        PkgfsRamdisk::start_with_blobfs(blobfs, self.system_image_merkle)
-    }
-}
-
-/// A running pkgfs server backed by a ramdisk-backed blobfs instance.
-///
-/// Make sure to call PkgfsRamdisk.stop() to shut it down properly and receive shutdown errors.
-///
-/// If dropped, only the ramdisk and dynamic index are deleted.
-pub struct PkgfsRamdisk {
-    blobfs: BlobfsRamdisk,
-    proxy: DirectoryProxy,
-    process: Scoped<fuchsia_zircon::Process>,
-    system_image_merkle: Option<String>,
-}
-
-impl PkgfsRamdisk {
-    /// Creates a new PkgfsRamdiskBuilder with no configured `blobfs` instance or `system_image_merkle`.
-    pub fn builder() -> PkgfsRamdiskBuilder {
-        PkgfsRamdiskBuilder::new()
-    }
-
-    /// Start a pkgfs server.
-    pub fn start() -> Result<Self, Error> {
-        Self::builder().start()
-    }
-
-    /// Starts a package server backed by the provided blobfs.
-    ///
-    /// If system_image_merkle is Some, uses that as the starting system_image package.
-    /// Strings in the other_args vector will be appended to the argv before the system image merkle.
-    /// Specifying the system image merkle in the argv vector and the system_image_merkle param is undefined behavior.
-    pub fn start_with_blobfs_and_argv(
-        blobfs: BlobfsRamdisk,
-        system_image_merkle: Option<impl Into<String>>,
-        other_args: &[&str],
-    ) -> Result<Self, Error> {
-        let system_image_merkle = system_image_merkle.map(|m| m.into());
+        let args = self.args.to_vec();
+        let argv = args.iter().map(AsRef::as_ref).collect::<Vec<&CStr>>();
 
         let pkgfs_root_handle_info = HandleInfo::new(HandleType::User0, 0);
         let (proxy, pkgfs_root_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
-        let pkgsvr_bin = CString::new("/pkg/bin/pkgsvr").unwrap();
-        let system_image_flag =
-            system_image_merkle.as_ref().map(|s| CString::new(s.clone()).unwrap());
-
-        let mut argv: Vec<&CStr> = vec![&pkgsvr_bin];
-
-        // golang's flag library is very specific about the fact that it wants positional args _last_,
-        // so specify other_args first, and the system image arg last.
-        let other_args_cstring: Vec<CString> =
-            other_args.into_iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect();
-        let mut other_args_cstr: Vec<&CStr> = other_args_cstring.iter().map(|s| &**s).collect();
-        argv.append(&mut other_args_cstr);
-
-        if let Some(system_image_flag) = system_image_flag.as_ref() {
-            argv.push(system_image_flag)
-        }
-
         let process = scoped_task::spawn_etc(
             scoped_task::job_default(),
             SpawnOptions::CLONE_ALL,
-            &pkgsvr_bin,
+            &CString::new(PKGSVR_PATH).unwrap(),
             &argv,
             None,
             &mut [
@@ -124,17 +107,32 @@ impl PkgfsRamdisk {
         .map_err(|(status, _)| status)
         .context("spawning 'pkgsvr'")?;
 
-        Ok(PkgfsRamdisk { blobfs, proxy, process, system_image_merkle })
+        Ok(PkgfsRamdisk { blobfs, proxy, process, args: self.args })
+    }
+}
+
+/// A running pkgfs server backed by a ramdisk-backed blobfs instance.
+///
+/// Make sure to call PkgfsRamdisk.stop() to shut it down properly and receive shutdown errors.
+///
+/// If dropped, only the ramdisk and dynamic index are deleted.
+pub struct PkgfsRamdisk {
+    blobfs: BlobfsRamdisk,
+    proxy: DirectoryProxy,
+    process: Scoped<fuchsia_zircon::Process>,
+    args: PkgfsArgs,
+}
+
+impl PkgfsRamdisk {
+    /// Creates a new [`PkgfsRamdiskBuilder`] with no configured `blobfs` instance or command line
+    /// arguments.
+    pub fn builder() -> PkgfsRamdiskBuilder {
+        PkgfsRamdiskBuilder::new()
     }
 
-    /// Starts a package server backed by the provided blobfs.
-    ///
-    /// If system_image_merkle is Some, uses that as the starting system_image package.
-    pub fn start_with_blobfs(
-        blobfs: BlobfsRamdisk,
-        system_image_merkle: Option<impl Into<String>>,
-    ) -> Result<Self, Error> {
-        Self::start_with_blobfs_and_argv(blobfs, system_image_merkle, &[])
+    /// Start a pkgfs server.
+    pub fn start() -> Result<Self, Error> {
+        Self::builder().start()
     }
 
     /// Returns a reference to the [`BlobfsRamdisk`] backing this pkgfs.
@@ -170,11 +168,18 @@ impl PkgfsRamdisk {
         Ok(dir)
     }
 
-    /// Restarts pkgfs with the same backing blobfs.
-    pub fn restart(self) -> Result<Self, Error> {
+    /// Shuts down the pkgfs server, returning a [`PkgfsRamdiskBuilder`] configured with the same
+    /// backing blobfs and command line arguments.
+    pub fn into_builder(self) -> Result<PkgfsRamdiskBuilder, Error> {
         kill_pkgfs(self.process)?;
         drop(self.proxy);
-        Self::start_with_blobfs(self.blobfs, self.system_image_merkle)
+
+        Ok(PkgfsRamdiskBuilder { blobfs: Some(self.blobfs), args: self.args })
+    }
+
+    /// Restarts pkgfs with the same backing blobfs.
+    pub fn restart(self) -> Result<Self, Error> {
+        self.into_builder()?.start()
     }
 
     /// Shuts down the pkgfs server and all the backing infrastructure.
@@ -231,7 +236,7 @@ mod tests {
         let root = pkgfs.root_dir().unwrap();
 
         let package_merkle = install_test_package(&root);
-        assert_eq!(list_dir(&root.sub_dir("versions").unwrap()), vec![package_merkle]);
+        assert_eq!(list_dir(&root.sub_dir("versions").unwrap()), vec![package_merkle.to_string()]);
 
         drop(root);
         pkgfs.stop().await.unwrap();
@@ -254,7 +259,7 @@ mod tests {
             root.new_file(&format!("install/pkg/{}", package_merkle), 0600),
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists
         );
-        assert_eq!(list_dir(&root.sub_dir("versions").unwrap()), vec![package_merkle]);
+        assert_eq!(list_dir(&root.sub_dir("versions").unwrap()), vec![package_merkle.to_string()]);
 
         drop(root);
         pkgfs.stop().await.unwrap();
@@ -284,11 +289,12 @@ mod tests {
 
         let mut pkgfs = PkgfsRamdisk::builder()
             .blobfs(blobfs)
-            .system_image_merkle(system_image_merkle_root.clone())
+            .system_image_merkle(&system_image_merkle_root)
             .start()
             .unwrap();
 
-        let expected_active_merkles = hashset![system_image_merkle_root, package_merkle];
+        let expected_active_merkles =
+            hashset![system_image_merkle_root.to_string(), package_merkle.to_string()];
 
         // both packages appear in versions
         assert_eq!(
@@ -359,7 +365,7 @@ mod tests {
     }
 
     /// Installs the test package (see make_test_package) to a pkgfs instance.
-    fn install_test_package(pkgfs: &openat::Dir) -> String {
+    fn install_test_package(pkgfs: &openat::Dir) -> Hash {
         let (meta_far, blobs) = make_test_package();
 
         let meta_far_merkle = write_blob(&pkgfs, "install/pkg", meta_far.as_slice());
@@ -371,13 +377,12 @@ mod tests {
     }
 
     /// Writes a blob in the given directory and path, returning the computed merkle root of the blob.
-    fn write_blob(dir: &openat::Dir, subdir: impl AsRef<Path>, mut payload: impl Read) -> String {
+    fn write_blob(dir: &openat::Dir, subdir: impl AsRef<Path>, mut payload: impl Read) -> Hash {
         let mut buf = vec![];
         payload.read_to_end(&mut buf).unwrap();
-        let merkle =
-            fuchsia_merkle::MerkleTree::from_reader(buf.as_slice()).unwrap().root().to_string();
+        let merkle = fuchsia_merkle::MerkleTree::from_reader(buf.as_slice()).unwrap().root();
 
-        let mut f = dir.new_file(&subdir.as_ref().join(&merkle), 0600).unwrap();
+        let mut f = dir.new_file(&subdir.as_ref().join(&merkle.to_string()), 0600).unwrap();
         f.set_len(buf.len() as u64).unwrap();
         f.write_all(&buf).unwrap();
 

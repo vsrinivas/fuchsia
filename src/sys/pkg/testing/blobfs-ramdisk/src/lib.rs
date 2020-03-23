@@ -14,37 +14,74 @@ use {
         DirectoryAdminMarker, DirectoryAdminProxy, DirectoryMarker, DirectoryProxy, NodeProxy,
     },
     fuchsia_component::server::ServiceFs,
-    fuchsia_merkle::Hash,
+    fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, prelude::*},
     futures::prelude::*,
     ramdevice_client::RamdiskClient,
-    std::{collections::BTreeSet, ffi::CString},
+    scoped_task::Scoped,
+    std::{borrow::Cow, collections::BTreeSet, ffi::CString},
 };
 
 #[cfg(test)]
 mod test;
 
-/// A ramdisk-backed blobfs instance
-pub struct BlobfsRamdisk {
-    backing_ramdisk: Ramdisk,
-    process: scoped_task::Scoped<fuchsia_zircon::Process>,
-    proxy: DirectoryAdminProxy,
+/// A blob's hash, length, and contents.
+#[derive(Debug, Clone)]
+pub struct BlobInfo {
+    merkle: Hash,
+    contents: Cow<'static, [u8]>,
 }
 
-impl BlobfsRamdisk {
-    /// Starts a blobfs server backed by a freshly formatted ramdisk.
-    pub fn start() -> Result<Self, Error> {
-        // make a new ramdisk and format it with blobfs.
-        let ramdisk = Ramdisk::start().context("creating backing ramdisk for blobfs")?;
-        mkblobfs(&ramdisk)?;
+impl<B> From<B> for BlobInfo
+where
+    B: Into<Cow<'static, [u8]>>,
+{
+    fn from(bytes: B) -> Self {
+        let bytes = bytes.into();
+        let mut tree = MerkleTreeBuilder::new();
+        tree.write(&bytes);
+        Self { merkle: tree.finish().root(), contents: bytes }
+    }
+}
 
-        Self::start_with_ramdisk(ramdisk)
+/// A helper to construct [`BlobfsRamdisk`] instances.
+pub struct BlobfsRamdiskBuilder {
+    ramdisk: Option<Ramdisk>,
+    blobs: Vec<BlobInfo>,
+}
+
+impl BlobfsRamdiskBuilder {
+    fn new() -> Self {
+        Self { ramdisk: None, blobs: vec![] }
     }
 
-    /// Starts a blobfs server backed by the given ramdisk.
-    pub fn start_with_ramdisk(ramdisk: Ramdisk) -> Result<Self, Error> {
-        // spawn blobfs on top of the ramdisk.
+    /// Configures this blobfs to use the given backing ramdisk.  The provided ramdisk should be
+    /// formatted as blobfs.
+    pub fn ramdisk(mut self, ramdisk: Ramdisk) -> Self {
+        self.ramdisk = Some(ramdisk);
+        self
+    }
+
+    /// Write the provided blob after mounting blobfs if the blob does not already exist.
+    pub fn with_blob(mut self, blob: impl Into<BlobInfo>) -> Self {
+        self.blobs.push(blob.into());
+        self
+    }
+
+    /// Starts a blobfs server with the current configuration options.
+    pub fn start(self) -> Result<BlobfsRamdisk, Error> {
+        // Use the provided ramdisk or format a fresh one with blobfs.
+        let ramdisk = match self.ramdisk {
+            Some(ramdisk) => ramdisk,
+            None => {
+                let ramdisk = Ramdisk::start().context("creating backing ramdisk for blobfs")?;
+                mkblobfs(&ramdisk)?;
+                ramdisk
+            }
+        };
+
+        // Spawn blobfs on top of the ramdisk.
         let block_device_handle_id = HandleInfo::new(HandleType::User0, 1);
         let fs_root_handle_id = HandleInfo::new(HandleType::User0, 0);
 
@@ -52,7 +89,7 @@ impl BlobfsRamdisk {
 
         let (proxy, blobfs_server_end) = fidl::endpoints::create_proxy::<DirectoryAdminMarker>()?;
         let process = scoped_task::spawn_etc(
-            &scoped_task::job_default(),
+            scoped_task::job_default(),
             SpawnOptions::CLONE_ALL,
             &CString::new("/pkg/bin/blobfs").unwrap(),
             &[&CString::new("blobfs").unwrap(), &CString::new("mount").unwrap()],
@@ -65,7 +102,43 @@ impl BlobfsRamdisk {
         .map_err(|(status, _)| status)
         .context("spawning 'blobfs mount'")?;
 
-        Ok(Self { backing_ramdisk: ramdisk, process, proxy })
+        let blobfs = BlobfsRamdisk { backing_ramdisk: ramdisk, process, proxy };
+
+        // Write all the requested missing blobs to the mounted filesystem.
+        if !self.blobs.is_empty() {
+            let mut present_blobs = blobfs.list_blobs()?;
+
+            for blob in self.blobs {
+                if present_blobs.contains(&blob.merkle) {
+                    continue;
+                }
+                blobfs
+                    .write_blob_sync(&blob.merkle, &blob.contents)
+                    .context(format!("writing {}", blob.merkle))?;
+                present_blobs.insert(blob.merkle);
+            }
+        }
+
+        Ok(blobfs)
+    }
+}
+
+/// A ramdisk-backed blobfs instance
+pub struct BlobfsRamdisk {
+    backing_ramdisk: Ramdisk,
+    process: Scoped<fuchsia_zircon::Process>,
+    proxy: DirectoryAdminProxy,
+}
+
+impl BlobfsRamdisk {
+    /// Creates a new [`BlobfsRamdiskBuilder`] with no pre-configured ramdisk.
+    pub fn builder() -> BlobfsRamdiskBuilder {
+        BlobfsRamdiskBuilder::new()
+    }
+
+    /// Starts a blobfs server backed by a freshly formatted ramdisk.
+    pub fn start() -> Result<Self, Error> {
+        Self::builder().start()
     }
 
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
@@ -94,6 +167,13 @@ impl BlobfsRamdisk {
             unsafe { openat::Dir::from_raw_fd(fd) }
         };
         Ok(dir)
+    }
+
+    /// Signals blobfs to unmount and waits for it to exit cleanly, returning a new
+    /// [`BlobfsRamdiskBuilder`] initialized with the ramdisk.
+    pub async fn into_builder(self) -> Result<BlobfsRamdiskBuilder, Error> {
+        let ramdisk = self.unmount().await?;
+        Ok(Self::builder().ramdisk(ramdisk))
     }
 
     /// Signals blobfs to unmount and waits for it to exit cleanly, returning the backing Ramdisk.
@@ -140,10 +220,14 @@ impl BlobfsRamdisk {
         merkle: &Hash,
         mut source: impl std::io::Read,
     ) -> Result<(), Error> {
-        use std::{convert::TryInto, io::Write};
-
         let mut bytes = vec![];
         source.read_to_end(&mut bytes)?;
+        self.write_blob_sync(merkle, &bytes)
+    }
+
+    fn write_blob_sync(&self, merkle: &Hash, bytes: &[u8]) -> Result<(), Error> {
+        use std::{convert::TryInto, io::Write};
+
         let mut file = self.root_dir().unwrap().write_file(merkle.to_string(), 0777)?;
         file.set_len(bytes.len().try_into().unwrap())?;
         file.write_all(&bytes)?;
@@ -284,7 +368,7 @@ fn mkblobfs(ramdisk: &Ramdisk) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::io::Write};
+    use {super::*, maplit::btreeset, std::io::Write};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn clean_start_and_stop() {
@@ -292,6 +376,79 @@ mod tests {
 
         let proxy = blobfs.root_dir_proxy().unwrap();
         drop(proxy);
+
+        blobfs.stop().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn clean_start_contains_no_blobs() {
+        let blobfs = BlobfsRamdisk::start().unwrap();
+
+        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![]);
+
+        blobfs.stop().await.unwrap();
+    }
+
+    #[test]
+    fn blob_info_conversions() {
+        let a = BlobInfo::from(&b"static slice"[..]);
+        let b = BlobInfo::from(b"owned vec".to_vec());
+        let c = BlobInfo::from(Cow::from(&b"cow"[..]));
+        assert_ne!(a.merkle, b.merkle);
+        assert_ne!(b.merkle, c.merkle);
+        assert_eq!(
+            a.merkle,
+            fuchsia_merkle::MerkleTree::from_reader(&b"static slice"[..]).unwrap().root()
+        );
+
+        // Verify the following calling patterns build, but don't bother building the ramdisk.
+        let _ = BlobfsRamdisk::builder()
+            .with_blob(&b"static slice"[..])
+            .with_blob(b"owned vec".to_vec())
+            .with_blob(Cow::from(&b"cow"[..]));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn with_blob_ignores_duplicates() {
+        let blob = BlobInfo::from(&b"duplicate"[..]);
+
+        let blobfs = BlobfsRamdisk::builder()
+            .with_blob(blob.clone())
+            .with_blob(blob.clone())
+            .start()
+            .unwrap();
+        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![blob.merkle.clone()]);
+
+        let blobfs = blobfs.into_builder().await.unwrap().with_blob(blob.clone()).start().unwrap();
+        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![blob.merkle.clone()]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn build_with_two_blobs() {
+        let blobfs = BlobfsRamdisk::builder()
+            .with_blob(&b"blob 1"[..])
+            .with_blob(&b"blob 2"[..])
+            .start()
+            .unwrap();
+
+        let expected = btreeset![
+            fuchsia_merkle::MerkleTree::from_reader(&b"blob 1"[..]).unwrap().root(),
+            fuchsia_merkle::MerkleTree::from_reader(&b"blob 2"[..]).unwrap().root(),
+        ];
+        assert_eq!(expected.len(), 2);
+        assert_eq!(blobfs.list_blobs().unwrap(), expected);
+
+        blobfs.stop().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn remount() {
+        let blobfs = BlobfsRamdisk::builder().with_blob(&b"test"[..]).start().unwrap();
+        let blobs = blobfs.list_blobs().unwrap();
+
+        let blobfs = blobfs.into_builder().await.unwrap().start().unwrap();
+
+        assert_eq!(blobs, blobfs.list_blobs().unwrap());
 
         blobfs.stop().await.unwrap();
     }

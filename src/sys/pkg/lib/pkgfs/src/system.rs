@@ -55,11 +55,11 @@ mod tests {
         let system_image_package = SystemImageBuilder::new(&[]).build().await;
         let blobfs = BlobfsRamdisk::start().unwrap();
         system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-        let pkgfs = PkgfsRamdisk::start_with_blobfs(
-            blobfs,
-            Some(&system_image_package.meta_far_merkle_root().to_string()),
-        )
-        .unwrap();
+        let pkgfs = PkgfsRamdisk::builder()
+            .blobfs(blobfs)
+            .system_image_merkle(system_image_package.meta_far_merkle_root())
+            .start()
+            .unwrap();
         let client = Client::open_from_pkgfs_root(&pkgfs.root_dir_proxy().unwrap()).unwrap();
 
         let mut contents = vec![];
@@ -76,11 +76,11 @@ mod tests {
         let system_image_package = SystemImageBuilder::new(&[]).build().await;
         let blobfs = BlobfsRamdisk::start().unwrap();
         system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-        let pkgfs = PkgfsRamdisk::start_with_blobfs(
-            blobfs,
-            Some(&system_image_package.meta_far_merkle_root().to_string()),
-        )
-        .unwrap();
+        let pkgfs = PkgfsRamdisk::builder()
+            .blobfs(blobfs)
+            .system_image_merkle(system_image_package.meta_far_merkle_root())
+            .start()
+            .unwrap();
         let client = Client::open_from_pkgfs_root(&pkgfs.root_dir_proxy().unwrap()).unwrap();
 
         assert_matches!(client.open_file("missing-file").await, Err(_));

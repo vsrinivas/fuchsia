@@ -28,11 +28,11 @@ async fn pkgfs_with_system_image_and_pkg(
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs")
+    PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap()
 }
 
 // The package is in the cache. Networking is totally down. Fallback succeeds.

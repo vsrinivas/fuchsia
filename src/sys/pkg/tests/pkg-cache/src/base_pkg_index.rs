@@ -24,11 +24,11 @@ async fn setup_test_env(static_packages: &[&Package]) -> TestEnv {
     for pkg in static_packages {
         pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     }
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .unwrap();
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
 
     let env = TestEnv::new(pkgfs);
     env.block_until_started().await;
