@@ -2,13 +2,13 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
-                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
             }
         }
     },
     "program": {
-        "binary": "test/logger_integration_cpp_tests"
+        "binary": "test/logs_integration_cpp_tests"
     },
     "sandbox": {
         "services": [

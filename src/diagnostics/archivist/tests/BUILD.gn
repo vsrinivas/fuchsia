@@ -9,7 +9,7 @@ group("tests") {
   testonly = true
   deps = [
     ":archivist_integration_tests",
-    "logger:tests",
+    "logs:tests",
   ]
 }
 
@@ -17,7 +17,7 @@ test_package("archivist_integration_tests") {
   deps = [
     "archive_path:archive_path_test",
     "data_stats:data_stats_test",
-    "logger:tests",
+    "logs:tests",
     "unified_reader:config",
     "unified_reader:unified_reader_test",
     "//src/diagnostics/archivist:bin",
@@ -68,18 +68,18 @@ test_package("archivist_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "logger_integration_go_tests"
+      name = "logs_integration_go_tests"
       environments = basic_envs
 
       # BUG(48594): Disabling flaky test for now.
       disabled = true
     },
     {
-      name = "logger_integration_bin_test"
+      name = "logs_integration_bin_test"
       environments = basic_envs
     },
     {
-      name = "logger_integration_cpp_tests"
+      name = "logs_integration_cpp_tests"
       environments = basic_envs
     },
   ]
