@@ -123,6 +123,9 @@ void AmlPdmDevice::InitRegs() {
               EE_AUDIO_CLK_GATE_ARB);
   // It is now safe to write to pdm registers
 
+  // Ensure clocks are stable before accessing any of the pdm_mmio_ registers.
+  zx::nanosleep(zx::deadline_after(zx::msec(10)));
+
   // Ensure system is in idle state in case we are re-initing hardware
   // which was already running.  Keep de-inited for 100ms with no pdm_dclk to
   // ensure pdm microphones will start reliably.
