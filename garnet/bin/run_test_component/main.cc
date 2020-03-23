@@ -15,6 +15,7 @@
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <stdio.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -24,7 +25,9 @@
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
+#include "lib/async/cpp/task.h"
 #include "lib/vfs/cpp/service.h"
+#include "lib/zx/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -36,7 +39,7 @@ constexpr char kEnvPrefix[] = "test_env_";
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] <test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] <test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -57,6 +60,9 @@ Usage: run_test_component [--realm-label=<label>] <test_url>|<test_matcher> [arg
        specified then the test will run in a persisted realm with that label,
        allowing files to be provide to, or retrieve from, the test, e.g. for
        diagnostic purposes.
+
+       If --timeout is specified, test would be killed in <timeout> secs and
+       run_test_component will exit with -ZX_ERR_TIMED_OUT.
 )");
 }
 
@@ -135,18 +141,16 @@ int main(int argc, const char** argv) {
   // data is up to date before continuing to try and parse the CMX file.
   // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
   fuchsia::sys::LoaderSyncPtr loader;
-  zx_status_t status =
-      namespace_services->Connect<fuchsia::sys::Loader>(loader.NewRequest());
+  zx_status_t status = namespace_services->Connect<fuchsia::sys::Loader>(loader.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "connect to %s failed: %s. Can not continue.\n",
-            fuchsia::sys::Loader::Name_, zx_status_get_string(status));
+    fprintf(stderr, "connect to %s failed: %s. Can not continue.\n", fuchsia::sys::Loader::Name_,
+            zx_status_get_string(status));
     return 1;
   }
   fuchsia::sys::PackagePtr pkg;
   status = loader->LoadUrl(program_name, &pkg);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to load %s: %s\n", program_name.c_str(),
-            zx_status_get_string(status));
+    fprintf(stderr, "Failed to load %s: %s\n", program_name.c_str(), zx_status_get_string(status));
     return 1;
   }
 
@@ -252,19 +256,45 @@ int main(int argc, const char** argv) {
 
   int64_t ret_code = 1;
 
-  controller.events().OnTerminated =
-      [&ret_code, &program_name, &loop](int64_t return_code, TerminationReason termination_reason) {
-        if (termination_reason != TerminationReason::EXITED) {
-          fprintf(stderr, "%s: %s\n", program_name.c_str(),
-                  sys::HumanReadableTerminationReason(termination_reason).c_str());
-        }
+  bool timed_out = false;
+  std::unique_ptr<async::TaskClosure> timeout_task;
 
-        ret_code = return_code;
+  if (parse_result.timeout > 0) {
+    timeout_task = std::make_unique<async::TaskClosure>(
+        [&controller, &program_name, &loop, &timed_out, &ret_code]() {
+          controller->Kill();
+          timed_out = true;
+          ret_code = -ZX_ERR_TIMED_OUT;
+          fprintf(stderr, "%s canceled due to timeout.\n", program_name.c_str());
+          loop.Quit();
+        });
 
-        loop.Quit();
-      };
+    timeout_task->PostDelayed(loop.dispatcher(), zx::sec(parse_result.timeout));
+  }
+
+  controller.events().OnTerminated = [&ret_code, &program_name, &loop, &timed_out](
+                                         int64_t return_code,
+                                         TerminationReason termination_reason) {
+    // component was killed due to timeout, don't collect results.
+    if (timed_out) {
+      return;
+    }
+    if (termination_reason != TerminationReason::EXITED) {
+      fprintf(stderr, "%s: %s\n", program_name.c_str(),
+              sys::HumanReadableTerminationReason(termination_reason).c_str());
+    }
+
+    ret_code = return_code;
+
+    loop.Quit();
+  };
 
   loop.Run();
+
+  // make sure timeout is not executed after test finishes.
+  if (timeout_task && timeout_task->is_pending()) {
+    timeout_task->Cancel();
+  }
 
   // Wait and process all messages in the queue.
   loop.ResetQuit();

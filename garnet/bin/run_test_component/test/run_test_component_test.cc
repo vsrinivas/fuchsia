@@ -13,6 +13,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <sys/stat.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <vector>
@@ -124,4 +125,57 @@ TEST_F(RunFixture, ExposesDebugDataService) {
       << err_msg;
 
   RunLoopUntil([&]() { return debugdata.call_count() >= 1u; });
+}
+
+TEST_F(RunFixture, TestTimeout) {
+  // coverage component runs for ever, so it is a good candidate for timeout test
+  const char* run_d_command_argv[] = {
+      "/bin/run-test-component", "--timeout=1",
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/coverage_component.cmx", nullptr};
+
+  auto job = zx::job::default_job();
+  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | (FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE);
+
+  std::vector<fdio_spawn_action_t> fdio_actions = {
+      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME,
+                          .name = {.data = "run-test-component"}},
+  };
+
+  auto action_ns_entry = [](const char* prefix, zx_handle_t handle) {
+    return fdio_spawn_action{.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                             .ns = {
+                                 .prefix = prefix,
+                                 .handle = handle,
+                             }};
+  };
+
+  // Export the root namespace.
+  fdio_flat_namespace_t* flat;
+  auto status = fdio_ns_export_root(&flat);
+  ASSERT_EQ(ZX_OK, status) << "FAILURE: Cannot export root namespace:"
+                           << zx_status_get_string(status);
+
+  for (size_t i = 0; i < flat->count; ++i) {
+    fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
+  }
+
+  zx::process process;
+
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  ASSERT_EQ(ZX_OK, fdio_spawn_etc(job->get(), flags,
+                                  run_d_command_argv[0],  // path
+                                  run_d_command_argv,
+                                  nullptr,  // environ
+                                  fdio_actions.size(), fdio_actions.data(),
+                                  process.reset_and_get_address(), err_msg))
+      << err_msg;
+  zx_signals_t signal;
+  process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &signal);
+  zx_info_process_t process_info;
+  ASSERT_EQ(
+      process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr),
+      ZX_OK);
+
+  ASSERT_EQ(process_info.return_code, -ZX_ERR_TIMED_OUT);
 }

@@ -18,6 +18,8 @@ struct ParseArgsResult {
   fuchsia::sys::LaunchInfo launch_info;
   std::vector<std::string> matching_urls;
   std::string realm_label;
+  /// Timeout in seconds for test. By default there is no timeout.
+  int32_t timeout = -1;
 };
 
 // Parses args.

@@ -31,6 +31,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(0u, result.launch_info.arguments->size());
     EXPECT_EQ(0u, result.matching_urls.size());
     EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(-1, result.timeout);
   }
 
   {
@@ -43,6 +44,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[2], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(-1, result.timeout);
   }
 
   {
@@ -55,6 +57,53 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
+    EXPECT_EQ(-1, result.timeout);
+  }
+
+  {
+    const char* argv[] = {
+        kBinName, "--realm-label=kittens", "--timeout=30", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 6, argv);
+    EXPECT_FALSE(result.error);
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[5], result.launch_info.arguments->at(1));
+    EXPECT_EQ("kittens", result.realm_label);
+    EXPECT_EQ(30, result.timeout);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--timeout=-1", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_TRUE(result.error);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--timeout=invalid", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_TRUE(result.error);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--timeout=100", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_FALSE(result.error);
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
+    EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(100, result.timeout);
+  }
+
+  // timeout out of range
+  {
+    const char* argv[] = {kBinName, "--timeout=3000000000", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_TRUE(result.error);
   }
 
   {

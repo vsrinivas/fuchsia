@@ -8,8 +8,10 @@
 #include <glob.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <limits.h>
 
 #include <regex>
+#include <sstream>
 #include <string>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -24,11 +26,13 @@ static constexpr char kComponentIndexerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
 
 static constexpr char kLabelArgPrefix[] = "--realm-label=";
+static constexpr char kTimeoutArgPrefix[] = "--timeout=";
 
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
                           const char** argv) {
   ParseArgsResult result;
   result.error = false;
+  result.timeout = -1;
   int url_or_matcher_argi = 1;
 
   std::string url;
@@ -41,8 +45,21 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 
     std::string argument = argv[url_or_matcher_argi];
     const size_t kLabelArgPrefixLength = strlen(kLabelArgPrefix);
+    const size_t kTimeoutArgPrefixLength = strlen(kTimeoutArgPrefix);
     if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
       result.realm_label = argument.substr(kLabelArgPrefixLength);
+      url_or_matcher_argi++;
+      continue;
+    }
+
+    if (argument.substr(0, kTimeoutArgPrefixLength) == kTimeoutArgPrefix) {
+      std::string arg = argument.substr(kTimeoutArgPrefixLength);
+      std::istringstream(arg) >> result.timeout;
+      if (result.timeout <= 0 || result.timeout == INT_MIN || result.timeout == INT_MAX) {
+        result.error = true;
+        result.error_msg = fxl::StringPrintf("\"%s\" is not a valid timeout.", arg.c_str());
+        return result;
+      }
       url_or_matcher_argi++;
       continue;
     }
