@@ -56,6 +56,7 @@ executable("unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
     "//src/ui/scenic/lib/shutdown/tests:unittests",
+    "//src/ui/scenic/lib/watchdog/tests:unittests",
   ]
 
   # TODO(46839): Fix the leaks and remove this.

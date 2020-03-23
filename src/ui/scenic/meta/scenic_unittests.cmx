@@ -1,6 +1,10 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.testing.FakeClock": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx",
+                "fuchsia.testing.FakeClockControl": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx"
+            },
             "system-services": [
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader"
@@ -17,7 +21,10 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.vulkan.loader.Loader",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.process.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.testing.FakeClock",
+            "fuchsia.testing.FakeClockControl"
         ]
     }
 }

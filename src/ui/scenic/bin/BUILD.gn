@@ -29,6 +29,7 @@ executable("bin") {
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
     "//src/ui/scenic/lib/shutdown",
     "//src/ui/scenic/lib/shutdown:lifecycle_controller",
+    "//src/ui/scenic/lib/watchdog",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/inspect",
