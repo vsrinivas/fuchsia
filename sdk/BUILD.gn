@@ -98,6 +98,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.castauth:fuchsia.castauth_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.castconfig:fuchsia.castconfig_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.castremotecontrol:fuchsia.castremotecontrol_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.castsetup:fuchsia.castsetup_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.castsysteminfo:fuchsia.castsysteminfo_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.component:fuchsia.component_sdk($fidl_toolchain)",

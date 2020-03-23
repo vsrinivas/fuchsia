@@ -22,6 +22,7 @@ sdk://fidl/fuchsia.camera2.hal
 sdk://fidl/fuchsia.camera3
 sdk://fidl/fuchsia.castauth
 sdk://fidl/fuchsia.castconfig
+sdk://fidl/fuchsia.castremotecontrol
 sdk://fidl/fuchsia.castsetup
 sdk://fidl/fuchsia.castsysteminfo
 sdk://fidl/fuchsia.cobalt
@@ -34,8 +35,8 @@ sdk://fidl/fuchsia.factory
 sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
 sdk://fidl/fuchsia.hardware.ethernet
-sdk://fidl/fuchsia.hardware.light
 sdk://fidl/fuchsia.hardware.goldfish
+sdk://fidl/fuchsia.hardware.light
 sdk://fidl/fuchsia.hardware.power.statecontrol
 sdk://fidl/fuchsia.hwinfo
 sdk://fidl/fuchsia.images
