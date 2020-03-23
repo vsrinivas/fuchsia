@@ -15,8 +15,6 @@
 #include <memory>
 #include <optional>
 
-#include "src/ui/a11y/lib/view/view_manager.h"
-
 namespace a11y {
 
 // The AnnotationView class enables the fuchsia accessibility manager to draw annotations over
@@ -33,13 +31,16 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
 
     // True if annotations are currently attached to client view, and false otherwise.
     bool view_content_attached = false;
-
-    // Node id for currently annotated node, if any.
-    std::optional<uint32_t> annotated_node_id = {};
   };
 
-  explicit AnnotationView(sys::ComponentContext* component_context, a11y::ViewManager* view_manager,
-                          zx_koid_t client_view_koid);
+  using ViewPropertiesChangedCallback = fit::function<void(zx_koid_t)>;
+  using ViewAttachedCallback = fit::function<void(zx_koid_t)>;
+  using ViewDetachedCallback = fit::function<void(zx_koid_t)>;
+
+  explicit AnnotationView(sys::ComponentContext* component_context,
+                          ViewPropertiesChangedCallback view_properties_changed_callback,
+                          ViewAttachedCallback view_attached_callback,
+                          ViewDetachedCallback view_detached_callback);
 
   ~AnnotationView() = default;
 
@@ -49,8 +50,9 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
   // the corresonding view.
   void InitializeView(fuchsia::ui::views::ViewRef client_view_ref);
 
-  // Draws a bounding box around the node with id node_id.
-  void HighlightNode(uint32_t node_id);
+  // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
+  // bounding box.
+  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box);
 
   // Hides annotation view contents by detaching the subtree containing the annotations from the
   // view.
@@ -71,10 +73,6 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
   static constexpr uint32_t kHighlightBottomEdgeNodeId = 7;
 
  private:
-  // Helper function to draw four rectangles corresponding to the top, bottom, left, and right edges
-  // of a node's bounding box.
-  void DrawHighlight(const fuchsia::accessibility::semantics::Node* node);
-
   // Draws a rectangle to represent one edge of a highlight bounding box.
   void DrawHighlightEdge(std::vector<fuchsia::ui::scenic::Command>* cmds, int parent_node_id,
                          float width, float height, float center_x, float center_y,
@@ -99,14 +97,20 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
   // Stores state of annotation view
   AnnotationViewState state_;
 
-  // View manager object used to retrieve relevant semantic node info.
-  a11y::ViewManager* view_manager_;
-
-  // KOID of the client view this annotation view is used to annotate.
-  zx_koid_t client_view_koid_;
-
   // Scenic session listener.
   fidl::Binding<fuchsia::ui::scenic::SessionListener> session_listener_binding_;
+
+  // Callback invoked when client view properties have changed.
+  ViewPropertiesChangedCallback view_properties_changed_callback_;
+
+  // Callback invoked when client view is attached to scene graph.
+  ViewAttachedCallback view_attached_callback_;
+
+  // Callback invoked when client view is detached from scene graph.
+  ViewDetachedCallback view_detached_callback_;
+
+  // Client view koid.
+  zx_koid_t client_view_koid_;
 
   // Scenic session interface.
   fuchsia::ui::scenic::SessionPtr session_;

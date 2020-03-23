@@ -13,10 +13,13 @@
 namespace a11y {
 
 AnnotationView::AnnotationView(sys::ComponentContext* component_context,
-                               a11y::ViewManager* view_manager, zx_koid_t client_view_koid)
-    : view_manager_(view_manager),
-      client_view_koid_(client_view_koid),
-      session_listener_binding_(this) {
+                               ViewPropertiesChangedCallback view_properties_changed_callback,
+                               ViewAttachedCallback view_attached_callback,
+                               ViewDetachedCallback view_detached_callback)
+    : session_listener_binding_(this),
+      view_properties_changed_callback_(std::move(view_properties_changed_callback)),
+      view_attached_callback_(std::move(view_attached_callback)),
+      view_detached_callback_(std::move(view_detached_callback)) {
   fuchsia::ui::scenic::ScenicPtr scenic =
       component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
@@ -33,6 +36,8 @@ AnnotationView::AnnotationView(sys::ComponentContext* component_context,
 
 void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref) {
   FX_CHECK(client_view_ref.reference);
+  client_view_koid_ = GetKoid(client_view_ref);
+
   std::vector<fuchsia::ui::scenic::Command> cmds;
 
   // Create view token pair for annotation view and view holder.
@@ -73,49 +78,16 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
   });
 }
 
-void AnnotationView::HighlightNode(uint32_t node_id) {
-  auto semantic_tree_weak_ptr = view_manager_->GetTreeByKoid(client_view_koid_);
-
-  if (!semantic_tree_weak_ptr) {
-    FX_LOGS(ERROR) << "AnnotationView: No semantic tree with koid: " << client_view_koid_;
+void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) {
+  if (!state_.tree_initialized) {
+    FX_LOGS(ERROR) << "Annotation view tree is not initialized.";
     return;
   }
 
-  auto node = semantic_tree_weak_ptr->GetNode(node_id);
-
-  if (!node) {
-    FX_LOGS(ERROR) << "AnnotationView: No node with id: " << node_id;
+  if (!state_.annotation_view_registered) {
+    FX_LOGS(ERROR) << "Annotation view not registered.";
     return;
   }
-
-  DrawHighlight(node);
-
-  state_.view_content_attached = true;
-  state_.annotated_node_id = node_id;
-}
-
-void AnnotationView::DetachViewContents() {
-  std::vector<fuchsia::ui::scenic::Command> cmds;
-
-  // Clear view contents by detaching top-level content node from view.
-  PushCommand(&cmds, scenic::NewDetachCmd(kContentNodeId));
-  session_->Enqueue(std::move(cmds));
-  session_->Present(0, {}, {}, [](fuchsia::images::PresentationInfo info) {});
-
-  state_.view_content_attached = false;
-}
-
-void AnnotationView::DrawHighlight(const fuchsia::accessibility::semantics::Node* node) {
-  FX_DCHECK(node);
-
-  const uint32_t node_id = node->node_id();
-
-  if (!node->has_location()) {
-    FX_LOGS(ERROR) << "AnnotationView:: No bounding box for node with id: " << node_id;
-    return;
-  }
-
-  const auto bounding_box = node->location();
 
   // Used to specify height/width of edge rectangles.
   const auto bounding_box_width = bounding_box.max.x - bounding_box.min.x;
@@ -157,6 +129,19 @@ void AnnotationView::DrawHighlight(const fuchsia::accessibility::semantics::Node
 
   session_->Enqueue(std::move(cmds));
   session_->Present(0, {}, {}, [](fuchsia::images::PresentationInfo info) {});
+
+  state_.view_content_attached = true;
+}
+
+void AnnotationView::DetachViewContents() {
+  std::vector<fuchsia::ui::scenic::Command> cmds;
+
+  // Clear view contents by detaching top-level content node from view.
+  PushCommand(&cmds, scenic::NewDetachCmd(kContentNodeId));
+  session_->Enqueue(std::move(cmds));
+  session_->Present(0, {}, {}, [](fuchsia::images::PresentationInfo info) {});
+
+  state_.view_content_attached = false;
 }
 
 void AnnotationView::DrawHighlightEdge(std::vector<fuchsia::ui::scenic::Command>* cmds,
@@ -200,21 +185,11 @@ void AnnotationView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> event
 
 void AnnotationView::HandleGfxEvent(const fuchsia::ui::gfx::Event& event) {
   if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
-    // If the view properties have changed, we need to redraw any existing annotation.
-    if (state_.view_content_attached && state_.annotated_node_id.has_value()) {
-      // Redraw highlight if any node is currently highlighted.
-      HighlightNode(state_.annotated_node_id.value());
-    }
+    view_properties_changed_callback_(client_view_koid_);
   } else if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene) {
-    // If the user switches to a different view, annotations should be hidden.
-    if (state_.view_content_attached) {
-      DetachViewContents();
-    }
+    view_detached_callback_(client_view_koid_);
   } else if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
-    // If the user switches to the view annotated
-    if (state_.annotated_node_id.has_value()) {
-      HighlightNode(state_.annotated_node_id.value());
-    }
+    view_attached_callback_(client_view_koid_);
   }
 }
 

@@ -11,14 +11,13 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 
-#include <map>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
-#include "src/ui/a11y/lib/view/view_manager.h"
+#include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {
 namespace {
@@ -79,6 +78,7 @@ class MockAnnotationRegistry : public fuchsia::ui::annotation::Registry {
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fuchsia::ui::annotation::Registry::CreateAnnotationViewHolderCallback callback) override {
     create_annotation_view_holder_called_ = true;
+    callback();
   }
 
   fidl::InterfaceRequestHandler<fuchsia::ui::annotation::Registry> GetHandler(
@@ -232,6 +232,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
           break;
       }
     }
+
+    callback(fuchsia::images::PresentationInfo());
   }
 
   void SendGfxEvent(fuchsia::ui::gfx::Event event) {
@@ -335,16 +337,6 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
     mock_session_ = std::make_unique<MockSession>();
     fake_scenic_ = std::make_unique<FakeScenic>(mock_session_.get());
     mock_annotation_registry_ = std::make_unique<MockAnnotationRegistry>();
-    view_manager_ =
-        std::make_unique<ViewManager>(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                                      context_provider_.context()->outgoing()->debug_dir());
-    view_manager_->SetSemanticsEnabled(true);
-    RunLoopUntilIdle();
-
-    mock_semantic_provider_ =
-        std::make_unique<accessibility_test::MockSemanticProvider>(view_manager_.get());
-
-    RunLoopUntilIdle();
 
     context_provider_.service_directory_provider()->AddService(fake_scenic_->GetHandler());
     context_provider_.service_directory_provider()->AddService(
@@ -358,20 +350,6 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
 
     zx::eventpair::create(0u, &view_ref.reference, &eventpair_peer_);
     return view_ref;
-  }
-
-  void CreateTestNode(uint32_t node_id, fuchsia::ui::gfx::BoundingBox bounding_box) {
-    fuchsia::accessibility::semantics::Node node;
-    node.set_node_id(node_id);
-    node.set_location(std::move(bounding_box));
-
-    std::vector<fuchsia::accessibility::semantics::Node> node_updates;
-    node_updates.push_back(std::move(node));
-    mock_semantic_provider_->UpdateSemanticNodes(std::move(node_updates));
-    RunLoopUntilIdle();
-
-    mock_semantic_provider_->CommitUpdates();
-    RunLoopUntilIdle();
   }
 
   void ExpectView(ViewAttributes expected) {
@@ -422,23 +400,20 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
   std::unique_ptr<MockSession> mock_session_;
   std::unique_ptr<FakeScenic> fake_scenic_;
   std::unique_ptr<MockAnnotationRegistry> mock_annotation_registry_;
-  std::unique_ptr<ViewManager> view_manager_;
-  std::unique_ptr<accessibility_test::MockSemanticProvider> mock_semantic_provider_;
   zx::eventpair eventpair_peer_;
 };
 
 TEST_F(AnnotationViewTest, TestInit) {
-  fuchsia::ui::views::ViewRef view_ref;
-  fidl::Clone(mock_semantic_provider_->view_ref(), &view_ref);
-  AnnotationView annotation_view(context_provider_.context(), view_manager_.get(),
-                                 mock_semantic_provider_->koid());
-  annotation_view.InitializeView(std::move(view_ref));
+  fuchsia::ui::views::ViewRef view_ref = CreateOrphanViewRef();
+  fuchsia::ui::views::ViewRef view_ref_copy;
+  fidl::Clone(view_ref, &view_ref_copy);
+  AnnotationView annotation_view(
+      context_provider_.context(), [](zx_koid_t) {}, [](zx_koid_t) {}, [](zx_koid_t) {});
+  annotation_view.InitializeView(std::move(view_ref_copy));
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(mock_annotation_registry_->create_annotation_view_holder_called());
-
-  EXPECT_FALSE(mock_semantic_provider_->IsChannelClosed());
 
   // Verify that annotation view was created.
   ExpectView({AnnotationView::kAnnotationViewId, {}});
@@ -465,20 +440,20 @@ TEST_F(AnnotationViewTest, TestInit) {
                        0, AnnotationView::kHighlightMaterialId});
 }
 
-TEST_F(AnnotationViewTest, TestHighlightNode) {
-  fuchsia::ui::views::ViewRef view_ref;
-  fidl::Clone(mock_semantic_provider_->view_ref(), &view_ref);
-  AnnotationView annotation_view(context_provider_.context(), view_manager_.get(),
-                                 mock_semantic_provider_->koid());
-  annotation_view.InitializeView(std::move(view_ref));
+TEST_F(AnnotationViewTest, TestDrawHighlight) {
+  fuchsia::ui::views::ViewRef view_ref = CreateOrphanViewRef();
+  fuchsia::ui::views::ViewRef view_ref_copy;
+  fidl::Clone(view_ref, &view_ref_copy);
+  AnnotationView annotation_view(
+      context_provider_.context(), [](zx_koid_t) {}, [](zx_koid_t) {}, [](zx_koid_t) {});
+  annotation_view.InitializeView(std::move(view_ref_copy));
 
   RunLoopUntilIdle();
 
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  CreateTestNode(0u, std::move(bounding_box));
 
-  annotation_view.HighlightNode(0u);
+  annotation_view.DrawHighlight(bounding_box);
 
   RunLoopUntilIdle();
 
@@ -518,19 +493,20 @@ TEST_F(AnnotationViewTest, TestHighlightNode) {
 }
 
 TEST_F(AnnotationViewTest, TestDetachViewContents) {
-  fuchsia::ui::views::ViewRef view_ref;
-  fidl::Clone(mock_semantic_provider_->view_ref(), &view_ref);
-  AnnotationView annotation_view(context_provider_.context(), view_manager_.get(),
-                                 mock_semantic_provider_->koid());
-  annotation_view.InitializeView(std::move(view_ref));
+  fuchsia::ui::views::ViewRef view_ref = CreateOrphanViewRef();
+  fuchsia::ui::views::ViewRef view_ref_copy;
+  ;
+  fidl::Clone(view_ref, &view_ref_copy);
+  AnnotationView annotation_view(
+      context_provider_.context(), [](zx_koid_t) {}, [](zx_koid_t) {}, [](zx_koid_t) {});
+  annotation_view.InitializeView(std::move(view_ref_copy));
 
   RunLoopUntilIdle();
 
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  CreateTestNode(0u, std::move(bounding_box));
 
-  annotation_view.HighlightNode(0u);
+  annotation_view.DrawHighlight(bounding_box);
 
   RunLoopUntilIdle();
 
@@ -556,105 +532,72 @@ TEST_F(AnnotationViewTest, TestDetachViewContents) {
 }
 
 TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
-  fuchsia::ui::views::ViewRef view_ref;
-  fidl::Clone(mock_semantic_provider_->view_ref(), &view_ref);
-  AnnotationView annotation_view(context_provider_.context(), view_manager_.get(),
-                                 mock_semantic_provider_->koid());
-  annotation_view.InitializeView(std::move(view_ref));
+  fuchsia::ui::views::ViewRef view_ref = CreateOrphanViewRef();
+  fuchsia::ui::views::ViewRef view_ref_copy;
+  fidl::Clone(view_ref, &view_ref_copy);
+
+  zx_koid_t properties_changed_koid = 0;
+  zx_koid_t attached_koid = 0;
+  zx_koid_t detached_koid = 0;
+
+  AnnotationView annotation_view(
+      context_provider_.context(),
+      [&properties_changed_koid](zx_koid_t koid) { properties_changed_koid = koid; },
+      [&attached_koid](zx_koid_t koid) { attached_koid = koid; },
+      [&detached_koid](zx_koid_t koid) { detached_koid = koid; });
+  annotation_view.InitializeView(std::move(view_ref_copy));
 
   RunLoopUntilIdle();
 
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  CreateTestNode(0u, std::move(bounding_box));
 
-  annotation_view.HighlightNode(0u);
+  annotation_view.DrawHighlight(bounding_box);
 
   RunLoopUntilIdle();
 
   // Update test node bounding box to reflect change in view properties.
   bounding_box = {.min = {.x = 0, .y = 0, .z = 0}, .max = {.x = 2.0, .y = 4.0, .z = 6.0}};
-  CreateTestNode(0u, std::move(bounding_box));
 
   mock_session_->SendViewPropertiesChangedEvent();
   RunLoopUntilIdle();
 
-  ExpectHighlightEdge(
-      12u, AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
-      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.min.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2, bounding_box.max.z);
-
-  ExpectHighlightEdge(
-      13u, AnnotationView::kHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
-      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.max.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2.f, bounding_box.max.z);
-
-  ExpectHighlightEdge(14u, AnnotationView::kHighlightTopEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
-                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
-                      bounding_box.max.z);
-
-  ExpectHighlightEdge(15u, AnnotationView::kHighlightBottomEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
-                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
-                      bounding_box.max.z);
+  EXPECT_EQ(properties_changed_koid, a11y::GetKoid(view_ref));
 }
 
 TEST_F(AnnotationViewTest, TestViewDetachAndReattachEvents) {
-  fuchsia::ui::views::ViewRef view_ref;
-  fidl::Clone(mock_semantic_provider_->view_ref(), &view_ref);
-  AnnotationView annotation_view(context_provider_.context(), view_manager_.get(),
-                                 mock_semantic_provider_->koid());
-  annotation_view.InitializeView(std::move(view_ref));
+  fuchsia::ui::views::ViewRef view_ref = CreateOrphanViewRef();
+  fuchsia::ui::views::ViewRef view_ref_copy;
+  fidl::Clone(view_ref, &view_ref_copy);
+
+  zx_koid_t properties_changed_koid = 0;
+  zx_koid_t attached_koid = 0;
+  zx_koid_t detached_koid = 0;
+
+  AnnotationView annotation_view(
+      context_provider_.context(),
+      [&properties_changed_koid](zx_koid_t koid) { properties_changed_koid = koid; },
+      [&attached_koid](zx_koid_t koid) { attached_koid = koid; },
+      [&detached_koid](zx_koid_t koid) { detached_koid = koid; });
+  annotation_view.InitializeView(std::move(view_ref_copy));
 
   RunLoopUntilIdle();
 
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  CreateTestNode(0u, std::move(bounding_box));
+
+  annotation_view.DrawHighlight(bounding_box);
 
   // ViewAttachedToSceneEvent() should have no effect before any highlights are drawn.
-  mock_session_->SendViewAttachedToSceneEvent();
-  RunLoopUntilIdle();
-
-  // Verify that top-level content node remains detached from view.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       0u,
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
-
-  annotation_view.HighlightNode(0u);
-
-  RunLoopUntilIdle();
-
-  // Update test node bounding box to reflect change in view properties.
-  bounding_box = {.min = {.x = 0, .y = 0, .z = 0}, .max = {.x = 2.0, .y = 4.0, .z = 6.0}};
-  CreateTestNode(0u, std::move(bounding_box));
-
   mock_session_->SendViewDetachedFromSceneEvent();
   RunLoopUntilIdle();
 
-  // Verify that top-level content node (used to attach/detach annotations from view) was detached
-  // from view.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       0u,
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
+  EXPECT_EQ(detached_koid, a11y::GetKoid(view_ref));
 
   mock_session_->SendViewAttachedToSceneEvent();
   RunLoopUntilIdle();
 
-  // Verify that top-level content node (used to attach/detach annotations from view) was
-  // re-attached to view.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       AnnotationView::kAnnotationViewId,
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
+  EXPECT_EQ(attached_koid, a11y::GetKoid(view_ref));
 }
 
 }  // namespace
