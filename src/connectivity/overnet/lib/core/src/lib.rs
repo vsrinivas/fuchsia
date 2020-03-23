@@ -21,6 +21,7 @@ mod ping_tracker;
 mod proxy;
 mod proxy_stream;
 mod proxyable_handle;
+mod quic_link;
 mod route_planner;
 mod router;
 mod routing_label;
@@ -32,8 +33,9 @@ mod stream_framer;
 
 // Export selected types from modules.
 pub use future_help::log_errors;
-pub use labels::{NodeId, NodeLinkId};
+pub use labels::{Endpoint, NodeId, NodeLinkId};
 pub use link::Link;
+pub use quic_link::Link as QuicLink;
 pub use router::{generate_node_id, Router, RouterOptions};
 pub use runtime::{run, spawn, wait_until};
 pub use stream_framer::*;

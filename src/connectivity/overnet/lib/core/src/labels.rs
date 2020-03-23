@@ -5,20 +5,24 @@
 use fidl_fuchsia_overnet_protocol::TRANSFER_KEY_LENGTH;
 use rand::Rng;
 
+/// Labels the endpoint of a client/server connection.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Endpoint {
+    /// Client endpoint.
     Client,
+    /// Server endpoint.
     Server,
 }
 
 impl Endpoint {
-    pub fn quic_id_bit(&self) -> u64 {
+    pub(crate) fn quic_id_bit(&self) -> u64 {
         match self {
             Endpoint::Client => 0,
             Endpoint::Server => 1,
         }
     }
 
+    /// Returns the other end of this endpoint.
     pub fn opposite(&self) -> Endpoint {
         match self {
             Endpoint::Client => Endpoint::Server,

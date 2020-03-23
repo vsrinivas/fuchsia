@@ -35,6 +35,16 @@ fn simple() -> Result<(), Error> {
 }
 
 #[test]
+fn quic() -> Result<(), Error> {
+    crate::run_async_test(async move {
+        let client = Overnet::new()?;
+        let server = Overnet::new()?;
+        crate::connect_with_quic(&client, &server)?;
+        run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
+    })
+}
+
+#[test]
 fn interspersed_log_messages() -> Result<(), Error> {
     crate::run_async_test(async move {
         let client = Overnet::new()?;

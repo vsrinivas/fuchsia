@@ -13,9 +13,10 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
     futures::prelude::*,
-    overnet_core::{log_errors, spawn, NodeId, Router, RouterOptions},
+    overnet_core::{log_errors, spawn, Endpoint, Link, NodeId, QuicLink, Router, RouterOptions},
     parking_lot::Mutex,
     std::collections::VecDeque,
+    std::pin::Pin,
     std::rc::Rc,
     std::sync::Arc,
 };
@@ -33,6 +34,17 @@ enum OvernetCommand {
     RegisterService(String, ClientEnd<ServiceProviderMarker>),
     ConnectToService(NodeId, String, fidl::Channel),
     AttachSocketLink(fidl::Socket, fidl_fuchsia_overnet::SocketLinkOptions),
+    NewLink(NodeId, Box<dyn NewLinkRunner>),
+}
+
+trait NewLinkRunner: Send {
+    fn run(self: Box<Self>, link: Rc<Link>) -> Pin<Box<dyn Future<Output = Result<(), Error>>>>;
+}
+
+impl std::fmt::Debug for dyn NewLinkRunner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        "link_runner".fmt(f)
+    }
 }
 
 /// Overnet implementation for integration tests
@@ -41,18 +53,30 @@ pub struct Overnet {
     node_id: NodeId,
 }
 
+#[cfg(not(target_os = "fuchsia"))]
+mod tls_params {
+    pub use hoist::hard_coded_server_cert as cert;
+    pub use hoist::hard_coded_server_key as key;
+}
+
+#[cfg(target_os = "fuchsia")]
+mod tls_params {
+    use anyhow::Error;
+    pub fn key() -> Result<Box<dyn AsRef<std::path::Path>>, Error> {
+        Ok(Box::new("/pkg/data/cert.key".to_string()))
+    }
+    pub fn cert() -> Result<Box<dyn AsRef<std::path::Path>>, Error> {
+        Ok(Box::new("/pkg/data/cert.crt".to_string()))
+    }
+}
+
 impl Overnet {
     /// Create a new instance
     pub fn new() -> Result<Arc<Overnet>, Error> {
         let options = RouterOptions::new();
-        #[cfg(not(target_os = "fuchsia"))]
         let options = options
-            .set_quic_server_key_file(hoist::hard_coded_server_key()?)
-            .set_quic_server_cert_file(hoist::hard_coded_server_cert()?);
-        #[cfg(target_os = "fuchsia")]
-        let options = options
-            .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()))
-            .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()));
+            .set_quic_server_key_file(tls_params::key()?)
+            .set_quic_server_cert_file(tls_params::cert()?);
 
         let node = Router::new(options)?;
 
@@ -92,6 +116,10 @@ impl Overnet {
     pub fn node_id(&self) -> NodeId {
         self.node_id
     }
+
+    fn new_link(&self, peer_node_id: NodeId, runner: impl 'static + NewLinkRunner) {
+        self.send(OvernetCommand::NewLink(peer_node_id, Box::new(runner)))
+    }
 }
 
 async fn run_overnet(
@@ -118,6 +146,13 @@ async fn run_overnet(
             }
             Some(OvernetCommand::AttachSocketLink(socket, options)) => {
                 node.attach_socket_link(socket, options)
+            }
+            Some(OvernetCommand::NewLink(peer_node_id, runner)) => {
+                spawn(log_errors(
+                    runner.run(node.new_link(peer_node_id).await?),
+                    "link runner failed",
+                ));
+                Ok(())
             }
         };
         if let Err(e) = r {
@@ -239,6 +274,53 @@ pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
     let (sa, sb) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     a.attach_socket_link(sa, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
     b.attach_socket_link(sb, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
+    Ok(())
+}
+
+struct QuicLinkRunner {
+    tx: futures::channel::mpsc::Sender<Vec<u8>>,
+    rx: futures::channel::mpsc::Receiver<Vec<u8>>,
+    endpoint: Endpoint,
+}
+
+impl NewLinkRunner for QuicLinkRunner {
+    fn run(self: Box<Self>, link: Rc<Link>) -> Pin<Box<dyn Future<Output = Result<(), Error>>>> {
+        async move {
+            let q = QuicLink::new(link, self.endpoint, tls_params::cert()?, tls_params::key()?)?;
+            futures::future::try_join(quic_in(self.rx, q.clone()), quic_out(q, self.tx)).await?;
+            Ok(())
+        }
+        .boxed_local()
+    }
+}
+
+// Connect two test overnet instances with a QUIC based link
+pub fn connect_with_quic(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
+    let (atx, brx) = futures::channel::mpsc::channel(0);
+    let (btx, arx) = futures::channel::mpsc::channel(0);
+    a.new_link(b.node_id(), QuicLinkRunner { tx: atx, rx: arx, endpoint: Endpoint::Client });
+    b.new_link(a.node_id(), QuicLinkRunner { tx: btx, rx: brx, endpoint: Endpoint::Server });
+    Ok(())
+}
+
+async fn quic_in(
+    mut ch: futures::channel::mpsc::Receiver<Vec<u8>>,
+    q: Rc<QuicLink>,
+) -> Result<(), Error> {
+    while let Some(mut frame) = ch.next().await {
+        q.received_packet(&mut frame)?;
+    }
+    Ok(())
+}
+
+async fn quic_out(
+    q: Rc<QuicLink>,
+    mut ch: futures::channel::mpsc::Sender<Vec<u8>>,
+) -> Result<(), Error> {
+    let mut frame = [0u8; 1400];
+    while let Some(n) = q.next_send(&mut frame).await? {
+        ch.send((&frame[..n]).to_vec()).await?;
+    }
     Ok(())
 }
 
