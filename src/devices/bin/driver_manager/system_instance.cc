@@ -512,6 +512,15 @@ void SystemInstance::start_console_shell(llcpp::fuchsia::boot::Arguments::SyncCl
   if (resp.ok() && resp->value) {
     return;
   }
+  // Disable the console shell if explicitly told to.
+  auto console_resp = boot_args.GetBool(fidl::StringView{"console.shell"}, false);
+  if (!console_resp.ok() || !console_resp->value) {
+    printf("console.shell: disabled\n");
+    return;
+  } else {
+    printf("console.shell: enabled\n");
+  }
+
   auto args = std::make_unique<ConsoleStarterArgs>();
   args->instance = this;
   args->boot_args = &boot_args;
