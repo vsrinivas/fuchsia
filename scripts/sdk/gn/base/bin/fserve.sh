@@ -189,9 +189,9 @@ echo "** Starting package server in the background**"
 
 SSH_ARGS=()
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
-  SSH_ARGS+=( "-i" "${PRIVATE_KEY_FILE}" )
+  SSH_ARGS+=( "-i" "${PRIVATE_KEY_FILE}")
 fi
-SSH_ARGS+=( "${DEVICE_IP}" amber_ctl add_src -f "http://[${HOST_IP}]:$FUCHSIA_SERVER_PORT/config.json" )
+SSH_ARGS+=( "${DEVICE_IP}" amber_ctl add_src -f "http://[${HOST_IP}]:${FUCHSIA_SERVER_PORT}/config.json" )
 
 # Update the device to point to the server.
 # Because the URL to config.json contains an IPv6 address, the address needs

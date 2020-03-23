@@ -85,8 +85,9 @@ else
 fi
 
 ssh_args=()
+# Build the command line
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
-  ssh_args+=( "-i" "${PRIVATE_KEY_FILE}" )
+  ssh_args+=( "-i" "${PRIVATE_KEY_FILE}")
 fi
 
 ssh_args+=( "${target_device_ip}" )

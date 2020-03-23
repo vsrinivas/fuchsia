@@ -37,7 +37,7 @@ function get-fuchsia-sdk-data-dir {
   if [[ -d "${data_dir}" ]]; then
     mkdir -p "${data_dir}"
   fi
-  echo "${data_dir}" 
+  echo "${data_dir}"
 }
 
 # fx-warn prints a line to stderr with a yellow WARNING: prefix.
@@ -59,7 +59,8 @@ function fx-error {
 }
 
 function ssh-cmd {
-  "${SSH_BIN}" -F "${SCRIPT_SRC_DIR}/sshconfig" "$@"
+  check-ssh-config
+  "${SSH_BIN}" -F "$(get-fuchsia-sshconfig-file)" "$@"
 }
 
 function get-device-ip {
@@ -83,13 +84,13 @@ function get-device-ip-by-name {
   # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
 
-  if [[ -n "$2" ]]; then
+  if [[ "${#}" -ge 2 &&  -n "$2" ]]; then
     # There should typically only be one device that matches the nodename
     # but we add a device-limit to speed up resolution by exiting when the first
     # candidate is found.
     "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${2}"
   else
-    if [[ -n "$1" ]]; then
+    if [[ "${#}" -ge 1 && -n "$1" ]]; then
       get-device-ip "$1"
     else
       get-device-ip
@@ -102,7 +103,7 @@ function get-host-ip {
   # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
   local DEVICE_NAME
-  if [[ "${2}" != "" ]]; then
+  if [[ "${#}" -ge 2 &&  "${2}" != "" ]]; then
     DEVICE_NAME="${2}"
   else
     DEVICE_NAME="$(get-device-name "${1-$(get-fuchsia-sdk-dir)}")"
@@ -224,4 +225,94 @@ function kill-running-pm {
     fx-warn "existing pm process not found"
   fi
   return 0
+}
+
+function check-ssh-config {
+  # This function creates the ssh keys needed to
+  # work with devices running Fuchsia. There are two parts, the keys and the config.
+  #
+  # The keys are stored in the Fuchsia SDK data directory in a directory named .ssh.
+  # This is the same structure as used "in-tree" for Fuchsia development. You can copy the
+  # keys from the other directory to make the keys identical, allowing SSH access using both
+  # SDK commands and in-tree "fx" commands.
+  #
+  # The authorized key file used for paving is in .ssh/authorized_keys.
+  # The private key used when ssh'ing to the device is in .ssh/pkey.
+  #
+  #
+  # The second part of is the sshconfig file used by the SDK when using SSH.
+  # This is stored in the Fuchsia SDK data directory named sshconfig.
+  # This script checks for the private key file being referenced in the sshconfig, if it
+  # is not present, the sshconfig file is regenerated.
+  # You can customize the sshconfig and it will not be overwritten unless the full path to the
+  # private key is not present. If you want to remove it as part of customization, you can comment out
+  # the IdentityFile line with the `#` character.
+
+  local ssh_dir
+  ssh_dir="$(get-fuchsia-sdk-data-dir)/.ssh"
+  local authfile="${ssh_dir}/authorized_keys"
+  local keyfile="${ssh_dir}/pkey"
+  local sshconfig_file
+  sshconfig_file="$(get-fuchsia-sshconfig-file)"
+
+  if [[ -e "${authfile}" && -e "${keyfile}" ]]; then
+   if grep "${keyfile}" "${sshconfig_file}" > /dev/null 2>&1; then
+    return 0
+   fi
+  fi
+
+  mkdir -p "${ssh_dir}"
+  if [[ ! -f "${authfile}" ]]; then
+    if [[ ! -f "${keyfile}" ]]; then
+      if ! result="$(ssh-keygen -P "" -t ed25519 -f "${keyfile}" -C "${USER}@$(hostname -f)" 2>&1)"; then
+        fx-error "${result}"
+        return 1
+      fi
+    fi
+    if ! result="$(ssh-keygen -y -f "${keyfile}" > "${authfile}" 2>&1)"; then
+      fx-error "${result}"
+      return 1
+    fi
+  fi
+
+  cat >"${sshconfig_file}" <<EOF
+Host *
+
+# Turn off refusing to connect to hosts whose key has changed
+StrictHostKeyChecking no
+CheckHostIP no
+
+# Disable recording the known hosts
+UserKnownHostsFile=/dev/null
+
+# Do not forward auth agent connection to remote, no X11
+ForwardAgent no
+ForwardX11 no
+
+# Connection timeout in seconds
+ConnectTimeout=10
+
+# Check for server alive in seconds, max count before disconnecting
+ServerAliveInterval 1
+ServerAliveCountMax 10
+
+# Try to keep the master connection open to speed reconnecting.
+ControlMaster auto
+ControlPersist yes
+ControlPath=/tmp/fuchsia--%r@%h:%p
+
+# Connect with user, use the identity specified.
+User fuchsia
+IdentityFile "${keyfile}"
+EOF
+
+  return 0
+}
+
+function get-fuchsia-auth-keys-file {
+  echo "$(get-fuchsia-sdk-data-dir)/.ssh/authorized_keys"
+}
+
+function get-fuchsia-sshconfig-file {
+  echo "$(get-fuchsia-sdk-data-dir)/sshconfig"
 }

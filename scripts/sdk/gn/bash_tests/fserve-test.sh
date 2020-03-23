@@ -211,7 +211,7 @@ TEST_fserve_registers_package_server() {
   source "${PATH_DIR_FOR_TEST}/ssh.mock_state"
 
   BT_EXPECT_EQ 8 "${#BT_MOCK_ARGS[@]}"
-  check_mock_has_args -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig"
+  check_mock_has_args -F "${FUCHSIA_WORK_DIR}/sshconfig"
   check_mock_has_args fe80::c0ff:eec0:ffee%coffee
   check_mock_has_args amber_ctl add_src -f "http://[fe80::c0ff:eec0:ffee]:8083/config.json"
 

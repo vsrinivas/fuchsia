@@ -1,8 +1,7 @@
 {
     "files": [
         "bin/fssh.sh",
-        "bin/fuchsia-common.sh",
-        "bin/sshconfig"
+        "bin/fuchsia-common.sh"
     ],
     "name": "fssh",
     "root": "bin",

@@ -39,7 +39,7 @@ usage () {
   echo "    Defaults to ${IMAGE_NAME}"
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
-  echo "    the output of 'ssh-add -L'"
+  echo "    ${FUCHSIA_IMAGE_WORK_DIR}/.ssh/authorized_keys, which is generated if needed."
   echo "  [--version <version>"
   echo "    Specify the CIPD version of AEMU to download."
   echo "    Defaults to aemu.version file with ${VER_AEMU}"
@@ -89,24 +89,10 @@ esac
 shift
 done
 
-
-if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
-  AUTH_KEYS_FILE="$(get-fuchsia-sdk-dir)/authkeys.txt"
-  if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-    # Store the SSL auth keys to a file for sending to the device.
-    if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
-      fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
-      exit 1
-    fi
-  fi
-elif [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-    fx-error "Argument --authorized-keys was specified as ${AUTH_KEYS_FILE} but it does not exist"
-    exit 1
-fi
-
-if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then
-  fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
-  exit 2
+if [[ "${AUTH_KEYS_FILE}" != "" ]]; then
+  auth_keys_file="${AUTH_KEYS_FILE}"
+else
+  auth_keys_file="$(get-fuchsia-auth-keys-file)"
 fi
 
 # Download the system images and packages
@@ -161,5 +147,4 @@ source "${SCRIPT_SRC_DIR}/fx-image-common.sh"
 echo "Setting writable permissions on $FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 chmod u+w "$FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 
-
-"${SCRIPT_SRC_DIR}/devshell/emu" -k "${AUTH_KEYS_FILE}" "${EMU_ARGS[@]}"
+"${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}" "${EMU_ARGS[@]}"

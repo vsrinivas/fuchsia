@@ -27,7 +27,7 @@ usage () {
   echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}"
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
-  echo "    the output of 'ssh-add -L'"
+  echo "    ${FUCHSIA_IMAGE_WORK_DIR}/.ssh/authorized_keys, which is generated if needed."
   echo "  [--version <version>"
   echo "    Specify the CIPD version of DevTools to download."
   echo "    Defaults to devtools.version file with ${VER_DEVTOOLS}"
@@ -64,23 +64,10 @@ esac
 shift
 done
 
-if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
-  AUTH_KEYS_FILE="$(get-fuchsia-sdk-dir)/authkeys.txt"
-  if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-    # Store the SSL auth keys to a file for sending to the device.
-    if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
-      fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
-      exit 1
-    fi
-  fi
-elif [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-    fx-error "Argument --authorized-keys was specified as ${AUTH_KEYS_FILE} but it does not exist"
-    exit 1
-fi
-
-if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then
-  fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
-  exit 2
+if [[ "${AUTH_KEYS_FILE}" != "" ]]; then
+  auth_keys_file="${AUTH_KEYS_FILE}"
+else
+  auth_keys_file="$(get-fuchsia-auth-keys-file)"
 fi
 
 # Do not create directory names with : otherwise LD_PRELOAD or PATH usage will fail.
@@ -106,8 +93,9 @@ rm "${TEMP_ENSURE}"
 export FDT_TOOLCHAIN="GN"
 FDT_GN_SSH="$(command -v ssh)"
 export FDT_GN_SSH
-export FDT_SSH_CONFIG="${SCRIPT_SRC_DIR}/sshconfig"
-export FDT_SSH_KEY="${AUTH_KEYS_FILE}"
+FDT_SSH_CONFIG="$(get-fuchsia-sshconfig-file)"
+export FDT_SSH_CONFIG
+export FDT_SSH_KEY="${auth_keys_file}"
 FDT_GN_DEVFIND="$(get-fuchsia-sdk-dir)/tools/device-finder"
 export FDT_GN_DEVFIND
 export FDT_DEBUG="true"

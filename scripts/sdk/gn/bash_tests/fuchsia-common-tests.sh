@@ -12,7 +12,6 @@ source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   "scripts/sdk/gn/base/bin/fuchsia-common.sh"
-  "scripts/sdk/gn/base/bin/sshconfig"
   "scripts/sdk/gn/testdata/meta/manifest.json"
   "scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 )
@@ -39,23 +38,23 @@ BT_SET_UP() {
       echo "$@"
 EOF
 
-# Add mocked system tools to the path.
-export PATH="${BT_TEMP_DIR}/mocked:${PATH}"
+  # Add mocked system tools to the path.
+  export PATH="${BT_TEMP_DIR}/mocked:${PATH}"
 
-if [ "$(type -t kill)" = "builtin" ]; then
+  if [ "$(type -t kill)" = "builtin" ]; then
     kill() {
       "${BT_TEMP_DIR}/${MOCKED_KILL}" "$@"
     }
-fi
+  fi
 
-# Copy the SDK manifest to the expected location
-mkdir -p  "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta"
-cp "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/meta/manifest.json" "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta/manifest.json"
+  # Copy the SDK manifest to the expected location
+  mkdir -p  "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta"
+  cp "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/meta/manifest.json" "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta/manifest.json"
 
-# Source the library file.
-# shellcheck disable=SC1090
-source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fuchsia-common.sh"
-
+  # Source the library file.
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fuchsia-common.sh"
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
 }
 
 TEST_fx-warn() {
@@ -82,7 +81,7 @@ EOF
     ssh-cmd remote-host ls -l > /dev/null
     # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_state"
-    EXPECTED_SSH_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_SSH_BIN}" "-F" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" "remote-host" "ls" "-l")
+    EXPECTED_SSH_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_SSH_BIN}" "-F" "${FUCHSIA_WORK_DIR}/sshconfig" "remote-host" "ls" "-l")
     BT_EXPECT_EQ "${EXPECTED_SSH_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 

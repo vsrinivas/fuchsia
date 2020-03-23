@@ -1,8 +1,7 @@
 {
     "files": [
         "bin/fcp.sh",
-        "bin/fuchsia-common.sh",
-        "bin/sshconfig"
+        "bin/fuchsia-common.sh"
     ],
     "name": "fcp",
     "root": "bin",

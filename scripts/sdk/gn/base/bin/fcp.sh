@@ -108,10 +108,12 @@ else
 fi
 
 # Build the command line
-sftp_cmd=( "sftp" "-F" "${SCRIPT_SRC_DIR}/sshconfig" )
+check-ssh-config
+sftp_cmd=( "sftp" "-F" "$(get-fuchsia-sshconfig-file)")
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
-  sftp_cmd+=( "-i" "${PRIVATE_KEY_FILE}" )
+  sftp_cmd+=( "-i" "${PRIVATE_KEY_FILE}")
 fi
+
 # Pass in commands in batch mode from stdin
 sftp_cmd+=( "-b" "-" )
 # sftp needs the [] around the ip address, which is different than ssh.

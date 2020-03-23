@@ -39,12 +39,11 @@ TEST_fdevtools_noargs() {
   # Set the version file to match the mock
    echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
 
-  # Mock authkeys
-  echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
-    >"${BT_TEMP_DIR}/scripts/sdk/gn/base/authkeys.txt"
-
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh"
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" > "${BT_TEMP_DIR}/launch_devtools.txt"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/.ssh/authorized_keys"
+
 
   # Verify that cipd was called to download the correct path
   # shellcheck disable=SC1090

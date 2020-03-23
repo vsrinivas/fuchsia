@@ -118,7 +118,7 @@ TEST_fpave_restarts_device() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
 
-  local expected_args=( _ANY_ "-F" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig"
+  local expected_args=( _ANY_ "-F" "${FUCHSIA_WORK_DIR}/sshconfig"
                        "fe80::c0ff:eec0:ffee%coffee" "dm" "reboot-recovery" )
   gn-test-check-mock-args "${expected_args[@]}"
 
@@ -185,6 +185,29 @@ TEST_fpave_switch_types() {
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image2 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image2.txt 2>&1
  BT_EXPECT_FILE_CONTAINS  "pave_image2.txt" "WARNING: Removing old image files."
  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image2.tgz"
+}
+TEST_fpave_default_keys() {
+  set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+  set_up_sdk_stubs
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${FPAVE_CMD}" "--image" "image1"
+
+  # Verify that the pave.sh script from the Fuchsia SDK was started correctly.
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/image/pave.sh.mock_state"
+
+  local expected_args=( _ANY_ --authorized-keys "${FUCHSIA_WORK_DIR}/.ssh/authorized_keys" -1 )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
+
+  local expected_args=( _ANY_ "-F" "${FUCHSIA_WORK_DIR}/sshconfig"
+                       "fe80::c0ff:eec0:ffee%coffee" "dm" "reboot-recovery" )
+  gn-test-check-mock-args "${expected_args[@]}"
 }
 
 # shellcheck disable=SC2034

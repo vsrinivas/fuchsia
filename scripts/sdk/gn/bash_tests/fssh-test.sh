@@ -18,6 +18,10 @@ BT_INIT_TEMP_DIR() {
     >"${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 }
 
+BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+}
+
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
 set_up_device_finder() {
@@ -70,7 +74,7 @@ TEST_fssh() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
 
-  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" fe80::c0ff:eec0:ffee%coffee
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" fe80::c0ff:eec0:ffee%coffee
 
   BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/ssh.mock_state"
 }
@@ -88,7 +92,7 @@ TEST_fssh_by_ip() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
 
-  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" fe80::d098:513f:9cfb:eb53%hardcoded
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" fe80::d098:513f:9cfb:eb53%hardcoded
 }
 
 TEST_fssh_by_name() {
@@ -104,7 +108,7 @@ TEST_fssh_by_name() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
 
-  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" fe80::c0ff:eec0:ffee%coffee
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" fe80::c0ff:eec0:ffee%coffee
 }
 
 TEST_fssh_name_not_found() {
@@ -118,14 +122,11 @@ TEST_fssh_name_not_found() {
   BT_EXPECT_FAIL  "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name name-not-found
 }
 
-
-
 # Test initialization.
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fssh.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
-  scripts/sdk/gn/base/bin/sshconfig
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
 # shellcheck disable=SC2034

@@ -54,28 +54,34 @@ TEST_fcp() {
   setup_device_finder
 
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  version.txt /tmp/version.txt
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  version.txt /tmp/version.txt
 
   # Verify that sftp was run correctly.
   # shellcheck disable=SC1090
   source "${PATH_DIR_FOR_TEST}/sftp.mock_state"
 
-  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" _ANY_ _ANY_ \[fe80::c0ff:eec0:ffee%coffee\]
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig"  _ANY_ _ANY_ \[fe80::c0ff:eec0:ffee%coffee\]
 
   # copy to host
     # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  --to-host /config/build-info/version version.txt
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  --to-host /config/build-info/version version.txt
 
   # Verify that sftp was run correctly.
   # shellcheck disable=SC1090
-  source "${PATH_DIR_FOR_TEST}/sftp.mock_state.1"
+  source "${PATH_DIR_FOR_TEST}/sftp.mock_state.2"
 
-  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" _ANY_ _ANY_ \[fe80::c0ff:eec0:ffee%coffee\]
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig"  _ANY_ _ANY_ \[fe80::c0ff:eec0:ffee%coffee\]
 
   expected_cmds="put \"version.txt\" \"/tmp/version.txt\"
 get \"/config/build-info/version\" \"version.txt\""
 
   BT_EXPECT_FILE_CONTAINS "${PATH_DIR_FOR_TEST}/sftp.captured_stdin" "${expected_cmds}"
+
+  # Check using explicit key
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh" --private-key other_key_file.txt  --to-host /config/build-info/version version.txt
+  # shellcheck disable=SC1090
+  source "${PATH_DIR_FOR_TEST}/sftp.mock_state.3"
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" -i "other_key_file.txt"  _ANY_ _ANY_ \[fe80::c0ff:eec0:ffee%coffee\]
 }
 
 # Test initialization.
@@ -90,5 +96,9 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/device-finder
   _isolated_path_for/sftp
 )
+
+BT_SET_UP() {
+  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+}
 
 BT_RUN_TESTS "$@"
