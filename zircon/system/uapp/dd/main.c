@@ -208,6 +208,8 @@ int main(int argc, const char** argv) {
   // Size of remaining "partial" transfer from input / to output.
   size_t record_in_partial = 0;
   size_t record_out_partial = 0;
+
+  uint64_t sum_bytes_out = 0;
   // Logic for skip-block devices.
   fuchsia_hardware_skipblock_PartitionInfo partition_info = {};
   bool in_is_skip_block = false;
@@ -215,6 +217,7 @@ int main(int argc, const char** argv) {
   zx_handle_t vmo = ZX_HANDLE_INVALID;
   zx_handle_t channel_in = ZX_HANDLE_INVALID;
   zx_handle_t channel_out = ZX_HANDLE_INVALID;
+  zx_time_t start = 0, stop = 0;
 
   if (*options.input == '\0') {
     in = STDIN_FILENO;
@@ -302,6 +305,7 @@ int main(int argc, const char** argv) {
 
   bool terminating = false;
   size_t rlen = 0;
+  start = zx_clock_get_monotonic();
   while (true) {
     if (options.use_count && !options.count) {
       r = 0;
@@ -416,9 +420,16 @@ int main(int argc, const char** argv) {
   }
 
 done:
+  stop = zx_clock_get_monotonic();
   printf("%zu+%u records in\n", records_in, record_in_partial ? 1 : 0);
   printf("%zu+%u records out\n", records_out, record_out_partial ? 1 : 0);
-  printf("%zu bytes copied\n", records_out * options.output_bs + record_out_partial);
+  sum_bytes_out = records_out * options.output_bs + record_out_partial;
+  if ((start != 0) && (stop > start)) {
+    fprintf(stderr, "%zu bytes copied, %zu bytes/s\n", sum_bytes_out,
+            sum_bytes_out * ZX_SEC(1) / (stop - start));
+  } else {
+    printf("%zu bytes copied\n", sum_bytes_out);
+  }
 
   if (buf) {
     if (in_is_skip_block || out_is_skip_block) {
