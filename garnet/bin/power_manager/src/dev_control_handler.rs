@@ -13,6 +13,9 @@ use fidl_fuchsia_device as fdev;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
+use serde_derive::Deserialize;
+use serde_json as json;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: DeviceControlHandler
@@ -47,6 +50,21 @@ impl<'a> DeviceControlHandlerBuilder<'a> {
     #[cfg(test)]
     pub fn new_with_proxy(driver_path: String, proxy: fdev::ControllerProxy) -> Self {
         Self { driver_path, driver_proxy: Some(proxy), inspect_root: None }
+    }
+
+    pub fn new_from_json(json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+        #[derive(Deserialize)]
+        struct Config {
+            driver_path: String,
+        };
+
+        #[derive(Deserialize)]
+        struct JsonData {
+            config: Config,
+        };
+
+        let data: JsonData = json::from_value(json_data).unwrap();
+        Self::new_with_driver_path(data.config.driver_path)
     }
 
     #[cfg(test)]
@@ -360,5 +378,18 @@ pub mod tests {
                 "DeviceControlHandler (Fake)": contains {}
             }
         );
+    }
+
+    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json() {
+        let json_data = json::json!({
+            "type": "DeviceControlHandler",
+            "name": "dev_control",
+            "config": {
+                "driver_path": "/dev/class/cpu-ctrl/000"
+            }
+        });
+        let _ = DeviceControlHandlerBuilder::new_from_json(json_data, &HashMap::new());
     }
 }

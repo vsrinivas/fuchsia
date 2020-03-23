@@ -15,7 +15,9 @@ use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_syslog::fx_log_err;
+use serde_json as json;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: CpuStatsHandler
@@ -44,6 +46,10 @@ pub struct CpuStatsHandlerBuilder<'a> {
 impl<'a> CpuStatsHandlerBuilder<'a> {
     pub fn new() -> Self {
         Self { stats_svc_proxy: None, inspect_root: None }
+    }
+
+    pub fn new_from_json(_json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+        Self::new()
     }
 
     #[cfg(test)]
@@ -440,5 +446,15 @@ pub mod tests {
                 }
             }
         );
+    }
+
+    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json() {
+        let json_data = json::json!({
+            "type": "CpuStatsHandler",
+            "name": "cpu_stats"
+        });
+        let _ = CpuStatsHandlerBuilder::new_from_json(json_data, &HashMap::new());
     }
 }

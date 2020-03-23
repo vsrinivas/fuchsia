@@ -1,0 +1,290 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Power Manager Node Config Schema",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "properties": {
+          "type": {
+            "pattern": "CpuControlHandler"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "driver_path": {
+                "type": "string"
+              },
+              "capacitance": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "min_cpu_clock_speed": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "driver_path",
+              "capacitance"
+            ]
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "cpu_stats_handler_node": {
+                "type": "string"
+              },
+              "cpu_dev_handler_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cpu_stats_handler_node",
+              "cpu_dev_handler_node"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "CpuStatsHandler"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "DeviceControlHandler"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "driver_path": {
+                "type": "string"
+              }
+            }
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "SystemPowerHandler"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "TemperatureHandler"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "driver_path": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "driver_path"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "ThermalLimiter"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "ThermalPolicy"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "cpu_control_nodes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "system_power_handler_node": {
+                "type": "string"
+              },
+              "temperature_handler_node": {
+                "type": "string"
+              },
+              "thermal_limiter_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cpu_control_nodes",
+              "system_power_handler_node",
+              "temperature_handler_node",
+              "thermal_limiter_node"
+            ]
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "thermal_limiting_range": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": [
+                  {
+                    "type": "number",
+                    "minimum": 30.0,
+                    "maximum": 110.0
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 30.0,
+                    "maximum": 110.0
+                  }
+                ],
+                "additionalItems": false
+              },
+              "thermal_shutdown_temperature": {
+                "type": "number"
+              },
+              "controller_params": {
+                "type": "object",
+                "properties": {
+                  "sample_interval": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "filter_time_constant": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "target_temperature": {
+                    "type": "number",
+                    "minimum": 30.0,
+                    "maximum": 110.0
+                  },
+                  "e_integral_min": {
+                    "type": "number",
+                    "maximum": 0
+                  },
+                  "e_integral_max": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "sustainable_power": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "proportional_gain": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "integral_gain": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sample_interval",
+                  "filter_time_constant",
+                  "target_temperature",
+                  "e_integral_min",
+                  "e_integral_max",
+                  "sustainable_power",
+                  "proportional_gain",
+                  "integral_gain"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "thermal_limiting_range",
+              "thermal_shutdown_temperature",
+              "controller_params"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
+      }
+    ]
+  }
+}

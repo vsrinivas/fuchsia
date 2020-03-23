@@ -12,7 +12,10 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpuctrl;
 use fuchsia_inspect::{self as inspect, Property};
+use serde_derive::Deserialize;
+use serde_json as json;
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: CpuControlHandler
@@ -141,6 +144,36 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             cpu_dev_handler_node,
             inspect_root: None,
         }
+    }
+
+    pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+        #[derive(Deserialize)]
+        struct Config {
+            driver_path: String,
+            capacitance: f64,
+            min_cpu_clock_speed: f64,
+        };
+
+        #[derive(Deserialize)]
+        struct Dependencies {
+            cpu_stats_handler_node: String,
+            cpu_dev_handler_node: String,
+        };
+
+        #[derive(Deserialize)]
+        struct JsonData {
+            config: Config,
+            dependencies: Dependencies,
+        };
+
+        let data: JsonData = json::from_value(json_data).unwrap();
+        Self::new_with_driver_path(
+            data.config.driver_path,
+            Farads(data.config.capacitance),
+            nodes[&data.dependencies.cpu_stats_handler_node].clone(),
+            nodes[&data.dependencies.cpu_dev_handler_node].clone(),
+        )
+        .with_min_cpu_clock_speed(Hertz(data.config.min_cpu_clock_speed))
     }
 
     #[cfg(test)]
@@ -835,5 +868,28 @@ pub mod tests {
                 }
             }
         );
+    }
+
+    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json() {
+        let json_data = json::json!({
+            "type": "CpuControlHandler",
+            "name": "cpu_control",
+            "config": {
+                "driver_path": "/dev/class/cpu-ctrl/000",
+                "capacitance": 1.2E-10,
+                "min_cpu_clock_speed": 1.0e9
+            },
+            "dependencies": {
+                "cpu_stats_handler_node": "cpu_stats",
+                "cpu_dev_handler_node": "cpu_dev"
+            }
+        });
+
+        let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
+        nodes.insert("cpu_stats".to_string(), create_mock_node("MockNode", vec![]));
+        nodes.insert("cpu_dev".to_string(), create_mock_node("MockNode", vec![]));
+        let _ = CpuControlHandlerBuilder::new_from_json(json_data, &nodes);
     }
 }

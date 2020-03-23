@@ -15,7 +15,10 @@ use fuchsia_inspect::{self as inspect, ArrayProperty, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use serde_derive::Deserialize;
+use serde_json as json;
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: ThermalPolicy
@@ -39,6 +42,74 @@ pub struct ThermalPolicyBuilder<'a> {
 impl<'a> ThermalPolicyBuilder<'a> {
     pub fn new(config: ThermalConfig) -> Self {
         Self { config, inspect_root: None }
+    }
+
+    pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+        #[derive(Deserialize)]
+        struct ControllerConfig {
+            sample_interval: f64,
+            filter_time_constant: f64,
+            target_temperature: f64,
+            e_integral_min: f64,
+            e_integral_max: f64,
+            sustainable_power: f64,
+            proportional_gain: f64,
+            integral_gain: f64,
+        };
+
+        #[derive(Deserialize)]
+        struct NodeConfig {
+            thermal_limiting_range: Vec<f64>,
+            thermal_shutdown_temperature: f64,
+            controller_params: ControllerConfig,
+        };
+
+        #[derive(Deserialize)]
+        struct Dependencies {
+            cpu_control_nodes: Vec<String>,
+            system_power_handler_node: String,
+            temperature_handler_node: String,
+            thermal_limiter_node: String,
+        }
+
+        #[derive(Deserialize)]
+        struct JsonData {
+            config: NodeConfig,
+            dependencies: Dependencies,
+        };
+
+        let data: JsonData = json::from_value(json_data).unwrap();
+        let thermal_config = ThermalConfig {
+            temperature_node: nodes[&data.dependencies.temperature_handler_node].clone(),
+            cpu_control_nodes: data
+                .dependencies
+                .cpu_control_nodes
+                .iter()
+                .map(|node| nodes[node].clone())
+                .collect(),
+            sys_pwr_handler: nodes[&data.dependencies.system_power_handler_node].clone(),
+            thermal_limiter_node: nodes[&data.dependencies.thermal_limiter_node].clone(),
+            policy_params: ThermalPolicyParams {
+                controller_params: ThermalControllerParams {
+                    sample_interval: Seconds(data.config.controller_params.sample_interval),
+                    filter_time_constant: Seconds(
+                        data.config.controller_params.filter_time_constant,
+                    ),
+                    target_temperature: Celsius(data.config.controller_params.target_temperature),
+                    e_integral_min: data.config.controller_params.e_integral_min,
+                    e_integral_max: data.config.controller_params.e_integral_max,
+                    sustainable_power: Watts(data.config.controller_params.sustainable_power),
+                    proportional_gain: data.config.controller_params.proportional_gain,
+                    integral_gain: data.config.controller_params.integral_gain,
+                },
+                thermal_limiting_range: [
+                    Celsius(data.config.thermal_limiting_range[0]),
+                    Celsius(data.config.thermal_limiting_range[1]),
+                ],
+                thermal_shutdown_temperature: Celsius(data.config.thermal_shutdown_temperature),
+            },
+        };
+        Self::new(thermal_config)
     }
 
     #[cfg(test)]
@@ -786,5 +857,43 @@ pub mod tests {
                 }
             }
         );
+    }
+
+    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json() {
+        let json_data = json::json!({
+            "type": "ThermalPolicy",
+            "name": "thermal_policy",
+            "config": {
+                "thermal_limiting_range": [77.0, 84.0],
+                "thermal_shutdown_temperature": 95.0,
+                "controller_params": {
+                    "sample_interval": 1.0,
+                    "filter_time_constant": 5.0,
+                    "target_temperature": 80.0,
+                    "e_integral_min": -20.0,
+                    "e_integral_max": 0.0,
+                    "sustainable_power": 0.876,
+                    "proportional_gain": 0.0,
+                    "integral_gain": 0.08
+                }
+            },
+            "dependencies": {
+                "cpu_control_nodes": [
+                    "cpu_control"
+                ],
+                "system_power_handler_node": "sys_power",
+                "temperature_handler_node": "temperature",
+                "thermal_limiter_node": "limiter"
+              },
+        });
+
+        let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
+        nodes.insert("temperature".to_string(), create_mock_node("MockNode", vec![]));
+        nodes.insert("cpu_control".to_string(), create_mock_node("MockNode", vec![]));
+        nodes.insert("sys_power".to_string(), create_mock_node("MockNode", vec![]));
+        nodes.insert("limiter".to_string(), create_mock_node("MockNode", vec![]));
+        let _ = ThermalPolicyBuilder::new_from_json(json_data, &nodes);
     }
 }

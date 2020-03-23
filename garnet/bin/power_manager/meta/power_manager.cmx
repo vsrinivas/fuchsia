@@ -7,6 +7,9 @@
             "class/thermal",
             "class/cpu-ctrl"
         ],
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.ui.activity.Provider",
             "fuchsia.logger.LogSink",

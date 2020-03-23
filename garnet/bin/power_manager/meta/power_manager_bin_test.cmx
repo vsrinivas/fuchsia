@@ -1,17 +1,5 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.sysinfo.SysInfo"
-            ]
-        }
-    },
     "program": {
         "binary": "test/power_manager_bin_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.sysinfo.SysInfo"
-        ]
     }
 }

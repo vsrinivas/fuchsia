@@ -13,6 +13,8 @@ use fidl_fuchsia_device_manager as fdevmgr;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
+use serde_json as json;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: SystemPowerStateHandler
@@ -41,6 +43,10 @@ pub struct SystemPowerStateHandlerBuilder<'a> {
 impl<'a> SystemPowerStateHandlerBuilder<'a> {
     pub fn new() -> Self {
         Self { svc_proxy: None, inspect_root: None }
+    }
+
+    pub fn new_from_json(_json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+        Self::new()
     }
 
     #[cfg(test)]
@@ -262,5 +268,15 @@ pub mod tests {
                 "SystemPowerStateHandler": contains {}
             }
         );
+    }
+
+    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json() {
+        let json_data = json::json!({
+            "type": "SystemPowerHandler",
+            "name": "sys_power"
+        });
+        let _ = SystemPowerStateHandlerBuilder::new_from_json(json_data, &HashMap::new());
     }
 }

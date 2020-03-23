@@ -1,0 +1,70 @@
+[
+  {
+    "type": "CpuStatsHandler",
+    "name": "cpu_stats"
+  },
+  {
+    "type": "DeviceControlHandler",
+    "name": "cpu_dev",
+    "config": {
+      "driver_path": "/dev/class/cpu-ctrl/000"
+    }
+  },
+  {
+    "type": "CpuControlHandler",
+    "name": "cpu_control",
+    "config": {
+      "driver_path": "/dev/class/cpu-ctrl/000",
+      "capacitance": 1.2E-10,
+      "min_cpu_clock_speed": 1000000000.0
+    },
+    "dependencies": {
+      "cpu_stats_handler_node": "cpu_stats",
+      "cpu_dev_handler_node": "cpu_dev"
+    }
+  },
+  {
+    "type": "SystemPowerHandler",
+    "name": "sys_power"
+  },
+  {
+    "type": "TemperatureHandler",
+    "name": "temperature",
+    "config": {
+      "driver_path": "/dev/class/thermal/000"
+    }
+  },
+  {
+    "type": "ThermalLimiter",
+    "name": "thermal_limiter"
+  },
+  {
+    "type": "ThermalPolicy",
+    "name": "thermal_policy",
+    "dependencies": {
+      "temperature_handler_node": "temperature",
+      "cpu_control_nodes": [
+        "cpu_control"
+      ],
+      "system_power_handler_node": "sys_power",
+      "thermal_limiter_node": "thermal_limiter"
+    },
+    "config": {
+      "controller_params": {
+        "sample_interval": 1.0,
+        "filter_time_constant": 5.0,
+        "target_temperature": 80.0,
+        "e_integral_min": -20.0,
+        "e_integral_max": 0.0,
+        "sustainable_power": 0.876,
+        "proportional_gain": 0.0,
+        "integral_gain": 0.08
+      },
+      "thermal_limiting_range": [
+        77.0,
+        84.0
+      ],
+      "thermal_shutdown_temperature": 95.0
+    }
+  }
+]

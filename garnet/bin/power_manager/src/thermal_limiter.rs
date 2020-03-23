@@ -17,7 +17,9 @@ use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
 use futures::TryStreamExt;
+use serde_json as json;
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: ThermalLimiter
@@ -49,6 +51,14 @@ pub struct ThermalLimiterBuilder<'a, 'b> {
 impl<'a, 'b> ThermalLimiterBuilder<'a, 'b> {
     pub fn new() -> Self {
         Self { service_fs: None, inspect_root: None }
+    }
+
+    pub fn new_from_json(
+        _json_data: json::Value,
+        _nodes: &HashMap<String, Rc<dyn Node>>,
+        service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
+    ) -> Self {
+        Self::new().with_service_fs(service_fs)
     }
 
     pub fn with_service_fs(
@@ -737,6 +747,20 @@ pub mod tests {
                     }
                 }
             }
+        );
+    }
+
+    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json() {
+        let json_data = json::json!({
+            "type": "ThermalLimiter",
+            "name": "thermal_limiter"
+        });
+        let _ = ThermalLimiterBuilder::new_from_json(
+            json_data,
+            &HashMap::new(),
+            &mut ServiceFs::new_local(),
         );
     }
 }
