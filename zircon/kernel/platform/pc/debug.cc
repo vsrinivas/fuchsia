@@ -75,7 +75,7 @@ static SerialConfig kernel_serial_command_line = {/*type=*/SerialConfig::Type::k
 
 // UART state.
 static bool output_enabled = false;
-cbuf_t console_input_buf;
+Cbuf console_input_buf;
 static uint32_t uart_fifo_depth;
 static bool uart_tx_irq_enabled = false;  // tx driven irq
 static event_t uart_dputc_event =
@@ -135,7 +135,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
       case 0b1100: {
         // rx fifo is non empty, drain it
         unsigned char c = uart_read(0);
-        cbuf_write_char(&console_input_buf, c);
+        console_input_buf.WriteChar(c);
         break;
       }
       case 0b0010:
@@ -161,7 +161,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
 static void platform_drain_debug_uart_rx() {
   while (uart_read(5) & (1 << 0)) {
     unsigned char c = uart_read(0);
-    cbuf_write_char(&console_input_buf, c);
+    console_input_buf.WriteChar(c);
   }
 }
 
@@ -531,7 +531,7 @@ void pc_init_debug() {
   //     use interrupts;
   //   - RX buffers.
 
-  cbuf_initialize(&console_input_buf, 1024);
+  console_input_buf.Initialize(1024, malloc(1024));
 
   // Update the ZBI with current serial port settings.
   //
@@ -692,7 +692,7 @@ static void debug_uart_putc_poll(char c) {
 
 int platform_dgetc(char* c, bool wait) {
   if (platform_serial_enabled()) {
-    return static_cast<int>(cbuf_read_char(&console_input_buf, c, wait));
+    return static_cast<int>(console_input_buf.ReadChar(c, wait));
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

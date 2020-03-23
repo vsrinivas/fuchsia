@@ -10,7 +10,7 @@
 
 #include <lib/cbuf.h>
 
-void platform_init_keyboard(cbuf_t* buffer);
+void platform_init_keyboard(Cbuf* buffer);
 
 int platform_read_key(char* c);
 

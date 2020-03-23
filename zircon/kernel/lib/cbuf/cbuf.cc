@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <lib/cbuf.h>
-#include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -20,75 +19,65 @@
 
 #define LOCAL_TRACE 0
 
-static inline uint inc_pointer(const cbuf_t* cbuf, uint ptr, uint inc) {
-  return modpow2(ptr + inc, cbuf->len_pow2);
-}
-
-void cbuf_initialize(cbuf_t* cbuf, size_t len) { cbuf_initialize_etc(cbuf, len, malloc(len)); }
-
-void cbuf_initialize_etc(cbuf_t* cbuf, size_t len, void* buf) {
-  DEBUG_ASSERT(cbuf);
+// This should only be called once to initialize the Cbuf, and so thread safety analysis is
+// disabled.
+void Cbuf::Initialize(size_t len, void* buf) TA_NO_THREAD_SAFETY_ANALYSIS {
   DEBUG_ASSERT(len > 0);
   DEBUG_ASSERT(fbl::is_pow2(len));
 
-  cbuf->head = 0;
-  cbuf->tail = 0;
-  cbuf->len_pow2 = log2_ulong_floor(len);
-  cbuf->buf = static_cast<char*>(buf);
-  event_init(&cbuf->event, false, 0);
-  spin_lock_init(&cbuf->lock);
+  len_pow2_ = log2_ulong_floor(len);
+  buf_ = static_cast<char*>(buf);
 
-  LTRACEF("len %zu, len_pow2 %u\n", len, cbuf->len_pow2);
+  LTRACEF("len %zu, len_pow2 %u\n", len, len_pow2_);
 }
 
-size_t cbuf_space_avail(const cbuf_t* cbuf) {
-  uint consumed = modpow2(cbuf->head - cbuf->tail, cbuf->len_pow2);
-  return valpow2(cbuf->len_pow2) - consumed - 1;
+// TODO(fxb/48878) We want to revisit the Cbuf API. It's intended to be used from interrupt context,
+// at which time clients can rely on being the only accessor. For now, we disable thread safety
+// analysis on this function.
+size_t Cbuf::SpaceAvail() const TA_NO_THREAD_SAFETY_ANALYSIS {
+  uint32_t consumed = modpow2(head_ - tail_, len_pow2_);
+  return valpow2(len_pow2_) - consumed - 1;
 }
 
-size_t cbuf_write_char(cbuf_t* cbuf, char c) {
-  DEBUG_ASSERT(cbuf);
-
+size_t Cbuf::WriteChar(char c) {
   size_t ret = 0;
   {
-    AutoSpinLock guard(&cbuf->lock);
+    AutoSpinLock guard(&lock_);
 
-    if (cbuf_space_avail(cbuf) > 0) {
-      cbuf->buf[cbuf->head] = c;
-
-      cbuf->head = inc_pointer(cbuf, cbuf->head, 1);
+    if (SpaceAvail() > 0) {
+      buf_[head_] = c;
+      IncPointer(&head_, 1);
       ret = 1;
     }
   }
 
   if (ret > 0) {
-    event_signal(&cbuf->event, true);
+    event_.Signal();
   }
 
   return ret;
 }
 
-size_t cbuf_read_char(cbuf_t* cbuf, char* c, bool block) {
-  DEBUG_ASSERT(cbuf);
+size_t Cbuf::ReadChar(char* c, bool block) {
   DEBUG_ASSERT(c);
 
 retry:
   if (block) {
-    event_wait(&cbuf->event);
+    event_.Wait(Deadline::infinite());
   }
 
   size_t ret = 0;
   {
-    AutoSpinLock guard(&cbuf->lock);
+    AutoSpinLock guard(&lock_);
 
     // see if there's data available
-    if (cbuf->tail != cbuf->head) {
-      *c = cbuf->buf[cbuf->tail];
-      cbuf->tail = inc_pointer(cbuf, cbuf->tail, 1);
+    if (tail_ != head_) {
+      *c = buf_[tail_];
+      IncPointer(&tail_, 1);
 
-      if (cbuf->tail == cbuf->head) {
-        // we've emptied the buffer, unsignal the event
-        event_unsignal(&cbuf->event);
+      if (tail_ == head_) {
+        // We've emptied the buffer, so unsignal the event.
+        event_.Unsignal();
       }
 
       ret = 1;

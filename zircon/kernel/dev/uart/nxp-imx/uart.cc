@@ -68,8 +68,7 @@
 static bool initialized = false;
 static vaddr_t uart_base = 0;
 static uint32_t uart_irq = 0;
-static cbuf_t uart_rx_buf;
-// static cbuf_t uart_tx_buf;
+static Cbuf uart_rx_buf;
 
 static bool uart_tx_irq_enabled = false;
 static event_t uart_dputc_event =
@@ -82,11 +81,11 @@ static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 static interrupt_eoi uart_irq_handler(void* arg) {
   /* read interrupt status and mask */
   while ((UARTREG(MX8_USR1) & USR1_RRDY)) {
-    if (cbuf_space_avail(&uart_rx_buf) == 0) {
+    if (uart_rx_buf.SpaceAvail() == 0) {
       break;
     }
     char c = UARTREG(MX8_URXD) & 0xFF;
-    cbuf_write_char(&uart_rx_buf, c);
+    uart_rx_buf.WriteChar(c);
   }
 
   /* Signal if anyone is waiting to TX */
@@ -121,7 +120,7 @@ static int imx_uart_pgetc() {
 static int imx_uart_getc(bool wait) {
   if (initialized) {
     char c;
-    if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
+    if (uart_rx_buf.ReadChar(&c, wait) == 1) {
       return c;
     }
     return ZX_ERR_INTERNAL;
@@ -176,8 +175,8 @@ static const struct pdev_uart_ops uart_ops = {
 static void imx_uart_init(const void* driver_data, uint32_t length) {
   uint32_t regVal;
 
-  // create circular buffer to hold received data
-  cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+  // Initialize circular buffer to hold received data.
+  uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // register uart irq
   register_int_handler(uart_irq, &uart_irq_handler, NULL);

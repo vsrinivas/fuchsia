@@ -13,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-extern cbuf_t console_input_buf;
+extern Cbuf console_input_buf;
 
 __BEGIN_CDECLS
 

@@ -80,7 +80,7 @@
 
 // clang-format on
 
-static cbuf_t uart_rx_buf;
+static Cbuf uart_rx_buf;
 static bool initialized = false;
 static vaddr_t s905_uart_base = 0;
 static uint32_t s905_uart_irq = 0;
@@ -112,7 +112,7 @@ static interrupt_eoi uart_irq(void* arg) {
 
   /* read interrupt status and mask */
   while ((UARTREG(base, S905_UART_STATUS) & S905_UART_STATUS_RXCOUNT_MASK) > 0) {
-    if (cbuf_space_avail(&uart_rx_buf) == 0) {
+    if (uart_rx_buf.SpaceAvail() == 0) {
       // Drop the data if our buffer is full
       // NOTE: This breaks flow control, but allows
       // serial to work when disconnecting/reconnecting the cable.
@@ -120,7 +120,7 @@ static interrupt_eoi uart_irq(void* arg) {
       continue;
     }
     char c = static_cast<char>(UARTREG(base, S905_UART_RFIFO));
-    cbuf_write_char(&uart_rx_buf, c);
+    uart_rx_buf.WriteChar(c);
   }
 
   /* handle any framing/parity errors */
@@ -148,7 +148,7 @@ static void s905_uart_init(const void* driver_data, uint32_t length) {
   DEBUG_ASSERT(s905_uart_irq);
 
   // create circular buffer to hold received data
-  cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+  uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // reset the port
   UARTREG(s905_uart_base, S905_UART_CONTROL) |=
@@ -208,7 +208,7 @@ static int s905_uart_getc(bool wait) {
   if (initialized) {
     // do cbuf stuff here
     char c;
-    if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
+    if (uart_rx_buf.ReadChar(&c, wait) == 1) {
       return c;
     }
     return ZX_ERR_INTERNAL;

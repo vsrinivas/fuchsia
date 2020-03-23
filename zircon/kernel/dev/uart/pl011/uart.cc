@@ -47,7 +47,7 @@
 static vaddr_t uart_base = 0;
 static uint32_t uart_irq = 0;
 
-static cbuf_t uart_rx_buf;
+static Cbuf uart_rx_buf;
 
 /*
  * Tx driven irq:
@@ -73,13 +73,13 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     /* while fifo is not empty, read chars out of it */
     while ((UARTREG(uart_base, UART_FR) & (1 << 4)) == 0) {
       /* if we're out of rx buffer, mask the irq instead of handling it */
-      if (cbuf_space_avail(&uart_rx_buf) == 0) {
+      if (uart_rx_buf.SpaceAvail() == 0) {
         UARTREG(uart_base, UART_IMSC) &= ~((1 << 4) | (1 << 6));  // !rxim
         break;
       }
 
       char c = static_cast<char>(UARTREG(uart_base, UART_DR));
-      cbuf_write_char(&uart_rx_buf, c);
+      uart_rx_buf.WriteChar(c);
     }
   }
   spin_lock(&uart_spinlock);
@@ -97,8 +97,8 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
 }
 
 static void pl011_uart_init(const void* driver_data, uint32_t length) {
-  // create circular buffer to hold received data
-  cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+  // Initialize circular buffer to hold received data.
+  uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // assumes interrupts are contiguous
   zx_status_t status = register_int_handler(uart_irq, &pl011_uart_irq, NULL);
@@ -131,7 +131,7 @@ static void pl011_uart_init(const void* driver_data, uint32_t length) {
 
 static int pl011_uart_getc(bool wait) {
   char c;
-  if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
+  if (uart_rx_buf.ReadChar(&c, wait) == 1) {
     UARTREG(uart_base, UART_IMSC) |= ((1 << 4) | (1 << 6));  // rxim
     return c;
   }

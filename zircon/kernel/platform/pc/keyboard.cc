@@ -458,7 +458,7 @@ static bool key_lshift;
 static bool key_rshift;
 static int last_code;
 
-static cbuf_t* key_buf;
+static Cbuf* key_buf;
 
 static void i8042_process_scode(uint8_t scode, unsigned int flags) {
   // is this a multi code sequence?
@@ -540,7 +540,7 @@ static void i8042_process_scode(uint8_t scode, unsigned int flags) {
   if (!key_up) {
     for (uint i = 0; str[i] != '\0'; i++) {
       LTRACEF("char 0x%hhx (%c)\n", str[i], isprint(str[i]) ? (str[i]) : ' ');
-      cbuf_write_char(key_buf, str[i]);
+      key_buf->WriteChar(str[i]);
     }
   }
 }
@@ -668,11 +668,11 @@ static interrupt_eoi i8042_interrupt(void* arg) {
 }
 
 int platform_read_key(char* c) {
-  ssize_t len = cbuf_read_char(key_buf, c, true);
+  ssize_t len = key_buf->ReadChar(c, true);
   return static_cast<int>(len);
 }
 
-void platform_init_keyboard(cbuf_t* buffer) {
+void platform_init_keyboard(Cbuf* buffer) {
   uint8_t ctr;
 
   key_buf = buffer;

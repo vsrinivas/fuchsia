@@ -112,7 +112,7 @@
 static uint64_t uart_base = 0;
 static uint32_t uart_irq = 0;
 
-static cbuf_t uart_rx_buf;
+static Cbuf uart_rx_buf;
 
 static bool uart_tx_irq_enabled = false;
 static event_t uart_dputc_event =
@@ -147,7 +147,7 @@ static void msm_pputc(char c) {
 }
 
 static int msm_pgetc(void) {
-  cbuf_t* rxbuf = &uart_rx_buf;
+  Cbuf* rxbuf = &uart_rx_buf;
 
   char c;
   int count = 0;
@@ -155,7 +155,7 @@ static int msm_pgetc(void) {
   char* bytes;
 
   // see if we have chars left from previous read
-  if (cbuf_read_char(rxbuf, &c, false) == 1) {
+  if (rxbuf->ReadChar(&c, false) == 1) {
     return c;
   }
 
@@ -184,7 +184,7 @@ static int msm_pgetc(void) {
 
   // save remaining chars for next call
   for (int i = 1; i < count; i++) {
-    cbuf_write_char(rxbuf, bytes[i]);
+    rxbuf->WriteChar(bytes[i]);
   }
 
   return c;
@@ -212,7 +212,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
           // Apparently this problem doesn't exist in DMA mode.
           char ch = bytes[j];
           if (ch) {
-            cbuf_write_char(&uart_rx_buf, ch);
+            uart_rx_buf.WriteChar(ch);
           } else {
             break;
           }
@@ -253,7 +253,7 @@ static void msm_uart_init(const void* driver_data, uint32_t length) {
   temp |= UART_MR1_RX_RDY_CTL;
   uart_write(temp, UART_MR1);
 
-  cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
+  uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // enable RX and TX interrupts
   uart_write(UART_IRQ_RXSTALE | UART_IRQ_TX_READY, UART_DM_IMR);
@@ -264,7 +264,7 @@ static void msm_uart_init(const void* driver_data, uint32_t length) {
 
 static int msm_getc(bool wait) {
   char ch;
-  size_t count = cbuf_read_char(&uart_rx_buf, &ch, wait);
+  size_t count = uart_rx_buf.ReadChar(&ch, wait);
   return (count == 1 ? ch : -1);
 }
 
