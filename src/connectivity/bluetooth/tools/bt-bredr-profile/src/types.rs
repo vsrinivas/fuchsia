@@ -5,7 +5,13 @@
 use {
     fidl_fuchsia_bluetooth_bredr::{ChannelMode, ChannelParameters},
     fuchsia_zircon as zx,
-    std::{cmp::PartialEq, collections::HashMap, fmt::Debug},
+    futures::channel::oneshot,
+    std::{
+        cmp::PartialEq,
+        collections::{hash_map::Iter, HashMap},
+        fmt::Debug,
+        iter::IntoIterator,
+    },
 };
 
 #[derive(Debug, PartialEq)]
@@ -14,7 +20,7 @@ pub struct IncrementedIdMap<T> {
     map: HashMap<u32, T>,
 }
 
-impl<T: Debug + PartialEq> IncrementedIdMap<T> {
+impl<T: Debug> IncrementedIdMap<T> {
     pub fn new() -> IncrementedIdMap<T> {
         IncrementedIdMap { next_id: 0, map: HashMap::new() }
     }
@@ -27,37 +33,46 @@ impl<T: Debug + PartialEq> IncrementedIdMap<T> {
     pub fn insert(&mut self, value: T) -> u32 {
         let id = self.next_id;
         self.next_id += 1;
-        assert_eq!(None, self.map.insert(id, value));
+        assert!(self.map.insert(id, value).is_none());
         id
     }
 
-    pub fn remove(&mut self, id: u32) -> Option<T> {
-        self.map.remove(&id)
+    pub fn remove(&mut self, id: &u32) -> Option<T> {
+        self.map.remove(id)
     }
 }
 
-#[derive(Debug, PartialEq)]
+impl<'a, T> IntoIterator for &'a IncrementedIdMap<T> {
+    type Item = (&'a u32, &'a T);
+    type IntoIter = Iter<'a, u32, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.iter()
+    }
+}
+
+#[derive(Debug)]
 pub struct L2capChannel {
     pub socket: zx::Socket,
     pub mode: ChannelMode,
     pub max_tx_sdu_size: u16,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct SdpService {
-    pub service_id: u64,
+    pub advertisement_stopper: oneshot::Sender<()>,
     pub params: ChannelParameters,
 }
 
 /// Tracks all state local to the command line tool.
 pub struct ProfileState {
     pub channels: IncrementedIdMap<L2capChannel>,
-    pub services: HashMap<u64, SdpService>,
+    pub services: IncrementedIdMap<SdpService>,
 }
 
 impl ProfileState {
     pub fn new() -> ProfileState {
-        ProfileState { channels: IncrementedIdMap::new(), services: HashMap::new() }
+        ProfileState { channels: IncrementedIdMap::new(), services: IncrementedIdMap::new() }
     }
 }
 

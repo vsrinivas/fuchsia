@@ -1037,7 +1037,7 @@ mod test {
                 .expect("unable to set absolute_volume proxy");
         }
 
-        let cmd_handler = ControlChannelHandler::new(&"test_peer".to_string(), target_delegate);
+        let cmd_handler = ControlChannelHandler::new(&PeerId(1), target_delegate);
         cmd_handler
     }
 

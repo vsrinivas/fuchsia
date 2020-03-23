@@ -472,11 +472,11 @@ async fn profile_server_method_to_fidl(
         "ProfileServerConnectL2cap" => {
             let id = parse_identifier(args.clone())?;
             let psm = parse_psm(args)?;
-            let result = facade.connect_l2cap(id, psm as u16).await?;
+            let result = facade.connect(id, psm as u16).await?;
             Ok(to_value(result)?)
         }
         "ProfileServerRemoveService" => {
-            let service_id = parse_u64_identifier(args)?;
+            let service_id = parse_u64_identifier(args)? as usize;
             let result = facade.remove_service(service_id).await?;
             Ok(to_value(result)?)
         }

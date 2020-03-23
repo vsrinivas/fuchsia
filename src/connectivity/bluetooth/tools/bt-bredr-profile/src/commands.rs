@@ -73,7 +73,7 @@ macro_rules! gen_commands {
 
 gen_commands! {
     Cmd {
-        AddService = ("add-service", ["psm", "channel-mode", "max-rx-du-size"],
+        Advertise = ("advertise", ["psm", "channel-mode", "max-rx-du-size"],
                       "\n\t\tRegister a service with the SDP server.\n\
                        \t\t'psm' is a protocol id that this service will advertise support for.\n\
                        \t\t'channel-mode' is {basic|ertm}.\n\
@@ -84,12 +84,12 @@ gen_commands! {
                          "\n\t\tUnregister service corresponding to 'service-id'\n\
                           \t\tExample: remove-service 0"),
         Channels = ("channels", [], "List connected channels and their Ids assigned by the REPL"),
-        ConnectL2cap = ("connect-l2cap", ["peer-id", "psm", "channel-mode", "max-rx-sdu-size"],
+        Connect = ("connect", ["peer-id", "psm", "channel-mode", "max-rx-sdu-size"],
                         "\n\t\tCreate an l2cap channel to the remote device 'peer-id'. \n\
                          \t\t'channel-mode' must be {basic|ertm}. 'psm' and 'max-rx-sdu-size' must be\n\
                          \t\tpositive integers in the range 0 - 65535.\n\n\
                          \t\tExample: connect-l2cap 028565803f1368b2 1 basic 672"),
-        DisconnectL2cap = ("disconnect-l2cap", ["channel-id"],
+        Disconnect = ("disconnect", ["channel-id"],
                            "\n\t\tDrop socket corresponding to 'channel-id', which will disconnect\n\
                             \t\tthe l2cap channel.\n\
                             \t\t'channel-id' must correspond to a connected channel listed by the \n\

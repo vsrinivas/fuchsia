@@ -3,21 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context, Error},
     bitflags::bitflags,
     fidl::encoding::Decodable,
-    fidl_fuchsia_bluetooth as bt,
+    fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_zircon as zx,
-    futures::{
-        future::{self, BoxFuture, FutureExt},
-        stream::{BoxStream, StreamExt},
-    },
-    std::{fmt::Debug, string::String},
+    fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
+    fuchsia_syslog::fx_log_info,
+    std::fmt::Debug,
 };
-
-use crate::types::PeerId;
 
 bitflags! {
     #[allow(dead_code)]
@@ -53,61 +47,43 @@ bitflags! {
 
 const SDP_SUPPORTED_FEATURES: u16 = 0x0311;
 
-const AV_REMOTE_TARGET_CLASS: &str = "0000110c-0000-1000-8000-00805f9b34fb";
-const AV_REMOTE_CLASS: &str = "0000110e-0000-1000-8000-00805f9b34fb";
-const AV_REMOTE_CONTROLLER_CLASS: &str = "0000110f-0000-1000-8000-00805f9b34fb";
+const AV_REMOTE_TARGET_CLASS: u16 = 0x110c;
+const AV_REMOTE_CLASS: u16 = 0x110e;
+const AV_REMOTE_CONTROLLER_CLASS: u16 = 0x110f;
 
 /// Make the SDP definition for the AVRCP service.
 /// TODO(1346): We need two entries in SDP in the future. One for target and one for controller.
 ///       We are using using one unified profile for both because of limitations in BrEdr service.
 fn make_profile_service_definition() -> ServiceDefinition {
-    let service_class_uuids: Vec<String> = vec![
-        String::from(AV_REMOTE_TARGET_CLASS),
-        String::from(AV_REMOTE_CLASS),
-        String::from(AV_REMOTE_CONTROLLER_CLASS),
+    let service_class_uuids: Vec<fidl_fuchsia_bluetooth::Uuid> = vec![
+        Uuid::new16(AV_REMOTE_TARGET_CLASS).into(),
+        Uuid::new16(AV_REMOTE_CLASS).into(),
+        Uuid::new16(AV_REMOTE_CONTROLLER_CLASS).into(),
     ];
     ServiceDefinition {
-        service_class_uuids, // AVRCP UUID
-        protocol_descriptors: vec![
+        service_class_uuids: Some(service_class_uuids), // AVRCP UUID
+        protocol_descriptor_list: Some(vec![
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::L2Cap,
-                params: vec![DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(PSM_AVCTP),
-                }],
+                params: vec![DataElement::Uint16(PSM_AVCTP as u16)],
             },
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::Avctp,
-                params: vec![DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(0x0103), // Indicate v1.3
-                }],
+                params: vec![DataElement::Uint16(0x0103)], // Indicate v1.3
             },
-        ],
-        profile_descriptors: vec![ProfileDescriptor {
+        ]),
+        profile_descriptors: Some(vec![ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AvRemoteControl,
             major_version: 1,
             minor_version: 6,
-        }],
-        additional_protocol_descriptors: None,
-        information: vec![Information {
-            language: "en".to_string(),
-            name: Some("AVRCP".to_string()),
-            description: Some("AVRCP".to_string()),
-            provider: Some("Fuchsia".to_string()),
-        }],
+        }]),
         additional_attributes: Some(vec![Attribute {
             id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
-            element: DataElement {
-                type_: DataElementType::UnsignedInteger,
-                size: 2,
-                data: DataElementData::Integer(i64::from(
-                    AvcrpTargetFeatures::CATEGORY1.bits() | AvcrpTargetFeatures::CATEGORY2.bits(),
-                )),
-            },
+            element: DataElement::Uint16(
+                AvcrpTargetFeatures::CATEGORY1.bits() | AvcrpTargetFeatures::CATEGORY2.bits(),
+            ),
         }]),
+        ..ServiceDefinition::new_empty()
     }
 }
 
@@ -128,207 +104,118 @@ pub enum AvrcpService {
     },
 }
 
-#[derive(Debug, PartialEq)]
-pub enum AvrcpProfileEvent {
-    ///Incoming connection on the control channel PSM.
-    ///TODO(2744): add browse channel.
-    IncomingControlConnection {
-        peer_id: PeerId,
-        channel: zx::Socket,
-    },
-    ServicesDiscovered {
-        peer_id: PeerId,
-        services: Vec<AvrcpService>,
-    },
-}
+impl AvrcpService {
+    pub fn from_attributes(attributes: Vec<Attribute>) -> Option<AvrcpService> {
+        let mut features: Option<u16> = None;
+        let mut service_uuids: Option<Vec<Uuid>> = None;
+        let mut profile: Option<ProfileDescriptor> = None;
 
-pub trait ProfileService: Debug {
-    fn connect_to_device<'a>(
-        &'a self,
-        peer_id: &'a PeerId,
-        psm: u16,
-    ) -> BoxFuture<'_, Result<zx::Socket, Error>>;
-
-    fn take_event_stream(&self) -> BoxStream<'_, Result<AvrcpProfileEvent, Error>>;
-}
-
-#[derive(Debug)]
-pub struct ProfileServiceImpl {
-    profile_svc: ProfileProxy,
-    service_id: u64,
-}
-
-impl ProfileServiceImpl {
-    pub async fn connect_and_register_service() -> Result<ProfileServiceImpl, Error> {
-        let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
-            .context("Failed to connect to Bluetooth profile service")?;
-
-        const SEARCH_ATTRIBUTES: [u16; 5] = [
-            ATTR_SERVICE_CLASS_ID_LIST,
-            ATTR_PROTOCOL_DESCRIPTOR_LIST,
-            ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST,
-            ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
-            SDP_SUPPORTED_FEATURES,
-        ];
-
-        profile_svc
-            .add_search(ServiceClassProfileIdentifier::AvRemoteControl, &SEARCH_ATTRIBUTES)?;
-
-        let mut service_def = make_profile_service_definition();
-        let (status, service_id) = profile_svc
-            .add_service(
-                &mut service_def,
-                SecurityLevel::EncryptionOptional,
-                ChannelParameters::new_empty(),
-            )
-            .await?;
-
-        fx_log_info!("Registered Service ID {}", service_id);
-
-        match status.error {
-            Some(e) => Err(format_err!("Couldn't add AVRCP service: {:?}", e)),
-            _ => Ok(ProfileServiceImpl { profile_svc, service_id }),
-        }
-    }
-}
-
-impl ProfileService for ProfileServiceImpl {
-    fn connect_to_device(
-        &self,
-        peer_id: &PeerId,
-        psm: u16,
-    ) -> BoxFuture<'_, Result<zx::Socket, Error>> {
-        let peer_id = peer_id.clone();
-        async move {
-            let (status, channel) = self
-                .profile_svc
-                .connect_l2cap(&peer_id, psm, ChannelParameters::new_empty())
-                .await
-                .map_err(|e| format_err!("Profile service error: {:?}", e))?;
-            let status: bt::Status = status;
-            if let Some(error) = status.error {
-                return Err(format_err!("Error connecting to device: {} {:?}", peer_id, *error));
-            }
-            match channel.socket {
-                Some(sock) => Ok(sock),
-                // Hopefully we should have an error if we don't have a socket.
-                None => Err(format_err!("No socket returned from profile service {}", peer_id)),
-            }
-        }
-        .boxed()
-    }
-
-    fn take_event_stream(&self) -> BoxStream<'_, Result<AvrcpProfileEvent, Error>> {
-        let event_stream: ProfileEventStream = self.profile_svc.take_event_stream();
-        let expected_service_id = self.service_id;
-        event_stream
-            .filter_map(move |event| {
-                future::ready(match event {
-                    Ok(ProfileEvent::OnConnected {
-                        device_id: peer_id,
-                        service_id,
-                        channel,
-                        protocol: _,
-                    }) => {
-                        if expected_service_id != service_id {
-                            fx_log_err!("Unexpected service id received {}", service_id);
-                            None
-                        } else if let Some(channel) = channel.socket {
-                            Some(Ok(AvrcpProfileEvent::IncomingControlConnection {
-                                peer_id: PeerId::from(peer_id),
-                                channel,
-                            }))
-                        } else {
-                            fx_log_err!("Received OnConnected event without a socket");
-                            None
+        for attr in attributes {
+            fx_log_info!("attribute: {:#?} ", attr);
+            match attr.id {
+                ATTR_SERVICE_CLASS_ID_LIST => {
+                    if let DataElement::Sequence(seq) = attr.element {
+                        let uuids: Vec<Uuid> = seq
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|item| match *item {
+                                DataElement::Uuid(uuid) => Some(uuid.into()),
+                                _ => None,
+                            })
+                            .collect();
+                        if uuids.len() > 0 {
+                            service_uuids = Some(uuids);
                         }
                     }
-                    Ok(ProfileEvent::OnServiceFound { peer_id, profile, attributes }) => {
-                        fx_log_info!("Service found on {}: {:#?}", peer_id, profile);
-                        let mut features: Option<u16> = None;
-                        let mut service_uuids: Option<Vec<String>> = None;
-
-                        for attr in attributes {
-                            fx_log_info!("attribute: {:#?} ", attr);
-                            match attr.id {
-                                ATTR_SERVICE_CLASS_ID_LIST => {
-                                    if let DataElementData::Sequence(seq) = attr.element.data {
-                                        let uuids: Vec<String> = seq
-                                            .into_iter()
-                                            .flatten()
-                                            .filter_map(|item| {
-                                                if let DataElementData::Uuid(uuid) = item.data {
-                                                    Some(uuid)
-                                                } else {
-                                                    None
-                                                }
-                                            })
-                                            .collect();
-                                        if uuids.len() > 0 {
-                                            service_uuids = Some(uuids);
-                                        }
-                                    }
-                                }
-                                SDP_SUPPORTED_FEATURES => {
-                                    if let DataElementData::Integer(value) = attr.element.data {
-                                        features = Some(value as u16);
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-
-                        if service_uuids.is_none() || features.is_none() {
-                            None
-                        } else {
-                            let service_uuids =
-                                service_uuids.expect("service_uuids should not be none");
-
-                            let mut services = vec![];
-
-                            if service_uuids.contains(&AV_REMOTE_TARGET_CLASS.to_string()) {
-                                if let Some(feature_flags) =
-                                    AvcrpTargetFeatures::from_bits(features.unwrap())
-                                {
-                                    services.push(AvrcpService::Target {
-                                        features: feature_flags,
-                                        psm: PSM_AVCTP as u16, // TODO: Parse this out instead of assuming it's default
-                                        protocol_version: AvrcpProtocolVersion(
-                                            profile.major_version,
-                                            profile.minor_version,
-                                        ),
-                                    })
-                                }
-                            } else if service_uuids.contains(&AV_REMOTE_CLASS.to_string())
-                                || service_uuids.contains(&AV_REMOTE_CONTROLLER_CLASS.to_string())
-                            {
-                                if let Some(feature_flags) =
-                                    AvcrpControllerFeatures::from_bits(features.unwrap())
-                                {
-                                    services.push(AvrcpService::Controller {
-                                        features: feature_flags,
-                                        psm: PSM_AVCTP as u16, // TODO: Parse this out instead of assuming it's default
-                                        protocol_version: AvrcpProtocolVersion(
-                                            profile.major_version,
-                                            profile.minor_version,
-                                        ),
-                                    })
-                                }
-                            }
-
-                            if services.is_empty() {
-                                None
-                            } else {
-                                Some(Ok(AvrcpProfileEvent::ServicesDiscovered {
-                                    peer_id,
-                                    services,
-                                }))
-                            }
+                }
+                ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST => {
+                    if let DataElement::Sequence(profiles) = attr.element {
+                        for elem in profiles {
+                            let elem = elem.expect("DataElement sequence elements should exist");
+                            profile = elem_to_profile_descriptor(&*elem);
                         }
                     }
-                    Err(e) => Some(Err(Error::from(e))),
-                })
-            })
-            .boxed()
+                }
+                SDP_SUPPORTED_FEATURES => {
+                    if let DataElement::Uint16(value) = attr.element {
+                        features = Some(value);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if service_uuids.is_none() || features.is_none() || profile.is_none() {
+            return None;
+        }
+
+        let service_uuids = service_uuids.expect("service_uuids should not be none");
+        let features = features.expect("features should not be none");
+        let profile = profile.expect("profile should not be none");
+
+        if service_uuids.contains(&Uuid::new16(AV_REMOTE_TARGET_CLASS)) {
+            if let Some(feature_flags) = AvcrpTargetFeatures::from_bits(features) {
+                return Some(AvrcpService::Target {
+                    features: feature_flags,
+                    psm: PSM_AVCTP as u16, // TODO: Parse this out instead of assuming it's default
+                    protocol_version: AvrcpProtocolVersion(
+                        profile.major_version,
+                        profile.minor_version,
+                    ),
+                });
+            }
+        } else if service_uuids.contains(&Uuid::new16(AV_REMOTE_CLASS))
+            || service_uuids.contains(&Uuid::new16(AV_REMOTE_CONTROLLER_CLASS))
+        {
+            if let Some(feature_flags) = AvcrpControllerFeatures::from_bits(features) {
+                return Some(AvrcpService::Controller {
+                    features: feature_flags,
+                    psm: PSM_AVCTP as u16, // TODO: Parse this out instead of assuming it's default
+                    protocol_version: AvrcpProtocolVersion(
+                        profile.major_version,
+                        profile.minor_version,
+                    ),
+                });
+            }
+        }
+        None
     }
+}
+
+pub fn connect_and_advertise(
+) -> Result<(ProfileProxy, ConnectionReceiverRequestStream, SearchResultsRequestStream), Error> {
+    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
+        .context("Failed to connect to Bluetooth profile service")?;
+
+    const SEARCH_ATTRIBUTES: [u16; 5] = [
+        ATTR_SERVICE_CLASS_ID_LIST,
+        ATTR_PROTOCOL_DESCRIPTOR_LIST,
+        ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+        ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST,
+        SDP_SUPPORTED_FEATURES,
+    ];
+
+    let (search_results, search_results_requests) =
+        create_request_stream().context("Couldn't create SearchResults")?;
+
+    profile_svc.search(
+        ServiceClassProfileIdentifier::AvRemoteControl,
+        &SEARCH_ATTRIBUTES,
+        search_results,
+    )?;
+
+    let (connection_client, connection_requests) =
+        create_request_stream().context("Couldn't create ConnectionTarget")?;
+
+    let service_defs = vec![make_profile_service_definition()];
+    profile_svc.advertise(
+        &mut service_defs.into_iter(),
+        SecurityRequirements::new_empty(),
+        ChannelParameters::new_empty(),
+        connection_client,
+    )?;
+
+    fx_log_info!("Advertised Service");
+
+    Ok((profile_svc, connection_requests, search_results_requests))
 }

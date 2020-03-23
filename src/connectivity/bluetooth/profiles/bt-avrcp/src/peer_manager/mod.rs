@@ -8,14 +8,12 @@ use {
     fidl_fuchsia_bluetooth_avrcp::{
         AbsoluteVolumeHandlerProxy, AvcPanelCommand, TargetHandlerProxy,
     },
+    fidl_fuchsia_bluetooth_bredr::ProfileProxy,
     fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
     fuchsia_syslog::{self, fx_log_err, fx_vlog},
     fuchsia_zircon as zx,
-    futures::{
-        self,
-        channel::{mpsc, oneshot},
-        stream::StreamExt,
-    },
+    futures::{self, channel::oneshot, stream::StreamExt},
     parking_lot::{Mutex, RwLock},
     std::{collections::HashMap, sync::Arc},
 };
@@ -24,8 +22,8 @@ mod target_delegate;
 
 use crate::{
     peer::{Controller, RemotePeerHandle},
-    profile::{AvrcpProfileEvent, AvrcpService, ProfileService},
-    types::{PeerError as Error, PeerId},
+    profile::AvrcpService,
+    types::PeerError as Error,
 };
 
 pub use target_delegate::TargetDelegate;
@@ -81,46 +79,39 @@ impl ServiceRequest {
 /// service requests from FIDL and profile events from the BREDR service and dispatches them
 /// accordingly.
 pub struct PeerManager {
-    profile_svc: Arc<Box<dyn ProfileService + Send + Sync>>,
+    profile_proxy: ProfileProxy,
 
-    /// shared internal state storage for all connected peers.
+    /// Connected peers, which may be connected or disconnected
     remotes: RwLock<HashMap<PeerId, RemotePeerHandle>>,
-
-    /// Incoming requests by the service front end.
-    service_request: mpsc::Receiver<ServiceRequest>,
 
     target_delegate: Arc<TargetDelegate>,
 }
 
 impl PeerManager {
-    pub fn new(
-        profile_svc: Box<dyn ProfileService + Send + Sync>,
-        service_request: mpsc::Receiver<ServiceRequest>,
-    ) -> Result<Self, FailureError> {
+    pub fn new(profile_proxy: ProfileProxy) -> Result<Self, FailureError> {
         Ok(Self {
-            profile_svc: Arc::new(profile_svc),
+            profile_proxy,
             remotes: RwLock::new(HashMap::new()),
-            service_request,
             target_delegate: Arc::new(TargetDelegate::new()),
         })
     }
 
-    pub fn get_remote_peer(&self, peer_id: &str) -> RemotePeerHandle {
+    pub fn get_remote_peer(&self, peer_id: &PeerId) -> RemotePeerHandle {
         self.remotes
             .write()
-            .entry(peer_id.to_string())
+            .entry(peer_id.clone())
             .or_insert_with(|| {
                 RemotePeerHandle::spawn_peer(
-                    peer_id.to_string(),
+                    peer_id.clone(),
                     self.target_delegate.clone(),
-                    self.profile_svc.clone(),
+                    self.profile_proxy.clone(),
                 )
             })
             .clone()
     }
 
     /// Handle a new incoming connection by a remote peer.
-    fn new_control_connection(&self, peer_id: &PeerId, channel: zx::Socket) {
+    pub fn new_control_connection(&self, peer_id: &PeerId, channel: zx::Socket) {
         let peer_handle = self.get_remote_peer(peer_id);
         match AvcPeer::new(channel) {
             Ok(peer) => {
@@ -133,24 +124,16 @@ impl PeerManager {
         }
     }
 
-    fn handle_profile_service_event(&mut self, event: AvrcpProfileEvent) {
-        match event {
-            AvrcpProfileEvent::IncomingControlConnection { peer_id, channel } => {
-                fx_vlog!(tag: "avrcp", 2, "IncomingConnection {} {:#?}", peer_id, channel);
-                self.new_control_connection(&peer_id, channel);
-            }
-            AvrcpProfileEvent::ServicesDiscovered { peer_id, services } => {
-                fx_vlog!(tag: "avrcp", 2, "ServicesDiscovered {} {:#?}", peer_id, services);
-                let peer_handle = self.get_remote_peer(&peer_id);
-                for service in services {
-                    match service {
-                        AvrcpService::Target { .. } => {
-                            peer_handle.set_target_descriptor(service);
-                        }
-                        AvrcpService::Controller { .. } => {
-                            peer_handle.set_controller_descriptor(service);
-                        }
-                    }
+    pub fn services_found(&mut self, peer_id: &PeerId, services: Vec<AvrcpService>) {
+        fx_vlog!(tag: "avrcp", 2, "ServicesDiscovered {} {:#?}", peer_id, services);
+        let peer_handle = self.get_remote_peer(&peer_id);
+        for service in services {
+            match service {
+                AvrcpService::Target { .. } => {
+                    peer_handle.set_target_descriptor(service);
+                }
+                AvrcpService::Controller { .. } => {
+                    peer_handle.set_controller_descriptor(service);
                 }
             }
         }
@@ -169,27 +152,6 @@ impl PeerManager {
                 let _ = reply.send(
                     self.target_delegate.set_absolute_volume_handler(absolute_volume_handler),
                 );
-            }
-        }
-    }
-
-    /// Loop to handle incoming events from the BREDR service and incoming service requests from FIDL.
-    /// This will only return if there is an unrecoverable error.
-    pub async fn run(mut self) -> Result<(), anyhow::Error> {
-        let profile_service = self.profile_svc.clone();
-        let mut profile_evt = profile_service.take_event_stream().fuse();
-        loop {
-            futures::select! {
-                request = self.service_request.select_next_some() => {
-                    self.handle_service_request(request);
-                },
-                evt = profile_evt.select_next_some() => {
-                    self.handle_profile_service_event(evt.map_err(|e| {
-                            fx_log_err!("profile service error {:?}", e);
-                            FailureError::from(e)
-                        })?
-                    );
-                },
             }
         }
     }

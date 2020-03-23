@@ -24,7 +24,7 @@ pub struct Controller {
 }
 
 impl Controller {
-    pub(super) fn new(peer: RemotePeerHandle) -> Controller {
+    pub(crate) fn new(peer: RemotePeerHandle) -> Controller {
         Controller { peer }
     }
 

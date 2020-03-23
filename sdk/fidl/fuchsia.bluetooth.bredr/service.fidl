@@ -4,32 +4,34 @@
 
 library fuchsia.bluetooth.bredr;
 
-/// A building element in SDP.  Used for various low-level and custom parameters.
-enum DataElementType {
-    NOTHING = 0;
-    UNSIGNED_INTEGER = 1;
-    SIGNED_INTEGER = 2;
-    UUID = 3;
-    STRING = 4;
-    BOOLEAN = 5;
-    SEQUENCE = 6;
-    ALTERNATIVE = 7;
-    // URL = 8;  // TODO(jamuraa): support URLs
-};
+using fuchsia.bluetooth;
+using fuchsia.url;
 
-union DataElementData {
-    1: int64 integer;
-    2: string str;
-    3: string uuid;
-    4: bool b;
-    5: bytes bytes;
-    6: vector<DataElement?> sequence;
-};
+/// The maximum length that a sequence or set of alternatives supported in a
+/// DataElement list. If a list is provided that is longer than this from a
+/// peer, it is truncated.
+const uint8 MAX_SEQUENCE_LENGTH = 255;
+/// Maximum length of a string that is alowed in a DataElement.  If a
+/// DataElement string longer than this is sent by a peer it will be truncated.
+const uint16 MAX_STRING_LENGTH = 1024;
 
-struct DataElement {
-    DataElementType type;
-    uint32 size; // Size in bytes, used for integer types.
-    DataElementData data;
+/// A DataElement is one element in a SDP record. SDP attributes and other parameters are
+/// expresssed in DataElements.
+union DataElement {
+    1: int8 int8;
+    2: int16 int16;
+    3: int32 int32;
+    4: int64 int64;
+    5: uint8 uint8;
+    6: uint16 uint16;
+    7: uint32 uint32;
+    8: uint64 uint64;
+    9: string:MAX_STRING_LENGTH str;
+    10: fuchsia.url.Url url;
+    11: fuchsia.bluetooth.Uuid uuid;
+    12: bool b;
+    13: vector<DataElement?>:MAX_SEQUENCE_LENGTH sequence;
+    14: vector<DataElement?>:MAX_SEQUENCE_LENGTH alternatives;
 };
 
 /// Defined Protocol Identifiers for the Protocol Descriptor
@@ -43,118 +45,132 @@ enum ProtocolIdentifier : uint16 {
     OBEX = 8;
     BNEP = 15;
     HIDP = 17;
-    HardcopyControlChannel = 18;
-    HardcopyDataChannel = 20;
-    HardcopyNotification = 22;
+    HARDCOPY_CONTROL_CHANNEL = 18;
+    HARDCOPY_DATA_CHANNEL = 20;
+    HARDCOPY_NOTIFICATION = 22;
     AVCTP = 23;
     AVDTP = 25;
-    MCAPControlChannel = 30;
-    MCAPDataChannel = 31;
+    MCAP_CONTROL_CHANNEL = 30;
+    MCAP_DATA_CHANNEL = 31;
     L2CAP = 256;
 };
 
 /// Defined PSMs from the Bluetooth Assigned Numbers
 /// https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control
-/// Used in DataElementData for protocol parameters for L2CAP.
-const int64 kPSM_SDP = 1;
-const int64 kPSM_RFCOMM = 3;
-const int64 kPSM_TCSBIN = 5; // Telephony Control Specification
-const int64 kPSM_TCSBINCordless = 7;
-const int64 kPSM_BNEP = 15; // Bluetooth Network Encapsulation Protocol
-const int64 kPSM_HIDControl = 17; // Human Interface Device
-const int64 kPSM_HIDInterrupt = 19; // Human Interface Device
-const int64 kPSM_AVCTP = 23; // Audio/Video Control Transport Protocol
-const int64 kPSM_AVDTP = 25; // Audio/Video Distribution Transport Protocol
-const int64 kPSM_AVCTP_Browse = 27; // Audio/Video Remote Control Profile (Browsing)
-const int64 kPSM_ATT = 31; // ATT
-const int64 kPSM_3DSP = 33; // 3D Synchronization Profile
-const int64 kPSM_LE_IPSP = 35; // Internet Protocol Support Profile
-const int64 kPSM_OTS = 37; // Object Transfer Service
+/// Used in DataElement as protocol parameters for L2CAP.
+const uint16 PSM_SDP = 1;
+const uint16 PSM_RFCOMM = 3;
+const uint16 PSM_TCSBIN = 5; // Telephony Control Specification
+const uint16 PSM_TCSBIN_CORDLESS = 7;
+const uint16 PSM_BNEP = 15; // Bluetooth Network Encapsulation Protocol
+const uint16 PSM_HID_CONTROL = 17; // Human Interface Device
+const uint16 PSM_HID_INTERRUPT = 19; // Human Interface Device
+const uint16 PSM_AVCTP = 23; // Audio/Video Control Transport Protocol
+const uint16 PSM_AVDTP = 25; // Audio/Video Distribution Transport Protocol
+const uint16 PSM_AVCTP_BROWSE = 27; // Audio/Video Remote Control Profile (Browsing)
+const uint16 PSM_ATT = 31; // ATT
+const uint16 PSM_3DSP = 33; // 3D Synchronization Profile
+const uint16 PSM_LE_IPSP = 35; // Internet Protocol Support Profile
+const uint16 PSM_OTS = 37; // Object Transfer Service
 
 /// Identifies a communications protocol along with protocol-specific parameters.
+/// Usually used to describe a protocol endpoint in a ProtocolDescriptorList
 struct ProtocolDescriptor {
     ProtocolIdentifier protocol;
-    vector<DataElement> params;
+    vector<DataElement>:MAX_SEQUENCE_LENGTH params;
 };
+
+/// A ProtocolDescriptorList is a list of protocols in a "stack" from lowest to highest,
+/// Specifying a specific protocol endpoint that can be connected.
+using ProtocolDescriptorList = vector<ProtocolDescriptor>:MAX_SEQUENCE_LENGTH;
 
 /// Identifiers that are valid for Bluetooth Classes / Profiles
 /// We intentionally omit classes and profile IDs that are unsupported, deprecated,
 /// or reserved for use by Fuchsia Bluetooth.
 /// From Bluetooth Assigned Numbers for SDP
 /// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
-enum ServiceClassProfileIdentifier {
-    /// ServiceDiscoveryService and BrowseGroupDescriptorService used by Fuchsia
-    SerialPort = 0x1101; // Serial Port Profile (SPP)
-    DialupNetworking = 0x1103; // Dial-up Networking Profile (DUN)
-    ObexObjectPush = 0x1105; // Object Push Profile (OPP)
-    ObexFileTransfer = 0x1106; // File Transfer Profile (FTP)
+enum ServiceClassProfileIdentifier : uint16 {
+    /// ServiceDiscoveryService and BrowseGroupDescriptorService claimed by Fuchsia
+    SERIAL_PORT = 0x1101; // Serial Port Profile (SPP)
+    DIALUP_NETWORKING = 0x1103; // Dial-up Networking Profile (DUN)
+    OBEX_OBJECT_PUSH = 0x1105; // Object Push Profile (OPP)
+    OPEX_FILE_TRANSFER = 0x1106; // File Transfer Profile (FTP)
     /// Headset Profile (HSP)
-    Headset = 0x1108;
-    HeadsetAudioGateway = 0x1112;
-    HeadsetHS = 0x1131;
+    HEADSET = 0x1108;
+    HEADSET_AUDIO_GATEWAY = 0x1112;
+    HEADSET_HS = 0x1131;
     /// Advanced Audio Distribution Profile (A2DP)
-    AudioSource = 0x110A;
-    AudioSink = 0x110B;
-    AdvancedAudioDistribution = 0x110D;
-    /// Audio/Video Remote Control Profil (AVRCP)
-    AVRemoteControlTarget = 0x110C;
-    AVRemoteControl = 0x110E;
-    AVRemoteControlController = 0x110F;
+    AUDIO_SOURCE = 0x110A;
+    AUDIO_SINK = 0x110B;
+    ADVANCED_AUDIO_DISTRIBUTION = 0x110D;
+    /// Audio/Video Remote Control Profile (AVRCP)
+    AV_REMOTE_CONTROL_TARGET = 0x110C;
+    AV_REMOTE_CONTROL = 0x110E;
+    AV_REMOTE_CONTROL_CONTROLLER = 0x110F;
     /// Personal Area Networking (PAN)
     PANU = 0x1115;
     NAP = 0x1116;
     GN = 0x1117;
     /// Basic Printing and Basic Imaging Profiles omitted (unsupported)
     /// Hands-Free Profile (HFP)
-    Handsfree = 0x111E;
-    HandsfreeAudioGateway = 0x111F;
+    HANDSFREE = 0x111E;
+    HANDSFREE_AUDIO_GATEWAY = 0x111F;
     /// Human Interface Device and Hardcopy Cable Replacement Profile omitted (unsupported)
-    SIM_Access = 0x112D; // Sim Access Profile (SAP)
+    SIM_ACCESS = 0x112D; // Sim Access Profile (SAP)
     /// Phonebook Access Profile (PBAP)
-    PhonebookPCE = 0x112E;
-    PhonebookPSE = 0x112F;
-    Phonebook = 0x1130;
+    PHONEBOOK_PCE = 0x112E;
+    PHONEBOOK_PSE = 0x112F;
+    PHONEBOOK = 0x1130;
     /// Message Access Profile (MAP)
-    MessageAccessServer = 0x1132;
-    MessageNotificationServer = 0x1133;
-    MessageAccessProfile = 0x1134;
+    MESSAGE_ACCESS_SERVER = 0x1132;
+    MESSAGE_NOTIFICATION_SERVER = 0x1133;
+    MESSAGE_ACCESS_PROFILE = 0x1134;
     /// GNSS and 3DSP omitted (unsupported)
     /// Multi-Profile Specification (MPS)
-    MPSProfile = 0x113A;
-    MPSClass = 0x113B;
+    MPS_PROFILE = 0x113A;
+    MPS_CLASS = 0x113B;
     /// Calendar, Task, and Notes Profile omitted (unsupported)
     /// Device ID used by Fuchsia
     /// Video Distribution Profile (VDP)
-    VideoSource = 0x1303;
-    VideoSink = 0x1304;
-    VideoDistribution = 0x1305;
+    VIDEO_SOURCE = 0x1303;
+    VIDEO_SINK = 0x1304;
+    VIDEO_DISTRIBUTION = 0x1305;
     /// Health Device Profile (HDP)
     HDP = 0x1400;
-    HDPSource = 0x1401;
-    HDPSink = 0x1402;
+    HDP_SOURCE = 0x1401;
+    HDP_SINK = 0x1402;
 };
 
 /// A description of a profile that this service conforms to.
+/// See Bluetooth Specification v5.2 Vol 3, Part B, Section 5.1.11
 struct ProfileDescriptor {
     ServiceClassProfileIdentifier profile_id;
     uint8 major_version;
     uint8 minor_version;
 };
 
+/// Maximum number of languages that are supported by SDP at the moment.
+// Note: all informations must be within 0x0100 - 0x01FF per Spec Vol 3, Part B,
+// Sec 5.1.8.  Since each information consumes three spaces, this means there is
+// a max of 256 / 3 = 85 supported.
+const uint8 MAX_INFORMATION_COUNT = 85;
+
 /// Human-readable information about a service. Strings are encoded in UTF-8.
-struct Information {
-    /// Language that is represented.  Must be two characters long and a valid
-    /// ICO 639:1988 identifier.
-    string language;
+/// See Bluetooth Specification v5.2 Vol 3, Part B, Sections 5.1.15 through 5.1.17
+table Information {
+    /// Language that the other fields in this table are in.
+    /// Must be two characters long and a valid ICO 639:1988 identifier.
+    /// Must be present.
+    1: string:2 language;
 
     /// Service name
-    string? name;
+    2: string:MAX_STRING_LENGTH name;
 
     /// A human-readable description
-    string? description;
+    3: string:MAX_STRING_LENGTH description;
 
     /// The provider of this service (person or organization)
-    string? provider;
+    4: string:MAX_STRING_LENGTH provider;
 };
 
 /// A generic attribute, used for protocol information;
@@ -164,7 +180,7 @@ struct Attribute {
 };
 
 /// Universal attribute IDs.
-/// From the Bluetooth Specification, Version 5, Vol 3, Part B
+/// From the Bluetooth Specification v5.2, Vol 3, Part B
 const uint16 ATTR_SERVICE_RECORD_HANDLE = 0x0000;
 const uint16 ATTR_SERVICE_CLASS_ID_LIST = 0x0001;
 const uint16 ATTR_SERVICE_RECORD_STATE = 0x0002;
@@ -177,28 +193,35 @@ const uint16 ATTR_SERVICE_INFO_TIME_TO_LIVE = 0x0007;
 const uint16 ATTR_SERVICE_AVAILABILITY = 0x0008;
 const uint16 ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST = 0x0009;
 
-struct ServiceDefinition {
-    /// UUIDs of service classes that this service record conforms to.
-    vector<string> service_class_uuids;
+/// Maximum additional attributes as defined by the spec. All attributes
+/// must be above 0x0200 per the Bluetooth Specfication, Ver 5.2 Vol 3, Part B,
+/// Section 5
+const uint16 MAX_ADDITIONAL_ATTRIBUTES = 0xFDFF;
 
-    /// The protocols that can be used to gain access to this service, with their
-    /// protocol-specific identifiers.
-    /// This is ordered from lowest level to highest.
-    vector<ProtocolDescriptor> protocol_descriptors;
+/// Definition for a service that is to be advertised as available via Bluetooth BR/EDR.
+table ServiceDefinition {
+    /// UUIDs of service classes that this service record conforms to.
+    /// This field is required - all advertised services must have at least one service class.
+    1: vector<fuchsia.bluetooth.Uuid>:MAX_SEQUENCE_LENGTH service_class_uuids;
+
+    /// Specification for the primary protocol that can be used to gain access to this
+    /// service, with their protocol-specific identifiers.
+    /// This is ordered from lowest level (typically L2CAP) to highest.
+    2: ProtocolDescriptorList protocol_descriptor_list;
 
     /// Additional protocol descriptor lists, if the service requires more channels
     /// in addition to the main service.
-    vector<vector<ProtocolDescriptor>>? additional_protocol_descriptors;
+    3: vector<ProtocolDescriptorList>:MAX_SEQUENCE_LENGTH additional_protocol_descriptor_lists;
 
     /// Bluetooth profiles that are supported by this service.
-    vector<ProfileDescriptor> profile_descriptors;
+    4: vector<ProfileDescriptor>:MAX_SEQUENCE_LENGTH profile_descriptors;
 
     /// Human-readable service information, in one or more languages.
     /// The first set of information is considered the primary language.
-    vector<Information> information;
+    5: vector<Information>:MAX_INFORMATION_COUNT information;
 
-    /// Additional attributes included in the Service Definition, for specific
-    /// services.
+    /// Additional attributes to be included in the Service Definition for specific
+    /// services or profiles.
     /// All of these attributes should have an Attribute ID above 0x0200.
-    vector<Attribute>? additional_attributes;
+    6: vector<Attribute>:MAX_ADDITIONAL_ATTRIBUTES additional_attributes;
 };

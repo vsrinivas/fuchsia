@@ -3,21 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::Error,
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
     fidl::encoding::Decodable as FidlDecodable,
-    fidl::endpoints::{create_endpoints, Proxy, RequestStream, ServiceMarker},
+    fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
-    fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{
-        channel::mpsc, future, future::BoxFuture, future::FutureExt, stream, stream::BoxStream,
-        stream::StreamExt,
-    },
-    parking_lot::Mutex,
+    fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream, PSM_AVCTP},
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
+    fuchsia_zircon as zx,
+    futures::{channel::mpsc, future::FutureExt, stream::StreamExt, task::Poll},
+    matches::assert_matches,
     pin_utils::pin_mut,
-    std::{collections::VecDeque, convert::TryFrom, sync::Arc},
+    std::convert::TryFrom,
 };
 
 use crate::{
@@ -26,200 +25,143 @@ use crate::{
         GetCapabilitiesCapabilityId, PlaybackStatus, *,
     },
     peer_manager::PeerManager,
-    profile::{
-        AvcrpTargetFeatures, AvrcpProfileEvent, AvrcpProtocolVersion, AvrcpService, ProfileService,
-    },
+    peer_manager::ServiceRequest,
+    profile::{AvcrpTargetFeatures, AvrcpProtocolVersion, AvrcpService},
     service,
-    types::PeerId,
 };
 
-pub fn create_fidl_endpoints<S: ServiceMarker>() -> Result<(S::Proxy, S::RequestStream), Error> {
-    let (client, server) = zx::Channel::create()?;
-    let client = fasync::Channel::from_channel(client)?;
-    let client = S::Proxy::from_channel(client);
-    let server = fasync::Channel::from_channel(server)?;
-    let server = S::RequestStream::from_channel(server);
-    Ok((client, server))
-}
-
-#[derive(Debug)]
-pub struct MockProfileServiceState {
-    pub fake_events: Mutex<Option<VecDeque<Result<AvrcpProfileEvent, Error>>>>,
-    pub fake_connect_to_device_response: Mutex<Option<Result<zx::Socket, Error>>>,
-}
-
-#[derive(Debug)]
-pub struct MockProfileService {
-    inner: Arc<MockProfileServiceState>,
-}
-
-impl ProfileService for MockProfileService {
-    fn connect_to_device<'a>(
-        &'a self,
-        _peer_id: &'a PeerId,
-        _psm: u16,
-    ) -> BoxFuture<'_, Result<zx::Socket, Error>> {
-        let result = self.inner.fake_connect_to_device_response.lock().take();
-
-        match result {
-            Some(result_value) => future::ready(result_value).boxed(),
-            None => future::ready(Err(format_err!("no value"))).boxed(),
-        }
-    }
-
-    fn take_event_stream(&self) -> BoxStream<'_, Result<AvrcpProfileEvent, Error>> {
-        let value = self.inner.fake_events.lock().take();
-        match value {
-            Some(events) => stream::iter(events).boxed(),
-            None => panic!("No fake events"),
-        }
-    }
-}
-
-impl MockProfileService {
-    pub fn new(
-        events: Option<VecDeque<Result<AvrcpProfileEvent, Error>>>,
-        device_response: Option<Result<zx::Socket, Error>>,
-    ) -> (Self, Arc<MockProfileServiceState>) {
-        let state = Arc::new(MockProfileServiceState {
-            fake_events: Mutex::new(events),
-            fake_connect_to_device_response: Mutex::new(device_response),
-        });
-        (Self { inner: state.clone() }, state)
-    }
-}
-
-fn spawn_peer_manager() -> Result<PeerManagerProxy, Error> {
+fn spawn_peer_manager() -> Result<
+    (PeerManager, ProfileRequestStream, PeerManagerProxy, mpsc::Receiver<ServiceRequest>),
+    Error,
+> {
     let (client_sender, service_request_receiver) = mpsc::channel(2);
-    let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
 
-    let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
-        .expect("unable to create peer manager");
+    let (profile_proxy, profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
 
-    let (peer_manager_client, peer_manager_client_stream): (
-        PeerManagerProxy,
-        PeerManagerRequestStream,
-    ) = create_fidl_endpoints::<PeerManagerMarker>()?;
+    let peer_manager = PeerManager::new(profile_proxy).expect("unable to create peer manager");
+
+    let (peer_manager_proxy, peer_manager_requests) =
+        create_proxy_and_stream::<PeerManagerMarker>()?;
 
     fasync::spawn(async move {
         let _ = service::avrcp_client_stream_handler(
-            peer_manager_client_stream,
-            client_sender.clone(),
+            peer_manager_requests,
+            client_sender,
             &service::spawn_avrcp_client_controller,
         )
         .await;
     });
 
-    fasync::spawn(async move {
-        let _ = peer_manager.run().await;
-    });
-
-    Ok(peer_manager_client)
+    Ok((peer_manager, profile_requests, peer_manager_proxy, service_request_receiver))
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
-    let peer_manager_client = spawn_peer_manager()?;
+#[test]
+fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
+    let mut exec = fasync::Executor::new().expect("executor should create");
 
-    // create an target volume handler.
-    let (target_client_end_1, target_server_end_1) =
-        create_endpoints::<TargetHandlerMarker>().expect("Error creating TargetHandler endpoint");
+    let (mut peer_manager, _profile_requests, peer_manager_proxy, mut service_request_receiver) =
+        spawn_peer_manager()?;
 
-    // first set should succeed
-    assert_eq!(
-        peer_manager_client
-            .register_target_handler(target_client_end_1)
-            .await
-            .expect("unexpected FIDL error"),
-        Ok(())
-    );
+    // create an target handler.
+    let (target_client, target_server) = create_endpoints::<TargetHandlerMarker>()?;
 
-    // drop the first one. the remote should drop handler when it notices the handle has be closed.
-    drop(target_server_end_1);
+    // Make a request and start it.  It should be pending.
+    let register_fut = peer_manager_proxy.register_target_handler(target_client);
+    pin_mut!(register_fut);
+
+    assert!(exec.run_until_stalled(&mut register_fut).is_pending());
+
+    // We should have a service request.
+    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+
+    // Handing it to Peer Manager should resolve the request
+    peer_manager.handle_service_request(request);
+
+    assert_matches!(exec.run_until_stalled(&mut register_fut), Poll::Ready(Ok(Ok(()))));
+
+    // Dropping the server end of this should drop the handler.
+    drop(target_server);
 
     // create an new target handler.
-    let (target_client_end_2, target_server_end_2) =
-        create_endpoints::<TargetHandlerMarker>().expect("Error creating TargeteHandler endpoint");
+    let (target_client_2, _target_server_2) = create_endpoints::<TargetHandlerMarker>()?;
 
     // should succeed if the previous handler was dropped.
-    assert_eq!(
-        peer_manager_client
-            .register_target_handler(target_client_end_2)
-            .await
-            .expect("unexpected FIDL error"),
-        Ok(())
-    );
+    let register_fut = peer_manager_proxy.register_target_handler(target_client_2);
+    pin_mut!(register_fut);
+    assert!(exec.run_until_stalled(&mut register_fut).is_pending());
+    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+    peer_manager.handle_service_request(request);
+    assert_matches!(exec.run_until_stalled(&mut register_fut), Poll::Ready(Ok(Ok(()))));
 
     // create an new target handler.
-    let (target_client_end_3, target_server_end_3) =
-        create_endpoints::<TargetHandlerMarker>().expect("Error creating TargetHandler endpoint");
+    let (target_client_3, _target_server_3) = create_endpoints::<TargetHandlerMarker>()?;
 
     // should fail since the target handler is already set.
-    assert_eq!(
-        peer_manager_client
-            .register_target_handler(target_client_end_3)
-            .await
-            .expect("unexpected FIDL error"),
-        Err(zx::Status::ALREADY_BOUND.into_raw())
-    );
-
-    drop(target_server_end_2);
-    drop(target_server_end_3);
+    let register_fut = peer_manager_proxy.register_target_handler(target_client_3);
+    pin_mut!(register_fut);
+    assert!(exec.run_until_stalled(&mut register_fut).is_pending());
+    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+    peer_manager.handle_service_request(request);
+    let expected_status = zx::Status::ALREADY_BOUND.into_raw();
+    match exec.run_until_stalled(&mut register_fut) {
+        Poll::Ready(Ok(Err(status))) => assert_eq!(status, expected_status),
+        x => panic!("Expected a ready error result, got {:?}", x),
+    }
     Ok(())
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
-    let peer_manager_client = spawn_peer_manager()?;
+#[test]
+fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
+    let mut exec = fasync::Executor::new().expect("executor should create");
 
-    // create an absolute volume handler.
-    let (absolute_volume_client_end_1, absolute_volume_server_end_1) =
-        create_endpoints::<AbsoluteVolumeHandlerMarker>()
-            .expect("Error creating AbsoluteVolumeHandler endpoint");
+    let (mut peer_manager, _profile_requests, peer_manager_proxy, mut service_request_receiver) =
+        spawn_peer_manager()?;
 
-    // first set should succeed
-    assert_eq!(
-        peer_manager_client
-            .set_absolute_volume_handler("", absolute_volume_client_end_1)
-            .await
-            .expect("unexpected FIDL error"),
-        Ok(())
-    );
+    // create a volume handler.
+    let (volume_client, volume_server) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
 
-    // drop the first one. the remote should drop handler when it notices the handle has be closed.
-    drop(absolute_volume_server_end_1);
+    // Make a request and start it.  It should be pending.
+    let register_fut = peer_manager_proxy.set_absolute_volume_handler("", volume_client);
+    pin_mut!(register_fut);
 
-    // create an new absolute volume handler.
-    let (absolute_volume_client_end_2, absolute_volume_server_end_2) =
-        create_endpoints::<AbsoluteVolumeHandlerMarker>()
-            .expect("Error creating AbsoluteVolumeHandler endpoint");
+    assert!(exec.run_until_stalled(&mut register_fut).is_pending());
+
+    // We should have a service request.
+    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+
+    // Handing it to Peer Manager should resolve the request
+    peer_manager.handle_service_request(request);
+
+    assert_matches!(exec.run_until_stalled(&mut register_fut), Poll::Ready(Ok(Ok(()))));
+
+    // Dropping the server end of this should drop the handler.
+    drop(volume_server);
+
+    // create an new target handler.
+    let (volume_client_2, _volume_server_2) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
 
     // should succeed if the previous handler was dropped.
-    assert_eq!(
-        peer_manager_client
-            .set_absolute_volume_handler("", absolute_volume_client_end_2)
-            .await
-            .expect("unexpected FIDL error"),
-        Ok(())
-    );
+    let register_fut = peer_manager_proxy.set_absolute_volume_handler("", volume_client_2);
+    pin_mut!(register_fut);
+    assert!(exec.run_until_stalled(&mut register_fut).is_pending());
+    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+    peer_manager.handle_service_request(request);
+    assert_matches!(exec.run_until_stalled(&mut register_fut), Poll::Ready(Ok(Ok(()))));
 
-    // create an new absolute volume handler.
-    let (absolute_volume_client_end_3, absolute_volume_server_end_3) =
-        create_endpoints::<AbsoluteVolumeHandlerMarker>()
-            .expect("Error creating AbsoluteVolumeHandler endpoint");
+    // create an new target handler.
+    let (volume_client_3, _volume_server_3) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
 
-    // should fail since the volume handler is already set.
-    assert_eq!(
-        peer_manager_client
-            .set_absolute_volume_handler("", absolute_volume_client_end_3)
-            .await
-            .expect("unexpected FIDL error"),
-        Err(zx::Status::ALREADY_BOUND.into_raw())
-    );
-
-    drop(absolute_volume_server_end_2);
-    drop(absolute_volume_server_end_3);
-
+    // should fail since the target handler is already set.
+    let register_fut = peer_manager_proxy.set_absolute_volume_handler("", volume_client_3);
+    pin_mut!(register_fut);
+    assert!(exec.run_until_stalled(&mut register_fut).is_pending());
+    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+    peer_manager.handle_service_request(request);
+    let expected_status = zx::Status::ALREADY_BOUND.into_raw();
+    match exec.run_until_stalled(&mut register_fut) {
+        Poll::Ready(Ok(Err(status))) => assert_eq!(status, expected_status),
+        x => panic!("Expected a ready error result, got {:?}", x),
+    }
     Ok(())
 }
 
@@ -244,10 +186,10 @@ async fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error
 // 11. Waits until we have a response to all commands from our mock remote service return expected
 //    values and we have received enough position change events.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Error> {
+async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Error> {
     const REQUESTED_VOLUME: u8 = 0x40;
     const SET_VOLUME: u8 = 0x24;
-    const FAKE_PEER_ID: &str = "1234";
+    let fake_peer_id = PeerId(0);
     const LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet,\
          consectetur adipiscing elit. Nunc eget elit cursus ipsum \
          fermentum viverra id vitae lorem. Cras luctus elementum \
@@ -274,48 +216,34 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     // when zero, we exit the test.
     let mut expected_commands: i64 = 0;
 
-    let (c_client, c_server): (PeerManagerProxy, PeerManagerRequestStream) =
-        create_fidl_endpoints::<PeerManagerMarker>()?;
+    let (peer_manager_proxy, peer_manager_requests) =
+        create_proxy_and_stream::<PeerManagerMarker>()?;
+    let (ext_proxy, ext_requests) = create_proxy_and_stream::<PeerManagerExtMarker>()?;
 
-    let (t_client, t_server): (PeerManagerExtProxy, PeerManagerExtRequestStream) =
-        create_fidl_endpoints::<PeerManagerExtMarker>()?;
-
-    let (client_sender, peer_controller_request_receiver) = mpsc::channel(512);
+    let (client_sender, mut peer_controller_request_receiver) = mpsc::channel(512);
 
     let (local, remote) =
         zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("unable to make socket");
 
-    // Queue up two fake test events.
-    let mut events = VecDeque::new();
-    events.push_back(Ok(AvrcpProfileEvent::ServicesDiscovered {
-        peer_id: FAKE_PEER_ID.to_string(),
-        services: vec![AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP as u16,
-            protocol_version: AvrcpProtocolVersion(1, 6),
-        }],
-    }));
-    events.push_back(Ok(AvrcpProfileEvent::IncomingControlConnection {
-        peer_id: FAKE_PEER_ID.to_string(),
-        channel: local,
-    }));
-
     let remote_peer = AvcPeer::new(remote)?;
 
-    let (profile_service, _state) = MockProfileService::new(Some(events), None);
+    let (profile_proxy, _requests) = create_proxy::<ProfileMarker>()?;
 
-    let peer_manager =
-        PeerManager::new(Box::new(profile_service), peer_controller_request_receiver)
-            .expect("unable to create peer manager");
+    let mut peer_manager = PeerManager::new(profile_proxy).expect("unable to create peer manager");
 
-    let (controller_client_endpoint, controller_server_endpoint) =
-        create_endpoints::<ControllerMarker>().expect("Error creating Controller endpoint");
+    peer_manager.services_found(
+        &fake_peer_id,
+        vec![AvrcpService::Target {
+            features: AvcrpTargetFeatures::CATEGORY1,
+            psm: PSM_AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        }],
+    );
 
-    let (controller_ext_client_endpoint, controller_ext_server_endpoint) =
-        create_endpoints::<ControllerExtMarker>().expect("Error creating Test Controller endpoint");
+    peer_manager.new_control_connection(&fake_peer_id, local);
 
     let handler_fut = service::avrcp_client_stream_handler(
-        c_server,
+        peer_manager_requests,
         client_sender.clone(),
         &service::spawn_avrcp_client_controller,
     )
@@ -323,26 +251,24 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     pin_mut!(handler_fut);
 
     let test_handler_fut = service::test_avrcp_client_stream_handler(
-        t_server,
+        ext_requests,
         client_sender.clone(),
         &service::spawn_test_avrcp_client_controller,
     )
     .fuse();
     pin_mut!(test_handler_fut);
 
-    let get_controller_fut =
-        c_client.get_controller_for_target(FAKE_PEER_ID, controller_server_endpoint).fuse();
+    let (controller_proxy, controller_server) = create_proxy()?;
+    let get_controller_fut = peer_manager_proxy
+        .get_controller_for_target(&fake_peer_id.to_string(), controller_server)
+        .fuse();
     pin_mut!(get_controller_fut);
 
-    let get_test_controller_fut =
-        t_client.get_controller_for_target(FAKE_PEER_ID, controller_ext_server_endpoint).fuse();
+    let (controller_ext_proxy, controller_ext_server) = create_proxy()?;
+    let get_test_controller_fut = ext_proxy
+        .get_controller_for_target(&fake_peer_id.to_string(), controller_ext_server)
+        .fuse();
     pin_mut!(get_test_controller_fut);
-
-    let peer_manager_run_fut = peer_manager.run().fuse();
-    pin_mut!(peer_manager_run_fut);
-
-    let controller_proxy = controller_client_endpoint.into_proxy()?;
-    let controller_ext_proxy = controller_ext_client_endpoint.into_proxy()?;
 
     let is_connected_fut = controller_ext_proxy.is_connected().fuse();
     pin_mut!(is_connected_fut);
@@ -646,19 +572,19 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
             command = remote_command_stream.select_next_some() => {
                 handle_remote_command(command?);
             }
-            _= peer_manager_run_fut  => {
-                return Err(format_err!("peer manager returned early"))
+            request = peer_controller_request_receiver.select_next_some()  => {
+                peer_manager.handle_service_request(request);
             }
             res = handler_fut => {
                 let _ = res?;
                 assert!(false, "handler returned");
-                drop(c_client);
+                drop(peer_manager_proxy);
                 return Ok(())
             }
             res = test_handler_fut => {
                 let _ = res?;
                 assert!(false, "handler returned");
-                drop(t_client);
+                drop(ext_proxy);
                 return Ok(())
             }
             res = get_controller_fut => {

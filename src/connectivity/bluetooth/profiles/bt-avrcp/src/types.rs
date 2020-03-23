@@ -22,9 +22,6 @@ use {
 
 use crate::packets::Error as PacketError;
 
-// TODO(BT-2197): change to the BT shared peer id type when the BrEdr protocol changes over.
-pub type PeerId = String;
-
 /// The error types for peer management.
 #[derive(Error, Debug)]
 pub enum PeerError {

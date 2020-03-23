@@ -17,38 +17,38 @@ Include the `tests` target in your `fx set`:
 Then run `fx run-test bt-bredr-profile-tests`.
 
 ## Commands
-### connect-l2cap
-Targets `Profile.ConnectL2cap`.
+### connect
+Targets `Profile.Connect`.
 
 Issuing this command does not automatically connect non-connected peers, and
 will fail for such peers. `bt-cli` may be used in conjunction with this tool to
 control peer connections.
 
 #### Usage
-`connect-l2cap <peer-id> <psm> <channel-mode> <max-rx-sdu-size>`
+`connect <peer-id> <psm> <channel-mode> <max-rx-sdu-size>`
 
 ##### Arguments
-- `peer-id` maps to the `peer_id` field of `ConnectL2cap`
-- `psm` maps to the `psm` field of `ConnectL2cap`
+- `peer-id` maps to the `peer_id` field of `Connect`
+- `psm` maps to the `psm` field of `Connect`
 - `channel-mode` can be one of {`basic`, `ertm`}, and maps to the
-  `parameters.channel_mode` field of `ConnectL2cap`
-- `max-rx-sdu-size` maps to the `parameters.max_rx_sdu_size` field of `ConnectL2cap`
+  `parameters.channel_mode` field of `Connect`
+- `max-rx-sdu-size` maps to the `parameters.max_rx_sdu_size` field of `Connect`
 
 #### Example
 ```
-profile> connect-l2cap 75870b2c86d9e801 1 basic 672
+profile> connect 75870b2c86d9e801 1 basic 672
 Channel:
   Id: 0
   Mode: Basic
   Max Tx Sdu Size: 672
 ```
 
-### disconnect-l2cap
+### disconnect
 Drops the socket corresponding to `channel-id`, which will disconnect the l2cap
 channel.
 
 #### Usage
-`disconnect-l2cap <channel-id>`
+`disconnect <channel-id>`
 
 ##### Arguments
 - `channel-id` is an integer assigned to this channel by the REPL.
@@ -82,13 +82,13 @@ Write data on a socket/channel.
 - `data` is a string of characters that will be written on the channel.
 
 ### add-service
-Targets `Profile.AddService`.
+Targets `Profile.Advertise`.
 
-Registers an L2CAP service with the SDP server. After adding a service, the
-`OnConnected` event will be printed when a peer connects to that service.
+Advertises an L2CAP service with the SDP server. After adding a service,
+a notification will be printed when a peer connects to that service.
 
 #### Usage
-`add-service <psm> <channel-mode> <max-rx-sdu-size>`
+`advertise <psm> <channel-mode> <max-rx-sdu-size>`
 
 For convenience, a valid Audio Sink service definition (with 1 UUID and 1 L2CAP
 protocol descriptor) is created from just the `psm` argument.
@@ -103,25 +103,25 @@ protocol descriptor) is created from just the `psm` argument.
 #### Example
 
 ```
-profile> add-service 25 ertm 672
+profile> advertise 25 ertm 672
 Service:
   Id: 0
 ```
 
 ### remove-service
-Targets `Profile.RemoveService`.
 
-Unregisters an L2CAP service from the SDP server.
+Unregisters an L2CAP service from the SDP server, using the id returned by
+`advertise`
 
 #### Usage
 `remove-service <service-id>`
 
 ##### Arguments
-- `service-id` is the unique service identifier received from the SDP server
-  after executing the `add-service` command.
+- `service-id` is the identifier assigned to the registration after executing
+  the `advertise` command.
 
 ### services
-Lists services registered with the `add-service` command.
+Lists services registered with the `advertise` command.
 
 #### Usage
 `services`
@@ -137,18 +137,3 @@ Service:
 
 ### exit / quit
 Removes all services, closes all open channels, and exits the REPL.
-
-## Events
-### OnConnected
-Corresponds to the `Profile.OnConnected` event. Printed when a channel connects to
-a service previously added with the `add-service` command.
-
-### Example
-```
- OnConnected Event:
-  Service Id: 0
-  Channel:
-    Id: 0
-    Mode: Basic
-    Max Tx Sdu Size: 672
-```

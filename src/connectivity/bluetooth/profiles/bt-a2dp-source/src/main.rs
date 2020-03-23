@@ -10,23 +10,23 @@ use {
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::{codec::MediaCodecConfig, media_types::*},
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
-    fidl::encoding::Decodable,
+    fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
-        types::PeerId,
+        profile::find_profile_descriptors,
+        types::{PeerId, Uuid},
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
-    futures::{self, AsyncWriteExt, StreamExt, TryStreamExt},
+    futures::{self, select, AsyncWriteExt, StreamExt, TryStreamExt},
     parking_lot::Mutex,
     std::{
         convert::{TryFrom, TryInto},
-        string::String,
         sync::Arc,
     },
 };
@@ -44,38 +44,23 @@ use sources::AudioSourceType;
 /// Make the SDP definition for the A2DP source service.
 fn make_profile_service_definition() -> ServiceDefinition {
     ServiceDefinition {
-        service_class_uuids: vec![String::from("110A")], // Audio Source UUID
-        protocol_descriptors: vec![
+        service_class_uuids: Some(vec![Uuid::new16(0x110A).into()]), // Audio Source UUID
+        protocol_descriptor_list: Some(vec![
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::L2Cap,
-                params: vec![DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(PSM_AVDTP),
-                }],
+                params: vec![DataElement::Uint16(PSM_AVDTP)],
             },
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::Avdtp,
-                params: vec![DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(0x0103), // Indicate v1.3
-                }],
+                params: vec![DataElement::Uint16(0x0103)], // Indicate v1.3
             },
-        ],
-        profile_descriptors: vec![ProfileDescriptor {
+        ]),
+        profile_descriptors: Some(vec![ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
             major_version: 1,
             minor_version: 2,
-        }],
-        additional_protocol_descriptors: None,
-        information: vec![Information {
-            language: "en".to_string(),
-            name: Some("A2DP".to_string()),
-            description: Some("Advanced Audio Distribution Profile".to_string()),
-            provider: Some("Fuchsia".to_string()),
-        }],
-        additional_attributes: None,
+        }]),
+        ..ServiceDefinition::new_empty()
     }
 }
 
@@ -177,15 +162,15 @@ impl Peers {
             }
             return Ok(());
         }
-        let (status, channel) = self
+        let channel = match self
             .profile
-            .connect_l2cap(&id.to_string(), PSM_AVDTP as u16, ChannelParameters::new_empty())
-            .await?;
+            .connect(&mut id.into(), PSM_AVDTP, ChannelParameters::new_empty())
+            .await?
+        {
+            Ok(channel) => channel,
+            Err(code) => return Err(format_err!("Couldn't connect to peer {}: {:?}", id, code)),
+        };
 
-        if let Some(e) = status.error {
-            fx_log_warn!("Couldn't connect to {}: {:?}", id, e);
-            return Ok(());
-        }
         match channel.socket {
             Some(socket) => self.connected(id, socket, Some(desc))?,
             None => fx_log_warn!("Couldn't connect {}: no socket", id),
@@ -420,21 +405,21 @@ async fn main() -> Result<(), Error> {
     fasync::spawn(fs.collect::<()>());
 
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
-        .context("Failed to connect to Bluetooth profile service")?;
+        .context("connecting to Bluetooth profile service")?;
 
-    let mut service_def = make_profile_service_definition();
+    let service_defs = vec![make_profile_service_definition()];
 
-    let (status, _) = profile_svc
-        .add_service(
-            &mut service_def,
-            SecurityLevel::EncryptionOptional,
+    let (connect_client, mut connect_requests) =
+        create_request_stream().context("ConnectionReceiver creation")?;
+
+    profile_svc
+        .advertise(
+            &mut service_defs.into_iter(),
+            SecurityRequirements::new_empty(),
             ChannelParameters::new_empty(),
+            connect_client,
         )
-        .await?;
-
-    if let Some(e) = status.error {
-        return Err(format_err!("Couldn't add A2DP source service: {:?}", e));
-    }
+        .context("advertising A2DP service")?;
 
     const ATTRS: [u16; 4] = [
         ATTR_PROTOCOL_DESCRIPTOR_LIST,
@@ -443,37 +428,59 @@ async fn main() -> Result<(), Error> {
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSink, &ATTRS)?;
-    let mut evt_stream = profile_svc.take_event_stream();
+    let (results_client, mut results_requests) =
+        create_request_stream().context("SearchResults creation")?;
+
+    profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
     let mut peers = Peers::new(opts.source, profile_svc);
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
-    while let Some(evt) = evt_stream.next().await {
-        let res = match evt? {
-            ProfileEvent::OnConnected { device_id, channel, .. } => {
-                fx_log_info!("Connected sink {}", device_id);
-                let peer_id = device_id.parse().expect("peer ids from profile should parse");
-                let socket = channel.socket.expect("socket from profile should not be None");
-                let connected_res = peers.connected(device_id.parse()?, socket, None);
+    loop {
+        select! {
+            connect_request = connect_requests.try_next() => {
+                let connected = match connect_request? {
+                    None => return Err(format_err!("BR/EDR ended service registration")),
+                    Some(request) => request,
+                };
+                let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
+                let peer_id: PeerId = peer_id.into();
+                fx_log_info!("Connected sink {}", peer_id);
+                let socket = channel.socket.ok_or(format_err!("socket from profile should not be None"))?;
+                if let Err(e) = peers.connected(peer_id, socket, None) {
+                    fx_log_info!("Error connecting peer {}: {:?}", peer_id, e);
+                    continue;
+                }
                 if let Some(peer) = peers.get(&peer_id) {
                     controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
                 }
-                connected_res
-            }
-            ProfileEvent::OnServiceFound { peer_id, profile, attributes } => {
+            },
+            results_request = results_requests.try_next() => {
+                let result = match results_request? {
+                    None => return Err(format_err!("BR/EDR ended service search")),
+                    Some(request) => request,
+                };
+                let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
+                let peer_id: PeerId = peer_id.into();
                 fx_log_info!(
-                    "Discovered sink {} - profile {:?}: {:?}",
+                    "Discovered sink {} - protocol {:?}: {:?}",
                     peer_id,
-                    profile,
+                    protocol,
                     attributes
                 );
-                peers.discovered(peer_id.parse()?, profile).await
-            }
-        };
-        if let Err(e) = res {
-            fx_log_warn!("Error processing event: {}", e);
+                let profile = match find_profile_descriptors(&attributes) {
+                    Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
+                    Err(_) => {
+                        fx_log_info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
+                        continue;
+                    }
+                };
+                if let Err(e) = peers.discovered(peer_id, profile).await {
+                    fx_log_info!("Error with discovered peer {}: {:?}", peer_id, e);
+                }
+            },
+            complete => break,
         }
     }
     Ok(())

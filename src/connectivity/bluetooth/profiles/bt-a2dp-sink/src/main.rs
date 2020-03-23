@@ -12,10 +12,15 @@ use {
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::encoding::Decodable,
+    fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
+    fuchsia_bluetooth::{
+        inspect::DebugExt,
+        profile::find_profile_descriptors,
+        types::{PeerId, Uuid},
+    },
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
@@ -43,38 +48,23 @@ mod player;
 /// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
     ServiceDefinition {
-        service_class_uuids: vec![String::from("110B")], // Audio Sink UUID
-        protocol_descriptors: vec![
+        service_class_uuids: Some(vec![Uuid::new16(0x110B).into()]), // Audio Sink UUID
+        protocol_descriptor_list: Some(vec![
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::L2Cap,
-                params: vec![DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(PSM_AVDTP),
-                }],
+                params: vec![DataElement::Uint16(PSM_AVDTP)],
             },
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::Avdtp,
-                params: vec![DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(0x0103), // Indicate v1.3
-                }],
+                params: vec![DataElement::Uint16(0x0103)], // Indicate v1.3
             },
-        ],
-        profile_descriptors: vec![ProfileDescriptor {
+        ]),
+        profile_descriptors: Some(vec![ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
             major_version: 1,
             minor_version: 2,
-        }],
-        additional_protocol_descriptors: None,
-        information: vec![Information {
-            language: "en".to_string(),
-            name: Some("A2DP".to_string()),
-            description: Some("Advanced Audio Distribution Profile".to_string()),
-            provider: Some("Fuchsia".to_string()),
-        }],
-        additional_attributes: None,
+        }]),
+        ..ServiceDefinition::new_empty()
     }
 }
 
@@ -435,21 +425,21 @@ async fn connect_after_timeout(
     }
 
     fx_vlog!(tag: "a2dp-sink", 1, "Remote peer has not established connection. A2DP sink will now assume the INT role.");
-    let (status, channel) = match profile_svc
-        .connect_l2cap(&peer_id.to_string(), PSM_AVDTP as u16, ChannelParameters::new_empty())
+    let channel = match profile_svc
+        .connect(&mut peer_id.into(), PSM_AVDTP, ChannelParameters::new_empty())
         .await
     {
-        Ok(x) => x,
         Err(e) => {
             fx_log_warn!("FIDL error creating channel: {:?}", e);
             return;
         }
+        Ok(Err(e)) => {
+            fx_log_warn!("Couldn't connect to {}: {:?}", peer_id, e);
+            return;
+        }
+        Ok(Ok(channel)) => channel,
     };
 
-    if let Some(e) = status.error {
-        fx_log_warn!("Couldn't connect to {}: {:?}", peer_id, e);
-        return;
-    }
     handle_connection(&peer_id, channel, true, &mut peers.lock(), &mut controller_pool.lock());
 }
 
@@ -469,54 +459,37 @@ fn handle_connection(
     }
 }
 
-/// Handles incoming profile events.
-///
-/// If a remote device connects to us, store the transport channel and assume the ACP role.
-/// If the remote device is found, but does not connect, wait `INITIATOR_DELAY` and attempt
-/// to assume the INT role.
-fn handle_profile_event(
-    evt: ProfileEvent,
-    profile_svc: ProfileProxy,
+/// Handles found services. Stores the found information and then spawns a task which will
+/// assume initator role after a delay.
+fn handle_services_found(
+    peer_id: &PeerId,
+    attributes: &[Attribute],
     peers: Arc<Mutex<ConnectedPeers>>,
     controller_pool: Arc<Mutex<AvdtpControllerPool>>,
-) -> Result<(), Error> {
-    match evt {
-        ProfileEvent::OnServiceFound { peer_id, profile, attributes } => {
-            fx_log_info!(
-                "Audio Source on {} with profile {:?}: {:?}",
-                peer_id,
-                profile,
-                attributes
-            );
-            let peer_id = peer_id.parse().expect("peer ids from profile should parse");
-            peers.lock().found(peer_id, profile);
+    profile_svc: ProfileProxy,
+) {
+    fx_log_info!("Audio Source found on {}, attributes: {:?}", peer_id, attributes);
 
-            if peers.lock().is_connected(&peer_id) {
-                return Ok(());
-            }
+    let profile = match find_profile_descriptors(attributes) {
+        Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
+        Err(_) => {
+            fx_log_info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
+            return;
+        }
+    };
 
-            fasync::spawn(connect_after_timeout(
-                peer_id,
-                peers.clone(),
-                controller_pool.clone(),
-                profile_svc,
-            ));
-        }
-        ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol } => {
-            fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
-            let peer_id = device_id.parse().expect("peer ids from profile should parse");
-            // The remote peer connected to us, `initiate_streaming` = false.
-            handle_connection(
-                &peer_id,
-                channel,
-                false,
-                &mut peers.lock(),
-                &mut controller_pool.lock(),
-            );
-        }
+    peers.lock().found(peer_id.clone(), profile);
+
+    if peers.lock().is_connected(&peer_id) {
+        return;
     }
 
-    Ok(())
+    fasync::spawn(connect_after_timeout(
+        peer_id.clone(),
+        peers.clone(),
+        controller_pool.clone(),
+        profile_svc,
+    ));
 }
 
 /// Options available from the command line
@@ -578,15 +551,17 @@ async fn main() -> Result<(), Error> {
         opts.domain,
     )));
 
-    let mut service_def = make_profile_service_definition();
+    let service_defs = vec![make_profile_service_definition()];
 
-    let (status, service_id) = profile_svc
-        .add_service(
-            &mut service_def,
-            SecurityLevel::EncryptionOptional,
-            ChannelParameters::new_empty(),
-        )
-        .await?;
+    let (connect_client, mut connect_requests) =
+        create_request_stream().context("ConnectionReceiver creation")?;
+
+    profile_svc.advertise(
+        &mut service_defs.into_iter(),
+        SecurityRequirements::new_empty(),
+        ChannelParameters::new_empty(),
+        connect_client,
+    )?;
 
     const ATTRS: [u16; 4] = [
         ATTR_PROTOCOL_DESCRIPTOR_LIST,
@@ -595,19 +570,34 @@ async fn main() -> Result<(), Error> {
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSource, &ATTRS)?;
+    let (results_client, mut results_requests) =
+        create_request_stream().context("SearchResults creation")?;
 
-    fx_log_info!("Registered Service ID {}", service_id);
-
-    if let Some(e) = status.error {
-        return Err(format_err!("Couldn't add A2DP sink service: {:?}", e));
-    }
+    profile_svc.search(ServiceClassProfileIdentifier::AudioSource, &ATTRS, results_client)?;
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
-    let mut evt_stream = profile_svc.take_event_stream();
-    while let Some(evt) = evt_stream.try_next().await? {
-        handle_profile_event(evt, profile_svc.clone(), peers.clone(), controller_pool.clone())?;
+    loop {
+        select! {
+            connect_request = connect_requests.try_next() => {
+                let connected = match connect_request? {
+                    None => return Err(format_err!("BR/EDR ended service registration")),
+                    Some(request) => request,
+                };
+                let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
+                handle_connection(&peer_id.into(), channel, false, &mut peers.lock(), &mut controller_pool.lock());
+            }
+            results_request = results_requests.try_next() => {
+                let result = match results_request? {
+                    None => return Err(format_err!("BR/EDR ended service search")),
+                    Some(request) => request,
+                };
+                let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
+
+                handle_services_found(&peer_id.into(), &attributes, peers.clone(), controller_pool.clone(), profile_svc.clone());
+            }
+            complete => break,
+        }
     }
     Ok(())
 }
@@ -616,14 +606,13 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    use fidl::endpoints::{create_proxy_and_stream, RequestStream};
-    use fidl_fuchsia_bluetooth::Status;
-    use fidl_fuchsia_bluetooth_bredr::{Channel, ProfileControlHandle, ProtocolDescriptor};
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_bluetooth_bredr::Channel;
     use fidl_fuchsia_cobalt::{CobaltEvent, EventPayload};
     use fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC};
     use fuchsia_bluetooth::types::PeerId;
     use futures::channel::mpsc;
-    use futures::{pin_mut, task::Poll, StreamExt};
+    use futures::{task::Poll, StreamExt};
     use matches::assert_matches;
 
     fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
@@ -661,34 +650,6 @@ mod tests {
         let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
         (exec, id, peers, proxy, stream, controller_pool)
-    }
-
-    fn send_on_service_found(id: PeerId, control_handle: ProfileControlHandle) {
-        let mut profile_desc = ProfileDescriptor {
-            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
-            major_version: 1,
-            minor_version: 3,
-        };
-        let attributes = vec![];
-        control_handle
-            .send_on_service_found(&id.to_string(), &mut profile_desc, &mut attributes.into_iter())
-            .expect("Should send event");
-    }
-
-    fn send_on_connected(id: PeerId, control_handle: ProfileControlHandle) -> zx::Socket {
-        let (remote, transport) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
-        let channel = Channel { socket: Some(transport), ..Channel::new_empty() };
-        control_handle
-            .send_on_connected(
-                &id.to_string(),
-                12345,
-                channel,
-                &mut ProtocolDescriptor::new_empty(),
-            )
-            .expect("Should send event");
-
-        remote
     }
 
     #[test]
@@ -868,31 +829,23 @@ mod tests {
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
 
-        let control_handle = prof_stream.control_handle();
-        let mut evt_stream = proxy.take_event_stream();
-        let evt_fut = evt_stream.next();
-        pin_mut!(evt_fut);
+        // Simulate getting the service found event.
+        let attributes = vec![Attribute {
+            id: ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+            element: DataElement::Sequence(vec![Some(Box::new(DataElement::Sequence(vec![
+                Some(Box::new(Uuid::from(ServiceClassProfileIdentifier::AudioSource).into())),
+                Some(Box::new(DataElement::Uint16(0x0103))), // Version 1.3
+            ])))]),
+        }];
+        handle_services_found(
+            &id,
+            &attributes,
+            peers.clone(),
+            controller_pool.clone(),
+            proxy.clone(),
+        );
 
-        match exec.run_until_stalled(&mut evt_fut) {
-            Poll::Pending => {}
-            Poll::Ready(x) => {
-                panic!("Expected a Pending response but got: {:?}", x);
-            }
-        };
-
-        // Send an OnServiceFound event and get the event.
-        send_on_service_found(id, control_handle);
-        let evt = match exec.run_until_stalled(&mut evt_fut) {
-            Poll::Ready(Some(Ok(evt))) => evt,
-            x => {
-                panic!("Expected a Ready response but got: {:?}", x);
-            }
-        };
-
-        // Propagate the event to the handler.
-        let res = handle_profile_event(evt, proxy, peers.clone(), controller_pool);
         run_to_stalled(&mut exec);
-        assert_eq!(Ok(()), res.map_err(|e| format!("{:?}", e)));
 
         // At this point, a remote peer was found, but hasn't connected yet. There
         // should be no entry for it.
@@ -904,22 +857,19 @@ mod tests {
         exec.wake_expired_timers();
         run_to_stalled(&mut exec);
 
-        // After fast forwarding time, expect and handle the `connect_l2cap` request
+        // After fast forwarding time, expect and handle the `connect` request
         // because A2DP-sink should be initiating.
         let (_test, transport) =
             zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
         let request = exec.run_until_stalled(&mut prof_stream.next());
         match request {
-            Poll::Ready(Some(Ok(ProfileRequest::ConnectL2cap { peer_id, responder, .. }))) => {
-                assert_eq!(PeerId(1), peer_id.parse().expect("peer_id parses"));
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { peer_id, responder, .. }))) => {
+                assert_eq!(PeerId(1), peer_id.into());
                 responder
-                    .send(
-                        &mut Status { error: None },
-                        Channel { socket: Some(transport), ..Channel::new_empty() },
-                    )
+                    .send(&mut Ok(Channel { socket: Some(transport), ..Channel::new_empty() }))
                     .expect("responder sends");
             }
-            x => panic!("Should have sent a open l2cap request, but got {:?}", x),
+            x => panic!("Should have sent a connect request, but got {:?}", x),
         };
         run_to_stalled(&mut exec);
 
@@ -937,31 +887,21 @@ mod tests {
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
 
-        let control_handle = prof_stream.control_handle();
-        let mut evt_stream = proxy.take_event_stream();
-        let evt_fut = evt_stream.next();
-        pin_mut!(evt_fut);
-
-        match exec.run_until_stalled(&mut evt_fut) {
-            Poll::Pending => {}
-            Poll::Ready(x) => {
-                panic!("Expected a Pending response but got: {:?}", x);
-            }
-        };
-
-        // Send an OnServiceFound event and get the event.
-        send_on_service_found(id, control_handle.clone());
-        let evt = match exec.run_until_stalled(&mut evt_fut) {
-            Poll::Ready(Some(Ok(evt))) => evt,
-            x => {
-                panic!("Expected a Ready response but got: {:?}", x);
-            }
-        };
-
-        // Propagate the event to the handler.
-        let res = handle_profile_event(evt, proxy.clone(), peers.clone(), controller_pool.clone());
-        run_to_stalled(&mut exec);
-        assert_eq!(Ok(()), res.map_err(|e| format!("{:?}", e)));
+        // Simulate getting the service found event.
+        let attributes = vec![Attribute {
+            id: ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+            element: DataElement::Sequence(vec![Some(Box::new(DataElement::Sequence(vec![
+                Some(Box::new(Uuid::from(ServiceClassProfileIdentifier::AudioSource).into())),
+                Some(Box::new(DataElement::Uint16(0x0103))), // Version 1.3
+            ])))]),
+        }];
+        handle_services_found(
+            &id,
+            &attributes,
+            peers.clone(),
+            controller_pool.clone(),
+            proxy.clone(),
+        );
 
         // At this point, a remote peer was found, but hasn't connected yet. There
         // should be no entry for it.
@@ -974,18 +914,12 @@ mod tests {
         run_to_stalled(&mut exec);
 
         // A peer connects before the timeout.
-        let _remote = send_on_connected(id, control_handle.clone());
-        let evt = match exec.run_until_stalled(&mut evt_fut) {
-            Poll::Ready(Some(Ok(evt))) => evt,
-            x => {
-                panic!("Expected a Ready response but got: {:?}", x);
-            }
-        };
+        let (_remote, transport) =
+            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
+        let channel = Channel { socket: Some(transport), ..Channel::new_empty() };
+        handle_connection(&id, channel, false, &mut peers.lock(), &mut controller_pool.lock());
 
-        // Propagate the event to the handler.
-        let res = handle_profile_event(evt, proxy, peers.clone(), controller_pool);
         run_to_stalled(&mut exec);
-        assert_eq!(Ok(()), res.map_err(|e| format!("{:?}", e)));
 
         // The remote peer connected to us, and should be in the map.
         assert!(peers.lock().is_connected(&id));

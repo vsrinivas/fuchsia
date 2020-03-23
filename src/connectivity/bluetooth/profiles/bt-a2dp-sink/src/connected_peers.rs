@@ -193,7 +193,6 @@ impl ConnectedPeers {
                 return;
             }
         };
-
         match self.get(&id) {
             Some(peer) => {
                 if let Err(e) = peer.write().receive_channel(socket) {

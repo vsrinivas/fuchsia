@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(response.encoded_len(), 0); // empty payload for command
         let mut buf = vec![0; response.encoded_len()];
         assert!(response.encode(&mut buf[..]).is_ok());
-        assert_eq!(buf, vec![]);
+        assert_eq!(buf.len(), 0);
     }
 
     #[test]

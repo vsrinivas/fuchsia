@@ -8,6 +8,8 @@ mod notification_stream;
 use crate::types::PeerError;
 use notification_stream::NotificationStream;
 
+use fidl_fuchsia_bluetooth_bredr::ChannelParameters;
+
 /// Processes incoming commands from the control stream and dispatches them to the control command
 /// handler. This started only when we have connection and when we have either a target or
 /// controller SDP profile record for the current peer.
@@ -104,8 +106,6 @@ fn handle_notification(
 ///       outgoing connection. Properly handle the case where we are attempting to connect to remote
 ///       at the same time they make an incoming connection according to how the the spec says.
 fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
-    let peer = peer.clone();
-
     fasync::spawn(async move {
         let (peer_id, profile_service) = {
             let peer_guard = peer.read();
@@ -114,11 +114,26 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                 PeerChannel::Connecting => {}
                 _ => return,
             }
-            (peer_guard.peer_id.clone(), peer_guard.profile_svc.clone())
+            (peer_guard.peer_id, peer_guard.profile_proxy.clone())
         };
 
-        match profile_service.connect_to_device(&peer_id, PSM_AVCTP as u16).await {
-            Ok(socket) => {
+        match profile_service
+            .connect(&mut peer_id.into(), PSM_AVCTP, ChannelParameters::new_empty())
+            .await
+        {
+            Err(fidl_err) => {
+                let mut peer_guard = peer.write();
+                fx_log_err!("FIDL error calling connect: {:?}", fidl_err);
+                peer_guard.reset_connection(false);
+            }
+            Ok(Ok(channel)) => {
+                let mut peer_guard = peer.write();
+                if channel.socket.is_none() {
+                    fx_log_err!("Connect didn't return a socket?!");
+                    peer_guard.reset_connection(false);
+                    return;
+                }
+                let socket = channel.socket.expect("socket isn't None");
                 let mut peer_guard = peer.write();
                 match peer_guard.control_channel {
                     PeerChannel::Connecting => match AvcPeer::new(socket) {
@@ -126,8 +141,8 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                             peer_guard.set_control_connection(peer);
                         }
                         Err(e) => {
+                            fx_log_err!("Unable to make peer from socket {:?}: {:?}", peer_id, e);
                             peer_guard.reset_connection(false);
-                            fx_log_err!("Unable to make peer from socket {}: {:?}", peer_id, e);
                         }
                     },
                     _ => {
@@ -142,7 +157,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                     }
                 };
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 fx_log_err!("connect_to_device error {}: {:?}", peer_id, e);
                 let mut peer_guard = peer.write();
                 if let PeerChannel::Connecting = peer_guard.control_channel {

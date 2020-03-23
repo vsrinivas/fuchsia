@@ -6,21 +6,21 @@ library fuchsia.bluetooth.bredr;
 
 using fuchsia.bluetooth;
 
-// Possible security levels for services.
-// See BT spec v5.0, Vol 3, Part C, Section 5.2.2.8 for detailed descriptions.
-enum SecurityLevel {
-    NONE = 0; // Only allowed for specific services.
-    ENCRYPTION_OPTIONAL = 1; // MITM protection not required, min user interaction
-    ENCRYPTION_REQUIRED = 2; // Encryption required, MITM protection not required
-    MITM_PROTECTED = 3; // MITM Protection & Encryption required. Interaction okay
-    HIGH_STRENGTH = 4; // 128-bit or equivalent key required using FIPS algorithms
+/// Authentication and permission requirements to access an advertised service.
+table SecurityRequirements {
+    /// If present and true, the physical link must be authenticated with man-in-the-middle attack
+    /// protection to access this service.  If missing, authentication is not required.
+    1: bool authentication_required;
+
+    /// If present and true, the physical link must be encrypted with a Secure Connections key to
+    /// access this service if the host is capable.  Advertisement will fail if the host does not
+    /// support Secure Connections.  See Bluetooth Spec v5.2, Vol 3, Part C, Sec 5.2.2.8.
+    2: bool secure_connections_required;
 };
 
-/// Used to specify preferred and accepted L2CAP channel modes.
-/// If the peer rejects a non-BASIC mode, the Bluetooth system will attempt to
-/// open the channel in BASIC mode instead.
-/// For a description of each mode, see Core Spec v5.2, Volume 3, Part A, Sec 2.4,
-/// "Modes of Operation".
+/// Used to specify preferred and accepted L2CAP channel modes.  If the peer rejects a non-BASIC
+/// mode, the Bluetooth system will attempt to open the channel in BASIC mode instead.  For a
+/// description of each mode, see Bluetooth Spec v5.2, Vol 3, Part A, Sec 2.4.
 enum ChannelMode {
     BASIC = 1;
     ENHANCED_RETRANSMISSION = 2;
@@ -30,14 +30,14 @@ enum ChannelMode {
 table ChannelParameters {
     /// Optional. If not provided, BASIC will be used.
     1: ChannelMode channel_mode;
-    /// Maximum SDU size this profile is capable of accepting. Must be >= 48.
-    /// Optional. If not provided, the size will be determined by the Bluetooth system.
-    /// No guarantees are given regarding the size selected.
+    /// Maximum SDU size this profile is capable of accepting. Must be >= 48.  Optional. If not
+    /// provided, the size will be determined by the Bluetooth system.  No guarantees are given
+    /// regarding the size selected.
     2: uint16 max_rx_sdu_size;
 };
 
-/// Used to return an opened channel. If there was an error in opening the channel,
-/// `Channel` will be empty. Otherwise, all fields will be present.
+/// Used to return an opened channel. If there was an error in opening the channel, `Channel` will
+/// be empty. Otherwise, all fields will be present.
 table Channel {
     /// Socket interface for sending/receiving SDUs on the channel.
     1: handle<socket> socket;
@@ -47,59 +47,71 @@ table Channel {
     3: uint16 max_tx_sdu_size;
 };
 
-/// Profile provides Bluetooth services a way to register a service definition,
-/// making that service discoverable by remote peers.  Registered services will receive
-/// L2CAP connections made to the services advertised in the definition, and can open
-/// connections to remote connected devices.  To discover possible connected
-/// devices, devices should use `AddSearch` to search any remote devices.
-[Discoverable]
-protocol Profile {
-    /// Register a service. This service will be registered and discoverable with
-    /// the Service Discovery Protocol server.
-    /// The `security_level` provided here will be required before a connection is
-    /// established.
-    /// If `devices` is true, connections to the service's channels will create a
-    /// device instead of producing an OnConnected event.
-    /// `parameters` indicates what channel parameters the host should
-    /// attempt to negotiate on behalf of the profile when a channel for this service is created.
-    /// Returns `status` for success or error.
-    /// If successful, a unique `service_id` is returned to identify this service.
-    AddService(ServiceDefinition definition, SecurityLevel sec_level, ChannelParameters parameters)
-        -> (fuchsia.bluetooth.Status status, uint64 service_id);
+/// Represents a service which is registered by this profile.  Closing this protocol will remove the
+/// service registration.
+protocol ConnectionReceiver {
+    /// Called when a peer connects to this service.  The channel connected is delivered
+    /// with parameters in `channel`.
+    /// `protocol` will contain a protocol list up to the point connected (for example, if
+    /// L2CAP is connected, it will contain the L2CAP protocol and specify the PSM connected)
+    Connected(fuchsia.bluetooth.PeerId peer_id, Channel channel, ProtocolDescriptorList protocol);
+};
 
-    /// Register a search for services on remote devices.  An `OnServiceFound`
-    /// event will be produced each time a device is connected that has a service
-    /// matching `service_uuid` with the additional attributes in `attr_ids`.
-    /// The ProtocolDescriptor should be requested to obtain information to connect to a service.
-    /// If `attr_ids` is empty, all attributes will be requested.
-    /// See the SDP Specification (Core Spec 5.0, Vol 3, Part B, Section 5) and the
-    /// relevant profile specification documents.
-    AddSearch(ServiceClassProfileIdentifier service_uuid, vector<uint16> attr_ids);
+/// Maximum number of attributes returned or allowed in a search request.
+const uint16 MAX_ATTRIBUTES = 512;
 
-    /// Removes a previously-registered service, disconnecting all clients.
-    RemoveService(uint64 service_id);
+/// Represents an active search which can produce results when peers are connected.  Closing this
+/// protocol will result in the associated search not being performed on new connected peers.
+protocol SearchResults {
+    /// Called when a search this client added finds a matching service on a peer.
+    /// `peer_id` is the peer the service was found on.
+    /// `protocol` includes the ProtocolDescriptorList in the service record if it exists
+    /// (it is also included in `attributes`.)
+    /// `attributes` contains all attributes requested from the search that are present on the
+    /// peer record.  It may also include additional attributes.
+    /// Each ServiceFound call should be acknowledged by replying.
+    /// A limited amount of unacknowledged results will be sent on the channel. Results may be
+    /// dropped if results are received while too many results are unacknowledged.
+    ServiceFound(fuchsia.bluetooth.PeerId peer_id, ProtocolDescriptorList? protocol,
+                 vector<Attribute>:MAX_ATTRIBUTES attributes) -> ();
+};
 
-    /// Connect a channel to the connected remote device `peer_id` using the
-    /// protocol and desired channel `parameters` listed. For L2CAP, dynamic PSMs can be specified.
-    /// See the defined PSMs in `service.fidl`
-    /// Returns the channel after it has been connected. `status` will indicate
-    /// an error if the channel could not be connected, in which case `channel` will be empty.
-    ConnectL2cap(string:16 peer_id, uint16 psm, ChannelParameters parameters)
-        -> (fuchsia.bluetooth.Status status, Channel channel);
+/// Maximum service records that can be advertised at once.
+const uint8 MAX_SERVICES_PER_ADVERTISEMENT = 32;
 
-    /// Produced when a protocol channel is connected for this profile.
-    /// `channel` contains the channel connected to, and information about the
-    /// protocol is provided in `protocol`. All protocols supported internally will be handled, for
-    /// example an RFCOMM socket will be provided instead of an L2CAP socket if the services protocol
-    /// descriptor includes it.
-    -> OnConnected(string device_id, uint64 service_id,
-                   Channel channel, ProtocolDescriptor protocol);
+/// Service provides Bluetooth BR/EDR profiles a way to register a service definition, making a
+/// profile discoverable by peers. Registered services can receive L2CAP connections made to the
+/// advertised records, and can open new connections on peers.
+[Discoverable] protocol Profile {
+    /// Register a set of services.
+    /// These services will be discoverable via Service Discovery Protocol server.
+    /// All services advertising the same channel must be added at once - if services are already
+    /// registered on any channel advertised, registration will fail and the receiver will be closed
+    /// with ZX_ERR_ALREADY_BOUND.
+    /// The ConnectionReceiver will get calls for connections to the channels included in the
+    /// `protocol_descriptor` or `alternative_protocol_descriptors` in the services advertised.
+    /// The `requirements` provided here will be attempted with the peer before a connection is
+    /// established. If a peer cannot provide the requirements before connecting, the connection is
+    /// closed and nothing is delivered to the receiver.
+    /// The receiver will be closed if the advertisement cannot be made for any reason with a
+    /// suitable epitaph.
+    Advertise(vector<ServiceDefinition>:MAX_SERVICES_PER_ADVERTISEMENT services,
+              SecurityRequirements requirements, ChannelParameters parameters,
+              ConnectionReceiver receiver);
 
-    /// Produced when a search this client added finds a matching service on a remote
-    /// device.  `peer_id` is the device the service was found on, and `profile` includes the
-    /// Profile Descriptor which matches the `service_uuid`
-    /// searched for, with the major and minor version reported by the remote device.
-    /// `attributes` contains all attributes retrieved from the remote device.  It may
-    /// include attributes not requested in the search.
-    -> OnServiceFound(string peer_id, ProfileDescriptor profile, vector<Attribute> attributes);
+    /// Register a search for services on newly connected peers.  The SearchResults protocol will be
+    /// used to report results for this search.  Any service result with a service matching
+    /// `service_uuid` will be returned with the additional attributes in `attr_ids`.  If `attr_ids`
+    /// is empty, all attributes will be requested.  The additional attribute
+    /// BLUETOOTH_PROTOCOL_DESCRIPTOR_LIST is always requested.  See the Bluetooth Spec v5.2, Vol 3,
+    /// Part B, Section 5) and relevant profile specification documents.
+    Search(ServiceClassProfileIdentifier service_uuid, vector<uint16>:MAX_ATTRIBUTES attr_ids,
+           SearchResults results);
+
+    /// Connect an L2CAP channel to the connected peer identified by `peer_id` using the desired
+    /// channel `parameters` listed.  Dynamic PSMs can be specified for the `psm` to connect to.
+    /// See also the defined PSMs in `service.fidl` Returns the channel connected once established,
+    /// or an error code if the channel could not be connected.
+    Connect(fuchsia.bluetooth.PeerId peer_id, uint16 psm, ChannelParameters parameters)
+        -> (Channel channel) error fuchsia.bluetooth.ErrorCode;
 };

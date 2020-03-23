@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp::*,
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
@@ -403,10 +404,10 @@ fn spawn_avrcp_client(stream: PeerManagerRequestStream, sender: mpsc::Sender<Ser
 pub async fn avrcp_client_stream_handler<F>(
     mut stream: PeerManagerRequestStream,
     mut sender: mpsc::Sender<ServiceRequest>,
-    spawn_fn: F,
+    mut spawn_fn: F,
 ) -> Result<(), anyhow::Error>
 where
-    F: Fn(Controller, ControllerRequestStream),
+    F: FnMut(Controller, ControllerRequestStream),
 {
     while let Some(req) = stream.try_next().await? {
         match req {
@@ -421,6 +422,8 @@ where
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
+                        // TODO(46796): eliminate this parsing with an API Update
+                        let peer_id: PeerId = peer_id.parse()?;
                         let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                         sender.try_send(pcr)?;
                         let controller = response.into_future().await?;
@@ -484,10 +487,10 @@ fn spawn_test_avrcp_client(
 pub async fn test_avrcp_client_stream_handler<F>(
     mut stream: PeerManagerExtRequestStream,
     mut sender: mpsc::Sender<ServiceRequest>,
-    spawn_fn: F,
+    mut spawn_fn: F,
 ) -> Result<(), anyhow::Error>
 where
-    F: Fn(Controller, ControllerExtRequestStream),
+    F: FnMut(Controller, ControllerExtRequestStream),
 {
     while let Some(req) = stream.try_next().await? {
         match req {
@@ -502,6 +505,7 @@ where
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
+                        let peer_id: PeerId = peer_id.parse()?;
                         let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                         sender.try_send(pcr)?;
                         let controller = response.into_future().await?;
@@ -537,241 +541,191 @@ pub fn run_services(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::peer_manager::PeerManager;
-    use crate::tests::{create_fidl_endpoints, MockProfileService};
-    use anyhow::format_err;
-    use fidl::endpoints::create_endpoints;
-    use futures::{future, future::FutureExt};
+    use crate::peer::RemotePeerHandle;
+    use crate::peer_manager::TargetDelegate;
+    use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
+    use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
+    use futures::task::Poll;
+    use matches::assert_matches;
     use pin_utils::pin_mut;
-    use std::collections::VecDeque;
+    use std::sync::Arc;
 
-    fn handle_target_server(request: TargetHandlerRequest) -> Result<(), Error> {
-        match request {
-            TargetHandlerRequest::GetEventsSupported { responder } => {
-                let _ = responder.send(&mut Ok(vec![]))?;
-            }
-            TargetHandlerRequest::GetMediaAttributes { responder } => {
-                let _ = responder.send(&mut Ok(MediaAttributes {
-                    title: Some("".to_string()),
-                    artist_name: Some("".to_string()),
-                    album_name: Some("".to_string()),
-                    track_number: Some("".to_string()),
-                    total_number_of_tracks: Some("".to_string()),
-                    genre: Some("".to_string()),
-                    playing_time: Some("".to_string()),
-                }))?;
-            }
-            TargetHandlerRequest::GetPlayStatus { responder } => {
-                let _ = responder.send(&mut Ok(PlayStatus {
-                    song_length: None,
-                    song_position: None,
-                    playback_status: None,
-                }))?;
-            }
-            TargetHandlerRequest::SendCommand { command: _, pressed: _, responder } => {
-                let _ = responder.send(&mut Ok(()))?;
-            }
-            TargetHandlerRequest::ListPlayerApplicationSettingAttributes { responder } => {
-                let _ = responder.send(&mut Ok(vec![]))?;
-            }
-            TargetHandlerRequest::GetPlayerApplicationSettings { attribute_ids: _, responder } => {
-                let _ = responder.send(&mut Ok(PlayerApplicationSettings {
-                    equalizer: None,
-                    repeat_status_mode: None,
-                    shuffle_mode: None,
-                    scan_mode: None,
-                    custom_settings: None,
-                }))?;
-            }
-            TargetHandlerRequest::SetPlayerApplicationSettings {
-                requested_settings: _,
-                responder,
-            } => {
-                let _ = responder.send(&mut Ok(PlayerApplicationSettings {
-                    equalizer: None,
-                    repeat_status_mode: None,
-                    shuffle_mode: None,
-                    scan_mode: None,
-                    custom_settings: None,
-                }))?;
-            }
-            TargetHandlerRequest::GetNotification { event_id: _, responder } => {
-                let _ = responder.send(&mut Ok(Notification {
-                    status: None,
-                    track_id: None,
-                    pos: None,
-                    battery_status: None,
-                    system_status: None,
-                    application_settings: None,
-                    player_id: None,
-                    volume: None,
-                    device_connected: None,
-                }))?;
-            }
-            TargetHandlerRequest::WatchNotification {
-                event_id: _,
-                current: _,
-                pos_change_interval: _,
-                responder,
-            } => {
-                let _ = responder.send(&mut Ok(Notification {
-                    status: None,
-                    track_id: None,
-                    pos: None,
-                    battery_status: None,
-                    system_status: None,
-                    application_settings: None,
-                    player_id: None,
-                    volume: None,
-                    device_connected: None,
-                }))?;
-            }
-            TargetHandlerRequest::SetAddressedPlayer { responder, .. } => {
-                responder.send(&mut Ok(()))?;
-            }
-            TargetHandlerRequest::GetMediaPlayerItems { responder, .. } => {
-                let _ = responder.send(&mut Ok(vec![]))?;
-            }
+    #[test]
+    /// Tests that a request to register a target handler responds correctly.
+    fn test_spawn_avrcp_client_target() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("Executor should be created");
+        let (peer_manager_proxy, peer_manager_requests) =
+            create_proxy_and_stream::<PeerManagerMarker>()?;
+
+        let (client_sender, mut service_request_receiver) = mpsc::channel(512);
+
+        let fail_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
+            panic!("Shouldn't have spawned a controller!");
         };
+
+        let (target_client, _target_server) =
+            create_endpoints::<TargetHandlerMarker>().expect("Target proxy creation");
+
+        let request_fut = peer_manager_proxy.register_target_handler(target_client);
+        pin_mut!(request_fut);
+
+        let handler_fut =
+            avrcp_client_stream_handler(peer_manager_requests, client_sender, fail_fn);
+        pin_mut!(handler_fut);
+
+        // Make the request.
+        assert!(exec.run_until_stalled(&mut request_fut).is_pending());
+
+        // Running the stream handler should produce a request to register a target
+        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+
+        let request = service_request_receiver.try_next()?.expect("a request should be made");
+
+        match request {
+            ServiceRequest::RegisterTargetHandler { target_handler: _, reply } => {
+                reply.send(Ok(())).expect("Reply should succeed");
+            }
+            x => panic!("Unexpected request from client stream: {:?}", x),
+        };
+
+        // The requestr should be answered.
+        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        assert_matches!(exec.run_until_stalled(&mut request_fut), Poll::Ready(Ok(Ok(()))));
+
+        drop(peer_manager_proxy);
+
+        // The handler should end when the client is closed.
+        assert_matches!(exec.run_until_stalled(&mut handler_fut), Poll::Ready(Ok(())));
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_spawn_avrcp_client_target() -> Result<(), Error> {
-        let (client, server): (PeerManagerProxy, PeerManagerRequestStream) =
-            create_fidl_endpoints::<PeerManagerMarker>()?;
+    #[test]
+    /// Tests that the client strream handler will spawn a controller when a controller request
+    /// successfully sets up a controller.
+    fn test_avrcp_client_stream_handler_controller_request() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("Executor should be created");
+        let (peer_manager_proxy, peer_manager_requests) =
+            create_proxy_and_stream::<PeerManagerMarker>()?;
 
-        let control_handle = server.control_handle();
-        let (client_sender, service_request_receiver) = mpsc::channel(512);
+        let (client_sender, mut service_request_receiver) = mpsc::channel(512);
 
-        let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
+        let (mut spawned_client_sender, mut spawned_client_receiver) = mpsc::channel::<()>(1);
 
-        let test_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
-            control_handle.shutdown();
+        let client_spawn_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
+            // Signal that the client has been created.
+            spawned_client_sender.try_send(()).expect("couldn't send spawn signal");
         };
 
-        let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
-            .expect("unable to create peer manager");
+        let (profile_proxy, _profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
 
-        let (target_client, target_server) = create_endpoints::<TargetHandlerMarker>()
-            .expect("Error creating TargetHandler endpoint");
+        let (_c_proxy, controller_server) = create_proxy().expect("Controller proxy creation");
+
+        let request_fut = peer_manager_proxy.get_controller_for_target(&"123", controller_server);
+        pin_mut!(request_fut);
 
         let handler_fut =
-            avrcp_client_stream_handler(server, client_sender.clone(), test_fn).fuse();
-        let client_fut = client.register_target_handler(target_client).fuse();
-
+            avrcp_client_stream_handler(peer_manager_requests, client_sender, client_spawn_fn);
         pin_mut!(handler_fut);
-        pin_mut!(client_fut);
 
-        let peer_manager_run_fut = peer_manager.run().fuse();
-        pin_mut!(peer_manager_run_fut);
+        // Make the request.
+        assert!(exec.run_until_stalled(&mut request_fut).is_pending());
 
-        let target_stream =
-            target_server.into_stream().expect("Unable to get target stream").fuse();
-        pin_mut!(target_stream);
+        // Running the stream handler should produce a request for a controller.
+        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
 
-        loop {
-            futures::select! {
-                _= peer_manager_run_fut  => {
-                    return Err(format_err!("peer manager returned early"));
-                }
-                req = target_stream.select_next_some() => {
-                    let _ = handle_target_server(req.expect("unable to parse request"))?;
-                }
-                _ = client_fut => {
-                    control_handle.shutdown();
-                }
-                res = handler_fut => {
-                    drop(client);
-                    let _ = res.expect("error with spawning handler");
-                    return Ok(());
-                }
+        let request = service_request_receiver.try_next()?.expect("a request should be made");
+
+        match request {
+            ServiceRequest::GetController { peer_id, reply } => {
+                // TODO(jamuraa): Make Controller a trait so we can mock it here.
+                let peer = RemotePeerHandle::spawn_peer(
+                    peer_id,
+                    Arc::new(TargetDelegate::new()),
+                    profile_proxy,
+                );
+                reply.send(Controller::new(peer)).expect("reply should succeed");
             }
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_spawn_avrcp_client() -> Result<(), Error> {
-        let (client, server): (PeerManagerProxy, PeerManagerRequestStream) =
-            create_fidl_endpoints::<PeerManagerMarker>()?;
-
-        let control_handle = server.control_handle();
-        let (client_sender, service_request_receiver) = mpsc::channel(512);
-
-        let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
-
-        let test_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
-            control_handle.shutdown();
+            x => panic!("Unexpected request from client stream: {:?}", x),
         };
 
-        let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
-            .expect("unable to create peer manager");
-        let (_c_client, c_server) =
-            create_endpoints::<ControllerMarker>().expect("Error creating Controller endpoint");
+        // The handler should spawn the request after the reply.
+        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
 
-        let handler_fut = future::join(
-            avrcp_client_stream_handler(server, client_sender.clone(), test_fn),
-            client.get_controller_for_target(&"123", c_server),
-        )
-        .fuse();
-        pin_mut!(handler_fut);
+        spawned_client_receiver.try_next()?.expect("a client should have been spawned");
 
-        let peer_manager_run_fut = peer_manager.run().fuse();
-        pin_mut!(peer_manager_run_fut);
+        assert_matches!(exec.run_until_stalled(&mut request_fut), Poll::Ready(Ok(Ok(()))));
 
-        futures::select! {
-            _= peer_manager_run_fut  => {
-                return Err(format_err!("peer manager returned early"))
-            }
-            res = handler_fut => {
-                drop(client);
-                res.0.expect("error with spawning handler");
-                let _ = res.1.expect("error get_controller_for_target");
-                return Ok(())
-            }
-        }
+        drop(peer_manager_proxy);
+
+        // The handler should end when the client is closed.
+        assert_matches!(exec.run_until_stalled(&mut handler_fut), Poll::Ready(Ok(())));
+        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_spawn_test_avrcp_client() -> Result<(), Error> {
-        let (client, server): (PeerManagerExtProxy, PeerManagerExtRequestStream) =
-            create_fidl_endpoints::<PeerManagerExtMarker>()?;
+    #[test]
+    /// Test that getting a controller from the test server (PeerManagerExt) works.
+    fn test_spawn_test_avrcp_client() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("Executor should be created");
+        let (peer_manager_ext_proxy, peer_manager_ext_requests) =
+            create_proxy_and_stream::<PeerManagerExtMarker>()?;
 
-        let control_handle = server.control_handle();
-        let (client_sender, service_request_receiver) = mpsc::channel(512);
+        let (client_sender, mut service_request_receiver) = mpsc::channel(512);
 
-        let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
+        let (mut spawned_client_sender, mut spawned_client_receiver) = mpsc::channel(1);
 
-        let test_fn = |_controller: Controller, _fidl_stream: ControllerExtRequestStream| {
-            control_handle.shutdown();
-        };
+        let client_spawn_fn =
+            |_controller: Controller, _fidl_stream: ControllerExtRequestStream| {
+                // Signal that the client has been created.
+                spawned_client_sender.try_send(()).expect("couldn't send spawn signal");
+            };
 
-        let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
-            .expect("unable to create peer manager");
+        let (profile_proxy, _profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
 
-        let (_target_client, target_server) = create_endpoints::<ControllerExtMarker>()
-            .expect("Error creating Test Controller endpoint");
+        let (_c_proxy, controller_server) = create_proxy().expect("Controller proxy creation");
 
-        let handler_fut = future::join(
-            test_avrcp_client_stream_handler(server, client_sender.clone(), test_fn),
-            client.get_controller_for_target(&"123", target_server),
-        )
-        .fuse();
+        let request_fut =
+            peer_manager_ext_proxy.get_controller_for_target(&"123", controller_server);
+        pin_mut!(request_fut);
+
+        let handler_fut = test_avrcp_client_stream_handler(
+            peer_manager_ext_requests,
+            client_sender,
+            client_spawn_fn,
+        );
         pin_mut!(handler_fut);
 
-        let peer_manager_run_fut = peer_manager.run().fuse();
-        pin_mut!(peer_manager_run_fut);
+        // Make the request.
+        assert!(exec.run_until_stalled(&mut request_fut).is_pending());
 
-        futures::select! {
-            _= peer_manager_run_fut  => {
-                return Err(format_err!("peer manager returned early"))
+        // Running the stream handler should produce a request for a controller.
+        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+
+        let request = service_request_receiver.try_next()?.expect("a request should be made");
+
+        match request {
+            ServiceRequest::GetController { peer_id, reply } => {
+                // TODO(jamuraa): Make Controller a trait so we can mock it here.
+                let peer = RemotePeerHandle::spawn_peer(
+                    peer_id,
+                    Arc::new(TargetDelegate::new()),
+                    profile_proxy,
+                );
+                reply.send(Controller::new(peer)).expect("reply should succeed");
             }
-            res = handler_fut => {
-                drop(client);
-                res.0.expect("error with spawning handler");
-                let _ = res.1.expect("error get_test_controller_for_target");
-                return Ok(())
-            }
-        }
+            x => panic!("Unexpected request from client stream: {:?}", x),
+        };
+
+        // The handler should spawn the request after the reply.
+        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+
+        spawned_client_receiver.try_next()?.expect("a client should have been spawned");
+
+        assert_matches!(exec.run_until_stalled(&mut request_fut), Poll::Ready(Ok(Ok(()))));
+
+        drop(peer_manager_ext_proxy);
+
+        // The handler should end when the client is closed.
+        assert_matches!(exec.run_until_stalled(&mut handler_fut), Poll::Ready(Ok(())));
+        Ok(())
     }
 }

@@ -10,8 +10,9 @@ use {
     },
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
-    fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
+    fidl_fuchsia_bluetooth_bredr::{ProfileProxy, PSM_AVCTP},
     fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_vlog},
     futures::{
         self,
@@ -39,9 +40,9 @@ mod tasks;
 use crate::{
     packets::{Error as PacketError, *},
     peer_manager::TargetDelegate,
-    profile::{AvrcpService, ProfileService},
+    profile::AvrcpService,
+    types::PeerError as Error,
     types::StateChangeListener,
-    types::{PeerError as Error, PeerId},
 };
 
 pub use controller::{Controller, ControllerEvent, ControllerEventStream};
@@ -78,7 +79,7 @@ struct RemotePeer {
     control_channel: PeerChannel<AvcPeer>,
 
     /// Profile service. Used by RemotePeer to make outgoing L2CAP connections.
-    profile_svc: Arc<Box<dyn ProfileService + Send + Sync>>,
+    profile_proxy: ProfileProxy,
 
     /// All stream listeners obtained by any `Controller`s around this peer that are listening for
     /// events from this peer.
@@ -106,7 +107,7 @@ impl RemotePeer {
     fn new(
         peer_id: PeerId,
         target_delegate: Arc<TargetDelegate>,
-        profile_svc: Arc<Box<dyn ProfileService + Send + Sync>>,
+        profile_proxy: ProfileProxy,
     ) -> RemotePeer {
         Self {
             peer_id: peer_id.clone(),
@@ -114,7 +115,7 @@ impl RemotePeer {
             controller_descriptor: None,
             control_channel: PeerChannel::Disconnected,
             controller_listeners: Vec::new(),
-            profile_svc,
+            profile_proxy,
             command_handler: ControlChannelHandler::new(&peer_id, target_delegate),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
@@ -289,10 +290,10 @@ impl RemotePeerHandle {
     pub fn spawn_peer(
         peer_id: PeerId,
         target_delegate: Arc<TargetDelegate>,
-        profile_svc: Arc<Box<dyn ProfileService + Send + Sync>>,
+        profile_proxy: ProfileProxy,
     ) -> RemotePeerHandle {
         let remote_peer =
-            Arc::new(RwLock::new(RemotePeer::new(peer_id, target_delegate, profile_svc)));
+            Arc::new(RwLock::new(RemotePeer::new(peer_id, target_delegate, profile_proxy)));
 
         fasync::spawn(tasks::state_watcher(remote_peer.clone()));
 
@@ -328,16 +329,16 @@ impl RemotePeerHandle {
             match response {
                 Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => Ok(()),
                 Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
-                    fx_log_info!("avrcp command rejected {}: {:?}", peer_id, response);
+                    fx_log_info!("avrcp command rejected {:?}: {:?}", peer_id, response);
                     Err(Error::CommandNotSupported)
                 }
                 Err(e) => {
-                    fx_log_err!("error sending avc command to {}: {:?}", peer_id, e);
+                    fx_log_err!("error sending avc command to {:?}: {:?}", peer_id, e);
                     Err(Error::CommandFailed)
                 }
                 _ => {
                     fx_log_err!(
-                        "error sending avc command. unhandled response {}: {:?}",
+                        "error sending avc command. unhandled response {:?}: {:?}",
                         peer_id,
                         response
                     );
@@ -392,43 +393,34 @@ mod tests {
     use super::*;
     use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
     use anyhow::Error;
-    use fuchsia_zircon as zx;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest};
+    use fuchsia_async::{DurationExt, TimeoutExt};
+    use fuchsia_zircon::DurationNum;
 
     #[fuchsia_async::run_singlethreaded(test)]
     // Check that the remote will attempt to connect to a peer if we have a profile.
     async fn trigger_connection_test() -> Result<(), Error> {
-        let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let (profile_service, _) = crate::tests::MockProfileService::new(None, Some(Ok(local)));
+        let (profile_proxy, mut profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
 
         let target_delegate = Arc::new(TargetDelegate::new());
 
-        let remote_peer = AvcPeer::new(remote)?;
-
-        let remote_command_stream = remote_peer.take_command_stream().fuse();
-        pin_mut!(remote_command_stream);
-
-        let peer_handle = RemotePeerHandle::spawn_peer(
-            "foobarbaz".to_string(),
-            target_delegate.clone(),
-            Arc::new(Box::new(profile_service)),
-        );
+        let peer_handle =
+            RemotePeerHandle::spawn_peer(PeerId(1), target_delegate.clone(), profile_proxy);
 
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvcrpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP as u16,
+            psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
         assert!(!peer_handle.is_connected());
 
-        loop {
-            futures::select! {
-                command = remote_command_stream.select_next_some() => {
-                    // we got a command!
-                    assert!(peer_handle.is_connected());
-                    return Ok(());
-                }
-            }
+        let next_request_fut = profile_requests.next().on_timeout(1.second().after_now(), || None);
+
+        match next_request_fut.await {
+            Some(Ok(ProfileRequest::Connect { .. })) => Ok(()),
+            x => panic!("Expected Profile connection request, got {:?} instead.", x),
         }
     }
 }

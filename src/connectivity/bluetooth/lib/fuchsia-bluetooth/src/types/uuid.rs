@@ -6,9 +6,14 @@
 ///! convenience functions to support 16-bit, 32-bit, and 128-bit canonical formats as well as
 ///! string representation. It can be converted to/from a fuchsia.bluetooth.Uuid FIDL type.
 use {
+    anyhow::{format_err, Error},
     byteorder::{ByteOrder, LittleEndian},
-    fidl_fuchsia_bluetooth as fidl,
-    std::{fmt, str::FromStr},
+    fidl_fuchsia_bluetooth as fidl, fidl_fuchsia_bluetooth_bredr as fidlbredr,
+    std::{
+        convert::{TryFrom, TryInto},
+        fmt,
+        str::FromStr,
+    },
     uuid,
 };
 
@@ -23,6 +28,9 @@ fn base_uuid() -> Uuid {
         0x00,
     ]))
 }
+
+/// Last eight bytes of the BASE UUID, in big-endian order, for comparision.
+const BASE_UUID_FINAL_EIGHT_BYTES: [u8; 8] = [0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB];
 
 impl Uuid {
     /// Create a new Uuid from a little-endian array of 16 bytes.
@@ -39,14 +47,22 @@ impl Uuid {
     }
 
     pub fn new32(value: u32) -> Uuid {
-        let final_eight_bytes = [0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB];
         // Note: It is safe to unwrap the result here a `from_fields` only errors if the final
         // slice length != 8, and here we are enforcing a constant value of length 8.
-        Uuid(uuid::Uuid::from_fields(value, 0x0000, 0x1000, &final_eight_bytes).unwrap())
+        Uuid(uuid::Uuid::from_fields(value, 0x0000, 0x1000, &BASE_UUID_FINAL_EIGHT_BYTES).unwrap())
     }
 
     pub fn to_string(&self) -> String {
         self.0.to_hyphenated().to_string()
+    }
+
+    fn get_base_u32(&self) -> Result<u32, anyhow::Error> {
+        let (first, second, third, final_bytes) = self.0.as_fields();
+        if second != 0x0000 || third != 0x1000 || final_bytes != &BASE_UUID_FINAL_EIGHT_BYTES {
+            Err(format_err!("not derived from the base UUID"))
+        } else {
+            Ok(first)
+        }
     }
 }
 
@@ -85,6 +101,27 @@ impl From<uuid::Uuid> for Uuid {
 impl From<Uuid> for uuid::Uuid {
     fn from(src: Uuid) -> uuid::Uuid {
         src.0
+    }
+}
+
+impl TryFrom<Uuid> for fidlbredr::ServiceClassProfileIdentifier {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Uuid) -> Result<Self, Self::Error> {
+        let short: u16 = value.get_base_u32()?.try_into()?;
+        Self::from_primitive(short).ok_or(format_err!("ServiceClassProfileIdentifier unknown"))
+    }
+}
+
+impl From<fidlbredr::ServiceClassProfileIdentifier> for Uuid {
+    fn from(src: fidlbredr::ServiceClassProfileIdentifier) -> Self {
+        Uuid::new16(src.into_primitive())
+    }
+}
+
+impl From<Uuid> for fidlbredr::DataElement {
+    fn from(src: Uuid) -> Self {
+        fidlbredr::DataElement::Uuid(src.into())
     }
 }
 

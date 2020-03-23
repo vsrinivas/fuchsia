@@ -3,28 +3,37 @@
 // found in the LICENSE file.
 
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
-use anyhow::Error;
+use anyhow::{Context, Error};
 use fidl::encoding::Decodable;
+use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_bluetooth_bredr::{
-    Attribute, ChannelParameters, DataElement, DataElementData, DataElementType, Information,
-    ProfileDescriptor, ProfileEvent, ProfileEventStream, ProfileMarker, ProfileProxy,
-    ProtocolDescriptor, ProtocolIdentifier, SecurityLevel, ServiceClassProfileIdentifier,
-    ServiceDefinition,
+    Attribute, ChannelParameters, ConnectionReceiverRequest, ConnectionReceiverRequestStream,
+    DataElement, Information, ProfileDescriptor, ProfileMarker, ProfileProxy, ProtocolDescriptor,
+    ProtocolIdentifier, SearchResultsRequest, SearchResultsRequestStream, SecurityRequirements,
+    ServiceClassProfileIdentifier, ServiceDefinition,
 };
 use fuchsia_async as fasync;
+use fuchsia_bluetooth::types::{PeerId, Uuid};
 use fuchsia_component as component;
 use fuchsia_syslog::macros::*;
+use futures::channel::oneshot;
+use futures::select;
 use futures::stream::StreamExt;
+use futures::FutureExt;
 use parking_lot::RwLock;
 use serde_json::value::Value;
+use std::{collections::HashMap, convert::TryFrom};
 
 #[derive(Debug)]
-struct InnerProfileServerFacade {
+struct ProfileServerFacadeInner {
     /// The current Profile Server Proxy
     profile_server_proxy: Option<ProfileProxy>,
 
-    /// Service IDs currently active on the Profile Server Proxy
-    service_ids: Vec<u64>,
+    /// Total count of services advertised so far.
+    advertisement_count: usize,
+
+    /// Services currently active on the Profile Server Proxy
+    advertisement_stoppers: HashMap<usize, oneshot::Sender<()>>,
 }
 
 /// Perform Profile Server operations.
@@ -32,15 +41,16 @@ struct InnerProfileServerFacade {
 /// Note this object is shared among all threads created by the server.
 #[derive(Debug)]
 pub struct ProfileServerFacade {
-    inner: RwLock<InnerProfileServerFacade>,
+    inner: RwLock<ProfileServerFacadeInner>,
 }
 
 impl ProfileServerFacade {
     pub fn new() -> ProfileServerFacade {
         ProfileServerFacade {
-            inner: RwLock::new(InnerProfileServerFacade {
+            inner: RwLock::new(ProfileServerFacadeInner {
                 profile_server_proxy: None,
-                service_ids: Vec::new(),
+                advertisement_count: 0,
+                advertisement_stoppers: HashMap::new(),
             }),
         }
     }
@@ -73,21 +83,7 @@ impl ProfileServerFacade {
 
     /// Initialize the ProfileServer proxy.
     pub async fn init_profile_server_proxy(&self) -> Result<(), Error> {
-        let tag = "ProfileServerFacade::init_profile_server_proxy";
         self.inner.write().profile_server_proxy = Some(self.create_profile_server_proxy()?);
-        let event_stream = match &self.inner.write().profile_server_proxy {
-            Some(p) => p.take_event_stream(),
-            None => fx_err_and_bail!(&with_line!(tag), "Failed to take event stream from proxy."),
-        };
-
-        let profile_server_future = ProfileServerFacade::monitor_profile_event_stream(event_stream);
-        let fut = async {
-            let result = profile_server_future.await;
-            if let Err(_err) = result {
-                fx_log_err!("Failed to monitor profile server event stream.");
-            }
-        };
-        fasync::spawn(fut);
         Ok(())
     }
 
@@ -96,11 +92,8 @@ impl ProfileServerFacade {
     /// # Arguments
     /// * `uuid_list` - A serde json list of Values to parse.
     ///  Example input:
-    /// 'uuid_list': ["0001"]
-    pub fn generate_service_class_uuids(
-        &self,
-        uuid_list: &Vec<Value>,
-    ) -> Result<Vec<String>, Error> {
+    /// 'uuid_list': ["00000001-0000-1000-8000-00805F9B34FB"]
+    pub fn generate_service_class_uuids(&self, uuid_list: &Vec<Value>) -> Result<Vec<Uuid>, Error> {
         let tag = "ProfileServerFacade::generate_service_class_uuids";
         let mut service_class_uuid_list = Vec::new();
         for raw_uuid in uuid_list {
@@ -112,7 +105,16 @@ impl ProfileServerFacade {
                     format_err!("Unable to convert Value to String.")
                 )
             };
-            service_class_uuid_list.push(uuid.to_string());
+            let uuid: Uuid = match uuid.parse() {
+                Ok(uuid) => uuid,
+                Err(e) => {
+                    fx_err_and_bail!(
+                        &with_line!(tag),
+                        format_err!("Unable to convert to Uuid: {:?}", e)
+                    );
+                }
+            };
+            service_class_uuid_list.push(uuid);
         }
         Ok(service_class_uuid_list)
     }
@@ -187,16 +189,12 @@ impl ProfileServerFacade {
             let mut params = Vec::new();
             for param in raw_params {
                 let data = if let Some(d) = param["data"].as_u64() {
-                    d as i64
+                    d as u16
                 } else {
                     fx_err_and_bail!(&with_line!(tag), "Value 'data' not found or invalid type.")
                 };
 
-                params.push(DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 2,
-                    data: DataElementData::Integer(data),
-                });
+                params.push(DataElement::Uint16(data as u16));
             }
 
             protocol_descriptor_list
@@ -282,7 +280,7 @@ impl ProfileServerFacade {
         let mut info_list = Vec::new();
         for raw_information in information_list {
             let language = if let Some(v) = raw_information["language"].as_str() {
-                v.to_string()
+                Some(v.to_string())
             } else {
                 let log_err = "Type of 'language' incorrect of invalid type.";
                 fx_err_and_bail!(&with_line!(tag), log_err)
@@ -344,11 +342,7 @@ impl ProfileServerFacade {
             };
 
             let data_element = if let Some(d) = raw_element["data"].as_u64() {
-                DataElement {
-                    type_: DataElementType::UnsignedInteger,
-                    size: 1,
-                    data: DataElementData::Integer(d as i64),
-                }
+                DataElement::Uint8(d as u8)
             } else {
                 fx_err_and_bail!(&with_line!(tag), "Value 'data' not found.")
             };
@@ -358,38 +352,71 @@ impl ProfileServerFacade {
         Ok(attribute_list)
     }
 
-    /// A function to monitor incoming events from the ProfileEventStream.
-    pub async fn monitor_profile_event_stream(mut stream: ProfileEventStream) -> Result<(), Error> {
-        let tag = "ProfileServerFacade::monitor_profile_event_stream";
-        while let Some(request) = stream.next().await {
-            match request {
-                Ok(r) => match r {
-                    ProfileEvent::OnServiceFound { peer_id, profile, attributes } => {
-                        fx_log_info!(
-                            tag: &with_line!(tag),
-                            "Peer {} with profile {:?}: {:?}",
-                            peer_id,
-                            profile,
-                            attributes
-                        );
-                    }
-                    ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol } => {
-                        fx_log_info!(
-                            tag: &with_line!(tag),
-                            "Connection from {}: {:?} {:?}!",
-                            device_id,
-                            channel,
-                            protocol
-                        );
-                    }
+    /// Monitor the connection request stream, printing outputs when connections happen.
+    pub async fn monitor_connection_receiver(
+        mut requests: ConnectionReceiverRequestStream,
+        end_signal: oneshot::Receiver<()>,
+    ) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::monitor_connection_receiver";
+        let mut fused_end_signal = end_signal.fuse();
+        loop {
+            select! {
+                _ = fused_end_signal => {
+                    fx_log_info!("Ending advertisement on signal..");
+                    return Ok(());
                 },
-                Err(r) => {
-                    let log_err = format_err!("Error during handling request stream: {}", r);
+                request = requests.next() => {
+                    let request = match request {
+                        None => {
+                            let log_err = format_err!("Connection request stream ended");
+                            fx_err_and_bail!(&with_line!(tag), log_err)
+                        }
+                        Some(Err(e)) => {
+                            let log_err = format_err!("Error during connection request: {}", e);
+                            fx_err_and_bail!(&with_line!(tag), log_err)
+                        },
+                        Some(Ok(r)) => r,
+                    };
+                    let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = request;
+                    let peer_id: PeerId = peer_id.into();
+                    fx_log_info!(
+                        tag: &with_line!(tag),
+                        "Connection from {}: {:?}!",
+                        peer_id,
+                        channel
+                    );
+                }
+            }
+        }
+    }
+
+    /// Monitor the search results stream, printing logs when results are produced.
+    pub async fn monitor_search_results(
+        mut requests: SearchResultsRequestStream,
+    ) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::monitor_search_results";
+        while let Some(request) = requests.next().await {
+            let request = match request {
+                Err(e) => {
+                    let log_err = format_err!("Error during search results request: {}", e);
                     fx_err_and_bail!(&with_line!(tag), log_err)
                 }
+                Ok(r) => r,
             };
+            let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } =
+                request;
+            let peer_id: PeerId = peer_id.into();
+            fx_log_info!(
+                tag: &with_line!(tag),
+                "Search Result: Peer {} with protocol {:?}: {:?}",
+                peer_id,
+                protocol,
+                attributes
+            );
+            responder.send()?;
         }
-        Ok(())
+        let log_err = format_err!("Search result request stream ended");
+        fx_err_and_bail!(&with_line!(tag), log_err)
     }
 
     /// Adds a service record based on a JSON dictrionary.
@@ -441,7 +468,7 @@ impl ProfileServerFacade {
     ///         }
     ///    }]
     ///}
-    pub async fn add_service(&self, args: Value) -> Result<u64, Error> {
+    pub async fn add_service(&self, args: Value) -> Result<usize, Error> {
         let tag = "ProfileServerFacade::write_sdp_record";
         fx_log_info!(tag: &with_line!(tag), "Writing SDP record");
 
@@ -488,22 +515,21 @@ impl ProfileServerFacade {
             fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
-        let raw_additional_protocol_descriptors = if let Some(v) =
-            record_description.get("additional_protocol_descriptors")
-        {
-            if let Some(arr) = v.as_array() {
-                Some(self.generate_protocol_descriptors(arr)?)
-            } else if v.is_null() {
-                None
-            } else {
-                let log_err =
+        let raw_additional_protocol_descriptors =
+            if let Some(v) = record_description.get("additional_protocol_descriptors") {
+                if let Some(arr) = v.as_array() {
+                    Some(self.generate_protocol_descriptors(arr)?)
+                } else if v.is_null() {
+                    None
+                } else {
+                    let log_err =
                     "Invalid type for 'additional_protocol_descriptors'. Expected null or array.";
+                    fx_err_and_bail!(&with_line!(tag), log_err)
+                }
+            } else {
+                let log_err = "Invalid SDP record input. Missing 'additional_protocol_descriptors'";
                 fx_err_and_bail!(&with_line!(tag), log_err)
-            }
-        } else {
-            let log_err = "Invalid SDP record input. Missing 'additional_protocol_descriptors'";
-            fx_err_and_bail!(&with_line!(tag), log_err)
-        };
+            };
 
         let information = if let Some(v) = record_description.get("information") {
             if let Some(r) = v.as_array() {
@@ -529,54 +555,58 @@ impl ProfileServerFacade {
             fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
-        let mut service_def = ServiceDefinition {
-            service_class_uuids,
-            protocol_descriptors,
-            profile_descriptors,
-            additional_protocol_descriptors: match raw_additional_protocol_descriptors {
+        let service_defs = vec![ServiceDefinition {
+            service_class_uuids: Some(service_class_uuids.into_iter().map(Into::into).collect()),
+            protocol_descriptor_list: Some(protocol_descriptors),
+            profile_descriptors: Some(profile_descriptors),
+            additional_protocol_descriptor_lists: match raw_additional_protocol_descriptors {
                 Some(d) => Some(vec![d]),
                 None => None,
             },
-            information,
+            information: Some(information),
             additional_attributes,
-        };
+        }];
 
-        let (status, service_id) = match &self.inner.read().profile_server_proxy {
+        let (connect_client, connect_requests) =
+            create_request_stream().context("ConnectionReceiver creation")?;
+
+        match &self.inner.read().profile_server_proxy {
             Some(server) => {
-                server
-                    .add_service(
-                        &mut service_def,
-                        SecurityLevel::EncryptionOptional,
-                        ChannelParameters::new_empty(),
-                    )
-                    .await?
+                server.advertise(
+                    &mut service_defs.into_iter(),
+                    SecurityRequirements::new_empty(),
+                    ChannelParameters::new_empty(),
+                    connect_client,
+                )?;
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
-        if let Some(e) = status.error {
-            let log_err = format!("Couldn't add service: {:?}", e);
-            fx_err_and_bail!(&with_line!(tag), log_err)
-        } else {
-            self.inner.write().service_ids.push(service_id);
-        }
+        let (end_ad_sender, end_ad_receiver) = oneshot::channel::<()>();
+        let request_handler_fut =
+            Self::monitor_connection_receiver(connect_requests, end_ad_receiver);
+        fasync::spawn(async move {
+            if let Err(e) = request_handler_fut.await {
+                fx_log_err!("Connection receiver handler ended with error: {:?}", e);
+            }
+        });
 
-        Ok(service_id)
+        let next = self.inner.write().advertisement_count + 1;
+        self.inner.write().advertisement_stoppers.insert(next, end_ad_sender);
+        self.inner.write().advertisement_count = next;
+        Ok(next)
     }
 
     /// Removes a remote service by id.
     ///
     /// # Arguments:
-    /// * `service_id`: The u64 service id to remove.
-    pub async fn remove_service(&self, service_id: u64) -> Result<(), Error> {
+    /// * `service_id`: The service id to remove.
+    pub async fn remove_service(&self, service_id: usize) -> Result<(), Error> {
         let tag = "ProfileServerFacade::remove_service";
-        match &self.inner.read().profile_server_proxy {
-            Some(server) => {
-                let _result = server.remove_service(service_id);
-            }
-            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set"),
-        };
-        Ok(())
+        match self.inner.write().advertisement_stoppers.remove(&service_id) {
+            Some(_) => Ok(()),
+            None => fx_err_and_bail!(&with_line!(tag), "Service ID not found"),
+        }
     }
 
     pub fn get_service_class_profile_identifier_from_id(
@@ -584,50 +614,16 @@ impl ProfileServerFacade {
         raw_profile_id: &Value,
     ) -> Result<ServiceClassProfileIdentifier, Error> {
         let tag = "ProfileServerFacade::get_service_class_profile_identifier_from_id";
-        let id = match raw_profile_id.as_u64() {
-            Some(id) => match id as u64 {
-                0x1101 => ServiceClassProfileIdentifier::SerialPort,
-                0x1103 => ServiceClassProfileIdentifier::DialupNetworking,
-                0x1105 => ServiceClassProfileIdentifier::ObexObjectPush,
-                0x1106 => ServiceClassProfileIdentifier::ObexFileTransfer,
-                0x1108 => ServiceClassProfileIdentifier::Headset,
-                0x1112 => ServiceClassProfileIdentifier::HeadsetAudioGateway,
-                0x1131 => ServiceClassProfileIdentifier::HeadsetHs,
-                0x110A => ServiceClassProfileIdentifier::AudioSource,
-                0x110B => ServiceClassProfileIdentifier::AudioSink,
-                0x110D => ServiceClassProfileIdentifier::AdvancedAudioDistribution,
-                0x110C => ServiceClassProfileIdentifier::AvRemoteControlTarget,
-                0x110E => ServiceClassProfileIdentifier::AvRemoteControl,
-                0x110F => ServiceClassProfileIdentifier::AvRemoteControlController,
-                0x1115 => ServiceClassProfileIdentifier::Panu,
-                0x1116 => ServiceClassProfileIdentifier::Nap,
-                0x1117 => ServiceClassProfileIdentifier::Gn,
-                0x111E => ServiceClassProfileIdentifier::Handsfree,
-                0x111F => ServiceClassProfileIdentifier::HandsfreeAudioGateway,
-                0x112D => ServiceClassProfileIdentifier::SimAccess,
-                0x112E => ServiceClassProfileIdentifier::PhonebookPce,
-                0x112F => ServiceClassProfileIdentifier::PhonebookPse,
-                0x1130 => ServiceClassProfileIdentifier::Phonebook,
-                0x1132 => ServiceClassProfileIdentifier::MessageAccessServer_,
-                0x1133 => ServiceClassProfileIdentifier::MessageNotificationServer_,
-                0x1134 => ServiceClassProfileIdentifier::MessageAccessProfile,
-                0x113A => ServiceClassProfileIdentifier::MpsProfile,
-                0x113B => ServiceClassProfileIdentifier::MpsClass,
-                0x1303 => ServiceClassProfileIdentifier::VideoSource,
-                0x1304 => ServiceClassProfileIdentifier::VideoSink,
-                0x1305 => ServiceClassProfileIdentifier::VideoDistribution,
-                0x1400 => ServiceClassProfileIdentifier::Hdp,
-                0x1401 => ServiceClassProfileIdentifier::HdpSource,
-                0x1402 => ServiceClassProfileIdentifier::HdpSink,
-                _ => {
+        match raw_profile_id.as_u64().map(u16::try_from) {
+            Some(Ok(id)) => match ServiceClassProfileIdentifier::from_primitive(id) {
+                Some(id) => return Ok(id),
+                None => {
                     let log_err = format!("UUID {} not supported by profile server.", id);
                     fx_err_and_bail!(&with_line!(tag), log_err)
                 }
             },
-            None => fx_err_and_bail!(&with_line!(tag), "Type of raw_profile_id incorrect."),
+            _ => fx_err_and_bail!(&with_line!(tag), "Type of raw_profile_id incorrect."),
         };
-
-        Ok(id)
     }
 
     pub async fn add_search(&self, args: Value) -> Result<(), Error> {
@@ -664,44 +660,57 @@ impl ProfileServerFacade {
             fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
+        let (search_client, result_requests) =
+            create_request_stream().context("SearchResults creation")?;
+
         match &self.inner.read().profile_server_proxy {
-            Some(server) => server.add_search(profile_id, &attribute_list)?,
+            Some(server) => server.search(profile_id, &attribute_list, search_client)?,
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
+
+        let search_fut = Self::monitor_search_results(result_requests);
+        fasync::spawn(async move {
+            if let Err(e) = search_fut.await {
+                fx_log_err!("Search result handler ended with error: {:?}", e);
+            }
+        });
 
         Ok(())
     }
 
-    pub async fn connect_l2cap(&self, id: String, psm: u16) -> Result<(), Error> {
-        let tag = "ProfileServerFacade::connect_l2cap";
-        let connect_l2cap_future = match &self.inner.read().profile_server_proxy {
-            Some(server) => server.connect_l2cap(&id, psm, ChannelParameters::new_empty()),
+    pub async fn connect(&self, id: String, psm: u16) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::connect";
+        let peer_id: PeerId = match id.parse() {
+            Ok(id) => id,
+            Err(_) => {
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    "Failed to convert value in attribute_list to u16."
+                );
+            }
+        };
+        let connect_future = match &self.inner.read().profile_server_proxy {
+            Some(server) => {
+                server.connect(&mut peer_id.into(), psm, ChannelParameters::new_empty())
+            }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
-        let connect_l2cap_future = async {
-            let result = connect_l2cap_future.await;
-            if let Err(err) = result {
-                fx_log_err!("Failed connect_l2cap with: {:?}", err);
+        let connect_future = async {
+            if let Err(err) = connect_future.await {
+                fx_log_err!("Failed connect with: {:?}", err);
             };
         };
-        fasync::spawn(connect_l2cap_future);
+        fasync::spawn(connect_future);
 
         Ok(())
     }
 
     /// Cleanup any Profile Server related objects.
     pub async fn cleanup(&self) -> Result<(), Error> {
-        let tag = "ProfileServerFacade::cleanup";
-        match &self.inner.read().profile_server_proxy {
-            Some(server) => {
-                for id in &self.inner.read().service_ids {
-                    let _result = server.remove_service(*id);
-                }
-            }
-            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set"),
-        };
-        self.inner.write().service_ids.clear();
+        // Dropping these will signal the other end with an Err, which is enough.
+        self.inner.write().advertisement_stoppers.clear();
+        self.inner.write().advertisement_count = 0;
         self.inner.write().profile_server_proxy = None;
         Ok(())
     }

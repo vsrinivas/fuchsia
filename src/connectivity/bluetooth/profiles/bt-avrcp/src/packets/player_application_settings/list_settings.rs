@@ -261,7 +261,7 @@ mod tests {
         assert_eq!(attributes.encoded_len(), 0); // empty payload for command
         let mut buf = vec![0; attributes.encoded_len()];
         assert!(attributes.encode(&mut buf[..]).is_ok());
-        assert_eq!(buf, vec![]);
+        assert_eq!(buf.len(), 0);
     }
 
     #[test]

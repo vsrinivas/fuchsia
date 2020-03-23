@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(b.command_type(), AvcCommandType::Status);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
-        assert_eq!(buf, &[]);
+        assert_eq!(buf.len(), 0);
     }
 
     #[test]
@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(b.encoded_len(), 0);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
-        assert_eq!(buf, &[]);
+        assert_eq!(buf.len(), 0);
     }
 
     #[test]

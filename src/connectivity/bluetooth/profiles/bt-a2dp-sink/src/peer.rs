@@ -150,22 +150,24 @@ impl Peer {
                 let strong = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
                 strong.lock().set_opening(&local_id, &remote_id, capabilities)?;
             }
-            let (status, channel) = profile
-                .connect_l2cap(
-                    &peer_id.to_string(),
-                    PSM_AVDTP as u16,
-                    ChannelParameters::new_empty(),
-                )
+            let channel = profile
+                .connect(&mut peer_id.into(), PSM_AVDTP, ChannelParameters::new_empty())
                 .await
-                .expect("FIDL error: {}");
-            if let Some(e) = status.error {
-                fx_log_warn!("Couldn't connect media transport {}: {:?}", peer_id, e);
-                return Err(avdtp::Error::PeerDisconnected);
-            }
+                .expect("FIDL client error: {}");
+
+            let channel = match channel {
+                Err(e) => {
+                    fx_log_warn!("Couldn't connect media transport {}: {:?}", peer_id, e);
+                    return Err(avdtp::Error::PeerDisconnected);
+                }
+                Ok(channel) => channel,
+            };
+
             if channel.socket.is_none() {
                 fx_log_warn!("Couldn't connect media transport {}: no channel", peer_id);
                 return Err(avdtp::Error::PeerDisconnected);
             }
+
             {
                 let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
                 let mut strong_peer = strong_peer.lock();
@@ -470,7 +472,6 @@ mod tests {
     use super::*;
     use bt_a2dp::media_types::*;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_bluetooth::Status;
     use fidl_fuchsia_bluetooth_bredr::{
         Channel, ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
     };
@@ -617,13 +618,10 @@ mod tests {
             zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
         let request = exec.run_until_stalled(&mut prof_stream.next());
         match request {
-            Poll::Ready(Some(Ok(ProfileRequest::ConnectL2cap { peer_id, responder, .. }))) => {
-                assert_eq!(PeerId(1), peer_id.parse().expect("peer_id parses"));
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { peer_id, responder, .. }))) => {
+                assert_eq!(PeerId(1), peer_id.into());
                 responder
-                    .send(
-                        &mut Status { error: None },
-                        Channel { socket: Some(transport), ..Channel::new_empty() },
-                    )
+                    .send(&mut Ok(Channel { socket: Some(transport), ..Channel::new_empty() }))
                     .expect("responder sends");
             }
             x => panic!("Should have sent a open l2cap request, but got {:?}", x),

@@ -20,6 +20,8 @@ pub mod hci_emulator;
 pub mod host;
 /// Extension traits and functions for interfacing with the Inspect API
 pub mod inspect;
+/// Convenience functions for working with the BR/EDR Profile API
+pub mod profile;
 /// Common Bluetooth type extensions
 pub mod types;
 /// Frequently Used Functions
