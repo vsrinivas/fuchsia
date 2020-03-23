@@ -125,8 +125,6 @@ impl SwitchboardImpl {
                 while let Ok(message_event) = receptor.watch().await {
                     // Wait for response
                     if let MessageEvent::Message(Payload::Event(event), _) = message_event {
-                        // TODO(fxb/48736): remove temporary logging.
-                        fx_log_info!("[switchboard] sending event for processing");
                         switchboard_clone.lock().await.process_event(event);
                     }
                 }
@@ -154,6 +152,10 @@ impl SwitchboardImpl {
     fn process_event(&mut self, input: SettingEvent) {
         match input {
             SettingEvent::Changed(setting_type) => {
+                if setting_type == SettingType::Audio {
+                    // TODO(fxb/48736): remove temporary logging.
+                    fx_log_info!("[switchboard] sending audio event for processing");
+                }
                 self.notify_listeners(setting_type);
             }
             _ => {}
@@ -201,8 +203,10 @@ impl Switchboard for SwitchboardImpl {
         request: SettingRequest,
         callback: SettingRequestResponder,
     ) -> Result<(), Error> {
-        // TODO(fxb/48736): remove temporary logging.
-        fx_log_info!("[switchboard] received request for {:?}", setting_type);
+        if setting_type == SettingType::Audio {
+            // TODO(fxb/48736): remove temporary logging.
+            fx_log_info!("[switchboard] received audio request");
+        }
         let messenger = self.registry_messenger_client.clone();
         let action_id = self.get_next_action_id();
 
@@ -225,8 +229,10 @@ impl Switchboard for SwitchboardImpl {
                     _,
                 ) = message_event
                 {
-                    // TODO(fxb/48736): remove temporary logging.
-                    fx_log_info!("[switchboard] answering request to {:?}", setting_type);
+                    if setting_type == SettingType::Audio {
+                        // TODO(fxb/48736): remove temporary logging.
+                        fx_log_info!("[switchboard] answering audio request");
+                    }
                     callback.send(response).ok();
                     return;
                 }
