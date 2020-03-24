@@ -145,6 +145,19 @@ following flags to find out which test is disabled: `fx run-test scenic_tests --
 To force-run disabled tests: `fx run-test scenic_tests --
 --gtest_also_run_disabled_tests`.
 
+### Rust only: apply the `#[ignore]` attribute
+
+To disable a particular test inside of a larger Rust test executable, you can
+tag it with `#[ignore]`. It should be applied underneath the `#[test]` attribute.
+
+Example:
+
+```rust
+#[test]
+#[ignore] // TODO(fxbug.dev/NNNNN) re-enable this test when de-flaked
+fn flaky_test_we_need_to_fix() { ... }
+```
+
 ### Mark test disabled
 
 Alternatively, you may also disable an entire test executable within a
