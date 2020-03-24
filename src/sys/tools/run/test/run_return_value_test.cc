@@ -14,6 +14,10 @@
 static constexpr char kRunPath[] = "/bin/run";
 static constexpr char kExiter[] =
     "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx";
+static constexpr char kExiterV2Ext[] =
+    "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cm";
+static constexpr char kExiterNoExt[] =
+    "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter";
 static constexpr char kExiterShort[] = "run_test_exiter.cmx";
 static constexpr char kStdout[] =
     "Found fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx, "
@@ -78,3 +82,5 @@ TEST(RunReturnValueTest, FuzzySearchLongValue) {
 }
 TEST(RunReturnValueTest, ZeroD) { test_case(kExiter, "0", true); }
 TEST(RunReturnValueTest, FuzzySearchZeroD) { test_case(kExiterShort, "0", true); }
+TEST(RunReturnValueTest, V2Ext) { test_case(kExiterV2Ext, "1", false); }
+TEST(RunReturnValueTest, NoExt) { test_case(kExiterNoExt, "1", false); }

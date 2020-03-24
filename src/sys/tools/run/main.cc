@@ -31,6 +31,25 @@ static void consume_arg(int* argc, const char*** argv) {
   ++(*argv);
 }
 
+static void CheckUrl(const std::string& url) {
+  if (url.rfind(".cmx") == url.size() - 4) {
+    // Valid URL.
+  } else if (url.rfind(".cm") == url.size() - 3) {
+    fprintf(stderr,
+            "\"%s\" is a Components v2 URL. `run` only supports v1 "
+            "components. See: "
+            "https://fuchsia.dev/fuchsia-src/glossary#components-v2\n",
+            url.c_str());
+    zx_process_exit(1);
+  } else {
+    fprintf(stderr,
+            "\"%s\" is not a valid component URL. Component URLs must "
+            "end in `.cmx`.\n",
+            url.c_str());
+    zx_process_exit(1);
+  }
+}
+
 void launch(fuchsia::sys::LauncherSyncPtr launcher, fuchsia::sys::ComponentControllerPtr controller,
             fuchsia::sys::LaunchInfo launch_info, async::Loop* loop, bool daemonize) {
   if (daemonize) {
@@ -133,7 +152,8 @@ int main(int argc, const char** argv) {
           fprintf(stderr, "Error: \"%s\" matched multiple components.\n", program_name.c_str());
           zx_process_exit(1);
         } else {
-          std::string matched_name = uris[0];
+          const std::string matched_name = uris[0];
+          CheckUrl(matched_name);
           fprintf(stdout, "Found %s, executing.\n", matched_name.c_str());
           launch_info.url = matched_name;
           launch(std::move(launcher), std::move(controller), std::move(launch_info), &loop,
@@ -143,6 +163,7 @@ int main(int argc, const char** argv) {
     });
     loop.Run();
   } else {
+    CheckUrl(launch_info.url);
     launch(std::move(launcher), std::move(controller), std::move(launch_info), &loop, daemonize);
   }
 
