@@ -100,8 +100,17 @@ zx_status_t As370Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
 uint32_t As370Sdhci::SdhciGetBaseClock() { return 0; }
 
 uint64_t As370Sdhci::SdhciGetQuirks() {
-  return SDHCI_QUIRK_NO_DMA | SDHCI_QUIRK_NON_STANDARD_TUNING |
-         SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
+  uint64_t quirks = SDHCI_QUIRK_NO_DMA | SDHCI_QUIRK_NON_STANDARD_TUNING |
+                    SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
+
+  // Tuning currently doesn't work on AS370/VS680 so HS200/HS400/SDR104 can't be used. VS680 has
+  // eMMC for which the next fallback is HSDDR, however this also doesn't work on the board we have.
+  // Enable the following quirk so that HS is used instead of HSDDR.
+  if (did_ == PDEV_DID_VS680_SDHCI0) {
+    quirks |= SDHCI_QUIRK_NO_DDR;
+  }
+
+  return quirks;
 }
 
 #define RXSELOFF   0x0
