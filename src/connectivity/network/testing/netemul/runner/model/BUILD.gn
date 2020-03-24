@@ -26,7 +26,10 @@ source_set("model") {
     "network.h",
   ]
 
-  public_deps = [ "//garnet/public/lib/json" ]
+  public_deps = [
+    "//garnet/public/lib/json",
+    "//src/connectivity/network/testing/netemul/lib/fidl:network",
+  ]
 
   deps = [
     "//src/lib/fsl",

@@ -4,6 +4,9 @@
 
 library fuchsia.netemul.network;
 using fuchsia.hardware.ethernet;
+using fuchsia.hardware.network;
+using fuchsia.net;
+
 using zx;
 
 /// Provides emulated latency configuration.
@@ -54,6 +57,9 @@ protocol NetworkManager {
 enum EndpointBacking {
     /// Endpoint backed by ethertap device.
     ETHERTAP = 1;
+    /// Endpoint backed by a network-tun device.
+    /// The created `fuchsia.hardware.network.Device` always acts as a virtual ethernet device.
+    NETWORK_DEVICE = 2;
 };
 
 /// Configuration used to create an endpoint.
@@ -62,7 +68,7 @@ struct EndpointConfig {
     uint16 mtu;
     /// Fake ethernet mac address, if not provided will be set to randomized local mac,
     /// using endpoint name as seed.
-    fuchsia.hardware.ethernet.MacAddress? mac;
+    fuchsia.net.MacAddress? mac;
     /// Backing type of emulated endpoint.
     EndpointBacking backing;
 };
@@ -104,7 +110,19 @@ protocol Network {
 /// Simple interface to serve devices over fidl.
 protocol DeviceProxy {
     /// Fulfills the device request.
+    /// The fulfilled requests's protocol is defined by the `Endpoint`'s `EndpointBacking`.
     ServeDevice(handle<channel> req);
+};
+
+/// A connection to an endpoint's underlying protocol.
+union DeviceConnection {
+    /// Set if the endpoint's backing is `ETHERTAP`.
+    1: fuchsia.hardware.ethernet.Device ethernet;
+    /// Set if the endpoint's backing is `NETWORK_DEVICE`.
+    // NOTE(brunodalbo) the DeviceInstance protocol is a transient protocol that is exposed by devfs.
+    // As documented in its definition, users should avoid passing this forward, but connect to its
+    // internal protocols instead.
+    2: fuchsia.hardware.network.DeviceInstance network_device;
 };
 
 /// Virtual ethernet endpoint.
@@ -115,8 +133,9 @@ protocol Endpoint {
     GetName() -> (string name);
     /// Sends link up or down signal
     SetLinkUp(bool up) -> ();
-    /// Opens channel with zircon ethernet device.
-    GetEthernetDevice() -> (fuchsia.hardware.ethernet.Device device);
+    /// Opens a channel with the underlying device protocol.
+    /// The resulting `DeviceConnection` variant is defined by this `Endpoint`'s `EndpointBacking`.
+    GetDevice() -> (DeviceConnection device);
     /// Gets a proxy to open requests with zircon ethernet device.
     GetProxy(request<DeviceProxy> proxy);
 };

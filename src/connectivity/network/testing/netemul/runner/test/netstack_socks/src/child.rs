@@ -6,7 +6,7 @@ use {
     crate::common::{BusConnection, SERVER_READY},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net,
-    fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
+    fidl_fuchsia_netemul_network::{DeviceConnection, EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_component::client,
     futures::TryStreamExt,
@@ -88,8 +88,8 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     // retrieve the created endpoint:
     let ep = epm.get_endpoint(&opt.endpoint).await?;
     let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
-    // and the ethernet device:
-    let eth = ep.get_ethernet_device().await?;
+    // and the device connection:
+    let device_connection = ep.get_device().await?;
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
@@ -125,10 +125,16 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             }
         },
     );
-    let nicid = netstack
-        .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
-        .await
-        .context("can't add ethernet device")?;
+    let nicid = match device_connection {
+        DeviceConnection::Ethernet(eth) => netstack
+            .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
+            .await
+            .context("can't add ethernet device")?,
+        DeviceConnection::NetworkDevice(netdevice) => {
+            todo!("(48860) Support and test NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice);
+        }
+    };
+
     let () = netstack.set_interface_status(nicid as u32, true)?;
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
     let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;

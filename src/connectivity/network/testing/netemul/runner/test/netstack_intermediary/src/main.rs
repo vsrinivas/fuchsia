@@ -60,8 +60,6 @@ async fn run_mock_guest(
     let (fake_ep, fake_ep_server_end) = fidl::endpoints::create_proxy::<FakeEndpointMarker>()?;
     net.create_fake_endpoint(fake_ep_server_end)?;
 
-    let eth_device = ep.get_ethernet_device().await?;
-
     let netstack = client::connect_to_service::<NetstackMarker>()?;
     let ip_addr_config = IpAddressConfig::Dhcp(true);
     let mut cfg = InterfaceConfig {
@@ -71,8 +69,14 @@ async fn run_mock_guest(
         metric: DEFAULT_METRIC,
     };
 
-    let _nicid =
-        netstack.add_ethernet_device(&format!("/{}", ep_name), &mut cfg, eth_device).await?;
+    let _nicid = match ep.get_device().await? {
+        fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(eth_device) => {
+            netstack.add_ethernet_device(&format!("/{}", ep_name), &mut cfg, eth_device).await?
+        }
+        fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+            todo!("(48860) Support and test for NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice)
+        }
+    };
 
     // Send a message to the server and expect it to be echoed back.
     let echo_string = String::from("hello");
@@ -104,23 +108,13 @@ async fn run_mock_guest(
     Ok(())
 }
 
-async fn run_echo_server(ep_name: String) -> Result<(), Error> {
-    // Get the Endpoint that was created in the server's environment.
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
-    let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
-    netctx.get_endpoint_manager(epm_server_end)?;
-
-    let ep = epm.get_endpoint(&ep_name).await?;
-
-    let ep = match ep {
-        Some(ep) => ep.into_proxy().unwrap(),
-        None => return Err(format_err!("Can't find endpoint {}", &ep_name)),
-    };
-
+async fn run_echo_server_ethernet(
+    ep_name: String,
+    eth_dev: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
+) -> Result<(), Error> {
     // Create an EthernetClient to wrap around the Endpoint's ethernet device.
     let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
-    let eth_dev = ep.get_ethernet_device().await?;
     let eth_proxy = match eth_dev.into_proxy() {
         Ok(proxy) => proxy,
         _ => return Err(format_err!("Could not get ethernet proxy")),
@@ -185,6 +179,29 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+async fn run_echo_server(ep_name: String) -> Result<(), Error> {
+    // Get the Endpoint that was created in the server's environment.
+    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
+    netctx.get_endpoint_manager(epm_server_end)?;
+
+    let ep = epm.get_endpoint(&ep_name).await?;
+
+    let ep = match ep {
+        Some(ep) => ep.into_proxy()?,
+        None => return Err(format_err!("Can't find endpoint {}", &ep_name)),
+    };
+
+    match ep.get_device().await? {
+        fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => {
+            run_echo_server_ethernet(ep_name, e).await
+        }
+        fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+            todo!("(48860) Support and test for NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice)
+        }
+    }
 }
 
 #[fasync::run_singlethreaded]

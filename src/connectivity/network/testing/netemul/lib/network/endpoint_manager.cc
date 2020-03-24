@@ -20,17 +20,20 @@ void EndpointManager::ListEndpoints(EndpointManager::ListEndpointsCallback callb
 }
 
 zx_status_t EndpointManager::CreateEndpoint(std::string name, Endpoint::Config config,
+                                            bool start_online,
                                             fidl::InterfaceRequest<Endpoint::FEndpoint> req) {
   if (name.empty()) {
     // empty name not allowed
     return ZX_ERR_INVALID_ARGS;
-  } else if (endpoints_.find(name) != endpoints_.end()) {
+  }
+  if (endpoints_.find(name) != endpoints_.end()) {
     return ZX_ERR_ALREADY_EXISTS;
-  } else {
-    // we only support ethertap backing for now
-    if (config.backing == fuchsia::netemul::network::EndpointBacking::ETHERTAP) {
+  }
+  switch (config.backing) {
+    case Endpoint::Backing::ETHERTAP:
+    case Endpoint::Backing::NETWORK_DEVICE: {
       auto ep = std::make_unique<Endpoint>(parent_, std::string(name), std::move(config));
-      auto result = ep->Startup(*parent_);
+      auto result = ep->Startup(*parent_, start_online);
       if (result != ZX_OK) {
         return result;
       }
@@ -41,20 +44,16 @@ zx_status_t EndpointManager::CreateEndpoint(std::string name, Endpoint::Config c
       });
 
       ep->Bind(std::move(req));
-      endpoints_.insert(
-          std::make_pair<std::string, Endpoint::Ptr>(std::string(name), std::move(ep)));
-    } else {
-      return ZX_ERR_INVALID_ARGS;
+      endpoints_.insert(std::make_pair<std::string, Endpoint::Ptr>(std::move(name), std::move(ep)));
     }
   }
-
   return ZX_OK;
 }
 
 void EndpointManager::CreateEndpoint(std::string name, Endpoint::Config config,
                                      EndpointManager::CreateEndpointCallback callback) {
   fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
-  auto status = CreateEndpoint(std::move(name), std::move(config), handle.NewRequest());
+  auto status = CreateEndpoint(std::move(name), std::move(config), false, handle.NewRequest());
   if (status != ZX_OK) {
     handle.TakeChannel().reset();  // destroy underlying channel
   }

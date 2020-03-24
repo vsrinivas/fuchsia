@@ -126,7 +126,8 @@ TEST_F(ModelTest, ParseTest) {
               "up": false
             },
             {
-              "name": "ep1"
+              "name": "ep1",
+              "backing": "NETWORK_DEVICE"
             }
           ],
           "name": "test-net"
@@ -246,13 +247,15 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_EQ(ep0.mtu(), 1000u);
   EXPECT_TRUE(ep0.mac());
   const uint8_t mac_cmp[] = {0x70, 0x00, 0x01, 0x02, 0x03, 0x04};
-  EXPECT_EQ(memcmp(mac_cmp, ep0.mac()->d, sizeof(mac_cmp)), 0);
+  EXPECT_EQ(memcmp(mac_cmp, ep0.mac()->octets.data(), sizeof(mac_cmp)), 0);
   EXPECT_EQ(ep0.up(), false);
+  EXPECT_EQ(ep0.backing(), fuchsia::netemul::network::EndpointBacking::ETHERTAP);
 
   EXPECT_EQ(ep1.name(), "ep1");
   EXPECT_EQ(ep1.mtu(), 1500u);  // default mtu check
   EXPECT_FALSE(ep1.mac());      // mac not set
   EXPECT_EQ(ep1.up(), true);    // default up
+  EXPECT_EQ(ep1.backing(), fuchsia::netemul::network::EndpointBacking::NETWORK_DEVICE);
 
   // check logger options
   EXPECT_FALSE(c0.logger_options().enabled());

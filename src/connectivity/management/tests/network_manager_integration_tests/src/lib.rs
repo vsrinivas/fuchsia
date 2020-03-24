@@ -269,10 +269,17 @@ async fn test_device() -> Device {
     for name in [stringify!(port1), stringify!(port2), stringify!(port3)].iter() {
         let endpoint =
             create_endpoint(name, &endpoint_manager).await.expect("failed to create endpoint");
-        let device = endpoint.get_ethernet_device().await.expect("failed to get ethernet device");
-        add_ethernet_device(&netstack_proxy, device, name)
-            .await
-            .expect("error adding ethernet device");
+        match endpoint.get_device().await.expect("failed to get ethernet device") {
+            fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(device) => {
+                add_ethernet_device(&netstack_proxy, device, name)
+                    .await
+                    .expect("error adding ethernet device")
+            }
+            fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device) => {
+                // We specifically create an Ethertap endpoint in `create_endpoint`.
+                panic!("Got unexpected NetworkDevice connection {:?}", device);
+            }
+        };
         endpoints.push(endpoint);
     }
     Device { env, _sandbox: sandbox, endpoints }

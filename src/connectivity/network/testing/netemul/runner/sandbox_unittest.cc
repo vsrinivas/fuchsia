@@ -978,5 +978,24 @@ TEST_F(SandboxTest, NotAllServicesHaveVdev) {
   RunSandbox(SandboxResult::Status::SERVICE_EXITED);
 }
 
+TEST_F(SandboxTest, ExposesNetworkDevice) {
+  // Create an endpoint with NETWORK_DEVICE backing and stat its file from the dummy_proc to see
+  // that it got mounted in /vdev
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc_with_dev.cmx",
+   "environment": {
+      "test" : [{"arguments":["-P", "/vdev/class/network/ep"]}],
+      "devices": ["ep"]
+   },
+   "networks": [{
+       "name": "net",
+       "endpoints": [{"name":"ep", "backing": "NETWORK_DEVICE"}]
+   }]
+}
+)");
+  RunSandboxSuccess();
+}
+
 }  // namespace testing
 }  // namespace netemul

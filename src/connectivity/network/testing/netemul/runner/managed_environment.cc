@@ -67,7 +67,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
 
   // Start LogListener for this environment
   log_listener_ =
-      LogListener::Create(std::move(*options.mutable_logger_options()), options.name(), NULL);
+      LogListener::Create(std::move(*options.mutable_logger_options()), options.name(), nullptr);
 
   auto services = EnvironmentServices::Create(parent);
 

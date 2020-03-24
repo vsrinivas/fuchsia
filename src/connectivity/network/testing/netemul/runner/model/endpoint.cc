@@ -16,6 +16,9 @@ static const char* kName = "name";
 static const char* kMtu = "mtu";
 static const char* kMac = "mac";
 static const char* kUp = "up";
+static const char* kBacking = "backing";
+static const char* kEthertapBacking = "ETHERTAP";
+static const char* kNetworkDeviceBacking = "NETWORK_DEVICE";
 static const bool kDefaultUp = true;
 static const uint16_t kDefaultMtu = 1500;
 
@@ -30,6 +33,7 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* pa
   mtu_ = kDefaultMtu;
   mac_ = nullptr;
   up_ = kDefaultUp;
+  backing_ = fuchsia::netemul::network::EndpointBacking::ETHERTAP;
 
   // iterate over members:
   for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
@@ -56,9 +60,9 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* pa
         return false;
       }
       auto macval = std::make_unique<Mac>();
-      if (std::sscanf(i->value.GetString(), "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", macval->d,
-                      macval->d + 1, macval->d + 2, macval->d + 3, macval->d + 4,
-                      macval->d + 5) != 6) {
+      auto* d = macval->octets.data();
+      if (std::sscanf(i->value.GetString(), "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", d, d + 1,
+                      d + 2, d + 3, d + 4, d + 5) != 6) {
         parser->ReportError("Can't parse supplied mac address");
         return false;
       }
@@ -69,6 +73,20 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* pa
         return false;
       }
       up_ = i->value.GetBool();
+    } else if (i->name == kBacking) {
+      if (!i->value.IsString()) {
+        parser->ReportError("endpoint backing must be string");
+        return false;
+      }
+      if (i->value == kEthertapBacking) {
+        backing_ = fuchsia::netemul::network::EndpointBacking::ETHERTAP;
+      } else if (i->value == kNetworkDeviceBacking) {
+        backing_ = fuchsia::netemul::network::EndpointBacking::NETWORK_DEVICE;
+      } else {
+        parser->ReportError(
+            "invalid endpoint backing value, must be one of [ETHERTAP | NETWORK_DEVICE]");
+        return false;
+      }
     } else {
       parser->ReportError(
           fxl::StringPrintf("Unrecognized endpoint member \"%s\"", i->name.GetString()));
@@ -92,6 +110,8 @@ const std::unique_ptr<Mac>& Endpoint::mac() const { return mac_; }
 uint16_t Endpoint::mtu() const { return mtu_; }
 
 bool Endpoint::up() const { return up_; }
+
+fuchsia::netemul::network::EndpointBacking Endpoint::backing() const { return backing_; }
 
 }  // namespace config
 }  // namespace netemul

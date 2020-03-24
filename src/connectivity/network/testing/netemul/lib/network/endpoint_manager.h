@@ -23,7 +23,7 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
   explicit EndpointManager(NetworkContext* context);
 
   // create endpoint
-  zx_status_t CreateEndpoint(std::string name, Endpoint::Config config,
+  zx_status_t CreateEndpoint(std::string name, Endpoint::Config config, bool start_online,
                              fidl::InterfaceRequest<Endpoint::FEndpoint> req);
 
   // gets endpoint with name

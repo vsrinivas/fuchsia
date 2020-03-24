@@ -19,8 +19,9 @@
 
 namespace netemul {
 
-class DevfsHolder;
+class ServiceHolder;
 class ManagedEnvironment;
+
 class SandboxEnv {
  public:
   using Ptr = std::shared_ptr<SandboxEnv>;
@@ -34,6 +35,7 @@ class SandboxEnv {
         service_terminated;
 
     fit::function<void()> devfs_terminated;
+    fit::function<void()> network_tun_terminated;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Events);
   };
@@ -56,9 +58,11 @@ class SandboxEnv {
 
  private:
   void ConnectDevfs(zx::channel req);
+  void ConnectNetworkTun(fidl::InterfaceRequest<fuchsia::net::tun::Control> req);
   std::string default_name_;
   std::shared_ptr<sys::ServiceDirectory> env_services_;
-  std::unique_ptr<DevfsHolder> devfs_;
+  std::unique_ptr<ServiceHolder> devfs_;
+  std::unique_ptr<ServiceHolder> network_tun_;
   Events events_;
   NetworkContext net_context_;
   SyncManager sync_manager_;

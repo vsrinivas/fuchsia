@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx",
                 "fuchsia.netemul.devmgr.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/netemul_devmgr#meta/netemul_devmgr.cmx"
             }
         }
@@ -12,6 +13,7 @@
     "sandbox": {
         "services": [
             "fuchsia.netemul.devmgr.IsolatedDevmgr",
+            "fuchsia.net.tun.Control",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

@@ -97,15 +97,10 @@ zx_status_t NetworkContext::Setup(std::vector<NetworkSetup> setup,
         endp_setup.config->backing = fuchsia::netemul::network::EndpointBacking::ETHERTAP;
       }
       status = endpoint_manager_.CreateEndpoint(endp_setup.name, std::move(*endp_setup.config),
+                                                endp_setup.link_up,
                                                 setup_handle->CreateChannel<Endpoint::FEndpoint>());
       if (status != ZX_OK) {
         return status;
-      }
-
-      if (endp_setup.link_up) {
-        auto* endpoint = endpoint_manager_.GetEndpoint(endp_setup.name);
-        ZX_ASSERT(endpoint != nullptr);
-        endpoint->SetLinkUp(true);
       }
 
       status = network->AttachEndpoint(std::move(endp_setup.name));
@@ -134,7 +129,7 @@ NetworkContext::GetHandler() {
   };
 }
 
-zx::channel NetworkContext::ConnectDevfs() {
+zx::channel NetworkContext::ConnectDevfs() const {
   if (devfs_handler_) {
     zx::channel cli, req;
     zx::channel::create(0, &cli, &req);
@@ -143,6 +138,14 @@ zx::channel NetworkContext::ConnectDevfs() {
   } else {
     return zx::channel();
   }
+}
+
+fidl::InterfaceHandle<fuchsia::net::tun::Control> NetworkContext::ConnectNetworkTun() const {
+  fidl::InterfaceHandle<fuchsia::net::tun::Control> ret;
+  if (network_tun_handler_) {
+    network_tun_handler_(ret.NewRequest());
+  }
+  return ret;
 }
 
 }  // namespace netemul

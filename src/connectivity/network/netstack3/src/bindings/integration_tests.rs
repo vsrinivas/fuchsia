@@ -421,7 +421,12 @@ impl TestSetup {
             }
         };
 
-        Ok(ep.get_ethernet_device().await?)
+        match ep.get_device().await? {
+            fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => Ok(e),
+            fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(n) => {
+                todo!("(48853) Support NetworkDevice for integration tests.  Got unexpected network device {:?}.", n)
+            }
+        }
     }
 
     /// Changes a named endpoint `ep_name` link status to `up`.

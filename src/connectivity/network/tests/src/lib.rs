@@ -38,6 +38,55 @@ impl Netstack for Netstack3 {
     const URL: &'static str = fuchsia_component::fuchsia_single_component_package_url!("netstack3");
 }
 
+/// Helper struct providing [`fidl_fuchsia_netemul_network::DeviceConnection`]
+/// with utility functions.
+struct DeviceConnection(fidl_fuchsia_netemul_network::DeviceConnection);
+
+impl DeviceConnection {
+    /// Creates a `DeviceConnection` from `endpoint`.
+    async fn new(endpoint: &fidl_fuchsia_netemul_network::EndpointProxy) -> anyhow::Result<Self> {
+        Ok(DeviceConnection(endpoint.get_device().await?))
+    }
+
+    /// Unwraps this `DeviceConnection` into an Ethernet
+    /// [`fidl::endpoints::ClientEnd`] if it is an Ethernet connection.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this `DeviceConnection` is not
+    /// [`fidl_fuchsia_netemul_network::DeviceConnection::Ethernet`].
+    fn expect_ethernet<T: std::fmt::Display>(
+        self,
+        msg: T,
+    ) -> fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker> {
+        let Self(device) = self;
+        match device {
+            fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(eth) => eth,
+            fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+                panic!("DeviceConnection was NetworkDevice ({:?}) {}", netdevice, msg)
+            }
+        }
+    }
+
+    /// Adds this `DeviceConnection` to `stack`.
+    async fn add_to_stack(
+        self,
+        name: &str,
+        stack: &fidl_fuchsia_net_stack::StackProxy,
+    ) -> anyhow::Result<u64> {
+        let Self(device) = self;
+        match device {
+            fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(eth) => exec_fidl!(
+                stack.add_ethernet_interface(name, eth),
+                "failed to add ethernet interface"
+            ),
+            fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+                todo!("(48907) Support NetworkDevice version of integration tests. Got unexpected NetworkDevice {:?}", netdevice)
+            }
+        }
+    }
+}
+
 fn connect_to_service<S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService>(
     managed_environment: &fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy,
 ) -> std::result::Result<S::Proxy, anyhow::Error> {
@@ -153,10 +202,7 @@ fn create_netstack_environment<N: Netstack>(
 async fn with_netstack_and_device<F, T, N, S>(name: &'static str, async_fn: T) -> Result
 where
     F: futures::Future<Output = Result>,
-    T: FnOnce(
-        S::Proxy,
-        fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
-    ) -> F,
+    T: FnOnce(S::Proxy, DeviceConnection) -> F,
     N: Netstack,
     S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
 {
@@ -169,7 +215,7 @@ where
         get_endpoint_manager(&network_context).context("failed to get endpoint manager")?;
     let endpoint =
         create_endpoint(name, &endpoint_manager).await.context("failed to create endpoint")?;
-    let device = endpoint.get_ethernet_device().await.context("failed to get ethernet device")?;
+    let device = DeviceConnection::new(&endpoint).await.context("failed to get ethernet device")?;
     let managed_environment = create_netstack_environment::<N>(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let netstack_proxy =
@@ -190,7 +236,8 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     launcher: &fidl_fuchsia_sys::LauncherProxy,
     name: String,
 ) -> Result<Vec<fidl_fuchsia_net::Subnet>> {
-    let device = endpoint.get_ethernet_device().await.context("failed to get ethernet device")?;
+    let device =
+        DeviceConnection::new(endpoint).await.context("failed to get device connection")?;
     // Launch the netstack service.
     let (dir, dir_server) = fuchsia_zircon::Channel::create()?;
     let (component_controller, component_controller_server) =
@@ -220,6 +267,8 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     ).context("failed to connect to netstack")?;
 
     // Add the device and get its interface state from netstack.
+    // TODO(48907) Support Network Device. This helper fn should use stack.fidl
+    // and be agnostic over interface type.
     let id = netstack
         .add_ethernet_device(
             &name,
@@ -229,7 +278,7 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
                 metric: 0,
                 ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             },
-            device,
+            device.expect_ethernet("add_ethernet_device requires an Ethernet endpoint"),
         )
         .await
         .context("failed to add ethernet device")?;
@@ -404,7 +453,9 @@ async fn add_ethernet_device() -> Result {
                         metric: 0,
                         ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
                     },
-                    device,
+                    // We're testing add_ethernet_device (netstack.fidl), which
+                    // does not have a network device entry point.
+                    device.expect_ethernet("add_ethernet_device requires an Ethernet endpoint"),
                 )
                 .await
                 .context("failed to add ethernet device")?;
@@ -430,10 +481,7 @@ async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
     with_netstack_and_device::<_, _, N, fidl_fuchsia_net_stack::StackMarker>(
         name,
         |stack, device| async move {
-            let id = exec_fidl!(
-                stack.add_ethernet_interface(name, device),
-                "failed to add ethernet interface"
-            )?;
+            let id = device.add_to_stack(name, &stack).await?;
             let interface = stack
                 .list_interfaces()
                 .await
@@ -693,17 +741,16 @@ async fn test_dhcp(name: &str, dhcpd_config: &str) -> Result {
         .context("failed to create endpoint")?;
     let () = server_endpoint.set_link_up(true).await.context("failed to start server endpoint")?;
     {
-        let server_device = server_endpoint
-            .get_ethernet_device()
+        let server_device = DeviceConnection::new(&server_endpoint)
             .await
-            .context("failed to get server ethernet device")?;
+            .context("failed to get server device connection")?;
         let server_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&server_environment)
                 .context("failed to connect to server stack")?;
-        let id = exec_fidl!(
-            server_stack.add_ethernet_interface(name, server_device),
-            "failed to add server ethernet interface"
-        )?;
+        let id = server_device
+            .add_to_stack(name, &server_stack)
+            .await
+            .context("failed to add server device")?;
         let () = exec_fidl!(
             server_stack.add_interface_address(
                 id,
@@ -778,17 +825,16 @@ async fn test_dhcp(name: &str, dhcpd_config: &str) -> Result {
     let () = fuchsia_zircon::Status::ok(status).context("failed to attach client endpoint")?;
 
     {
-        let client_device = client_endpoint
-            .get_ethernet_device()
+        let client_device = DeviceConnection::new(&client_endpoint)
             .await
-            .context("failed to get client ethernet device")?;
+            .context("failed to get client device connection")?;
         let client_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&client_environment)
                 .context("failed to connect to client stack")?;
-        let id = exec_fidl!(
-            client_stack.add_ethernet_interface(name, client_device),
-            "failed to add client ethernet interface"
-        )?;
+        let id = client_device
+            .add_to_stack(name, &client_stack)
+            .await
+            .context("failed to add client device")?;
         let () =
             exec_fidl!(client_stack.enable_interface(id), "failed to enable client interface")?;
         let client_netstack =

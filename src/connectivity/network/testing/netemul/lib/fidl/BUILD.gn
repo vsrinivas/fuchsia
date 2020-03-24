@@ -14,7 +14,11 @@ fidl("network") {
   name = "fuchsia.netemul.network"
   sources = [ "network.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-ethernet" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet",
+    "//zircon/system/fidl/fuchsia-net",
+  ]
 }
 
 fidl("environment") {

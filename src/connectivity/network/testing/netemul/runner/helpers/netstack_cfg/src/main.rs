@@ -51,9 +51,9 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let ep = epm.get_endpoint(&opt.endpoint).await?;
     let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
     fx_log_info!("Got endpoint.");
-    // and the ethernet device:
-    let eth = ep.get_ethernet_device().await?;
-    fx_log_info!("Got ethernet.");
+    // and the device connection:
+    let device_connection = ep.get_device().await?;
+    fx_log_info!("Got device connection.");
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
@@ -84,10 +84,17 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         metric: DEFAULT_METRIC,
         ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };
-    let nicid = netstack
-        .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
-        .await
-        .context("can't add ethernet device")?;
+    let nicid = match device_connection {
+        fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => netstack
+            .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, e)
+            .await
+            .context("can't add ethernet device")?,
+        fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device) => todo!(
+            "(48860) Support NetworkDevice configuration. Got unexpected NetworkDevice {:?}",
+            device
+        ),
+    };
+
     let () = netstack.set_interface_status(nicid as u32, true)?;
     fx_log_info!("Added ethernet to stack.");
 

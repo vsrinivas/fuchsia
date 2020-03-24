@@ -233,12 +233,13 @@ In that case, it's as if only the *url* field had been specified.
 
 ### Endpoint
 
-| Field | Type    | Description                                                                                               |
-|-------|---------|-----------------------------------------------------------------------------------------------------------|
-| name  | String  | **Required** endpoint name identifier. Must be unique in even across networks.                            |
-| mac   | String  | MAC address of virtual endpoint. If not set will be generated randomly using the endpoint's name as seed. |
-| mtu   | Number  | Endpoint's MTU. Defaults to **1500**.                                                                     |
-| up    | Boolean | Toggle endpoint to link up as part of setup process. Defaults to **true**.                                |
+| Field   | Type    | Description                                                                                               |
+|---------|---------|-----------------------------------------------------------------------------------------------------------|
+| name    | String  | **Required** endpoint name identifier. Must be unique in even across networks.                            |
+| mac     | String  | MAC address of virtual endpoint. If not set will be generated randomly using the endpoint's name as seed. |
+| mtu     | Number  | Endpoint's MTU. Defaults to **1500**.                                                                     |
+| up      | Boolean | Toggle endpoint to link up as part of setup process. Defaults to **true**.                                |
+| backing | String  | Endpoint backing type, can be `ETHERTAP` or `NETWORK_DEVICE`. Defaults to `ETHERTAP`.                     |
 
 
 ### LoggerOptions

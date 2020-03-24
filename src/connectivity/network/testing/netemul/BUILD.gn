@@ -11,6 +11,9 @@ group("netemul") {
 
     # The following packages are needed to run the netemul guest integration test.
     "//garnet/packages/prod:guest_runner",
+
+    # Netemul uses network-tun to create virtual devices
+    "//src/connectivity/network/tun/network-tun",
     "//src/virtualization/lib/guest_interaction",
     "//src/virtualization/packages",
   ]

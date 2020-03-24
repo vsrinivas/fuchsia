@@ -54,8 +54,10 @@ source_set("network_service") {
     "//zircon/public/lib/fdio",
   ]
 
-  public_deps =
-      [ "//src/connectivity/network/testing/netemul/lib/fidl:network" ]
+  public_deps = [
+    "//src/connectivity/network/testing/netemul/lib/fidl:network",
+    "//src/connectivity/network/tun/fidl",
+  ]
 }
 
 source_set("netdump") {
@@ -88,6 +90,7 @@ executable("network_test_bin") {
     ":netdump",
     ":network_service",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/connectivity/lib/network-device/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

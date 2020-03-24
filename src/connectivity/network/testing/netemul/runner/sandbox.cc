@@ -5,6 +5,7 @@
 #include "sandbox.h"
 
 #include <fcntl.h>
+#include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
@@ -34,7 +35,8 @@ using namespace fuchsia::netemul;
 namespace netemul {
 
 static const char* kDebianGuestUrl = "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
-static const char* kEndpointMountPath = "class/ethernet/";
+static const char* kEthertapEndpointMountPath = "class/ethernet/";
+static const char* kNetworkDeviceEndpointMountPath = "class/network/";
 static const char* kGuestManagerUrl =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
 static const char* kGuestDiscoveryUrl =
@@ -118,9 +120,15 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
   global_events.devfs_terminated = [this]() {
     if (helper_loop_) {
       async::PostTask(helper_loop_->dispatcher(), [this]() {
-        std::stringstream ss;
-        ss << "Isolated devmgr terminated prematurely";
-        PostTerminate(SandboxResult::Status::INTERNAL_ERROR, ss.str());
+        PostTerminate(SandboxResult::Status::INTERNAL_ERROR,
+                      "Isolated devmgr terminated prematurely");
+      });
+    }
+  };
+  global_events.network_tun_terminated = [this]() {
+    if (helper_loop_) {
+      async::PostTask(helper_loop_->dispatcher(), [this]() {
+        PostTerminate(SandboxResult::Status::INTERNAL_ERROR, "network-tun terminated prematurely");
       });
     }
   };
@@ -299,11 +307,11 @@ bool Sandbox::ConfigureNetworks() {
       network::EndpointConfig fidl_config;
       fidl::InterfaceHandle<network::Endpoint> endp_h;
 
-      fidl_config.backing = network::EndpointBacking::ETHERTAP;
+      fidl_config.backing = endp_cfg.backing();
       fidl_config.mtu = endp_cfg.mtu();
       if (endp_cfg.mac()) {
-        fidl_config.mac = std::make_unique<fuchsia::hardware::ethernet::MacAddress>();
-        memcpy(&fidl_config.mac->octets[0], endp_cfg.mac()->d, 6);
+        fidl_config.mac = std::make_unique<fuchsia::net::MacAddress>();
+        endp_cfg.mac()->Clone(fidl_config.mac.get());
       }
 
       if (endp_manager->CreateEndpoint(endp_cfg.name(), std::move(fidl_config), &status, &endp_h) !=
@@ -356,7 +364,6 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
     });
     for (const auto& device : config.devices()) {
       auto& nd = devices->emplace_back();
-      nd.path = fxl::Concatenate({std::string(kEndpointMountPath), device});
 
       fidl::InterfaceHandle<network::Endpoint> endp_h;
       auto status = epm->GetEndpoint(device, &endp_h);
@@ -370,6 +377,14 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
         FXL_LOG(ERROR) << "Can't get proxy on endpoint " << device;
         return false;
       }
+      network::EndpointConfig ep_config;
+      if (endp->GetConfig(&ep_config) != ZX_OK) {
+        FXL_LOG(ERROR) << "Can't get endpoint configuration " << device;
+      }
+      fxl::StringView base_path(ep_config.backing == network::EndpointBacking::ETHERTAP
+                                    ? kEthertapEndpointMountPath
+                                    : kNetworkDeviceEndpointMountPath);
+      nd.path = fxl::Concatenate({base_path, device});
     }
   }
 
