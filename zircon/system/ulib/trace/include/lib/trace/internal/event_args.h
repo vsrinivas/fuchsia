@@ -121,6 +121,7 @@ struct ArgumentValueMaker<
 template <typename T>
 struct ArgumentValueMaker<
     T, typename std::enable_if<!is_bool<T>::value && std::is_unsigned<T>::value &&
+                               !std::is_enum<T>::value &&
                                (sizeof(T) <= sizeof(uint32_t))>::type> {
   static trace_arg_value_t Make(uint32_t value) { return trace_make_uint32_arg_value(value); }
 };
@@ -135,7 +136,9 @@ struct ArgumentValueMaker<
 
 template <typename T>
 struct ArgumentValueMaker<
-    T, typename std::enable_if<std::is_unsigned<T>::value && (sizeof(T) > sizeof(uint32_t)) &&
+    T, typename std::enable_if<std::is_unsigned<T>::value &&
+                               !std::is_enum<T>::value &&
+                               (sizeof(T) > sizeof(uint32_t)) &&
                                (sizeof(T) <= sizeof(uint64_t))>::type> {
   static trace_arg_value_t Make(uint64_t value) { return trace_make_uint64_arg_value(value); }
 };
