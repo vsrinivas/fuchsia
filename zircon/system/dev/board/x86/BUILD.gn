@@ -388,9 +388,6 @@ test("x86-cros-ec-test") {
     "//zircon/system/dev/lib/mock-hidbus-ifc",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
-
-  # TODO(46716): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("platform-bus-x86-manifest") {

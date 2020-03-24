@@ -150,8 +150,9 @@ TEST(MotionSense, Lifecycle) {
   ASSERT_EQ(parsed_hid->rep_count, 1);
   hid::FreeDeviceDescriptor(parsed_hid);
 
-  // Destroy the device.
+  // Remove and destroy the device.
   device->DdkAsyncRemove();
+  device->DdkRelease();
 
   // Ensure everything was ok.
   EXPECT_TRUE(ddk.Ok());
