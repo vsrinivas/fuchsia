@@ -926,10 +926,15 @@ func TestStateTransition(t *testing.T) {
 			case <-time.After(testTimeout):
 				t.Fatal("timeout acquiring initial address")
 			}
+			if got := c.Info().State; got != bound {
+				t.Errorf("after first address acquisition, got client state: %s, want: %s", got, bound)
+			}
 
 			wantAddr := addr
+			wantState := bound
 			if tc.typ == testLeaseExpire {
 				wantAddr = tcpip.AddressWithPrefix{}
+				wantState = initSelecting
 				// Cut the data flow to block request packets during renew/rebind.
 				// TODO(ckuiper): This has the potential for a race between when the thread that injects
 				// data into the link EP reads the new "blockData" value and when the DHCP client thread's
@@ -945,6 +950,9 @@ func TestStateTransition(t *testing.T) {
 				}
 			case <-time.After(testTimeout):
 				t.Fatal("timeout acquiring renewed address")
+			}
+			if got := c.Info().State; got != wantState {
+				t.Errorf("after acquiring renewed address, got client state: %s, want: %s", got, wantState)
 			}
 		})
 	}

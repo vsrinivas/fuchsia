@@ -9,13 +9,14 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[initSelecting-0]
-	_ = x[renewing-1]
-	_ = x[rebinding-2]
+	_ = x[bound-1]
+	_ = x[renewing-2]
+	_ = x[rebinding-3]
 }
 
-const _dhcpClientState_name = "initSelectingrenewingrebinding"
+const _dhcpClientState_name = "initSelectingboundrenewingrebinding"
 
-var _dhcpClientState_index = [...]uint8{0, 13, 21, 30}
+var _dhcpClientState_index = [...]uint8{0, 13, 18, 26, 35}
 
 func (i dhcpClientState) String() string {
 	if i >= dhcpClientState(len(_dhcpClientState_index)-1) {

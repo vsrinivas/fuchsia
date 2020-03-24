@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"sync/atomic"
@@ -58,6 +57,7 @@ type dhcpClientState uint8
 
 const (
 	initSelecting dhcpClientState = iota
+	bound
 	renewing
 	rebinding
 )
@@ -154,12 +154,6 @@ func (c *Client) Run(ctx context.Context) {
 	// https://tools.ietf.org/html/rfc2131#section-4.4
 	info.State = initSelecting
 
-	initSelectingTimer := time.NewTimer(math.MaxInt64)
-	rebindTimer := time.NewTimer(math.MaxInt64)
-	renewTimer := time.NewTimer(math.MaxInt64)
-
-	var leaseExpirationTime, rebindTime time.Time
-
 	go func() {
 		c.sem <- struct{}{}
 		defer func() { <-c.sem }()
@@ -169,6 +163,9 @@ func (c *Client) Run(ctx context.Context) {
 			// cleanup mutates info.
 			c.info.Store(info)
 		}()
+
+		var leaseExpirationTime, renewTime, rebindTime time.Time
+		var timer *time.Timer
 
 		for {
 			if err := func() error {
@@ -203,15 +200,6 @@ func (c *Client) Run(ctx context.Context) {
 				if err != nil {
 					return err
 				}
-				// Avoid races between lease acquisition and timers firing.
-				for _, timer := range []*time.Timer{initSelectingTimer, rebindTimer, renewTimer} {
-					if !timer.Stop() {
-						// TODO: why does this hang? Cf. https://godoc.org/time#Timer.Stop
-						if false {
-							<-timer.C
-						}
-					}
-				}
 
 				{
 					leaseLength, renewTime, rebindTime := cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime
@@ -240,57 +228,75 @@ func (c *Client) Run(ctx context.Context) {
 
 				now := time.Now()
 				leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
-				rebindTime = now.Add(cfg.RenewTime.Duration())
-
-				initSelectingTimer.Reset(cfg.LeaseLength.Duration())
-				renewTimer.Reset(cfg.RenewTime.Duration())
-				rebindTimer.Reset(cfg.RebindTime.Duration())
+				renewTime = now.Add(cfg.RenewTime.Duration())
+				rebindTime = now.Add(cfg.RebindTime.Duration())
 
 				if fn := c.acquiredFunc; fn != nil {
 					fn(info.OldAddr, info.Addr, cfg)
 				}
 				info.OldAddr = info.Addr
+				info.State = bound
 
 				return nil
 			}(); err != nil {
 				if ctx.Err() != nil {
 					return
 				}
-				var timer *time.Timer
-				switch info.State {
-				case initSelecting:
-					timer = initSelectingTimer
-				case renewing:
-					timer = renewTimer
-				case rebinding:
-					timer = rebindTimer
-				default:
-					panic(fmt.Sprintf("unexpected client state: state=%s", info.State))
-				}
-				timer.Reset(info.Backoff)
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
 			}
 
 			// Synchronize info after attempt to acquire is complete.
 			c.info.Store(info)
 
-			// Wait for the next event.
+			// RFC 2131 Section 4.4.5
+			// https://tools.ietf.org/html/rfc2131#section-4.4.5
 			//
-			// In the error case, a retry timer will have been set. If a state transition timer fires at the
-			// same time as the retry timer, then the non-determinism of the selection between the two timers
-			// could lead to the client incorrectly bouncing back and forth between two states, e.g.
-			// RENEW->REBIND->RENEW. Accordingly, we must check for validity before allowing a state
-			// transition to occur.
+			//   T1 MUST be earlier than T2, which, in turn, MUST be earlier than
+			//   the time at which the client's lease will expire.
 			var next dhcpClientState
-			select {
-			case <-ctx.Done():
-				return
-			case <-initSelectingTimer.C:
+			var waitDuration time.Duration
+			switch now := time.Now(); {
+			case !now.Before(leaseExpirationTime):
 				next = initSelecting
-			case <-renewTimer.C:
-				next = renewing
-			case <-rebindTimer.C:
+			case !now.Before(rebindTime):
 				next = rebinding
+			case !now.Before(renewTime):
+				next = renewing
+			default:
+				switch s := info.State; s {
+				case renewing, rebinding:
+					// This means the client is stuck in a bad state, because if
+					// the timers are correctly set, previous cases should have matched.
+					panic(fmt.Sprintf("invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s", s, now, leaseExpirationTime, renewTime, rebindTime))
+				}
+				waitDuration = renewTime.Sub(now)
+				next = renewing
+			}
+
+			// No state transition occurred, the client is retrying.
+			if info.State == next {
+				waitDuration = info.Backoff
+			}
+
+			if waitDuration != 0 {
+				if timer == nil {
+					timer = time.NewTimer(waitDuration)
+				} else {
+					timer.Reset(waitDuration)
+				}
+			}
+
+			if info.State != next && next != renewing {
+				// Transition immediately for RENEW->REBIND, REBIND->INIT.
+				if ctx.Err() != nil {
+					return
+				}
+			} else {
+				select {
+				case <-ctx.Done():
+					return
+				case <-timer.C:
+				}
 			}
 
 			if info.State != initSelecting && next == initSelecting {
@@ -298,9 +304,8 @@ func (c *Client) Run(ctx context.Context) {
 				c.cleanup(&info)
 			}
 
-			if info.State <= next || next == initSelecting {
-				info.State = next
-			}
+			info.State = next
+
 			// Synchronize info after any state updates.
 			c.info.Store(info)
 		}
