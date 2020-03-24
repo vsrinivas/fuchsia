@@ -85,6 +85,9 @@ use crate::tracing::facade::TracingFacade;
 // Update related includes
 use crate::update::facade::UpdateFacade;
 
+// Weave related includes
+use crate::weave::facade::WeaveFacade;
+
 // Webdriver related includes
 use crate::webdriver::facade::WebdriverFacade;
 
@@ -144,6 +147,7 @@ impl Sl4f {
                 "traceutil_facade" => TraceutilFacade::new(),
                 "tracing_facade" => TracingFacade::new(),
                 "update_facade" => UpdateFacade::new(),
+                "weave_facade" => WeaveFacade::new(),
                 "webdriver_facade" => WebdriverFacade::new(),
                 "wlan" => WlanFacade::new()?,
                 "wlan_policy" => WlanPolicyFacade::new()?,

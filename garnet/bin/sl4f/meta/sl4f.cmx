@@ -45,6 +45,7 @@
             "fuchsia.virtualaudio.Control",
             "fuchsia.virtualaudio.Input",
             "fuchsia.virtualaudio.Output",
+            "fuchsia.weave.FactoryDataManager",
             "fuchsia.web.ContextProvider",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.test.manager.Harness",

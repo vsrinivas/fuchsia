@@ -29,6 +29,7 @@ pub mod test;
 pub mod traceutil;
 pub mod tracing;
 pub mod update;
+pub mod weave;
 pub mod webdriver;
 pub mod wlan;
 pub mod wlan_policy;
