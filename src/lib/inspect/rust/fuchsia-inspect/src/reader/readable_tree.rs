@@ -24,12 +24,15 @@ impl ReadableTree for Inspector {
     }
 
     async fn tree_names(&self) -> Result<Vec<String>, Error> {
-        self.state()
-            .map(|state| {
+        match self.state() {
+            // A no-op inspector.
+            None => Ok(vec![]),
+            Some(state) => {
                 let state = state.lock();
-                state.callbacks.keys().map(|k| k.to_string()).collect::<Vec<String>>()
-            })
-            .ok_or(format_err!("failed to get tree names"))
+                let names = state.callbacks.keys().map(|k| k.to_string()).collect::<Vec<String>>();
+                Ok(names)
+            }
+        }
     }
 
     async fn read_tree(&self, name: &str) -> Result<Self, Error> {

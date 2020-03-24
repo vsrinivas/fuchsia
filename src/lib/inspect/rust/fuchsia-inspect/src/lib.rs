@@ -234,6 +234,11 @@ impl Inspector {
         let state = State::create(heap)?;
         Ok((vmo, Node::new_root(Arc::new(Mutex::new(state)))))
     }
+
+    /// Creates an no-op inspector from the given Vmo. If the VMO is corrupted, reading can fail.
+    fn no_op_from_vmo(vmo: Arc<zx::Vmo>) -> Inspector {
+        Inspector { vmo: Some(vmo), root_node: Arc::new(Node::new_no_op()) }
+    }
 }
 
 /// Trait implemented by all inspect types.
@@ -572,6 +577,22 @@ impl Node {
     create_exponential_histogram_property_fn!(int, Int, i64);
     create_exponential_histogram_property_fn!(uint, Uint, u64);
     create_exponential_histogram_property_fn!(double, Double, f64);
+
+    /// Creates a lazy node from the given VMO.
+    pub fn create_lazy_child_from_vmo(&self, name: impl AsRef<str>, vmo: Arc<zx::Vmo>) -> LazyNode {
+        self.create_lazy_child(name.as_ref(), move || {
+            let vmo_clone = vmo.clone();
+            async move { Ok(Inspector::no_op_from_vmo(vmo_clone)) }.boxed()
+        })
+    }
+
+    /// Records a lazy node from the given VMO.
+    pub fn record_lazy_child_from_vmo(&self, name: impl AsRef<str>, vmo: Arc<zx::Vmo>) {
+        self.record_lazy_child(name.as_ref(), move || {
+            let vmo_clone = vmo.clone();
+            async move { Ok(Inspector::no_op_from_vmo(vmo_clone)) }.boxed()
+        });
+    }
 
     /// Add a string property to this node.
     #[must_use]
@@ -1583,6 +1604,24 @@ mod tests {
             assert_eq!(node_block.child_count().unwrap(), 1);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn inspector_lazy_from_vmo() {
+        let inspector = Inspector::new();
+        inspector.root().record_uint("test", 3);
+
+        let embedded_inspector = Inspector::new();
+        embedded_inspector.root().record_uint("test2", 4);
+        let vmo = embedded_inspector.duplicate_vmo().unwrap();
+
+        inspector.root().record_lazy_child_from_vmo("lazy", Arc::new(vmo));
+        assert_inspect_tree!(inspector, root: {
+            test: 3u64,
+            lazy: {
+                test2: 4u64,
+            }
+        });
     }
 
     #[test]
