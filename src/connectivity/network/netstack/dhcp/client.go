@@ -23,9 +23,10 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-const tag = "DHCP"
-
-const defaultLeaseTime = 12 * time.Hour
+const (
+	tag                        = "DHCP"
+	defaultLeaseLength Seconds = 12 * 3600
+)
 
 type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
 
@@ -213,37 +214,37 @@ func (c *Client) Run(ctx context.Context) {
 				}
 
 				{
-					leaseLength, renewalTime, rebindingTime := cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime
+					leaseLength, renewTime, rebindTime := cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime
 					if cfg.LeaseLength == 0 {
-						syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseTime)
-						leaseLength = defaultLeaseTime
+						syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseLength)
+						leaseLength = defaultLeaseLength
 					}
 					switch {
-					case cfg.LeaseLength != 0 && cfg.RenewalTime >= cfg.LeaseLength:
-						syslog.WarnTf(tag, "invalid renewal time: renewing=%s lease=%s", cfg.RenewalTime, cfg.LeaseLength)
+					case cfg.LeaseLength != 0 && cfg.RenewTime >= cfg.LeaseLength:
+						syslog.WarnTf(tag, "invalid renewal time: renewing=%s, lease=%s", cfg.RenewTime, cfg.LeaseLength)
 						fallthrough
-					case cfg.RenewalTime == 0:
+					case cfg.RenewTime == 0:
 						// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
-						renewalTime = leaseLength / 2
+						renewTime = leaseLength / 2
 					}
 					switch {
-					case cfg.RenewalTime != 0 && cfg.RebindingTime <= cfg.RenewalTime:
-						syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s renewing=%s", cfg.RebindingTime, cfg.RenewalTime)
+					case cfg.RenewTime != 0 && cfg.RebindTime <= cfg.RenewTime:
+						syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s, renewing=%s", cfg.RebindTime, cfg.RenewTime)
 						fallthrough
-					case cfg.RebindingTime == 0:
+					case cfg.RebindTime == 0:
 						// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
-						rebindingTime = leaseLength * 875 / 1000
+						rebindTime = leaseLength * 875 / 1000
 					}
-					cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime = leaseLength, renewalTime, rebindingTime
+					cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime = leaseLength, renewTime, rebindTime
 				}
 
 				now := time.Now()
-				leaseExpirationTime = now.Add(cfg.LeaseLength)
-				rebindTime = now.Add(cfg.RebindingTime)
+				leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
+				rebindTime = now.Add(cfg.RenewTime.Duration())
 
-				initSelectingTimer.Reset(cfg.LeaseLength)
-				renewTimer.Reset(cfg.RenewalTime)
-				rebindTimer.Reset(cfg.RebindingTime)
+				initSelectingTimer.Reset(cfg.LeaseLength.Duration())
+				renewTimer.Reset(cfg.RenewTime.Duration())
+				rebindTimer.Reset(cfg.RebindTime.Duration())
 
 				if fn := c.acquiredFunc; fn != nil {
 					fn(info.OldAddr, info.Addr, cfg)
@@ -545,7 +546,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 					PrefixLen: prefixLen,
 				}
 
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime)
 
 				break retransmitDiscover
 			}
@@ -618,7 +619,7 @@ retransmitRequest:
 
 				// Now that we've successfully acquired the address, update the client state.
 				info.Addr = requestedAddr
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with lease %s", typ, fromAddr.Addr, cfg.LeaseLength)
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with leaseLength=%s", typ, fromAddr.Addr, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
 				if msg := opts.message(); len(msg) != 0 {

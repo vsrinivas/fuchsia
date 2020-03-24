@@ -1120,7 +1120,6 @@ func TestDHCPAcquired(t *testing.T) {
 	serverAddress[len(serverAddress)-1]++
 	gatewayAddress := serverAddress
 	gatewayAddress[len(gatewayAddress)-1]++
-	const defaultLeaseLength = 60 * time.Second
 
 	defaultMask := net.IP(testV4Address).DefaultMask()
 	prefixLen, _ := defaultMask.Size()
@@ -1152,7 +1151,7 @@ func TestDHCPAcquired(t *testing.T) {
 				Gateway:       tcpip.Address(serverAddress),
 				SubnetMask:    tcpip.AddressMask(defaultMask),
 				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
-				LeaseLength:   defaultLeaseLength,
+				LeaseLength:   dhcp.Seconds(60),
 			},
 			expectedRouteTable: []routes.ExtendedRoute{
 				{

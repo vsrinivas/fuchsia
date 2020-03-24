@@ -170,7 +170,7 @@ func (s *Server) expirer(ctx context.Context) {
 		case <-t.C:
 			s.mu.Lock()
 			for linkAddr, lease := range s.leases {
-				if time.Since(lease.start) > s.cfg.LeaseLength {
+				if time.Since(lease.start) > s.cfg.LeaseLength.Duration() {
 					lease.state = leaseExpired
 					s.leases[linkAddr] = lease
 				}

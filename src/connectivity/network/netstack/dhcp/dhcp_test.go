@@ -257,7 +257,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		DNS: []tcpip.Address{
 			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
 		},
-		LeaseLength: 24 * time.Hour,
+		LeaseLength: defaultLeaseLength,
 	}
 	if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
 		t.Fatal(err)
@@ -303,7 +303,7 @@ func TestDHCP(t *testing.T) {
 		DNS: []tcpip.Address{
 			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
 		},
-		LeaseLength: 24 * time.Hour,
+		LeaseLength: defaultLeaseLength,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -481,7 +481,7 @@ func TestDelayRetransmission(t *testing.T) {
 				DNS: []tcpip.Address{
 					"\x08\x08\x08\x08", "\x08\x08\x04\x04",
 				},
-				LeaseLength: 24 * time.Hour,
+				LeaseLength: defaultLeaseLength,
 			}
 
 			{
@@ -601,7 +601,7 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 				DNS: []tcpip.Address{
 					"\x08\x08\x08\x08", "\x08\x08\x04\x04",
 				},
-				LeaseLength: 24 * time.Hour,
+				LeaseLength: defaultLeaseLength,
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -723,7 +723,7 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 		DNS: []tcpip.Address{
 			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
 		},
-		LeaseLength: 24 * time.Hour,
+		LeaseLength: defaultLeaseLength,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -775,15 +775,18 @@ func TestStateTransition(t *testing.T) {
 		// The following 3 durations are included in DHCP responses.
 		// They are multiples of a second because that's the smallest time granularity
 		// DHCP messages support.
-		renewTime   = 1 * time.Second
-		rebindTime  = 2 * time.Second
-		leaseLength = 3 * time.Second
-		// testTimeout is the amount of time the test is willing to wait for the
-		// client to bind/unbind addresses. This value has to be larger than lease length,
-		// because in the worst case a test has to wait for the client to respond
-		// to lease expiration.
-		testTimeout = leaseLength + 1*time.Second
+		renewTime   Seconds = 1
+		rebindTime  Seconds = 2
+		leaseLength Seconds = 3
 	)
+	// testTimeout is the amount of time the test is willing to wait for the
+	// client to bind/unbind addresses. This value has to be larger than lease length,
+	// because in the worst case a test has to wait for the client to respond
+	// to lease expiration.
+	//
+	// Function call is not supported in const initializer, so this is a var not
+	// a const.
+	testTimeout := leaseLength.Duration() + time.Second
 
 	for _, tc := range []struct {
 		name           string
@@ -807,7 +810,7 @@ func TestStateTransition(t *testing.T) {
 			// causing it to miss REBIND.
 			name:           "RebindWithLargeAcquisitionTimeout",
 			typ:            testRebind,
-			acquireTimeout: leaseLength + 1*time.Second,
+			acquireTimeout: leaseLength.Duration() + time.Second,
 		},
 		{
 			name:           "LeaseExpire",
@@ -859,8 +862,8 @@ func TestStateTransition(t *testing.T) {
 				Gateway:       "\xc0\xa8\x03\xF0",
 				DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
 				LeaseLength:   leaseLength,
-				RebindingTime: rebindTime,
-				RenewalTime:   renewTime,
+				RebindTime:    rebindTime,
+				RenewTime:     renewTime,
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -1050,7 +1053,7 @@ func TestTwoServers(t *testing.T) {
 		SubnetMask:    "\xff\xff\xff\x00",
 		Gateway:       "\xc0\xa8\x03\xF0",
 		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-		LeaseLength:   30 * time.Minute,
+		LeaseLength:   Seconds(30 * 60),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1059,7 +1062,7 @@ func TestTwoServers(t *testing.T) {
 		SubnetMask:    "\xff\xff\xff\x00",
 		Gateway:       "\xc0\xa8\x03\xF0",
 		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-		LeaseLength:   30 * time.Minute,
+		LeaseLength:   Seconds(30 * 60),
 	}); err != nil {
 		t.Fatal(err)
 	}
