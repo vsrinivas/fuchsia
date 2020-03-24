@@ -493,7 +493,7 @@ TEST_F(DeviceEnumerationTest, As370Test) {
 TEST_F(DeviceEnumerationTest, LuisTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/luis",
-      "sys/platform/14:02:1",
+      "sys/platform/14:02:1/as370-gpio",
       "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-000",
       "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-001",
       "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-002",

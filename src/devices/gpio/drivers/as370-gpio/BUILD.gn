@@ -16,6 +16,7 @@ driver_module("as370-gpio") {
   sources = [ "as370-gpio.cc" ]
   deps = [
     "//src/devices/lib/driver",
+    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -37,6 +38,7 @@ test("as370-gpio-test") {
   ]
   deps = [
     "//src/devices/lib/driver",
+    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",

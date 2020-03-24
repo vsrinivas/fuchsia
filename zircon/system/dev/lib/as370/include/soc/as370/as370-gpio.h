@@ -14,8 +14,8 @@ constexpr uint32_t kGpio1Base = 0xf7e8'1800;
 constexpr uint32_t kGpio2Base = 0xf7e8'2000;
 constexpr uint32_t kGpioSize = fbl::round_up<uint32_t, uint32_t>(0x200, PAGE_SIZE);
 
-constexpr uint32_t kPinmuxBase = 0xf7ea'0800;
-constexpr uint32_t kPinmuxSize = fbl::round_up<uint32_t, uint32_t>(0x180, PAGE_SIZE);
+constexpr uint32_t kPinmuxBase = 0xf7ea'0840;
+constexpr uint32_t kPinmuxSize = fbl::round_up<uint32_t, uint32_t>(0x20, PAGE_SIZE);
 
 constexpr uint32_t kGpio1Irq = 40 + 32;
 constexpr uint32_t kGpio2Irq = 41 + 32;

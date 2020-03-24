@@ -105,12 +105,11 @@ zx_status_t Luis::GpioInit() {
 
   constexpr pbus_mmio_t gpio_mmios[] = {
       {.base = vs680::kSocPinmuxBase, .length = vs680::kPinmuxSize},
-      // TODO(bradenkell): Uncomment these when the GPIO driver has been changed.
-      // {.base = vs680::kAvioPinmuxBase, .length = vs680::kPinmuxSize},
-      // {.base = vs680::kSmPinmuxBase, .length = vs680::kPinmuxSize},
+      {.base = vs680::kAvioPinmuxBase, .length = vs680::kPinmuxSize},
+      {.base = vs680::kSmPinmuxBase, .length = vs680::kPinmuxSize},
       {.base = vs680::kGpio1Base, .length = vs680::kGpioSize},
       {.base = vs680::kGpio2Base, .length = vs680::kGpioSize},
-      // {.base = vs680::kSmGpioBase, .length = vs680::kGpioSize},
+      {.base = vs680::kSmGpioBase, .length = vs680::kGpioSize},
   };
 
   const pbus_irq_t gpio_irqs[] = {
