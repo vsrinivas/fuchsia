@@ -741,13 +741,17 @@ TEST_F(FormatValueConsoleTest, RustVector) {
       FormatNodeForConsole(vec, options).AsString());
 
   // Medium verbosity shows the real type.
+  //
+  // Note this shows the escaping $(...) around the type name. This is a test artifact because we
+  // constructed the type as one string rather than constructing the full hierarchy of namespaces
+  // (more code).
   options.wrapping = ConsoleFormatOptions::Wrapping::kNone;
   options.verbosity = ConsoleFormatOptions::Verbosity::kMedium;
-  EXPECT_EQ("alloc::vec::Vec<i32>[42, 19]", FormatNodeForConsole(vec, options).AsString());
+  EXPECT_EQ("$(alloc::vec::Vec<i32>)[42, 19]", FormatNodeForConsole(vec, options).AsString());
 
   // Full type info is the same.
   options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
-  EXPECT_EQ("alloc::vec::Vec<i32>[42, 19]", FormatNodeForConsole(vec, options).AsString());
+  EXPECT_EQ("$(alloc::vec::Vec<i32>)[42, 19]", FormatNodeForConsole(vec, options).AsString());
 
   // Use another type name in minimal mode. It shouldn't get abbreviated with the "vec!"
   auto fast_vec_type = MakeCollectionType(DwarfTag::kStructureType, "FastVector<i32>", {});

@@ -422,7 +422,10 @@ TEST_F(ExprParserTest, SpecialIdentifiers) {
       "  IDENTIFIER(\"$plt(foo_bar)\")\n"
       " LITERAL(2)\n",
       GetParseString("2+$plt(foo_bar)+2"));
-  EXPECT_EQ("IDENTIFIER(\"$({{impl}})\"; ::\"$(some(crazyness)$here))\")\n",
+
+  // For escaping, the identifier won't contain the escaping characters, these are for parsing and
+  // output only.
+  EXPECT_EQ("IDENTIFIER(\"{{impl}}\"; ::\"some(crazyness)$here)\")\n",
             GetParseString("$({{impl}})::$(some(crazyness)$here\\))"));
 }
 

@@ -28,7 +28,13 @@ class ParsedIdentifierComponent {
         template_contents_(std::move(template_contents)) {}
 
   ParsedIdentifierComponent(SpecialIdentifier si, std::string name = std::string())
-      : special_(si), name_(std::move(name)) {}
+      : special_(si), name_(std::move(name)) {
+    // As described in the SpecialIdentifier definition, kEscaped is used only for parsing. An
+    // escaped identifier component becomes a regular one in the Identifier object since the value
+    // has been parsed and the escaped contents converted to the name.
+    if (special_ == SpecialIdentifier::kEscaped)
+      special_ = SpecialIdentifier::kNone;
+  }
 
   bool operator==(const ParsedIdentifierComponent& other) const {
     return name_ == other.name_ && has_template_ == other.has_template_ &&

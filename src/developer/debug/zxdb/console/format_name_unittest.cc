@@ -176,4 +176,50 @@ TEST(FormatName, FormatSpecialIdentifier) {
       FormatIdentifier(ident, global_opts).GetDebugString());
 }
 
+// Tests printing components that need escaping.
+TEST(FormatName, EscapeComponent) {
+  FormatIdentifierOptions global_opts;
+
+  // Begins with a digit.
+  ParsedIdentifier ident;
+  ident.AppendComponent(ParsedIdentifierComponent("1two"));
+  EXPECT_EQ(
+      "kComment \"$(\", "
+      "kNormal \"1two\", "
+      "kComment \")\"",
+      FormatIdentifier(ident, global_opts).GetDebugString());
+
+  // Random bad characters.
+  ident.components()[0] = ParsedIdentifierComponent("h$ello \\world");
+  EXPECT_EQ(
+      "kComment \"$(\", "
+      "kNormal \"h\\$ello \\\\world\", "
+      "kComment \")\"",
+      FormatIdentifier(ident, global_opts).GetDebugString());
+
+  // Balanced parens - don't need backslash escaping for them.
+  ident.components()[0] = ParsedIdentifierComponent("a(b)c");
+  EXPECT_EQ(
+      "kComment \"$(\", "
+      "kNormal \"a(b)c\", "
+      "kComment \")\"",
+      FormatIdentifier(ident, global_opts).GetDebugString());
+
+  // Disordered parens require backslash escaping.
+  ident.components()[0] = ParsedIdentifierComponent("a)b(c");
+  EXPECT_EQ(
+      "kComment \"$(\", "
+      "kNormal \"a\\)b\\(c\", "
+      "kComment \")\"",
+      FormatIdentifier(ident, global_opts).GetDebugString());
+
+  // Imbalanced parens require backslash escaping.
+  ident.components()[0] = ParsedIdentifierComponent("a(b)c)");
+  EXPECT_EQ(
+      "kComment \"$(\", "
+      "kNormal \"a\\(b\\)c\\)\", "
+      "kComment \")\"",
+      FormatIdentifier(ident, global_opts).GetDebugString());
+}
+
 }  // namespace zxdb

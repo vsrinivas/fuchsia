@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_name.h"
 
+#include <ctype.h>
+
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -63,6 +65,76 @@ bool FormatRustClosure(const Function* function, OutputBuffer* out) {
   // lambda is redundant.
   out->Append("λ");
   return true;
+}
+
+// Checks to see if this identifier component will parse by itself using the expression parser
+// (returns false) or if it needs escaping to be identified as an identifier (returns true).
+bool IdentifierComponentNeedsEscaping(const std::string& comp) {
+  if (comp.empty())
+    return true;  // Empty identifier components need escaping just to identify them.
+  if (isdigit(comp[0]))
+    return true;  // Starting with a number implies escaping.
+
+  for (char c : comp) {
+    if (!isalnum(c) && c != '_')
+      return true;
+  }
+  return false;
+}
+
+// Escapes the given identifier component. This does not put the "$(...) around it, but handles the
+// stuff in the middle. There are two things that need to happen: handling parens and escaping
+// backslashes.
+//
+// If parens are balanced inside the component (there is a closing paren for each opening one), they
+// do not need escaping. In most cases, these will be balanced because it's some kind of textual
+// representation for a function call or something. The parser can handle this and it's much more
+// readable.
+//
+// The algorithm is to assume the parens are balanced and just escape backslashes. If it finds the
+// parens are unbalanced, it recursively calls itself with paren escaping forced on. We don't try
+// to be intelligent about only escaping the unbalanced parens, they all get escaped in this mode.
+std::string EscapeComponent(const std::string& name, bool force_escape_parens = false) {
+  std::string output;
+  int paren_nesting = 0;
+
+  for (char c : name) {
+    if (c == '(') {
+      if (force_escape_parens) {
+        output.push_back('\\');
+        output.push_back('(');
+      } else {
+        paren_nesting++;
+        output.push_back('(');
+      }
+    } else if (c == ')') {
+      if (force_escape_parens) {
+        output.push_back('\\');
+        output.push_back(')');
+      } else if (paren_nesting == 0) {
+        // Lone ')' without an opening paren.
+        return EscapeComponent(name, true);
+      } else {
+        // Found closing paren for a previous opening one.
+        paren_nesting--;
+        output.push_back(')');
+      }
+    } else if (c == '$' || c == '\\') {
+      // Always escape these.
+      output.push_back('\\');
+      output.push_back(c);
+    } else {
+      // Everything else is a literal.
+      output.push_back(c);
+    }
+  }
+
+  if (paren_nesting > 0) {
+    // There was an opening paren with no closing paren.
+    return EscapeComponent(name, true);
+  }
+
+  return output;
 }
 
 }  // namespace
@@ -129,10 +201,17 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
         // Provide names for anonymous components.
         result.Append(Syntax::kComment, kAnonIdentifierComponentName);
       } else {
+        bool needs_escaping = IdentifierComponentNeedsEscaping(name);
+        if (needs_escaping)
+          result.Append(Syntax::kComment, "$(");
+
         if (options.bold_last && i == comps.size() - 1)
-          result.Append(Syntax::kHeading, name);
+          result.Append(Syntax::kHeading, needs_escaping ? EscapeComponent(name) : name);
         else
-          result.Append(Syntax::kNormal, name);
+          result.Append(Syntax::kNormal, needs_escaping ? EscapeComponent(name) : name);
+
+        if (needs_escaping)
+          result.Append(Syntax::kComment, ")");
       }
     } else if (comp.special() == SpecialIdentifier::kAnon) {
       // Always dim anonymous names.
