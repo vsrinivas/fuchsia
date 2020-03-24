@@ -35,6 +35,13 @@ pub struct ImeHandler {
     /// listens for events on this request stream. This allows the ImeHandler to rely on the IME
     /// service to generate the proper keys to send to clients.
     key_listener: fidl_ui_input2::KeyListenerRequestStream,
+
+    /// The Scenic session to send keyboard events to.
+    scenic_session: scenic::SessionPtr,
+
+    /// The id of the compositor used for the scene's layer stack. This is used when sending
+    /// keyboard events to the `scenic_session`.
+    scenic_compositor_id: u32,
 }
 
 #[async_trait]
@@ -52,21 +59,31 @@ impl InputHandler for ImeHandler {
             } => {
                 let pressed_keys: Vec<Key> =
                     keyboard_device_event.get_keys(fidl_ui_input2::KeyEventPhase::Pressed);
-                self.dispatch_keys(
-                    pressed_keys,
-                    keyboard_device_event.modifiers,
-                    fidl_ui_input2::KeyEventPhase::Pressed,
-                )
-                .await;
+                let pressed_key_events: Vec<fidl_ui_input::KeyboardEvent> = self
+                    .dispatch_keys(
+                        pressed_keys,
+                        keyboard_device_event.modifiers,
+                        fidl_ui_input2::KeyEventPhase::Pressed,
+                    )
+                    .await;
 
                 let released_keys: Vec<Key> =
                     keyboard_device_event.get_keys(fidl_ui_input2::KeyEventPhase::Released);
-                self.dispatch_keys(
-                    released_keys,
-                    keyboard_device_event.modifiers,
-                    fidl_ui_input2::KeyEventPhase::Released,
-                )
-                .await;
+                let released_key_events: Vec<fidl_ui_input::KeyboardEvent> = self
+                    .dispatch_keys(
+                        released_keys,
+                        keyboard_device_event.modifiers,
+                        fidl_ui_input2::KeyEventPhase::Released,
+                    )
+                    .await;
+
+                let keyboard_events: Vec<fidl_ui_input::KeyboardEvent> =
+                    pressed_key_events.into_iter().chain(released_key_events).collect();
+                send_events_to_scenic(
+                    keyboard_events,
+                    self.scenic_session.clone(),
+                    self.scenic_compositor_id,
+                );
 
                 // Consume the input event.
                 vec![]
@@ -84,31 +101,34 @@ impl ImeHandler {
     /// `scenic_session`: The Scenic session to send keyboard events to.
     /// `scenic_compositor_id`: The id of the compositor used for the scene's layer stack.
     pub async fn new(
-        _scenic_session: scenic::SessionPtr,
-        _scenic_compositor_id: u32,
+        scenic_session: scenic::SessionPtr,
+        scenic_compositor_id: u32,
     ) -> Result<Self, Error> {
         let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
         let keyboard = connect_to_service::<fidl_ui_input2::KeyboardMarker>()?;
         let (listener_client_end, key_listener) =
             fidl::endpoints::create_request_stream::<fidl_ui_input2::KeyListenerMarker>()?;
-        Self::new_handler(ime, keyboard, listener_client_end, key_listener).await
-    }
-
-    /// Creates a new [`ImeHandler`] and connects to IME and Keyboard services.
-    pub async fn new2() -> Result<Self, Error> {
-        let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
-        let keyboard = connect_to_service::<fidl_ui_input2::KeyboardMarker>()?;
-        let (listener_client_end, key_listener) =
-            fidl::endpoints::create_request_stream::<fidl_ui_input2::KeyListenerMarker>()?;
-        Self::new_handler(ime, keyboard, listener_client_end, key_listener).await
+        Self::new_handler(
+            scenic_session,
+            scenic_compositor_id,
+            ime,
+            keyboard,
+            listener_client_end,
+            key_listener,
+        )
+        .await
     }
 
     /// Creates a new [`ImeHandler`].
     ///
     /// # Parameters
+    /// `scenic_session`: The Scenic session to send keyboard events to.
+    /// `scenic_compositor_id`: The id of the compositor used for the scene's layer stack.
     /// `ime_proxy`: A proxy to the IME service.
     /// `keyboard_proxy`: A proxy to the Keyboard service.
     async fn new_handler(
+        scenic_session: scenic::SessionPtr,
+        scenic_compositor_id: u32,
         ime_proxy: fidl_ui_input::ImeServiceProxy,
         keyboard_proxy: fidl_ui_input2::KeyboardProxy,
         key_listener_proxy: fidl::endpoints::ClientEnd<fidl_ui_input2::KeyListenerMarker>,
@@ -118,7 +138,13 @@ impl ImeHandler {
         let view_ref = &mut ui_views::ViewRef { reference: raw_event_pair };
         keyboard_proxy.set_listener(view_ref, key_listener_proxy).await?;
 
-        let handler = ImeHandler { ime_proxy, _keyboard_proxy: keyboard_proxy, key_listener };
+        let handler = ImeHandler {
+            ime_proxy,
+            _keyboard_proxy: keyboard_proxy,
+            key_listener,
+            scenic_session,
+            scenic_compositor_id,
+        };
 
         Ok(handler)
     }
@@ -129,16 +155,27 @@ impl ImeHandler {
     /// `keys`: The keys to dispatch.
     /// `modifiers`: The modifiers associated with the keys to dispatch.
     /// `phase`: The phase of the key event to dispatch.
+    ///
+    /// # Returns
+    /// A vector of KeyboardEvents to be sent to the Scenic session. This will be removed once
+    /// Scenic no longer handles keyboard events.
     async fn dispatch_keys(
         &mut self,
         keys: Vec<Key>,
         modifiers: Option<Modifiers>,
         phase: fidl_ui_input2::KeyEventPhase,
-    ) {
+    ) -> Vec<fidl_ui_input::KeyboardEvent> {
+        let mut events: Vec<fidl_ui_input::KeyboardEvent> = vec![];
         for key in keys {
             let key_event: fidl_ui_input2::KeyEvent = create_key_event(&key, phase, modifiers);
-            dispatch_key_event(key_event, &self.ime_proxy, &mut self.key_listener).await;
+            let keyboard_event: Option<fidl_ui_input::KeyboardEvent> =
+                dispatch_key_event(key_event, &self.ime_proxy, &mut self.key_listener).await;
+            if let Some(event) = keyboard_event {
+                events.push(event);
+            }
         }
+
+        events
     }
 }
 
@@ -214,9 +251,6 @@ async fn dispatch_key_event(
     ime: &fidl_ui_input::ImeServiceProxy,
     key_listener: &mut fidl_ui_input2::KeyListenerRequestStream,
 ) -> Option<fidl_ui_input::KeyboardEvent> {
-    // IME was migrating to input2 but will instead be migrating to fuchsia.input.Key and input3.
-    // In the meantime, dispatch_key() is needed for shortcuts while inject_input() handles the key
-    // event.
     let fut = ime.dispatch_key(key_event);
     fasync::spawn(async move {
         let _ = fut.await;
@@ -225,11 +259,6 @@ async fn dispatch_key_event(
     match key_listener.next().await {
         Some(Ok(fidl_ui_input2::KeyListenerRequest::OnKeyEvent { event, responder, .. })) => {
             let keyboard_event = create_keyboard_event(event);
-
-            match ime.inject_input(&mut fidl_ui_input::InputEvent::Keyboard(keyboard_event)) {
-                Err(e) => fx_log_err!("Error injecting input to IME with error: {:?}", e),
-                _ => {}
-            };
 
             responder
                 .send(fidl_ui_input2::Status::NotHandled)
@@ -242,21 +271,47 @@ async fn dispatch_key_event(
     None
 }
 
+/// Sends `keybaord_event` to the Scenic session. This will be removed once Scenic no longer handles
+/// keyboard events.
+///
+/// `keyboard_events`: The events to send to the Scenic session.
+/// `scenic_session`: The Scenic session.
+/// `scenic_compositor_id`: The id of the compositor used for the scene's layer stack.
+fn send_events_to_scenic(
+    keyboard_events: Vec<fidl_ui_input::KeyboardEvent>,
+    scenic_session: scenic::SessionPtr,
+    scenic_compositor_id: u32,
+) {
+    for keyboard_event in keyboard_events {
+        let command =
+            fidl_ui_input::Command::SendKeyboardInput(fidl_ui_input::SendKeyboardInputCmd {
+                compositor_id: scenic_compositor_id,
+                keyboard_event,
+            });
+        scenic_session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(command));
+        scenic_session.lock().flush()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::keyboard, crate::testing_utilities, fuchsia_zircon as zx};
+    use {
+        super::*, crate::keyboard, crate::testing_utilities,
+        fidl_fuchsia_ui_scenic as fidl_ui_scenic, fuchsia_zircon as zx,
+    };
+    const COMPOSITOR_ID: u32 = 1;
 
     /// Creates an [`ImeHandler`] for tests.
     ///
     /// This routes key events from the IME service to a key listener.
     ///
     /// # Parameters
-    /// - `ime_proxy`: The IME proxy to dispatch events to.
-    /// - `key_listener`: The KeyListener that receives key events from IME.
-    async fn create_ime_handler(
-        ime_proxy: fidl_ui_input::ImeServiceProxy,
-        key_listener: fidl_ui_input2::KeyListenerRequestStream,
-    ) -> ImeHandler {
+    /// - `scenic_session`: The Scenic session to send keyboard events to.
+    async fn create_ime_handler(scenic_session: scenic::SessionPtr) -> ImeHandler {
+        let (ime_proxy, mut ime_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
+                .expect("Failed to create ImeProxy and stream.");
+
         let (keyboard_proxy, mut keyboard_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_input2::KeyboardMarker>()
                 .expect("Failed to create KeyboardProxy and stream.");
@@ -274,11 +329,33 @@ mod tests {
             }
         });
 
+        let (key_listener_client_end, key_listener) =
+            fidl::endpoints::create_request_stream::<fidl_ui_input2::KeyListenerMarker>().unwrap();
+
+        fuchsia_async::spawn(async move {
+            let key_listener_client = key_listener_client_end.into_proxy().unwrap().clone();
+            loop {
+                match ime_request_stream.next().await {
+                    Some(Ok(fidl_ui_input::ImeServiceRequest::DispatchKey {
+                        event,
+                        responder,
+                        ..
+                    })) => {
+                        let _ = key_listener_client.clone().on_key_event(event).await;
+                        responder.send(true).expect("error responding to DispatchKey");
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
         // This dummy key listener is passed to [`Keyboard.SetListener()`] but not used.
         let (dummy_key_listener_client_end, _dummy_key_listener) =
             fidl::endpoints::create_request_stream::<fidl_ui_input2::KeyListenerMarker>().unwrap();
 
         ImeHandler::new_handler(
+            scenic_session,
+            COMPOSITOR_ID,
             ime_proxy,
             keyboard_proxy,
             dummy_key_listener_client_end,
@@ -288,80 +365,53 @@ mod tests {
         .expect("Failed to create ImeHandler.")
     }
 
-    /// Handles events sent to IME. Asserts all `expected_events` are received on
-    /// `ime_request_stream`.
+    /// Validates the first event in `cmds` against `expected_event`.
+    ///
+    /// Note: `event_time` will not match `expected_event.event_time`. The latter is
+    /// generated by this handler because `fidl_ui_input2::KeyEvent`s don't propagate timestamps.
+    ///
     ///
     /// # Parameters
-    /// - `ime_handler`: The handler that will process events.
-    /// - `input_events`: The input events to handle.
-    /// - `ime_request_stream`: The request stream receiving events sent to IME.
-    /// - `key_listener_proxy`: The proxy IME sends events to.
-    /// - `expected_events`: The events expected to be received on
-    ///   `ime_request_stream::inject_input()`.
-    async fn handle_and_assert_key_events(
-        mut ime_handler: ImeHandler,
-        input_events: Vec<input_device::InputEvent>,
-        mut ime_request_stream: fidl_ui_input::ImeServiceRequestStream,
-        key_listener_proxy: fidl_ui_input2::KeyListenerProxy,
-        expected_events: Vec<fidl_ui_input::KeyboardEvent>,
-    ) {
-        fasync::spawn(async move {
-            for input_event in input_events {
-                let events: Vec<input_device::InputEvent> =
-                    ime_handler.handle_input_event(input_event).await;
-                assert_eq!(events.len(), 0);
-            }
-        });
-
-        let mut expected_event_iter = expected_events.into_iter().peekable();
-        while let Some(request) = ime_request_stream.next().await {
-            match request {
-                Ok(fidl_ui_input::ImeServiceRequest::DispatchKey { event, responder, .. }) => {
-                    match key_listener_proxy.clone().on_key_event(event).await {
-                        Err(_) => assert!(false),
-                        _ => {}
-                    }
-                    responder.send(true).expect("error responding to DispatchKey");
-                }
-                Ok(fidl_ui_input::ImeServiceRequest::InjectInput { event, .. }) => match event {
-                    fidl_ui_input::InputEvent::Keyboard(keyboard_event) => {
-                        let expected_event = expected_event_iter.next().unwrap();
-                        assert_event_eq(keyboard_event, expected_event);
-                    }
-                    _ => assert!(false),
-                },
-                _ => assert!(false),
-            }
-        }
-    }
-
-    /// Asserts that `event` and `expected_event` are equal. Doesn't compare the `event_times`
-    /// because this IME handler generates new `event_times` when handling a keyboard event.
-    ///
-    /// # Parameters
-    /// - `event`: The event received by the IME service.
+    /// - `commands`: The commands received by the Scenic session.
     /// - `expected_event`: The expected event.
-    fn assert_event_eq(
-        event: fidl_ui_input::KeyboardEvent,
+    fn verify_keyboard_event(
+        command: fidl_ui_scenic::Command,
         expected_event: fidl_ui_input::KeyboardEvent,
     ) {
-        assert_eq!(event.device_id, expected_event.device_id);
-        assert_eq!(event.phase, expected_event.phase);
-        assert_eq!(event.hid_usage, expected_event.hid_usage);
-        assert_eq!(event.code_point, expected_event.code_point);
-        assert_eq!(event.modifiers, expected_event.modifiers);
+        match command {
+            fidl_ui_scenic::Command::Input(fidl_ui_input::Command::SendKeyboardInput(
+                fidl_ui_input::SendKeyboardInputCmd {
+                    compositor_id: _,
+                    keyboard_event:
+                        fidl_ui_input::KeyboardEvent {
+                            event_time: _,
+                            device_id,
+                            phase,
+                            hid_usage,
+                            code_point: _,
+                            modifiers,
+                        },
+                },
+            )) => {
+                assert_eq!(device_id, expected_event.device_id);
+                assert_eq!(phase, expected_event.phase);
+                assert_eq!(hid_usage, expected_event.hid_usage);
+                assert_eq!(modifiers, expected_event.modifiers);
+            }
+            _ => {
+                assert!(false);
+            }
+        }
     }
 
     /// Tests that a pressed key event is dispatched.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
-        let (key_listener_proxy, key_listener_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input2::KeyListenerMarker>()
-                .unwrap();
-        let ime_handler = create_ime_handler(ime_proxy, key_listener_request_stream).await;
+        let (session_proxy, mut session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+        let mut ime_handler = create_ime_handler(scenic_session.clone()).await;
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -382,30 +432,27 @@ mod tests {
             device_id: 1,
             phase: fidl_ui_input::KeyboardEventPhase::Pressed,
             hid_usage: key_to_hid_usage(Key::A),
-            code_point: 0,
+            code_point: 1,
             modifiers: 0,
         }];
 
-        handle_and_assert_key_events(
-            ime_handler,
-            input_events,
-            ime_request_stream,
-            key_listener_proxy,
-            expected_commands,
-        )
-        .await;
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 
     /// Tests that a released key event is dispatched.
     #[fasync::run_singlethreaded(test)]
     async fn released_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
-        let (key_listener_proxy, key_listener_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input2::KeyListenerMarker>()
-                .unwrap();
-        let ime_handler = create_ime_handler(ime_proxy, key_listener_request_stream).await;
+        let (session_proxy, mut session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+        let mut ime_handler = create_ime_handler(scenic_session.clone()).await;
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -426,30 +473,27 @@ mod tests {
             device_id: 1,
             phase: fidl_ui_input::KeyboardEventPhase::Released,
             hid_usage: key_to_hid_usage(Key::A),
-            code_point: 0,
+            code_point: 1,
             modifiers: 0,
         }];
 
-        handle_and_assert_key_events(
-            ime_handler,
-            input_events,
-            ime_request_stream,
-            key_listener_proxy,
-            expected_commands,
-        )
-        .await;
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 
     /// Tests that both pressed and released keys are dispatched appropriately.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_and_released_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
-        let (key_listener_proxy, key_listener_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input2::KeyListenerMarker>()
-                .unwrap();
-        let ime_handler = create_ime_handler(ime_proxy, key_listener_request_stream).await;
+        let (session_proxy, mut session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+        let mut ime_handler = create_ime_handler(scenic_session.clone()).await;
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -480,7 +524,7 @@ mod tests {
                 device_id: 1,
                 phase: fidl_ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: key_to_hid_usage(Key::A),
-                code_point: 0,
+                code_point: 1,
                 modifiers: 0,
             },
             fidl_ui_input::KeyboardEvent {
@@ -488,7 +532,7 @@ mod tests {
                 device_id: 1,
                 phase: fidl_ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: key_to_hid_usage(Key::B),
-                code_point: 0,
+                code_point: 1,
                 modifiers: 0,
             },
             fidl_ui_input::KeyboardEvent {
@@ -496,31 +540,28 @@ mod tests {
                 device_id: 1,
                 phase: fidl_ui_input::KeyboardEventPhase::Released,
                 hid_usage: key_to_hid_usage(Key::A),
-                code_point: 0,
+                code_point: 1,
                 modifiers: 0,
             },
         ];
 
-        handle_and_assert_key_events(
-            ime_handler,
-            input_events,
-            ime_request_stream,
-            key_listener_proxy,
-            expected_commands,
-        )
-        .await;
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 
     /// Tests that modifier keys are dispatched appropriately.
     #[fasync::run_singlethreaded(test)]
     async fn repeated_modifier_key() {
-        let (ime_proxy, ime_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input::ImeServiceMarker>()
-                .expect("Failed to create ImeProxy and stream.");
-        let (key_listener_proxy, key_listener_request_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_ui_input2::KeyListenerMarker>()
-                .unwrap();
-        let ime_handler = create_ime_handler(ime_proxy, key_listener_request_stream).await;
+        let (session_proxy, mut session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+        let mut ime_handler = create_ime_handler(scenic_session.clone()).await;
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -558,7 +599,7 @@ mod tests {
                 device_id: 1,
                 phase: fidl_ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: key_to_hid_usage(Key::LeftShift),
-                code_point: 0,
+                code_point: 1,
                 modifiers: 3, // Modifiers::Shift | Modifiers::LeftShift
             },
             fidl_ui_input::KeyboardEvent {
@@ -566,7 +607,7 @@ mod tests {
                 device_id: 1,
                 phase: fidl_ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: key_to_hid_usage(Key::A),
-                code_point: 0,
+                code_point: 1,
                 modifiers: 3, // Modifiers::Shift | Modifiers::LeftShift
             },
             fidl_ui_input::KeyboardEvent {
@@ -574,18 +615,17 @@ mod tests {
                 device_id: 1,
                 phase: fidl_ui_input::KeyboardEventPhase::Released,
                 hid_usage: key_to_hid_usage(Key::LeftShift),
-                code_point: 0,
+                code_point: 1,
                 modifiers: 0,
             },
         ];
 
-        handle_and_assert_key_events(
-            ime_handler,
-            input_events,
-            ime_request_stream,
-            key_listener_proxy,
-            expected_commands,
-        )
-        .await;
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 }
