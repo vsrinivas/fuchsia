@@ -21,6 +21,7 @@
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
@@ -136,7 +137,8 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  DataProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
+  DataProviderTest()
+      : CobaltTestFixture(/*unit_test_fixture=*/this), device_id_provider_(kDeviceIdPath) {}
 
   void SetUp() override {
     // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
@@ -151,8 +153,9 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  protected:
   void SetUpDataProvider(const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
                          const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
-    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
-                                             annotation_allowlist, attachment_allowlist);
+    datastore_ =
+        std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
+                                    attachment_allowlist, &device_id_provider_);
     data_provider_ =
         std::make_unique<DataProvider>(dispatcher(), services(), cobalt_.get(), datastore_.get());
   }
@@ -207,15 +210,18 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     return scenic_->take_screenshot_responses();
   }
 
-  std::unique_ptr<DataProvider> data_provider_;
-
  private:
-  std::unique_ptr<stubs::Scenic> scenic_;
-
+  DeviceIdProvider device_id_provider_;
   // The lifetime of |clock_| is managed by |cobalt_|.
   timekeeper::TestClock* clock_;
   std::unique_ptr<Cobalt> cobalt_;
   std::unique_ptr<Datastore> datastore_;
+
+ protected:
+  std::unique_ptr<DataProvider> data_provider_;
+
+ private:
+  std::unique_ptr<stubs::Scenic> scenic_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {

@@ -32,13 +32,15 @@ const zx::duration kTimeout = zx::sec(30);
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt,
                      const AnnotationKeys& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist)
+                     const AttachmentKeys& attachment_allowlist,
+                     DeviceIdProvider* device_id_provider)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(feedback::GetStaticAnnotations(annotation_allowlist_)),
+      static_annotations_(
+          feedback::GetStaticAnnotations(annotation_allowlist_, device_id_provider)),
       static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "

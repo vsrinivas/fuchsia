@@ -246,6 +246,7 @@ executable("data_provider_unittest") {
     "//sdk/lib/fidl/cpp",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:data_provider",
+    "//src/developer/feedback/feedback_agent:device_id_provider",
     "//src/developer/feedback/feedback_agent/annotations:aliases",
     "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/testing:cobalt_test_fixture",

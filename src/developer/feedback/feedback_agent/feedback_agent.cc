@@ -62,13 +62,9 @@ FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       cobalt_(dispatcher_, services),
-      // We need to create a DeviceIdProvider before a Datastore because the DeviceIdProvider
-      // will initialize the device id the Datastore uses.
-      // TODO(fxb/47734): pass a reference to the DeviceIdProvider to the Datastore to make that
-      // dependency explicit.
       device_id_provider_(kDeviceIdPath),
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
-                 config.attachment_allowlist),
+                 config.attachment_allowlist, &device_id_provider_),
       data_provider_(dispatcher_, services, &cobalt_, &datastore_),
       data_register_(&datastore_) {
   // We need to move the logs from the previous boot before spawning the system log recorder process

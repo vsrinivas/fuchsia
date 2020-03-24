@@ -34,7 +34,8 @@ std::optional<AnnotationValue> ReadAnnotationValueFromFilepath(const AnnotationK
   return value;
 }
 
-std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key) {
+std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key,
+                                                    DeviceIdProvider* device_id_provider) {
   if (key == kAnnotationBuildBoard) {
     return ReadAnnotationValueFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {
@@ -52,7 +53,7 @@ std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key) {
   } else if (key == kAnnotationDeviceBoardName) {
     return GetBoardName();
   } else if (key == kAnnotationDeviceFeedbackId) {
-    return ReadAnnotationValueFromFilepath(key, kDeviceIdPath);
+    return device_id_provider->GetId();
   }
   // There are non-static annotations in the allowlist that we just skip here.
   return std::nullopt;
@@ -60,10 +61,11 @@ std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key) {
 
 }  // namespace
 
-Annotations GetStaticAnnotations(const AnnotationKeys& allowlist) {
+Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
+                                 DeviceIdProvider* device_id_provider) {
   Annotations annotations;
   for (const auto& key : allowlist) {
-    const auto value = BuildAnnotationValue(key);
+    const auto value = BuildAnnotationValue(key, device_id_provider);
     if (value.has_value()) {
       annotations[key] = value.value();
     }

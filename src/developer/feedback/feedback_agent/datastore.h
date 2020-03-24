@@ -11,6 +11,7 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
+#include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
 
 namespace feedback {
@@ -32,7 +33,7 @@ class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             Cobalt* cobalt, const AnnotationKeys& annotation_allowlist,
-            const AttachmentKeys& attachment_allowlist);
+            const AttachmentKeys& attachment_allowlist, DeviceIdProvider* device_id_provider);
 
   fit::promise<Annotations> GetAnnotations();
   fit::promise<Attachments> GetAttachments();

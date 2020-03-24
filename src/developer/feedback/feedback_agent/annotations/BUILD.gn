@@ -125,7 +125,10 @@ source_set("static_annotations") {
     "static_annotations.h",
   ]
 
-  public_deps = [ ":aliases" ]
+  public_deps = [
+    ":aliases",
+    "//src/developer/feedback/feedback_agent:device_id_provider",
+  ]
 
   deps = [
     "//src/developer/feedback/feedback_agent:constants",

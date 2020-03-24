@@ -62,7 +62,10 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
 
 class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  DatastoreTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  DatastoreTest()
+      : CobaltTestFixture(/*unit_test_fixture=*/this),
+        executor_(dispatcher()),
+        device_id_provider_(kDeviceIdPath) {}
 
   void SetUp() override {
     SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -72,8 +75,9 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
                       const AttachmentKeys& attachment_allowlist) {
-    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
-                                             annotation_allowlist, attachment_allowlist);
+    datastore_ =
+        std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
+                                    attachment_allowlist, &device_id_provider_);
   }
 
   void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProvider> board_provider) {
@@ -116,6 +120,12 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
+  std::string device_id() {
+    auto device_id = device_id_provider_.GetId();
+    FX_CHECK(device_id.has_value());
+    return device_id.value();
+  }
+
   fit::result<Annotations> GetAnnotations() {
     FX_CHECK(datastore_);
 
@@ -144,6 +154,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   async::Executor executor_;
+  DeviceIdProvider device_id_provider_;
   std::unique_ptr<Cobalt> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 
@@ -218,18 +229,16 @@ TEST_F(DatastoreTest, GetAnnotations_Channel) {
 }
 
 TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
-  const std::optional<std::string> device_id = DeviceIdProvider(kDeviceIdPath).GetId();
-  ASSERT_TRUE(device_id.has_value());
   SetUpDatastore({kAnnotationDeviceFeedbackId}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
   fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationDeviceFeedbackId, device_id.value()),
+                                            Pair(kAnnotationDeviceFeedbackId, device_id()),
                                         }));
 
   EXPECT_THAT(GetStaticAnnotations(), ElementsAreArray({
-                                          Pair(kAnnotationDeviceFeedbackId, device_id.value()),
+                                          Pair(kAnnotationDeviceFeedbackId, device_id()),
                                       }));
 
   ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false));
