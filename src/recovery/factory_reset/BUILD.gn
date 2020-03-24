@@ -140,9 +140,6 @@ test("factory_reset_unittests") {
     "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
   ]
-
-  # TODO(46718): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # This is required so that the IsolatedDevmgr can properly start up devcoordinator and fshost,
