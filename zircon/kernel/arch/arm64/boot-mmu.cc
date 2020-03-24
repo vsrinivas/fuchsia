@@ -179,7 +179,8 @@ extern "C" zx_status_t arm64_boot_map(pte_t* kernel_table0, const vaddr_t vaddr,
     return pa;
   };
 
-  auto phys_to_virt = [](paddr_t pa) __NO_SAFESTACK -> pte_t* { return reinterpret_cast<pte_t*>(pa); };
+  auto phys_to_virt = [](paddr_t pa)
+                          __NO_SAFESTACK -> pte_t* { return reinterpret_cast<pte_t*>(pa); };
 
   return _arm64_boot_map(kernel_table0, vaddr, paddr, len, flags, alloc, phys_to_virt);
 }

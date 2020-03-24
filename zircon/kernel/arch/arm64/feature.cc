@@ -167,58 +167,58 @@ static void midr_to_core_string(uint32_t midr, char* str, size_t len) {
 
   const char* partnum_str = "unknown";
   switch (microarch) {
-  case ARM_CORTEX_A32:
-    partnum_str = "ARM Cortex-a32";
-    break;
-  case ARM_CORTEX_A35:
-    partnum_str = "ARM Cortex-a35";
-    break;
-  case ARM_CORTEX_A53:
-    partnum_str = "ARM Cortex-a53";
-    break;
-  case ARM_CORTEX_A55:
-    partnum_str = "ARM Cortex-a55";
-    break;
-  case ARM_CORTEX_A57:
-    partnum_str = "ARM Cortex-a57";
-    break;
-  case ARM_CORTEX_A65:
-    partnum_str = "ARM Cortex-a65";
-    break;
-  case ARM_CORTEX_A72:
-    partnum_str = "ARM Cortex-a72";
-    break;
-  case ARM_CORTEX_A73:
-    partnum_str = "ARM Cortex-a73";
-    break;
-  case ARM_CORTEX_A75:
-    partnum_str = "ARM Cortex-a75";
-    break;
-  case ARM_CORTEX_A76:
-    partnum_str = "ARM Cortex-a76";
-    break;
-  case ARM_CORTEX_A76AE:
-    partnum_str = "ARM Cortex-a76ae";
-    break;
-  case ARM_CORTEX_A77:
-    partnum_str = "ARM Cortex-a77";
-    break;
-  case ARM_NEOVERSE_E1:
-    partnum_str = "ARM Neoverse E1";
-    break;
-  case ARM_NEOVERSE_N1:
-    partnum_str = "ARM Neoverse N1";
-    break;
-  case CAVIUM_CN88XX:
-    partnum_str = "Cavium CN88XX";
-    break;
-  case CAVIUM_CN99XX:
-    partnum_str = "Cavium CN99XX";
-    break;
-  case UNKNOWN:
-    snprintf(str, len, "Unknown implementer %c partnum 0x%x r%up%u", (char)implementer, partnum,
-             variant, revision);
-    return;
+    case ARM_CORTEX_A32:
+      partnum_str = "ARM Cortex-a32";
+      break;
+    case ARM_CORTEX_A35:
+      partnum_str = "ARM Cortex-a35";
+      break;
+    case ARM_CORTEX_A53:
+      partnum_str = "ARM Cortex-a53";
+      break;
+    case ARM_CORTEX_A55:
+      partnum_str = "ARM Cortex-a55";
+      break;
+    case ARM_CORTEX_A57:
+      partnum_str = "ARM Cortex-a57";
+      break;
+    case ARM_CORTEX_A65:
+      partnum_str = "ARM Cortex-a65";
+      break;
+    case ARM_CORTEX_A72:
+      partnum_str = "ARM Cortex-a72";
+      break;
+    case ARM_CORTEX_A73:
+      partnum_str = "ARM Cortex-a73";
+      break;
+    case ARM_CORTEX_A75:
+      partnum_str = "ARM Cortex-a75";
+      break;
+    case ARM_CORTEX_A76:
+      partnum_str = "ARM Cortex-a76";
+      break;
+    case ARM_CORTEX_A76AE:
+      partnum_str = "ARM Cortex-a76ae";
+      break;
+    case ARM_CORTEX_A77:
+      partnum_str = "ARM Cortex-a77";
+      break;
+    case ARM_NEOVERSE_E1:
+      partnum_str = "ARM Neoverse E1";
+      break;
+    case ARM_NEOVERSE_N1:
+      partnum_str = "ARM Neoverse N1";
+      break;
+    case CAVIUM_CN88XX:
+      partnum_str = "Cavium CN88XX";
+      break;
+    case CAVIUM_CN99XX:
+      partnum_str = "Cavium CN99XX";
+      break;
+    case UNKNOWN:
+      snprintf(str, len, "Unknown implementer %c partnum 0x%x r%up%u", (char)implementer, partnum,
+               variant, revision);
+      return;
   }
 
   snprintf(str, len, "%s r%up%u", partnum_str, variant, revision);
