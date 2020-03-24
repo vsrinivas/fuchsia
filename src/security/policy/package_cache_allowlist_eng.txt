@@ -2,3 +2,4 @@ fuchsia-pkg://fuchsia.com/pkgctl#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx
 fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-for-integration-test.cmx
 fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx
+fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx

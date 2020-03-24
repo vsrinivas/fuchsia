@@ -51,9 +51,10 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "fuchsia.pkg.PackageResolver. go/no-package-resolver";
     return std::nullopt;
   }
-  if (sandbox.HasService("fuchsia.pkg.PkgCache") && !CheckPackageCache(pkg_path_without_variant)) {
+  if (sandbox.HasService("fuchsia.pkg.PackageCache") &&
+      !CheckPackageCache(pkg_path_without_variant)) {
     FXL_LOG(ERROR) << "Component " << pkg_path_without_variant << " is not allowed to use "
-                   << "fuchsia.pkg.PkgCache. go/no-package-cache";
+                   << "fuchsia.pkg.PackageCache. go/no-package-cache";
     return std::nullopt;
   }
   if (sandbox.HasPkgFsPath("versions") && !CheckPkgFsVersions(pkg_path_without_variant)) {
