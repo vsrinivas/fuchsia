@@ -9,6 +9,8 @@ import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
+import("//build/images/ta.gni")
+import("//build/images/zxcrypt.gni")
 
 # Assembles a Fuchsia system.
 #
@@ -36,6 +38,10 @@ import("//build/images/shell_commands.gni")
 #     [list of strings] List of arguments to add to /boot/config/devmgr.
 #     These arguments come after synthesized arguments to configure blobfs and
 #     pkgfs.
+#
+#   ta_uuids (default: [])
+#     [list of strings] UUIDs of Trusted Applications to include in the system
+#     image.
 #
 #   cmdline (optional)
 #     [list of strings] Kernel command line text.
@@ -308,6 +314,11 @@ template("assemble_system") {
     ]
   }
 
+  generated_file("${image_name}_zxcrypt_config.txt") {
+    outputs = [ "$target_out_dir/$target_name" ]
+    contents = zxcrypt_key_source
+  }
+
   component_manager_label =
       "//src/sys/component_manager:component_manager.bootfs"
   component_manager_target_dir =
@@ -360,6 +371,7 @@ template("assemble_system") {
       ":${image_name}_devmgr_config.txt",
       ":${image_name}_fvm.blk",
       ":${image_name}_system_image.manifest",
+      ":${image_name}_zxcrypt_config.txt",
       component_manager_label,
       coordinator_label,
       root_manifests_label,
@@ -376,7 +388,22 @@ template("assemble_system") {
         outputs = [ "config/devmgr" ]
         sources = get_target_outputs(":${image_name}_devmgr_config.txt")
       },
+      {
+        outputs = [ "config/zxcrypt" ]
+        sources = get_target_outputs(":${image_name}_zxcrypt_config.txt")
+      },
     ]
+
+    if (defined(invoker.ta_uuids)) {
+      foreach(ta_uuid, invoker.ta_uuids) {
+        manifest += [
+          {
+            outputs = [ "lib/firmware/$ta_uuid$ta_dest_suffix" ]
+            sources = [ rebase_path("$ta_path/$ta_uuid$ta_src_suffix") ]
+          },
+        ]
+      }
+    }
 
     if (netboot) {
       ramdisk_inputs = get_target_outputs(":${image_name}_fvm.blk")

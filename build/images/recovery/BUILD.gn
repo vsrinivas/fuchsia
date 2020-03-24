@@ -4,6 +4,7 @@
 
 import("//build/board.gni")
 import("//build/images/assemble_system.gni")
+import("//build/images/ta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 
 declare_args() {
@@ -88,4 +89,6 @@ assemble_system("recovery-fdr") {
   metadata = {
     test_runtime_deps = [ "${target_out_dir}/${target_name}.zbi" ]
   }
+
+  ta_uuids = recovery_ta_uuids
 }

@@ -12,6 +12,9 @@ declare_args() {
   # UUID of TAs to include in the Zedboot build.
   zedboot_ta_uuids = []
 
+  # UUID of TAs to include in the Recovery build.
+  recovery_ta_uuids = []
+
   # File name suffix of prebuilt TA images. ".ta.prod" and ".ta.dev" are
   # usually used. The TA image file names are "$ta_uuid$ta_src_suffix".
   ta_src_suffix = ""
