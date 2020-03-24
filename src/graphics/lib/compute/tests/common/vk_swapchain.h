@@ -111,12 +111,6 @@ typedef struct
   uint32_t present_queue_family;
   uint32_t present_queue_index;
 
-  // queue family and index to be used for graphics.
-  uint32_t graphics_queue_family;
-  uint32_t graphics_queue_index;
-
-  // TODO(digit): Support graphics_queue_family != present_queue_family
-
   // The target presentation surface to use and its extent.
   VkSurfaceKHR surface_khr;
 
@@ -138,11 +132,6 @@ typedef struct
   // If not 0, this is taken as the required image usage bits for the
   // swapchain creation. Default will be VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.
   VkImageUsageFlags image_usage_flags;
-
-  // Set to true to transition the layout of all swapchain images to
-  // VK_LAYOUT_PRESENT_SRC_KHR in vk_swapchain_create(). By default, they
-  // will be in VK_LAYOUT_UNDEFINED layout.
-  bool use_presentation_layout;
 
   // TODO(digit): Provide a way to suggest a favorite presentation mode.
   // TODO(digit): Provide a way to provide an old swapchain to support resizes.

@@ -18,6 +18,8 @@ vk_buffer_alloc_generic(vk_buffer_t *                 buffer,
                         VkDevice                      device,
                         const VkAllocationCallbacks * allocator)
 {
+  *buffer = (vk_buffer_t){};
+
   // First create a buffer that can be used as a transfer source for our
   // application.
   VkBufferCreateInfo createInfo = {

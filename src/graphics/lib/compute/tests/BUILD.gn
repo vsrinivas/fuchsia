@@ -132,16 +132,6 @@ source_set("common_vk") {
   } else {
     sources += [ "common/vk_surface_glfw.c" ]
     deps += [ "//third_party/glfw:glfw" ]
-
-    # Work-around bug in //third_party/glfw:glfw definition.
-    if (is_linux) {
-      libs = [
-        "X11",
-        "Xinerama",
-        "Xcursor",
-        "Xrandr",
-      ]
-    }
   }
 
   public_deps = [

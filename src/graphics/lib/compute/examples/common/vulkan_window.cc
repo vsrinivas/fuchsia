@@ -68,18 +68,15 @@ VulkanWindow::init(VulkanDevice * device, const VulkanWindow::Config & config)
     .physical_device = device_->vk_physical_device(),
     .allocator       = device_->vk_allocator(),
 
-    .present_queue_family  = device_->graphics_queue_family(),
-    .present_queue_index   = 0,
-    .graphics_queue_family = device_->graphics_queue_family(),
-    .graphics_queue_index  = 0,
+    .present_queue_family = device_->graphics_queue_family(),
+    .present_queue_index  = 0,
 
     .surface_khr = window_surface,
 
-    .max_frames              = 3,
-    .pixel_format            = wanted_format,
-    .disable_vsync           = config.disable_vsync,
-    .image_usage_flags       = image_usage,
-    .use_presentation_layout = true,
+    .max_frames        = 3,
+    .pixel_format      = wanted_format,
+    .disable_vsync     = config.disable_vsync,
+    .image_usage_flags = image_usage,
   };
   swapchain_ = vk_swapchain_create(&swapchain_config);
 

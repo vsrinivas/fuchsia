@@ -312,10 +312,6 @@ vk_swapchain_create(const vk_swapchain_config_t * config)
 
   vk_device_surface_info_destroy(&surface_info);
 
-  // TODO: Support graphics_queue_family != present_queue_family
-  ASSERT_MSG(config->graphics_queue_family == config->present_queue_family,
-             "This code requires graphics and presentation to use the same queue!\n");
-
   VkDevice                      device    = swapchain->device;
   const VkAllocationCallbacks * allocator = swapchain->allocator;
 
@@ -417,16 +413,13 @@ vk_swapchain_create(const vk_swapchain_config_t * config)
 #endif
     }
 
-  if (config->use_presentation_layout)
-    {
-      // Transition each swapchain image to presentation layout to considerably
-      // simplify future usage.
-      vk_swapchain_transition_image_layouts(swapchain,
-                                            swapchain->present_queue,
-                                            swapchain->present_command_pool,
-                                            VK_IMAGE_LAYOUT_UNDEFINED,
-                                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    }
+  // Transition each swapchain image to presentation layout to considerably
+  // simplify future usage.
+  vk_swapchain_transition_image_layouts(swapchain,
+                                        swapchain->present_queue,
+                                        swapchain->present_command_pool,
+                                        VK_IMAGE_LAYOUT_UNDEFINED,
+                                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
   return swapchain;
 }

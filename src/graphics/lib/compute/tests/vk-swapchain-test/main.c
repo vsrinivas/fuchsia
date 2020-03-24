@@ -65,10 +65,8 @@ main(int argc, char const * argv[])
     .physical_device = app_state.pd,
     .allocator       = app_state.ac,
 
-    .present_queue_family  = app_state.qfi,
-    .present_queue_index   = 0,
-    .graphics_queue_family = app_state.qfi,
-    .graphics_queue_index  = 0,
+    .present_queue_family = app_state.qfi,
+    .present_queue_index  = 0,
 
     .surface_khr = vk_surface_get_surface_khr(surface),
     .max_frames  = 2,

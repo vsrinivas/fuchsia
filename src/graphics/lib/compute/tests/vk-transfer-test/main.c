@@ -30,7 +30,7 @@ create_render_pass(VkDevice                      device,
     .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
     .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-    .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+    .initialLayout  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
     .finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
   };
 
@@ -309,10 +309,8 @@ main(int argc, char const * argv[])
     .physical_device = app_state.pd,
     .allocator       = app_state.ac,
 
-    .present_queue_family  = app_state.qfi,
-    .present_queue_index   = 0,
-    .graphics_queue_family = app_state.qfi,
-    .graphics_queue_index  = 0,
+    .present_queue_family = app_state.qfi,
+    .present_queue_index  = 0,
 
     .image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
     .surface_khr       = vk_surface_get_surface_khr(surface),
@@ -393,9 +391,11 @@ main(int argc, char const * argv[])
       //    image's layout back to presentation.
       //
 
+      fill_buffer(&my_buffer, buffer_width, buffer_height, counter);
+
       // Step 1)
       {
-        VkCommandBuffer buffer          = image->command_buffer;
+        VkCommandBuffer cmd_buffer      = image->command_buffer;
         VkFramebuffer   framebuffer     = image->framebuffer;
         VkImage         swapchain_image = image->image;
 
@@ -403,7 +403,7 @@ main(int argc, char const * argv[])
           .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
           .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
         };
-        vk(BeginCommandBuffer(buffer, &beginInfo));
+        vk(BeginCommandBuffer(cmd_buffer, &beginInfo));
 
         const VkRenderPassBeginInfo renderPassInfo = {
           .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -416,15 +416,15 @@ main(int argc, char const * argv[])
           .clearValueCount = 1,
           .pClearValues = &(const VkClearValue){.color = {{0.0f, 0.0f, 0.0f, 1.0f}}},
         };
-        vkCmdBeginRenderPass(buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(cmd_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         {
-          vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-          vkCmdDraw(buffer, 3, 1, 0, 0);
+          vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+          vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
         }
-        vkCmdEndRenderPass(buffer);
+        vkCmdEndRenderPass(cmd_buffer);
 
         // Step 2)
-        vk_cmd_image_layout_transition(buffer,
+        vk_cmd_image_layout_transition(cmd_buffer,
                                        swapchain_image,
                                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -433,7 +433,7 @@ main(int argc, char const * argv[])
 
         // Step 3)
         vk_cmd_copy_buffer_to_image(
-            buffer,
+            cmd_buffer,
             my_buffer.buffer,
             buffer_width * 4,
             4,
@@ -459,17 +459,16 @@ main(int argc, char const * argv[])
             });
 
         // Step 4)
-        vk_cmd_image_layout_transition(buffer,
+        vk_cmd_image_layout_transition(cmd_buffer,
                                        swapchain_image,
                                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-        vk(EndCommandBuffer(buffer));
+        vk(EndCommandBuffer(cmd_buffer));
       }
 
-      fill_buffer(&my_buffer, buffer_width, buffer_height, counter);
       vk_buffer_flush_all(&my_buffer);
 
       vk_swapchain_queue_submit_and_present_image(swapchain_queue);
