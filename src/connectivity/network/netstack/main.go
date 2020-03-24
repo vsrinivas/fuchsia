@@ -168,6 +168,8 @@ func Main() {
 		panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
 	}
 
+	ndpDisp := newNDPDispatcher()
+
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
@@ -194,7 +196,7 @@ func Main() {
 		//	DiscoverOnLinkPrefixes:  true,
 		//	AutoGenGlobalAddresses:  true,
 		//},
-		//NDPDisp:              ndpDisp,
+		NDPDisp: ndpDisp,
 		//AutoGenIPv6LinkLocal: true,
 
 		// Raw sockets are typically used for implementing custom protocols. We intend
@@ -232,6 +234,8 @@ func Main() {
 		nameProvider: np,
 		stack:        stk,
 	}
+	ndpDisp.ns = ns
+	ndpDisp.start(ctx)
 
 	if err := ns.addLoopback(); err != nil {
 		syslog.Fatalf("loopback: %s", err)
