@@ -46,6 +46,17 @@ pub enum OpenError {
     UnexpectedNodeKind { expected: NodeKind, actual: NodeKind },
 }
 
+/// An error encountered while closing a node
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum CloseError {
+    #[error("while sending close request: {}", _0)]
+    SendCloseRequest(fidl::Error),
+
+    #[error("close failed with status: {}", _0)]
+    CloseError(Status),
+}
+
 /// The type of a filesystem node
 #[derive(Debug, PartialEq, Eq)]
 #[allow(missing_docs)]
@@ -189,4 +200,9 @@ pub(crate) async fn open_file(
         .map_err(|actual| OpenError::UnexpectedNodeKind { expected: NodeKind::File, actual })?;
 
     Ok(file)
+}
+
+pub(crate) async fn close_directory(dir: DirectoryProxy) -> Result<(), CloseError> {
+    let status = dir.close().await.map_err(CloseError::SendCloseRequest)?;
+    Status::ok(status).map_err(CloseError::CloseError)
 }

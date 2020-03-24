@@ -105,7 +105,7 @@ impl BlobLocation {
         package: &Hash,
     ) -> Result<impl Iterator<Item = Hash>, Error> {
         let meta_contents = MetaContents::deserialize(
-            client_end_to_openat(versions.open_package(package, None).await?)?
+            client_end_to_openat(versions.open_package(package).await?.into_client_end())?
                 .open_file("meta/contents")
                 .with_context(|| format!("error opening meta/contents of {}", package))?,
         )

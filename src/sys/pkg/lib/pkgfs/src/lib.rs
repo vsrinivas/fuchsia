@@ -12,5 +12,7 @@ pub use iou::{NodeKind, OpenError};
 pub mod control;
 pub mod install;
 pub mod needs;
+pub mod package;
+pub mod packages;
 pub mod system;
 pub mod versions;

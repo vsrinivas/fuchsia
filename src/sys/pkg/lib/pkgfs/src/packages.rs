@@ -1,17 +1,16 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Typesafe wrappers around the /pkgfs/versions filesystem.
+//! Typesafe wrappers around the /pkgfs/packages filesystem.
 
 use {
     crate::{iou, package},
     fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_merkle::Hash,
     fuchsia_zircon::Status,
 };
 
-/// An open handle to /pkgfs/versions
+/// An open handle to /pkgfs/packages
 #[derive(Debug, Clone)]
 pub struct Client {
     proxy: DirectoryProxy,
@@ -20,7 +19,7 @@ pub struct Client {
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
     pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
-        let proxy = iou::open_directory_from_namespace("/pkgfs/versions")?;
+        let proxy = iou::open_directory_from_namespace("/pkgfs/packages")?;
         Ok(Client { proxy })
     }
 
@@ -29,25 +28,26 @@ impl Client {
         Ok(Client {
             proxy: iou::open_directory_no_describe(
                 pkgfs,
-                "versions",
+                "packages",
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
             )?,
         })
     }
 
-    /// Open the package given by `meta_far_merkle`. Verifies the OnOpen event before returning.
+    /// Open the package given by `name` and `variant` (defaults to "0"). Verifies the OnOpen event
+    /// before returning.
     pub async fn open_package(
         &self,
-        meta_far_merkle: &Hash,
+        name: &str,
+        variant: Option<&str>,
     ) -> Result<package::Directory, package::OpenError> {
         // TODO(37858) allow opening as executable too
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-        let dir = iou::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
-            .await
-            .map_err(|e| match e {
-                iou::OpenError::OpenError(Status::NOT_FOUND) => package::OpenError::NotFound,
-                other => package::OpenError::Io(other),
-            })?;
+        let path = format!("{}/{}", name, variant.unwrap_or("0"));
+        let dir = iou::open_directory(&self.proxy, &path, flags).await.map_err(|e| match e {
+            iou::OpenError::OpenError(Status::NOT_FOUND) => package::OpenError::NotFound,
+            other => package::OpenError::Io(other),
+        })?;
 
         Ok(package::Directory::new(dir))
     }
@@ -66,8 +66,11 @@ mod tests {
         let root = pkgfs.root_dir_proxy().unwrap();
         let client = Client::open_from_pkgfs_root(&root).unwrap();
 
-        let merkle = fuchsia_merkle::MerkleTree::from_reader(std::io::empty()).unwrap().root();
-        assert_matches!(client.open_package(&merkle).await, Err(package::OpenError::NotFound));
+        assert_matches!(client.open_package("fake", None).await, Err(package::OpenError::NotFound));
+        assert_matches!(
+            client.open_package("fake", Some("package")).await,
+            Err(package::OpenError::NotFound)
+        );
 
         pkgfs.stop().await.unwrap();
     }
@@ -80,13 +83,14 @@ mod tests {
         let client = Client::open_from_pkgfs_root(&root).unwrap();
 
         let pkg = PackageBuilder::new("uniblob").build().await.unwrap();
-        let pkg_merkle = pkg.meta_far_merkle_root().to_owned();
         install.write_meta_far(&pkg).await;
 
-        assert_matches!(client.open_package(&pkg_merkle).await, Ok(_));
+        assert_matches!(client.open_package("uniblob", None).await, Ok(_));
         assert_matches!(
-            pkg.verify_contents(&client.open_package(&pkg_merkle).await.unwrap().into_proxy())
-                .await,
+            pkg.verify_contents(
+                &client.open_package("uniblob", Some("0")).await.unwrap().into_proxy()
+            )
+            .await,
             Ok(())
         );
 
@@ -107,11 +111,13 @@ mod tests {
             .await
             .unwrap();
         let pkg_contents = pkg.meta_contents().unwrap().contents().to_owned();
-        let pkg_merkle = pkg.meta_far_merkle_root().to_owned();
         install.write_meta_far(&pkg).await;
 
         // Package is not complete yet, so opening fails.
-        assert_matches!(client.open_package(&pkg_merkle).await, Err(package::OpenError::NotFound));
+        assert_matches!(
+            client.open_package("multiblob", None).await,
+            Err(package::OpenError::NotFound)
+        );
 
         install
             .write_blob(
@@ -128,10 +134,12 @@ mod tests {
             )
             .await;
 
-        assert_matches!(client.open_package(&pkg_merkle).await, Ok(_));
+        assert_matches!(client.open_package("multiblob", None).await, Ok(_));
         assert_matches!(
-            pkg.verify_contents(&client.open_package(&pkg_merkle).await.unwrap().into_proxy())
-                .await,
+            pkg.verify_contents(
+                &client.open_package("multiblob", Some("0")).await.unwrap().into_proxy()
+            )
+            .await,
             Ok(())
         );
 

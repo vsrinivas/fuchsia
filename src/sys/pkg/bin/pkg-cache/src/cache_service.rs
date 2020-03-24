@@ -92,9 +92,14 @@ async fn open<'a>(
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    match pkgfs_versions.open_package(&meta_far_blob_id.into(), Some(dir_request)).await {
+    let res = async {
+        let pkg = pkgfs_versions.open_package(&meta_far_blob_id.into()).await?;
+        pkg.reopen(dir_request).await
+    };
+
+    match res.await {
         Ok(_) => Ok(()),
-        Err(pkgfs::versions::PackageOpenError::NotFound) => Err(Status::NOT_FOUND),
+        Err(pkgfs::package::OpenError::NotFound) => Err(Status::NOT_FOUND),
         Err(err) => {
             fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
             Err(Status::INTERNAL)
