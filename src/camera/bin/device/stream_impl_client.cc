@@ -18,6 +18,7 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       binding_(this, std::move(request), loop_.dispatcher()) {
   FX_LOGS(DEBUG) << "Stream client " << id << " connected.";
+  binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
   std::ostringstream oss;
   oss << "Camera Stream Thread (Client ID = " << id << ")";
   ZX_ASSERT(loop_.StartThread(oss.str().c_str()) == ZX_OK);

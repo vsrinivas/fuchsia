@@ -18,6 +18,7 @@ DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       binding_(this, std::move(request), loop_.dispatcher()) {
   FX_LOGS(DEBUG) << "Device client " << id << " connected.";
+  binding_.set_error_handler(fit::bind_member(this, &DeviceImpl::Client::OnClientDisconnected));
   std::ostringstream oss;
   oss << "Camera Device Thread (Client ID = " << id << ")";
   ZX_ASSERT(loop_.StartThread(oss.str().c_str()) == ZX_OK);

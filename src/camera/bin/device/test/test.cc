@@ -312,4 +312,73 @@ TEST_F(DeviceTest, RequestStreamFromController) {
   RunLoopUntilFailureOr(callback_received);
 }
 
+TEST_F(DeviceTest, DeviceClientDisconnect) {
+  // Create the first client.
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+
+  // Try to connect a second client, which should fail.
+  fuchsia::camera3::DevicePtr device2;
+  bool error_received = false;
+  device2.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+    error_received = true;
+  });
+  device_->GetHandler()(device2.NewRequest());
+  RunLoopUntilFailureOr(error_received);
+
+  // Disconnect the first client, then try to connect the second again.
+  device = nullptr;
+  bool callback_received = false;
+  while (!HasFailure() && !callback_received) {
+    error_received = false;
+    device_->GetHandler()(device2.NewRequest());
+    // Call a returning API to verify the connection status.
+    device2->GetIdentifier([&](fidl::StringPtr identifier) { callback_received = true; });
+    RunLoopUntil([&] { return error_received || callback_received; });
+  }
+
+  RunLoopUntilFailureOr(callback_received);
+}
+TEST_F(DeviceTest, StreamClientDisconnect) {
+  // Create the first client.
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  device->ConnectToStream(0, stream.NewRequest());
+  SetFailOnError(stream, "Stream");
+
+  // Try to connect a second client, which should fail.
+  fuchsia::camera3::StreamPtr stream2;
+  bool error_received = false;
+  stream2.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+    error_received = true;
+  });
+  device->ConnectToStream(0, stream2.NewRequest());
+  RunLoopUntilFailureOr(error_received);
+
+  // Disconnect the first client, then try to connect the second again.
+  stream = nullptr;
+  bool callback_received = false;
+  while (!HasFailure() && !callback_received) {
+    error_received = false;
+    device->ConnectToStream(0, stream2.NewRequest());
+    fuchsia::sysmem::BufferCollectionTokenPtr token;
+    SetFailOnError(token, "Token");
+    allocator_->AllocateSharedCollection(token.NewRequest());
+    token->Sync([&, token = std::move(token)]() mutable {
+      stream2->SetBufferCollection(std::move(token));
+    });
+    // Call a returning API to verify the connection status.
+    stream2->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+      EXPECT_EQ(token.BindSync()->Close(), ZX_OK);
+      callback_received = true;
+    });
+    RunLoopUntil([&] { return error_received || callback_received; });
+  }
+}
+
 }  // namespace camera
