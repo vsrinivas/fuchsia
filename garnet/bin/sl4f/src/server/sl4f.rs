@@ -52,6 +52,9 @@ use crate::hwinfo::facade::HwinfoFacade;
 // Input related includes
 use crate::input::facade::InputFacade;
 
+// Launch related includes
+use crate::launch::facade::LaunchFacade;
+
 // Location related includes
 use crate::location::regulatory_region_facade::RegulatoryRegionFacade;
 
@@ -129,6 +132,7 @@ impl Sl4f {
                 "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
                 "input_facade" => InputFacade::new(),
+                "launch_facade" => LaunchFacade::new(),
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::new(),

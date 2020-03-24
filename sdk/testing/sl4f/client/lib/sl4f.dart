@@ -12,6 +12,7 @@ export 'src/exceptions.dart';
 export 'src/factory_store.dart';
 export 'src/input.dart';
 export 'src/inspect.dart';
+export 'src/launch.dart';
 export 'src/modular.dart';
 export 'src/performance.dart';
 export 'src/power.dart';
