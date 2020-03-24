@@ -167,7 +167,7 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
 
     log::trace!("Wait for greeting & first frame write");
     let (frame_type, mut frame) = deframer.read().await?;
-    ensure!(frame_type == FrameType::Overnet, "Expect Overnet frame as first frame");
+    ensure!(frame_type == Some(FrameType::Overnet), "Expect Overnet frame as first frame");
 
     let mut greeting = StreamSocketGreeting::empty();
     // WARNING: Since we are decoding without a transaction header, we have to
@@ -209,7 +209,7 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
         async move {
             loop {
                 let (frame_type, mut frame) = deframer.read().await?;
-                ensure!(frame_type == FrameType::Overnet, "Should only see Overnet frames");
+                ensure!(frame_type == Some(FrameType::Overnet), "Should only see Overnet frames");
                 if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
                     log::warn!("Error receiving packet: {}", e);
                 }

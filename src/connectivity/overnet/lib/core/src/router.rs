@@ -1059,7 +1059,7 @@ mod tests {
                 "deframer failed",
             ));
             let (frame_type, mut greeting_bytes) = deframer.read().await.unwrap();
-            assert_eq!(frame_type, FrameType::Overnet);
+            assert_eq!(frame_type, Some(FrameType::Overnet));
             let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
             assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
             assert_eq!(greeting.node_id, Some(node_id.into()));

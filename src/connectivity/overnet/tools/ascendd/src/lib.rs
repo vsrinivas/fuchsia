@@ -75,7 +75,7 @@ async fn process_incoming(
     tx_frames.write(FrameType::Overnet, bytes.as_slice()).await?;
 
     let (frame_type, mut frame) = rx_frames.read().await?;
-    ensure!(frame_type == FrameType::Overnet, "Expect only overnet frames");
+    ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
 
     let mut greeting = StreamSocketGreeting::empty();
     // WARNING: Since we are decoding without a transaction header, we have to
@@ -119,7 +119,7 @@ async fn process_incoming(
     // Supply node with incoming frames
     loop {
         let (frame_type, mut frame) = rx_frames.read().await?;
-        ensure!(frame_type == FrameType::Overnet, "Expect only overnet frames");
+        ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
         if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
             log::trace!("Failed handling packet: {:?}", err);
         }

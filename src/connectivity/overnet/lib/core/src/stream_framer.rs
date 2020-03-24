@@ -65,6 +65,9 @@ impl Format for Box<dyn Format> {
 pub struct Deframed {
     /// The new beginning of the parsing buffer, as an offset from the beginning of the buffer.
     pub new_start_pos: usize,
+    /// How many bytes (measured from the start of the buffer) should be reported as unframed
+    /// data. It's required that `unframed_bytes` <= `new_start_pos`.
+    pub unframed_bytes: usize,
     /// Optional parsed frame from the buffer.
     pub frame: Option<(FrameType, Vec<u8>)>,
 }
@@ -244,8 +247,17 @@ impl std::fmt::Debug for TimeoutFut {
 
 #[derive(Debug)]
 enum Incoming {
-    Parsing { unparsed: BVec, waiting_read: Option<Waker>, timeout: TimeoutFut },
-    Queuing { frame_type: FrameType, bytes: BVec, unparsed: BVec, waiting_write: Option<Waker> },
+    Parsing {
+        unparsed: BVec,
+        waiting_read: Option<Waker>,
+        timeout: TimeoutFut,
+    },
+    Queuing {
+        unframed: Option<BVec>,
+        framed: Option<(FrameType, BVec)>,
+        unparsed: BVec,
+        waiting_write: Option<Waker>,
+    },
     Closed,
 }
 
@@ -298,27 +310,43 @@ fn deframe_step<Fmt: Format>(
     mut waiting_read: Option<Waker>,
     fmt: &Fmt,
 ) -> Result<Incoming, Error> {
-    let Deframed { frame, new_start_pos } = fmt.deframe(&unparsed)?;
-    if new_start_pos != 0 {
-        unparsed.drain(..new_start_pos);
+    let Deframed { frame, unframed_bytes, new_start_pos } = fmt.deframe(&unparsed)?;
+    log::trace!(
+        "unparsed:{:?} frame:{:?} unframed_bytes:{:?} new_start_pos:{:?}",
+        unparsed,
+        frame,
+        unframed_bytes,
+        new_start_pos
+    );
+    assert!(unframed_bytes <= new_start_pos);
+    let mut unframed = None;
+    if unframed_bytes != 0 {
+        let mut unframed_vec = unparsed.split_off(unframed_bytes);
+        std::mem::swap(&mut unframed_vec, &mut unparsed);
+        unframed = Some(BVec(unframed_vec));
     }
-    if let Some((frame_type, bytes)) = frame {
+    if new_start_pos != unframed_bytes {
+        unparsed.drain(..(new_start_pos - unframed_bytes));
+    }
+    if frame.is_some() || unframed.is_some() {
         waiting_read.take().map(|w| w.wake());
         Ok(Incoming::Queuing {
-            frame_type,
-            bytes: BVec(bytes),
+            framed: frame.map(|(frame_type, bytes)| (frame_type, BVec(bytes))),
+            unframed,
             unparsed: BVec(unparsed),
             waiting_write: None,
         })
     } else {
         Ok(Incoming::Parsing {
-            timeout: TimeoutFut(
-                fmt.deframe_timeout(unparsed.len() > 0).map(|when| wait_until(when).boxed_local()),
-            ),
+            timeout: make_timeout(fmt, unparsed.len()),
             unparsed: BVec(unparsed),
             waiting_read,
         })
     }
+}
+
+fn make_timeout<Fmt: Format>(fmt: &Fmt, unparsed_len: usize) -> TimeoutFut {
+    TimeoutFut(fmt.deframe_timeout(unparsed_len > 0).map(|when| wait_until(when).boxed_local()))
 }
 
 impl<Fmt: Format> DeframerWriter<Fmt> {
@@ -336,11 +364,11 @@ impl<Fmt: Format> DeframerWriter<Fmt> {
                 )?);
                 Poll::Ready(Ok(()))
             }
-            Incoming::Queuing { unparsed, frame_type, bytes, waiting_write: _ } => {
+            Incoming::Queuing { unparsed, framed, unframed, waiting_write: _ } => {
                 self.deframer.incoming.set(Incoming::Queuing {
                     unparsed,
-                    frame_type,
-                    bytes,
+                    framed,
+                    unframed,
                     waiting_write: Some(ctx.waker().clone()),
                 });
                 Poll::Pending
@@ -361,21 +389,44 @@ impl<Fmt: Format> Drop for DeframerWriter<Fmt> {
 }
 
 impl<Fmt: Format> DeframerReader<Fmt> {
-    fn poll_read(&mut self, ctx: &mut Context<'_>) -> Poll<Result<(FrameType, Vec<u8>), Error>> {
+    fn poll_read(
+        &mut self,
+        ctx: &mut Context<'_>,
+    ) -> Poll<Result<(Option<FrameType>, Vec<u8>), Error>> {
         let incoming = self.deframer.incoming.take();
         log::trace!("{} poll_read: {:?}", self.deframer.id, incoming);
         match incoming {
             Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed"))),
             Incoming::Queuing {
+                unframed: Some(BVec(unframed)),
+                framed,
                 unparsed: BVec(unparsed),
-                frame_type,
-                bytes: BVec(bytes),
+                waiting_write,
+            } => {
+                if framed.is_some() {
+                    self.deframer.incoming.set(Incoming::Queuing {
+                        unframed: None,
+                        framed,
+                        unparsed: BVec(unparsed),
+                        waiting_write,
+                    });
+                } else {
+                    self.deframer.incoming.set(deframe_step(unparsed, None, &self.deframer.fmt)?);
+                    waiting_write.map(|w| w.wake());
+                }
+                Poll::Ready(Ok((None, unframed)))
+            }
+            Incoming::Queuing {
+                unframed: None,
+                framed: Some((frame_type, BVec(bytes))),
+                unparsed: BVec(unparsed),
                 waiting_write,
             } => {
                 self.deframer.incoming.set(deframe_step(unparsed, None, &self.deframer.fmt)?);
                 waiting_write.map(|w| w.wake());
-                Poll::Ready(Ok((frame_type, bytes)))
+                Poll::Ready(Ok((Some(frame_type), bytes)))
             }
+            Incoming::Queuing { unframed: None, framed: None, .. } => unreachable!(),
             Incoming::Parsing { unparsed, timeout: TimeoutFut(None), waiting_read: _ } => {
                 self.deframer.incoming.set(Incoming::Parsing {
                     unparsed,
@@ -387,7 +438,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
             Incoming::Parsing {
                 unparsed: BVec(mut unparsed),
                 timeout: TimeoutFut(Some(mut timeout)),
-                waiting_read: _,
+                waiting_read,
             } => match timeout.as_mut().poll(ctx) {
                 Poll::Pending => {
                     self.deframer.incoming.set(Incoming::Parsing {
@@ -398,8 +449,15 @@ impl<Fmt: Format> DeframerReader<Fmt> {
                     Poll::Pending
                 }
                 Poll::Ready(()) => {
-                    unparsed.drain(..1);
-                    self.deframer.incoming.set(deframe_step(unparsed, None, &self.deframer.fmt)?);
+                    let mut unframed = unparsed.split_off(1);
+                    std::mem::swap(&mut unframed, &mut unparsed);
+                    waiting_read.map(|w| w.wake());
+                    self.deframer.incoming.set(Incoming::Queuing {
+                        unframed: Some(BVec(unframed)),
+                        framed: None,
+                        unparsed: BVec(unparsed),
+                        waiting_write: None,
+                    });
                     self.poll_read(ctx)
                 }
             },
@@ -407,7 +465,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
     }
 
     /// Read one frame from the deframer.
-    pub async fn read(&mut self) -> Result<(FrameType, Vec<u8>), Error> {
+    pub async fn read(&mut self) -> Result<(Option<FrameType>, Vec<u8>), Error> {
         poll_fn(|ctx| self.poll_read(ctx)).await
     }
 }
@@ -461,7 +519,7 @@ impl Format for LossyBinary {
         loop {
             let buf = &bytes[start..];
             if buf.len() <= 8 {
-                return Ok(Deframed { frame: None, new_start_pos: start });
+                return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
             let frame_type = match buf[0] {
                 0u8 => FrameType::Overnet,
@@ -475,7 +533,7 @@ impl Format for LossyBinary {
             let crc = u32::from_le_bytes([buf[3], buf[4], buf[5], buf[6]]);
             if buf.len() < 8 + len {
                 // Not enough bytes to deframe: done for now
-                return Ok(Deframed { frame: None, new_start_pos: start });
+                return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
             if buf[7 + len] != 10u8 {
                 // Does not end with an end marker: remove start byte and continue
@@ -490,10 +548,10 @@ impl Format for LossyBinary {
                 continue;
             }
             // Successfully got a frame! Save it, and continue
-            start += 8 + len;
             return Ok(Deframed {
                 frame: Some((frame_type, frame.to_vec())),
-                new_start_pos: start,
+                unframed_bytes: start,
+                new_start_pos: start + 8 + len,
             });
         }
     }
@@ -525,7 +583,7 @@ impl Format for LosslessBinary {
             ));
         }
         match frame_type {
-            FrameType::Overnet => outgoing.write_u8(0u8)?, // '\0'
+            FrameType::Overnet => outgoing.write_u8(0u8)?,
         }
         outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
         outgoing.extend_from_slice(bytes);
@@ -535,7 +593,7 @@ impl Format for LosslessBinary {
     fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
         log::trace!("DEFRAME: buffer_len={}", bytes.len());
         if bytes.len() <= 4 {
-            return Ok(Deframed { frame: None, new_start_pos: 0 });
+            return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
         }
         let frame_type = match bytes[0] {
             0u8 => FrameType::Overnet,
@@ -546,10 +604,14 @@ impl Format for LosslessBinary {
         log::trace!("DEFRAME: frame_len={}", len);
         if bytes.len() < 3 + len {
             // Not enough bytes to deframe: done for now.
-            return Ok(Deframed { frame: None, new_start_pos: 0 });
+            return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
         }
         let frame = &bytes[3..3 + len];
-        return Ok(Deframed { frame: Some((frame_type, frame.to_vec())), new_start_pos: 3 + len });
+        return Ok(Deframed {
+            frame: Some((frame_type, frame.to_vec())),
+            unframed_bytes: 0,
+            new_start_pos: 3 + len,
+        });
     }
 
     fn deframe_timeout(&self, _have_pending_bytes: bool) -> Option<Instant> {
@@ -577,13 +639,13 @@ mod test {
             deframer_writer.write(framer_reader.read().await.unwrap().as_slice()).await.unwrap();
             assert_eq!(
                 deframer_reader.read().await.unwrap(),
-                (FrameType::Overnet, vec![1, 2, 3, 4])
+                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
             );
             framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await.unwrap();
             deframer_writer.write(framer_reader.read().await.unwrap().as_slice()).await.unwrap();
             assert_eq!(
                 deframer_reader.read().await.unwrap(),
-                (FrameType::Overnet, vec![5, 6, 7, 8])
+                (Some(FrameType::Overnet), vec![5, 6, 7, 8])
             );
         })
     }
@@ -609,9 +671,10 @@ mod test {
                 .write(join(vec![0], framer_reader.read().await.unwrap()).as_slice())
                 .await
                 .unwrap();
+            assert_eq!(deframer_reader.read().await.unwrap(), (None, vec![0]));
             assert_eq!(
                 deframer_reader.read().await.unwrap(),
-                (FrameType::Overnet, vec![1, 2, 3, 4])
+                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
             );
         })
     }
@@ -628,9 +691,10 @@ mod test {
                 .write(join(vec![1], framer_reader.read().await.unwrap()).as_slice())
                 .await
                 .unwrap();
+            assert_eq!(deframer_reader.read().await.unwrap(), (None, vec![1]));
             assert_eq!(
                 deframer_reader.read().await.unwrap(),
-                (FrameType::Overnet, vec![1, 2, 3, 4])
+                (Some(FrameType::Overnet), vec![1, 2, 3, 4])
             );
         })
     }

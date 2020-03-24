@@ -98,7 +98,7 @@ async fn run_socket_link(
 
     // Wait for first frame
     let (frame_type, mut greeting_bytes) = deframer.read().await?;
-    if frame_type != FrameType::Overnet {
+    if frame_type != Some(FrameType::Overnet) {
         bail!("Expected Overnet frame, got {:?}", frame_type);
     }
     let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())
@@ -133,7 +133,7 @@ async fn run_socket_link(
         async move {
             loop {
                 let (frame_type, mut frame) = deframer.read().await?;
-                if frame_type != FrameType::Overnet {
+                if frame_type != Some(FrameType::Overnet) {
                     continue;
                 }
                 if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
