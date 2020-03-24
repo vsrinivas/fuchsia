@@ -162,7 +162,7 @@ group("all") {
     "//src/connectivity/network/mdns/bundles:utils",
     "//src/connectivity/network/netstack:tools",
     "//src/connectivity/telephony:drivers",
-    "//src/connectivity/wlan:service",
+    "//src/connectivity/wlan:packages",
     "//src/connectivity/wlan:tools",
     "//src/developer/memory/mem",
     "//src/fonts",

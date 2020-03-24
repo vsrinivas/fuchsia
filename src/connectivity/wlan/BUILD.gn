@@ -5,27 +5,16 @@
 group("wlan") {
   testonly = true
   deps = [
-    ":service",
+    ":packages",
     "drivers",
   ]
 }
 
-group("service") {
-  testonly = true
-  deps = [
-    ":bin",
-    "config:default",
-  ]
-}
-
-group("service-legacy-privacy") {
-  deps = [
-    ":bin",
-    "config:legacy-privacy",
-  ]
-}
-
-group("bin") {
+# This target just includes the wlan-related packages, but not any sysmgr
+# config that will cause them to actually be used. Product configs (and only
+# product configs, rather than other group targets, to avoid conflicts) should
+# also include an appropriate target under config/.
+group("packages") {
   public_deps = [
     "//src/connectivity/location/regulatory_region",
     "//src/connectivity/wlan/wlancfg",

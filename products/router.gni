@@ -41,9 +41,10 @@ base_package_labels += [
   "//src/connectivity/network/net-cli",
   "//src/connectivity/network/netstack3",
   "//src/connectivity/network/netstack:tools",
-  "//src/connectivity/wlan:service",
+  "//src/connectivity/wlan:packages",
   "//src/connectivity/wlan:tests",
   "//src/connectivity/wlan:tools",
+  "//src/connectivity/wlan/config:default",
   "//third_party/boringssl:boringssl_tool",
 ]
 

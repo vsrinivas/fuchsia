@@ -86,7 +86,6 @@ group("kitchen_sink") {
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
     "//src/connectivity/telephony",
-    "//src/connectivity/wlan:service",
     "//src/media/audio/bundles:virtual_audio_driver",
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
