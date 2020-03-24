@@ -241,6 +241,14 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
   DoSuspend(flags, [this](uint32_t flags) { coordinator()->Suspend(flags); });
 }
 
+void MultipleDeviceTestCase::DoSuspendWithCallback(
+    uint32_t flags, fit::function<void(zx_status_t status)> suspend_complete_cb) {
+  DoSuspend(flags, [this, suspend_cb = std::move(suspend_complete_cb)](uint32_t flags) mutable {
+    coordinator()->Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags),
+                           std::move(suspend_cb));
+  });
+}
+
 // Reads the request from |remote| and verifies whether it matches the expected Unbind request.
 // |SendUnbindReply| can be used to send the desired response.
 void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_txid_t* txid) {

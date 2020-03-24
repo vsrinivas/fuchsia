@@ -4,6 +4,8 @@
 
 #include "multiple_device_test.h"
 
+#include <zircon/errors.h>
+
 #include <string>
 
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
@@ -84,6 +86,50 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   // The parent should now be removed.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->controller_remote));
   coordinator_loop()->RunUntilIdle();
+}
+
+TEST_F(MultipleDeviceTestCase, ConcurrentSuspend) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
+                                     0 /* protocol id */, "", &child_index));
+
+  const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
+  zx_status_t first_suspend_status = ZX_ERR_INTERNAL;
+  ASSERT_NO_FATAL_FAILURES(
+      DoSuspendWithCallback(flags, [&first_suspend_status](zx_status_t completion_status) {
+        first_suspend_status = completion_status;
+      }));
+
+  zx_txid_t txid;
+
+  // Don't reply to the suspend yet.
+  ASSERT_NO_FATAL_FAILURES(
+      CheckSuspendReceived(device(child_index)->controller_remote, flags, &txid));
+
+  zx_status_t second_suspend_status = ZX_OK;
+  ASSERT_NO_FATAL_FAILURES(
+      DoSuspendWithCallback(flags, [&second_suspend_status](zx_status_t completion_status) {
+        second_suspend_status = completion_status;
+      }));
+  ASSERT_EQ(second_suspend_status, ZX_ERR_ALREADY_EXISTS);
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(child_index)->controller_remote, ZX_OK, txid));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(
+      CheckSuspendReceivedAndReply(device(parent_index)->controller_remote, flags, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(
+      CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(
+      CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, flags, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_EQ(first_suspend_status, ZX_OK);
 }
 
 TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {

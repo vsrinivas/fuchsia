@@ -101,6 +101,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   void DoSuspend(uint32_t flags);
   void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
+  void DoSuspendWithCallback(uint32_t flags, fit::function<void(zx_status_t)> suspend_complete_cb);
 
   void DoResume(
       SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});

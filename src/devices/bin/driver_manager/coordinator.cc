@@ -31,6 +31,7 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -1340,6 +1341,9 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   // is in queue.
   if (InResume()) {
     log(ERROR, "driver_manager: Aborting system-suspend. A system resume is in progresss.\n");
+    if (callback) {
+      callback(ZX_ERR_UNAVAILABLE);
+    }
     return;
   }
 
@@ -1347,6 +1351,9 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   if (InSuspend()) {
     log(ERROR,
         "driver_manager: Aborting system-suspend. A system suspend is already in progress\n");
+    if (callback) {
+      callback(ZX_ERR_ALREADY_EXISTS);
+    }
     return;
   }
 
@@ -1354,6 +1361,9 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   // cannot go to suspend.
   if (!sys_device_->proxy()) {
     log(ERROR, "driver_manager: Aborting system-suspend. System is not fully initialized yet.\n");
+    if (callback) {
+      callback(ZX_ERR_UNAVAILABLE);
+    }
     return;
   }
 

@@ -310,6 +310,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
   void Suspend(uint32_t flags);
+  void Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback);
+
   void Resume(
       SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
 
@@ -393,7 +395,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void DumpDrivers(VmoWriter* vmo) const;
 
   void BuildSuspendList();
-  void Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback);
   void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
   uint32_t GetSuspendFlagsFromSystemPowerState(
       llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState state);
