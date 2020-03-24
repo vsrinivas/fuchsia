@@ -39,10 +39,6 @@ pub fn serve_request(request: &Request) -> Response {
         (GET) (/loop2) => {
             rouille::Response::redirect_301("/loop1")
         },
-        (GET) (/responds_in_10_minutes) => {
-            thread::sleep(time::Duration::from_millis(600_000));
-            rouille::Response::text(ROOT_DOCUMENT)
-        },
         (GET) (/big_stream) => {
             let mut big_vec: Vec<u8> = Vec::with_capacity(BIG_STREAM_SIZE);
             for n in 0..BIG_STREAM_SIZE {
@@ -80,13 +76,7 @@ fn make_url(port: u16, path: &str) -> Vec<u8> {
 }
 
 fn make_request(method: &str, url: Vec<u8>) -> http::Request {
-    http::Request {
-        url: Some(url),
-        method: Some(method.to_string()),
-        headers: None,
-        body: None,
-        deadline: None,
-    }
+    http::Request { url: Some(url), method: Some(method.to_string()), headers: None, body: None }
 }
 
 fn check_response_common(response: &http::Response, expected_header_names: &[&str]) {
@@ -179,46 +169,6 @@ async fn test_fetch_http() -> Result<(), Error> {
 
     check_response(&response);
     check_body(response.body);
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_fetch_past_deadline() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
-
-    let response = loader
-        .fetch({
-            let mut req = make_request("GET", make_url(server_port, "/"));
-
-            // Deadline expired 10 minutes ago!
-            req.deadline = Some(zx::Time::after(zx::Duration::from_minutes(-10)).into_nanos());
-            req
-        })
-        .await?;
-
-    assert_eq!(response.error.unwrap(), http::Error::DeadlineExceeded);
-    assert!(response.body.is_none());
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_fetch_response_too_slow() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
-
-    // But it doesn't when the deadline is 100ms in the future.
-    let response = loader
-        .fetch({
-            let mut req = make_request("GET", make_url(server_port, "/responds_in_10_minutes"));
-            // Deadline expires 100ms from now.
-            req.deadline = Some(zx::Time::after(zx::Duration::from_millis(100)).into_nanos());
-            req
-        })
-        .await?;
-
-    assert_eq!(response.error.unwrap(), http::Error::DeadlineExceeded);
-    assert!(response.body.is_none());
 
     Ok(())
 }

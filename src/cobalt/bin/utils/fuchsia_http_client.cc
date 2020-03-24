@@ -152,11 +152,6 @@ void FuchsiaHTTPClient::HandleResponse(int request_id, fuchsia::net::http::Respo
       case fuchsia::net::http::Error::CONNECT:
         ss << "Error occurred while connecting";
         status_code = util::StatusCode::UNAVAILABLE;
-        break;
-      case fuchsia::net::http::Error::DEADLINE_EXCEEDED:
-        ss << "Deadline exceeded while waiting for response";
-        status_code = util::StatusCode::DEADLINE_EXCEEDED;
-        break;
     }
     SetValue(util::Status(status_code, ss.str()));
     return;
