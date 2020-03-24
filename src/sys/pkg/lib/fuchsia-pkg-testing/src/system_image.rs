@@ -14,18 +14,37 @@ use {
 pub struct SystemImageBuilder<'a> {
     static_packages: &'a [&'a Package],
     cache_packages: Option<&'a [&'a Package]>,
+    pkgfs_disable_executability_restrictions: bool,
 }
 
 impl<'a> SystemImageBuilder<'a> {
     /// Create an instance of the builder from the (possibly empty) list of base packages.
     pub fn new(static_packages: &'a [&'a Package]) -> Self {
-        Self { static_packages, cache_packages: None }
+        Self {
+            static_packages,
+            cache_packages: None,
+            pkgfs_disable_executability_restrictions: false,
+        }
     }
 
     /// Use the supplied cache_packages with the system image. Call at most once.
     pub fn cache_packages(self, cache_packages: &'a [&'a Package]) -> Self {
         assert!(self.cache_packages.is_none());
-        Self { static_packages: self.static_packages, cache_packages: Some(cache_packages) }
+        Self {
+            static_packages: self.static_packages,
+            cache_packages: Some(cache_packages),
+            pkgfs_disable_executability_restrictions: self.pkgfs_disable_executability_restrictions,
+        }
+    }
+
+    /// Add a config file which disables pkgfs/versions exec restrictions. Call at most once.
+    pub fn pkgfs_disable_executability_restrictions(self, disable: bool) -> Self {
+        assert_eq!(self.pkgfs_disable_executability_restrictions, false);
+        Self {
+            static_packages: self.static_packages,
+            cache_packages: self.cache_packages,
+            pkgfs_disable_executability_restrictions: disable,
+        }
     }
 
     /// Build the system_image package.
@@ -53,6 +72,12 @@ impl<'a> SystemImageBuilder<'a> {
                 .serialize(&mut bytes)
                 .unwrap();
             builder = builder.add_resource_at("data/cache_packages", bytes.as_slice());
+        }
+        if self.pkgfs_disable_executability_restrictions {
+            builder = builder.add_resource_at(
+                "data/pkgfs_disable_executability_restrictions",
+                vec![].as_slice(),
+            );
         }
         async move { builder.build().await.unwrap() }
     }

@@ -4,6 +4,7 @@
 
 use {
     crate::blob_location::BlobLocation,
+    crate::pkgfs_inspect::PkgfsInspectState,
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -17,6 +18,7 @@ use {
 mod blob_location;
 mod cache_service;
 mod gc_service;
+mod pkgfs_inspect;
 
 const SERVER_THREADS: usize = 2;
 
@@ -54,6 +56,10 @@ fn main() -> Result<(), Error> {
         || Ok(pkgfs::system::Client::open_from_namespace()?),
         || Ok(pkgfs::versions::Client::open_from_namespace()?),
         inspector.root().create_child("blob-location"),
+    ));
+    let _pkgfs_inspect = executor.run_singlethreaded(PkgfsInspectState::new(
+        || Ok(pkgfs::system::Client::open_from_namespace()?),
+        inspector.root().create_child("pkgfs"),
     ));
 
     inspector.serve(&mut fs)?;

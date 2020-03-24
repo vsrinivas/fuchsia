@@ -4,16 +4,30 @@
 
 //! Typesafe wrappers around the /pkgfs/system filesystem.
 
-use {crate::iou, anyhow::anyhow, fidl_fuchsia_io::DirectoryProxy, std::fs};
+use {crate::iou, anyhow::anyhow, fidl_fuchsia_io::DirectoryProxy, std::fs, thiserror::Error};
 
-/// An open handle to /pkgfs/system
+/// An error encountered while opening the system image.
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum SystemImageFileOpenError {
+    #[error("the file does not exist in the system image package")]
+    NotFound,
+
+    #[error("while opening the file: {0}")]
+    Io(iou::OpenError),
+
+    #[error("unexpected error: {0}")]
+    Other(anyhow::Error),
+}
+
+/// An open handle to /pkgfs/system.
 #[derive(Debug, Clone)]
 pub struct Client {
     proxy: DirectoryProxy,
 }
 
 impl Client {
-    /// Returns a `Client` connected to pkgfs from the current component's namespace
+    /// Returns a `Client` connected to pkgfs from the current component's namespace.
     pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
         Ok(Self { proxy: iou::open_directory_from_namespace("/pkgfs/system")? })
     }
@@ -30,16 +44,25 @@ impl Client {
     }
 
     /// Open a file from the system_image package wrapped by this `Client`.
-    pub async fn open_file(&self, path: &str) -> Result<fs::File, anyhow::Error> {
-        let file_proxy =
-            iou::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
-        Ok(fdio::create_fd(
+    pub async fn open_file(&self, path: &str) -> Result<fs::File, SystemImageFileOpenError> {
+        let file_proxy = iou::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
+            .await
+            .map_err(|e| match e {
+                iou::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
+                    SystemImageFileOpenError::NotFound
+                }
+                other => SystemImageFileOpenError::Io(other),
+            })?;
+        fdio::create_fd(
             file_proxy
                 .into_channel()
-                .map_err(|_| anyhow!("into_channel() on FileProxy failed"))?
+                .map_err(|_| {
+                    SystemImageFileOpenError::Other(anyhow!("into_channel() on FileProxy failed"))
+                })?
                 .into_zx_channel()
                 .into(),
-        )?)
+        )
+        .map_err(|e| SystemImageFileOpenError::Other(e.into()))
     }
 }
 
@@ -83,6 +106,9 @@ mod tests {
             .unwrap();
         let client = Client::open_from_pkgfs_root(&pkgfs.root_dir_proxy().unwrap()).unwrap();
 
-        assert_matches!(client.open_file("missing-file").await, Err(_));
+        assert_matches!(
+            client.open_file("missing-file").await,
+            Err(SystemImageFileOpenError::NotFound)
+        );
     }
 }

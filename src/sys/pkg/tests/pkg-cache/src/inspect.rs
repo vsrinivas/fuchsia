@@ -42,7 +42,7 @@ async fn assert_base_blob_count(
 
     assert_inspect_tree!(
         hierarchy,
-        root: {
+        root: contains {
             "blob-location": {
                 "base-blobs": {
                     count: count,
@@ -110,11 +110,72 @@ async fn assume_all_blobs_in_base_on_error() {
     let hierarchy = env.inspect_hierarchy().await;
     assert_inspect_tree!(
         hierarchy,
-        root: {
+        root: contains {
             "blob-location": {
                 "assume-all-in-base": {}
             }
         }
     );
     env.stop().await;
+}
+
+async fn pkgfs_with_restrictions_enabled(restrictions_enabled: bool) -> PkgfsRamdisk {
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let system_image_package = SystemImageBuilder::new(&[])
+        .pkgfs_disable_executability_restrictions(!restrictions_enabled)
+        .build()
+        .await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap()
+}
+
+async fn assert_pkgfs_executability_restrictions_enabled(
+    pkgfs: PkgfsRamdisk,
+    expected_state: String,
+) {
+    let env = TestEnv::new(pkgfs);
+    env.block_until_started().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_inspect_tree!(
+        hierarchy,
+        root: contains {
+            "pkgfs" : {
+                "pkgfs-executability-restrictions-enabled": expected_state
+            }
+        }
+    );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn pkgfs_executability_restrictions_enabled() {
+    assert_pkgfs_executability_restrictions_enabled(
+        pkgfs_with_restrictions_enabled(true).await,
+        "true".to_string(),
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn pkgfs_executability_restrictions_disabled() {
+    assert_pkgfs_executability_restrictions_enabled(
+        pkgfs_with_restrictions_enabled(false).await,
+        "false".to_string(),
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn pkgfs_executability_restrictions_error() {
+    // We should get an error in inspect state if there is no system image package.
+    assert_pkgfs_executability_restrictions_enabled(
+        PkgfsRamdisk::builder().start().unwrap(),
+        "error".to_string(),
+    )
+    .await;
 }
