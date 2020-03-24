@@ -29,8 +29,7 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   vaddr_t stack_top = t->stack_.top;
 
   // make sure the top of the stack is 16 byte aligned for EABI compliance
-  stack_top = ROUNDDOWN(stack_top, 16);
-  t->stack_.top = stack_top;
+  DEBUG_ASSERT(IS_ALIGNED(stack_top, 16));
 
   struct arm64_context_switch_frame* frame = (struct arm64_context_switch_frame*)(stack_top);
   frame--;
@@ -46,7 +45,9 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // set the stack pointer
   t->arch_.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
-  t->arch_.unsafe_sp = ROUNDDOWN(t->stack.unsafe_base + t->stack_.size, 16);
+  vaddr_t unsafe_top = t->stack_.unsafe_base + t->stack_.size;
+  DEBUG_ASSERT(IS_ALIGNED(unsafe_top, 16));
+  t->arch_.unsafe_sp = unsafe_top;
 #endif
 #if __has_feature(shadow_call_stack)
   // The shadow call stack grows up.
