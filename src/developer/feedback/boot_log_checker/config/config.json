@@ -1,3 +1,0 @@
-{
-  "apps": [ "fuchsia-pkg://fuchsia.com/boot_log_checker#meta/boot_log_checker.cmx" ]
-}

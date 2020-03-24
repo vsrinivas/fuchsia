@@ -71,14 +71,3 @@ source_set("src") {
     "//zircon/public/lib/zx",
   ]
 }
-
-###############################################################################
-# CONFIGS
-###############################################################################
-config_data("config") {
-  for_pkg = "sysmgr"
-
-  sources = [ "config/config.json" ]
-
-  outputs = [ "boot_log_checker.config" ]
-}
