@@ -157,132 +157,107 @@ uint32_t AmlSdEmmc::GetClkFreq(uint32_t clk_src) const {
   return AmlSdEmmcClock::kCtsOscinClkFreq;
 }
 
-zx_status_t AmlSdEmmc::WaitForInterrupt() {
+zx_status_t AmlSdEmmc::WaitForInterruptImpl() {
   zx::time timestamp;
   return irq_.wait(&timestamp);
 }
 
-void AmlSdEmmc::OnIrqThreadExit() {}
+zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
+  zx_status_t status = WaitForInterruptImpl();
 
-int AmlSdEmmc::IrqThread() {
-  auto on_thread_exit =
-      fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS { OnIrqThreadExit(); });
-  while (1) {
-    zx_status_t status = WaitForInterrupt();
-    if (status == ZX_ERR_CANCELED) {
-      return 0;
-    } else if (status != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::IrqThread: zx_interrupt_wait got %d\n", status);
-      break;
-    }
-    fbl::AutoLock mutex_al(&mtx_);
-    if (cur_req_ == NULL) {
-      status = ZX_ERR_IO_INVALID;
-      zxlogf(ERROR, "AmlSdEmmc::IrqThread: Got a spurious interrupt\n");
-      // Ignore this interrupt and keep going
-      // TODO(ravoorir): Do some error recovery here
-      continue;
-    }
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: WaitForInterruptImpl got %d\n", status);
+    return status;
+  }
 
-    auto status_irq = AmlSdEmmcStatus::Get().ReadFrom(&mmio_);
-    uint32_t rxd_err = status_irq.rxd_err();
+  auto status_irq = AmlSdEmmcStatus::Get().ReadFrom(&mmio_);
+  uint32_t rxd_err = status_irq.rxd_err();
 
-    auto complete_ac = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-      cur_req_->status = status;
-      AmlSdEmmcStatus::Get()
-          .ReadFrom(&mmio_)
-          .set_reg_value(AmlSdEmmcStatus::kClearStatus)
-          .WriteTo(&mmio_);
-      cur_req_ = nullptr;
-      sync_completion_signal(&req_completion_);
-    });
+  auto complete_ac = fbl::MakeAutoCall([&]() {
+    AmlSdEmmcStatus::Get()
+        .ReadFrom(&mmio_)
+        .set_reg_value(AmlSdEmmcStatus::kClearStatus)
+        .WriteTo(&mmio_);
+  });
 
-    if (rxd_err) {
-      if (cur_req_->probe_tuning_cmd) {
-        AML_SD_EMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", cur_req_->cmd_idx,
-                          status_irq.reg_value(), rxd_err);
-      } else {
-        AML_SD_EMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", cur_req_->cmd_idx,
-                          status_irq.reg_value(), rxd_err);
-      }
-      status = ZX_ERR_IO_DATA_INTEGRITY;
-      continue;
-    }
-    if (status_irq.txd_err()) {
-      AML_SD_EMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR\n", cur_req_->cmd_idx,
-                        status_irq.reg_value());
-      status = ZX_ERR_IO_DATA_INTEGRITY;
-      continue;
-    }
-    if (status_irq.desc_err()) {
-      AML_SD_EMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x\n",
-                        cur_req_->cmd_idx, status_irq.reg_value());
-      status = ZX_ERR_IO_INVALID;
-      continue;
-    }
-    if (status_irq.resp_err()) {
-      if (cur_req_->probe_tuning_cmd) {
-        AML_SD_EMMC_TRACE("Response CRC Error, cmd%d, status=0x%x\n", cur_req_->cmd_idx,
-                          status_irq.reg_value());
-      } else {
-        AML_SD_EMMC_ERROR("Response CRC Error, cmd%d, status=0x%x\n", cur_req_->cmd_idx,
-                          status_irq.reg_value());
-      }
-      status = ZX_ERR_IO_DATA_INTEGRITY;
-      continue;
-    }
-    if (status_irq.resp_timeout()) {
-      // When mmc dev_ice is being probed with SDIO command this is an expected failure.
-      if (cur_req_->probe_tuning_cmd) {
-        AML_SD_EMMC_TRACE("No response received before time limit, cmd%d, status=0x%x\n",
-                          cur_req_->cmd_idx, status_irq.reg_value());
-      } else {
-        AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x\n",
-                          cur_req_->cmd_idx, status_irq.reg_value());
-      }
-      status = ZX_ERR_TIMED_OUT;
-      continue;
-    }
-    if (status_irq.desc_timeout()) {
-      AML_SD_EMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x\n", cur_req_->cmd_idx,
-                        status_irq.reg_value());
-      status = ZX_ERR_TIMED_OUT;
-      continue;
-    }
-
-    if (!(status_irq.end_of_chain())) {
-      status = ZX_ERR_IO_INVALID;
-      zxlogf(ERROR, "AmlSdEmmc::IrqThread: END OF CHAIN bit is not set status:0x%x\n",
-             status_irq.reg_value());
-      continue;
-    }
-
-    if (cur_req_->cmd_flags & SDMMC_RESP_LEN_136) {
-      cur_req_->response[0] = AmlSdEmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
-      cur_req_->response[1] = AmlSdEmmcCmdResp1::Get().ReadFrom(&mmio_).reg_value();
-      cur_req_->response[2] = AmlSdEmmcCmdResp2::Get().ReadFrom(&mmio_).reg_value();
-      cur_req_->response[3] = AmlSdEmmcCmdResp3::Get().ReadFrom(&mmio_).reg_value();
+  if (rxd_err) {
+    if (req->probe_tuning_cmd) {
+      AML_SD_EMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", req->cmd_idx,
+                        status_irq.reg_value(), rxd_err);
     } else {
-      cur_req_->response[0] = AmlSdEmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+      AML_SD_EMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", req->cmd_idx,
+                        status_irq.reg_value(), rxd_err);
     }
-    if ((!cur_req_->use_dma) && (cur_req_->cmd_flags & SDMMC_CMD_READ)) {
-      uint32_t length = cur_req_->blockcount * cur_req_->blocksize;
-      if (length == 0 || ((length % 4) != 0)) {
-        status = ZX_ERR_INTERNAL;
-        continue;
-      }
-      uint32_t data_copied = 0;
-      uint32_t* dest = reinterpret_cast<uint32_t*>(cur_req_->virt_buffer);
-      volatile uint32_t* src = reinterpret_cast<volatile uint32_t*>(
-          reinterpret_cast<uintptr_t>(mmio_.get()) + kAmlSdEmmcPingOffset);
-      while (length) {
-        *dest++ = *src++;
-        length -= 4;
-        data_copied += 4;
-      }
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (status_irq.txd_err()) {
+    AML_SD_EMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR\n", req->cmd_idx,
+                      status_irq.reg_value());
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (status_irq.desc_err()) {
+    AML_SD_EMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x\n",
+                      req->cmd_idx, status_irq.reg_value());
+    return ZX_ERR_IO_INVALID;
+  }
+  if (status_irq.resp_err()) {
+    if (req->probe_tuning_cmd) {
+      AML_SD_EMMC_TRACE("Response CRC Error, cmd%d, status=0x%x\n", req->cmd_idx,
+                        status_irq.reg_value());
+    } else {
+      AML_SD_EMMC_ERROR("Response CRC Error, cmd%d, status=0x%x\n", req->cmd_idx,
+                        status_irq.reg_value());
+    }
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (status_irq.resp_timeout()) {
+    // When mmc dev_ice is being probed with SDIO command this is an expected failure.
+    if (req->probe_tuning_cmd) {
+      AML_SD_EMMC_TRACE("No response received before time limit, cmd%d, status=0x%x\n",
+                        req->cmd_idx, status_irq.reg_value());
+    } else {
+      AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x\n",
+                        req->cmd_idx, status_irq.reg_value());
+    }
+    return ZX_ERR_TIMED_OUT;
+  }
+  if (status_irq.desc_timeout()) {
+    AML_SD_EMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x\n", req->cmd_idx,
+                      status_irq.reg_value());
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  if (!(status_irq.end_of_chain())) {
+    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: END OF CHAIN bit is not set status:0x%x\n",
+           status_irq.reg_value());
+    return ZX_ERR_IO_INVALID;
+  }
+
+  if (req->cmd_flags & SDMMC_RESP_LEN_136) {
+    req->response[0] = AmlSdEmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+    req->response[1] = AmlSdEmmcCmdResp1::Get().ReadFrom(&mmio_).reg_value();
+    req->response[2] = AmlSdEmmcCmdResp2::Get().ReadFrom(&mmio_).reg_value();
+    req->response[3] = AmlSdEmmcCmdResp3::Get().ReadFrom(&mmio_).reg_value();
+  } else {
+    req->response[0] = AmlSdEmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+  }
+  if ((!req->use_dma) && (req->cmd_flags & SDMMC_CMD_READ)) {
+    uint32_t length = req->blockcount * req->blocksize;
+    if (length == 0 || ((length % 4) != 0)) {
+      return ZX_ERR_INTERNAL;
+    }
+    uint32_t data_copied = 0;
+    uint32_t* dest = reinterpret_cast<uint32_t*>(req->virt_buffer);
+    volatile uint32_t* src = reinterpret_cast<volatile uint32_t*>(
+        reinterpret_cast<uintptr_t>(mmio_.get()) + kAmlSdEmmcPingOffset);
+    while (length) {
+      *dest++ = *src++;
+      length -= 4;
+      data_copied += 4;
     }
   }
-  return 0;
+
+  return ZX_OK;
 }
 
 zx_status_t AmlSdEmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
@@ -661,9 +636,7 @@ zx_status_t AmlSdEmmc::FinishReq(sdmmc_req_t* req) {
 zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   // Wait for the bus to become idle before issuing the next request. This could be necessary if the
   // card is driving CMD low after a voltage switch.
-  while (!AmlSdEmmcStatus::Get().ReadFrom(&mmio_).cmd_i()) {
-    zx::nanosleep(zx::deadline_after(zx::usec(10)));
-  }
+  WaitForBus();
 
   zx_status_t status = ZX_OK;
 
@@ -689,31 +662,33 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   AML_SD_EMMC_TRACE("SUBMIT req:%p cmd_idx: %d cmd_cfg: 0x%x cmd_dat: 0x%x cmd_arg: 0x%x\n", req,
                     req->cmd_idx, desc->cmd_info, desc->data_addr, desc->cmd_arg);
 
-  {
-    fbl::AutoLock mutex_al(&mtx_);
-    cur_req_ = req;
-    zx_paddr_t desc_phys;
+  zx_paddr_t desc_phys;
 
-    auto start_reg = AmlSdEmmcStart::Get().ReadFrom(&mmio_);
-    if (req->use_dma) {
-      desc_phys = descs_buffer_.phys();
-      descs_buffer_.CacheFlush(0, descs_buffer_.size());
-      // Read desc from external DDR
-      start_reg.set_desc_int(0);
-    } else {
-      desc_phys = pinned_mmio_.get_paddr() + AML_SD_EMMC_SRAM_MEMORY_BASE;
-      start_reg.set_desc_int(1);
-    }
-
-    start_reg.set_desc_busy(1)
-        .set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2)
-        .WriteTo(&mmio_);
+  auto start_reg = AmlSdEmmcStart::Get().ReadFrom(&mmio_);
+  if (req->use_dma) {
+    desc_phys = descs_buffer_.phys();
+    descs_buffer_.CacheFlush(0, descs_buffer_.size());
+    // Read desc from external DDR
+    start_reg.set_desc_int(0);
+  } else {
+    desc_phys = pinned_mmio_.get_paddr() + AML_SD_EMMC_SRAM_MEMORY_BASE;
+    start_reg.set_desc_int(1);
   }
 
-  sync_completion_wait(&req_completion_, ZX_TIME_INFINITE);
+  start_reg.set_desc_busy(1)
+      .set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2)
+      .WriteTo(&mmio_);
+
+  zx_status_t res = WaitForInterrupt(req);
   FinishReq(req);
-  sync_completion_reset(&req_completion_);
-  return req->status;
+  req->status = res;
+  return res;
+}
+
+void AmlSdEmmc::WaitForBus() const {
+  while (!AmlSdEmmcStatus::Get().ReadFrom(&mmio_).cmd_i()) {
+    zx::nanosleep(zx::deadline_after(zx::usec(10)));
+  }
 }
 
 zx_status_t AmlSdEmmc::TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
@@ -950,14 +925,7 @@ zx_status_t AmlSdEmmc::Init() {
   dev_info_.max_transfer_size_non_dma = AML_SD_EMMC_MAX_PIO_DATA_SIZE;
   max_freq_ = board_config_.max_freq;
   min_freq_ = board_config_.min_freq;
-  sync_completion_reset(&req_completion_);
 
-  // Init the Irq thread
-  auto cb = [](void* arg) -> int { return reinterpret_cast<AmlSdEmmc*>(arg)->IrqThread(); };
-  if (thrd_create_with_name(&irq_thread_, cb, this, "aml_sd_emmc_irq_thread") != thrd_success) {
-    zxlogf(ERROR, "AmlSdEmmc::Init: Failed to init irq thread\n");
-    return ZX_ERR_INTERNAL;
-  }
   return ZX_OK;
 }
 
@@ -965,9 +933,6 @@ zx_status_t AmlSdEmmc::Bind() {
   zx_status_t status = DdkAdd("aml-sd-emmc");
   if (status != ZX_OK) {
     irq_.destroy();
-    if (irq_thread_) {
-      thrd_join(irq_thread_, NULL);
-    }
     zxlogf(ERROR, "AmlSdEmmc::Bind: DdkAdd failed\n");
   }
   return status;
@@ -1070,8 +1035,6 @@ void AmlSdEmmc::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSdEmmc::DdkRelease() {
   irq_.destroy();
-  if (irq_thread_)
-    thrd_join(irq_thread_, NULL);
   delete this;
 }
 

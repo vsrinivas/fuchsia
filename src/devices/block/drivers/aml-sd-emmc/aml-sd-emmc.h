@@ -6,8 +6,6 @@
 #define SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
 
 #include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
@@ -67,13 +65,11 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   // Visible for tests
   zx_status_t Bind();
 
-  virtual zx_status_t WaitForInterrupt();
-  virtual void OnIrqThreadExit();
+  virtual zx_status_t WaitForInterruptImpl();
+  virtual void WaitForBus() const;
 
   ddk::MmioBuffer mmio_;
   fbl::Mutex mtx_;
-  // cur pending req
-  sdmmc_req_t* cur_req_ TA_GUARDED(mtx_) = nullptr;
 
  private:
   enum {
@@ -117,7 +113,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sd_emmc_desc_t* desc,
                              aml_sd_emmc_desc_t** last_desc);
   zx_status_t FinishReq(sdmmc_req_t* req);
-  int IrqThread();
+  zx_status_t WaitForInterrupt(sdmmc_req_t* req);
 
   zx::bti bti_;
 
@@ -126,10 +122,8 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx::interrupt irq_;
   aml_sd_emmc_config_t board_config_;
 
-  thrd_t irq_thread_ = {};
   sdmmc_host_info_t dev_info_;
   ddk::IoBuffer descs_buffer_;
-  sync_completion_t req_completion_;
   uint32_t max_freq_, min_freq_;
 };
 
