@@ -10,7 +10,7 @@
 
 namespace media::audio {
 
-float UsageGainSettings::GetUsageGain(const fuchsia::media::Usage& usage) const {
+float UsageGainSettings::GetAdjustedUsageGain(const fuchsia::media::Usage& usage) const {
   TRACE_DURATION("audio", "UsageGainSettings::GetUsageGain");
   if (usage.is_render_usage()) {
     const auto usage_index = fidl::ToUnderlying(usage.render_usage());

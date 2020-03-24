@@ -20,7 +20,7 @@ class UsageGainSettings {
   //
   // Since this value includes adjustments, it should only be used for mixing and not reflected to
   // users.
-  float GetUsageGain(const fuchsia::media::Usage& usage) const;
+  float GetAdjustedUsageGain(const fuchsia::media::Usage& usage) const;
 
   void SetUsageGain(fuchsia::media::Usage usage, float gain_db);
 

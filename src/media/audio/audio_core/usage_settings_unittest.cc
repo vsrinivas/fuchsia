@@ -22,16 +22,16 @@ TEST(UsageGainSettingsTest, RenderUsageGainPersists) {
   const auto test_usage = [&under_test](auto render_usage) {
     under_test.SetUsageGain(fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage)),
                             kArbitraryGainValue);
-    EXPECT_FLOAT_EQ(
-        under_test.GetUsageGain(fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage))),
-        kArbitraryGainValue);
+    EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(
+                        fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage))),
+                    kArbitraryGainValue);
 
     under_test.SetUsageGainAdjustment(
         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage)),
         kArbitraryGainAdjustment);
-    EXPECT_FLOAT_EQ(
-        under_test.GetUsageGain(fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage))),
-        kArbitraryGainValue + kArbitraryGainAdjustment);
+    EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(
+                        fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage))),
+                    kArbitraryGainValue + kArbitraryGainAdjustment);
   };
 
   test_usage(fuchsia::media::AudioRenderUsage::MEDIA);
@@ -44,14 +44,14 @@ TEST(UsageGainSettingsTest, CaptureUsageGainPersists) {
   const auto test_usage = [&under_test](auto capture_usage) {
     under_test.SetUsageGain(fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(capture_usage)),
                             kArbitraryGainValue);
-    EXPECT_FLOAT_EQ(under_test.GetUsageGain(
+    EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(
                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(capture_usage))),
                     kArbitraryGainValue);
 
     under_test.SetUsageGainAdjustment(
         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(capture_usage)),
         kArbitraryGainAdjustment);
-    EXPECT_FLOAT_EQ(under_test.GetUsageGain(
+    EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(
                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(capture_usage))),
                     kArbitraryGainValue + kArbitraryGainAdjustment);
   };
@@ -66,7 +66,7 @@ TEST(UsageGainSettingsTest, UsageGainCannotExceedUnity) {
   UsageGainSettings under_test;
   under_test.SetUsageGain(fidl::Clone(usage), 10.0);
 
-  EXPECT_FLOAT_EQ(under_test.GetUsageGain(fidl::Clone(usage)), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(fidl::Clone(usage)), Gain::kUnityGainDb);
 }
 
 TEST(UsageVolumeSettingsTest, RenderUsageVolumePersists) {

@@ -79,19 +79,22 @@ TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
   // Start playing a MEDIA stream and check for 'no gain adjustment'.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
 
   // Now play a COMMUNICATIONS stream and also check for 'no gain adjustment'.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::COMMUNICATION))));
 }
 
 TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
@@ -121,29 +124,34 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
   // create media active stream.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
 
   // communications renderer becomes active; media should duck.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kDuckGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kDuckGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::COMMUNICATION))));
 
   // comms becomes inactive; ducking should stop.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r2);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::COMMUNICATION))));
 }
 
 TEST_F(AudioAdminTest, CapturerDucksRenderer) {
@@ -174,29 +182,34 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
   // Create active media stream.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
 
   // Create active comms capturer; media output should duck.
   admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, true, &c1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kDuckGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(
-                                             fuchsia::media::AudioCaptureUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kDuckGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithCaptureUsage(
+                    fidl::Clone(fuchsia::media::AudioCaptureUsage::COMMUNICATION))));
 
   // Comms becomes inactive; ducking should stop.
   admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, false, &c1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::MEDIA))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(
-                                             fuchsia::media::AudioCaptureUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::MEDIA))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithCaptureUsage(
+                    fidl::Clone(fuchsia::media::AudioCaptureUsage::COMMUNICATION))));
 }
 
 TEST_F(AudioAdminTest, RendererDucksCapturer) {
@@ -226,29 +239,34 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
   // Create active capturer stream.
   admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::FOREGROUND, true, &c1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(
-                                             fuchsia::media::AudioCaptureUsage::FOREGROUND))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithCaptureUsage(
+                    fidl::Clone(fuchsia::media::AudioCaptureUsage::FOREGROUND))));
 
   // Create active comms renderer; foreground capturer should duck.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kDuckGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(
-                                             fuchsia::media::AudioCaptureUsage::FOREGROUND))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kDuckGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithCaptureUsage(
+                    fidl::Clone(fuchsia::media::AudioCaptureUsage::FOREGROUND))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::COMMUNICATION))));
 
   // Comms becomes inactive; ducking should stop.
   admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r1);
   RunLoopUntilIdle();
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(
-                                             fuchsia::media::AudioCaptureUsage::FOREGROUND))));
-  EXPECT_EQ(kStreamGain + kNoneGain, stream_volume_manager.GetUsageGainSettings().GetUsageGain(
-                                         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(
-                                             fuchsia::media::AudioRenderUsage::COMMUNICATION))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithCaptureUsage(
+                    fidl::Clone(fuchsia::media::AudioCaptureUsage::FOREGROUND))));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(
+                    fidl::Clone(fuchsia::media::AudioRenderUsage::COMMUNICATION))));
 }
 
 TEST_F(AudioAdminTest, PolicyActionsReported) {
