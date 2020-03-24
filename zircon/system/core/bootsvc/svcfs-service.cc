@@ -157,29 +157,28 @@ void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
   llcpp::fuchsia::kernel::CpuStats stats;
   stats.actual_num_cpus = actual;
   llcpp::fuchsia::kernel::PerCpuStats per_cpu_stats[available];
-  fbl::Vector<std::unique_ptr<llcpp::fuchsia::kernel::PerCpuStats::UnownedBuilder>> builders;
   stats.per_cpu_stats = fidl::VectorView(fidl::unowned_ptr(per_cpu_stats), available);
   for (uint32_t cpu_num = 0; cpu_num < available; ++cpu_num) {
-    // TODO(fxb/42059) Switch to using owned heap allocated builders.
-    builders.push_back(std::make_unique<llcpp::fuchsia::kernel::PerCpuStats::UnownedBuilder>());
-    auto& builder = builders[cpu_num];
     auto& cpu_stat = cpu_stats[cpu_num];
-    builder->set_cpu_number(fidl::unowned_ptr(&cpu_stat.cpu_number));
-    builder->set_flags(fidl::unowned_ptr(&cpu_stat.flags));
-    builder->set_idle_time(fidl::unowned_ptr(&cpu_stat.idle_time));
-    builder->set_reschedules(fidl::unowned_ptr(&cpu_stat.reschedules));
-    builder->set_context_switches(fidl::unowned_ptr(&cpu_stat.context_switches));
-    builder->set_irq_preempts(fidl::unowned_ptr(&cpu_stat.irq_preempts));
-    builder->set_yields(fidl::unowned_ptr(&cpu_stat.yields));
-    builder->set_ints(fidl::unowned_ptr(&cpu_stat.ints));
-    builder->set_timer_ints(fidl::unowned_ptr(&cpu_stat.timer_ints));
-    builder->set_timers(fidl::unowned_ptr(&cpu_stat.timers));
-    builder->set_page_faults(fidl::unowned_ptr(&cpu_stat.page_faults));
-    builder->set_exceptions(fidl::unowned_ptr(&cpu_stat.exceptions));
-    builder->set_syscalls(fidl::unowned_ptr(&cpu_stat.syscalls));
-    builder->set_reschedule_ipis(fidl::unowned_ptr(&cpu_stat.reschedule_ipis));
-    builder->set_generic_ipis(fidl::unowned_ptr(&cpu_stat.generic_ipis));
-    per_cpu_stats[cpu_num] = builder->build();
+    per_cpu_stats[cpu_num] =
+        llcpp::fuchsia::kernel::PerCpuStats::Builder(
+            std::make_unique<llcpp::fuchsia::kernel::PerCpuStats::Frame>())
+            .set_cpu_number(fidl::unowned_ptr(&cpu_stat.cpu_number))
+            .set_flags(fidl::unowned_ptr(&cpu_stat.flags))
+            .set_idle_time(fidl::unowned_ptr(&cpu_stat.idle_time))
+            .set_reschedules(fidl::unowned_ptr(&cpu_stat.reschedules))
+            .set_context_switches(fidl::unowned_ptr(&cpu_stat.context_switches))
+            .set_irq_preempts(fidl::unowned_ptr(&cpu_stat.irq_preempts))
+            .set_yields(fidl::unowned_ptr(&cpu_stat.yields))
+            .set_ints(fidl::unowned_ptr(&cpu_stat.ints))
+            .set_timer_ints(fidl::unowned_ptr(&cpu_stat.timer_ints))
+            .set_timers(fidl::unowned_ptr(&cpu_stat.timers))
+            .set_page_faults(fidl::unowned_ptr(&cpu_stat.page_faults))
+            .set_exceptions(fidl::unowned_ptr(&cpu_stat.exceptions))
+            .set_syscalls(fidl::unowned_ptr(&cpu_stat.syscalls))
+            .set_reschedule_ipis(fidl::unowned_ptr(&cpu_stat.reschedule_ipis))
+            .set_generic_ipis(fidl::unowned_ptr(&cpu_stat.generic_ipis))
+            .build();
   }
   completer.Reply(std::move(stats));
 }
