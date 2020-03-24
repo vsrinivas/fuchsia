@@ -104,6 +104,18 @@ bool SlotHasPinnedPage(VmPageOrMarker* slot) {
   return slot && slot->IsPage() && slot->Page()->object.pin_count > 0;
 }
 
+// Convenience function that produces a callback suitable for passing to VmPageList::RemovePages
+auto FreePageIntoList(list_node_t* free_list) {
+  return [free_list](VmPageOrMarker* p, uint64_t off) {
+    if (p->IsPage()) {
+      vm_page_t* page = p->ReleasePage();
+      DEBUG_ASSERT(!list_in_list(&page->queue_node));
+      list_add_tail(free_list, &page->queue_node);
+    }
+    *p = VmPageOrMarker::Empty();
+  };
+}
+
 }  // namespace
 
 VmObjectPaged::VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
@@ -162,21 +174,16 @@ VmObjectPaged::~VmObjectPaged() {
     DEBUG_ASSERT(page_list_.HasNoPages());
   }
 
-  page_list_.ForEveryPage([this](const auto& p, uint64_t off) {
-    if (p.IsPage()) {
-      if (this->is_contiguous()) {
-        p.Page()->object.pin_count--;
-      }
-      ASSERT(p.Page()->object.pin_count == 0);
-    }
-    return ZX_ERR_NEXT;
-  });
-
   list_node_t list;
   list_initialize(&list);
-
   // free all of the pages attached to us
-  page_list_.RemoveAllPages(&list);
+  page_list_.RemoveAllPages([this, &list](vm_page_t* page) {
+    if (this->is_contiguous()) {
+      page->object.pin_count--;
+    }
+    ASSERT(page->object.pin_count == 0);
+    list_add_tail(&list, &page->queue_node);
+  });
 
   if (page_source_) {
     page_source_->Close();
@@ -813,8 +820,8 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
   const uint64_t merge_start_offset = child.parent_offset_;
   const uint64_t merge_end_offset = child.parent_offset_ + child.parent_limit_;
 
-  page_list_.RemovePages(0, visibility_start_offset, &freed_pages);
-  page_list_.RemovePages(merge_end_offset, MAX_SIZE, &freed_pages);
+  page_list_.RemovePages(FreePageIntoList(&freed_pages), 0, visibility_start_offset);
+  page_list_.RemovePages(FreePageIntoList(&freed_pages), merge_end_offset, MAX_SIZE);
 
   if (child.parent_offset_ + child.parent_limit_ > parent_limit_) {
     // Update the child's parent limit to ensure that it won't be able to see more
@@ -920,7 +927,10 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
 
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
-    child.page_list_.MergeOnto(page_list_, &covered_pages);
+    child.page_list_.MergeOnto(page_list_, [&covered_pages](vm_page_t* p) {
+      DEBUG_ASSERT(!list_in_list(&p->queue_node));
+      list_add_tail(&covered_pages, &p->queue_node);
+    });
     child.page_list_ = ktl::move(page_list_);
 
 #ifdef DEBUG_ASSERT_IMPLEMENTED
@@ -940,7 +950,7 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
     // Merge our page list into the child page list and update all the necessary metadata.
     child.page_list_.MergeFrom(
         page_list_, merge_start_offset, merge_end_offset,
-        [this_is_contig = this->is_contiguous()](vm_page* page, uint64_t offset) {
+        [&freed_pages, this_is_contig = this->is_contiguous()](vm_page* page, uint64_t offset) {
           if (this_is_contig) {
             // If this vmo is contiguous, unpin the pages that aren't needed. The pages
             // are either original contig pages (which should have a pin_count of 1),
@@ -949,9 +959,13 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
             DEBUG_ASSERT(page->object.pin_count <= 1);
             page->object.pin_count = 0;
           }
+          list_add_tail(&freed_pages, &page->queue_node);
         },
-        [this_is_contig = this->is_contiguous(), child_is_contig = child.is_contiguous(),
-         removed_left](vm_page* page, uint64_t offset) -> bool {
+        [&freed_pages, this_is_contig = this->is_contiguous(),
+         child_is_contig = child.is_contiguous(),
+         removed_left](VmPageOrMarker* page_or_marker, uint64_t offset) {
+          DEBUG_ASSERT(page_or_marker->IsPage());
+          vm_page_t* page = page_or_marker->Page();
           if (child_is_contig) {
             // We moved the page into the contiguous vmo, so we expect the page
             // to be a pinned contiguous page.
@@ -969,16 +983,15 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
           if (removed_left ? page->object.cow_right_split : page->object.cow_left_split) {
             // This happens when the pages was already migrated into child but then
             // was migrated further into child's descendants. The page can be freed.
-            return false;
+            page = page_or_marker->ReleasePage();
+            list_add_tail(&freed_pages, &page->queue_node);
           } else {
             // Since we recursively fork on write, if the child doesn't have the
             // page, then neither of its children do.
             page->object.cow_left_split = 0;
             page->object.cow_right_split = 0;
-            return true;
           }
-        },
-        &freed_pages);
+        });
   }
 
   if (!list_is_empty(&freed_pages)) {
@@ -1999,7 +2012,7 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   // unmap all of the pages in this range on all the mapping regions
   RangeChangeUpdateLocked(offset, new_len, RangeChangeOp::Unmap);
 
-  page_list_.RemovePages(offset, offset + new_len, &free_list);
+  page_list_.RemovePages(FreePageIntoList(&free_list), offset, offset + new_len);
 
   return ZX_OK;
 }
@@ -2454,17 +2467,21 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
   auto parent = VmObjectPaged::AsVmObjectPaged(parent_);
   AssertHeld(parent->lock_);
   parent->page_list_.RemovePages(
-      [skip_split_bits, left = this == &parent->left_child_locked()](
-          const VmPageOrMarker& page_or_mark, auto offset) -> bool {
-        if (page_or_mark.IsMarker())
-          return true;
-        vm_page* page = page_or_mark.Page();
+      [skip_split_bits, &free_list, left = this == &parent->left_child_locked()](
+          VmPageOrMarker* page_or_mark, uint64_t offset) {
+        if (page_or_mark->IsMarker()) {
+          *page_or_mark = VmPageOrMarker::Empty();
+          return;
+        }
+        vm_page* page = page_or_mark->Page();
         // Simply checking if the page is resident in |this|->page_list_ is insufficient, as the
         // page split into this vmo could have been migrated anywhere into is children. To avoid
         // having to search its entire child subtree, we need to track into which subtree
         // a page is split (i.e. have two directional split bits instead of a single split bit).
         if (left ? page->object.cow_right_split : page->object.cow_left_split) {
-          return true;
+          page = page_or_mark->ReleasePage();
+          list_add_tail(free_list, &page->queue_node);
+          return;
         }
         if (skip_split_bits) {
           // If we were able to update this vmo's parent limit, that made the pages
@@ -2480,9 +2497,8 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
             page->object.cow_right_split = 1;
           }
         }
-        return false;
       },
-      parent_range_start, parent_range_end, free_list);
+      parent_range_start, parent_range_end);
 }
 
 void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t root_end,
@@ -2535,7 +2551,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
           // start offset will be set to head_end.
           uint64_t head_end =
               fbl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
-          parent->page_list_.RemovePages(parent_range_start, head_end, free_list);
+          parent->page_list_.RemovePages(FreePageIntoList(free_list), parent_range_start, head_end);
 
           if (start == cur->parent_start_limit_) {
             cur->parent_start_limit_ = head_end;
@@ -2566,7 +2582,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
         // If the tail region is non-empty, recurse into the parent. Note that
         // we do put this vmo back on the stack, which makes it simpler to walk back
         // up the tree.
-        parent->page_list_.RemovePages(tail_start, parent_range_end, free_list);
+        parent->page_list_.RemovePages(FreePageIntoList(free_list), tail_start, parent_range_end);
 
         DEBUG_ASSERT((cur_end & 1) == 0);  // cur_end is page aligned
         uint64_t scratch = cur_end >> 1;   // gcc is finicky about setting bitfields
@@ -2658,7 +2674,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     // again, even if the parent is later reenlarged. So update the child parent limits.
     UpdateChildParentLimitsLocked(s);
 
-    page_list_.RemovePages(start, end, &free_list);
+    page_list_.RemovePages(FreePageIntoList(&free_list), start, end);
   } else if (s > size_) {
     // expanding
     // figure the starting and ending page offset that is affected

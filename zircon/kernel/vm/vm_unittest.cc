@@ -662,7 +662,7 @@ static bool pmm_get_arena_info_test() {
 
   // See they are in ascending order by base.
   paddr_t prev = 0;
-  for (unsigned i = 0; i < num_arenas; ++i){
+  for (unsigned i = 0; i < num_arenas; ++i) {
     if (i == 0) {
       ASSERT_GE(buffer[i].base, prev);
     } else {
@@ -1935,7 +1935,15 @@ static bool vmpl_free_pages_test() {
 
   list_node_t list;
   list_initialize(&list);
-  pl.RemovePages(PAGE_SIZE * 2, (kCount - 1) * 2 * PAGE_SIZE, &list);
+  pl.RemovePages(
+      [&list](VmPageOrMarker* page_or_marker, uint64_t off) {
+        if (page_or_marker->IsPage()) {
+          vm_page_t* p = page_or_marker->ReleasePage();
+          list_add_tail(&list, &p->queue_node);
+        }
+        *page_or_marker = VmPageOrMarker::Empty();
+      },
+      PAGE_SIZE * 2, (kCount - 1) * 2 * PAGE_SIZE);
   for (unsigned i = 1; i < kCount - 2; i++) {
     EXPECT_TRUE(list_in_list(&test_pages[i].queue_node), "Not in free list");
   }
@@ -1969,7 +1977,7 @@ static bool vmpl_free_pages_last_page_test() {
 
   list_node_t list;
   list_initialize(&list);
-  pl.RemoveAllPages(&list);
+  pl.RemoveAllPages([&list](vm_page_t* p) { list_add_tail(&list, &p->queue_node); });
   EXPECT_TRUE(pl.IsEmpty(), "not empty\n");
 
   EXPECT_EQ(list_length(&list), 1u, "too many pages");
@@ -1992,7 +2000,7 @@ static bool vmpl_near_last_offset_free() {
 
       list_node_t list;
       list_initialize(&list);
-      pl.RemoveAllPages(&list);
+      pl.RemoveAllPages([&list](vm_page_t* p) { list_add_tail(&list, &p->queue_node); });
 
       EXPECT_EQ(list_length(&list), 1u, "too many pages");
       EXPECT_EQ(list_remove_head_type(&list, vm_page_t, queue_node), &page, "wrong page");
@@ -2202,7 +2210,7 @@ static bool vmpl_page_gap_iter_test_body(vm_page_t** pages, uint32_t count, uint
 
   list_node_t free_list;
   list_initialize(&free_list);
-  list.RemoveAllPages(&free_list);
+  list.RemoveAllPages([&free_list](vm_page_t* p) { list_add_tail(&free_list, &p->queue_node); });
   ASSERT_TRUE(list.IsEmpty());
 
   END_TEST;
@@ -2262,15 +2270,16 @@ static bool vmpl_merge_offset_test_helper(uint64_t list1_offset, uint64_t list2_
       [&](vm_page* page, uint64_t offset) {
         DEBUG_ASSERT(page == test_pages || page == test_pages + 5);
         DEBUG_ASSERT(offset == offsets[0] || offset == offsets[5]);
+        list_add_tail(&free_list, &page->queue_node);
       },
-      [&](vm_page* page, uint64_t offset) {
+      [&](VmPageOrMarker* page_or_marker, uint64_t offset) {
+        DEBUG_ASSERT(page_or_marker->IsPage());
+        vm_page_t* page = page_or_marker->Page();
         DEBUG_ASSERT(page == test_pages + 1 || page == test_pages + 2 || page == test_pages + 3 ||
                      page == test_pages + 4);
         DEBUG_ASSERT(offset == offsets[1] || offset == offsets[2] || offset == offsets[3] ||
                      offsets[4]);
-        return true;
-      },
-      &free_list);
+      });
 
   EXPECT_EQ(list_length(&free_list), 2ul);
 
@@ -2321,13 +2330,14 @@ static bool vmpl_merge_overlap_test_helper(uint64_t list1_offset, uint64_t list2
       [&](vm_page* page, uint64_t offset) {
         DEBUG_ASSERT(page == test_pages);
         DEBUG_ASSERT(offset == list2_offset);
+        list_add_tail(&free_list, &page->queue_node);
       },
-      [&](vm_page* page, uint64_t offset) {
+      [&](VmPageOrMarker* page_or_marker, uint64_t offset) {
+        DEBUG_ASSERT(page_or_marker->IsPage());
+        vm_page_t* page = page_or_marker->Page();
         DEBUG_ASSERT(page == test_pages + 1);
         DEBUG_ASSERT(offset == list2_offset + 2 * PAGE_SIZE);
-        return true;
-      },
-      &free_list);
+      });
 
   EXPECT_EQ(list_length(&free_list), 1ul);
 
@@ -2399,7 +2409,7 @@ static bool vmpl_for_every_page_test() {
 
   list_node_t free_list;
   list_initialize(&free_list);
-  list.RemoveAllPages(&free_list);
+  list.RemoveAllPages([&free_list](vm_page_t* p) { list_add_tail(&free_list, &p->queue_node); });
 
   END_TEST;
 }
@@ -2422,7 +2432,7 @@ static bool vmpl_merge_onto_test() {
   list_node_t free_list;
   list_initialize(&free_list);
 
-  list1.MergeOnto(list2, &free_list);
+  list1.MergeOnto(list2, [&free_list](auto* p) { list_add_tail(&free_list, &p->queue_node); });
 
   // (test_pages + 0) should have covered this page
   EXPECT_EQ(1ul, list_length(&free_list));
@@ -2434,7 +2444,7 @@ static bool vmpl_merge_onto_test() {
   EXPECT_EQ(test_pages + 3,
             list2.Lookup(2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE)->Page());
 
-  list2.RemoveAllPages(&free_list);
+  list2.RemoveAllPages([&free_list](vm_page_t* p) { list_add_tail(&free_list, &p->queue_node); });
   EXPECT_EQ(3ul, list_length(&free_list));
 
   END_TEST;

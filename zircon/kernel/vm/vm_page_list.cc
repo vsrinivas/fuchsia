@@ -157,38 +157,6 @@ VmPageOrMarker VmPageList::RemovePage(uint64_t offset) {
   return page;
 }
 
-void VmPageList::RemovePages(uint64_t start_offset, uint64_t end_offset,
-                             list_node_t* removed_pages) {
-  RemovePages([](const auto& p, uint64_t) -> bool { return true; }, start_offset, end_offset,
-              removed_pages);
-}
-
-size_t VmPageList::RemoveAllPages(list_node_t* removed_pages) {
-  LTRACEF("%p\n", this);
-
-  DEBUG_ASSERT(removed_pages);
-
-  size_t count = 0;
-
-  // per page get a reference to the page pointer inside the page list node
-  auto per_page_func = [&](VmPageOrMarker& p, uint64_t offset) {
-    if (p.IsPage()) {
-      // add the page to our list and null out the inner node
-      list_add_tail(removed_pages, &p.ReleasePage()->queue_node);
-      count++;
-    }
-    return ZX_ERR_NEXT;
-  };
-
-  // walk the tree in order, freeing all the pages on every node
-  ForEveryPage(per_page_func);
-
-  // empty the tree
-  list_.clear();
-
-  return count;
-}
-
 bool VmPageList::IsEmpty() const { return list_.is_empty(); }
 
 bool VmPageList::HasNoPages() const {
@@ -206,26 +174,26 @@ bool VmPageList::HasNoPages() const {
 
 void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint64_t end_offset,
                            fbl::Function<void(vm_page*, uint64_t offset)> release_fn,
-                           fbl::Function<bool(vm_page*, uint64_t offset)> migrate_fn,
-                           list_node_t* free_list) {
+                           fbl::Function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn) {
   constexpr uint64_t kNodeSize = PAGE_SIZE * VmPageListNode::kPageFanOut;
   // The skewed |offset| in |other| must be equal to 0 skewed in |this|. This allows
   // nodes to moved directly between the lists, without having to worry about allocations.
   DEBUG_ASSERT((other.list_skew_ + offset) % kNodeSize == list_skew_);
 
-  auto release_fn_wrapper = [&release_fn](auto& p, uint64_t offset) -> bool {
-    if (p.IsPage()) {
-      release_fn(p.Page(), offset);
+  auto release_fn_wrapper = [&release_fn](VmPageOrMarker* page_or_marker, uint64_t offset) {
+    if (page_or_marker->IsPage()) {
+      vm_page_t* page = page_or_marker->ReleasePage();
+      release_fn(page, offset);
     }
-    return true;
+    *page_or_marker = VmPageOrMarker::Empty();
   };
 
   // Free pages outside of [|offset|, |end_offset|) so that the later code
   // doesn't have to worry about dealing with this.
   if (offset) {
-    other.RemovePages(release_fn_wrapper, 0, offset, free_list);
+    other.RemovePages(release_fn_wrapper, 0, offset);
   }
-  other.RemovePages(release_fn_wrapper, end_offset, MAX_SIZE, free_list);
+  other.RemovePages(release_fn_wrapper, end_offset, MAX_SIZE);
 
   // Calculate how much we need to shift nodes so that the node in |other| which contains
   // |offset| gets mapped to offset 0 in |this|.
@@ -249,17 +217,16 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
         VmPageOrMarker page = ktl::move(other_node->Lookup(i));
         VmPageOrMarker& target_page = target->Lookup(i);
         if (target_page.IsEmpty()) {
-          if (!page.IsPage() || migrate_fn(page.Page(), src_offset)) {
-            target_page = ktl::move(page);
+          if (page.IsPage()) {
+            migrate_fn(&page, src_offset);
           }
+          target_page = ktl::move(page);
         } else if (page.IsPage()) {
-          release_fn(page.Page(), src_offset);
+          release_fn(page.ReleasePage(), src_offset);
         }
 
         // In all cases if we still have a page add it to the free list.
-        if (page.IsPage()) {
-          list_add_tail(free_list, &page.ReleasePage()->queue_node);
-        }
+        DEBUG_ASSERT(!page.IsPage());
       }
     } else {
       // If there's no node at the desired location, then directly insert the node.
@@ -268,10 +235,9 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
       for (unsigned i = 0; i < VmPageListNode::kPageFanOut; i++) {
         VmPageOrMarker& page = target->Lookup(i);
         if (page.IsPage()) {
-          if (migrate_fn(page.Page(), other_offset - other.list_skew_ + i * PAGE_SIZE)) {
+          migrate_fn(&page, other_offset - other.list_skew_ + i * PAGE_SIZE);
+          if (page.IsPage()) {
             has_page = true;
-          } else {
-            list_add_tail(free_list, &page.ReleasePage()->queue_node);
           }
         } else if (page.IsMarker()) {
           has_page = true;
@@ -284,7 +250,7 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
   }
 }
 
-void VmPageList::MergeOnto(VmPageList& other, list_node_t* free_list) {
+void VmPageList::MergeOnto(VmPageList& other, fbl::Function<void(vm_page*)> release_fn) {
   DEBUG_ASSERT(other.list_skew_ == list_skew_);
 
   auto iter = list_.begin();
@@ -292,7 +258,7 @@ void VmPageList::MergeOnto(VmPageList& other, list_node_t* free_list) {
     auto node = list_.erase(iter++);
     auto target = other.list_.find(node->GetKey());
     if (target.IsValid()) {
-      // If there'a already a node at the desired location, then merge the two nodes.
+      // If there's already a node at the desired location, then merge the two nodes.
       for (unsigned i = 0; i < VmPageListNode::kPageFanOut; i++) {
         VmPageOrMarker page = ktl::move(node->Lookup(i));
         if (page.IsEmpty()) {
@@ -302,7 +268,7 @@ void VmPageList::MergeOnto(VmPageList& other, list_node_t* free_list) {
         VmPageOrMarker removed = ktl::move(old_page);
         old_page = ktl::move(page);
         if (removed.IsPage()) {
-          list_add_tail(free_list, &removed.ReleasePage()->queue_node);
+          release_fn(removed.ReleasePage());
         }
       }
     } else {

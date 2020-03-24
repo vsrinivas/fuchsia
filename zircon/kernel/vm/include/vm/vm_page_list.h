@@ -293,20 +293,34 @@ class VmPageList final {
 
   // Removes any page at |offset| from the list and returns it, or VmPageOrMarker::Empty() if none.
   VmPageOrMarker RemovePage(uint64_t offset);
-  // Removes all pages from this list and puts them on |removed_pages|. The caller
-  // now owns the pages. Any markers are cleared.
-  size_t RemoveAllPages(list_node_t* removed_pages);
-  // Removes all pages in the range [start_offset, end_offset) and puts them
-  // on |removed_pages|. The caller now owns the pages. Any markers are cleared.
-  void RemovePages(uint64_t start_offset, uint64_t end_offset, list_node_t* remove_page);
-  // Invokes T on each page or marker in [start_offset, end_offset) and for any pages for
-  // which it returns true, puts them on |removed_pages|. The caller now owns
-  // the pages.
-  template <typename T>
-  void RemovePages(T per_page_fn, uint64_t start_offset, uint64_t end_offset,
-                   list_node_t* removed_pages) {
-    DEBUG_ASSERT(removed_pages);
 
+  // Release every page in the in the page list and calls free_page_fn on each one, giving it
+  // ownership. Any markers are cleared.
+  template <typename T>
+  void RemoveAllPages(T free_page_fn) {
+    // per page get a reference to the page pointer inside the page list node
+    auto per_page_func = [&free_page_fn](VmPageOrMarker& p, uint64_t offset) {
+      if (p.IsPage()) {
+        free_page_fn(p.ReleasePage());
+      }
+      p = VmPageOrMarker::Empty();
+      return ZX_ERR_NEXT;
+    };
+
+    // walk the tree in order, freeing all the pages on every node
+    ForEveryPage(per_page_func);
+
+    // empty the tree
+    list_.clear();
+  }
+
+  // Calls the provided callback for every page or marker in the range [start_offset, end_offset).
+  // The callback can modify the VmPageOrMarker and take ownership of any pages, or leave them in
+  // place. The difference between this and ForEveryPage is as this allows for modifying the
+  // underlying pages any intermediate data structures can be checked and potentially freed if no
+  // longer needed.
+  template <typename T>
+  void RemovePages(T per_page_fn, uint64_t start_offset, uint64_t end_offset) {
     start_offset += list_skew_;
     end_offset += list_skew_;
 
@@ -322,15 +336,8 @@ class VmPageList final {
 
     // Visitor function which moves the pages from the VmPageListNode
     // to the accumulation list.
-    auto per_page_func = [per_page_fn, &removed_pages](VmPageOrMarker& p, uint64_t offset) {
-      // Ensure per_page_fn views `p` behind a const reference so we know that we still own any
-      // page.
-      if (per_page_fn(static_cast<const VmPageOrMarker&>(p), offset)) {
-        if (p.IsPage()) {
-          list_add_tail(removed_pages, &p.ReleasePage()->queue_node);
-        }
-        p = VmPageOrMarker::Empty();
-      }
+    auto per_page_func = [&per_page_fn](VmPageOrMarker& p, uint64_t offset) {
+      per_page_fn(&p, offset);
       return ZX_ERR_NEXT;
     };
 
@@ -355,10 +362,10 @@ class VmPageList final {
   // page list, starting at offset 0 in this list.
   //
   // For every page in |other| in the given range, if there is no corresponding page or marker
-  // in |this|, then they will be passed to |migrate_fn|. If |migrate_fn| returns true,
-  // they will be migrated into |this|; otherwise they will be added to |free_list|. For
-  // any pages in |other| outside the given range or which conflict with a page in |this|,
-  // they will be passed to |release_fn| and then added to |free_list|.
+  // in |this|, then they will be passed to |migrate_fn|. If |migrate_fn| leaves the page in the
+  // VmPageOrMarker it will be migrated into |this|, otherwise the migrate_fn is assumed to now own
+  // the page. For any pages in |other| outside the given range or which conflict with a page in
+  // |this|, they will be released given ownership to |release_fn|.
   //
   // The |offset| values passed to |release_fn| and |migrate_fn| are the original offsets
   // in |other|, not the adapted offsets in |this|.
@@ -366,16 +373,16 @@ class VmPageList final {
   // **NOTE** unlike MergeOnto, |other| will be empty at the end of this method.
   void MergeFrom(VmPageList& other, uint64_t offset, uint64_t end_offset,
                  fbl::Function<void(vm_page*, uint64_t offset)> release_fn,
-                 fbl::Function<bool(vm_page*, uint64_t offset)> migrate_fn, list_node_t* free_list);
+                 fbl::Function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn);
 
   // Merges this pages in |this| onto |other|.
   //
   // For every page (or marker) in |this|, checks the same offset in |other|. If there is no
-  // page or marker, then it inserts the page into |other|. Otherwise, it adds the
-  // page onto |free_list|.
+  // page or marker, then it inserts the page into |other|. Otherwise, it releases the page and
+  // gives ownership to |release_fn|.
   //
   // **NOTE** unlike MergeFrom, |this| will be empty at the end of this method.
-  void MergeOnto(VmPageList& other, list_node_t* free_list);
+  void MergeOnto(VmPageList& other, fbl::Function<void(vm_page*)> release_fn);
 
   // Takes the pages and markers in the range [offset, length) out of this page list.
   VmPageSpliceList TakePages(uint64_t offset, uint64_t length);
