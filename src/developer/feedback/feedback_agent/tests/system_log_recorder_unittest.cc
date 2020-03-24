@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
+#include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/file.h"
@@ -43,7 +43,7 @@ class SystemLogRecorderTest : public UnitTestFixture {
         std::make_unique<SystemLogRecorder>(services(), log_file_paths_, log_size);
   }
 
-  void SetUpLogger(std::unique_ptr<StubLogger> logger) {
+  void SetUpLogger(std::unique_ptr<stubs::Logger> logger) {
     logger_ = std::move(logger);
     if (logger_) {
       InjectServiceProvider(logger_.get());
@@ -59,7 +59,7 @@ class SystemLogRecorderTest : public UnitTestFixture {
 
  private:
   files::ScopedTempDir temp_dir_;
-  std::unique_ptr<StubLogger> logger_;
+  std::unique_ptr<stubs::Logger> logger_;
   std::unique_ptr<SystemLogRecorder> system_log_recorder_;
 
  protected:
@@ -73,29 +73,29 @@ TEST_F(SystemLogRecorderTest, Check_RecordsLogsCorrectly) {
 
   const std::vector<std::vector<fuchsia::logger::LogMessage>> dumps({
       {
-          BuildLogMessage(FX_LOG_INFO, "line 1"),
-          BuildLogMessage(FX_LOG_INFO, "line 2"),
-          BuildLogMessage(FX_LOG_INFO, "line 3"),
-          BuildLogMessage(FX_LOG_INFO, "line 4"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 1"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 2"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 3"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 4"),
 
       },
       {
-          BuildLogMessage(FX_LOG_INFO, "line 5"),
-          BuildLogMessage(FX_LOG_INFO, "line 6"),
-          BuildLogMessage(FX_LOG_INFO, "line 7"),
-          BuildLogMessage(FX_LOG_INFO, "line 8"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 5"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 6"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 7"),
+          stubs::BuildLogMessage(FX_LOG_INFO, "line 8"),
       },
 
   });
 
   const std::vector<fuchsia::logger::LogMessage> messages({
-      BuildLogMessage(FX_LOG_INFO, "line 9"),
-      BuildLogMessage(FX_LOG_INFO, "line 10"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 9"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 10"),
 
   });
 
-  auto logger = std::make_unique<StubLoggerDelayedResponses>(dispatcher(), dumps, messages,
-                                                             kDelayBetweenResponses);
+  auto logger = std::make_unique<stubs::LoggerDelayedResponses>(dispatcher(), dumps, messages,
+                                                                kDelayBetweenResponses);
 
   const zx::duration total_dump_delays = logger->TotalDelayBetweenDumps();
   const zx::duration total_message_delays = logger->TotalDelayBetweenMessages();

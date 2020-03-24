@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_BOARD_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_BOARD_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_BOARD_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_BOARD_INFO_PROVIDER_H_
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-#include <string>
-
 namespace feedback {
+namespace stubs {
 
-// Stub Board service to return controlled response to Board::GetInfo().
-class StubBoard : public fuchsia::hwinfo::Board {
+// Stub fuchsia.hwinfo.Board service to return controlled response to GetInfo().
+class BoardInfoProvider : public fuchsia::hwinfo::Board {
  public:
-  StubBoard(fuchsia::hwinfo::BoardInfo&& info) : info_(std::move(info)) {}
+  BoardInfoProvider(fuchsia::hwinfo::BoardInfo&& info) : info_(std::move(info)) {}
 
   // Returns a request handler for a binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::hwinfo::Board> GetHandler() {
@@ -38,13 +37,15 @@ class StubBoard : public fuchsia::hwinfo::Board {
   bool has_been_called_ = false;
 };
 
-class StubBoardNeverReturns : public StubBoard {
+class BoardInfoProviderNeverReturns : public BoardInfoProvider {
  public:
-  StubBoardNeverReturns() : StubBoard(fuchsia::hwinfo::BoardInfo()) {}
+  BoardInfoProviderNeverReturns() : BoardInfoProvider(fuchsia::hwinfo::BoardInfo()) {}
 
   // |fuchsia.hwinfo.Board|
   void GetInfo(GetInfoCallback callback) override;
 };
+
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_BOARD_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_BOARD_INFO_PROVIDER_H_

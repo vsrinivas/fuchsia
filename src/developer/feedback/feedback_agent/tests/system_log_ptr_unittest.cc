@@ -14,10 +14,10 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
@@ -36,7 +36,7 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpLogger(std::unique_ptr<StubLogger> logger) {
+  void SetUpLogger(std::unique_ptr<stubs::Logger> logger) {
     logger_ = std::move(logger);
     if (logger_) {
       InjectServiceProvider(logger_.get());
@@ -58,22 +58,22 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
  private:
   async::Executor executor_;
 
-  std::unique_ptr<StubLogger> logger_;
+  std::unique_ptr<stubs::Logger> logger_;
 };
 
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
-  std::unique_ptr<StubLogger> logger = std::make_unique<StubLogger>();
+  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
   logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO, "line 1"),
-      BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(1)),
-      BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
-      BuildLogMessage(FX_LOG_FATAL, "line 4", zx::msec(3)),
-      BuildLogMessage(-1 /*VLOG(1)*/, "line 5", zx::msec(4)),
-      BuildLogMessage(-2 /*VLOG(2)*/, "line 6", zx::msec(5)),
-      BuildLogMessage(FX_LOG_INFO, "line 7", zx::msec(6), /*tags=*/{"foo"}),
-      BuildLogMessage(FX_LOG_INFO, "line 8", zx::msec(7), /*tags=*/{"bar"}),
-      BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(8),
-                      /*tags=*/{"foo", "bar"}),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 1"),
+      stubs::BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(1)),
+      stubs::BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
+      stubs::BuildLogMessage(FX_LOG_FATAL, "line 4", zx::msec(3)),
+      stubs::BuildLogMessage(-1 /*VLOG(1)*/, "line 5", zx::msec(4)),
+      stubs::BuildLogMessage(-2 /*VLOG(2)*/, "line 6", zx::msec(5)),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 7", zx::msec(6), /*tags=*/{"foo"}),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 8", zx::msec(7), /*tags=*/{"bar"}),
+      stubs::BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(8),
+                             /*tags=*/{"foo", "bar"}),
   });
   SetUpLogger(std::move(logger));
 
@@ -95,11 +95,11 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
-  std::unique_ptr<StubLogger> logger =
-      std::make_unique<StubLoggerUnbindsFromLogListenerAfterOneMessage>();
+  std::unique_ptr<stubs::Logger> logger =
+      std::make_unique<stubs::LoggerUnbindsFromLogListenerAfterOneMessage>();
   logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
-      BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
   SetUpLogger(std::move(logger));
 
@@ -119,11 +119,11 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   const zx::duration logger_delay = zx::sec(10);
   const zx::duration log_collection_timeout = zx::sec(1);
 
-  std::unique_ptr<StubLogger> logger =
-      std::make_unique<StubLoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
+  std::unique_ptr<stubs::Logger> logger =
+      std::make_unique<stubs::LoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
   logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
-      BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
   SetUpLogger(std::move(logger));
 
@@ -144,7 +144,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
-  SetUpLogger(std::make_unique<StubLogger>());
+  SetUpLogger(std::make_unique<stubs::Logger>());
 
   fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -160,7 +160,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
-  SetUpLogger(std::make_unique<StubLoggerClosesConnection>());
+  SetUpLogger(std::make_unique<stubs::LoggerClosesConnection>());
 
   fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -168,7 +168,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
-  SetUpLogger(std::make_unique<StubLoggerNeverBindsToLogListener>());
+  SetUpLogger(std::make_unique<stubs::LoggerNeverBindsToLogListener>());
 
   fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -176,7 +176,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
-  SetUpLogger(std::make_unique<StubLoggerNeverCallsLogManyBeforeDone>());
+  SetUpLogger(std::make_unique<stubs::LoggerNeverCallsLogManyBeforeDone>());
 
   fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -184,7 +184,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
-  SetUpLogger(std::make_unique<StubLoggerBindsToLogListenerButNeverCalls>());
+  SetUpLogger(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
 
   fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -201,9 +201,9 @@ class LogListenerTest : public UnitTestFixture, public CobaltTestFixture {
 
 // DX-1602
 TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
-  std::unique_ptr<StubLogger> logger = std::make_unique<StubLogger>();
+  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
   logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO, "msg"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "msg"),
   });
   InjectServiceProvider(logger.get());
 
@@ -228,9 +228,9 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
 }
 
 TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
-  std::unique_ptr<StubLogger> logger = std::make_unique<StubLogger>();
+  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
   logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO, "msg"),
+      stubs::BuildLogMessage(FX_LOG_INFO, "msg"),
   });
   InjectServiceProvider(logger.get());
 

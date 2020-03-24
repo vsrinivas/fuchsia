@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
+#include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/result.h>
 
 #include "src/lib/fsl/vmo/strings.h"
@@ -12,6 +11,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
+namespace stubs {
 namespace {
 
 std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
@@ -30,14 +30,14 @@ std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
 
 }  // namespace
 
-StubInspectBatchIterator::~StubInspectBatchIterator() {
+InspectBatchIterator::~InspectBatchIterator() {
   FXL_CHECK(!ExpectCall()) << fxl::StringPrintf(
       "Expected %ld more calls to GetNext() (%ld/%lu calls made)",
       std::distance(next_json_batch_, json_batches_.cend()),
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 }
 
-void StubInspectBatchIterator::GetNext(GetNextCallback callback) {
+void InspectBatchIterator::GetNext(GetNextCallback callback) {
   FXL_CHECK(ExpectCall()) << fxl::StringPrintf(
       "No more calls to GetNext() expected (%lu/%lu calls made)",
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
@@ -45,7 +45,7 @@ void StubInspectBatchIterator::GetNext(GetNextCallback callback) {
   callback(fit::ok(ToVmo(*next_json_batch_++)));
 }
 
-void StubInspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback callback) {
+void InspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback callback) {
   if (has_returned_batch_) {
     return;
   }
@@ -54,10 +54,11 @@ void StubInspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback
   has_returned_batch_ = true;
 }
 
-void StubInspectBatchIteratorNeverResponds::GetNext(GetNextCallback callback) {}
+void InspectBatchIteratorNeverResponds::GetNext(GetNextCallback callback) {}
 
-void StubInspectBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
+void InspectBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
   callback(fit::error(fuchsia::diagnostics::ReaderError::IO));
 }
 
+}  // namespace stubs
 }  // namespace feedback

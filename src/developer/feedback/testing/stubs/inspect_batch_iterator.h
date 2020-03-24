@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_INSPECT_BATCH_ITERATOR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_INSPECT_BATCH_ITERATOR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 
@@ -13,25 +13,26 @@
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
+namespace stubs {
 
-// Stub Inspect batch iterator service to return controlled response to BatchIterator::GetNext().
-class StubInspectBatchIteratorBase : public fuchsia::diagnostics::BatchIterator {
+//  Inspect batch iterator service to return controlled response to BatchIterator::GetNext().
+class InspectBatchIteratorBase : public fuchsia::diagnostics::BatchIterator {
  public:
-  StubInspectBatchIteratorBase() = default;
+  InspectBatchIteratorBase() = default;
 
   // |fuchsia.diagnostics.BatchIterator|
   virtual void GetNext(GetNextCallback callback) override { FXL_NOTIMPLEMENTED(); }
 };
 
-class StubInspectBatchIterator : public StubInspectBatchIteratorBase {
+class InspectBatchIterator : public InspectBatchIteratorBase {
  public:
-  StubInspectBatchIterator() : json_batches_({}) {}
-  StubInspectBatchIterator(const std::vector<std::vector<std::string>>& json_batches)
+  InspectBatchIterator() : json_batches_({}) {}
+  InspectBatchIterator(const std::vector<std::vector<std::string>>& json_batches)
       : json_batches_(json_batches) {
     next_json_batch_ = json_batches_.cbegin();
   }
 
-  ~StubInspectBatchIterator();
+  ~InspectBatchIterator();
 
   // Whether the batch iterator expects at least one more call to GetNext().
   bool ExpectCall() { return next_json_batch_ != json_batches_.cend(); }
@@ -43,9 +44,9 @@ class StubInspectBatchIterator : public StubInspectBatchIteratorBase {
   decltype(json_batches_)::const_iterator next_json_batch_;
 };
 
-class StubInspectBatchIteratorNeverRespondsAfterOneBatch : public StubInspectBatchIteratorBase {
+class InspectBatchIteratorNeverRespondsAfterOneBatch : public InspectBatchIteratorBase {
  public:
-  StubInspectBatchIteratorNeverRespondsAfterOneBatch(const std::vector<std::string>& json_batch)
+  InspectBatchIteratorNeverRespondsAfterOneBatch(const std::vector<std::string>& json_batch)
       : json_batch_(json_batch) {}
 
   void GetNext(GetNextCallback callback) override;
@@ -55,20 +56,21 @@ class StubInspectBatchIteratorNeverRespondsAfterOneBatch : public StubInspectBat
   bool has_returned_batch_ = false;
 };
 
-class StubInspectBatchIteratorNeverResponds : public StubInspectBatchIteratorBase {
+class InspectBatchIteratorNeverResponds : public InspectBatchIteratorBase {
  public:
-  StubInspectBatchIteratorNeverResponds() {}
+  InspectBatchIteratorNeverResponds() {}
 
   void GetNext(GetNextCallback callback) override;
 };
 
-class StubInspectBatchIteratorReturnsError : public StubInspectBatchIteratorBase {
+class InspectBatchIteratorReturnsError : public InspectBatchIteratorBase {
  public:
-  StubInspectBatchIteratorReturnsError() {}
+  InspectBatchIteratorReturnsError() {}
 
   void GetNext(GetNextCallback callback) override;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_INSPECT_BATCH_ITERATOR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_

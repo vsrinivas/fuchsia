@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
+#include "src/developer/feedback/testing/stubs/logger.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -11,10 +11,10 @@
 
 #include <cstdint>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace stubs {
 namespace {
 
 constexpr zx::duration kLogMessageBaseTimestamp = zx::sec(15604);
@@ -36,90 +36,90 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
   return msg;
 }
 
-void StubLogger::CloseConnection() {
+void Logger::CloseConnection() {
   if (binding_) {
     binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
-void StubLogger::Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-                        std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+void Logger::Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
-  FXL_CHECK(log_listener_ptr.is_bound());
+  FX_CHECK(log_listener_ptr.is_bound());
   for (const auto& message : messages_) {
     log_listener_ptr->Log(message);
   }
 }
 
-void StubLogger::DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-                          std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+void Logger::DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
-  FXL_CHECK(log_listener_ptr.is_bound());
+  FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->LogMany(messages_);
   log_listener_ptr->Done();
 }
 
-void StubLoggerClosesConnection::DumpLogs(
+void LoggerClosesConnection::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   CloseConnection();
 }
 
-void StubLoggerNeverBindsToLogListener::DumpLogs(
+void LoggerNeverBindsToLogListener::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {}
 
-void StubLoggerUnbindsFromLogListenerAfterOneMessage::DumpLogs(
+void LoggerUnbindsFromLogListenerAfterOneMessage::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  FXL_CHECK(messages_.size() > 1u)
+  FX_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
 
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
-  FXL_CHECK(log_listener_ptr.is_bound());
+  FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->LogMany(
       std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1));
   log_listener_ptr.Unbind();
 }
 
-void StubLoggerNeverCallsLogManyBeforeDone::DumpLogs(
+void LoggerNeverCallsLogManyBeforeDone::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
-  FXL_CHECK(log_listener_ptr.is_bound());
+  FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->Done();
 }
 
-void StubLoggerBindsToLogListenerButNeverCalls::DumpLogs(
+void LoggerBindsToLogListenerButNeverCalls::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
-  FXL_CHECK(log_listener_ptr_.is_bound());
+  FX_CHECK(log_listener_ptr_.is_bound());
 }
 
-void StubLoggerDelaysAfterOneMessage::DumpLogs(
+void LoggerDelaysAfterOneMessage::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  FXL_CHECK(messages_.size() > 1u)
+  FX_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
 
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
-  FXL_CHECK(log_listener_ptr.is_bound());
+  FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->LogMany(
       std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1));
 
-  FX_LOGS(INFO) << "Stub logger delaying the remaining messages for " << delay_.to_msecs() << "ms";
-  FXL_CHECK(async::PostDelayedTask(
-                dispatcher_,
-                [this, log_listener_ptr = std::move(log_listener_ptr)] {
-                  log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
-                      messages_.begin() + 1, messages_.end()));
-                  log_listener_ptr->Done();
-                },
-                delay_) == ZX_OK);
+  FX_LOGS(INFO) << " logger delaying the remaining messages for " << delay_.to_msecs() << "ms";
+  FX_CHECK(async::PostDelayedTask(
+               dispatcher_,
+               [this, log_listener_ptr = std::move(log_listener_ptr)] {
+                 log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
+                     messages_.begin() + 1, messages_.end()));
+                 log_listener_ptr->Done();
+               },
+               delay_) == ZX_OK);
 }
 
-void StubLoggerDelayedResponses::Listen(
+void LoggerDelayedResponses::Listen(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
@@ -132,7 +132,7 @@ void StubLoggerDelayedResponses::Listen(
   }
 }
 
-void StubLoggerDelayedResponses::DumpLogs(
+void LoggerDelayedResponses::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
@@ -149,12 +149,13 @@ void StubLoggerDelayedResponses::DumpLogs(
       dispatcher_, [this]() { log_listener_ptr_->Done(); }, delay_between_responses_ * i);
 }
 
-zx::duration StubLoggerDelayedResponses::TotalDelayBetweenDumps() {
+zx::duration LoggerDelayedResponses::TotalDelayBetweenDumps() {
   return delay_between_responses_ * (dumps_.size());
 }
 
-zx::duration StubLoggerDelayedResponses::TotalDelayBetweenMessages() {
+zx::duration LoggerDelayedResponses::TotalDelayBetweenMessages() {
   return delay_between_responses_ * (messages_.size() - 1);
 }
 
+}  // namespace stubs
 }  // namespace feedback

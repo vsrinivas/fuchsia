@@ -15,8 +15,8 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/board_info_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
@@ -42,7 +42,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpBoardProvider(std::unique_ptr<StubBoard> board_provider) {
+  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProvider> board_provider) {
     board_provider_ = std::move(board_provider);
     if (board_provider_) {
       InjectServiceProvider(board_provider_.get());
@@ -80,7 +80,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<StubBoard> board_provider_;
+  std::unique_ptr<stubs::BoardInfoProvider> board_provider_;
 };
 
 BoardInfo CreateBoardInfo(const Annotations& annotations) {
@@ -98,7 +98,7 @@ BoardInfo CreateBoardInfo(const Annotations& annotations) {
 }
 
 TEST_F(BoardInfoProviderTest, Succeed_AllAnnotationsRequested) {
-  auto board_provider = std::make_unique<StubBoard>(CreateBoardInfo({
+  auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
       {kAnnotationHardwareBoardName, "some-name"},
       {kAnnotationHardwareBoardRevision, "some-revision"},
   }));
@@ -114,7 +114,7 @@ TEST_F(BoardInfoProviderTest, Succeed_AllAnnotationsRequested) {
                           }));
 }
 TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationRequested) {
-  auto board_provider = std::make_unique<StubBoard>(CreateBoardInfo({
+  auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
       {kAnnotationHardwareBoardName, "some-name"},
   }));
   SetUpBoardProvider(std::move(board_provider));
@@ -129,7 +129,7 @@ TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationRequested) {
 }
 
 TEST_F(BoardInfoProviderTest, Succeed_SpuriousAnnotationRequested) {
-  auto board_provider = std::make_unique<StubBoard>(CreateBoardInfo({
+  auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
       {kAnnotationHardwareBoardName, "some-name"},
       {kAnnotationHardwareBoardRevision, "some-revision"},
   }));
@@ -147,7 +147,7 @@ TEST_F(BoardInfoProviderTest, Succeed_SpuriousAnnotationRequested) {
 }
 
 TEST_F(BoardInfoProviderTest, Succeed_MissingAnnotationReturned) {
-  auto board_provider = std::make_unique<StubBoard>(CreateBoardInfo({
+  auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
       {kAnnotationHardwareBoardName, "some-name"},
   }));
   SetUpBoardProvider(std::move(board_provider));
@@ -162,7 +162,7 @@ TEST_F(BoardInfoProviderTest, Succeed_MissingAnnotationReturned) {
 }
 
 TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
-  SetUpBoardProvider(std::make_unique<StubBoardNeverReturns>());
+  SetUpBoardProvider(std::make_unique<stubs::BoardInfoProviderNeverReturns>());
 
   auto board_info = GetBoardInfo();
 
@@ -173,7 +173,7 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
 }
 
 TEST_F(BoardInfoProviderTest, Fail_CallGetBoardInfoTwice) {
-  SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo({})));
+  SetUpBoardProvider(std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({})));
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 

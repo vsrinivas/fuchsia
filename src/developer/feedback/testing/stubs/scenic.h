@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_SCENIC_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_SCENIC_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -16,6 +16,7 @@
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
+namespace stubs {
 
 // Returns an empty screenshot, still needed when Scenic::TakeScreenshot() returns false as the FIDL
 // ScreenshotData field is not marked optional in fuchsia.ui.scenic.Scenic.TakeScreenshot.
@@ -37,8 +38,8 @@ struct TakeScreenshotResponse {
       : screenshot(std::move(data)), success(success){};
 };
 
-// Stub Scenic service to return canned responses to Scenic::TakeScreenshot().
-class StubScenic : public fuchsia::ui::scenic::Scenic {
+//  Scenic service to return canned responses to Scenic::TakeScreenshot().
+class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
@@ -63,7 +64,7 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   uint64_t total_num_bindings() { return total_num_bindings_; }
   size_t current_num_bindings() { return bindings_.size(); }
 
-  // Stub injection and verification methods.
+  //  injection and verification methods.
   void set_take_screenshot_responses(std::vector<TakeScreenshotResponse> responses) {
     take_screenshot_responses_ = std::move(responses);
   }
@@ -79,21 +80,22 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   std::vector<TakeScreenshotResponse> take_screenshot_responses_;
 };
 
-class StubScenicAlwaysReturnsFalse : public StubScenic {
+class ScenicAlwaysReturnsFalse : public Scenic {
  public:
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
-class StubScenicClosesConnection : public StubScenic {
+class ScenicClosesConnection : public Scenic {
  public:
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
-class StubScenicNeverReturns : public StubScenic {
+class ScenicNeverReturns : public Scenic {
  public:
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_SCENIC_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_LOGGER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_LOGGER_H_
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -14,9 +14,8 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
-
 namespace feedback {
+namespace stubs {
 
 // Returns a LogMessage with the given severity, message and optional tags.
 //
@@ -26,8 +25,8 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
                                             const zx::duration timestamp_offset = zx::duration(0),
                                             const std::vector<std::string>& tags = {});
 
-// Stub Log service to return canned responses to Log::DumpLogs().
-class StubLogger : public fuchsia::logger::Log {
+//  Log service to return canned responses to Log::DumpLogs().
+class Logger : public fuchsia::logger::Log {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
@@ -43,7 +42,7 @@ class StubLogger : public fuchsia::logger::Log {
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
-  // Stub injection methods.
+  //  injection methods.
   void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
     messages_ = messages;
   }
@@ -55,31 +54,31 @@ class StubLogger : public fuchsia::logger::Log {
   std::vector<fuchsia::logger::LogMessage> messages_;
 };
 
-class StubLoggerClosesConnection : public StubLogger {
+class LoggerClosesConnection : public Logger {
  public:
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class StubLoggerNeverBindsToLogListener : public StubLogger {
+class LoggerNeverBindsToLogListener : public Logger {
  public:
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class StubLoggerUnbindsFromLogListenerAfterOneMessage : public StubLogger {
+class LoggerUnbindsFromLogListenerAfterOneMessage : public Logger {
  public:
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class StubLoggerNeverCallsLogManyBeforeDone : public StubLogger {
+class LoggerNeverCallsLogManyBeforeDone : public Logger {
  public:
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class StubLoggerBindsToLogListenerButNeverCalls : public StubLogger {
+class LoggerBindsToLogListenerButNeverCalls : public Logger {
  public:
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
@@ -90,9 +89,9 @@ class StubLoggerBindsToLogListenerButNeverCalls : public StubLogger {
   fuchsia::logger::LogListenerPtr log_listener_ptr_;
 };
 
-class StubLoggerDelaysAfterOneMessage : public StubLogger {
+class LoggerDelaysAfterOneMessage : public Logger {
  public:
-  StubLoggerDelaysAfterOneMessage(async_dispatcher_t* dispatcher, zx::duration delay)
+  LoggerDelaysAfterOneMessage(async_dispatcher_t* dispatcher, zx::duration delay)
       : dispatcher_(dispatcher), delay_(delay) {}
 
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
@@ -103,12 +102,12 @@ class StubLoggerDelaysAfterOneMessage : public StubLogger {
   zx::duration delay_;
 };
 
-class StubLoggerDelayedResponses : public StubLogger {
+class LoggerDelayedResponses : public Logger {
  public:
-  StubLoggerDelayedResponses(async_dispatcher_t* dispatcher,
-                             std::vector<std::vector<fuchsia::logger::LogMessage>> dumps,
-                             std::vector<fuchsia::logger::LogMessage> messages,
-                             zx::duration delay_between_responses)
+  LoggerDelayedResponses(async_dispatcher_t* dispatcher,
+                         std::vector<std::vector<fuchsia::logger::LogMessage>> dumps,
+                         std::vector<fuchsia::logger::LogMessage> messages,
+                         zx::duration delay_between_responses)
       : dispatcher_(dispatcher),
         dumps_(dumps),
         messages_(messages),
@@ -132,6 +131,7 @@ class StubLoggerDelayedResponses : public StubLogger {
   fuchsia::logger::LogListenerPtr log_listener_ptr_;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_LOGGER_H_

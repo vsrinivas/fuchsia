@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
+#include "src/developer/feedback/testing/stubs/scenic.h"
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 
 #include <cstdint>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace stubs {
 namespace {
 
 using fuchsia::ui::scenic::ScreenshotData;
@@ -27,7 +28,7 @@ struct RGBA {
 
 ScreenshotData CreateEmptyScreenshot() {
   ScreenshotData screenshot;
-  FXL_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
+  FX_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
   return screenshot;
 }
 
@@ -59,8 +60,8 @@ ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px) {
   }
 
   ScreenshotData screenshot;
-  FXL_CHECK(zx::vmo::create(size_in_bytes, 0u, &screenshot.data.vmo) == ZX_OK);
-  FXL_CHECK(screenshot.data.vmo.write(ptr.get(), 0u, size_in_bytes) == ZX_OK);
+  FX_CHECK(zx::vmo::create(size_in_bytes, 0u, &screenshot.data.vmo) == ZX_OK);
+  FX_CHECK(screenshot.data.vmo.write(ptr.get(), 0u, size_in_bytes) == ZX_OK);
   screenshot.data.size = size_in_bytes;
   screenshot.info.height = image_dim_in_px;
   screenshot.info.width = image_dim_in_px;
@@ -75,8 +76,8 @@ ScreenshotData CreateNonBGRA8Screenshot() {
   return screenshot;
 }
 
-void StubScenic::TakeScreenshot(TakeScreenshotCallback callback) {
-  FXL_CHECK(!take_screenshot_responses_.empty())
+void Scenic::TakeScreenshot(TakeScreenshotCallback callback) {
+  FX_CHECK(!take_screenshot_responses_.empty())
       << "You need to set up Scenic::TakeScreenshot() responses before testing GetScreenshot() "
          "using set_scenic_responses()";
   TakeScreenshotResponse response = std::move(take_screenshot_responses_[0]);
@@ -84,14 +85,15 @@ void StubScenic::TakeScreenshot(TakeScreenshotCallback callback) {
   callback(std::move(response.screenshot), response.success);
 }
 
-void StubScenicAlwaysReturnsFalse::TakeScreenshot(TakeScreenshotCallback callback) {
+void ScenicAlwaysReturnsFalse::TakeScreenshot(TakeScreenshotCallback callback) {
   callback(CreateEmptyScreenshot(), false);
 }
 
-void StubScenicClosesConnection::TakeScreenshot(TakeScreenshotCallback callback) {
+void ScenicClosesConnection::TakeScreenshot(TakeScreenshotCallback callback) {
   CloseAllConnections();
 }
 
-void StubScenicNeverReturns::TakeScreenshot(TakeScreenshotCallback callback) {}
+void ScenicNeverReturns::TakeScreenshot(TakeScreenshotCallback callback) {}
 
+}  // namespace stubs
 }  // namespace feedback

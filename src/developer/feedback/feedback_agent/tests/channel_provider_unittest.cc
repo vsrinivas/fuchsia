@@ -13,8 +13,8 @@
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -33,7 +33,7 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
   ChannelProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpChannelProviderPtr(std::unique_ptr<StubChannelProvider> channel_provider) {
+  void SetUpChannelProviderPtr(std::unique_ptr<stubs::ChannelProvider> channel_provider) {
     channel_provider_ = std::move(channel_provider);
     if (channel_provider_) {
       InjectServiceProvider(channel_provider_.get());
@@ -67,11 +67,11 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<StubChannelProvider> channel_provider_;
+  std::unique_ptr<stubs::ChannelProvider> channel_provider_;
 };
 
 TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
-  auto channel_provider = std::make_unique<StubChannelProvider>();
+  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
   channel_provider->set_channel("my-channel");
   SetUpChannelProviderPtr(std::move(channel_provider));
 
@@ -82,7 +82,7 @@ TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
 }
 
 TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
-  SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
+  SetUpChannelProviderPtr(std::make_unique<stubs::ChannelProvider>());
 
   const auto result = RetrieveCurrentChannel();
 
@@ -99,7 +99,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNotAvailable) {
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrClosesConnection) {
-  SetUpChannelProviderPtr(std::make_unique<StubChannelProviderClosesConnection>());
+  SetUpChannelProviderPtr(std::make_unique<stubs::ChannelProviderClosesConnection>());
 
   const auto result = RetrieveCurrentChannel();
 
@@ -107,7 +107,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrClosesConnection) {
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
-  SetUpChannelProviderPtr(std::make_unique<StubChannelProviderNeverReturns>());
+  SetUpChannelProviderPtr(std::make_unique<stubs::ChannelProviderNeverReturns>());
 
   const auto result = RetrieveCurrentChannel();
 
@@ -118,7 +118,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
 }
 
 TEST_F(ChannelProviderTest, Fail_CallGetCurrentTwice) {
-  SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
+  SetUpChannelProviderPtr(std::make_unique<stubs::ChannelProvider>());
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 

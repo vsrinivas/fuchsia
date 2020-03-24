@@ -2,35 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
-
-#include <lib/fit/result.h>
+#include "src/developer/feedback/testing/stubs/inspect_archive.h"
 
 namespace feedback {
+namespace stubs {
 
-void StubInspectArchive::CloseConnection() {
+void InspectArchive::CloseConnection() {
   if (archive_binding_) {
     archive_binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
-void StubInspectArchive::StreamDiagnostics(
+void InspectArchive::StreamDiagnostics(
     fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
     fuchsia::diagnostics::StreamParameters stream_parameters) {
   batch_iterator_binding_ = std::make_unique<fidl::Binding<fuchsia::diagnostics::BatchIterator>>(
       batch_iterator_.get(), std::move(request));
 }
 
-void StubInspectArchiveClosesArchiveConnection::StreamDiagnostics(
+void InspectArchiveClosesArchiveConnection::StreamDiagnostics(
     fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
     fuchsia::diagnostics::StreamParameters stream_parameters) {
   CloseConnection();
 }
 
-void StubInspectArchiveClosesIteratorConnection::StreamDiagnostics(
+void InspectArchiveClosesIteratorConnection::StreamDiagnostics(
     fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
     fuchsia::diagnostics::StreamParameters stream_parameters) {
   request.Close(ZX_ERR_PEER_CLOSED);
 }
 
+}  // namespace stubs
 }  // namespace feedback

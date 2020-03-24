@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_PRODUCT_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_PRODUCT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_PRODUCT_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_PRODUCT_INFO_PROVIDER_H_
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
-#include <string>
-
 namespace feedback {
+namespace stubs {
 
-// Stub Product service to return controlled response to Product::GetInfo().
-class StubProduct : public fuchsia::hwinfo::Product {
+// Stub fuchsia.hwinfo.Product service to return controlled response to GetInfo().
+class ProductInfoProvider : public fuchsia::hwinfo::Product {
  public:
-  StubProduct(fuchsia::hwinfo::ProductInfo&& info) : info_(std::move(info)) {}
+  ProductInfoProvider(fuchsia::hwinfo::ProductInfo&& info) : info_(std::move(info)) {}
 
   // Returns a request handler for a binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::hwinfo::Product> GetHandler() {
@@ -38,14 +37,15 @@ class StubProduct : public fuchsia::hwinfo::Product {
   bool has_been_called_ = false;
 };
 
-class StubProductNeverReturns : public StubProduct {
+class ProductInfoProviderNeverReturns : public ProductInfoProvider {
  public:
-  StubProductNeverReturns() : StubProduct(fuchsia::hwinfo::ProductInfo()) {}
+  ProductInfoProviderNeverReturns() : ProductInfoProvider(fuchsia::hwinfo::ProductInfo()) {}
 
   // |fuchsia.hwinfo.Product|
   void GetInfo(GetInfoCallback callback) override;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_PRODUCT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_PRODUCT_INFO_PROVIDER_H_

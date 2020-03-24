@@ -16,9 +16,9 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -47,7 +47,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
+  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProvider> product_provider) {
     product_provider_ = std::move(product_provider);
     if (product_provider_) {
       InjectServiceProvider(product_provider_.get());
@@ -85,7 +85,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
   async::Executor executor_;
 
  private:
-  std::unique_ptr<StubProduct> product_provider_;
+  std::unique_ptr<stubs::ProductInfoProvider> product_provider_;
 };
 
 ProductInfo CreateProductInfo(const Annotations& annotations) {
@@ -122,7 +122,7 @@ ProductInfo CreateProductInfo(const Annotations& annotations) {
 }
 
 TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({
+  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({
       {kAnnotationHardwareProductLanguage, "some-language"},
       {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
       {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
@@ -143,7 +143,7 @@ TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
 }
 
 TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({
+  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({
       {kAnnotationHardwareProductLanguage, "some-language"},
       {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
       {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
@@ -166,7 +166,7 @@ TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
 }
 
 TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({
+  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({
       {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
       {kAnnotationHardwareProductModel, "some-model"},
       {kAnnotationHardwareProductName, "some-name"},
@@ -194,7 +194,7 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
 }
 
 TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
-  SetUpProductProvider(std::make_unique<StubProductNeverReturns>());
+  SetUpProductProvider(std::make_unique<stubs::ProductInfoProviderNeverReturns>());
 
   auto board_info = GetProductInfo();
 
@@ -205,7 +205,7 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
 }
 
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({})));
+  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({})));
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
@@ -267,7 +267,8 @@ INSTANTIATE_TEST_SUITE_P(WithVariousProductInfoResponses, ProductInfoProviderTes
 
 TEST_P(ProductInfoProviderTest, Succeed_OnAnnotations) {
   Annotations annotations = GetParam();
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo(annotations)));
+  SetUpProductProvider(
+      std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo(annotations)));
 
   AnnotationKeys keys;
   for (const auto& [key, _] : annotations) {

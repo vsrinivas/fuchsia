@@ -15,10 +15,10 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/inspect_archive.h"
+#include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -36,7 +36,7 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpInspect(std::unique_ptr<StubInspectArchive> inspect_archive) {
+  void SetUpInspect(std::unique_ptr<stubs::InspectArchive> inspect_archive) {
     inspect_archive_ = std::move(inspect_archive);
     if (inspect_archive_) {
       InjectServiceProvider(inspect_archive_.get());
@@ -66,12 +66,12 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
   async::Executor executor_;
 
  private:
-  std::unique_ptr<StubInspectArchive> inspect_archive_;
+  std::unique_ptr<stubs::InspectArchive> inspect_archive_;
 };
 
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(
-      std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
+  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+      std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({
           {"foo1", "foo2"},
           {"bar1"},
           {},
@@ -91,8 +91,8 @@ bar1
 }
 
 TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(
-      std::make_unique<StubInspectBatchIteratorNeverRespondsAfterOneBatch>(
+  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+      std::make_unique<stubs::InspectBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"}))));
 
   fit::result<AttachmentValue> result = CollectInspectData();
@@ -108,8 +108,8 @@ foo2
 }
 
 TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(
-      std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
+  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+      std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
 
   fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -118,8 +118,8 @@ TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(
-      std::make_unique<StubInspectBatchIteratorReturnsError>()));
+  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+      std::make_unique<stubs::InspectBatchIteratorReturnsError>()));
 
   fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -127,8 +127,8 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(
-      std::make_unique<StubInspectBatchIteratorNeverResponds>()));
+  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+      std::make_unique<stubs::InspectBatchIteratorNeverResponds>()));
 
   fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -137,7 +137,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
-  SetUpInspect(std::make_unique<StubInspectArchiveClosesIteratorConnection>());
+  SetUpInspect(std::make_unique<stubs::InspectArchiveClosesIteratorConnection>());
 
   fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -146,7 +146,7 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
-  SetUpInspect(std::make_unique<StubInspectArchiveClosesArchiveConnection>());
+  SetUpInspect(std::make_unique<stubs::InspectArchiveClosesArchiveConnection>());
 
   fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());

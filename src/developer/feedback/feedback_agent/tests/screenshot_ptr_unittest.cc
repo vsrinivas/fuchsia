@@ -12,9 +12,9 @@
 #include <memory>
 #include <vector>
 
-#include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/scenic.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils//cobalt_metrics.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -35,7 +35,7 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   TakeScreenshotTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpScreenshotProvider(std::unique_ptr<StubScenic> screenshot_provider) {
+  void SetUpScreenshotProvider(std::unique_ptr<stubs::Scenic> screenshot_provider) {
     screenshot_provider_ = std::move(screenshot_provider);
     if (screenshot_provider_) {
       InjectServiceProvider(screenshot_provider_.get());
@@ -57,15 +57,15 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<StubScenic> screenshot_provider_;
+  std::unique_ptr<stubs::Scenic> screenshot_provider_;
 };
 
 TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   const size_t image_dim_in_px = 100;
-  std::vector<TakeScreenshotResponse> screenshot_provider_responses;
-  screenshot_provider_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
+  std::vector<stubs::TakeScreenshotResponse> screenshot_provider_responses;
+  screenshot_provider_responses.emplace_back(stubs::CreateCheckerboardScreenshot(image_dim_in_px),
                                              kSuccess);
-  std::unique_ptr<StubScenic> scenic = std::make_unique<StubScenic>();
+  std::unique_ptr<stubs::Scenic> scenic = std::make_unique<stubs::Scenic>();
   scenic->set_take_screenshot_responses(std::move(screenshot_provider_responses));
   SetUpScreenshotProvider(std::move(scenic));
 
@@ -89,7 +89,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
-  SetUpScreenshotProvider(std::make_unique<StubScenicAlwaysReturnsFalse>());
+  SetUpScreenshotProvider(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -97,7 +97,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
-  SetUpScreenshotProvider(std::make_unique<StubScenicClosesConnection>());
+  SetUpScreenshotProvider(std::make_unique<stubs::ScenicClosesConnection>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -105,7 +105,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
-  SetUpScreenshotProvider(std::make_unique<StubScenicNeverReturns>());
+  SetUpScreenshotProvider(std::make_unique<stubs::ScenicNeverReturns>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -116,9 +116,9 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
-  std::vector<TakeScreenshotResponse> screenshot_provider_responses;
-  screenshot_provider_responses.emplace_back(CreateEmptyScreenshot(), kSuccess);
-  auto screenshot_provider = std::make_unique<StubScenic>();
+  std::vector<stubs::TakeScreenshotResponse> screenshot_provider_responses;
+  screenshot_provider_responses.emplace_back(stubs::CreateEmptyScreenshot(), kSuccess);
+  auto screenshot_provider = std::make_unique<stubs::Scenic>();
   screenshot_provider->set_take_screenshot_responses(std::move(screenshot_provider_responses));
   SetUpScreenshotProvider(std::move(screenshot_provider));
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());

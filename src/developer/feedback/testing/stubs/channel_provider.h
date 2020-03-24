@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CHANNEL_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CHANNEL_PROVIDER_H_
 
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
+#include <memory>
 #include <string>
 
 namespace feedback {
+namespace stubs {
 
-class StubChannelProvider : public fuchsia::update::channel::Provider {
+class ChannelProvider : public fuchsia::update::channel::Provider {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::update::channel::Provider> GetHandler() {
@@ -36,16 +38,17 @@ class StubChannelProvider : public fuchsia::update::channel::Provider {
   std::string channel_;
 };
 
-class StubChannelProviderClosesConnection : public StubChannelProvider {
+class ChannelProviderClosesConnection : public ChannelProvider {
  public:
   void GetCurrent(GetCurrentCallback callback) override;
 };
 
-class StubChannelProviderNeverReturns : public StubChannelProvider {
+class ChannelProviderNeverReturns : public ChannelProvider {
  public:
   void GetCurrent(GetCurrentCallback callback) override;
 };
 
+}  // namespace stubs
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CHANNEL_PROVIDER_H_

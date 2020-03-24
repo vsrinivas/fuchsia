@@ -19,14 +19,14 @@
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/device_id_provider.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_board.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/board_info_provider.h"
+#include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/inspect_archive.h"
+#include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
+#include "src/developer/feedback/testing/stubs/logger.h"
+#include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/files/file.h"
@@ -76,14 +76,14 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
                                              annotation_allowlist, attachment_allowlist);
   }
 
-  void SetUpBoardProvider(std::unique_ptr<StubBoard> board_provider) {
+  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProvider> board_provider) {
     board_provider_ = std::move(board_provider);
     if (board_provider_) {
       InjectServiceProvider(board_provider_.get());
     }
   }
 
-  void SetUpChannelProvider(std::unique_ptr<StubChannelProvider> channel_provider) {
+  void SetUpChannelProvider(std::unique_ptr<stubs::ChannelProvider> channel_provider) {
     channel_provider_ = std::move(channel_provider);
     if (channel_provider_) {
       InjectServiceProvider(channel_provider_.get());
@@ -91,8 +91,8 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   void SetUpInspect(const std::string& inspect_chunk) {
-    inspect_archive_ = std::make_unique<StubInspectArchive>(
-        std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
+    inspect_archive_ = std::make_unique<stubs::InspectArchive>(
+        std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({
             {inspect_chunk},
             {},
         })));
@@ -100,7 +100,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    logger_.reset(new StubLogger());
+    logger_.reset(new stubs::Logger());
     logger_->set_messages(messages);
     InjectServiceProvider(logger_.get());
   }
@@ -109,7 +109,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, content.c_str(), content.size()));
   }
 
-  void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
+  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProvider> product_provider) {
     product_provider_ = std::move(product_provider);
     if (product_provider_) {
       InjectServiceProvider(product_provider_.get());
@@ -148,11 +148,11 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<Datastore> datastore_;
 
   // Stubs.
-  std::unique_ptr<StubBoard> board_provider_;
-  std::unique_ptr<StubChannelProvider> channel_provider_;
-  std::unique_ptr<StubInspectArchive> inspect_archive_;
-  std::unique_ptr<StubLogger> logger_;
-  std::unique_ptr<StubProduct> product_provider_;
+  std::unique_ptr<stubs::BoardInfoProvider> board_provider_;
+  std::unique_ptr<stubs::ChannelProvider> channel_provider_;
+  std::unique_ptr<stubs::InspectArchive> inspect_archive_;
+  std::unique_ptr<stubs::Logger> logger_;
+  std::unique_ptr<stubs::ProductInfoProvider> product_provider_;
 };
 
 TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
@@ -184,7 +184,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
   fuchsia::hwinfo::BoardInfo info;
   info.set_name("my-board-name");
   info.set_revision("my-revision");
-  SetUpBoardProvider(std::make_unique<StubBoard>(std::move(info)));
+  SetUpBoardProvider(std::make_unique<stubs::BoardInfoProvider>(std::move(info)));
   SetUpDatastore(
       {
           kAnnotationHardwareBoardName,
@@ -203,7 +203,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Channel) {
-  auto channel_provider = std::make_unique<StubChannelProvider>();
+  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
   channel_provider->set_channel("my-channel");
   SetUpChannelProvider(std::move(channel_provider));
   SetUpDatastore({kAnnotationChannel}, kDefaultAttachmentsToAvoidSpuriousLogs);
@@ -253,7 +253,7 @@ TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
     locales.back().id = locale;
   }
   info.set_locale_list(locales);
-  SetUpProductProvider(std::make_unique<StubProduct>(std::move(info)));
+  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(std::move(info)));
   SetUpDatastore(
       {
           kAnnotationHardwareProductLanguage,
@@ -391,8 +391,8 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
   SetUpLogger({
-      BuildLogMessage(FX_LOG_INFO, "log message",
-                      /*timestamp_offset=*/zx::duration(0), {"foo"}),
+      stubs::BuildLogMessage(FX_LOG_INFO, "log message",
+                             /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystem});
 

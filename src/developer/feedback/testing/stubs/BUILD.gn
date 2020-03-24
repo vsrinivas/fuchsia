@@ -5,6 +5,38 @@
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("board_info_provider") {
+  sources = [
+    "board_info_provider.cc",
+    "board_info_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/lib/fidl/cpp",
+  ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("channel_provider") {
+  sources = [
+    "channel_provider.cc",
+    "channel_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.update.channel",
+    "//sdk/lib/fidl/cpp",
+  ]
+
+  deps = [ "//zircon/public/lib/zx" ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 source_set("cobalt") {
   testonly = true
 
@@ -78,6 +110,62 @@ source_set("data_provider") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("inspect") {
+  sources = [
+    "inspect_archive.cc",
+    "inspect_archive.h",
+    "inspect_batch_iterator.cc",
+    "inspect_batch_iterator.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//src/lib/fsl",
+    "//zircon/public/lib/fit",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("logger") {
+  sources = [
+    "logger.cc",
+    "logger.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-logger",
+  ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("product_info_provider") {
+  sources = [
+    "product_info_provider.cc",
+    "product_info_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/lib/fidl/cpp",
+  ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 source_set("network_reachability_provider") {
   testonly = true
 
@@ -94,6 +182,27 @@ source_set("network_reachability_provider") {
   deps = [
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
+source_set("scenic") {
+  sources = [
+    "scenic.cc",
+    "scenic.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.images",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
   ]
 
   visibility = [ "//src/developer/feedback/*" ]
