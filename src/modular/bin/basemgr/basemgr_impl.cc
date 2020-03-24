@@ -250,6 +250,10 @@ void BasemgrImpl::GetAuthenticationUIContext(
 }
 
 void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
+  if (state_ == State::SHUTTING_DOWN) {
+    return;
+  }
+
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto did_start_session =
       session_provider_->StartSession(std::move(view_token), std::move(account));
@@ -271,7 +275,8 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
       /* shell_config= */ GetActiveSessionShellConfig(),
-      /* on_swap_session_shell= */ [this] { SelectNextSessionShell(/* callback= */ [] {}); });
+      /* on_swap_session_shell= */ [this] {
+    SelectNextSessionShell(/* callback= */ [] {}); });
 }
 
 void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {
@@ -372,6 +377,9 @@ void BasemgrImpl::ShowSetupOrLogin() {
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
+  if (state_ == State::SHUTTING_DOWN) {
+    return;
+  }
   session_provider_->RestartSession(std::move(on_restart_complete));
 }
 
