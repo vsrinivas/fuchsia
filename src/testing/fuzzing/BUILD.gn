@@ -6,6 +6,7 @@ group("fuzzing") {
   testonly = true
   deps = [
     ":tests",
+    "go",
     "syzkaller",
   ]
 }

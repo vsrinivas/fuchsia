@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+group("go") {
+  deps = [ ":fuzzing" ]
+}
+
+go_library("fuzzing") {
+  name = "fuchsia.googlesource.com/testing/fuzzing/go/fuzzing"
+  sources = [
+    "disabled.go",
+    "enabled.go",
+  ]
+}
