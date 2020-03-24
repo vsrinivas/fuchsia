@@ -10,14 +10,17 @@
 
 namespace vs680 {
 
-constexpr uint32_t kGpio1Base = 0xf7e8'0800;
-constexpr uint32_t kGpio2Base = 0xf7e8'0c00;
+constexpr uint32_t kGpio1Base = 0xf7e8'2400;
+constexpr uint32_t kGpio2Base = 0xf7e8'0800;
+constexpr uint32_t kSmGpioBase = 0xf7fc'8000;
 constexpr uint32_t kGpioSize = fbl::round_up<uint32_t, uint32_t>(0x400, PAGE_SIZE);
 
-constexpr uint32_t kPinmuxBase = 0xf7ea'0800;
-constexpr uint32_t kPinmuxSize = fbl::round_up<uint32_t, uint32_t>(0x180, PAGE_SIZE);
+constexpr uint32_t kSocPinmuxBase = 0xf7ea'8000;
+constexpr uint32_t kAvioPinmuxBase = 0xf7ea'8400;
+constexpr uint32_t kSmPinmuxBase = 0xf7fe'2c10;
+constexpr uint32_t kPinmuxSize = fbl::round_up<uint32_t, uint32_t>(0x10, PAGE_SIZE);
 
-constexpr uint32_t kGpio1Irq = 78 + 32;
-constexpr uint32_t kGpio2Irq = 79 + 32;
+constexpr uint32_t kGpio1Irq = 77 + 32;
+constexpr uint32_t kGpio2Irq = 78 + 32;
 
 }  // namespace vs680
