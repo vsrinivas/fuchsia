@@ -32,6 +32,7 @@ source_set("sdio") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
     "//zircon/system/dev/lib/broadcom",
+    "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]
   public_deps = [

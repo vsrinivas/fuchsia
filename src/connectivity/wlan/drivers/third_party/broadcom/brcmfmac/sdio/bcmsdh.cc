@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <inttypes.h>
 
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -28,6 +29,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/trace/event.h>
+#include <lib/zx/vmo.h>
 #include <wifi/wifi-config.h>
 
 #ifndef _ALL_SOURCE
@@ -59,6 +61,13 @@
 #define SDIO_WAIT_F2RDY 3000
 
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
+
+// The initial size of the DMA buffer
+constexpr size_t kDmaInitialBufferSize = 4096;
+// The maximum size the DMA buffer should be allowed to grow to
+constexpr size_t kDmaMaxBufferSize = 131072;
+// The minimum size a packet should be to enable DMA
+constexpr size_t kDmaThresholdSize = 64;
 
 static void brcmf_sdiod_ib_irqhandler(struct brcmf_sdio_dev* sdiodev) {
   BRCMF_DBG(INTR, "IB intr triggered\n");
@@ -249,17 +258,48 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
                                  bool write, void* data, size_t size, bool fifo) {
   sdio_rw_txn_t txn;
   zx_status_t result;
+  // The size must be a multiple of 4 to use DMA, also don't use DMA for very
+  // small transfers as the overhead might not be worth it.
+  bool use_dma = ((size % 4) == 0) && size > kDmaThresholdSize;
 
   TRACE_DURATION("brcmfmac:isr", "sdiod_transfer", "func", TA_UINT32((uint32_t)func), "type",
                  TA_STRING(write ? "write" : "read"), "addr", TA_UINT32(addr), "size",
                  TA_UINT64((uint64_t)size));
+  if (use_dma) {
+    if (size > sdiodev->dma_buffer_size) {
+      // Only resize the DMA buffer if it's not big enough. This saves a
+      // significant amount of time by not resizing the buffer for every
+      // transfer. Use a cached size value to avoid a syscall each time.
+      if (size > kDmaMaxBufferSize) {
+        BRCMF_ERR("Requested SDIO transfer VMO size %" PRIu64 " too large, max is %" PRIu64 "\n",
+                  size, kDmaMaxBufferSize);
+        return ZX_ERR_NO_MEMORY;
+      }
+      result = sdiodev->dma_buffer.set_size(size);
+      if (result != ZX_OK) {
+        BRCMF_ERR("Error resizing SDIO transfer VMO: %s\n",
+                  zx_status_get_string(result));
+        return result;
+      }
+      sdiodev->dma_buffer_size = size;
+    }
+    if (write) {
+      result = sdiodev->dma_buffer.write(data, 0, size);
+      if (result != ZX_OK) {
+        BRCMF_ERR("Error writing to SDIO transfer VMO: %s\n",
+                  zx_status_get_string(result));
+        return result;
+      }
+    }
+  }
 
   txn.addr = addr;
   txn.write = write;
   txn.virt_buffer = data;
   txn.data_size = size;
   txn.incr = !fifo;
-  txn.use_dma = false;  // TODO(cphoenix): Decide when to use DMA
+  txn.use_dma = use_dma;
+  txn.dma_vmo = use_dma ? sdiodev->dma_buffer.get() : ZX_HANDLE_INVALID;
   txn.buf_offset = 0;
 
   if (func == SDIO_FN_1) {
@@ -269,7 +309,15 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
   }
 
   if (result != ZX_OK) {
-    BRCMF_DBG(TEMP, "Why did this fail?? result %d %s", result, zx_status_get_string(result));
+    BRCMF_DBG(TEMP, "SDIO transaction failed: %s\n", zx_status_get_string(result));
+  } else if (use_dma && !write) {
+    // This is a read operation, read the data from the VMO to the buffer
+    result = sdiodev->dma_buffer.read(data, 0, size);
+    if (result != ZX_OK) {
+      BRCMF_ERR("Error reading from SDIO transfer VMO: %s\n",
+                zx_status_get_string(result));
+      return result;
+    }
   }
   return result;
 }
@@ -840,7 +888,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
       goto fail;
     }
   }
-  sdiodev = static_cast<decltype(sdiodev)>(calloc(1, sizeof(struct brcmf_sdio_dev)));
+  sdiodev = new brcmf_sdio_dev{};
   if (!sdiodev) {
     err = ZX_ERR_NO_MEMORY;
     goto fail;
@@ -863,6 +911,15 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   sdiodev->manufacturer_id = devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id;
   sdiodev->product_id = devinfo.funcs_hw_info[SDIO_FN_1].product_id;
 
+  err = zx::vmo::create(kDmaInitialBufferSize,
+                        ZX_VMO_RESIZABLE,
+                        &sdiodev->dma_buffer);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Error creating DMA buffer: %s\n", zx_status_get_string(err));
+    goto fail;
+  }
+  sdiodev->dma_buffer_size = kDmaInitialBufferSize;
+
   brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_DOWN);
 
   BRCMF_DBG(SDIO, "F2 found, calling brcmf_sdiod_probe...\n");
@@ -879,7 +936,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   return ZX_OK;
 
 fail:
-  free(sdiodev);
+  delete sdiodev;
   if (func2) {
     pthread_mutex_destroy(&func2->lock);
     free(func2);

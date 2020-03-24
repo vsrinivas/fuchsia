@@ -19,6 +19,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <tuple>
 
 #include <ddk/device.h>
@@ -52,13 +53,14 @@ zx_status_t get_wifi_metadata(struct brcmf_bus* bus, void* data, size_t exp_size
 
 namespace {
 
-constexpr sdio_rw_txn MakeSdioTxn(uint32_t addr, uint32_t data_size, bool incr, bool write) {
+constexpr sdio_rw_txn MakeSdioTxn(uint32_t addr, uint32_t data_size, bool incr, bool write,
+                                  bool use_dma = false, zx_handle_t dma_vmo = ZX_HANDLE_INVALID) {
   return {.addr = addr,
           .data_size = data_size,
           .incr = incr,
           .write = write,
-          .use_dma = false,
-          .dma_vmo = ZX_HANDLE_INVALID,
+          .use_dma = use_dma,
+          .dma_vmo = dma_vmo,
           .virt_buffer = nullptr,
           .virt_size = 0,
           .buf_offset = 0};
@@ -206,6 +208,70 @@ TEST(Sdio, Transfer) {
   EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, 200, 0xecf0a024, true, nullptr, 0x57d91422, false));
 
   sdio1.VerifyAndClear();
+  sdio2.VerifyAndClear();
+}
+
+TEST(Sdio, DmaTransfer) {
+  brcmf_sdio_dev sdio_dev = {};
+
+  // In order to write data to the VMO we need an actual valid address, use some
+  // test data.
+  std::array<unsigned char, 4096> dma_test_data;
+
+  sdio_dev.dma_buffer_size = 16384;
+  ASSERT_OK(zx::vmo::create(sdio_dev.dma_buffer_size, ZX_VMO_RESIZABLE, &sdio_dev.dma_buffer));
+
+  MockSdio sdio1;
+  MockSdio sdio2;
+  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
+  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
+
+  // These transactions should not have DMA enabled because they do not meet
+  // the criteria.
+  auto unaligned_size = MakeSdioTxn(0x458ef43b, 1233, true, true, false, ZX_HANDLE_INVALID);
+  auto too_small_for_dma = MakeSdioTxn(0x216977b9, 16, true, true, false, ZX_HANDLE_INVALID);
+  // These transactions should have DMA enabled
+  auto perfect_for_dma = MakeSdioTxn(0x9da7a590, dma_test_data.size(), true, true,
+                                     true, sdio_dev.dma_buffer.get());
+
+  sdio1.ExpectDoRwTxn(ZX_OK, unaligned_size)
+       .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
+       .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
+
+  EXPECT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x458ef43b, true, nullptr,
+                           unaligned_size.data_size, false));
+  EXPECT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x216977b9, true, nullptr,
+                           too_small_for_dma.data_size, false));
+  EXPECT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x9da7a590, true, dma_test_data.data(),
+                           dma_test_data.size(), false));
+
+  sdio1.VerifyAndClear();
+
+  sdio2.ExpectDoRwTxn(ZX_OK, unaligned_size)
+       .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
+       .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
+
+  EXPECT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x458ef43b, true, nullptr,
+                           unaligned_size.data_size, false));
+  EXPECT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x216977b9, true, nullptr,
+                           too_small_for_dma.data_size, false));
+  EXPECT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, dma_test_data.data(),
+                           dma_test_data.size(), false));
+
+  sdio2.VerifyAndClear();
+
+  // Data provided is a nullptr, ensure this is not OK when using DMA, that
+  // data needs to be copied.
+  EXPECT_NOT_OK(
+      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, nullptr,
+                           dma_test_data.size(), false));
+  // And make sure there are no interactions with sdio
   sdio2.VerifyAndClear();
 }
 

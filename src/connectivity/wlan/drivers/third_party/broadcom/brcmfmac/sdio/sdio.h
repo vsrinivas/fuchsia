@@ -22,6 +22,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
+#include <lib/zx/vmo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
@@ -229,6 +230,8 @@ struct brcmf_sdio_dev {
   std::string nvram_name;
   bool wowl_enabled;
   enum brcmf_sdiod_state state;
+  zx::vmo dma_buffer; /* DMA buffer used for SDIO transfers */
+  size_t dma_buffer_size; /* Cached size of the DMA buffer */
 };
 
 /* sdio core registers */
