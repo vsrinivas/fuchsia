@@ -378,11 +378,11 @@ fx debug -c upload_file_minidump-e71256ba30163a0.dmp
 
 #### Downloading symbols
 
-You can tell `zxdb` to look for debug symbols for your core dump in a GCS bucket and download them
+You can tell `zxdb` to look for debug symbols for your core dump in a GCS URL and download them
 automatically. You'll need to run with a few command-line options:
 
 ```
-zxdb --symbol-cache $HOME --symbol-server gs://my-bucket-name
+zxdb --symbol-cache $HOME --symbol-server gs://my-bucket-name/namespace
 ```
 
 In-tree users will automatically have these options set, with the server pointed to a bucket
@@ -400,7 +400,7 @@ https://accounts.google.com/o/oauth2/v2/< very long URL omitted >
 Once you've retrieved a token, run 'auth <token>'
 
 [zxdb] auth 4/hAF-pASODIFUASDIFUASODIUFSADF329827349872V6
-Successfully authenticated with gs://fuchsia-infra-debug-symbols
+Successfully authenticated with gs://fuchsia-artifacts-release/debug
 ```
 
 ### Debugging multiple processes

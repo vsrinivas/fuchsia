@@ -104,11 +104,13 @@ class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
 
 CloudStorageSymbolServer::CloudStorageSymbolServer(Session* session, const std::string& url)
     : SymbolServer(session, url) {
-  // Strip off the protocol identifier, yielding only the bucket name.
-  bucket_ = url.substr(5);
+  if (url.size() >= 6) {
+    // Strip off the protocol identifier.
+    path_ = url.substr(5);
 
-  if (bucket_.back() != '/') {
-    bucket_ += "/";
+    if (path_.back() != '/') {
+      path_ += "/";
+    }
   }
 }
 
@@ -300,7 +302,7 @@ std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::strin
   }
 
   std::string url = "https://storage.googleapis.com/";
-  url += bucket_ + ToDebugFileName(build_id, file_type);
+  url += path_ + ToDebugFileName(build_id, file_type);
 
   auto curl = Curl::MakeShared();
   FXL_DCHECK(curl);

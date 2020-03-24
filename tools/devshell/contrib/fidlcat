@@ -136,7 +136,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-symbol-server)
       arguments+=("--symbol-server")
-      arguments+=("gs://fuchsia-infra-debug-symbols")
+      arguments+=("gs://fuchsia-artifacts-release/debug")
       ;;
     --debug-mode)
       agent_out="/dev/stdout"

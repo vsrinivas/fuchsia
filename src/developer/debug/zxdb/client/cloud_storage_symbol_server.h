@@ -18,7 +18,7 @@ class CloudStorageSymbolServer : public SymbolServer {
   static std::unique_ptr<CloudStorageSymbolServer> Impl(Session* session, const std::string& url);
 
   // Construct a new cloud storage symbol server. Expects a url of the format
-  // gs://<bucket name>
+  // gs://bucket/[namespace]
   CloudStorageSymbolServer(Session* session, const std::string& url);
 
   // Implementation of SymbolServer
@@ -44,7 +44,7 @@ class CloudStorageSymbolServer : public SymbolServer {
   // Load our saved refresh token from disk and reauthenticate.
   void LoadCachedAuth();
 
-  std::string bucket_;
+  std::string path_;
   std::string access_token_;
   std::string refresh_token_;
 };

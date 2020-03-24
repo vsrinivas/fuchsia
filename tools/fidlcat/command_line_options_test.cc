@@ -118,7 +118,7 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   std::string symbol_path = "path/to/debug/symbols";
   std::string symbol_repo_path = "path/to/debug/symbols/repo";
   std::string symbol_cache = "~";
-  std::string symbol_server = "gs://fuchsia-infra-debug-symbols";
+  std::string symbol_server = "gs://fuchsia-artifacts-release/debug";
   std::string remote_pid = "3141";
   std::string connect = "localhost:8080";
   std::vector<const char*> argv = {"fakebinary",

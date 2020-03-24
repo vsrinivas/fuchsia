@@ -183,5 +183,5 @@ fi
   "-s" "${ZIRCON_BUILDROOT}" \
   "-s" "${PREBUILT_CLANG_DIR}/lib/debug" \
   "--symbol-cache" ~ \
-  "--symbol-server" "gs://fuchsia-infra-debug-symbols" \
+  "--symbol-server" "gs://fuchsia-artifacts-release/debug" \
   $@
