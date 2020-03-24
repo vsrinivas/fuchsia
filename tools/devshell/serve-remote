@@ -108,7 +108,7 @@ fi
 
 if "${serve}"; then
   # Starts a package server
-  args+=("cd ${dir} && ./.jiri_root/bin/fx set-device 127.0.0.1 && ./.jiri_root/bin/fx serve-updates")
+  args+=("cd ${dir} && ./.jiri_root/bin/fx set-device '[::1]:8022' && ./.jiri_root/bin/fx serve-updates")
 else
   # Starts nothing, just goes to sleep
   args+=("-nNT")
