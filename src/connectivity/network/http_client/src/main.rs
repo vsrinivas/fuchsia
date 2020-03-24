@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_net_http as net_http, fuchsia_async as fasync,
+    fidl_fuchsia_net_http as net_http,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_hyper as fhyper,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -21,6 +22,7 @@ use {
 
 static LOG_VERBOSITY: u16 = 1;
 static MAX_REDIRECTS: u8 = 10;
+static DEFAULT_DEADLINE_DURATION: zx::Duration = zx::Duration::from_seconds(15);
 
 fn version_to_str(version: hyper::Version) -> &'static str {
     match version {
@@ -160,9 +162,9 @@ fn to_fidl_error(error: &hyper::Error) -> net_http::Error {
     }
 }
 
-fn to_error_response(error: hyper::Error) -> net_http::Response {
+fn to_error_response(error: net_http::Error) -> net_http::Response {
     net_http::Response {
-        error: Some(to_fidl_error(&error)),
+        error: Some(error),
         body: None,
         final_url: None,
         status_code: None,
@@ -177,6 +179,7 @@ struct Loader {
     url: hyper::Uri,
     headers: hyper::HeaderMap,
     body: Vec<u8>,
+    deadline: fasync::Time,
 }
 
 impl Loader {
@@ -214,9 +217,14 @@ impl Loader {
                 None => Vec::new(),
             };
 
+            let deadline = req
+                .deadline
+                .map(|deadline| fasync::Time::from_nanos(deadline))
+                .unwrap_or_else(|| fasync::Time::after(DEFAULT_DEADLINE_DURATION));
+
             trace!("Starting request {} {}", method, url);
 
-            Ok(Loader { method, url, headers, body })
+            Ok(Loader { method, url, headers, body, deadline })
         } else {
             Err(Error::msg("Request missing URL"))
         }
@@ -243,7 +251,8 @@ impl Loader {
                 Err(error) => {
                     info!("Received network level error from hyper: {}", error);
                     // We don't care if on_response never returns, since this is the last callback.
-                    let _ = loader_client.on_response(to_error_response(error)).await;
+                    let _ =
+                        loader_client.on_response(to_error_response(to_fidl_error(&error))).await;
                     return Ok(());
                 }
             };
@@ -289,10 +298,12 @@ impl Loader {
     ) -> BoxFuture<
         'static,
         Result<
-            Result<(hyper::Response<hyper::Body>, hyper::Uri, hyper::Method), hyper::Error>,
+            Result<(hyper::Response<hyper::Body>, hyper::Uri, hyper::Method), net_http::Error>,
             http::Error,
         >,
     > {
+        let deadline = self.deadline;
+
         async move {
             let client = fhyper::new_https_client();
             let result = client.request(self.build_request()?).compat().await;
@@ -314,10 +325,11 @@ impl Loader {
                 }
                 Err(e) => {
                     info!("Received network level error from hyper: {}", e);
-                    Err(e)
+                    Err(to_fidl_error(&e))
                 }
             })
         }
+        .on_timeout(deadline, || Ok(Err(net_http::Error::DeadlineExceeded)))
         .boxed()
     }
 }
