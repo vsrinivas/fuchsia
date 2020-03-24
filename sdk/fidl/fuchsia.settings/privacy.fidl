@@ -8,9 +8,10 @@ library fuchsia.settings;
 protocol Privacy {
     /// Notifies of a change in privacy settings.
     ///
-    /// On a given connection, the first call will return the current `settings` value while
-    /// subsequent calls will only return the new `settings` value upon a value change. This
-    /// follows the hanging get pattern.
+    /// On a given connection, the server will return immediately if this is the first call made,
+    /// if an error occurred or if the `settings` value has changed since a previous call.
+    /// Otherwise, the server will wait on a value change or error before returning the new value
+    /// or error. This follows the hanging get pattern.
     Watch() -> (PrivacySettings settings) error Error;
 
     /// Sets the privacy settings.
