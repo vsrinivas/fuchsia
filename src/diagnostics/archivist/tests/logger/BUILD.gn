@@ -6,9 +6,9 @@ group("tests") {
   testonly = true
   public_deps = [
     "cpp",
-    "cpp:logs_integration_cpp_tests",
+    "cpp:logger_integration_cpp_tests",
     "go",
-    "go/src:logs_integration_go_tests",
+    "go/src:logger_integration_go_tests",
     "rust",
     "rust:bin_test",
   ]

@@ -12,16 +12,18 @@ mod tests {
     use fuchsia_syslog::{self as syslog, fx_log_info};
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
     use fuchsia_zircon as zx;
-    use futures::{channel::mpsc, Stream, StreamExt};
     use log::warn;
+    use parking_lot::Mutex;
+
+    use std::sync::Arc;
 
     struct Listener {
-        send_logs: mpsc::UnboundedSender<LogMessage>,
+        log_messages: Arc<Mutex<Vec<LogMessage>>>,
     }
 
     impl LogProcessor for Listener {
         fn log(&mut self, message: LogMessage) {
-            self.send_logs.unbounded_send(message).unwrap();
+            self.log_messages.lock().push(message);
         }
 
         fn done(&mut self) {
@@ -29,7 +31,7 @@ mod tests {
         }
     }
 
-    fn run_listener(tag: &str) -> impl Stream<Item = LogMessage> {
+    fn run_listener(tag: &str) -> Arc<Mutex<Vec<LogMessage>>> {
         let mut options = LogFilterOptions {
             filter_by_pid: false,
             pid: 0,
@@ -39,30 +41,34 @@ mod tests {
             tid: 0,
             tags: vec![tag.to_string()],
         };
-        let (send_logs, recv_logs) = mpsc::unbounded();
-        let l = Listener { send_logs };
+        let logs = Arc::new(Mutex::new(Vec::new()));
+        let l = Listener { log_messages: logs.clone() };
         fasync::spawn(async move {
             let fut = syslog_listener::run_log_listener(l, Some(&mut options), false);
             if let Err(e) = fut.await {
                 panic!("test fail {:?}", e);
             }
         });
-        recv_logs
+        return logs;
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn listen_for_syslog() {
+    #[test]
+    fn test_listen_for_syslog() {
+        let mut executor = fasync::Executor::new().unwrap();
         let random = rand::random::<u16>();
         let tag = "logger_integration_rust".to_string() + &random.to_string();
         syslog::init_with_tags(&[&tag]).expect("should not fail");
-        let incoming = run_listener(&tag);
+        let logs = run_listener(&tag);
         fx_log_info!("my msg: {}", 10);
         warn!("log crate: {}", 20);
 
-        let mut logs: Vec<LogMessage> = incoming.take(2).collect().await;
-
-        // sort logs to account for out-of-order arrival
-        logs.sort_by(|a, b| a.time.cmp(&b.time));
+        loop {
+            if logs.lock().len() >= 2 {
+                break;
+            }
+            executor.run_one_step(&mut futures::future::pending::<()>());
+        }
+        let logs = logs.lock();
         assert_eq!(2, logs.len());
         assert_eq!(logs[0].tags, vec![tag.clone()]);
         assert_eq!(logs[0].severity, LogLevelFilter::Info as i32);
@@ -73,8 +79,9 @@ mod tests {
         assert_eq!(logs[1].msg, "log crate: 20");
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn listen_for_klog() {
+    #[test]
+    fn test_listen_for_klog() {
+        let mut executor = fasync::Executor::new().unwrap();
         let logs = run_listener("klog");
 
         let msg = format!("logger_integration_rust test_klog {}", rand::random::<u64>());
@@ -83,6 +90,13 @@ mod tests {
         let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::empty()).unwrap();
         debuglog.write(msg.as_bytes()).unwrap();
 
-        logs.filter(|m| futures::future::ready(m.msg == msg)).next().await;
+        loop {
+            let logs_lock = logs.lock();
+            if logs_lock.iter().find(|&m| m.msg == msg).is_some() {
+                return;
+            }
+            drop(logs_lock);
+            executor.run_one_step(&mut futures::future::pending::<()>());
+        }
     }
 }
