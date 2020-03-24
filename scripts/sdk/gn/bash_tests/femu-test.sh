@@ -74,6 +74,8 @@ TEST_femu_noargs() {
 zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator"
 INPUT
 
+  export DISPLAY="fakedisplay"
+
   # Run command.
   BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
 
@@ -127,6 +129,8 @@ INPUT
   else
     expected_result=BT_EXPECT
   fi
+
+  export DISPLAY="fakedisplay"
 
   # Run command.
   ${expected_result} gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \

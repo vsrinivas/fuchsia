@@ -252,6 +252,12 @@ arm64)
 esac
 
 if [[ "$ACCEL" == "kvm" ]]; then
+  if [[ ! -w "/dev/kvm" ]]; then
+    echo "To use KVM acceleration, adjust permissions to /dev/kvm using:"
+    echo
+    echo "sudo chmod 666 /dev/kvm"
+    exit 1
+  fi
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
   FEATURES+=",KVM,GLDirectMem"
 elif [[ "$ACCEL" == "hvf" ]]; then
@@ -350,6 +356,14 @@ if (( NET )); then
   ARGS+=("-device" "e1000,netdev=net0${MAC}")
 else
   ARGS+=("-net" "none")
+fi
+
+if [[ "$GPU" == "host" && -z "$DISPLAY" ]]; then
+  echo "To use host GPU acceleration, enable access to X server using:"
+  echo
+  echo "export DISPLAY=:0 && \\"
+  echo "XAUTHORITY=/var/run/lightdm/root/:0 sudo xhost +"
+  exit 1
 fi
 
 # Construction of a qcow image prevents aemu from writing back to the
