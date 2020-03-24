@@ -5,12 +5,6 @@
 #include <algorithm>
 #include <limits>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
-#include "base/callback_helpers.h"
-#include "base/numerics/safe_conversions.h"
-#include "base/optional.h"
-#include "base/stl_util.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/video/h264_level_limits.h"
 
@@ -382,10 +376,35 @@ struct POCAscCompare {
                   const scoped_refptr<H264Picture>& b) const {
     return a->pic_order_cnt < b->pic_order_cnt;
   }
+
+  bool operator()(const H264Picture* a, const H264Picture* b) const {
+    return a->pic_order_cnt < b->pic_order_cnt;
+  }
+
+  bool operator()(const scoped_refptr<H264Picture>& a,
+                  const H264Picture* b) const {
+    return a->pic_order_cnt < b->pic_order_cnt;
+  }
+
+  bool operator()(const H264Picture* a,
+                  const scoped_refptr<H264Picture>& b) const {
+    return a->pic_order_cnt < b->pic_order_cnt;
+  }
 };
 
 struct POCDescCompare {
   bool operator()(const scoped_refptr<H264Picture>& a,
+                  const scoped_refptr<H264Picture>& b) const {
+    return a->pic_order_cnt > b->pic_order_cnt;
+  }
+  bool operator()(const H264Picture* a, const H264Picture* b) const {
+    return a->pic_order_cnt > b->pic_order_cnt;
+  }
+  bool operator()(const scoped_refptr<H264Picture>& a,
+                  const H264Picture* b) const {
+    return a->pic_order_cnt > b->pic_order_cnt;
+  }
+  bool operator()(const H264Picture* a,
                   const scoped_refptr<H264Picture>& b) const {
     return a->pic_order_cnt > b->pic_order_cnt;
   }
@@ -719,7 +738,7 @@ H264Decoder::H264Accelerator::Status H264Decoder::StartNewFrame(
 
   return accelerator_->SubmitFrameMetadata(sps, pps, dpb_, ref_pic_list_p0_,
                                            ref_pic_list_b0_, ref_pic_list_b1_,
-                                           curr_pic_.get());
+                                           curr_pic_);
 }
 
 bool H264Decoder::HandleMemoryManagementOps(scoped_refptr<H264Picture> pic) {
@@ -1082,9 +1101,11 @@ bool H264Decoder::ProcessSPS(int sps_id, bool* need_new_buffers) {
       profile_ != new_profile) {
     if (!Flush())
       return false;
+#if CHROMIUM_CODE
     DVLOG(1) << "Codec profile: " << GetProfileName(new_profile)
              << ", level: " << level << ", DPB size: " << max_dpb_size
              << ", Picture size: " << new_pic_size.ToString();
+#endif
     *need_new_buffers = true;
     profile_ = new_profile;
     pic_size_ = new_pic_size;
@@ -1141,7 +1162,7 @@ bool H264Decoder::HandleFrameNumGap(int frame_num) {
   // 7.4.3/7-23
   int unused_short_term_frame_num = (prev_ref_frame_num_ + 1) % max_frame_num_;
   while (unused_short_term_frame_num != frame_num) {
-    scoped_refptr<H264Picture> pic = new H264Picture();
+    scoped_refptr<H264Picture> pic(new H264Picture());
     if (!InitNonexistingPicture(pic, unused_short_term_frame_num))
       return false;
 
@@ -1212,7 +1233,7 @@ H264Decoder::H264Accelerator::Status H264Decoder::ProcessCurrentSlice() {
     return H264Accelerator::Status::kFail;
 
   return accelerator_->SubmitSlice(pps, slice_hdr, ref_pic_list0, ref_pic_list1,
-                                   curr_pic_.get(), slice_hdr->nalu_data,
+                                   curr_pic_, slice_hdr->nalu_data,
                                    slice_hdr->nalu_size,
                                    parser_.GetCurrentSubsamples());
 }
@@ -1253,8 +1274,10 @@ void H264Decoder::SetStream(int32_t id, const DecoderBuffer& decoder_buffer) {
   current_stream_size_ = size;
   current_stream_has_been_changed_ = true;
   if (decrypt_config) {
+#if CHROMIUM_CODE
     parser_.SetEncryptedStream(ptr, size, decrypt_config->subsamples());
     current_decrypt_config_ = decrypt_config->Clone();
+#endif
   } else {
     parser_.SetStream(ptr, size);
     current_decrypt_config_ = nullptr;
@@ -1352,9 +1375,10 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
             curr_pic_ = accelerator_->CreateH264Picture();
             if (!curr_pic_)
               return kRanOutOfSurfaces;
+#if CHROMIM_CODE
             if (current_decrypt_config_)
               curr_pic_->set_decrypt_config(current_decrypt_config_->Clone());
-
+#endif
             state_ = kTryNewFrame;
           }
         }

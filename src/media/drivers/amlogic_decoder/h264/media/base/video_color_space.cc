@@ -66,6 +66,7 @@ bool VideoColorSpace::IsSpecified() const {
   return false;
 }
 
+#if CHROMIUM_CODE
 gfx::ColorSpace VideoColorSpace::ToGfxColorSpace() const {
   gfx::ColorSpace::PrimaryID primary_id = gfx::ColorSpace::PrimaryID::INVALID;
   gfx::ColorSpace::TransferID transfer_id =
@@ -288,6 +289,7 @@ gfx::ColorSpace VideoColorSpace::ToGfxColorSpace() const {
 
   return gfx::ColorSpace(primary_id, transfer_id, matrix_id, range);
 }
+#endif
 
 VideoColorSpace VideoColorSpace::REC709() {
   return VideoColorSpace(PrimaryID::BT709, TransferID::BT709, MatrixID::BT709,
@@ -305,4 +307,4 @@ VideoColorSpace VideoColorSpace::JPEG() {
                          MatrixID::SMPTE170M, gfx::ColorSpace::RangeID::FULL);
 }
 
-}  // namespace
+}  // namespace media

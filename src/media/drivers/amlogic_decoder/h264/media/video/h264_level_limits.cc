@@ -4,8 +4,7 @@
 
 #include "media/video/h264_level_limits.h"
 
-#include "base/logging.h"
-#include "base/stl_util.h"
+#include "chromium_utils.h"
 #include "media/video/h264_parser.h"
 
 namespace media {
@@ -105,8 +104,8 @@ uint32_t H264ProfileLevelToMaxBR(VideoCodecProfile profile, uint8_t level) {
     case H264PROFILE_HIGH444PREDICTIVEPROFILE:
       return max_main_br * 4;
     default:
-      DVLOG(1) << "Failed to query MaxBR for profile: "
-               << GetProfileName(profile);
+      DVLOG(1) << "Failed to query MaxBR for profile: " << profile;
+      //<< GetProfileName(profile);
       return 0;
   }
 }

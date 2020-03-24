@@ -2,11 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MEDIA_BASE_VIDEO_COLOR_SPACE_H_
-#define MEDIA_BASE_VIDEO_COLOR_SPACE_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_VIDEO_COLOR_SPACE_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_VIDEO_COLOR_SPACE_H_
 
-#include "media/base/media_export.h"
-#include "ui/gfx/color_space.h"
+#include "chromium_utils.h"
+
+namespace gfx {
+class ColorSpace {
+ public:
+  enum class RangeID : uint8_t {
+    INVALID,
+    // Limited Rec. 709 color range with RGB values ranging from 16 to 235.
+    LIMITED,
+    // Full RGB color range with RGB valees from 0 to 255.
+    FULL,
+    // Range is defined by TransferID/MatrixID.
+    DERIVED,
+    kMaxValue = DERIVED,
+  };
+};
+}  // namespace gfx
 
 namespace media {
 

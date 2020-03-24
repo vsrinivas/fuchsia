@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MEDIA_BASE_RANGES_H_
-#define MEDIA_BASE_RANGES_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_RANGES_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_RANGES_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -12,9 +12,7 @@
 #include <ostream>
 #include <vector>
 
-#include "base/logging.h"
-#include "base/time/time.h"
-#include "media/base/media_export.h"
+#include "chromium_utils.h"
 
 namespace media {
 
@@ -48,14 +46,14 @@ class Ranges {
   void DCheckLT(const T& lhs, const T& rhs) const;
 
   // Disjoint, in increasing order of start.
-  std::vector<std::pair<T, T> > ranges_;
+  std::vector<std::pair<T, T>> ranges_;
 };
 
 //////////////////////////////////////////////////////////////////////
 // EVERYTHING BELOW HERE IS IMPLEMENTATION DETAIL!!
 //////////////////////////////////////////////////////////////////////
 
-template<class T>
+template <class T>
 size_t Ranges<T>::Add(T start, T end) {
   if (start == end)  // Nothing to be done with empty ranges.
     return ranges_.size();
@@ -105,37 +103,37 @@ size_t Ranges<T>::Add(T start, T end) {
   return ranges_.size();
 }
 
-template<>
-MEDIA_EXPORT void
-    Ranges<base::TimeDelta>::DCheckLT(const base::TimeDelta& lhs,
-                                      const base::TimeDelta& rhs) const;
+template <>
+MEDIA_EXPORT void Ranges<base::TimeDelta>::DCheckLT(
+    const base::TimeDelta& lhs,
+    const base::TimeDelta& rhs) const;
 
-template<class T>
+template <class T>
 void Ranges<T>::DCheckLT(const T& lhs, const T& rhs) const {
   DCHECK_LT(lhs, rhs);
 }
 
-template<class T>
+template <class T>
 size_t Ranges<T>::size() const {
   return ranges_.size();
 }
 
-template<class T>
+template <class T>
 T Ranges<T>::start(size_t i) const {
   return ranges_[i].first;
 }
 
-template<class T>
+template <class T>
 T Ranges<T>::end(size_t i) const {
   return ranges_[i].second;
 }
 
-template<class T>
+template <class T>
 void Ranges<T>::clear() {
   ranges_.clear();
 }
 
-template<class T>
+template <class T>
 Ranges<T> Ranges<T>::IntersectionWith(const Ranges<T>& other) const {
   Ranges<T> result;
 
@@ -161,4 +159,4 @@ Ranges<T> Ranges<T>::IntersectionWith(const Ranges<T>& other) const {
 
 }  // namespace media
 
-#endif  // MEDIA_BASE_RANGES_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_RANGES_H_

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include "media/base/subsample_entry.h"
-
-#include "base/logging.h"
-#include "base/numerics/safe_math.h"
+#include "chromium_utils.h"
 
 namespace media {
 

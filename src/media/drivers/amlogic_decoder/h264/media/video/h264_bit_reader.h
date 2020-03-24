@@ -4,15 +4,14 @@
 //
 // This file contains an implementation of an H264 Annex-B video stream parser.
 
-#ifndef MEDIA_VIDEO_H264_BIT_READER_H_
-#define MEDIA_VIDEO_H264_BIT_READER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_BIT_READER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_BIT_READER_H_
 
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "base/macros.h"
-#include "media/base/media_export.h"
+#include "chromium_utils.h"
 
 namespace media {
 
@@ -78,4 +77,4 @@ class MEDIA_EXPORT H264BitReader {
 
 }  // namespace media
 
-#endif  // MEDIA_VIDEO_H264_BIT_READER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_BIT_READER_H_

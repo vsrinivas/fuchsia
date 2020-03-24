@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("h264_headers") {
+  include_dirs = [ "." ]
+}
+
+source_set("h264_parser") {
+  sources = [
+    "media/base/ranges.cc",
+    "media/base/ranges.h",
+    "media/base/subsample_entry.cc",
+    "media/base/subsample_entry.h",
+    "media/base/video_color_space.cc",
+    "media/base/video_color_space.h",
+    "media/gpu/accelerated_video_decoder.h",
+    "media/gpu/h264_decoder.cc",
+    "media/gpu/h264_decoder.h",
+    "media/gpu/h264_dpb.cc",
+    "media/gpu/h264_dpb.h",
+    "media/video/h264_bit_reader.cc",
+    "media/video/h264_bit_reader.h",
+    "media/video/h264_level_limits.cc",
+    "media/video/h264_level_limits.h",
+    "media/video/h264_parser.cc",
+    "media/video/h264_parser.h",
+  ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/safemath",
+  ]
+  public_configs = [ ":h264_headers" ]
+}

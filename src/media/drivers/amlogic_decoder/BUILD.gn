@@ -160,6 +160,7 @@ if (target_cpu == "arm64") {
     ]
     deps = [
       ":test_support",
+      "h264:h264_parser",
       "third_party/libvpx",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",

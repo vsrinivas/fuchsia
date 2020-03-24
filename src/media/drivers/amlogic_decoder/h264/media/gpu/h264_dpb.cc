@@ -6,8 +6,6 @@
 
 #include <algorithm>
 
-#include "base/logging.h"
-#include "base/stl_util.h"
 #include "media/gpu/h264_dpb.h"
 
 namespace media {
@@ -46,6 +44,7 @@ H264Picture::H264Picture()
 
 H264Picture::~H264Picture() = default;
 
+#if CHROMIUM_CODE
 V4L2H264Picture* H264Picture::AsV4L2H264Picture() {
   return nullptr;
 }
@@ -53,6 +52,7 @@ V4L2H264Picture* H264Picture::AsV4L2H264Picture() {
 VaapiH264Picture* H264Picture::AsVaapiH264Picture() {
   return nullptr;
 }
+#endif
 
 H264DPB::H264DPB() : max_num_pics_(0) {}
 H264DPB::~H264DPB() = default;

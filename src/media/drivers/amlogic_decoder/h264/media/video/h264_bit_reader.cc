@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "media/video/h264_bit_reader.h"
-#include "base/logging.h"
+
+#include "chromium_utils.h"
 
 namespace media {
 

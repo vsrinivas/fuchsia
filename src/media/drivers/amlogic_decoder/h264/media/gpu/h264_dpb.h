@@ -5,19 +5,17 @@
 // This file contains an implementation of an H.264 Decoded Picture Buffer
 // used in H264 decoders.
 
-#ifndef MEDIA_GPU_H264_DPB_H_
-#define MEDIA_GPU_H264_DPB_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DPB_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DPB_H_
 
 #include <stddef.h>
 
 #include <vector>
 
-#include "base/macros.h"
-#include "base/memory/ref_counted.h"
+#include "chromium_utils.h"
+#include "geometry.h"
 #include "media/gpu/codec_picture.h"
-#include "media/gpu/media_gpu_export.h"
 #include "media/video/h264_parser.h"
-#include "ui/gfx/geometry/rect.h"
 
 namespace media {
 
@@ -38,8 +36,10 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
 
   H264Picture();
 
+#if CHROMIUM_CODE
   virtual V4L2H264Picture* AsV4L2H264Picture();
   virtual VaapiH264Picture* AsVaapiH264Picture();
+#endif
 
   // Values calculated per H.264 specification or taken from slice header.
   // See spec for more details on each (some names have been converted from
@@ -87,7 +87,6 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
   // Position in DPB (i.e. index in DPB).
   int dpb_position;
 
- protected:
   ~H264Picture() override;
 
  private:
@@ -176,4 +175,4 @@ class H264DPB {
 
 }  // namespace media
 
-#endif  // MEDIA_GPU_H264_DPB_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DPB_H_

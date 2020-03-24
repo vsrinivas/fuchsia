@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MEDIA_GPU_ACCELERATED_VIDEO_DECODER_H_
-#define MEDIA_GPU_ACCELERATED_VIDEO_DECODER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_ACCELERATED_VIDEO_DECODER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_ACCELERATED_VIDEO_DECODER_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
-#include "base/macros.h"
+#include "chromium_utils.h"
+#include "geometry.h"
 #include "media/base/decoder_buffer.h"
 #include "media/base/video_codecs.h"
-#include "media/gpu/media_gpu_export.h"
-#include "ui/gfx/geometry/rect.h"
-#include "ui/gfx/geometry/size.h"
 
 namespace media {
 
@@ -93,4 +91,4 @@ class MEDIA_GPU_EXPORT AcceleratedVideoDecoder {
 
 }  //  namespace media
 
-#endif  // MEDIA_GPU_ACCELERATED_VIDEO_DECODER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_ACCELERATED_VIDEO_DECODER_H_

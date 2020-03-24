@@ -4,8 +4,8 @@
 //
 // This file contains an implementation of an H264 Annex-B video stream parser.
 
-#ifndef MEDIA_VIDEO_H264_PARSER_H_
-#define MEDIA_VIDEO_H264_PARSER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_PARSER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_PARSER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -15,9 +15,7 @@
 #include <memory>
 #include <vector>
 
-#include "base/macros.h"
-#include "base/optional.h"
-#include "media/base/media_export.h"
+#include "chromium_utils.h"
 #include "media/base/ranges.h"
 #include "media/base/video_codecs.h"
 #include "media/base/video_color_space.h"
@@ -563,4 +561,4 @@ class MEDIA_EXPORT H264Parser {
 
 }  // namespace media
 
-#endif  // MEDIA_VIDEO_H264_PARSER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_PARSER_H_

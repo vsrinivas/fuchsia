@@ -7,12 +7,9 @@
 #include <limits>
 #include <memory>
 
-#include "base/logging.h"
-#include "base/numerics/safe_math.h"
-#include "base/stl_util.h"
+#include "chromium_utils.h"
+#include "geometry.h"
 #include "media/base/subsample_entry.h"
-#include "ui/gfx/geometry/rect.h"
-#include "ui/gfx/geometry/size.h"
 
 namespace media {
 
