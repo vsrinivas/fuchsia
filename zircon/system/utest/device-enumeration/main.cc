@@ -509,6 +509,7 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-012",
       "sys/platform/14:02:c/vs680-usb-phy",
       "sys/platform/00:00:5",
+      "sys/platform/00:00:9/dw-i2c/i2c/i2c-1-98",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

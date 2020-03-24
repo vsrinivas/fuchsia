@@ -60,6 +60,11 @@ int Luis::Thread() {
     return thrd_error;
   }
 
+  if (I2cInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: I2cInit() failed\n", __func__);
+    return thrd_error;
+  }
+
   if (EmmcInit() != ZX_OK) {
     zxlogf(ERROR, "%s: EmmcInit() failed\n", __func__);
   }

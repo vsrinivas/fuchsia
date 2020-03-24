@@ -26,6 +26,7 @@ driver_module("luis") {
   sources = [
     "luis-emmc.cc",
     "luis-gpio.cc",
+    "luis-i2c.cc",
     "luis-usb.cc",
     "luis.cc",
   ]
