@@ -143,9 +143,12 @@ source_set("connection_client") {
 source_set("connection") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [ "zircon_platform_connection.cc" ]
+  sources = [
+    "zircon_platform_connection.cc",
+    "zircon_platform_connection.h",
+  ]
 
-  deps = [
+  public_deps = [
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/async-loop-cpp",
