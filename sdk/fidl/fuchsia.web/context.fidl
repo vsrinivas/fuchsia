@@ -87,6 +87,9 @@ bits ContextFeatureFlags : uint64 {
     /// Allows embedders to render web content without graphical output or Scenic.
     /// Not compatible with the [`VULKAN`] flag.
     HEADLESS = 0x40;
+
+    /// Report telemetry data to the [`fuchsia.legacymetrics.MetricsRecorder`].
+    LEGACYMETRICS = 0x80;
 };
 
 table CreateContextParams {
