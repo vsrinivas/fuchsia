@@ -41,6 +41,7 @@ class BlobfsCheckerTest : public zxtest::Test {
 
     MountOptions options;
     ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
+    srand(zxtest::Runner::GetInstance()->random_seed());
   }
 
   // UpdateSuperblock writes the provided superblock to the block device and

@@ -73,6 +73,7 @@ class BlobfsTest : public zxtest::Test {
     device_ = device.get();
     loop_.StartThread();
     ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
+    srand(zxtest::Runner::GetInstance()->random_seed());
   }
 
  protected:

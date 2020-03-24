@@ -33,6 +33,7 @@ FilesystemTest::FilesystemTest(FsTestType type)
     : type_(type), environment_(g_environment), device_path_(environment_->device_path()) {}
 
 void FilesystemTest::SetUp() {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   ASSERT_OK(mkfs(device_path_.c_str(), format_type(), launch_stdio_sync, &default_mkfs_options));
   Mount();
 }

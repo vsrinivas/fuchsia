@@ -22,11 +22,8 @@ using digest::MerkleTreeVerifier;
 using BlobSrcFunction = void (*)(char* data, size_t length);
 
 void RandomFill(char* data, size_t length) {
-  static unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-  // TODO(US-286): Make this easier to reproduce with reliably generated prng.
-  printf("RandomFill of %zu bytes with seed: %u\n", length, seed);
   for (size_t i = 0; i < length; i++) {
-    data[i] = (char)rand_r(&seed);
+    data[i] = (char)rand();
   }
 }
 
