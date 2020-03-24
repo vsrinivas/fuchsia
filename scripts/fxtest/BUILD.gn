@@ -54,7 +54,12 @@ copy("helpers") {
 
 dart_test("fxtest_tests") {
   sources = [
-    "fxtest_test.dart",
+    "args_test.dart",
+
+    # "output_test.dart",
+    "parsing_test.dart",
+    "setup_test.dart",
+    "utils_test.dart",
   ]
 
   non_dart_deps = [ ":helpers" ]
