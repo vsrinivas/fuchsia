@@ -92,9 +92,6 @@ executable("archive_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
   ]
-
-  # TODO(46561): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("cobalt_unittest") {
@@ -185,9 +182,6 @@ executable("rotating_file_set_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(46561): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("time_unittest") {
@@ -231,7 +225,4 @@ executable("write_only_file_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(46561): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

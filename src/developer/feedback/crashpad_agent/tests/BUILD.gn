@@ -172,9 +172,6 @@ executable("config_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("crashpad_agent_integration_test") {
@@ -194,9 +191,6 @@ executable("crashpad_agent_integration_test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
   ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("crashpad_agent_unittest") {
@@ -236,9 +230,6 @@ executable("crashpad_agent_unittest") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
   ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("database_unittest") {
@@ -266,9 +257,6 @@ executable("database_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("feedback_data_provider_unittest") {
@@ -308,9 +296,6 @@ executable("inspect_manager_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("privacy_settings_ptr_unittest") {
@@ -357,9 +342,6 @@ executable("queue_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(46559): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 ###############################################################################
