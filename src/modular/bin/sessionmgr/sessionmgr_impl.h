@@ -65,6 +65,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::ui::views::ViewToken view_token) override;
 
+  // Completes any deferred initialization steps from Initialize().
+  void MaybeFinishInitialization();
+
   // |Sessionmgr|
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
                         SwapSessionShellCallback callback) override;
@@ -82,7 +85,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                               fuchsia::ui::views::ViewToken view_token);
 
   void RunSessionShell(fuchsia::modular::AppConfig session_shell_config);
-  // This is a termination sequence that may be used with |AtEnd()|, but also
+  // This is a termination sequence that may be used with |OnTerminate()|, but also
   // may be executed to terminate the currently running session shell.
   void TerminateSessionShell(fit::function<void()> done);
 
@@ -118,7 +121,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // destructor at initialization time. The sequence of actions thus scheduled
   // is executed in reverse in Terminate().
   //
-  // The AtEnd() calls for a field should happen next to the calls that
+  // The OnTerminate() calls for a field should happen next to the calls that
   // initialize the field, for the following reasons:
   //
   // 1. It ensures the termination sequence corresponds to the initialization
@@ -131,10 +134,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   //    agents that are not started when runnign a test).
   //
   // See also the Reset() and Teardown() functions in the .cc file.
-  void AtEnd(fit::function<void(fit::function<void()>)> action);
+  void OnTerminate(fit::function<void(fit::function<void()>)> action);
 
-  // Recursively execute the termiation steps scheduled by AtEnd(). The
-  // execution steps are stored in at_end_.
+  // Recursively execute the termiation steps scheduled by OnTerminate(). The
+  // execution steps are stored in on_terminate_cbs_.
   void TerminateRecurse(int i);
 
   void ConnectSessionShellToStoryProvider();
@@ -211,13 +214,12 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // *app*).
   std::unique_ptr<StoryStorage> session_shell_storage_;
 
-  // Holds the actions scheduled by calls to the AtEnd() method.
-  std::vector<fit::function<void(fit::function<void()>)>> at_end_;
+  // Holds the actions scheduled by calls to the OnTerminate() method.
+  std::vector<fit::function<void(fit::function<void()>)>> on_terminate_cbs_;
 
-  // Holds the done callback of Terminate() while the at_end_ actions are being
-  // executed. We can rely on Terminate() only being called once. (And if not,
-  // this could simply be made a vector as usual.)
-  fit::function<void()> at_end_done_;
+  // Holds the done callback of Terminate() while the on_terminate_cbs_ actions are being
+  // executed.
+  fit::function<void()> terminate_done_;
 
   class SwapSessionShellOperation;
 
@@ -226,7 +228,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Part of Initialize() that is deferred until the first environment service
   // request is received from the session shell, in order to accelerate the
   // startup of session shell.
-  fit::function<void()> finish_initialization_{[] {}};
+  fit::function<void()> deferred_initialization_cb_;
 
   // Set to |true| when sessionmgr starts its terminating sequence;  this flag
   // can be used to determine whether to reject vending FIDL services.

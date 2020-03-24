@@ -54,7 +54,7 @@ constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 // services.
 constexpr char kSessionCtlDir[] = "sessionctl";
 
-// Creates a function that can be used as termination action passed to AtEnd(),
+// Creates a function that can be used as termination action passed to OnTerminate(),
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
 template <typename X>
@@ -73,7 +73,7 @@ fit::function<void(fit::function<void()>)> Reset(fidl::InterfacePtr<X>* const fi
   };
 }
 
-// Creates a function that can be used as termination action passed to AtEnd(),
+// Creates a function that can be used as termination action passed to OnTerminate(),
 // which when called asynchronously invokes the Teardown() method on the object
 // pointed to by the argument. Used to teardown AppClient and AsyncHolder
 // members.
@@ -162,35 +162,37 @@ void SessionmgrImpl::Initialize(
     fuchsia::ui::views::ViewToken view_token) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
 
-  // This is called in the service connection factory callbacks for session
-  // shell (see how RunSessionShell() initializes session_shell_services_) to
-  // lazily initialize the following services only once they are requested
-  // for the first time.
-  finish_initialization_ = [this, called = false, session_shell_url = session_shell_config.url,
-                            story_shell_config = std::move(story_shell_config),
-                            use_session_shell_for_story_shell_factory]() mutable {
-    if (called) {
-      return;
-    }
+  session_context_ = session_context.Bind();
+  OnTerminate(Reset(&session_context_));
+
+  InitializeSessionEnvironment(session_id);
+  InitializeAgentRunner();
+  InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
+  InitializeIntlPropertyProvider();
+
+  // The final stages of initialization are deferred until after the Session Shell
+  // has started and requests one of its dependency services.
+  deferred_initialization_cb_ = [this, session_shell_url = session_shell_config.url,
+                                 story_shell_config = std::move(story_shell_config),
+                                 use_session_shell_for_story_shell_factory]() mutable {
     FX_LOGS(INFO) << "SessionmgrImpl::Initialize() finishing initialization.";
-    called = true;
 
     InitializeLedger();
 
     InitializeModular(std::move(session_shell_url), std::move(story_shell_config),
                       use_session_shell_for_story_shell_factory);
     ConnectSessionShellToStoryProvider();
-    AtEnd([this](fit::function<void()> cont) { TerminateSessionShell(std::move(cont)); });
+    OnTerminate([this](fit::function<void()> cont) { TerminateSessionShell(std::move(cont)); });
     ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
   };
+}
 
-  session_context_ = session_context.Bind();
-  AtEnd(Reset(&session_context_));
+void SessionmgrImpl::MaybeFinishInitialization() {
+  if (!deferred_initialization_cb_)
+    return;
 
-  InitializeSessionEnvironment(session_id);
-  InitializeAgentRunner();
-  InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
-  InitializeIntlPropertyProvider();
+  auto cb = std::move(deferred_initialization_cb_);
+  cb();
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
@@ -238,7 +240,7 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   session_environment_->OverrideLauncher(
       std::make_unique<ArgvInjectingLauncher>(std::move(session_environment_launcher), argv_map));
 
-  AtEnd(Reset(&session_environment_));
+  OnTerminate(Reset(&session_environment_));
 }
 
 zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
@@ -247,7 +249,7 @@ zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
         << "An existing memfs for the Ledger has already been initialized.";
     FX_LOGS(INFO) << "Using memfs-backed storage for the ledger.";
     memfs_for_ledger_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
-    AtEnd(Reset(&memfs_for_ledger_));
+    OnTerminate(Reset(&memfs_for_ledger_));
 
     return fsl::CloneChannelFromFileDescriptor(memfs_for_ledger_->root_fd());
   }
@@ -281,7 +283,7 @@ void SessionmgrImpl::InitializeLedger() {
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
   });
-  AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
+  OnTerminate(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
   auto repository_request = ledger_repository_.NewRequest();
   ledger_client_ =
@@ -297,7 +299,7 @@ void SessionmgrImpl::InitializeLedger() {
     Shutdown();
   });
   ledger_app_->services().ConnectToService(ledger_repository_factory_.NewRequest());
-  AtEnd(Reset(&ledger_repository_factory_));
+  OnTerminate(Reset(&ledger_repository_factory_));
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
@@ -312,9 +314,9 @@ void SessionmgrImpl::InitializeLedger() {
                    << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
   });
-  AtEnd(ResetLedgerRepository(&ledger_repository_));
+  OnTerminate(ResetLedgerRepository(&ledger_repository_));
 
-  AtEnd(Reset(&ledger_client_));
+  OnTerminate(Reset(&ledger_client_));
 }
 
 void SessionmgrImpl::InitializeIntlPropertyProvider() {
@@ -355,11 +357,11 @@ void SessionmgrImpl::InitializeAgentRunner() {
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
       },
       [this]() { return terminating_; }));
-  AtEnd(Reset(&startup_agent_launcher_));
+  OnTerminate(Reset(&startup_agent_launcher_));
 
   entity_provider_runner_ =
       std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
-  AtEnd(Reset(&entity_provider_runner_));
+  OnTerminate(Reset(&entity_provider_runner_));
 
   // Initialize the AgentRunner.
   //
@@ -385,7 +387,7 @@ void SessionmgrImpl::InitializeAgentRunner() {
   agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), startup_agent_launcher_.get(),
                                       entity_provider_runner_.get(), &inspect_root_node_,
                                       std::move(agent_service_index), sessionmgr_context_));
-  AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
+  OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
 
 void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
@@ -400,7 +402,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       component_context_info, kSessionShellComponentNamespace, session_shell_url.value_or(""),
       session_shell_url.value_or(""));
 
-  AtEnd(Reset(&session_shell_component_context_impl_));
+  OnTerminate(Reset(&session_shell_component_context_impl_));
 
   // The StoryShellFactory to use when creating story shells, or nullptr if no
   // such factory exists.
@@ -414,7 +416,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   auto focus_provider_request_story_provider = focus_provider_story_provider.NewRequest();
 
   presentation_provider_impl_ = std::make_unique<PresentationProviderImpl>(this);
-  AtEnd(Reset(&presentation_provider_impl_));
+  OnTerminate(Reset(&presentation_provider_impl_));
 
   // We create |story_provider_impl_| after |agent_runner_| so
   // story_provider_impl_ is terminated before agent_runner_, which will cause
@@ -432,7 +434,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       entity_provider_runner_.get(), presentation_provider_impl_.get(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
 
-  AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
+  OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
   auto focus_provider_request_puppet_master = focus_provider_puppet_master.NewRequest();
@@ -451,7 +453,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
     }
     story_controller_ptr->FocusModule(std::move(mod_name));
   };
-  AtEnd(Reset(&session_storage_));
+  OnTerminate(Reset(&session_storage_));
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master), std::move(module_focuser));
   puppet_master_impl_ =
@@ -460,15 +462,15 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   session_ctl_ = std::make_unique<SessionCtl>(sessionmgr_context_->outgoing()->debug_dir(),
                                               kSessionCtlDir, puppet_master_impl_.get());
 
-  AtEnd(Reset(&story_command_executor_));
-  AtEnd(Reset(&puppet_master_impl_));
-  AtEnd(Reset(&session_ctl_));
+  OnTerminate(Reset(&story_command_executor_));
+  OnTerminate(Reset(&puppet_master_impl_));
+  OnTerminate(Reset(&session_ctl_));
 
   focus_handler_ = std::make_unique<FocusHandler>(LoadDeviceID(session_id_), ledger_client_.get(),
                                                   fuchsia::ledger::PageId());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
-  AtEnd(Reset(&focus_handler_));
+  OnTerminate(Reset(&focus_handler_));
 }
 
 void SessionmgrImpl::InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
@@ -504,7 +506,7 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     if (terminating_) {
       return;
     }
-    finish_initialization_();
+    MaybeFinishInitialization();
     session_shell_context_bindings_.AddBinding(this, std::move(request));
   });
 
@@ -513,7 +515,7 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     if (terminating_) {
       return;
     }
-    finish_initialization_();
+    MaybeFinishInitialization();
     session_shell_component_context_impl_->Connect(std::move(request));
   });
 
@@ -522,7 +524,7 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     if (terminating_) {
       return;
     }
-    finish_initialization_();
+    MaybeFinishInitialization();
     puppet_master_impl_->Connect(std::move(request));
   });
 
@@ -595,9 +597,9 @@ void SessionmgrImpl::SwapSessionShell(fuchsia::modular::AppConfig session_shell_
 void SessionmgrImpl::Terminate(fit::function<void()> done) {
   FX_LOGS(INFO) << "Sessionmgr::Terminate()";
   terminating_ = true;
-  at_end_done_ = std::move(done);
+  terminate_done_ = std::move(done);
 
-  TerminateRecurse(at_end_.size() - 1);
+  TerminateRecurse(on_terminate_cbs_.size() - 1);
 }
 
 void SessionmgrImpl::GetComponentContext(
@@ -647,16 +649,16 @@ void SessionmgrImpl::ConnectToStoryEntityProvider(
   story_provider_impl_->ConnectToStoryEntityProvider(story_id, std::move(entity_provider_request));
 }
 
-void SessionmgrImpl::AtEnd(fit::function<void(fit::function<void()>)> action) {
-  at_end_.emplace_back(std::move(action));
+void SessionmgrImpl::OnTerminate(fit::function<void(fit::function<void()>)> action) {
+  on_terminate_cbs_.emplace_back(std::move(action));
 }
 
 void SessionmgrImpl::TerminateRecurse(const int i) {
   if (i >= 0) {
-    at_end_[i]([this, i] { TerminateRecurse(i - 1); });
+    on_terminate_cbs_[i]([this, i] { TerminateRecurse(i - 1); });
   } else {
     FX_LOGS(INFO) << "Sessionmgr::Terminate(): done";
-    at_end_done_();
+    terminate_done_();
   }
 }
 
