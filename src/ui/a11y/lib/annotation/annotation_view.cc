@@ -185,12 +185,44 @@ void AnnotationView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> event
 
 void AnnotationView::HandleGfxEvent(const fuchsia::ui::gfx::Event& event) {
   if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
-    view_properties_changed_callback_(client_view_koid_);
+    view_properties_changed_callback_();
   } else if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene) {
-    view_detached_callback_(client_view_koid_);
+    view_detached_callback_();
   } else if (event.Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
-    view_attached_callback_(client_view_koid_);
+    view_attached_callback_();
   }
+}
+
+std::unique_ptr<AnnotationViewInterface> AnnotationViewFactory::CreateAndInitAnnotationView(
+    fuchsia::ui::views::ViewRef client_view_ref) {
+  // NOTE: Since theere life cycles of an annotation view is coupled to the view it annotates, each
+  // annotation view factory will instantiate exactly one view. Therefore, we can move the callback
+  // member variables here.
+  auto annotation_view = std::make_unique<AnnotationView>(
+      context_, std::move(view_properties_changed_callback_), std::move(view_attached_callback_),
+      std::move(view_detached_callback_));
+
+  view_properties_changed_callback_ = []() {};
+  view_attached_callback_ = []() {};
+  view_detached_callback_ = []() {};
+
+  annotation_view->InitializeView(std::move(client_view_ref));
+
+  return annotation_view;
+}
+
+void AnnotationViewFactory::SetViewPropertiesChangedCallback(
+    AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback) {
+  view_properties_changed_callback_ = std::move(view_properties_changed_callback);
+}
+void AnnotationViewFactory::SetViewAttachedCallback(
+    AnnotationViewInterface::ViewAttachedCallback view_attached_callback) {
+  view_attached_callback_ = std::move(view_attached_callback);
+}
+
+void AnnotationViewFactory::SetViewDetachedCallback(
+    AnnotationViewInterface::ViewDetachedCallback view_detached_callback) {
+  view_detached_callback_ = std::move(view_detached_callback);
 }
 
 }  // namespace a11y

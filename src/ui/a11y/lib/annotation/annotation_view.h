@@ -17,9 +17,29 @@
 
 namespace a11y {
 
+class AnnotationViewInterface {
+ public:
+  using ViewPropertiesChangedCallback = fit::function<void()>;
+  using ViewAttachedCallback = fit::function<void()>;
+  using ViewDetachedCallback = fit::function<void()>;
+
+  AnnotationViewInterface() = default;
+  virtual ~AnnotationViewInterface() = default;
+
+  virtual void InitializeView(fuchsia::ui::views::ViewRef client_view_ref) = 0;
+
+  // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
+  // bounding box.
+  virtual void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) = 0;
+
+  // Hides annotation view contents by detaching the subtree containing the annotations from the
+  // view.
+  virtual void DetachViewContents() = 0;
+};
+
 // The AnnotationView class enables the fuchsia accessibility manager to draw annotations over
 // client views.
-class AnnotationView : public fuchsia::ui::scenic::SessionListener {
+class AnnotationView : public fuchsia::ui::scenic::SessionListener, public AnnotationViewInterface {
  public:
   // Stores state of annotation view.
   struct AnnotationViewState {
@@ -33,30 +53,26 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
     bool view_content_attached = false;
   };
 
-  using ViewPropertiesChangedCallback = fit::function<void(zx_koid_t)>;
-  using ViewAttachedCallback = fit::function<void(zx_koid_t)>;
-  using ViewDetachedCallback = fit::function<void(zx_koid_t)>;
-
   explicit AnnotationView(sys::ComponentContext* component_context,
                           ViewPropertiesChangedCallback view_properties_changed_callback,
                           ViewAttachedCallback view_attached_callback,
                           ViewDetachedCallback view_detached_callback);
 
-  ~AnnotationView() = default;
+  ~AnnotationView() override = default;
 
   // NOTE: Callers MUST call InitializeView() before calling HighlightNode().
   // Creates an annotation view in session private to this view class and a corresponding view
   // holder in scenic, and then initializes the view's node structure to allow callers to annotate
   // the corresonding view.
-  void InitializeView(fuchsia::ui::views::ViewRef client_view_ref);
+  void InitializeView(fuchsia::ui::views::ViewRef client_view_ref) override;
 
   // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
   // bounding box.
-  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box);
+  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) override;
 
   // Hides annotation view contents by detaching the subtree containing the annotations from the
   // view.
-  void DetachViewContents();
+  void DetachViewContents() override;
 
   zx_koid_t koid() { return client_view_koid_; }
 
@@ -120,6 +136,44 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
   fuchsia::ui::annotation::RegistryPtr annotation_registry_;
 
   uint32_t next_resource_id_ = 8;
+};
+
+class AnnotationViewFactoryInterface {
+ public:
+  AnnotationViewFactoryInterface() = default;
+  virtual ~AnnotationViewFactoryInterface() = default;
+
+  virtual std::unique_ptr<AnnotationViewInterface> CreateAndInitAnnotationView(
+      fuchsia::ui::views::ViewRef client_view_ref) = 0;
+
+  virtual void SetViewPropertiesChangedCallback(
+      AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback) = 0;
+  virtual void SetViewAttachedCallback(
+      AnnotationViewInterface::ViewAttachedCallback view_attached_callback) = 0;
+  virtual void SetViewDetachedCallback(
+      AnnotationViewInterface::ViewDetachedCallback view_detached_callback) = 0;
+};
+
+class AnnotationViewFactory : public AnnotationViewFactoryInterface {
+ public:
+  AnnotationViewFactory(sys::ComponentContext* context) : context_(context) {}
+  ~AnnotationViewFactory() override = default;
+
+  std::unique_ptr<AnnotationViewInterface> CreateAndInitAnnotationView(
+      fuchsia::ui::views::ViewRef client_view_ref) override;
+
+  void SetViewPropertiesChangedCallback(AnnotationViewInterface::ViewPropertiesChangedCallback
+                                            view_properties_changed_callback) override;
+  void SetViewAttachedCallback(
+      AnnotationViewInterface::ViewAttachedCallback view_attached_callback) override;
+  void SetViewDetachedCallback(
+      AnnotationViewInterface::ViewDetachedCallback view_detached_callback) override;
+
+ private:
+  sys::ComponentContext* context_;
+  AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback_;
+  AnnotationViewInterface::ViewAttachedCallback view_attached_callback_;
+  AnnotationViewInterface::ViewDetachedCallback view_detached_callback_;
 };
 
 }  // namespace a11y
