@@ -26,29 +26,34 @@
 zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle, zx_vm_option_t options,
                               uint64_t offset, uint64_t size, user_out_handle* child_vmar,
                               user_out_ptr<zx_vaddr_t> child_addr) {
-  auto up = ProcessDispatcher::GetCurrent();
+  auto* up = ProcessDispatcher::GetCurrent();
 
   // Compute needed rights from requested mapping protections.
   zx_rights_t vmar_rights = 0u;
-  if (options & ZX_VM_CAN_MAP_READ)
+  if (options & ZX_VM_CAN_MAP_READ) {
     vmar_rights |= ZX_RIGHT_READ;
-  if (options & ZX_VM_CAN_MAP_WRITE)
+  }
+  if (options & ZX_VM_CAN_MAP_WRITE) {
     vmar_rights |= ZX_RIGHT_WRITE;
-  if (options & ZX_VM_CAN_MAP_EXECUTE)
+  }
+  if (options & ZX_VM_CAN_MAP_EXECUTE) {
     vmar_rights |= ZX_RIGHT_EXECUTE;
+  }
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_status_t status = up->GetDispatcherWithRights(parent_vmar_handle, vmar_rights, &vmar);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Create the new VMAR
   KernelHandle<VmAddressRegionDispatcher> handle;
   zx_rights_t new_rights;
   status = vmar->Allocate(offset, size, options, &handle, &new_rights);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup a handler to destroy the new VMAR if the syscall is unsuccessful.
   fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher = handle.dispatcher();
@@ -57,23 +62,26 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle, zx_vm_option_t opt
   // Create a handle and attach the dispatcher to it
   status = child_vmar->make(ktl::move(handle), new_rights);
 
-  if (status == ZX_OK)
+  if (status == ZX_OK) {
     status = child_addr.copy_to_user(vmar_dispatcher->vmar()->base());
+  }
 
-  if (status == ZX_OK)
+  if (status == ZX_OK) {
     cleanup_handler.cancel();
+  }
   return status;
 }
 
 // zx_status_t zx_vmar_destroy
 zx_status_t sys_vmar_destroy(zx_handle_t handle) {
-  auto up = ProcessDispatcher::GetCurrent();
+  auto* up = ProcessDispatcher::GetCurrent();
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_status_t status = up->GetDispatcher(handle, &vmar);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return vmar->Destroy();
 }
@@ -82,28 +90,32 @@ zx_status_t sys_vmar_destroy(zx_handle_t handle) {
 zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vmar_offset,
                          zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t len,
                          user_out_ptr<zx_vaddr_t> mapped_addr) {
-  auto up = ProcessDispatcher::GetCurrent();
+  auto* up = ProcessDispatcher::GetCurrent();
 
   // lookup the VMAR dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_rights_t vmar_rights;
   zx_status_t status = up->GetDispatcherAndRights(handle, &vmar, &vmar_rights);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // lookup the VMO dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
   zx_rights_t vmo_rights;
   status = up->GetDispatcherAndRights(vmo_handle, &vmo, &vmo_rights);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // test to see if we should even be able to map this
-  if (!(vmo_rights & ZX_RIGHT_MAP))
+  if (!(vmo_rights & ZX_RIGHT_MAP)) {
     return ZX_ERR_ACCESS_DENIED;
+  }
 
-  if (!VmAddressRegionDispatcher::is_valid_mapping_protection(options))
+  if (!VmAddressRegionDispatcher::is_valid_mapping_protection(options)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   bool do_map_range = false;
   if (options & ZX_VM_MAP_RANGE) {
@@ -127,27 +139,34 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
   const bool can_exec = (vmo_rights & ZX_RIGHT_EXECUTE) && (vmar_rights & ZX_RIGHT_EXECUTE);
 
   // test to see if the requested mapping protections are allowed
-  if ((options & ZX_VM_PERM_READ) && !can_read)
+  if ((options & ZX_VM_PERM_READ) && !can_read) {
     return ZX_ERR_ACCESS_DENIED;
-  if ((options & ZX_VM_PERM_WRITE) && !can_write)
+  }
+  if ((options & ZX_VM_PERM_WRITE) && !can_write) {
     return ZX_ERR_ACCESS_DENIED;
-  if ((options & ZX_VM_PERM_EXECUTE) && !can_exec)
+  }
+  if ((options & ZX_VM_PERM_EXECUTE) && !can_exec) {
     return ZX_ERR_ACCESS_DENIED;
+  }
 
   // If a permission is allowed by both the VMO and the VMAR, add it to the
   // flags for the new mapping, so that the VMO's rights as of now can be used
   // to constrain future permission changes via Protect().
-  if (can_read)
+  if (can_read) {
     options |= ZX_VM_CAN_MAP_READ;
-  if (can_write)
+  }
+  if (can_write) {
     options |= ZX_VM_CAN_MAP_WRITE;
-  if (can_exec)
+  }
+  if (can_exec) {
     options |= ZX_VM_CAN_MAP_EXECUTE;
+  }
 
   fbl::RefPtr<VmMapping> vm_mapping;
   status = vmar->Map(vmar_offset, vmo->vmo(), vmo_offset, len, options, &vm_mapping);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup a handler to destroy the new mapping if the syscall is unsuccessful.
   auto cleanup_handler = fbl::MakeAutoCall([vm_mapping]() { vm_mapping->Destroy(); });
@@ -160,8 +179,9 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
   }
 
   status = mapped_addr.copy_to_user(vm_mapping->base());
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   cleanup_handler.cancel();
   return ZX_OK;
@@ -169,13 +189,14 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
 
 // zx_status_t zx_vmar_unmap
 zx_status_t sys_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len) {
-  auto up = ProcessDispatcher::GetCurrent();
+  auto* up = ProcessDispatcher::GetCurrent();
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_status_t status = up->GetDispatcher(handle, &vmar);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return vmar->Unmap(addr, len);
 }
@@ -183,24 +204,29 @@ zx_status_t sys_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len) {
 // zx_status_t zx_vmar_protect
 zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vaddr_t addr,
                              uint64_t len) {
-  auto up = ProcessDispatcher::GetCurrent();
+  auto* up = ProcessDispatcher::GetCurrent();
 
   zx_rights_t vmar_rights = 0u;
-  if (options & ZX_VM_PERM_READ)
+  if (options & ZX_VM_PERM_READ) {
     vmar_rights |= ZX_RIGHT_READ;
-  if (options & ZX_VM_PERM_WRITE)
+  }
+  if (options & ZX_VM_PERM_WRITE) {
     vmar_rights |= ZX_RIGHT_WRITE;
-  if (options & ZX_VM_PERM_EXECUTE)
+  }
+  if (options & ZX_VM_PERM_EXECUTE) {
     vmar_rights |= ZX_RIGHT_EXECUTE;
+  }
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_status_t status = up->GetDispatcherWithRights(handle, vmar_rights, &vmar);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
-  if (!VmAddressRegionDispatcher::is_valid_mapping_protection(options))
+  if (!VmAddressRegionDispatcher::is_valid_mapping_protection(options)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   return vmar->Protect(addr, len, options);
 }
@@ -208,14 +234,15 @@ zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vadd
 // zx_status_t zx_vmar_op_range
 zx_status_t sys_vmar_op_range(zx_handle_t handle, uint32_t op, zx_vaddr_t addr, uint64_t len,
                               user_inout_ptr<void> _buffer, size_t buffer_size) {
-  auto up = ProcessDispatcher::GetCurrent();
+  auto* up = ProcessDispatcher::GetCurrent();
 
   // TODO(39956): Pass |handle| rights to RangeOp(), so it can enforce e.g. that
   // certain operations only be available through writable handles.
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_status_t status = up->GetDispatcher(handle, &vmar);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return vmar->RangeOp(op, addr, len, _buffer, buffer_size);
 }
