@@ -9,6 +9,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/asm.h>
 #include <arch/asm_macros.h>
+#include <lib/syscalls/arm64.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
 
 #ifndef __has_feature
@@ -431,6 +432,15 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     cbz  x1, arm64_exc_shared_restore_lower_el
     mov  x0, sp
     bl   arch_iframe_process_pending_signals
+    // Spectre: ARM64 CPUs may speculatively execute instructions after an SVC instruction.
+    // The userspace entry code has a speculation barrier; advance ELR_EL1 past in on the return
+    // since it has already done its job.
+.ifne ARM64_SYSCALL_SPECULATION_BARRIER_SIZE - 8
+.error "Syscall speculation barrier must be 8 bytes"
+.endif
+    msr  elr_el1, x10
+    add  x10, x10, ARM64_SYSCALL_SPECULATION_BARRIER_SIZE
+    mrs  x10, elr_el1
     b    arm64_exc_shared_restore_lower_el
 
 // Emit a small trampoline to branch to the wrapper routine for the syscall.
