@@ -6,9 +6,12 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        geometry::Corners,
+        drawing::path_for_rectangle,
         make_app_assistant,
-        render::{Context as RenderContext, *},
+        render::{
+            BlendMode, Composition, Context, Fill, FillRule, Layer, Path, PreClear, RenderExt,
+            Style,
+        },
         AnimationMode, App, AppAssistant, Color, Point, Rect, RenderOptions, Size, ViewAssistant,
         ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
@@ -50,16 +53,6 @@ impl AppAssistant for GammaAppAssistant {
     fn get_mode(&self) -> ViewMode {
         ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
     }
-}
-
-fn path_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    path_builder.move_to(bounds.origin);
-    path_builder.line_to(bounds.top_right());
-    path_builder.line_to(bounds.bottom_right());
-    path_builder.line_to(bounds.bottom_left());
-    path_builder.line_to(bounds.origin);
-    path_builder.build()
 }
 
 struct GammaViewAssistant {

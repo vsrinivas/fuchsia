@@ -250,10 +250,7 @@ fn render_composition(
         }
     }
 
-    mold_composition.render(
-        buffer,
-        composition.background_color.to_linear_brga(),
-    );
+    mold_composition.render(buffer, composition.background_color.to_linear_brga());
 }
 
 impl Context<Mold> for MoldContext {
