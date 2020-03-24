@@ -13,11 +13,13 @@
 
 struct TestOptions {
   int ecc_error_interval;  // Controls simulation of ECC errors.
-  int bad_block_interval;  // Controls simulation of bad blocks.
+  int bad_block_interval;  // Controls simulation of bad block sequence.
+  int bad_block_burst;     // Controls the size of the sequence of operations that will run
+                           // into a bad block.
   bool use_half_size;      // Makes only half of the space visible.
   bool save_config_data;   // Save options on the partition info.
 };
-constexpr TestOptions kDefaultTestOptions = {900, 50, false, true};
+constexpr TestOptions kDefaultTestOptions = {900, 50, 1, false, true};
 
 // Ram-backed driver for testing purposes.
 class NdmRamDriver final : public ftl::NdmBaseDriver {

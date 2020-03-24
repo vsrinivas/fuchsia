@@ -544,7 +544,7 @@ void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t maj
 
 // Verifies that the NDM control header can be upgraded to version 2.
 TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
-  const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
+  const TestOptions kNoEccErrors = {INT32_MAX, 50, 1, false, false};
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
@@ -618,7 +618,7 @@ TEST_F(FtlUpgradeTest, CreateNewVolumeWithVersion2ByDefault) {
 // Verifies that a new control block with partition data is automatically added.
 TEST_F(FtlUpgradeTest, ForceUpgrade) {
   // Start with an old version.
-  const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
+  const TestOptions kNoEccErrors = {INT32_MAX, 50, 1, false, false};
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
@@ -653,7 +653,7 @@ TEST_F(FtlUpgradeTest, ForceUpgrade) {
 
 TEST_F(FtlUpgradeTest, BadBlocksWriteVersion2) {
   // Start with an old version.
-  const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
+  const TestOptions kNoEccErrors = {INT32_MAX, 50, 1, false, false};
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.

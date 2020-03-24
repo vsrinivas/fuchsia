@@ -129,7 +129,6 @@ int NdmRamDriver::NandErase(uint32_t page_num) {
   if (BadBlock(page_num)) {
     ZX_ASSERT(false);
   }
-
   if (SimulateBadBlock(page_num)) {
     return ftl::kNdmError;
   }
@@ -159,6 +158,7 @@ int NdmRamDriver::IsBadBlock(uint32_t page_num) {
     SetBadBlock(page_num, true);
     return ftl::kTrue;
   }
+
   return ftl::kFalse;
 }
 
@@ -223,10 +223,13 @@ int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_
 
 bool NdmRamDriver::SimulateBadBlock(uint32_t page_num) {
   if (num_bad_blocks_ < options_.max_bad_blocks) {
-    if (bad_block_interval_++ == test_options_.bad_block_interval) {
+    bad_block_interval_++;
+    if (bad_block_interval_ > test_options_.bad_block_interval) {
       SetBadBlock(page_num, true);
-      bad_block_interval_ = 0;
-      ++num_bad_blocks_;
+      num_bad_blocks_++;
+      if (bad_block_interval_ == test_options_.bad_block_interval + test_options_.bad_block_burst) {
+        bad_block_interval_ = 0;
+      }
       return true;
     }
   }

@@ -8,11 +8,14 @@
 
 namespace {
 
+constexpr uint32_t kPagesPerBlock = 32;
 constexpr uint32_t kPageSize = 2048;
 constexpr uint32_t kOobSize = 16;
 
 // 20 blocks of 32 pages, 4 bad blocks max.
-constexpr ftl::VolumeOptions kDefaultOptions = {20, 4, 32 * kPageSize, kPageSize, kOobSize, 0};
+constexpr ftl::VolumeOptions kDefaultOptions = {
+    20, 4, (kPagesPerBlock * kPageSize), kPageSize, kOobSize, 0,
+};
 
 TEST(DriverTest, TrivialLifetime) { NdmRamDriver driver({}); }
 
@@ -161,11 +164,52 @@ TEST(DriverTest, WriteBadBlock) {
   memset(data.data(), 0, data.size());
   memset(oob.data(), 0, oob.size());
 
-  for (int i = 0; i < driver_options.bad_block_interval; i++) {
-    ASSERT_EQ(ftl::kNdmOk, driver.NandErase(0));
-  }
+  // Check that we cycle through bad block intervals.
+  uint32_t page = 0;
+  for (uint32_t cycle = 0; cycle < kDefaultOptions.max_bad_blocks; cycle++) {
+    for (int i = 0; i < driver_options.bad_block_interval; i++) {
+      ASSERT_EQ(ftl::kNdmOk, driver.NandErase(page), "Cycle: %d Interval: %d\n", cycle, i);
+    }
 
-  ASSERT_EQ(ftl::kNdmError, driver.NandWrite(0, 1, data.data(), oob.data()));
+    for (int i = 0; i < driver_options.bad_block_burst; i++, page += kPagesPerBlock) {
+      ASSERT_EQ(ftl::kNdmError, driver.NandWrite(page, 1, data.data(), oob.data()),
+                "Cycle: %d Interval: %d\n", cycle, i);
+    }
+  }
+}
+
+TEST(DriverTest, WriteBadBlockWithRange) {
+  ASSERT_TRUE(ftl::InitModules());
+
+  constexpr uint64_t kCycles = 5;
+
+  TestOptions driver_options = kDefaultTestOptions;
+  driver_options.bad_block_interval = 80;
+  driver_options.bad_block_burst = kDefaultOptions.max_bad_blocks;
+
+  auto options = kDefaultOptions;
+  options.max_bad_blocks = kDefaultOptions.max_bad_blocks * kCycles;
+  NdmRamDriver driver(options, driver_options);
+  ASSERT_EQ(nullptr, driver.Init());
+
+  fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
+  fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
+
+  memset(data.data(), 0, data.size());
+  memset(oob.data(), 0, oob.size());
+
+  // Check that we cycle through bad block intervals.=
+  uint32_t page = 0;
+  for (uint32_t cycle = 0; cycle < kCycles; ++cycle) {
+    for (int i = 0; i < driver_options.bad_block_interval; i++) {
+      ASSERT_EQ(ftl::kNdmOk, driver.NandErase(page), "Cycle: %d Interval: %d\n", cycle, i);
+    }
+
+    for (int i = 0; i < driver_options.bad_block_burst; i++, page += kPagesPerBlock) {
+      ASSERT_EQ(ftl::kNdmError, driver.NandWrite(page, 1, data.data(), oob.data()),
+                "Cycle: %d Interval: %d\n", cycle, i);
+    }
+  }
 }
 
 // NdmRamDriver is supposed to inject failures periodically. This tests that it
