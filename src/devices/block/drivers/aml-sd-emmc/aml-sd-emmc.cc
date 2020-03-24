@@ -162,6 +162,13 @@ zx_status_t AmlSdEmmc::WaitForInterruptImpl() {
   return irq_.wait(&timestamp);
 }
 
+void AmlSdEmmc::ClearStatus() {
+  AmlSdEmmcStatus::Get()
+    .ReadFrom(&mmio_)
+    .set_reg_value(AmlSdEmmcStatus::kClearStatus)
+    .WriteTo(&mmio_);
+}
+
 zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
   zx_status_t status = WaitForInterruptImpl();
 
@@ -173,11 +180,10 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
   auto status_irq = AmlSdEmmcStatus::Get().ReadFrom(&mmio_);
   uint32_t rxd_err = status_irq.rxd_err();
 
-  auto complete_ac = fbl::MakeAutoCall([&]() {
-    AmlSdEmmcStatus::Get()
-        .ReadFrom(&mmio_)
-        .set_reg_value(AmlSdEmmcStatus::kClearStatus)
-        .WriteTo(&mmio_);
+  auto complete_ac = fbl::MakeAutoCall([&]() { ClearStatus(); });
+
+  auto on_bus_error = fbl::MakeAutoCall([&]() {
+    AmlSdEmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_);
   });
 
   if (rxd_err) {
@@ -232,6 +238,9 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
            status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
+
+  // At this point we have succeeded and don't need to perform our on-error call
+  on_bus_error.cancel();
 
   if (req->cmd_flags & SDMMC_RESP_LEN_136) {
     req->response[0] = AmlSdEmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
@@ -674,6 +683,8 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
     desc_phys = pinned_mmio_.get_paddr() + AML_SD_EMMC_SRAM_MEMORY_BASE;
     start_reg.set_desc_int(1);
   }
+
+  ClearStatus();
 
   start_reg.set_desc_busy(1)
       .set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2)

@@ -113,6 +113,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sd_emmc_desc_t* desc,
                              aml_sd_emmc_desc_t** last_desc);
   zx_status_t FinishReq(sdmmc_req_t* req);
+  void ClearStatus();
   zx_status_t WaitForInterrupt(sdmmc_req_t* req);
 
   zx::bti bti_;

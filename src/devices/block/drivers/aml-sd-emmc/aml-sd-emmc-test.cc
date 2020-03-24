@@ -48,6 +48,8 @@ class TestAmlSdEmmc : public AmlSdEmmc {
 
       successful_transfers_ = 0;
       request_index_++;
+    } else if (interrupt_status_.has_value()) {
+      mmio_.Write32(interrupt_status_.value(), kAmlSdEmmcStatusOffset);
     } else {
       // Indicate that the request completed successfully.
       mmio_.Write32(1 << 13, kAmlSdEmmcStatusOffset);
@@ -72,10 +74,16 @@ class TestAmlSdEmmc : public AmlSdEmmc {
     request_index_ = 0;
   }
 
+  void SetRequestInterruptStatus(uint32_t status) {
+    interrupt_status_ = status;
+  }
+
  private:
   std::vector<uint8_t> request_results_;
   size_t request_index_ = 0;
   uint32_t successful_transfers_ = 0;
+  // The optional interrupt status to set after a request is completed.
+  std::optional<uint32_t> interrupt_status_;
 };
 
 class AmlSdEmmcTest : public zxtest::Test {
@@ -397,6 +405,33 @@ TEST_F(AmlSdEmmcTest, SetBusFreq) {
   EXPECT_OK(dut_->SdmmcSetBusFreq(400'000));
   EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 60);
   EXPECT_EQ(clock.cfg_src(), 0);
+}
+
+TEST_F(AmlSdEmmcTest, ClearStatus) {
+  ASSERT_OK(dut_->Init());
+
+  // Set end_of_chain to indicate we're done and to have something to clear
+  dut_->SetRequestInterruptStatus(1 << 13);
+  sdmmc_req_t request;
+  memset(&request, 0, sizeof(request));
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+
+  auto status = AmlSdEmmcStatus::Get().FromValue(0);
+  EXPECT_EQ(AmlSdEmmcStatus::kClearStatus, status.ReadFrom(&mmio_).reg_value());
+}
+
+TEST_F(AmlSdEmmcTest, TxCrcError) {
+  ASSERT_OK(dut_->Init());
+
+  // Set TX CRC error bit (8) and desc_busy bit (30)
+  dut_->SetRequestInterruptStatus(1 << 8 | 1 << 30);
+  sdmmc_req_t request;
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+
+  auto start = AmlSdEmmcStart::Get().FromValue(0);
+  // The desc busy bit should now have been cleared because of the error
+  EXPECT_EQ(0, start.ReadFrom(&mmio_).desc_busy());
 }
 
 }  // namespace sdmmc

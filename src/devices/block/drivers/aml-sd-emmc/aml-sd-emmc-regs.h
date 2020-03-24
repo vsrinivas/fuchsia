@@ -117,7 +117,7 @@ class AmlSdEmmcCfg : public hwreg::RegisterBase<AmlSdEmmcCfg, uint32_t> {
 
 class AmlSdEmmcStatus : public hwreg::RegisterBase<AmlSdEmmcStatus, uint32_t> {
  public:
-  static constexpr uint32_t kClearStatus = 0x3fff;
+  static constexpr uint32_t kClearStatus = 0x7fff;
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcStatus>(kAmlSdEmmcStatusOffset); }
 
   DEF_FIELD(7, 0, rxd_err);
