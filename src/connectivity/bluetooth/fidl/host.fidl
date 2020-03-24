@@ -12,6 +12,8 @@ using fuchsia.bluetooth.control;
 using fuchsia.bluetooth.gatt;
 using fuchsia.bluetooth.le;
 
+using fuchsia.mem;
+
 /// Interface for interacting with a Bluetooth host device (bt-host)
 protocol Host {
     /// The following methods fulfill a given interface request. bt-host device
@@ -161,6 +163,9 @@ protocol Host {
     /// to these devices when they are in range and connectable. Future connections will be encrypted
     /// using the provided bonding data.
     AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
+
+    /// Returns a buffer containing the read-only Virtual Memory Object containing the host's Inspect File.
+    GetInspectVmo() -> (fuchsia.mem.Buffer inspect_vmo);
 
     // ===== Events =====
 

@@ -22,6 +22,7 @@ fidl("host") {
     "//sdk/fidl/fuchsia.bluetooth.gatt",
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.bluetooth.sys",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 
