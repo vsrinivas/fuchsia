@@ -52,6 +52,7 @@ group("tests") {
     "//src/connectivity/wlan/lib/inspect:wlan-inspect-tests",
     "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme-tests",
+    "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c-tests",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn-tests",
     "//src/connectivity/wlan/lib/sme:wlan-sme-tests",
     "//src/connectivity/wlan/lib/span:wlan-span-tests",
