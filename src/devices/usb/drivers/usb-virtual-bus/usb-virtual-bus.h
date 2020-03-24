@@ -89,9 +89,6 @@ class UsbVirtualBus : public UsbVirtualBusType,
     RequestQueue host_reqs;
     RequestQueue device_reqs;
     uint16_t max_packet_size = 0;
-    // Offset into current host req, for dealing with host reqs that are bigger than
-    // their matching device req.
-    zx_off_t req_offset = 0;
     bool stalled = false;
   };
 

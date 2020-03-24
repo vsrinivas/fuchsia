@@ -107,6 +107,28 @@ test("usb-virtual-bus-cdc-acm") {
   ]
 }
 
+test("usb-virtual-bus-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  sources = [ "usb-virtual-bus-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.virtualbustest:fuchsia.hardware.usb.virtualbustest_llcpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+  ]
+}
+
 test("usb-virtual-bus-cdc-ecm") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # Remove when converting this file to proper GN build idioms.
@@ -144,6 +166,10 @@ migrated_manifest("usb-virtual-bus-ftdi-manifest") {
 
 migrated_manifest("usb-virtual-bus-cdc-acm-manifest") {
   deps = [ ":usb-virtual-bus-cdc-acm" ]
+}
+
+migrated_manifest("usb-virtual-bus-test-manifest") {
+  deps = [ ":usb-virtual-bus-test" ]
 }
 
 migrated_manifest("usb-virtual-bus-cdc-ecm-manifest") {

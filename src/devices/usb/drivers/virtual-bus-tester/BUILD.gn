@@ -1,0 +1,57 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("virtual-bus-tester") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "host.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.virtualbustest:fuchsia.hardware.usb.virtualbustest_llcpp",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+  ]
+}
+
+driver_module("virtual-bus-tester-function") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "peripheral.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.usb.function",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+  ]
+}
+
+migrated_manifest("virtual-bus-tester-manifest") {
+  deps = [ ":virtual-bus-tester" ]
+}
+
+migrated_manifest("virtual-bus-tester-function-manifest") {
+  deps = [ ":virtual-bus-tester-function" ]
+}

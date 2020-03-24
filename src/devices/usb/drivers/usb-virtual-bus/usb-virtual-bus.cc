@@ -127,12 +127,8 @@ int UsbVirtualBus::DeviceThread() {
           has_work = true;
           auto device_req = ep->device_reqs.pop();
           auto req = ep->host_reqs.pop();
-          zx_off_t offset = ep->req_offset;
-          size_t length = req->request()->header.length - offset;
-          if (length > device_req->request()->header.length) {
-            length = device_req->request()->header.length;
-          }
-
+          size_t length =
+              std::min(req->request()->header.length, device_req->request()->header.length);
           void* device_buffer;
           auto status = device_req->Mmap(&device_buffer);
           if (status != ZX_OK) {
@@ -147,26 +143,16 @@ int UsbVirtualBus::DeviceThread() {
           }
 
           if (out) {
-            req->CopyFrom(device_buffer, length, offset);
+            req->CopyFrom(device_buffer, length, 0);
           } else {
-            req->CopyTo(device_buffer, length, offset);
+            req->CopyTo(device_buffer, length, 0);
           }
-
-          offset += length;
-          if (offset == req->request()->header.length ||
-              // Short packet in the IN direction signals end of transfer.
-              (!out && device_req->request()->header.length < ep->max_packet_size)) {
-            req->request()->response.status = ZX_OK;
-            req->request()->response.actual = length;
-            complete_reqs_pending.push(std::move(req.value()));
-            ep->req_offset = 0;
-          } else {
-            ep->req_offset = offset;
-            ep->host_reqs.push_next(*std::move(req));
-          }
+          req->request()->response.actual = length;
+          req->request()->response.status = ZX_OK;
           device_req->request()->response.actual = length;
           device_req->request()->response.status = ZX_OK;
           complete_reqs_pending.push(std::move(device_req.value()));
+          complete_reqs_pending.push(std::move(req.value()));
         }
       }
     }
