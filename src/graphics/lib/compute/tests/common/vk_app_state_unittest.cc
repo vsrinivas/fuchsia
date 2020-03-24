@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "vk_surface.h"
+
 TEST(vkAppStateTest, DefautInit)
 {
   vk_app_state_t app = {};
@@ -194,10 +196,6 @@ TEST(vkAppStateTest, RequireSwapchain)
   ASSERT_FALSE(app.has_amd_statistics);
   ASSERT_FALSE(app.has_subgroup_size_control);
 
-  VkSurfaceKHR surface = vk_app_state_create_surface(&app, 100, 100);
-  ASSERT_TRUE(surface);
-  vkDestroySurfaceKHR(app.instance, surface, app.ac);
-
   vk_app_state_destroy(&app);
 }
 
@@ -211,10 +209,6 @@ TEST(vkAppStateTest, RequireSwapchainDisablePresent)
   };
 
   ASSERT_TRUE(vk_app_state_init(&app, &config)) << "Could not initialize vk_app_state_t instance";
-
-  VkSurfaceKHR surface = vk_app_state_create_surface(&app, 100, 100);
-  ASSERT_TRUE(surface);
-  vkDestroySurfaceKHR(app.instance, surface, app.ac);
 
   vk_app_state_destroy(&app);
 }

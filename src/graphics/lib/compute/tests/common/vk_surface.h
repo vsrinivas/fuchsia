@@ -13,50 +13,88 @@
 extern "C" {
 #endif
 
-// A struct modelling the surface formats that a given physical device
-// supports for presentation, given a VkSurfaceKHR instance.
 //
+//
+//
+
+// Return true if a given physical device supports presentation, false
+// otherwise.
+extern bool
+vk_physical_device_supports_presentation(VkInstance       instance,
+                                         VkPhysicalDevice physical_device,
+                                         uint32_t         queue_family_index);
+
+#define MAX_VK_SURFACE_REQUIREMENTS_STORAGE 8
+
+// Grab Vulkan instance requirements for presentation surface.
+typedef struct vk_surface_requirements
+{
+  uint32_t             num_layers;
+  uint32_t             num_extensions;
+  const char * const * layer_names;
+  const char * const * extension_names;
+
+  // Free storage available for implementations to use (e.g. to store
+  // layer/extension name pointers).
+  uintptr_t storage[MAX_VK_SURFACE_REQUIREMENTS_STORAGE];
+
+  // Optional function to be called to release this object's memory.
+  // If |storage| was not large enough for the implementation.
+  void (*free_func)(struct vk_surface_requirements * requirements);
+
+} vk_surface_requirements_t;
+
+extern vk_surface_requirements_t
+vk_surface_get_requirements(bool disable_swapchain_present);
+
+//
+// vk_surface_t
+//
+
+// An opaque struct modelling a Vulkan presentation surface.
+typedef struct vk_surface vk_surface_t;
+
+// Configuration structure for vk_surface_t creation.
+// |instance| is the Vulkan instance.
+// |physical_device| is the physical device.
+// |queue_family_index| is the queue family used for presentation.
+// |allocator| is an optional Vulkan allocator pointer.
+// |window_width| and |window_height| are the desired display surface
+// dimensions. Only used as a hint since the implementation might
+// enforce different dimensions (e.g. fullscreen framebuffers) or
+// adjust the values (e.g. rounding to multiples of 4 or 8). A value
+// of 0 means an arbitrary default (e.g. 32x32).
+// |window_title| is an optional window title to use.
 typedef struct
 {
-  VkPhysicalDevice         physical_device;
-  VkSurfaceCapabilitiesKHR capabilities;
+  VkInstance                    instance;
+  VkPhysicalDevice              physical_device;
+  uint32_t                      queue_family_index;
+  const VkAllocationCallbacks * allocator;
+  uint32_t                      window_width;
+  uint32_t                      window_height;
+  const char *                  window_title;
+} vk_surface_config_t;
 
-  uint32_t           present_modes_count;
-  VkPresentModeKHR * present_modes;
+// Create a new presentaiton surface handle. On success, return a non-null
+// pointer. On failure, return NULL after printing an error message to stderr()
+// explaining the problem.
+extern vk_surface_t *
+vk_surface_create(const vk_surface_config_t * config);
 
-  uint32_t             formats_count;
-  VkSurfaceFormatKHR * formats;
+// Return the Vulkan handle for this presentation surface.
+extern VkSurfaceKHR
+vk_surface_get_surface_khr(const vk_surface_t * surface);
 
-} vk_device_surface_info_t;
+// Poll input user events on this presentation surface.
+// Return true on success, false if the program should quit.
+// This function should be called before any draw call.
+extern bool
+vk_surface_poll_events(vk_surface_t * surface);
 
-// Initialize a new vk_device_surface_info_t instance.
+// Destroy a given presentation surface.
 extern void
-vk_device_surface_info_init(vk_device_surface_info_t * info,
-                            VkPhysicalDevice           physical_device,
-                            VkSurfaceKHR               surface,
-                            VkInstance                 instance);
-
-// Destroy a given vk_device_surface_info_t instance.
-extern void
-vk_device_surface_info_destroy(vk_device_surface_info_t * info);
-
-// Probe all surface formats to find the one that best matches |wanted_image_usage|
-// and |wanted_format|. Returns VK_FORMAT_UNDEFINED if none is found, or a valid
-// and compatible VkFormat value otherwise.
-//
-// If |wanted_image_usage| is not 0, all bits in it should be supported by the
-// result format.
-//
-// If |wanted_format| is not VK_FORMAT_UNDEFINED, then it will be the value returned
-// by this function in case of success.
-extern VkFormat
-vk_device_surface_info_find_presentation_format(vk_device_surface_info_t * info,
-                                                VkImageUsageFlags          wanted_image_usage,
-                                                VkFormat                   wanted_format);
-
-// Print the content of |info| to stdout for debugging.
-extern void
-vk_device_surface_info_print(const vk_device_surface_info_t * info);
+vk_surface_destroy(vk_surface_t * surface);
 
 #ifdef __cplusplus
 }

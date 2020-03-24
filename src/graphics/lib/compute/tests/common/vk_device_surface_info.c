@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vk_surface.h"
+#include "vk_device_surface_info.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,7 +78,7 @@ vk_device_surface_info_find_presentation_format(vk_device_surface_info_t * info,
           vk_format_matcher_probe(&format_matcher, VK_FORMAT_R8G8B8A8_SRGB);
           vk_format_matcher_probe(&format_matcher, VK_FORMAT_R8G8B8A8_UNORM);
           vk_format_matcher_probe(&format_matcher, VK_FORMAT_B8G8R8A8_SRGB);
-          vk_format_matcher_probe(&format_matcher, VK_FORMAT_B8G8R8A8_SRGB);
+          vk_format_matcher_probe(&format_matcher, VK_FORMAT_B8G8R8A8_UNORM);
         }
       else
         {

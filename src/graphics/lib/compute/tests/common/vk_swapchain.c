@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "vk_device_surface_info.h"
 #include "vk_format_matcher.h"
 #include "vk_strings.h"
-#include "vk_surface.h"
 #include "vk_utils.h"
 
 // Set to 1 to enable debug traces to stdout.

@@ -8,6 +8,7 @@
 #include "tests/common/vk_app_state.h"
 #include "tests/common/vk_buffer.h"
 #include "tests/common/vk_image_utils.h"
+#include "tests/common/vk_surface.h"
 #include "tests/common/vk_swapchain.h"
 #include "tests/common/vk_swapchain_queue.h"
 #include "tests/common/vk_utils.h"
@@ -285,6 +286,23 @@ main(int argc, char const * argv[])
 
   vk_app_state_print(&app_state);
 
+  vk_surface_t * surface = vk_surface_create(&(const vk_surface_config_t){
+    .instance           = app_state.instance,
+    .physical_device    = app_state.pd,
+    .allocator          = app_state.ac,
+    .queue_family_index = app_state.qfi,
+
+    .window_width  = 800,
+    .window_height = 800,
+    .window_title  = "Transfer test",
+  });
+
+  if (!surface)
+    {
+      vk_app_state_destroy(&app_state);
+      return EXIT_FAILURE;
+    }
+
   vk_swapchain_t * swapchain = vk_swapchain_create(&(const vk_swapchain_config_t){
     .instance        = app_state.instance,
     .device          = app_state.d,
@@ -297,9 +315,16 @@ main(int argc, char const * argv[])
     .graphics_queue_index  = 0,
 
     .image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-    .surface_khr       = vk_app_state_create_surface(&app_state, 800, 600),
+    .surface_khr       = vk_surface_get_surface_khr(surface),
     .max_frames        = 2,
   });
+
+  if (!swapchain)
+    {
+      vk_surface_destroy(surface);
+      vk_app_state_destroy(&app_state);
+      return EXIT_FAILURE;
+    }
 
   VkDevice                      device         = app_state.d;
   const VkAllocationCallbacks * allocator      = app_state.ac;
@@ -343,7 +368,7 @@ main(int argc, char const * argv[])
   // Main loop.
   uint32_t counter = 0;
 
-  while (vk_app_state_poll_events(&app_state))
+  while (vk_surface_poll_events(surface))
     {
       const vk_swapchain_queue_image_t * image =
         vk_swapchain_queue_acquire_next_image(swapchain_queue);
@@ -463,6 +488,7 @@ main(int argc, char const * argv[])
   vk_buffer_free(&my_buffer);
 
   vk_swapchain_queue_destroy(swapchain_queue);
+  vk_surface_destroy(surface);
   vk_swapchain_destroy(swapchain);
 
   vkDestroyPipeline(device, graphics_pipeline, allocator);

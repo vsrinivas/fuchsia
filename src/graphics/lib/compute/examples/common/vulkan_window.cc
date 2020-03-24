@@ -8,6 +8,7 @@
 
 #include "tests/common/utils.h"
 #include "tests/common/vk_app_state.h"
+#include "tests/common/vk_device_surface_info.h"
 #include "tests/common/vk_surface.h"
 #include "tests/common/vk_swapchain.h"
 #include "tests/common/vk_swapchain_queue.h"
@@ -20,10 +21,21 @@ VulkanWindow::init(VulkanDevice * device, const VulkanWindow::Config & config)
 
   // Allocate display surface, and determine whether it's possible to directly
   // render to the swapchain with it.
-  VkSurfaceKHR window_surface =
-    vk_app_state_create_surface(&device->vk_app_state(), config.window_width, config.window_height);
+  const vk_surface_config_t surface_config = {
+    .instance           = device->vk_instance(),
+    .physical_device    = device->vk_physical_device(),
+    .queue_family_index = device->graphics_queue_family(),
+    .allocator          = device->vk_allocator(),
+    .window_width       = config.window_width,
+    .window_height      = config.window_height,
+    .window_title       = config.app_name,
+  };
+  surface_ = vk_surface_create(&surface_config);
+  if (!surface_)
+    return false;  // NOTE: error message already sent to stderr.
 
-  VkImageUsageFlags image_usage = 0;
+  VkSurfaceKHR      window_surface = vk_surface_get_surface_khr(surface_);
+  VkImageUsageFlags image_usage    = 0;
 
   // Check that rendering directly to the swapchain is supported
   if (config.require_swapchain_image_shader_storage)
@@ -111,6 +123,9 @@ VulkanWindow::~VulkanWindow()
 
   if (swapchain_)
     vk_swapchain_destroy(swapchain_);
+
+  if (surface_)
+    vk_surface_destroy(surface_);
 }
 
 bool
@@ -150,7 +165,7 @@ VulkanWindow::presentSwapchainQueueImage()
 bool
 VulkanWindow::handleUserEvents()
 {
-  return vk_app_state_poll_events(&device_->vk_app_state());
+  return vk_surface_poll_events(surface_);
 }
 
 void

@@ -10,6 +10,8 @@
 
 // Forward declarations only.
 class VulkanDevice;
+
+typedef struct vk_surface               vk_surface_t;
 typedef struct vk_swapchain             vk_swapchain_t;
 typedef struct vk_swapchain_queue       vk_swapchain_queue_t;
 typedef struct vk_swapchain_queue_image vk_swapchain_queue_image_t;
@@ -148,6 +150,7 @@ class VulkanWindow {
 
  protected:
   VulkanDevice *   device_    = nullptr;
+  vk_surface_t *   surface_   = nullptr;
   vk_swapchain_t * swapchain_ = nullptr;
   Info             info_      = {};
 

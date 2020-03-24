@@ -84,6 +84,7 @@ source_set("common_vk") {
   public = [
     "common/vk_app_state.h",
     "common/vk_buffer.h",
+    "common/vk_device_surface_info.h",
     "common/vk_format_matcher.h",
     "common/vk_image.h",
     "common/vk_image_utils.h",
@@ -99,6 +100,8 @@ source_set("common_vk") {
     "common/vk_app_state.h",
     "common/vk_buffer.c",
     "common/vk_buffer.h",
+    "common/vk_device_surface_info.c",
+    "common/vk_device_surface_info.h",
     "common/vk_format_matcher.c",
     "common/vk_format_matcher.h",
     "common/vk_image.c",
@@ -109,7 +112,6 @@ source_set("common_vk") {
     "common/vk_sampler.h",
     "common/vk_strings.c",
     "common/vk_strings.h",
-    "common/vk_surface.c",
     "common/vk_surface.h",
     "common/vk_swapchain.c",
     "common/vk_swapchain.h",
@@ -118,20 +120,17 @@ source_set("common_vk") {
     "common/vk_utils.c",
     "common/vk_utils.h",
   ]
-  public_deps = [
-    ":common",
-    graphics_compute_vulkan_loader_target,
-  ]
   deps = []
+
   if (is_fuchsia) {
+    sources += [ "common/vk_surface_fuchsia.cc" ]
     deps += [
       "//zircon/public/lib/async-loop",
       "//zircon/public/lib/async-loop-default",
       "//zircon/public/lib/trace-provider-with-fdio",
     ]
-  }
-  if (!is_fuchsia) {
-    # GLFW is used to create a window on the host in vk_app_state.c
+  } else {
+    sources += [ "common/vk_surface_glfw.c" ]
     deps += [ "//third_party/glfw:glfw" ]
 
     # Work-around bug in //third_party/glfw:glfw definition.
@@ -144,6 +143,11 @@ source_set("common_vk") {
       ]
     }
   }
+
+  public_deps = [
+    ":common",
+    graphics_compute_vulkan_loader_target,
+  ]
   public_configs = [ ":common_public_config" ]
 }
 
@@ -155,6 +159,7 @@ graphics_compute_unittests("common_vk_unittests") {
     "common/vk_image_unittest.cc",
     "common/vk_sampler_unittest.cc",
     "common/vk_strings_unittest.cc",
+    "common/vk_surface_unittest.cc",
     "common/vk_utils_unittest.cc",
   ]
   deps = [ ":common_vk" ]

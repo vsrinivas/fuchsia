@@ -14,6 +14,7 @@
 
 #include "utils.h"
 #include "vk_strings.h"
+#include "vk_surface.h"
 #include "vk_utils.h"
 
 #if VK_USE_PLATFORM_FUCHSIA
@@ -21,65 +22,6 @@
 #include <lib/async-loop/loop.h>
 #include <trace-provider/provider.h>
 #endif
-
-// For now, using GLFW to create a presentation surface on the host.
-#if !VK_USE_PLATFORM_FUCHSIA
-#include <GLFW/glfw3.h>
-
-// Print GLFW errors to stderr to ease debugging.
-static void
-glfw_error_callback(int error, const char * message)
-{
-  fprintf(stderr, "GLFW:error=%d: %s\n", error, message);
-}
-
-static GLFWwindow * glfw_window;
-
-static uint32_t glfw_window_width = 1024, glfw_window_height = 1024;
-
-static void
-glfw_setup_config(uint32_t window_width, uint32_t window_height)
-{
-  if (window_width > 0)
-    glfw_window_width = window_width;
-  if (window_height > 0)
-    glfw_window_height = window_height;
-}
-
-static GLFWwindow *
-glfw_get_window()
-{
-  if (!glfw_window)
-    {
-      glfwInit();
-
-      glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-      //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-      glfwSetErrorCallback(glfw_error_callback);
-      glfw_window =
-        glfwCreateWindow(glfw_window_width, glfw_window_height, "Spinel Demo Test", NULL, NULL);
-      ASSERT_MSG(glfw_window, "Could not create GLFW presentation window!");
-    }
-  return glfw_window;
-}
-
-static bool
-glfw_poll_events()
-{
-  GLFWwindow * window = glfw_get_window();
-
-  if (!window)
-    return false;
-
-  if (glfwWindowShouldClose(window))
-    return false;
-
-  glfwPollEvents();
-  return true;
-}
-
-#endif  // !VK_USE_PLATFORM_FUCHSIA
 
 //
 // Generic const char * vector. Used for extensions and layout names.
@@ -433,59 +375,6 @@ device_info_destroy(DeviceInfo * info)
       info->extensions       = NULL;
       info->extensions_count = 0;
     }
-}
-
-//
-// Platform-specific surface creation code.
-//
-
-VkResult
-create_surface_khr(VkInstance                    instance,
-                   const VkAllocationCallbacks * ac,
-                   VkSurfaceKHR *                surface_khr)
-{
-#define INSTANCE_LOADER(name) vkGetInstanceProcAddr(instance, name)
-
-#if VK_USE_PLATFORM_FUCHSIA
-  GET_VULKAN_INSTANCE_PROC_ADDR(vkCreateImagePipeSurfaceFUCHSIA);
-  ASSERT_MSG(vkCreateImagePipeSurfaceFUCHSIA, "Missing %s!\n", "vkCreateImagePipeSurfaceFUCHSIA");
-
-  VkImagePipeSurfaceCreateInfoFUCHSIA const surface_info = {
-    .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-    .pNext = NULL,
-  };
-  return vkCreateImagePipeSurfaceFUCHSIA(instance, &surface_info, ac, surface_khr);
-#else   // !FUCHSIA
-  GLFWwindow * window = glfw_get_window();
-  return glfwCreateWindowSurface(instance, window, ac, surface_khr);
-#endif  // !FUCHSIA
-}
-
-static bool
-physical_device_supports_presentation(VkPhysicalDevice physical_device,
-                                      uint32_t         queue_family_index,
-                                      VkInstance       instance)
-{
-#if VK_USE_PLATFORM_FUCHSIA
-  return true;
-#else
-  return glfwGetPhysicalDevicePresentationSupport(instance, physical_device, queue_family_index) ==
-         GLFW_TRUE;
-#endif
-}
-
-VkSurfaceKHR
-vk_app_state_create_surface(const vk_app_state_t * app_state,
-                            uint32_t               window_width,
-                            uint32_t               window_height)
-{
-  VkSurfaceKHR surface;
-#if !VK_USE_PLATFORM_FUCHSIA
-  glfw_setup_config(window_width, window_height);
-#endif
-  VkResult result = create_surface_khr(app_state->instance, app_state->ac, &surface);
-  VK_CHECK_MSG(result, "Could not create presentation surface");
-  return surface;
 }
 
 //
@@ -976,6 +865,8 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
 
   bool require_swapchain = config->require_swapchain;
 
+  vk_surface_requirements_t surface_requirements = {};
+
   if (require_swapchain)
     {
       string_list_append(&enabled_extensions, VK_KHR_SURFACE_EXTENSION_NAME);
@@ -984,23 +875,13 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
       // For now, only use the layer allowing presenting to the framebuffer
       // directly (another layer is provided to display in a window, but this one
       // is far more work to get everything working).
-#if VK_USE_PLATFORM_FUCHSIA
-      const char * fuchsia_layer = config->disable_swapchain_present
-                                     ? "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present"
-                                     : "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
-      string_list_append(&enabled_layers, fuchsia_layer);
-      string_list_append(&enabled_extensions, VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME);
-#else
-      glfwInit();
-      uint32_t      glfw_extensions_count = 0;
-      const char ** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extensions_count);
-      for (uint32_t n = 0; n < glfw_extensions_count; ++n)
-        {
-          string_list_append(&enabled_extensions, glfw_extensions[n]);
-        }
-      if (config->disable_swapchain_present)
-        fprintf(stderr, "WARNING: disable_swapchain_present ignored on this platform!\n");
-#endif
+      surface_requirements = vk_surface_get_requirements(config->disable_swapchain_present);
+
+      const vk_surface_requirements_t * reqs = &surface_requirements;
+      for (uint32_t nn = 0; nn < reqs->num_layers; ++nn)
+        string_list_append(&enabled_layers, reqs->layer_names[nn]);
+      for (uint32_t nn = 0; nn < reqs->num_extensions; ++nn)
+        string_list_append(&enabled_extensions, reqs->extension_names[nn]);
     }
   else if (config->disable_swapchain_present)
     {
@@ -1036,6 +917,9 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
 
   string_list_free(&enabled_layers);
   string_list_free(&enabled_extensions);
+
+  if (surface_requirements.free_func)
+    surface_requirements.free_func(&surface_requirements);
 
   instance_info_destroy(&instance_info);
 
@@ -1252,9 +1136,9 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
 
   if (require_swapchain)
     {
-      if (!physical_device_supports_presentation(app_state->pd,
-                                                 graphics_family,
-                                                 app_state->instance))
+      if (!vk_physical_device_supports_presentation(app_state->instance,
+                                                    app_state->pd,
+                                                    graphics_family))
         {
           fprintf(stderr, "This device does not support presentation/display!\n");
           return false;
@@ -1428,17 +1312,6 @@ vk_app_state_get_queue_families(const vk_app_state_t * app_state)
 
   result.count = count;
   return result;
-}
-
-bool
-vk_app_state_poll_events(vk_app_state_t * app_state)
-{
-#if VK_USE_PLATFORM_FUCHSIA
-  // TODO(digit): Find a way to receive events from the system.
-  return true;
-#else
-  return glfw_poll_events();
-#endif
 }
 
 void

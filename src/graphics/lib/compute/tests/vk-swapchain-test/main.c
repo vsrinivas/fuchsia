@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "tests/common/vk_app_state.h"
+#include "tests/common/vk_surface.h"
 #include "tests/common/vk_swapchain.h"
 
 //
@@ -41,6 +42,23 @@ main(int argc, char const * argv[])
 
   vk_app_state_print(&app_state);
 
+  const vk_surface_config_t surface_config = {
+    .instance           = app_state.instance,
+    .physical_device    = app_state.pd,
+    .allocator          = app_state.ac,
+    .queue_family_index = app_state.qfi,
+    .window_width       = 800,
+    .window_height      = 600,
+    .window_title       = "vk_swapchain_test",
+  };
+  vk_surface_t * surface = vk_surface_create(&surface_config);
+
+  if (!surface)
+    {
+      vk_app_state_destroy(&app_state);
+      return EXIT_FAILURE;
+    }
+
   const vk_swapchain_config_t swapchain_config = {
     .instance        = app_state.instance,
     .device          = app_state.d,
@@ -52,7 +70,7 @@ main(int argc, char const * argv[])
     .graphics_queue_family = app_state.qfi,
     .graphics_queue_index  = 0,
 
-    .surface_khr = vk_app_state_create_surface(&app_state, 800, 600),
+    .surface_khr = vk_surface_get_surface_khr(surface),
     .max_frames  = 2,
   };
 
@@ -61,6 +79,7 @@ main(int argc, char const * argv[])
   vk_swapchain_print(swapchain);
 
   vk_swapchain_destroy(swapchain);
+  vk_surface_destroy(surface);
   vk_app_state_destroy(&app_state);
 
   return EXIT_SUCCESS;

@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include "tests/common/utils.h"
-#include "tests/common/vk_surface.h"
+#include "tests/common/vk_device_surface_info.h"
 
 bool
 DemoAppBase::init(const DemoAppBase::Config & config)
