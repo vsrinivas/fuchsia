@@ -49,13 +49,23 @@ func NewCmdRecord() *cmdRecord {
 	cmd.flags.StringVar(&cmd.keyFile, "key-file", "", "SSH key file to use. The default is $FUCHSIA_DIR/.ssh/pkey.")
 	cmd.flags.StringVar(&cmd.filePrefix, "file-prefix", "",
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
-	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname.")
-	cmd.flags.StringVar(&cmd.targetPort, "target-port", "", "Target SSH port.")
+	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname. Can also be set in environment with TRACEUTIL_TARGET_HOST.")
+	cmd.flags.StringVar(&cmd.targetPort, "target-port", "", "Target SSH port. Can also be set in environment with TRACEUTIL_TARGET_PORT.")
 	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
 	cmd.flags.BoolVar(&cmd.stdout, "stdout", false,
 		"Send the report to stdout, in addition to writing to file.")
 	cmd.flags.StringVar(&cmd.zedmon, "zedmon", "",
 		"UNDER DEVELOPMENT: Path to power trace utility, zedmon.")
+
+	target, present := os.LookupEnv("TRACEUTIL_TARGET_HOST")
+	if present {
+		cmd.flags.Set("target", target)
+	}
+
+	port, present := os.LookupEnv("TRACEUTIL_TARGET_PORT")
+	if present {
+		cmd.flags.Set("target-port", port)
+	}
 
 	cmd.captureConfig = newCaptureTraceConfig(cmd.flags)
 	return cmd
