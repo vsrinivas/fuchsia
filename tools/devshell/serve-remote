@@ -94,6 +94,7 @@ args=(
   -6 # We want ipv6 binds for the port forwards
   -L "\*:8083:localhost:8083" # requests to the package server address locally go to the workstation
   -R "8022:[${target_addr}]:22" # requests from the workstaiton to ssh to localhost:8022 will make it to the target
+  -R "2345:[${target_addr}]:2345" # requests from the workstation to the debug agent on localhost will make it to the target
   -o ExitOnForwardFailure=yes
   "${host}"
 )
