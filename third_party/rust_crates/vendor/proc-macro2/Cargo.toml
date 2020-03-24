@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "proc-macro2"
-version = "1.0.1"
+version = "1.0.9"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "A stable implementation of the upcoming new `proc_macro` API. Comes with an\noption, off by default, to also reimplement itself in terms of the upstream\nunstable API.\n"
 homepage = "https://github.com/alexcrichton/proc-macro2"
@@ -25,13 +25,11 @@ repository = "https://github.com/alexcrichton/proc-macro2"
 [package.metadata.docs.rs]
 rustc-args = ["--cfg", "procmacro2_semver_exempt"]
 rustdoc-args = ["--cfg", "procmacro2_semver_exempt"]
-
-[lib]
-name = "proc_macro2"
 [dependencies.unicode-xid]
 version = "0.2"
 [dev-dependencies.quote]
 version = "1.0"
+default_features = false
 
 [features]
 default = ["proc-macro"]

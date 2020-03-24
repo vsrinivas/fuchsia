@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::cmp;
 use std::fmt;
 use std::iter;
+use std::ops::RangeBounds;
 #[cfg(procmacro2_semver_exempt)]
 use std::path::Path;
 use std::path::PathBuf;
@@ -426,6 +427,32 @@ impl Span {
             })
         })
     }
+
+    #[cfg(not(span_locations))]
+    fn first_byte(self) -> Self {
+        self
+    }
+
+    #[cfg(span_locations)]
+    fn first_byte(self) -> Self {
+        Span {
+            lo: self.lo,
+            hi: cmp::min(self.lo.saturating_add(1), self.hi),
+        }
+    }
+
+    #[cfg(not(span_locations))]
+    fn last_byte(self) -> Self {
+        self
+    }
+
+    #[cfg(span_locations)]
+    fn last_byte(self) -> Self {
+        Span {
+            lo: cmp::max(self.hi.saturating_sub(1), self.lo),
+            hi: self.hi,
+        }
+    }
 }
 
 impl fmt::Debug for Span {
@@ -473,11 +500,11 @@ impl Group {
     }
 
     pub fn span_open(&self) -> Span {
-        self.span
+        self.span.first_byte()
     }
 
     pub fn span_close(&self) -> Span {
-        self.span
+        self.span.last_byte()
     }
 
     pub fn set_span(&mut self, span: Span) {
@@ -548,7 +575,6 @@ impl Ident {
     }
 }
 
-#[inline]
 fn is_ident_start(c: char) -> bool {
     ('a' <= c && c <= 'z')
         || ('A' <= c && c <= 'Z')
@@ -556,7 +582,6 @@ fn is_ident_start(c: char) -> bool {
         || (c > '\x7f' && UnicodeXID::is_xid_start(c))
 }
 
-#[inline]
 fn is_ident_continue(c: char) -> bool {
     ('a' <= c && c <= 'z')
         || ('A' <= c && c <= 'Z')
@@ -729,10 +754,10 @@ impl Literal {
         text.push('"');
         for c in t.chars() {
             if c == '\'' {
-                // escape_default turns this into "\'" which is unnecessary.
+                // escape_debug turns this into "\'" which is unnecessary.
                 text.push(c);
             } else {
-                text.extend(c.escape_default());
+                text.extend(c.escape_debug());
             }
         }
         text.push('"');
@@ -743,10 +768,10 @@ impl Literal {
         let mut text = String::new();
         text.push('\'');
         if t == '"' {
-            // escape_default turns this into '\"' which is unnecessary.
+            // escape_debug turns this into '\"' which is unnecessary.
             text.push(t);
         } else {
-            text.extend(t.escape_default());
+            text.extend(t.escape_debug());
         }
         text.push('\'');
         Literal::_new(text)
@@ -776,6 +801,10 @@ impl Literal {
 
     pub fn set_span(&mut self, span: Span) {
         self.span = span;
+    }
+
+    pub fn subspan<R: RangeBounds<usize>>(&self, _range: R) -> Option<Span> {
+        None
     }
 }
 

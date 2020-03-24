@@ -31,6 +31,7 @@
 //! # const IGNORE: &str = stringify! {
 //! #[proc_macro_derive(MyDerive)]
 //! # };
+//! # #[cfg(wrap_proc_macro)]
 //! pub fn my_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 //!     let input = proc_macro2::TokenStream::from(input);
 //!
@@ -77,7 +78,7 @@
 //! a different thread.
 
 // Proc-macro2 types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/proc-macro2/1.0.1")]
+#![doc(html_root_url = "https://docs.rs/proc-macro2/1.0.9")]
 #![cfg_attr(any(proc_macro_span, super_unstable), feature(proc_macro_span))]
 #![cfg_attr(super_unstable, feature(proc_macro_raw_ident, proc_macro_def_site))]
 
@@ -89,6 +90,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::marker;
+use std::ops::RangeBounds;
 #[cfg(procmacro2_semver_exempt)]
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -188,6 +190,12 @@ impl From<proc_macro::TokenStream> for TokenStream {
 impl From<TokenStream> for proc_macro::TokenStream {
     fn from(inner: TokenStream) -> proc_macro::TokenStream {
         inner.inner.into()
+    }
+}
+
+impl From<TokenTree> for TokenStream {
+    fn from(token: TokenTree) -> Self {
+        TokenStream::_new(imp::TokenStream::from(token))
     }
 }
 
@@ -672,7 +680,7 @@ pub struct Punct {
 pub enum Spacing {
     /// E.g. `+` is `Alone` in `+ =`, `+ident` or `+()`.
     Alone,
-    /// E.g. `+` is `Joint` in `+=` or `'#`.
+    /// E.g. `+` is `Joint` in `+=` or `'` is `Joint` in `'#`.
     ///
     /// Additionally, single quote `'` can join with identifiers to form
     /// lifetimes `'ident`.
@@ -1116,6 +1124,19 @@ impl Literal {
     /// Configures the span associated for this literal.
     pub fn set_span(&mut self, span: Span) {
         self.inner.set_span(span.inner);
+    }
+
+    /// Returns a `Span` that is a subset of `self.span()` containing only
+    /// the source bytes in range `range`. Returns `None` if the would-be
+    /// trimmed span is outside the bounds of `self`.
+    ///
+    /// Warning: the underlying [`proc_macro::Literal::subspan`] method is
+    /// nightly-only. When called from within a procedural macro not using a
+    /// nightly compiler, this method will always return `None`.
+    ///
+    /// [`proc_macro::Literal::subspan`]: https://doc.rust-lang.org/proc_macro/struct.Literal.html#method.subspan
+    pub fn subspan<R: RangeBounds<usize>>(&self, range: R) -> Option<Span> {
+        self.inner.subspan(range).map(Span::_new)
     }
 }
 
