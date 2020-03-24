@@ -585,7 +585,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.policy-test",
 #------------------
 #------------------
     ":test.sys.ptysvc-test-test",
@@ -1138,7 +1137,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.policy-test",
 #------------------
 #------------------
     ":test.sys.ptysvc-test-test",
@@ -3015,7 +3013,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/platform-bus:platform-bus-manifest",
 #------------------
 #------------------
-    #":test.sys.policy-test",
+    "//zircon/system/utest/policy:policy-manifest",
 #------------------
     "//zircon/system/utest/posixio:posixio-manifest",
     "//zircon/system/ulib/pretty/test:pretty-test-manifest",
@@ -3675,7 +3673,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/platform-bus:platform-bus-manifest",
 #------------------
 #------------------
-    #":test.sys.policy-test",
+    "//zircon/system/utest/policy:policy-manifest",
 #------------------
     "//zircon/system/utest/posixio:posixio-manifest",
     "//zircon/system/ulib/pretty/test:pretty-test-manifest",
