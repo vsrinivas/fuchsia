@@ -281,6 +281,7 @@ pub struct Use {
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
     pub event: Option<String>,
+    pub filter: Option<Map<String, Value>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -312,6 +313,7 @@ pub struct Offer {
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
     pub dependency: Option<String>,
+    pub filter: Option<Map<String, Value>>,
 }
 
 #[derive(Deserialize, Debug)]

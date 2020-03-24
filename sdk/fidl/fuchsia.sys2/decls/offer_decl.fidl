@@ -6,6 +6,7 @@ library fuchsia.sys2;
 
 using fuchsia.io2;
 using fuchsia.component;
+using fuchsia.data;
 
 /// Declares a capability offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component
@@ -181,4 +182,8 @@ table OfferEventDecl {
 
     /// Name under which the event is being offered.
     4: fuchsia.component.resolver_name target_name;
+
+    /// Filter for the event. The structure of the filter depends on the event type. May be absent
+    /// for some events.
+    5: fuchsia.data.Dictionary filter;
 };

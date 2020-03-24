@@ -180,6 +180,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 source,
                 source_name: cm::Name::new(p.clone())?,
                 target_name: cm::Name::new(target_id)?,
+                filter: use_.filter.clone(),
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
@@ -373,6 +374,7 @@ fn translate_offer(
                     source_name: cm::Name::new(e.clone())?,
                     target,
                     target_name: cm::Name::new(target_id)?,
+                    filter: offer.filter.clone(),
                 }));
             }
         } else {
@@ -904,7 +906,12 @@ mod tests {
                     { "runner": "elf" },
                     { "runner": "web" },
                     { "event": "started", "from": "framework" },
-                    { "event": "diagnostics_on_x", "as": "diagnostics", "from": "realm" },
+                    {
+                        "event": "capability_ready",
+                        "as": "diagnostics",
+                        "from": "realm",
+                        "filter": { "path": "/diagnostics" }
+                    },
                 ],
             }),
             output = r#"{
@@ -997,7 +1004,8 @@ mod tests {
                     "framework": {}
                 },
                 "source_name": "started",
-                "target_name": "started"
+                "target_name": "started",
+                "filter": null
             }
         },
         {
@@ -1005,8 +1013,11 @@ mod tests {
                 "source": {
                     "realm": {}
                 },
-                "source_name": "diagnostics_on_x",
-                "target_name": "diagnostics"
+                "source_name": "capability_ready",
+                "target_name": "diagnostics",
+                "filter": {
+                    "path": "/diagnostics"
+                }
             }
         }
     ]
@@ -1285,6 +1296,12 @@ mod tests {
                         "from": "realm",
                         "to": [ "#netstack" ],
                         "as": "started-modular",
+                        "filter": {
+                            "path": [
+                                "/diagnostics",
+                                "/foo/bar"
+                            ],
+                        }
                     },
                     {
                         "resolver": "my_resolver",
@@ -1560,7 +1577,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_name": "stopped"
+                "target_name": "stopped",
+                "filter": null
             }
         },
         {
@@ -1574,7 +1592,13 @@ mod tests {
                         "name": "netstack"
                     }
                 },
-                "target_name": "started-modular"
+                "target_name": "started-modular",
+                "filter": {
+                    "path": [
+                        "/diagnostics",
+                        "/foo/bar"
+                    ]
+                }
             }
         },
         {

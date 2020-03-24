@@ -329,6 +329,25 @@
               "strong",
               "weak_for_migration"
             ]
+          },
+          "filter": {
+            "title": "Used event filters",
+            "description": "A component defines the path of the capability it'll get through an event. Can only be used on capability_ready events.",
+            "type": "object",
+            "properties": {
+              "path": {
+                "title": "The path(s) of the capability in a component",
+                "description": "A path that the component requests on capability ready",
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/path-clause"
+                  },
+                  {
+                    "$ref": "#/definitions/path-clause-multiple"
+                  }
+                ]
+              }
+            }
           }
         }
       }
@@ -760,6 +779,25 @@
             "examples": [
               "data/assets"
             ]
+          },
+          "filter": {
+            "title": "Offered event filters",
+            "description": "A component defines the path of the capability it offers through an event. Can only be used on capability_ready events.",
+            "type": "object",
+            "properties": {
+              "path": {
+                "title": "The path(s) of the capability in a component",
+                "description": "A path that the component requests on capability ready",
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/path-clause"
+                  },
+                  {
+                    "$ref": "#/definitions/path-clause-multiple"
+                  }
+                ]
+              }
+            }
           }
         }
       }

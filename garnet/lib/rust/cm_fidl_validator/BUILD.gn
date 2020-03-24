@@ -10,6 +10,7 @@ rustc_library("cm_fidl_validator") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/cm_types",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/directed_graph",
     "//third_party/rust_crates:thiserror",

@@ -763,6 +763,7 @@ mod tests {
                 source_name: "started".into(),
                 target: cm_rust::OfferTarget::Child("child".to_string()),
                 target_name: "started".into(),
+                filter: None,
             })],
             ..default_component_decl()
         };
@@ -773,6 +774,7 @@ mod tests {
             source: cm_rust::UseSource::Realm,
             source_name: "started".into(),
             target_name: "started-x".into(),
+            filter: None,
         }));
 
         assert_eq!(
@@ -788,6 +790,7 @@ mod tests {
             source: cm_rust::UseSource::Realm,
             source_name: "foo".into(),
             target_name: "started".into(),
+            filter: None,
         }));
         assert_eq!(misnamed_child_cap.find_offer_source(&parent_decl, &"child:0".into()), None);
     }

@@ -472,6 +472,7 @@ fsys::UseEventDecl,
     source: UseSource,
     source_name: CapabilityName,
     target_name: CapabilityName,
+    filter: Option<HashMap<String, DictionaryValue>>,
 });
 
 fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDecl,
@@ -558,6 +559,7 @@ fsys::OfferEventDecl,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
+    filter: Option<HashMap<String, DictionaryValue>>,
 });
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
 {
@@ -741,6 +743,12 @@ impl FidlIntoNative<Option<HashMap<String, DictionaryValue>>> for Option<fdata::
     }
 }
 
+impl NativeIntoFidl<Option<fdata::Dictionary>> for Option<HashMap<String, DictionaryValue>> {
+    fn native_into_fidl(self) -> Option<fdata::Dictionary> {
+        self.map(|d| to_fidl_dict(d))
+    }
+}
+
 impl FidlIntoNative<CapabilityPath> for Option<String> {
     fn fidl_into_native(self) -> CapabilityPath {
         let s: &str = &self.unwrap();
@@ -802,7 +810,7 @@ pub enum Value {
     Null,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DictionaryValue {
     Str(String),
     StrVec(Vec<String>),
@@ -837,6 +845,16 @@ impl FidlIntoNative<DictionaryValue> for Option<Box<fdata::DictionaryValue>> {
     }
 }
 
+impl NativeIntoFidl<Option<Box<fdata::DictionaryValue>>> for DictionaryValue {
+    fn native_into_fidl(self) -> Option<Box<fdata::DictionaryValue>> {
+        match self {
+            DictionaryValue::Str(s) => Some(Box::new(fdata::DictionaryValue::Str(s))),
+            DictionaryValue::StrVec(ss) => Some(Box::new(fdata::DictionaryValue::StrVec(ss))),
+            DictionaryValue::Null => None,
+        }
+    }
+}
+
 fn from_fidl_vec(vec: fsys::Vector) -> Vec<Value> {
     vec.values.into_iter().map(|v| v.fidl_into_native()).collect()
 }
@@ -849,6 +867,16 @@ fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, DictionaryValue> {
     match dict.entries {
         Some(entries) => entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect(),
         _ => HashMap::new(),
+    }
+}
+
+fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
+    fdata::Dictionary {
+        entries: Some(
+            dict.into_iter()
+                .map(|(key, value)| fdata::DictionaryEntry { key, value: value.native_into_fidl() })
+                .collect(),
+        ),
     }
 }
 
@@ -1471,7 +1499,7 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, maplit::hashmap};
 
     macro_rules! test_try_from_decl {
         (
@@ -1652,8 +1680,16 @@ mod tests {
                    }),
                    fsys::UseDecl::Event(fsys::UseEventDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
-                       source_name: Some("started_on_x".to_string()),
-                       target_name: Some("started".to_string()),
+                       source_name: Some("capability_ready".to_string()),
+                       target_name: Some("diagnostics_ready".to_string()),
+                       filter: Some(fdata::Dictionary{
+                           entries: Some(vec![
+                              fdata::DictionaryEntry {
+                                  key: "path".to_string(),
+                                  value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
+                              },
+                           ])
+                       }),
                    }),
                ]),
                exposes: Some(vec![
@@ -1779,6 +1815,14 @@ mod tests {
                           }
                        )),
                        target_name: Some("mystarted".to_string()),
+                       filter: Some(fdata::Dictionary {
+                           entries: Some(vec![
+                              fdata::DictionaryEntry {
+                                  key: "path".to_string(),
+                                  value: Some(Box::new(fdata::DictionaryValue::Str("/a".to_string()))),
+                              },
+                           ]),
+                       }),
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
@@ -1906,8 +1950,9 @@ mod tests {
                         }),
                         UseDecl::Event(UseEventDecl {
                             source: UseSource::Realm,
-                            source_name: "started_on_x".into(),
-                            target_name: "started".into(),
+                            source_name: "capability_ready".into(),
+                            target_name: "diagnostics_ready".into(),
+                            filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
                         })
                     ],
                     exposes: vec![
@@ -1992,6 +2037,7 @@ mod tests {
                             source_name: "started".into(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "mystarted".into(),
+                            filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/a".to_string())}),
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![

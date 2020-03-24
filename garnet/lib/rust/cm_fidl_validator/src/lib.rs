@@ -1552,7 +1552,7 @@ fn check_offer_target_is_not_source(
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_io2 as fio2,
+        fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType,
             Durability, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
@@ -1945,6 +1945,7 @@ mod tests {
                         source: None,
                         source_name: None,
                         target_name: None,
+                        filter: None,
                     })
                 ]);
                 decl
@@ -2001,6 +2002,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None }),
                     }),
                 ]);
                 decl
@@ -2071,7 +2073,8 @@ mod tests {
                     UseDecl::Event(UseEventDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
-                        target_name: Some(format!("{}", "a".repeat(101)))
+                        target_name: Some(format!("{}", "a".repeat(101))),
+                        filter: None,
                     }),
                 ]);
                 decl
@@ -2650,6 +2653,7 @@ mod tests {
                         source_name: None,
                         target: None,
                         target_name: None,
+                        filter: None,
                     })
                 ]);
                 decl
@@ -2817,6 +2821,7 @@ mod tests {
                             collection: None
                         })),
                         target_name: Some(format!("{}", "a".repeat(101))),
+                        filter: Some(fdata::Dictionary { entries: None }),
                     }),
                 ]);
                 decl
@@ -3060,6 +3065,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("/path".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None }),
                     })
                 ]);
                 decl
@@ -3403,6 +3409,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("started".to_string()),
+                        filter: None,
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source: Some(Ref::Realm(RealmRef {})),
@@ -3412,6 +3419,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("started".to_string()),
+                        filter: None,
                     }),
                 ]);
                 decl.children = Some(vec![
@@ -3572,6 +3580,7 @@ mod tests {
                                 collection: None,
                             }
                         )),
+                        filter: None,
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source_name: Some("started".to_string()),
@@ -3580,6 +3589,7 @@ mod tests {
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
                         )),
+                        filter: None,
                     }),
                 ]);
                 decl
@@ -3622,6 +3632,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some(format!("started_{}", i)),
+                            filter: Some(fdata::Dictionary { entries: None }),
                         })
                     })
                     .collect());

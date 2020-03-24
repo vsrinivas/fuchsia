@@ -273,6 +273,8 @@ pub struct UseEvent {
     pub source_name: Name,
     /// Used event target name.
     pub target_name: Name,
+    /// Used event filter.
+    pub filter: Option<Map<String, Value>>,
 }
 
 /// Exposed capability destination. See [`ExposeTargetDecl`].
@@ -464,6 +466,7 @@ pub struct OfferEvent {
     pub source_name: Name,
     pub target: Ref,
     pub target_name: Name,
+    pub filter: Option<Map<String, Value>>,
 }
 
 /// The type of storage capability. See [`StorageType`].

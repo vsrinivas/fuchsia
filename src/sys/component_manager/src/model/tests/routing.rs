@@ -25,6 +25,7 @@ use {
     fuchsia_zircon as zx,
     futures::{join, lock::Mutex, TryStreamExt},
     log::*,
+    maplit::hashmap,
     std::{
         convert::{TryFrom, TryInto},
         path::{Path, PathBuf},
@@ -2288,6 +2289,7 @@ async fn use_event_from_framework() {
                     source: UseSource::Framework,
                     source_name: "started".into(),
                     target_name: "started".into(),
+                    filter: None,
                 }))
                 .build(),
         ),
@@ -2317,6 +2319,7 @@ async fn use_event_from_parent() {
                     source_name: "started".into(),
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
+                    filter: None,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -2334,6 +2337,7 @@ async fn use_event_from_parent() {
                     source: UseSource::Realm,
                     source_name: "started_on_a".into(),
                     target_name: "started".into(),
+                    filter: None,
                 }))
                 .build(),
         ),
@@ -2370,12 +2374,14 @@ async fn use_event_from_grandparent() {
                     source_name: "started".into(),
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
+                    filter: None,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Framework,
                     source_name: "stopped".into(),
                     target_name: "stopped_on_b".into(),
                     target: OfferTarget::Child("b".to_string()),
+                    filter: None,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -2394,12 +2400,14 @@ async fn use_event_from_grandparent() {
                     source_name: "started_on_a".into(),
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("c".to_string()),
+                    filter: None,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Framework,
                     source_name: "destroyed".into(),
                     target_name: "destroyed".into(),
                     target: OfferTarget::Child("c".to_string()),
+                    filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
                 }))
                 .add_lazy_child("c")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -2417,16 +2425,19 @@ async fn use_event_from_grandparent() {
                     source: UseSource::Realm,
                     source_name: "started_on_a".into(),
                     target_name: "started".into(),
+                    filter: None,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Realm,
                     source_name: "destroyed".into(),
                     target_name: "destroyed".into(),
+                    filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Realm,
                     source_name: "stopped_on_a".into(),
                     target_name: "stopped".into(),
+                    filter: None,
                 }))
                 .build(),
         ),

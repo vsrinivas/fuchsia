@@ -171,6 +171,7 @@ impl CmInto<fsys::UseEventDecl> for cm::UseEvent {
             source: Some(self.source.cm_into()?),
             source_name: Some(self.source_name.into()),
             target_name: Some(self.target_name.into()),
+            filter: self.filter.cm_into()?,
         })
     }
 }
@@ -314,6 +315,7 @@ impl CmInto<fsys::OfferEventDecl> for cm::OfferEvent {
             source_name: Some(self.source_name.into()),
             target: Some(self.target.cm_into()?),
             target_name: Some(self.target_name.into()),
+            filter: self.filter.cm_into()?,
         })
     }
 }
@@ -796,8 +798,11 @@ mod tests {
                             "source": {
                                 "realm": {}
                             },
-                            "source_name": "started",
-                            "target_name": "started_from_realm"
+                            "source_name": "capability_ready",
+                            "target_name": "capability_ready_from_realm",
+                            "filter": {
+                                "path": "/diagnostics"
+                            }
                         }
                     },
                     {
@@ -856,13 +861,20 @@ mod tests {
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
-                        source_name: Some("started".to_string()),
-                        target_name: Some("started_from_realm".to_string()),
+                        source_name: Some("capability_ready".to_string()),
+                        target_name: Some("capability_ready_from_realm".to_string()),
+                        filter: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: "path".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
+                            }]),
+                        }),
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
+                        filter: None,
                     }),
                 ];
                 let mut decl = new_component_decl();
@@ -1240,7 +1252,7 @@ mod tests {
                     },
                     {
                         "event": {
-                            "source_name": "started_on_x",
+                            "source_name": "capability_ready",
                             "source": {
                                 "realm": {}
                             },
@@ -1249,7 +1261,10 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "target_name": "started",
+                            "target_name": "capability_ready_diagnostics",
+                            "filter": {
+                                "path": "/diagnostics"
+                            }
                         }
                     }
                 ],
@@ -1425,7 +1440,7 @@ mod tests {
                         target_name: Some("pkg_resolver".to_string()),
                     }),
                     fsys::OfferDecl::Event(fsys::OfferEventDecl {
-                        source_name: Some("started_on_x".to_string()),
+                        source_name: Some("capability_ready".to_string()),
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         target: Some(fsys::Ref::Child(
                             fsys::ChildRef {
@@ -1433,7 +1448,13 @@ mod tests {
                                 collection: None,
                             }
                         )),
-                        target_name: Some("started".to_string()),
+                        filter: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: "path".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
+                            }]),
+                        }),
+                        target_name: Some("capability_ready_diagnostics".to_string()),
                     }),
                 ];
                 let children = vec![

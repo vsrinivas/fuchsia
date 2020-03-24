@@ -403,6 +403,11 @@ impl<'a> ValidationContext<'a> {
             _ => Ok(()),
         }?;
 
+        match (&use_.event, &use_.filter) {
+            (None, Some(_)) => Err(Error::validate("\"filter\" can only be used with \"event\"")),
+            _ => Ok(()),
+        }?;
+
         let storage = use_.storage.as_ref().map(|s| s.as_str());
         match (storage, &use_.r#as) {
             (Some("meta"), Some(_)) => {
@@ -571,6 +576,12 @@ impl<'a> ValidationContext<'a> {
                 "Dependency can only be provided for protocol and directory capabilities",
             ));
         }
+
+        // Ensure that only events can have filter.
+        match (&offer.event, &offer.filter) {
+            (None, Some(_)) => Err(Error::validate("\"filter\" can only be used with \"event\"")),
+            _ => Ok(()),
+        }?;
 
         // Validate every target of this offer.
         for to in offer.to.iter() {
@@ -1079,6 +1090,9 @@ mod tests {
                     "event": "capability_ready_diagnostics",
                     "as": "capability_ready",
                     "from": "realm",
+                    "filter": {
+                        "path": "/diagnositcs"
+                    }
                   },
                 ]
             }),
@@ -1213,6 +1227,14 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate("service \"/foo/bar/baz/fuchsia.logger.Log\" is a prefix of \"use\" target directory \"/foo/bar\"")),
+        },
+        test_cml_use_disallows_filter_on_non_events => {
+            input = json!({
+                "use": [
+                    { "directory": "/foo/bar", "rights": [ "r*" ], "filter": {"path": "/diagnostics"} },
+                ],
+            }),
+            result = Err(Error::validate("\"filter\" can only be used with \"event\"")),
         },
         // expose
         test_cml_expose => {
@@ -1490,10 +1512,13 @@ mod tests {
                         "to": [ "#modular" ],
                     },
                     {
-                        "event": "started",
+                        "event": "capability_ready",
                         "from": "realm",
                         "to": [ "#modular" ],
-                        "as": "started-modular",
+                        "as": "capability-ready-for-modular",
+                        "filter": {
+                            "path": "/modular"
+                        }
                     },
                 ],
                 "children": [
@@ -2005,6 +2030,26 @@ mod tests {
                     ]
                 }),
             result = Ok(()),
+        },
+        test_cml_offer_disallows_filter_on_non_events => {
+            input = json!({
+                "offer": [
+                    {
+                        "directory": "/foo/bar",
+                        "rights": [ "r*" ],
+                        "from": "self",
+                        "to": [ "#logger" ],
+                        "filter": {"path": "/diagnostics"}
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    },
+                ],
+            }),
+            result = Err(Error::validate("\"filter\" can only be used with \"event\"")),
         },
 
         // children
@@ -3155,6 +3200,7 @@ mod tests {
             rights: None,
             subdir: None,
             dependency: None,
+            filter: None,
         }
     }
 

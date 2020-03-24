@@ -52,11 +52,20 @@ fn main() {
                 source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),
                 target_name: Some("started".to_string()),
+                filter: None,
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Realm(RealmRef {})),
-                source_name: Some("capability_ready_diagnostics".to_string()),
-                target_name: Some("capability_ready".to_string()),
+                source_name: Some("capability_ready".to_string()),
+                target_name: Some("diagnostics_ready".to_string()),
+                filter: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "path".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            "/diagnostics".to_string(),
+                        ))),
+                    }]),
+                }),
             }),
         ];
         let runners = vec![RunnerDecl {
@@ -126,6 +135,7 @@ fn main() {
                 source_name: Some("stopped".to_string()),
                 target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 target_name: Some("stopped-logger".to_string()),
+                filter: None,
             }),
         ];
         let children = vec![ChildDecl {
