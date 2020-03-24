@@ -10,8 +10,9 @@ use {
         realm::{Realm, RealmState},
     },
     cm_rust::{
-        ComponentDecl, OfferDecl, OfferDirectorySource, OfferResolverSource, OfferRunnerSource,
-        OfferServiceSource, OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource,
+        ComponentDecl, DependencyType, OfferDecl, OfferDirectorySource, OfferResolverSource,
+        OfferRunnerSource, OfferServiceSource, OfferStorageSource, OfferTarget, StorageDecl,
+        StorageDirectorySource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -326,6 +327,11 @@ pub fn process_component_dependencies(
         // here.
         let source_target_pairs = match dep {
             OfferDecl::Protocol(svc_offer) => {
+                if svc_offer.dependency_type == DependencyType::WeakForMigration {
+                    // weak dependencies are ignored by this algorithm, because weak dependencies
+                    // can be broken arbitrarily.
+                    continue;
+                }
                 match &svc_offer.source {
                     OfferServiceSource::Child(source) => match &svc_offer.target {
                         OfferTarget::Child(target) => vec![(
@@ -368,6 +374,11 @@ pub fn process_component_dependencies(
                 pairs
             }
             OfferDecl::Directory(dir_offer) => {
+                if dir_offer.dependency_type == DependencyType::WeakForMigration {
+                    // weak dependencies are ignored by this algorithm, because weak dependencies
+                    // can be broken arbitrarily.
+                    continue;
+                }
                 match &dir_offer.source {
                     OfferDirectorySource::Child(source) => match &dir_offer.target {
                         OfferTarget::Child(target) => vec![(
@@ -548,6 +559,31 @@ mod tests {
     }
 
     #[test]
+    fn test_weak_service_from_parent() -> Result<(), Error> {
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferServiceSource::Self_,
+                source_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
+                target_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
+                target: OfferTarget::Child("childA".to_string()),
+                dependency_type: DependencyType::WeakForMigration,
+            })],
+            children: vec![ChildDecl {
+                name: "childA".to_string(),
+                url: "ignored:///child".to_string(),
+                startup: fsys::StartupMode::Lazy,
+                environment: None,
+            }],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
     fn test_service_from_child() -> Result<(), Error> {
         let decl = ComponentDecl {
             exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -610,6 +646,50 @@ mod tests {
         let mut v = vec![DependencyNode::Child(child_a.name.clone())];
         v.sort_unstable();
         expected.push((DependencyNode::Child(child_b.name.clone()), v));
+        expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
+        expected.sort_unstable();
+
+        validate_results(expected, process_component_dependencies(&decl));
+        Ok(())
+    }
+
+    #[test]
+    fn test_single_weak_dependency() -> Result<(), Error> {
+        let child_a = ChildDecl {
+            name: "childA".to_string(),
+            url: "ignored:///child".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+        };
+        let child_b = ChildDecl {
+            name: "childB".to_string(),
+            url: "ignored:///child".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+        };
+        let decl = ComponentDecl {
+            offers: vec![
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
+                    target: OfferTarget::Child("childA".to_string()),
+                    dependency_type: DependencyType::WeakForMigration,
+                }),
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Child("childB".to_string()),
+                    source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
+                    target: OfferTarget::Child("childA".to_string()),
+                    dependency_type: DependencyType::WeakForMigration,
+                }),
+            ],
+            children: vec![child_a.clone(), child_b.clone()],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Child(child_b.name.clone()), vec![]));
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
         expected.sort_unstable();
 
@@ -761,6 +841,13 @@ mod tests {
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                     dependency_type: DependencyType::Strong,
+                }),
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Child("childC".to_string()),
+                    source_path: CapabilityPath::try_from("/svc/childCToA").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
+                    target: OfferTarget::Child("childA".to_string()),
+                    dependency_type: DependencyType::WeakForMigration,
                 }),
             ],
             children: vec![child_a.clone(), child_b.clone(), child_c.clone()],
