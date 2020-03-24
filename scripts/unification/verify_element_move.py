@@ -177,7 +177,7 @@ class FileDataSet(object):
         self.files = {}
 
     def add(self, name, file):
-        if name == 'lib/libdriver.so':
+        if os.path.basename(name) == 'libdriver.so':
             # libdriver is a complicated hydra whose many heads we don't need to
             # worry about here.
             return
