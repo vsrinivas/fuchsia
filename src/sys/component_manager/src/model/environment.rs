@@ -213,7 +213,8 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_b")
-                        .extends(fsys::EnvironmentExtends::None),
+                        .extends(fsys::EnvironmentExtends::None)
+                        .stop_timeout(1234),
                 )
                 .build(),
         );

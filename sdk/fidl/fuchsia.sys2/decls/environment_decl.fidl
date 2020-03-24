@@ -18,7 +18,10 @@ table EnvironmentDecl {
     /// These registrations determine how components are resolved in the realm.
     /// If the component URL scheme does not match any of these resolvers, URL resolution
     /// is delegated to the parent environment, if this environment `extends` from `REALM`.
-    3: vector<ResolverRegistration> resolvers;
+    3: vector<ResolverRegistration>:MAX resolvers;
+    /// The duration in milliseconds that the component will have to stop before
+    /// it is killed.
+    4: uint32 stop_timeout_ms;
 };
 
 /// Specifies how a declared environment's initial set of properties are assigned.

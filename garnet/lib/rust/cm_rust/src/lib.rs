@@ -590,6 +590,7 @@ fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys:
     name: String,
     extends: fsys::EnvironmentExtends,
     resolvers: Vec<ResolverRegistration>,
+    stop_timeout_ms: Option<u32>,
 });
 fidl_into_struct!(ResolverRegistration, ResolverRegistration, fsys::ResolverRegistration,
 fsys::ResolverRegistration,
@@ -748,6 +749,8 @@ impl NativeIntoFidl<Option<fdata::Dictionary>> for Option<HashMap<String, Dictio
         self.map(|d| to_fidl_dict(d))
     }
 }
+
+fidl_translations_identical!(Option<u32>);
 
 impl FidlIntoNative<CapabilityPath> for Option<String> {
     fn fidl_into_native(self) -> CapabilityPath {
@@ -1909,7 +1912,8 @@ mod tests {
                                source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
                                scheme: Some("fuchsia-pkg".to_string()),
                            }
-                       ])
+                       ]),
+                       stop_timeout_ms: Some(4567),
                    }
                ]),
             },
@@ -2114,7 +2118,8 @@ mod tests {
                                     source: ResolverSource::Realm,
                                     scheme: "fuchsia-pkg".to_string(),
                                 }
-                            ]
+                            ],
+                            stop_timeout_ms: Some(4567),
                         }
                     ]
                 }

@@ -78,6 +78,7 @@
     {
       "name": "logger",
       "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+      "environment": "#env_one",
     },
   ],
   "collections": [
@@ -96,5 +97,16 @@
   "facets": {
     "author": "Fuchsia",
     "year": 2018,
-  }
+  },
+  "environments": [
+    {
+      "name": "env_one",
+      "__stop_timeout_ms": 1337,
+      "extends": "none",
+    },
+    {
+      "name": "env_two",
+      "extends": "realm",
+    },
+  ]
 }

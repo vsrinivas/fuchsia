@@ -353,6 +353,7 @@ impl EnvironmentDeclBuilder {
             name: String::new(),
             extends: fsys::EnvironmentExtends::None,
             resolvers: vec![],
+            stop_timeout_ms: None,
         })
     }
 
@@ -371,6 +372,11 @@ impl EnvironmentDeclBuilder {
     /// Registers a resolver with the environment.
     pub fn add_resolver(mut self, resolver: cm_rust::ResolverRegistration) -> Self {
         self.0.resolvers.push(resolver);
+        self
+    }
+
+    pub fn stop_timeout(mut self, timeout_ms: u32) -> Self {
+        self.0.stop_timeout_ms = Some(timeout_ms);
         self
     }
 

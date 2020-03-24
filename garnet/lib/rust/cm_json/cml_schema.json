@@ -905,6 +905,15 @@
               "none"
             ]
           },
+          "__stop_timeout_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Stop timeout for a component",
+            "description": "The duration in milliseconds that component manager will wait before telling the runner to kill the component.",
+            "examples": [
+              8000
+            ]
+          },
           "resolvers": {
             "type": "array",
             "title": "The resolvers registered with this environment",

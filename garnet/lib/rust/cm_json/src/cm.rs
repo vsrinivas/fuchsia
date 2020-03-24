@@ -165,6 +165,11 @@ pub struct Environment {
     pub extends: EnvironmentExtends,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resolvers: Option<Vec<ResolverRegistration>>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename(serialize = "__stop_timeout_ms", deserialize = "__stop_timeout_ms")
+    )]
+    pub stop_timeout_ms: Option<u32>,
 }
 
 /// A registration of a resolver capability to a particular URL scheme. See [`ResolverRegistration`].

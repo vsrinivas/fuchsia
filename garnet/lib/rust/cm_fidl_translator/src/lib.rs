@@ -385,6 +385,7 @@ impl CmInto<fsys::EnvironmentDecl> for cm::Environment {
             name: Some(self.name.into()),
             extends: Some(self.extends.cm_into()?),
             resolvers: self.resolvers.cm_into()?,
+            stop_timeout_ms: self.stop_timeout_ms,
         })
     }
 }
@@ -1514,7 +1515,8 @@ mod tests {
                                 },
                                 "scheme": "fuchsia-pkg",
                             }
-                        ]
+                        ],
+                        "__stop_timeout_ms": 9876,
                     },
                     {
                         "name": "env",
@@ -1541,12 +1543,14 @@ mod tests {
                                 source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
                                 scheme: Some("fuchsia-pkg".to_string()),
                             }
-                        ])
+                        ]),
+                        stop_timeout_ms: Some(9876),
                     },
                     fsys::EnvironmentDecl {
                         name: Some("env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::Realm),
                         resolvers: None,
+                        stop_timeout_ms: None,
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1929,7 +1933,8 @@ mod tests {
                                 source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
                                 scheme: Some("fuchsia-pkg".to_string()),
                             }
-                        ])
+                        ]),
+                        stop_timeout_ms: None,
                     }
                 ];
                 let resolvers = vec![

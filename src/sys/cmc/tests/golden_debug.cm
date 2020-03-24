@@ -179,7 +179,8 @@
         {
             "name": "logger",
             "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-            "startup": "lazy"
+            "startup": "lazy",
+            "environment": "env_one"
         }
     ],
     "collections": [
@@ -199,6 +200,17 @@
                 "self": {}
             },
             "source_path": "/svc/fuchsia.sys2.Runner"
+        }
+    ],
+    "environments": [
+        {
+            "name": "env_one",
+            "extends": "none",
+            "__stop_timeout_ms": 1337
+        },
+        {
+            "name": "env_two",
+            "extends": "realm"
         }
     ]
 }

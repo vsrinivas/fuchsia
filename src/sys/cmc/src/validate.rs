@@ -821,6 +821,21 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_environment(&self, environment: &cml::Environment) -> Result<(), Error> {
+        match &environment.extends {
+            Some(cml::EnvironmentExtends::None) => {
+                if environment.stop_timeout_ms.is_none() {
+                    return Err(Error::validate_schema(
+                        CML_SCHEMA,
+                        concat!(
+                        "'__stop_timeout_ms' must be provided if the environment does not extend ",
+                        "another environment"
+                    ),
+                    ));
+                }
+            }
+            Some(cml::EnvironmentExtends::Realm) | None => {}
+        }
+
         if let Some(resolvers) = &environment.resolvers {
             let mut used_schemes = HashMap::new();
             for registration in resolvers {
@@ -2149,6 +2164,31 @@ mod tests {
             result = Ok(()),
         },
 
+        test_cml_environment_timeout => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "foo_env",
+                        "__stop_timeout_ms": 10000,
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+
+        test_cml_environment_bad_timeout => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "foo_env",
+                        "__stop_timeout_ms": -3,
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA,
+                "Minimum condition is not met at /environments/0/__stop_timeout_ms")),
+        },
+
         // collections
         test_cml_collections => {
             input = json!({
@@ -2344,11 +2384,28 @@ mod tests {
                     {
                         "name": "my_env_c",
                         "extends": "none",
+                        "__stop_timeout_ms": 8000,
                     },
                 ],
             }),
             result = Ok(()),
         },
+
+        test_invalid_cml_environment_no_stop_timeout => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "none",
+                    },
+                ],
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, concat!(
+                "'__stop_timeout_ms' must be provided if the environment does not extend ",
+                "another environment"
+            ))),
+        },
+
         test_cml_environment_invalid_extends => {
             input = json!({
                 "environments": [

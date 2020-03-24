@@ -489,6 +489,7 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
                             .collect::<Result<Vec<_>, Error>>()
                     })
                     .transpose()?,
+                stop_timeout_ms: env.stop_timeout_ms,
             })
         })
         .collect()
@@ -1807,6 +1808,11 @@ mod tests {
                     {
                         "name": "myenv2",
                         "extends": "realm",
+                    },
+                    {
+                        "name": "myenv3",
+                        "extends": "none",
+                        "__stop_timeout_ms": 8000,
                     }
                 ],
             }),
@@ -1819,6 +1825,11 @@ mod tests {
         {
             "name": "myenv2",
             "extends": "realm"
+        },
+        {
+            "name": "myenv3",
+            "extends": "none",
+            "__stop_timeout_ms": 8000
         }
     ]
 }"#,

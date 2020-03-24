@@ -543,6 +543,15 @@ impl<'a> ValidationContext<'a> {
                 );
             }
         }
+
+        match environment.extends.as_ref() {
+            Some(fsys::EnvironmentExtends::None) => {
+                if environment.stop_timeout_ms.is_none() {
+                    self.errors.push(Error::missing_field("EnvironmentDecl", "stop_timeout_ms"));
+                }
+            }
+            None | Some(fsys::EnvironmentExtends::Realm) => {}
+        }
     }
 
     fn validate_resolver_registration(
@@ -3706,6 +3715,7 @@ mod tests {
                     name: None,
                     extends: None,
                     resolvers: None,
+                    stop_timeout_ms: None,
                 }]);
                 decl
             },
@@ -3714,6 +3724,33 @@ mod tests {
                 Error::missing_field("EnvironmentDecl", "extends"),
             ])),
         },
+
+        test_validate_environment_no_stop_timeout => {
+            input = {  let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("env".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: None,
+                    stop_timeout_ms: None,
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![Error::missing_field("EnvironmentDecl", "stop_timeout_ms")])),
+        },
+
+        test_validate_environment_extends_stop_timeout => {
+            input = {  let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("env".to_string()),
+                    extends: Some(EnvironmentExtends::Realm),
+                    resolvers: None,
+                    stop_timeout_ms: None,
+                }]);
+                decl
+            },
+            result = Ok(()),
+        },
+
         test_validate_environment_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
@@ -3721,6 +3758,7 @@ mod tests {
                     name: Some("a".repeat(1025)),
                     extends: Some(EnvironmentExtends::None),
                     resolvers: None,
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl
             },
@@ -3741,6 +3779,7 @@ mod tests {
                             scheme: None,
                         },
                     ]),
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl
             },
@@ -3763,6 +3802,7 @@ mod tests {
                             scheme: Some("a".repeat(101)),
                         },
                     ]),
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl
             },
@@ -3784,6 +3824,7 @@ mod tests {
                             scheme: Some("9scheme".to_string()),
                         },
                     ]),
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl
             },
@@ -3811,6 +3852,7 @@ mod tests {
                             scheme: Some("fuchsia-pkg".to_string()),
                         },
                     ]),
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl
             },
@@ -3834,6 +3876,7 @@ mod tests {
                             scheme: Some("fuchsia-pkg".to_string()),
                         },
                     ]),
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl
             },
@@ -3857,6 +3900,7 @@ mod tests {
                             scheme: Some("fuchsia-pkg".to_string()),
                         },
                     ]),
+                    stop_timeout_ms: Some(1234),
                 }]);
                 decl.children = Some(vec![ChildDecl {
                     name: Some("child".to_string()),

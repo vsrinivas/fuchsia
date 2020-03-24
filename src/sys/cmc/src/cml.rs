@@ -260,6 +260,8 @@ pub struct Environment {
     // When not set, its value is assumed to be EnvironmentExtends::None.
     pub extends: Option<EnvironmentExtends>,
     pub resolvers: Option<Vec<ResolverRegistration>>,
+    #[serde(rename(deserialize = "__stop_timeout_ms"))]
+    pub stop_timeout_ms: Option<u32>,
 }
 
 #[derive(Deserialize, Debug)]

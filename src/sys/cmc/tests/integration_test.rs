@@ -8,10 +8,10 @@ use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
-    Entry, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef,
-    Object, OfferDecl, OfferEventDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
-    RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, UseDecl, UseEventDecl, UseProtocolDecl,
-    UseRunnerDecl, UseServiceDecl, Value,
+    Entry, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
+    ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, Object, OfferDecl, OfferEventDecl,
+    OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef,
+    StartupMode, UseDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, Value,
 };
 use std::fs::File;
 use std::io::Read;
@@ -142,7 +142,7 @@ fn main() {
             name: Some("logger".to_string()),
             url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
             startup: Some(StartupMode::Lazy),
-            environment: None,
+            environment: Some("env_one".to_string()),
         }];
         let collections = vec![CollectionDecl {
             name: Some("modular".to_string()),
@@ -157,6 +157,20 @@ fn main() {
                 Entry { key: "year".to_string(), value: Some(Box::new(Value::Inum(2018))) },
             ],
         };
+        let envs = vec![
+            EnvironmentDecl {
+                name: Some("env_one".to_string()),
+                extends: Some(EnvironmentExtends::None),
+                stop_timeout_ms: Some(1337),
+                resolvers: None,
+            },
+            EnvironmentDecl {
+                name: Some("env_two".to_string()),
+                extends: Some(EnvironmentExtends::Realm),
+                stop_timeout_ms: None,
+                resolvers: None,
+            },
+        ];
         ComponentDecl {
             program: Some(program),
             uses: Some(uses),
@@ -168,7 +182,7 @@ fn main() {
             runners: Some(runners),
             // TODO: test storage
             storage: None,
-            environments: None,
+            environments: Some(envs),
             resolvers: None,
         }
     };
