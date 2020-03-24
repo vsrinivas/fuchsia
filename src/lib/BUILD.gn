@@ -70,6 +70,7 @@ group("tests") {
     "http-sse:tests",
     "icu:tests",
     "icu_data:tests",
+    "inet:tests",
     "intl:tests",
     "isolated_devmgr:tests",
     "json_parser:tests",
