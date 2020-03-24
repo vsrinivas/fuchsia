@@ -334,8 +334,8 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
 
   // Pin to the target CPU
   thread->SetCpuAffinity(cpu_num_to_mask(cpu_id));
-  // Set real time to cancel the pre-emption timer
-  thread->SetRealTime();
+
+  thread->SetDeadline({ZX_MSEC(9), ZX_MSEC(10), ZX_MSEC(10)});
 
   status = thread->DetachAndResume();
   if (status != ZX_OK) {
