@@ -32,7 +32,7 @@ constexpr uint32_t kGpioBaseOffset = T931_GPIO_BASE - kGpioBase;
 
 class PadDsReg2A : public hwreg::RegisterBase<PadDsReg2A, uint32_t> {
  public:
-  static constexpr uint32_t kDriveStrength3mA = 2;
+  static constexpr uint32_t kDriveStrengthMax = 3;
 
   static auto Get() { return hwreg::RegisterAddr<PadDsReg2A>((0xd2 * 4) + kGpioBaseOffset); }
 
@@ -220,12 +220,12 @@ zx_status_t Sherlock::SdioInit() {
 
   PadDsReg2A::Get()
       .ReadFrom(&(*buf))
-      .set_gpiox_0_select(PadDsReg2A::kDriveStrength3mA)
-      .set_gpiox_1_select(PadDsReg2A::kDriveStrength3mA)
-      .set_gpiox_2_select(PadDsReg2A::kDriveStrength3mA)
-      .set_gpiox_3_select(PadDsReg2A::kDriveStrength3mA)
-      .set_gpiox_4_select(PadDsReg2A::kDriveStrength3mA)
-      .set_gpiox_5_select(PadDsReg2A::kDriveStrength3mA)
+      .set_gpiox_0_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_1_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_2_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_3_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_4_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_5_select(PadDsReg2A::kDriveStrengthMax)
       .WriteTo(&(*buf));
 
   status = gpio_impl_.SetAltFunction(T931_WIFI_REG_ON, T931_WIFI_REG_ON_FN);
