@@ -174,29 +174,83 @@ _FpsResult _computeFps(Model model, Thread uiThread, Thread gpuThread) {
 }
 
 class _Results {
+  String appName;
   _FpsResult fpsResult;
   List<double> frameBuildTimes;
   List<double> frameRasterizerTimes;
 }
 
-_Results _flutterFrameStats(Model model, Thread uiThread, Thread gpuThread) {
-  double getDurationInMilliseconds(DurationEvent durationEvent) {
-    return durationEvent.duration.toMillisecondsF();
+/// Compute frame stats metrics for all matching flutter apps in the trace. If
+/// [flutterAppName] is specified, only threads whose name starts with
+/// [flutterAppName] are considered.
+///
+/// Returns a list of results with an entry for each flutter app found.
+List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
+  final results = <_Results>[];
+  // TODO(PT-212): Should only iterate on flutter processes.
+  // final flutterProcesses = model.processes
+  //     .where((process) => process.name.startsWith('io.flutter.'));
+  final flutterProcesses = model.processes;
+
+  for (final process in flutterProcesses) {
+    final uiThreads = process.threads
+        .where((thread) =>
+            (flutterAppName == null ||
+                thread.name.startsWith(flutterAppName)) &&
+            thread.name.endsWith('.ui'))
+        .toList();
+    for (final uiThread in uiThreads) {
+      final appName =
+          flutterAppName ?? uiThread.name.split(RegExp(r'.ui$')).first;
+      final gpuThreads = process.threads
+          .where((thread) =>
+              thread.name.startsWith(appName) && thread.name.endsWith('.gpu'))
+          .toList();
+      if (gpuThreads.isEmpty) {
+        print('Warning, found ui thread but no gpu thread for app $appName');
+        continue;
+      }
+      if (gpuThreads.length > 1) {
+        print('Warning, found multiple gpu threads for app $appName. '
+            'Continuing with the first one.');
+      }
+
+      final gpuThread = gpuThreads.first;
+
+      double getDurationInMilliseconds(DurationEvent durationEvent) {
+        return durationEvent.duration.toMillisecondsF();
+      }
+
+      results.add(_Results()
+        ..appName = appName
+        ..fpsResult = _computeFps(model, uiThread, gpuThread)
+        // TODO(48263): Only match "vsync callback".
+        ..frameBuildTimes = filterEventsTyped<DurationEvent>(uiThread.events,
+                category: 'flutter', name: 'vsync callback')
+            .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
+                category: 'flutter', name: 'VsyncProcessCallback'))
+            .map(getDurationInMilliseconds)
+            .toList()
+        ..frameRasterizerTimes = filterEventsTyped<DurationEvent>(
+                gpuThread.events,
+                category: 'flutter',
+                name: 'GPURasterizer::Draw')
+            .map(getDurationInMilliseconds)
+            .toList());
+    }
   }
 
-  return _Results()
-    ..fpsResult = _computeFps(model, uiThread, gpuThread)
-    // TODO(48263): Only match "vsync callback".
-    ..frameBuildTimes = filterEventsTyped<DurationEvent>(uiThread.events,
-            category: 'flutter', name: 'vsync callback')
-        .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
-            category: 'flutter', name: 'VsyncProcessCallback'))
-        .map(getDurationInMilliseconds)
-        .toList()
-    ..frameRasterizerTimes = filterEventsTyped<DurationEvent>(gpuThread.events,
-            category: 'flutter', name: 'GPURasterizer::Draw')
-        .map(getDurationInMilliseconds)
-        .toList();
+  if (results.isEmpty) {
+    if (flutterAppName != null) {
+      throw ArgumentError(
+          'Failed to find any matching flutter process in $model for flutter app '
+          'name $flutterAppName');
+    } else {
+      throw ArgumentError('Failed to find any flutter processes in $model');
+    }
+  }
+
+  return results;
 }
 
 List<TestCaseResults> flutterFrameStatsMetricsProcessor(
@@ -216,107 +270,45 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
   }
   final String flutterAppName = extraArgs['flutterAppName'];
 
-  // TODO(PT-212): Should only iterate on flutter processes.
-  // final flutterProcesses = model.processes
-  //     .where((process) => process.name.startsWith('io.flutter.'));
-  final flutterProcesses = model.processes;
+  final results =
+      _flutterFrameStats(model, flutterAppName: flutterAppName).first;
 
-  for (final process in flutterProcesses) {
-    final uiThreads = process.threads
-        .where((thread) =>
-            thread.name.startsWith(flutterAppName) &&
-            thread.name.endsWith('.ui'))
-        .toList();
-    final gpuThreads = process.threads
-        .where((thread) =>
-            thread.name.startsWith(flutterAppName) &&
-            thread.name.endsWith('.gpu'))
-        .toList();
-
-    if (uiThreads.length != gpuThreads.length) {
-      throw ArgumentError('Found unequal number of UI and GPU Flutter threads');
-    }
-    if (uiThreads.isEmpty && gpuThreads.isEmpty) {
-      continue;
-    }
-
-    // TODO: We are assuming that threads are in order, instead we should verify
-    // that they have the same name % suffix
-    final results =
-        _flutterFrameStats(model, uiThreads.first, gpuThreads.first);
-    return [
-      TestCaseResults('${flutterAppName}_fps', Unit.framesPerSecond,
-          [results.fpsResult.averageFps]),
-      TestCaseResults('${flutterAppName}_frame_build_times', Unit.milliseconds,
-          results.frameBuildTimes),
-      TestCaseResults('${flutterAppName}_frame_rasterizer_times',
-          Unit.milliseconds, results.frameRasterizerTimes),
-    ];
-  }
-
-  throw ArgumentError(
-      'Failed to find any matching flutter process in $model for flutter app '
-      'name $flutterAppName');
+  return [
+    TestCaseResults('${flutterAppName}_fps', Unit.framesPerSecond,
+        [results.fpsResult.averageFps]),
+    TestCaseResults('${flutterAppName}_frame_build_times', Unit.milliseconds,
+        results.frameBuildTimes),
+    TestCaseResults('${flutterAppName}_frame_rasterizer_times',
+        Unit.milliseconds, results.frameRasterizerTimes),
+  ];
 }
 
 String flutterFrameStatsReport(Model model) {
   final buffer = StringBuffer();
 
-  // TODO(PT-212): Should only iterate on flutter processes.
-  // final flutterProcesses = model.processes
-  //     .where((process) => process.name.startsWith('io.flutter.'));
-  final flutterProcesses = model.processes;
+  final results = _flutterFrameStats(model);
 
-  for (final process in flutterProcesses) {
-    if (process.name == 'kernel') {
-      // TODO(PT-212): This can be removed once PT-212 is fixed.
-      continue;
-    }
-
-    final uiThreads =
-        process.threads.where((thread) => thread.name.endsWith('.ui')).toList();
-    final gpuThreads = process.threads
-        .where((thread) => thread.name.endsWith('.gpu'))
-        .toList();
-
-    if (uiThreads.isEmpty && gpuThreads.isEmpty) {
-      continue;
-    }
-    if (uiThreads.length != gpuThreads.length) {
-      // throw ArgumentError('Found unequal number of UI and GPU Flutter threads');
-      print('Found unequal number of UI and GPU Flutter threads');
-      continue;
-    }
-
-    final flutterAppName = uiThreads.first.name;
-
-    buffer.write('''
+  for (final appResult in results) {
+    buffer
+      ..write('''
 ===
-$flutterAppName Flutter Frame Stats
+${appResult.appName} Flutter Frame Stats
 ===
 
-''');
-
-    // TODO: We are assuming that threads are in order, instead we should verify
-    // that they have the same name % suffix
-
-    for (var i = 0; i < uiThreads.length; i++) {
-      final results = _flutterFrameStats(model, uiThreads[i], gpuThreads[i]);
-      buffer
-        ..write('fps:\n')
-        ..write('  ${results.fpsResult.averageFps}\n')
-        ..write(
-            '    (flow adjusted) frame count: ${results.fpsResult.flowedFrameCount}\n')
-        ..write(
-            '    (work adjusted) total duration: ${results.fpsResult.totalDuration.toSecondsF()}\n')
-        ..write('\n')
-        ..write('frame_build_times:\n')
-        ..write(describeValues(results.frameBuildTimes, indent: 2))
-        ..write('\n')
-        ..write('frame_rasterizer_times:\n')
-        ..write(describeValues(results.frameRasterizerTimes, indent: 2))
-        ..write('\n');
-    }
+''')
+      ..write('fps:\n')
+      ..write('  ${appResult.fpsResult.averageFps}\n')
+      ..write(
+          '    (flow adjusted) frame count: ${appResult.fpsResult.flowedFrameCount}\n')
+      ..write(
+          '    (work adjusted) total duration: ${appResult.fpsResult.totalDuration.toSecondsF()}\n')
+      ..write('\n')
+      ..write('frame_build_times:\n')
+      ..write(describeValues(appResult.frameBuildTimes, indent: 2))
+      ..write('\n')
+      ..write('frame_rasterizer_times:\n')
+      ..write(describeValues(appResult.frameRasterizerTimes, indent: 2))
+      ..write('\n');
   }
 
   return buffer.toString();
