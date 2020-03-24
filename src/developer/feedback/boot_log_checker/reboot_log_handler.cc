@@ -127,14 +127,13 @@ std::string ProgramName(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kKernelPanic:
       return "kernel";
-    case RebootReason::kOOM:
-      return "oom";
     case RebootReason::kBrownout:
     case RebootReason::kHardwareWatchdog:
     case RebootReason::kUnknown:
       return "device";
     case RebootReason::kClean:
     case RebootReason::kCold:
+    case RebootReason::kOOM:
     case RebootReason::kSoftwareWatchdog:
       return "system";
   }
