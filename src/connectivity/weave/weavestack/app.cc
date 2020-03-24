@@ -25,6 +25,7 @@ void App::Quit() {
   loop_.Quit();
   loop_.JoinThreads();
   ClearWaiters();
+  PlatformMgrImpl().ShutdownWeaveStack();
 }
 
 zx_status_t App::Init() {
@@ -55,7 +56,7 @@ zx_status_t App::WaitForFd(int fd, uint32_t events) {
   if (!waited) {
     FX_LOGS(ERROR) << "failed to wait for events on fd = " << fd;
   }
-  waiters_.push_back(std::move(waiter));
+  waiters_.emplace_back(std::move(waiter));
 
   return ZX_OK;
 }

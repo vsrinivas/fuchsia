@@ -134,6 +134,20 @@ nl::Inet::InetLayer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetInetLayer
   return inet_layer_;
 }
 
+template<class ImplClass>
+void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_ShutdownWeaveStack(void)
+{
+  FabricProvisioningSvr().Shutdown();
+  DeviceControlSvr().Shutdown();
+  DeviceDescriptionSvr().Shutdown();
+  security_manager_.Shutdown();
+  ExchangeMgr.Shutdown();
+  message_layer_.Shutdown();
+  fabric_state_.Shutdown();
+  inet_layer_.Shutdown();
+  system_layer_.Shutdown();
+}
+
 // Fully instantiate the generic implementation class in whatever compilation unit includes this file.
 template class GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>;
 

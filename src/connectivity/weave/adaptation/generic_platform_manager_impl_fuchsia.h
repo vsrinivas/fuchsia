@@ -26,6 +26,7 @@ class GenericPlatformManagerImpl_Fuchsia : public GenericPlatformManagerImpl<Imp
   // ===== Methods that implement the PlatformManager abstract interface.
 
   WEAVE_ERROR _InitWeaveStack();
+  void _ShutdownWeaveStack(void);
   void _LockWeaveStack(void);
   bool _TryLockWeaveStack(void);
   void _UnlockWeaveStack(void);

@@ -19,6 +19,10 @@ WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
 }
 
+void PlatformManagerImpl::ShutdownWeaveStack(void) {
+  Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_ShutdownWeaveStack();
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

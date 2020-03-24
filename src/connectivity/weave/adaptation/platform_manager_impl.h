@@ -28,7 +28,7 @@ class PlatformManagerImpl final
 
  public:
   // ===== Platform-specific members that may be accessed directly by the application.
-
+ void ShutdownWeaveStack(void);
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
 
