@@ -12,6 +12,7 @@
 #include "spinel/spinel_vk_types.h"
 #include "tests/common/utils.h"
 #include "tests/common/vk_image_utils.h"
+#include "tests/common/vk_strings.h"
 #include "tests/common/vk_swapchain_queue.h"
 #include "tests/common/vk_utils.h"
 
@@ -62,8 +63,14 @@ DemoAppMold::DemoAppMold(const Config & config) : config_no_clear_(config.no_cle
 {
   DemoAppBase::Config app_config    = config.app;
   app_config.enable_swapchain_queue = true;
+
+  // Mold can render to either BGRA or RGBA buffers, but the former
+  // is preferred for performance reasons.
+  app_config.wanted_format = VK_FORMAT_B8G8R8A8_UNORM;
+
   this->DemoAppBase::init(app_config);
   mold_context_create(&spinel_context_);
+  LOG("SURFACE FORMAT: %s\n", vk_format_to_string(window_.info().surface_format.format));
 }
 
 DemoAppMold::~DemoAppMold()
@@ -197,14 +204,10 @@ DemoAppMold::drawFrame(uint32_t frame_counter)
   if (!config_no_clear_)
     memset(image_buffer->mapped, 0xff, image_buffer->size);
 
-  mold_pixel_format_t pixel_format = MOLD_RGBA8888;
-  if (window_.info().surface_format.format == VK_FORMAT_B8G8R8A8_UNORM)
-    pixel_format = MOLD_BGRA8888;
-
   mold_raw_buffer_t mold_target_buffer = {
     .buffer = image_buffer->mapped,
     .width  = SPN_DEMO_SURFACE_WIDTH,
-    .format = pixel_format,
+    .format = MOLD_BGRA8888,
   };
 
   demo_image.render(&mold_target_buffer, SPN_DEMO_SURFACE_WIDTH, SPN_DEMO_SURFACE_HEIGHT);
