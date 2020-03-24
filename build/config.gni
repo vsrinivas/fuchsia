@@ -4,6 +4,20 @@
 
 import("//build/package.gni")
 
+declare_args() {
+  # WARNING: This is a TEMPORARY workaround to allow developers to skip the
+  # sysmgr config validation perfomed below. Allowing config conflicts will
+  # allow you to build but cause non-determistic behavior in sysmgr since
+  # sysmgr may pick any of the conflicting configs to use at runtime
+  #
+  # This will be removed shortly and should only be used locally by developers
+  # either through 'fx set' or in 'args.gn', never checked into a product
+  # config file.
+  #
+  # TODO(fxb/39576): Remove this when landing the runtime conflict check in sysmgr
+  dangerous_allow_sysmgr_config_conflicts = false
+}
+
 # Define configuration data that can be aggregated into other packages. This is
 # primarily used to aggregate configuration files into the config-data package
 # that supplies the /config/data namespace.
@@ -74,6 +88,9 @@ template("config_data") {
 template("config_package") {
   config_package_manifest = "${target_name}.config-package-extra.manifest"
   config_package_manifest_path = target_gen_dir + "/" + config_package_manifest
+  if (!dangerous_allow_sysmgr_config_conflicts) {
+    validate_sysmgr_config_target_name = "${target_name}_validate_sysmgr_config"
+  }
 
   generated_file(config_package_manifest) {
     forward_variables_from(invoker,
@@ -90,6 +107,34 @@ template("config_package") {
     outputs = [ config_package_manifest_path ]
   }
 
+  if (!dangerous_allow_sysmgr_config_conflicts) {
+    action(validate_sysmgr_config_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "data_deps",
+                               "testonly",
+                             ])
+      deps += [ ":${config_package_manifest}" ]
+
+      script = "//build/tools/validate_sysmgr_config.py"
+      inputs = [ config_package_manifest_path ]
+
+      depfile = "$target_out_dir/$target_name.d"
+      stamp_file = "$target_out_dir/$target_name.script.stamp"
+      outputs = [ stamp_file ]
+
+      args = [
+        rebase_path(config_package_manifest_path, root_build_dir),
+        "--stamp",
+        rebase_path(stamp_file, root_build_dir),
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
+      ]
+    }
+  }
+
   package(target_name) {
     forward_variables_from(invoker,
                            [
@@ -100,7 +145,11 @@ template("config_package") {
                              "testonly",
                              "visibility",
                            ])
-    deps += [ ":" + config_package_manifest ]
+    deps += [ ":${config_package_manifest}" ]
+    if (!dangerous_allow_sysmgr_config_conflicts) {
+      deps += [ ":${validate_sysmgr_config_target_name}" ]
+    }
+
     extra = [ config_package_manifest_path ]
     metadata = {
       if (defined(invoker.metadata)) {
