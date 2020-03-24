@@ -30,7 +30,9 @@ usage () {
   echo "  [--server-port <port>]"
   echo "    Port number to use when serving the packages.  Defaults to ${FUCHSIA_SERVER_PORT}."
   echo "  [--device-name <device hostname>]"
-  echo "    Only serves packages to a device with the given device hostname."
+  echo "    Only serves packages to a device with the given device hostname. Cannot be used with --device-ip."
+  echo "  [--device-ip <device ip>]"
+  echo "    Only serves packages to a device with the given device ip address. Cannot be used with --device-name."
   echo "  [--kill]"
   echo "    Kills any existing package manager server"
   echo "  [--prepare]"
@@ -41,6 +43,7 @@ usage () {
 PRIVATE_KEY_FILE=""
 PREPARE_ONLY=""
 DEVICE_NAME_FILTER=""
+DEVICE_IP_ADDR=""
 
 # Parse command line
 while (( "$#" )); do
@@ -69,6 +72,10 @@ case $1 in
     shift
     DEVICE_NAME_FILTER="${1}"
     ;;
+    --device-ip)
+    shift
+    DEVICE_IP_ADDR="${1}"
+    ;;
     --kill)
     kill-running-pm
     exit 0
@@ -88,6 +95,10 @@ esac
 shift
 done
 
+if [[ "${DEVICE_IP_ADDR}" != "" && "${DEVICE_NAME_FILTER}" != "" ]]; then
+  fx-error "Cannot use both --device-name and --device-ip".
+  exit 1
+fi
 
 SDK_ID="$(get-sdk-version)"
 
@@ -169,9 +180,24 @@ if [[ "${PREPARE_ONLY}" == "yes" ]]; then
   exit 0
 fi
 
-# Explicitly pass the sdk path for these methods.
-HOST_IP=$(get-host-ip "${FUCHSIA_SDK_PATH}" "$DEVICE_NAME_FILTER")
-DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
+if [[ "${DEVICE_IP_ADDR}" != "" ]]; then
+  DEVICE_IP="${DEVICE_IP_ADDR}"
+  # get the host address as seen by the device.
+  ssh_args=("${DEVICE_IP}" echo "\$SSH_CONNECTION")
+  if ! connection_str="$(ssh-cmd "${ssh_args[@]}")"; then
+    fx-error "unable to determine host address as seen from the target.  Is the target up?"
+    exit 1
+  fi
+  HOST_IP="$(echo "$connection_str" | cut -d ' ' -f 1)"
+else
+  # Explicitly pass the sdk path for these methods.
+  HOST_IP=$(get-host-ip "${FUCHSIA_SDK_PATH}" "$DEVICE_NAME_FILTER")
+  DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
+fi
+if [[ ! "$?" || -z "$HOST_IP" ]]; then
+  fx-error "Could not get Host IP address"
+  exit 2
+fi
 if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
   fx-error "Could not get device IP address"
   exit 2
