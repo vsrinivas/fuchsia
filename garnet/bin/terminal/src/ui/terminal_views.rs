@@ -67,15 +67,19 @@ impl GridView {
     pub fn render<'a, C>(
         &self,
         canvas: &mut Canvas<MappingPixelSink>,
+        metrics: Size,
         cells: RenderableCellsIter<'a, C>,
     ) {
         ftrace::duration!("terminal", "Views:GridView:render");
-        let font_size = self.cell_size.height * 0.9;
+
+        let mut size = self.cell_size;
+        size.width *= metrics.width;
+        size.height *= metrics.height;
+
+        let font_size = size.height * 0.9;
         let baseline = font_size * 0.9;
         let mut font_description =
             FontDescription { face: &self.font, size: font_size as u32, baseline: baseline as i32 };
-
-        let size = self.cell_size;
 
         for cell in cells {
             let character = match maybe_char_for_renderable_cell_content(cell.inner) {

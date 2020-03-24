@@ -174,7 +174,7 @@ pub struct TerminalViewAssistant {
 impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
     pub fn new(app_context: &AppContext, view_key: ViewKey) -> TerminalViewAssistant {
-        let cell_size = Size::new(24.0, 44.0);
+        let cell_size = Size::new(12.0, 22.0);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents
             // the term from panicing if a byte is received before a resize event.
@@ -413,7 +413,7 @@ impl ViewAssistant for TerminalViewAssistant {
 
         drop(grid);
 
-        self.terminal_scene.render(canvas, iter);
+        self.terminal_scene.render(canvas, context.metrics, iter);
         Ok(())
     }
 

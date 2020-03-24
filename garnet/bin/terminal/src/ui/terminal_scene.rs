@@ -49,11 +49,12 @@ impl TerminalScene {
     pub fn render<'a, C>(
         &self,
         canvas: &mut Canvas<MappingPixelSink>,
+        metrics: Size,
         cells: RenderableCellsIter<'a, C>,
     ) {
         ftrace::duration!("terminal", "Scene:TerminalScene:render");
         self.background_view.render(canvas);
-        self.grid_view.render(canvas, cells);
+        self.grid_view.render(canvas, metrics, cells);
         self.scroll_bar.render(canvas);
     }
 
