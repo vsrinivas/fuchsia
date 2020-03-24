@@ -233,11 +233,9 @@ bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output)
 // Generates the spirv  for the shader and recreates the vk shader module with it.
 void ShaderModuleTemplate::Variant::UpdateModule() {
   std::vector<uint32_t> spirv;
-  if (GenerateSpirV(&spirv)) {
-    RecreateModuleFromSpirvAndNotifyListeners(spirv);
-  } else {
-    FXL_NOTREACHED() << "Shader compilation failed!";
-  }
+  bool result = GenerateSpirV(&spirv);
+  FXL_CHECK(result) << "Shader compilation failed!";
+  RecreateModuleFromSpirvAndNotifyListeners(spirv);
 }
 #else
 
