@@ -35,7 +35,6 @@ pub struct FidlJson {
     pub type_alias_declarations: Vec<Value>,
     pub struct_declarations: Vec<Value>,
     pub union_declarations: Vec<Value>,
-    pub xunion_declarations: Vec<Value>,
     pub declaration_order: Vec<String>,
     pub declarations: Map<String, Value>,
 }

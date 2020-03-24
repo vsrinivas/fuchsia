@@ -184,7 +184,6 @@ fn render_fidl_interface(
         "struct_declarations": package_fidl_json.struct_declarations,
         "type_alias_declarations": package_fidl_json.type_alias_declarations,
         "union_declarations": package_fidl_json.union_declarations,
-        "xunion_declarations": package_fidl_json.xunion_declarations,
         "declaration_order": package_fidl_json.declaration_order,
         "declarations": package_fidl_json.declarations,
         "table_of_contents": table_of_contents,
@@ -292,7 +291,6 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
                 .type_alias_declarations
                 .append(&mut fidl_json.type_alias_declarations);
             package_fidl_json.union_declarations.append(&mut fidl_json.union_declarations);
-            package_fidl_json.xunion_declarations.append(&mut fidl_json.xunion_declarations);
             package_fidl_json.declaration_order.append(&mut fidl_json.declaration_order);
             fidl_json_map.insert(package_name, package_fidl_json);
         }
@@ -390,7 +388,6 @@ mod test {
                 type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
                 union_declarations: Vec::new(),
-                xunion_declarations: Vec::new(),
                 declaration_order: Vec::new(),
                 declarations: Map::new(),
             },
@@ -410,7 +407,6 @@ mod test {
                 type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
                 union_declarations: Vec::new(),
-                xunion_declarations: Vec::new(),
                 declaration_order: Vec::new(),
                 declarations: Map::new(),
             },
@@ -430,7 +426,6 @@ mod test {
                 type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
                 union_declarations: Vec::new(),
-                xunion_declarations: Vec::new(),
                 declaration_order: Vec::new(),
                 declarations: Map::new(),
             },

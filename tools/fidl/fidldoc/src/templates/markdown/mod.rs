@@ -55,11 +55,6 @@ impl MarkdownTemplate {
                 include_str!("partials/declarations/unions.hbs"),
                 "Failed to include unions",
             ),
-            (
-                "xunions",
-                include_str!("partials/declarations/xunions.hbs"),
-                "Failed to include xunions",
-            ),
             ("bits", include_str!("partials/declarations/bits.hbs"), "Failed to include bits"),
             (
                 "constants",
@@ -259,11 +254,6 @@ mod test {
                 include_str!("testdata/unions_declarations.md"),
                 include_str!("testdata/unions_declarations.json"),
                 "unions",
-            ),
-            (
-                include_str!("testdata/xunions_declarations.md"),
-                include_str!("testdata/xunions_declarations.json"),
-                "xunions",
             ),
         ] {
             let declarations: Value = serde_json::from_str(testdata)
