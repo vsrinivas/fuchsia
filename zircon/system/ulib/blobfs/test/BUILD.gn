@@ -76,6 +76,7 @@ test("blobfs-unit") {
     "unit/get-allocated-regions-test.cc",
     "unit/node-populator-test.cc",
     "unit/node-reserver-test.cc",
+    "unit/parser_test.cc",
     "unit/utils.cc",
     "unit/vector-extent-iterator-test.cc",
   ]
@@ -93,6 +94,7 @@ test("blobfs-unit") {
     "//zircon/public/lib/fake-device",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fs-management",
+    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/id_allocator",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/operation",

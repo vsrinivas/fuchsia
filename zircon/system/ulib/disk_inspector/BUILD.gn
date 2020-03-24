@@ -16,12 +16,14 @@ zx_library("disk_inspector") {
     "disk_inspector/type_utils.h",
     "disk_inspector/buffer_factory.h",
     "disk_inspector/vmo_buffer_factory.h",
+    "disk_inspector/loader.h",
   ]
   static = true
   sources = [
     "command.cc",
     "disk_inspector.cc",
     "disk_struct.cc",
+    "loader.cc",
     "vmo_buffer_factory.cc",
   ]
 

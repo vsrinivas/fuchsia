@@ -42,6 +42,7 @@ test("disk_inspector_unit") {
     "disk_primitive_test.cc",
     "disk_struct_test.cc",
     "inspector_transaction_handler_test.cc",
+    "loader_test.cc",
     "type_utils_test.cc",
   ]
   deps = [
@@ -49,6 +50,7 @@ test("disk_inspector_unit") {
     "//zircon/public/lib/buffer",
     "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/fake-device",
+    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/operation",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

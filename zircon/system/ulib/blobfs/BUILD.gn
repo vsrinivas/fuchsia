@@ -36,6 +36,8 @@ zx_library("blobfs") {
     "compression/zstd-plain.h",
     "compression/zstd-seekable.cc",
     "compression/zstd-seekable.h",
+    "inspector/parser.cc",
+    "inspector/parser.h",
     "iterator/allocated-extent-iterator.cc",
     "iterator/allocated-extent-iterator.h",
     "iterator/block-iterator-provider.h",
@@ -62,6 +64,7 @@ zx_library("blobfs") {
   deps = [
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/digest",
+    "$zx/system/ulib/disk_inspector",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs/journal",
