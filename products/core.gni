@@ -32,7 +32,6 @@ base_package_labels += [
   "//garnet/bin/setui:setui_service",
   "//garnet/bin/sshd-host",
   "//garnet/bin/sshd-host:config",
-  "//garnet/bin/stash:stash",
   "//garnet/bin/sysmgr",
   "//garnet/bin/sysmgr:network_config",
   "//garnet/bin/sysmgr:services_config",
@@ -74,6 +73,7 @@ base_package_labels += [
   "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
+  "//src/sys/stash:pkg",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 

@@ -7,6 +7,22 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("stash") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":stash-tests",
+    "tests",
+  ]
+}
+
 rustc_binary("bin") {
   name = "stash"
   with_unit_tests = true
@@ -32,7 +48,8 @@ rustc_binary("bin") {
   ]
 }
 
-package("stash") {
+package("pkg") {
+  package_name = "stash"
   deps = [ ":bin" ]
 
   binary = "stash"
@@ -49,7 +66,7 @@ package("stash") {
   ]
 }
 
-test_package("stash_tests") {
+test_package("stash-tests") {
   deps = [ ":bin_test" ]
 
   tests = [

@@ -53,7 +53,6 @@ group("all") {
     "//garnet/bin/setui_client:setui_client_tests",
     "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
-    "//garnet/bin/stash:stash_tests",
     "//garnet/bin/stash_ctl:stash_ctl_tests",
     "//garnet/bin/sysmem_connector:sysmem_connector_test",
     "//garnet/bin/sysmgr",

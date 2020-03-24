@@ -805,7 +805,6 @@ group("deprecated_package_underscore") {
     "//src/sys/pkg/bin/pkgfs:pmd_tests",
     "//src/sys/run_test_suite/tests:run_test_suite_integration_tests",
     "//src/sys/run_test_suite:run_test_suite_pkg",
-    "//src/sys/stash:stash_tests",
     "//src/sys/sysmgr/integration_tests:integration_tests",
     "//src/sys/sysmgr/test:sysmgr_tests",
     "//src/sys/test_adapters/gtest/tests/echo-example:gtest_adapter_echo_example",

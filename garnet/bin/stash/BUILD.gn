@@ -4,11 +4,12 @@
 
 # Do not use this target directly, instead depend on //src/sys/stash:stash.
 group("stash") {
-  public_deps = [ "//src/sys/stash:stash" ]
+  public_deps = [ "//src/sys/stash" ]
+  testonly = true
 }
 
-# Do not use this target directly, instead depend on //src/sys/stash:stash_tests.
-group("stash_tests") {
-  public_deps = [ "//src/sys/stash:stash_tests" ]
+# Do not use this target directly, instead depend on //src/sys/stash:tests.
+group("tests") {
+  public_deps = [ "//src/sys/stash:tests" ]
   testonly = true
 }

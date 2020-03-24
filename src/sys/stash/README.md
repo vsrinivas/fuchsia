@@ -1,6 +1,6 @@
 # `stash`
 
-Reviewed on: 2020-02-26
+Reviewed on: 2020-03-23
 
 Stash exists to hold persistent mutable state for early boot system services
 that are restricted from using mutable storage (usually for security reasons).
@@ -13,8 +13,8 @@ FIDL. More details on writing a program that uses stash is available
 
 ## Building
 
-To add this project to your build, append `--with //src/sys/stash` to
-the `fx set` invocation.
+To add this project to your build, append `--with //src/sys/stash` to the
+`fx set` invocation.
 
 ## Running
 
@@ -28,10 +28,10 @@ $ fx shell run stash_ctl --help
 
 ## Testing
 
-Unit tests for stash are available in the `stash_tests` package.
+Unit tests for stash are available in the `stash-tests` package.
 
 ```
-$ fx run-test stash_tests
+$ fx test stash-tests
 ```
 
 ## Source layout
