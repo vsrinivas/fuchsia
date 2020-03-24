@@ -7,19 +7,20 @@ use {
     crate::args::{Ffx, Subcommand, TestCommand},
     crate::config::command::exec_config,
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
-    anyhow::{format_err, Context, Error},
+    anyhow::{anyhow, format_err, Context, Error},
     ffx_daemon::{is_daemon_running, start as start_daemon},
     fidl::endpoints::{create_proxy, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
-    fidl_fuchsia_test::CaseIteratorMarker,
-    futures::{StreamExt, TryStreamExt},
+    fidl_fuchsia_test::{CaseIteratorMarker, SuiteProxy},
+    futures::{channel::mpsc, FutureExt, StreamExt, TryStreamExt},
     signal_hook,
     std::env,
     std::process::Command,
     std::sync::{Arc, Mutex},
+    test_executor::{run_and_collect_results as run_tests, TestEvent, TestResult},
 };
 
 mod args;
@@ -223,12 +224,72 @@ impl Cli {
         }
     }
 
+    async fn run_tests(&self, suite_url: &String) -> Result<(), Error> {
+        let (suite_proxy, suite_server_end) =
+            fidl::endpoints::create_proxy().expect("creating suite proxy");
+        let (_controller_proxy, controller_server_end) =
+            fidl::endpoints::create_proxy().expect("creating controller proxy");
+
+        log::info!("launching test suite {}", suite_url);
+
+        self.daemon_proxy
+            .launch_suite(&suite_url, suite_server_end, controller_server_end)
+            .await
+            .context("launch_test call failed")?
+            .map_err(|e| format_err!("error launching test: {:?}", e))?;
+
+        log::info!("launched suite, getting tests");
+        let (sender, recv) = mpsc::channel(1);
+
+        let (remote, test_fut) =
+            run_tests(suite_proxy, sender, suite_url.to_string()).remote_handle();
+
+        println!("*** Running {} ***", suite_url);
+        hoist::spawn(remote);
+
+        let mut successful_completion = false;
+        let events = recv.collect::<Vec<_>>().await;
+        for event in events {
+            match event {
+                TestEvent::LogMessage { test_case_name, msg } => {
+                    let logs = msg.split("\n");
+                    for log in logs {
+                        if log.len() > 0 {
+                            println!("{}: {}", test_case_name, log.to_string());
+                        }
+                    }
+                }
+                TestEvent::TestCaseStarted { test_case_name } => {
+                    println!("{} started ...", test_case_name);
+                }
+                TestEvent::TestCaseFinished { test_case_name, result } => {
+                    match result {
+                        TestResult::Passed => println!("{} PASSED", test_case_name),
+                        TestResult::Failed => println!("{} FAILED", test_case_name),
+                        TestResult::Skipped => println!("{} SKIPPED", test_case_name),
+                        TestResult::Error => println!("{} ERROR", test_case_name),
+                    };
+                }
+                TestEvent::Finish => {
+                    successful_completion = true;
+                    println!("*** Finished {} ***", suite_url);
+                }
+            };
+        }
+
+        test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
+
+        if !successful_completion {
+            return Err(anyhow!("Test run finished prematurely. Something went wrong."));
+        }
+        Ok(())
+    }
+
     pub async fn test(&self, test: TestCommand) -> Result<(), Error> {
         if (test.list) {
             self.get_tests(&test.url).await
         } else {
-            // TODO Run tests
-            Ok(())
+            self.run_tests(&test.url).await
         }
     }
 
@@ -308,8 +369,11 @@ mod test {
         Case, CaseIteratorRequest, CaseIteratorRequestStream, SuiteRequest, SuiteRequestStream,
     };
 
-    fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
-        let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
+    fn spawn_fake_iterator_server(
+        values: Vec<&'static str>,
+        mut stream: CaseIteratorRequestStream,
+    ) {
+        let mut iter = values.into_iter().map(|name| Case { name: Some(name.to_string()) });
         hoist::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
@@ -327,9 +391,16 @@ mod test {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(SuiteRequest::GetTests { iterator, control_handle: _ }) => {
-                        let values = vec!["Test".to_string()];
+                        let values = vec!["Test 1", "Test 2"];
                         let iterator_request_stream = iterator.into_stream().unwrap();
                         spawn_fake_iterator_server(values, iterator_request_stream);
+                    }
+                    Some(SuiteRequest::Run { tests, options: _, listener, .. }) => {
+                        let listener = listener
+                            .into_proxy()
+                            .context("Can't convert listener into proxy")
+                            .unwrap();
+                        listener.on_finished().context("Cannot send on_finished event").unwrap();
                     }
                     _ => assert!(false),
                 }
@@ -409,6 +480,19 @@ mod test {
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
         let cmd = TestCommand { url, devices: None, list: true };
+        hoist::run(async move {
+            let response =
+                Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
+            assert_eq!(response, ());
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn test_run_tests() -> Result<(), Error> {
+        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
+            .to_string();
+        let cmd = TestCommand { url, devices: None, list: false };
         hoist::run(async move {
             let response =
                 Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();

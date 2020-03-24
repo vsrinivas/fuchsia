@@ -6,16 +6,13 @@
 
 use {
     anyhow::{format_err, Context as _},
-    fidl_fuchsia_sys::LauncherProxy,
+    fidl::handle::AsHandleRef,
     fidl_fuchsia_test::{
         CaseListenerRequest::Finished,
         CaseListenerRequestStream, Invocation,
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
     },
     fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions},
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_vlog, macros::*},
-    fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::join_all,
@@ -26,8 +23,10 @@ use {
         task::{Context, Poll},
     },
     std::{cell::RefCell, marker::Unpin, pin::Pin},
-    zx::HandleBased,
 };
+
+#[cfg(target_os = "fuchsia")]
+use fidl_fuchsia_sys::LauncherProxy;
 
 /// Defines the result of a test case run.
 #[derive(PartialEq, Debug, Eq, Hash)]
@@ -75,7 +74,7 @@ impl TestEvent {
 
 #[must_use = "futures/streams"]
 pub struct LoggerStream {
-    socket: fasync::Socket,
+    socket: fidl::AsyncSocket,
 }
 impl Unpin for LoggerStream {}
 
@@ -86,9 +85,9 @@ thread_local! {
 
 impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket) -> Result<LoggerStream, anyhow::Error> {
+    pub fn new(socket: fidl::Socket) -> Result<LoggerStream, anyhow::Error> {
         let l = LoggerStream {
-            socket: fasync::Socket::from_socket(socket).context("Invalid zircon socket")?,
+            socket: fidl::AsyncSocket::from_socket(socket).context("Invalid zircon socket")?,
         };
         Ok(l)
     }
@@ -125,7 +124,7 @@ impl TestCaseProcessor {
     pub fn new(
         test_case_name: String,
         listener: CaseListenerRequestStream,
-        logger_socket: zx::Socket,
+        logger_socket: fidl::Socket,
         sender: mpsc::Sender<TestEvent>,
     ) -> Self {
         let log_fut =
@@ -133,7 +132,7 @@ impl TestCaseProcessor {
         let f = Self::process_run_event(test_case_name, listener, log_fut, sender);
 
         let (remote, remote_handle) = f.remote_handle();
-        fasync::spawn(remote);
+        hoist::spawn(remote);
 
         TestCaseProcessor { f: Some(remote_handle.boxed()) }
     }
@@ -181,16 +180,16 @@ impl TestCaseProcessor {
     /// in the background.
     fn collect_and_send_logs(
         name: String,
-        logger_socket: zx::Socket,
+        logger_socket: fidl::Socket,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Option<BoxFuture<'static, Result<(), anyhow::Error>>> {
-        if logger_socket.is_invalid_handle() {
+        if logger_socket.as_handle_ref().is_invalid() {
             return None;
         }
 
         let mut ls = match LoggerStream::new(logger_socket) {
             Err(e) => {
-                fx_log_err!("Logger: Failed to create fuchsia async socket: {:?}", e);
+                log::error!("Logger: Failed to create fuchsia async socket: {:?}", e);
                 return None;
             }
             Ok(ls) => ls,
@@ -211,7 +210,7 @@ impl TestCaseProcessor {
         };
 
         let (remote, remote_handle) = f.remote_handle();
-        fasync::spawn(remote);
+        hoist::spawn(remote);
         Some(remote_handle.boxed())
     }
 
@@ -230,7 +229,7 @@ pub async fn run_and_collect_results(
     mut sender: mpsc::Sender<TestEvent>,
     test_url: String,
 ) -> Result<(), anyhow::Error> {
-    fx_vlog!(1, "enumerating tests");
+    log::debug!("enumerating tests");
     let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
     suite.get_tests(server_end).map_err(|e| format_err!("Error getting test steps: {}", e))?;
 
@@ -244,9 +243,9 @@ pub async fn run_and_collect_results(
             invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
         }
     }
-    fx_vlog!(1, "invocations: {:#?}", invocations);
+    log::debug!("invocations: {:#?}", invocations);
 
-    fx_vlog!(1, "running tests");
+    log::debug!("running tests");
     let mut successful_completion = true; // will remain true, if there are no tests to run.
     let mut invocations_iter = invocations.into_iter();
     loop {
@@ -319,6 +318,7 @@ async fn run_invocations(
 }
 
 /// Runs v1 test component defined by `test_url` and reports `TestEvent` to sender for each test case.
+#[cfg(target_os = "fuchsia")]
 pub async fn run_v1_test_component(
     launcher: LauncherProxy,
     test_url: String,
@@ -330,11 +330,11 @@ pub async fn run_v1_test_component(
         ));
     }
 
-    fx_vlog!(1, "launching test component {}", test_url);
+    log::debug!("launching test component {}", test_url);
     let app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
         .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", test_url, e))?;
 
-    fx_vlog!(1, "connecting to test service");
+    log::debug!("connecting to test service");
     let suite = app
         .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
         .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
@@ -359,7 +359,7 @@ pub async fn run_v2_test_component(
     let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
     let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
-    fx_vlog!(1, "launching test component {}", test_url);
+    log::debug!("launching test component {}", test_url);
     harness
         .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
         .await
@@ -378,47 +378,51 @@ pub async fn run_v2_test_component(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl::HandleBased;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn collect_logs() {
-        let (sock_server, sock_client) =
-            zx::Socket::create(zx::SocketOpts::STREAM).expect("Failed while creating socket");
+    #[test]
+    fn collect_logs() {
+        hoist::run(async move {
+            let (sock_server, sock_client) = fidl::Socket::create(fidl::SocketOpts::STREAM)
+                .expect("Failed while creating socket");
 
-        let name = "test_name";
+            let name = "test_name";
 
-        let (sender, mut recv) = mpsc::channel(1);
+            let (sender, mut recv) = mpsc::channel(1);
 
-        let fut = TestCaseProcessor::collect_and_send_logs(name.to_string(), sock_client, sender)
-            .expect("future should not be None");
+            let fut =
+                TestCaseProcessor::collect_and_send_logs(name.to_string(), sock_client, sender)
+                    .expect("future should not be None");
 
-        sock_server.write(b"test message 1").expect("Can't write msg to socket");
-        sock_server.write(b"test message 2").expect("Can't write msg to socket");
-        sock_server.write(b"test message 3").expect("Can't write msg to socket");
+            sock_server.write(b"test message 1").expect("Can't write msg to socket");
+            sock_server.write(b"test message 2").expect("Can't write msg to socket");
+            sock_server.write(b"test message 3").expect("Can't write msg to socket");
 
-        let mut msg = recv.next().await;
+            let mut msg = recv.next().await;
 
-        assert_eq!(
-            msg,
-            Some(TestEvent::log_message(&name, "test message 1test message 2test message 3"))
-        );
+            assert_eq!(
+                msg,
+                Some(TestEvent::log_message(&name, "test message 1test message 2test message 3"))
+            );
 
-        // can receive messages multiple times
-        sock_server.write(b"test message 4").expect("Can't write msg to socket");
-        msg = recv.next().await;
+            // can receive messages multiple times
+            sock_server.write(b"test message 4").expect("Can't write msg to socket");
+            msg = recv.next().await;
 
-        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 4")));
+            assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 4")));
 
-        // messages can be read after socket server is closed.
-        sock_server.write(b"test message 5").expect("Can't write msg to socket");
-        sock_server.into_handle(); // this will drop this handle and close it.
-        fut.await.expect("log collection should not fail");
+            // messages can be read after socket server is closed.
+            sock_server.write(b"test message 5").expect("Can't write msg to socket");
+            sock_server.into_handle(); // this will drop this handle and close it.
+            fut.await.expect("log collection should not fail");
 
-        msg = recv.next().await;
+            msg = recv.next().await;
 
-        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 5")));
+            assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 5")));
 
-        // socket was closed, this should return None
-        msg = recv.next().await;
-        assert_eq!(msg, None);
+            // socket was closed, this should return None
+            msg = recv.next().await;
+            assert_eq!(msg, None);
+        });
     }
 }

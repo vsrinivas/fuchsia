@@ -758,6 +758,9 @@ pub mod non_fuchsia_handles {
                     self.waker.sched(cx);
                     Poll::Pending
                 }
+                Err(zx_status::Status::PEER_CLOSED) => {
+                    return Poll::Ready(Ok(0));
+                }
                 Err(e) => Poll::Ready(Err(e)),
                 Ok(bytes) => {
                     if bytes == avail {
@@ -814,6 +817,9 @@ pub mod non_fuchsia_handles {
                 Err(zx_status::Status::SHOULD_WAIT) => {
                     self.waker.sched(cx);
                     Poll::Pending
+                }
+                Err(zx_status::Status::PEER_CLOSED) => {
+                    return Poll::Ready(Ok(0));
                 }
                 Ok(x) => Poll::Ready(Ok(x)),
                 Err(x) => Poll::Ready(Err(x.into())),
