@@ -17,12 +17,8 @@ source_set("echo_server_provider") {
   ]
 }
 
-fidl_protocol_fuzzer("echo_fuzzer") {
+fidl_protocol_fuzzer("echo-fuzzer") {
   fidl = "//garnet/examples/fidl/services:echo"
   protocol = "fidl.examples.echo.Echo"
   deps = [ ":echo_server_provider" ]
-}
-
-fuzzers_package("echo_fuzzers") {
-  fuzzers = [ ":echo_fuzzer" ]
 }

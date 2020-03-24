@@ -30,6 +30,7 @@ fuzzers_package("fuzzing-examples") {
     ":overflow_fuzzer",
     ":trap_fuzzer",
     ":baz_fuzzer",
+    ":fuzzed_data_provider_fuzzer",
     {
       # ... or scopes with additional fields, like a non-default output name.
       label = ":oom_fuzzer"
@@ -37,7 +38,7 @@ fuzzers_package("fuzzing-examples") {
     },
     {
       # Variables set here override those in the outer scope.
-      label = ":fuzzed_data_provider_fuzzer"
+      label = "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo-fuzzer"
       fuzz_host = false
     },
   ]

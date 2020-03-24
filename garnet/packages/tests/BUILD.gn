@@ -69,7 +69,6 @@ group("all") {
     "//garnet/bin/wayland:wayland_tests",
     "//garnet/examples/fidl/echo_server_cpp",
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
-    "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers",
     "//garnet/examples/intl/manager:tests",
     "//garnet/examples/intl/wisdom:tests",
     "//garnet/go/src/benchmarking:go_benchmarking_tests",
