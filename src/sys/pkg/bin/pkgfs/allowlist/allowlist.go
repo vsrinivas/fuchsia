@@ -38,7 +38,7 @@ func LoadFrom(f io.Reader) (*Allowlist, error) {
 				return nil, err
 			}
 		}
-		if strings.HasPrefix(l, "#") {
+		if strings.HasPrefix(l, "#") || l == "" {
 			// This is a comment line in the allowlist
 			continue
 		}

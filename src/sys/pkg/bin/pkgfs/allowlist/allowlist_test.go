@@ -25,6 +25,16 @@ var allowlistTests = []struct {
 		0,
 	},
 	{
+		// Ignores empty lines
+		"foo\n\nbar\n",
+		[]allowListCheckAndResult{
+			{"foo", true},
+			{"bar", true},
+			{"", false},
+		},
+		2,
+	},
+	{
 		// Empty allowlist with a newline at EOF
 		"#Comment\n",
 		[]allowListCheckAndResult{
@@ -71,7 +81,7 @@ func TestAllowlist(t *testing.T) {
 			}
 
 			if len(allowlist.allowed) != test.desiredAllowListLength {
-				t.Errorf("Expected allowlist to have %d entries, found %d", len(allowlist.allowed), test.desiredAllowListLength)
+				t.Errorf("Expected allowlist to have %d entries, found %d", test.desiredAllowListLength, len(allowlist.allowed))
 			}
 		})
 	}
