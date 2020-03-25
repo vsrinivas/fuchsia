@@ -124,6 +124,8 @@ source_set("src") {
     "database.h",
     "feedback_data_provider.cc",
     "feedback_data_provider.h",
+    "feedback_device_id_provider.cc",
+    "feedback_device_id_provider.h",
     "privacy_settings_ptr.cc",
     "privacy_settings_ptr.h",
     "queue.cc",

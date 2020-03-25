@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.DataProvider",
+            "fuchsia.feedback.DeviceIdProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",

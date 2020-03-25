@@ -158,7 +158,9 @@ std::string ReadStringFromFile(const std::string& filepath) {
   return fxl::TrimString(content, "\r\n").ToString();
 }
 
-void AddCrashServerAnnotations(const std::string& program_name, const bool should_process,
+void AddCrashServerAnnotations(const std::string& program_name,
+                               const std::optional<std::string>& device_id,
+                               const bool should_process,
                                std::map<std::string, std::string>* annotations) {
   (*annotations)["product"] = "Fuchsia";
   (*annotations)["version"] = ReadStringFromFile("/config/build-info/version");
@@ -166,6 +168,15 @@ void AddCrashServerAnnotations(const std::string& program_name, const bool shoul
   (*annotations)["ptype"] = program_name;
   (*annotations)["osName"] = "Fuchsia";
   (*annotations)["osVersion"] = "0.0.0";
+
+  // We set the device's global unique identifier only if the device has one.
+  if (device_id.has_value()) {
+    (*annotations)["guid"] = device_id.value();
+    (*annotations)["debug.guid.set"] = "true";
+  } else {
+    (*annotations)["debug.guid.set"] = "false";
+  }
+
   // Not all reports need to be processed by the crash server.
   // Typically only reports with a minidump or a Dart stack trace file need to be processed.
   (*annotations)["should_process"] = should_process ? "true" : "false";
@@ -195,6 +206,7 @@ void AddFeedbackAttachments(fuchsia::feedback::Data feedback_data,
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     fuchsia::feedback::Data feedback_data,
                                     std::optional<zx::time_utc> current_time,
+                                    std::optional<std::string> device_id,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump) {
@@ -207,7 +219,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                    minidump, &should_process);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, should_process, annotations);
+  AddCrashServerAnnotations(program_name, device_id, should_process, annotations);
 
   // Feedback annotations common to all crash reports.
   AddFeedbackAnnotations(feedback_data, annotations);

@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -115,7 +116,8 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
       crash_server_(std::move(crash_server)),
       info_(std::move(info_context)),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
-      data_provider_(dispatcher_, services_) {
+      data_provider_(dispatcher_, services_),
+      device_id_provider_(dispatcher_, services_) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(queue_);
@@ -144,21 +146,38 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
-  auto promise = data_provider_.GetData(kFeedbackDataCollectionTimeout)
+  auto data_promise = data_provider_.GetData(kFeedbackDataCollectionTimeout);
+  auto device_id_promise = device_id_provider_.GetId(kFeedbackDataCollectionTimeout);
+
+  auto promise = fit::join_promises(std::move(data_promise), std::move(device_id_promise))
                      .then([this, report = std::move(report)](
-                               fit::result<Data>& result) mutable -> fit::result<void> {
-                       Data feedback_data;
-                       if (result.is_ok()) {
-                         feedback_data = result.take_value();
+                               fit::result<std::tuple<fit::result<Data>, fit::result<std::string>>>&
+                                   results) mutable -> fit::result<void> {
+                       if (results.is_error()) {
+                         return fit::error();
                        }
+
+                       auto data_result = std::move(std::get<0>(results.value()));
+                       auto device_id_result = std::move(std::get<1>(results.value()));
+
+                       Data feedback_data;
+                       if (data_result.is_ok()) {
+                         feedback_data = data_result.take_value();
+                       }
+
+                       std::optional<std::string> device_id = std::nullopt;
+                       if (device_id_result.is_ok()) {
+                         device_id = device_id_result.take_value();
+                       }
+
                        const std::string program_name = report.program_name();
 
                        std::map<std::string, std::string> annotations;
                        std::map<std::string, fuchsia::mem::Buffer> attachments;
                        std::optional<fuchsia::mem::Buffer> minidump;
                        BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
-                                                      utc_provider_.CurrentTime(), &annotations,
-                                                      &attachments, &minidump);
+                                                      utc_provider_.CurrentTime(), device_id,
+                                                      &annotations, &attachments, &minidump);
 
                        if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                                         annotations)) {

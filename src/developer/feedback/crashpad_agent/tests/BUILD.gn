@@ -26,6 +26,7 @@ group("tests") {
     "//src/developer/feedback/crashpad_agent",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_invalid_override_config",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_valid_override_config",
+    "//src/developer/feedback/testing/fakes:fake-device-id-provider",
     "//src/developer/feedback/testing/fakes:fake_data_provider",
     "//src/diagnostics/archivist",
     "//src/sys/timekeeper",
@@ -80,6 +81,9 @@ test_package("crashpad_agent_tests") {
     },
     {
       name = "feedback_data_provider_unittest"
+    },
+    {
+      name = "feedback_device_id_provider_unittest"
     },
     {
       name = "privacy_settings_ptr_unittest"
@@ -151,6 +155,7 @@ test_package("crashpad_agent_tests") {
     ":crashpad_agent_unittest",
     ":database_unittest",
     ":feedback_data_provider_unittest",
+    ":feedback_device_id_provider_unittest",
     ":inspect_manager_unittest",
     ":privacy_settings_ptr_unittest",
     ":queue_unittest",
@@ -204,6 +209,8 @@ executable("crashpad_agent_unittest") {
     "stub_crash_server.h",
     "stub_feedback_data_provider.cc",
     "stub_feedback_data_provider.h",
+    "stub_feedback_device_id_provider.cc",
+    "stub_feedback_device_id_provider.h",
   ]
 
   deps = [
@@ -273,6 +280,24 @@ executable("feedback_data_provider_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/fsl:fsl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("feedback_device_id_provider_unittest") {
+  testonly = true
+
+  sources = [
+    "feedback_device_id_provider_unittest.cc",
+    "stub_feedback_device_id_provider.cc",
+    "stub_feedback_device_id_provider.h",
+  ]
+
+  deps = [
+    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

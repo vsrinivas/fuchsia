@@ -5,7 +5,8 @@
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake_crashpad_agent_invalid_override_config#meta/crashpad_agent.cmx",
-                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_data_provider#meta/fake_data_provider.cmx"
+                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_data_provider#meta/fake_data_provider.cmx",
+                "fuchsia.feedback.DeviceIdProvider": "fuchsia-pkg://fuchsia.com/fake-device-id-provider#meta/fake_device_id_provider.cmx"
             }
         }
     },

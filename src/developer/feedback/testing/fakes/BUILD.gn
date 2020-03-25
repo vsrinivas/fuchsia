@@ -47,6 +47,21 @@ package("fake_data_provider") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+package("fake-device-id-provider") {
+  binary = "fake_device_id_provider"
+
+  meta = [
+    {
+      path = "meta/fake_device_id_provider.cmx"
+      dest = "fake_device_id_provider.cmx"
+    },
+  ]
+
+  deps = [ ":fake_device_id_provider_main" ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
@@ -89,5 +104,25 @@ executable("fake_data_provider_main") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("fake_device_id_provider_main") {
+  output_name = "fake_device_id_provider"
+
+  sources = [
+    "fake_device_id_provider.cc",
+    "fake_device_id_provider.h",
+    "fake_device_id_provider_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//src/lib/uuid",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
