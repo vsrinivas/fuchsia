@@ -221,7 +221,6 @@ impl<L: AssetLoader> AssetCollection<L> {
     }
 
     /// Looks up the local path or URL for a given asset ID.
-    #[allow(dead_code)]
     pub fn get_asset_path_or_url(&self, asset_id: AssetId) -> Option<String> {
         self.id_to_location_map.get(&asset_id).map(FullAssetLocation::path_or_url)
     }

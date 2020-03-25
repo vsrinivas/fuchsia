@@ -3,11 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    super::typeface::{
-        Collection as TypefaceCollection, Typeface, TypefaceCollectionBuilder, TypefaceId,
-        TypefaceInfoAndCharSet,
+    super::{
+        inspect::zero_pad,
+        typeface::{
+            Collection as TypefaceCollection, Typeface, TypefaceCollectionBuilder, TypefaceId,
+            TypefaceInfoAndCharSet, TypefaceInspectData,
+        },
+        AssetId,
     },
     fidl_fuchsia_fonts::GenericFontFamily,
+    fuchsia_inspect as finspect,
+    heck::KebabCase,
     itertools::Itertools,
     manifest::{serde_ext::StyleOptions, v2},
     std::{collections::BTreeMap, sync::Arc},
@@ -21,8 +27,8 @@ pub enum FamilyOrAlias {
     /// (value). The alias's name (key) is stored outside of this enum.
     ///
     /// * `UniCase<String>` - The _canonical_ family name.
-    /// *`Arc<TypefaceQueryOverrides` - Optional query overrides applied when a client requests the
-    /// associated alias.
+    /// * `Option<Arc<TypefaceQueryOverrides>>` - Optional query overrides applied when a client
+    ///    requests the associated alias.
     Alias(UniCase<String>, Option<Arc<TypefaceQueryOverrides>>),
 }
 
@@ -181,10 +187,115 @@ impl FontFamilyBuilder {
     }
 }
 
+/// Inspect data for a `FontFamily`.
+#[derive(Debug)]
+pub struct FamilyInspectData {
+    node: finspect::Node,
+
+    aliases_node: finspect::Node,
+    aliases: Vec<AliasInspectData>,
+
+    typefaces_node: finspect::Node,
+    typefaces: Vec<TypefaceInspectData>,
+}
+
+impl FamilyInspectData {
+    /// Creates a new `FamilyInspectData`.
+    pub fn new(
+        parent: &finspect::Node,
+        family: &FontFamily,
+        asset_location_lookup: &impl Fn(AssetId) -> Option<String>,
+    ) -> Self {
+        let node = parent.create_child(&family.name);
+
+        let aliases_node = node.create_child("aliases");
+        let aliases: Vec<AliasInspectData> = Vec::new();
+
+        let typefaces_node = node.create_child("typefaces");
+        let typefaces_count = family.faces.faces.len();
+        let typefaces: Vec<TypefaceInspectData> = family
+            .faces
+            .faces
+            .iter()
+            .enumerate()
+            .map(|(idx, typeface)| {
+                TypefaceInspectData::new(
+                    &typefaces_node,
+                    &zero_pad(idx, typefaces_count),
+                    typeface,
+                    asset_location_lookup,
+                )
+            })
+            .collect();
+
+        FamilyInspectData { node, aliases_node, aliases, typefaces_node, typefaces }
+    }
+
+    /// Adds a new font family alias, optionally with query overrides, to the existing Inspect data.
+    pub fn add_alias(&mut self, alias: &str, overrides: &Option<Arc<TypefaceQueryOverrides>>) {
+        let alias_data = AliasInspectData::new(&self.aliases_node, alias, overrides);
+        self.aliases.push(alias_data);
+    }
+}
+
+/// Inspect data for a single font family alias.
+#[derive(Debug)]
+pub struct AliasInspectData {
+    node: finspect::Node,
+    style_overrides: Option<finspect::Node>,
+    language_overrides: Option<finspect::StringProperty>,
+}
+
+impl AliasInspectData {
+    /// Creates a new `AliasInspectData`.
+    fn new(
+        parent_inspect_node: &finspect::Node,
+        alias: &str,
+        overrides: &Option<Arc<TypefaceQueryOverrides>>,
+    ) -> Self {
+        let node = parent_inspect_node.create_child(alias);
+
+        let style_overrides = overrides.as_ref().and_then(|overrides| {
+            if overrides.has_style_overrides() {
+                let style = node.create_child("style_overrides");
+                if let Some(slant) = overrides.style.slant {
+                    style.record_string("slant", format!("{:?}", slant).to_kebab_case());
+                }
+                if let Some(weight) = overrides.style.weight {
+                    style.record_uint("weight", weight.into());
+                }
+                if let Some(width) = overrides.style.width {
+                    style.record_string("width", format!("{:?}", width).to_kebab_case());
+                }
+                Some(style)
+            } else {
+                None
+            }
+        });
+
+        let language_overrides = overrides.as_ref().and_then(|overrides| {
+            if overrides.has_language_overrides() {
+                Some(
+                    node.create_string("language_overrides", overrides.languages.iter().join(", ")),
+                )
+            } else {
+                None
+            }
+        });
+
+        AliasInspectData { node, style_overrides, language_overrides }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
-        super::*, anyhow::Error, fidl_fuchsia_fonts::Width, maplit::btreemap,
+        super::*,
+        anyhow::Error,
+        char_collection::char_collect,
+        fidl_fuchsia_fonts::{Slant, Width},
+        finspect::assert_inspect_tree,
+        maplit::{btreemap, btreeset},
         pretty_assertions::assert_eq,
     };
 
@@ -278,5 +389,93 @@ mod tests {
         assert_eq!(expected, actual);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_alias_inspect_data() {
+        let alias = "Alif";
+        let overrides = Some(Arc::new(TypefaceQueryOverrides {
+            style: StyleOptions {
+                slant: None,
+                weight: Some(600),
+                width: Some(Width::ExtraExpanded),
+            },
+            languages: vec!["ar-EG".to_string(), "ar-MA".to_string()],
+        }));
+
+        let inspector = finspect::Inspector::new();
+        let _inspect_data = AliasInspectData::new(inspector.root(), alias, &overrides);
+        assert_inspect_tree!(inspector, root: {
+            Alif: {
+                style_overrides: {
+                    weight: 600u64,
+                    width: "extra-expanded"
+                },
+                language_overrides: "ar-EG, ar-MA"
+            }
+        });
+    }
+
+    #[test]
+    fn test_family_inspect_data() {
+        let mut family = FontFamilyBuilder::new("Alpha", Some(GenericFontFamily::Cursive));
+        family.add_typeface_once(Arc::new(Typeface {
+            asset_id: AssetId(0),
+            font_index: 0,
+            slant: Slant::Upright,
+            weight: 400,
+            width: Width::Normal,
+            languages: btreeset!("ar-EG".to_string(), "ar-MA".to_string()),
+            char_set: char_collect!(0x0..=0xEE).into(),
+            generic_family: Some(GenericFontFamily::Cursive),
+        }));
+        family.add_typeface_once(Arc::new(Typeface {
+            asset_id: AssetId(1),
+            font_index: 0,
+            slant: Slant::Upright,
+            weight: 400,
+            width: Width::UltraCondensed,
+            languages: btreeset!("und-Latn".to_string()),
+            char_set: char_collect!(0x0..=0xEE).into(),
+            generic_family: Some(GenericFontFamily::Cursive),
+        }));
+        let family = family.build();
+
+        let asset_location_lookup = |asset_id| match asset_id {
+            AssetId(0) => Some("/path/to/asset-0.ttf".to_string()),
+            AssetId(1) => Some("/path/to/asset-1.ttf".to_string()),
+            _ => unreachable!(),
+        };
+
+        let inspector = finspect::Inspector::new();
+        let mut inspect_data =
+            FamilyInspectData::new(inspector.root(), &family, &asset_location_lookup);
+        inspect_data.add_alias(
+            "Alif",
+            &Some(Arc::new(TypefaceQueryOverrides {
+                style: StyleOptions::default(),
+                languages: vec!["ar-EG".to_string(), "ar-JO".to_string()],
+            })),
+        );
+        inspect_data.add_alias("Ay", &None);
+
+        // The contents of `AliasInspectData` and `TypefaceInspectData` are tested in their
+        // respective unit tests. This test just asserts the overall structure.
+        assert_inspect_tree!(inspector, root: {
+            Alpha: {
+                aliases: {
+                    Ay: contains {},
+                    Alif: contains {},
+                },
+                typefaces: {
+                    "0": contains {
+                        asset_location: "/path/to/asset-0.ttf",
+                    },
+                    "1": contains {
+                        asset_location: "/path/to/asset-1.ttf",
+                    },
+                }
+            }
+        });
     }
 }

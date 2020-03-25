@@ -6,6 +6,7 @@ use {
     super::{
         asset::{AssetCollectionBuilder, AssetLoader, AssetLoaderImpl},
         family::{FamilyOrAliasBuilder, FontFamilyBuilder},
+        inspect::ServiceInspectData,
         typeface::{Typeface, TypefaceCollectionBuilder, TypefaceId},
         FontService,
     },
@@ -18,6 +19,7 @@ use {
     std::{
         collections::BTreeMap,
         convert::TryFrom,
+        fmt::{self, Display},
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -32,7 +34,7 @@ use {
 /// [`load_manifest()`](FontServiceBuilder::load_manifest), and finally construct a `FontService`
 /// using [`build()`](FontServiceBuilder::build).
 #[derive(Debug)]
-pub struct FontServiceBuilder<L>
+pub struct FontServiceBuilder<'a, L>
 where
     L: AssetLoader,
 {
@@ -41,23 +43,24 @@ where
     /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAliasBuilder>,
     fallback_collection: TypefaceCollectionBuilder,
+    inspect_root: &'a finspect::Node,
 }
 
-impl FontServiceBuilder<AssetLoaderImpl> {
+impl<'a> FontServiceBuilder<'a, AssetLoaderImpl> {
     /// Creates a new, empty builder with a real asset loader.
     pub fn with_default_asset_loader(
         cache_capacity_bytes: u64,
-        root: &finspect::Node,
-    ) -> FontServiceBuilder<AssetLoaderImpl> {
-        FontServiceBuilder::<AssetLoaderImpl>::new(
+        inspect_root: &'a finspect::Node,
+    ) -> FontServiceBuilder<'a, AssetLoaderImpl> {
+        FontServiceBuilder::<'a, AssetLoaderImpl>::new(
             AssetLoaderImpl::new(),
             cache_capacity_bytes,
-            root,
+            inspect_root,
         )
     }
 }
 
-impl<L> FontServiceBuilder<L>
+impl<'a, L> FontServiceBuilder<'a, L>
 where
     L: AssetLoader,
 {
@@ -65,13 +68,14 @@ where
     pub fn new(
         asset_loader: L,
         cache_capacity_bytes: u64,
-        root: &finspect::Node,
-    ) -> FontServiceBuilder<L> {
+        inspect_root: &'a finspect::Node,
+    ) -> FontServiceBuilder<'a, L> {
         FontServiceBuilder {
             manifests: vec![],
-            assets: AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes, root),
+            assets: AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes, inspect_root),
             families: BTreeMap::new(),
             fallback_collection: TypefaceCollectionBuilder::new(),
+            inspect_root,
         }
     }
 
@@ -92,6 +96,7 @@ where
     /// Tries to build a [`FontService`] from the provided manifests, with some additional error
     /// checking.
     pub async fn build(mut self) -> Result<FontService<L>, Error> {
+        let manifest_paths = self.manifests.iter().map(ManifestOrPath::to_string).collect();
         let manifests: Result<Vec<(FontManifestWrapper, Option<PathBuf>)>, Error> = self
             .manifests
             .drain(..)
@@ -120,11 +125,19 @@ where
             return Err(FontServiceBuilderError::NoFallbackCollection.into());
         }
 
-        Ok(FontService {
-            assets: self.assets.build(),
-            families: self.families.into_iter().map(|(key, value)| (key, value.build())).collect(),
-            fallback_collection: self.fallback_collection.build(),
-        })
+        let assets = self.assets.build();
+        let families = self.families.into_iter().map(|(key, value)| (key, value.build())).collect();
+        let fallback_collection = self.fallback_collection.build();
+
+        let inspect_data = ServiceInspectData::new(
+            self.inspect_root,
+            manifest_paths,
+            &assets,
+            &families,
+            &fallback_collection,
+        );
+
+        Ok(FontService { assets, families, fallback_collection, inspect_data })
     }
 
     async fn add_fonts_from_manifest_v2(
@@ -315,6 +328,15 @@ where
 enum ManifestOrPath {
     Manifest(FontManifestWrapper),
     Path(PathBuf),
+}
+
+impl Display for ManifestOrPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ManifestOrPath::Manifest(_manifest) => write!(f, "{}", "FontManifestWrapper {{ ... }}"),
+            ManifestOrPath::Path(path) => write!(f, "{}", path.to_string_lossy().to_string()),
+        }
+    }
 }
 
 /// Errors arising from the use of [`FontServiceBuilder`].

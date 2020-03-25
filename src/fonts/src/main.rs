@@ -90,6 +90,9 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(ProviderRequestStream::Experimental);
     fs.take_and_serve_directory_handle()?;
 
+    inspector().serve(&mut fs)?;
+
+    let fs = fs;
     service.run(fs).await;
 
     Ok(())

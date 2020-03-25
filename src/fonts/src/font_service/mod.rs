@@ -70,6 +70,8 @@ where
     /// Maps the font family name from the manifest (`families[x].name`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
+    /// Holds Inspect data about manifests, families, and the fallback collection.
+    inspect_data: inspect::ServiceInspectData,
 }
 
 impl<L> FontService<L>
