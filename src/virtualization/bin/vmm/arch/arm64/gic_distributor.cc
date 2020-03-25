@@ -292,6 +292,8 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
       FX_LOGS(ERROR) << "Failed to bind VCPU " << status;
       return status;
     }
+    // Only bind the interrupt to the first valid VCPU.
+    break;
   }
   return ZX_OK;
 }
