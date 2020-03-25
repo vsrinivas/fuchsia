@@ -18,6 +18,7 @@ group("tests") {
 }
 
 validator_deps = [
+  "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
   "//src/diagnostics/inspect_validator/fidl:validate-rustc",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
@@ -36,6 +37,7 @@ validator_deps = [
   "//third_party/rust_crates:serde",
   "//third_party/rust_crates:serde_json",
   "//third_party/rust_crates:thiserror",
+  "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
 ]
 
 rustc_binary("validator_bin") {

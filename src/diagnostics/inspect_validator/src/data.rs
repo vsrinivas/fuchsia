@@ -21,6 +21,8 @@ use {
 
 mod scanner;
 pub use scanner::Scanner;
+mod fetch;
+pub use fetch::LazyNode;
 
 #[cfg(test)]
 use num_traits::ToPrimitive;
