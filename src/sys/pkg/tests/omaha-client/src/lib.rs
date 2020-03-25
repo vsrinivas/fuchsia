@@ -12,17 +12,17 @@ use {
     },
     fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
     fidl_fuchsia_update::{
-        CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData, Initiator,
-        InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker, ManagerProxy,
-        MonitorMarker, MonitorRequest, MonitorRequestStream, NoUpdateAvailableData, State,
-        UpdateInfo,
+        CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData,
+        Initiator, InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker,
+        ManagerProxy, MonitorMarker, MonitorRequest, MonitorRequestStream, NoUpdateAvailableData,
+        State, UpdateInfo,
     },
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, Status},
     futures::{channel::mpsc, prelude::*},
     matches::assert_matches,
     parking_lot::Mutex,
@@ -39,12 +39,13 @@ mod server;
 use server::OmahaReponse;
 
 const OMAHA_CLIENT_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service.cmx";
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
 
 struct Mounts {
     _test_dir: TempDir,
     config_data: PathBuf,
     packages: PathBuf,
+    build_info: PathBuf,
 }
 
 impl Mounts {
@@ -54,8 +55,10 @@ impl Mounts {
         create_dir(&config_data).expect("create config_data dir");
         let packages = test_dir.path().join("packages");
         create_dir(&packages).expect("create packages dir");
+        let build_info = test_dir.path().join("build_info");
+        create_dir(&build_info).expect("create build_info dir");
 
-        Self { _test_dir: test_dir, config_data, packages }
+        Self { _test_dir: test_dir, config_data, packages, build_info }
     }
 
     fn write_url(&self, url: impl AsRef<[u8]>) {
@@ -67,6 +70,11 @@ impl Mounts {
         let appid_path = self.config_data.join("omaha_app_id");
         fs::write(appid_path, appid).expect("write omaha_app_id");
     }
+
+    fn write_version(&self, version: impl AsRef<[u8]>) {
+        let version_path = self.build_info.join("version");
+        fs::write(version_path, version).expect("write version");
+    }
 }
 struct Proxies {
     paver: Arc<MockPaver>,
@@ -74,27 +82,47 @@ struct Proxies {
     update_manager: ManagerProxy,
 }
 
-struct TestEnv {
-    _env: NestedEnvironment,
-    mounts: Mounts,
-    proxies: Proxies,
-    _omaha_client: App,
+struct TestEnvBuilder {
+    paver: MockPaver,
+    response: OmahaReponse,
+    version: String,
 }
 
-impl TestEnv {
-    fn new(paver: MockPaver, response: OmahaReponse) -> Self {
+impl TestEnvBuilder {
+    fn new() -> Self {
+        Self {
+            paver: MockPaver::new(Status::OK),
+            response: OmahaReponse::NoUpdate,
+            version: "0.1.2.3".to_string(),
+        }
+    }
+
+    fn paver(self, paver: MockPaver) -> Self {
+        Self { paver: paver, response: self.response, version: self.version }
+    }
+
+    fn response(self, response: OmahaReponse) -> Self {
+        Self { paver: self.paver, response: response, version: self.version }
+    }
+
+    fn version(self, version: impl Into<String>) -> Self {
+        Self { paver: self.paver, response: self.response, version: version.into() }
+    }
+
+    fn build(self) -> TestEnv {
         let mounts = Mounts::new();
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>();
 
-        let server = server::OmahaServer::new(response);
+        let server = server::OmahaServer::new(self.response);
         let url = server.start().expect("start server");
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
+        mounts.write_version(self.version);
 
-        let paver = Arc::new(paver);
+        let paver = Arc::new(self.paver);
         let paver_clone = paver.clone();
         fs.add_fidl_service(move |stream: PaverRequestStream| {
             let paver_clone = paver_clone.clone();
@@ -119,10 +147,15 @@ impl TestEnv {
                 File::open(&mounts.config_data).expect("open config_data"),
             )
             .unwrap()
+            .add_dir_to_namespace(
+                "/config/build-info".into(),
+                File::open(&mounts.build_info).expect("open build_info"),
+            )
+            .unwrap()
             .spawn(env.launcher())
             .expect("omaha_client to launch");
 
-        Self {
+        TestEnv {
             _env: env,
             mounts,
             proxies: Proxies {
@@ -135,7 +168,16 @@ impl TestEnv {
             _omaha_client: omaha_client,
         }
     }
+}
 
+struct TestEnv {
+    _env: NestedEnvironment,
+    mounts: Mounts,
+    proxies: Proxies,
+    _omaha_client: App,
+}
+
+impl TestEnv {
     fn register_package(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
         let name = name.as_ref();
         let merkle = merkle.as_ref();
@@ -152,21 +194,33 @@ impl TestEnv {
     }
 
     async fn check_now(&self) -> MonitorRequestStream {
-        let options = CheckOptions {
-            initiator: Some(Initiator::User),
-            allow_attaching_to_existing_update_check: Some(true),
-        };
-        let (client_end, stream) =
-            fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
-        assert_matches!(
-            self.proxies
+        for _ in 0..20u8 {
+            let options = CheckOptions {
+                initiator: Some(Initiator::User),
+                allow_attaching_to_existing_update_check: Some(false),
+            };
+            let (client_end, stream) =
+                fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
+            match self
+                .proxies
                 .update_manager
                 .check_now(options, Some(client_end))
                 .await
-                .expect("check_now"),
-            Ok(())
-        );
-        stream
+                .expect("check_now")
+            {
+                Ok(()) => {
+                    return stream;
+                }
+                Err(CheckNotStartedReason::AlreadyInProgress) => {
+                    println!("Update already in progress, waiting 1s...");
+                    fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(1))).await;
+                }
+                Err(e) => {
+                    panic!("Unexpected check_now error: {:?}", e);
+                }
+            }
+        }
+        panic!("Timeout waiting to start update check");
     }
 }
 
@@ -313,7 +367,7 @@ impl MockResolver {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if omaha-client does not call paver service
 async fn test_calls_paver_service() {
-    let env = TestEnv::new(MockPaver::new(Status::OK), OmahaReponse::NoUpdate);
+    let env = TestEnvBuilder::new().build();
 
     let mut set_active_configuration_healthy_was_called =
         env.proxies.paver.set_active_configuration_healthy_was_called.lock();
@@ -323,7 +377,7 @@ async fn test_calls_paver_service() {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if omaha-client does not call paver service
 async fn test_update_manager_checknow_works_after_paver_service_fails() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::NoUpdate);
+    let env = TestEnvBuilder::new().paver(MockPaver::new(Status::INTERNAL)).build();
 
     let mut set_active_configuration_healthy_was_called =
         env.proxies.paver.set_active_configuration_healthy_was_called.lock();
@@ -354,7 +408,7 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let mut env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::Update);
+    let mut env = TestEnvBuilder::new().response(OmahaReponse::Update).build();
 
     env.register_package(
         "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -417,7 +471,7 @@ async fn test_omaha_client_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_error() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::Update);
+    let env = TestEnvBuilder::new().response(OmahaReponse::Update).build();
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -472,7 +526,7 @@ async fn test_omaha_client_update_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_no_update() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::NoUpdate);
+    let env = TestEnvBuilder::new().build();
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -488,7 +542,7 @@ async fn test_omaha_client_no_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_response() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::InvalidResponse);
+    let env = TestEnvBuilder::new().response(OmahaReponse::InvalidResponse).build();
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -504,7 +558,7 @@ async fn test_omaha_client_invalid_response() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_url() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::InvalidURL);
+    let env = TestEnvBuilder::new().response(OmahaReponse::InvalidURL).build();
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -519,4 +573,18 @@ async fn test_omaha_client_invalid_url() {
     )
     .await;
     assert_matches!(stream.next().await, None);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_invalid_app_set() {
+    let env = TestEnvBuilder::new().version("invalid-version").build();
+
+    let options = CheckOptions {
+        initiator: Some(Initiator::User),
+        allow_attaching_to_existing_update_check: None,
+    };
+    assert_matches!(
+        env.proxies.update_manager.check_now(options, None).await.expect("check_now"),
+        Err(CheckNotStartedReason::Internal)
+    );
 }

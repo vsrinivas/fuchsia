@@ -428,16 +428,16 @@ where
         let s = server.borrow();
         s.state_node.set(&s.state);
 
-        if state == state_machine::State::Idle || state == state_machine::State::WaitingForReboot {
-            // State is back to idle or waiting for reboot, clear the current update monitor handles.
+        if state == state_machine::State::Idle {
+            // State is back to idle, clear the current update monitor handles.
             let mut monitor_queue = s.monitor_queue.clone();
             drop(s);
             if let Err(e) = monitor_queue.clear().await {
                 warn!("error clearing clients of monitor_queue: {:?}", e);
             }
 
-            // The state machine might make changes to apps only when state changes to `Idle` or
-            // `WaitingForReboot`, update the apps node in inspect.
+            // The state machine might make changes to apps only when state changes to `Idle`,
+            // update the apps node in inspect.
             let app_set = server.borrow().app_set.clone();
             let app_set = app_set.to_vec().await;
             server.borrow().apps_node.set(&app_set);

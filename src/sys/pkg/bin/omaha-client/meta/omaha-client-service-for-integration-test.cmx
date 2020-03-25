@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/omaha-client-service"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.paver.Paver",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

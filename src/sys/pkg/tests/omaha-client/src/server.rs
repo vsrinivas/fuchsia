@@ -75,6 +75,8 @@ async fn handle_omaha_request(
     let app = &apps[0];
     let appid = app.get("appid").unwrap();
     assert_eq!(appid, "integration-test-appid");
+    let version = app.get("version").unwrap();
+    assert_eq!(version, "0.1.2.3");
 
     let is_update_check = app.get("updatecheck").is_some();
     let app = if is_update_check {

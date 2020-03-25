@@ -379,34 +379,7 @@ where
                 "App set not valid, not starting state machine: {:#?}",
                 self.app_set.to_vec().await
             );
-
-            // Still serve the control handle to let manual update checks happen.
-            // TODO(fxb/48631): Remove this once integration tests have valid app set.
-            loop {
-                while let Some(request) = control.next().await {
-                    let options = match request {
-                        ControlRequest::StartUpdateCheck { options, responder } => {
-                            let _ = responder.send(StartUpdateCheckResponse::Started);
-                            options
-                        }
-                    };
-
-                    let update_check = self.start_update_check(options, &mut co).fuse();
-                    futures::pin_mut!(update_check);
-
-                    // Wait for the update check to complete, handling any control requests that come in
-                    // during the check.
-                    loop {
-                        select! {
-                            () = update_check => break,
-                            ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
-                                let _ = responder.send(StartUpdateCheckResponse::AlreadyRunning);
-                            }
-
-                        }
-                    }
-                }
-            }
+            return;
         }
 
         loop {
@@ -576,9 +549,8 @@ where
             if let Err(e) = self.installer.perform_reboot().await {
                 error!("Unable to reboot the system: {}", e);
             }
-        } else {
-            self.set_state(State::Idle, co).await;
         }
+        self.set_state(State::Idle, co).await;
     }
 
     /// Update `CONSECUTIVE_FAILED_UPDATE_CHECKS` in storage and report the metrics if `success`.

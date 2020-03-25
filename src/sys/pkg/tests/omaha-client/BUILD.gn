@@ -50,8 +50,8 @@ test_package("omaha-client-integration-tests") {
   meta = [
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/omaha-client/meta/omaha-client-service.cmx")
-      dest = "omaha-client-service.cmx"
+              "//src/sys/pkg/bin/omaha-client/meta/omaha-client-service-for-integration-test.cmx")
+      dest = "omaha-client-service-for-integration-test.cmx"
     },
   ]
 
