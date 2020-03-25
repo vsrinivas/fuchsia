@@ -142,6 +142,10 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
       return DEV(ctx)->SetCountry(country);
     },
+
+    .get_country = [](void* ctx, wlanphy_country_t* out_country) -> zx_status_t {
+      return DEV(ctx)->GetCountry(out_country);
+    },
 };
 
 static wlanmac_protocol_ops_t wlanmac_ops = {
@@ -3765,6 +3769,16 @@ zx_status_t Device::SetCountry(const wlanphy_country_t* country) {
   // Nothing can be done in Ralink device driver level.
   debugf("SetCountry to [%s] not implemented\n",
          wlan::common::Alpha2ToStr(country->alpha2).c_str());
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::GetCountry(wlanphy_country_t* out_country) {
+  if (out_country == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Nothing can be done in Ralink device driver level.
+  debugf("GetCountry not implemented\n");
   return ZX_ERR_NOT_SUPPORTED;
 }
 

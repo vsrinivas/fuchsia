@@ -73,6 +73,7 @@ class Device {
   zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id);
   zx_status_t DestroyIface(uint16_t id);
   zx_status_t SetCountry(const wlanphy_country_t* country);
+  zx_status_t GetCountry(wlanphy_country_t* out_country);
 
   // ddk wlanmac_protocol_ops methods
   zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);

@@ -279,6 +279,15 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return ZX_OK;
   }
 
+  zx_status_t GetCountry(wlanphy_country_t* out_country) {
+    if (out_country == nullptr) {
+      zxlogf(ERROR, "%s: GetCountry() received nullptr\n", name_.c_str());
+      return ZX_ERR_INVALID_ARGS;
+    }
+    zxlogf(ERROR, "GetCountry not implemented\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // wlantap::WlantapPhy impl
 
   virtual void Rx(uint16_t wlanmac_id, ::std::vector<uint8_t> data,
@@ -418,6 +427,9 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     },
     .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
       return DEV(ctx)->SetCountry(country);
+    },
+    .get_country = [](void* ctx, wlanphy_country_t* out_country) -> zx_status_t {
+      return DEV(ctx)->GetCountry(out_country);
     },
 };
 #undef DEV

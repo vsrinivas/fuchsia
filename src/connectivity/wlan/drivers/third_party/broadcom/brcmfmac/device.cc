@@ -171,6 +171,13 @@ zx_status_t Device::WlanphyImplSetCountry(const wlanphy_country_t* country) {
   return WlanInterface::SetCountry(brcmf_pub_.get(), country);
 }
 
+zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
+  if (out_country == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 void Device::DisableDispatcher() {
   if (dispatcher_ != nullptr) {
     dispatcher_->Shutdown();
