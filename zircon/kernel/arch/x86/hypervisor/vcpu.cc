@@ -863,7 +863,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // protect hypervisor user threads.
       MsrAccess msr;
       x86_ras_fill();
-      x86_cpu_ibpb(&msr);
+      if (x86_cpu_has_ibpb()) {
+        x86_cpu_ibpb(&msr);
+      }
     }
 
     if (status != ZX_OK) {
