@@ -24,6 +24,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/test_executor/rust:test_executor",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -39,6 +40,9 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
   ]
 }
 

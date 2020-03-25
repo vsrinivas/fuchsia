@@ -15,6 +15,7 @@ async fn launch_and_run_echo_test() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm".to_string(),
         &mut output,
+        None,
     )
     .await
     .expect("Running test should not fail");
@@ -37,7 +38,8 @@ async fn launch_and_run_simple_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/simple_gtest_adapter_example#meta/simple_gtest_adapter_example.cm".to_string(),
-        &mut output,
+        &mut output
+        ,None
     )
     .await
     .expect("Running test should not fail");
@@ -60,6 +62,7 @@ async fn launch_and_run_sample_test() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/gtest_adapter_integration_test#meta/sample_tests.cm".to_string(),
         &mut output,
+        None,
     )
     .await
     .expect("Running test should not fail");
@@ -100,6 +103,7 @@ async fn launch_and_run_huge_test() {
         "fuchsia-pkg://fuchsia.com/huge_gtest_adapter_example#meta/huge_gtest_adapter_example.cm"
             .to_string(),
         &mut output,
+        None,
     )
     .await
     .expect("Running test should not fail");

@@ -6,10 +6,14 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_async as fasync,
-    futures::{channel::mpsc, prelude::*},
+    fuchsia_async::TimeoutExt,
+    fuchsia_zircon as zx,
+    futures::{channel::mpsc, future::abortable, prelude::*},
     std::collections::HashSet,
     std::fmt,
     std::io::Write,
+    std::sync::atomic::{AtomicBool, Ordering},
+    std::sync::Arc,
     test_executor::TestEvent,
 };
 
@@ -18,6 +22,7 @@ pub enum Outcome {
     Passed,
     Failed,
     Inconclusive,
+    Timedout,
     Error,
 }
 
@@ -27,6 +32,7 @@ impl fmt::Display for Outcome {
             Outcome::Passed => write!(f, "PASSED"),
             Outcome::Failed => write!(f, "FAILED"),
             Outcome::Inconclusive => write!(f, "INCONCLUSIVE"),
+            Outcome::Timedout => write!(f, "TIMED OUT"),
             Outcome::Error => write!(f, "ERROR"),
         }
     }
@@ -48,7 +54,12 @@ pub struct RunResult {
 }
 
 /// Runs test defined by `url`, and writes logs to writer.
-pub async fn run_test<W: Write>(url: String, writer: &mut W) -> Result<RunResult, Error> {
+/// |timeout|: Test timeout.should be more than zero.
+pub async fn run_test<W: Write>(
+    url: String,
+    writer: &mut W,
+    timeout: Option<u32>,
+) -> Result<RunResult, Error> {
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()?;
 
     let (sender, mut recv) = mpsc::channel(1);
@@ -56,7 +67,27 @@ pub async fn run_test<W: Write>(url: String, writer: &mut W) -> Result<RunResult
     let (remote, test_fut) =
         test_executor::run_v2_test_component(harness, url, sender).remote_handle();
 
-    fasync::spawn(remote);
+    let timed_out = Arc::new(AtomicBool::new(false));
+    let timed_out_clone = timed_out.clone();
+    match timeout {
+        Some(timeout) => {
+            if timeout > 0 {
+                let (remote, abort_handle) = abortable(remote);
+                let timeout = fasync::Time::after(zx::Duration::from_seconds(timeout as _));
+                let timeout_fut = remote
+                    .on_timeout(timeout, move || {
+                        abort_handle.abort();
+                        timed_out_clone.store(true, Ordering::SeqCst);
+                        Ok(())
+                    })
+                    .map(drop);
+                fasync::spawn(timeout_fut);
+            } else {
+                return Err(format_err!("timeout should be more than zero"));
+            }
+        }
+        None => fasync::spawn(remote),
+    }
 
     let mut outcome = Outcome::Passed;
 
@@ -123,7 +154,12 @@ pub async fn run_test<W: Write>(url: String, writer: &mut W) -> Result<RunResult
         }
     }
 
-    test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
+    let timed_out = timed_out.load(Ordering::SeqCst);
+    if timed_out {
+        outcome = Outcome::Timedout;
+    } else {
+        test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
+    }
 
     let mut test_cases_in_progress: Vec<String> = test_cases_in_progress.into_iter().collect();
     test_cases_in_progress.sort();

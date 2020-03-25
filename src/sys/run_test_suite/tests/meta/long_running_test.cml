@@ -1,0 +1,10 @@
+{
+    program: { binary: "bin/long_running_test" },
+    use: [{ runner: "gtest_runner" }],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self"
+        }
+    ]
+}
