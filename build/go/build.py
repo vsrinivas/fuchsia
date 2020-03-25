@@ -60,7 +60,16 @@ def main():
     parser.add_argument(
         '--is-test', help='True if the target is a go test', default=False)
     parser.add_argument('--buildmode', help='Build mode to use')
-    parser.add_argument('--gcflags', help='Arguments to pass to Go compiler')
+    parser.add_argument(
+        '--gcflag',
+        help='Arguments to pass to Go compiler',
+        action='append',
+        default=[])
+    parser.add_argument(
+        '--ldflag',
+        help='Arguments to pass to Go linker',
+        action='append',
+        default=[])
     parser.add_argument(
         '--go-dep-files',
         help='List of files describing library dependencies',
@@ -206,8 +215,10 @@ def main():
         cmd += ['-tags', ' '.join(args.tag)]
     if args.buildmode:
         cmd += ['-buildmode', args.buildmode]
-    if args.gcflags:
-        cmd += ['-gcflags', args.gcflags]
+    if args.gcflag:
+        cmd += ['-gcflags', ' '.join(args.gcflag)]
+    if args.ldflag:
+        cmd += ['-ldflags', ' '.join(args.ldflag)]
     cmd += [
         '-pkgdir',
         os.path.join(project_path, 'pkg'), '-o', args.output_path, args.package

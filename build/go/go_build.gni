@@ -54,6 +54,9 @@ declare_args() {
 #   gcflags (optional)
 #     List of go compiler flags to pass.
 #
+#   ldflags (optional)
+#     List of go linker flags to pass.
+#
 #   tags (optional)
 #     List of go build tags to include in the build.
 #
@@ -229,17 +232,16 @@ template("go_build") {
       }
 
       # Go compiler flags
-      gcflags = []
-
       if (defined(invoker.gcflags)) {
-        gcflags += invoker.gcflags
+        foreach(gcflag, invoker.gcflags) {
+          args += [ "--gcflag=${gcflag}" ]
+        }
       }
 
-      foreach(gcflag, gcflags) {
-        args += [
-          "--gcflag",
-          gcflag,
-        ]
+      if (defined(invoker.ldflags)) {
+        foreach(ldflag, invoker.ldflags) {
+          args += [ "--ldflag=${ldflag}" ]
+        }
       }
 
       if (carchive) {
@@ -255,7 +257,9 @@ template("go_build") {
         if (!carchive && output_breakpad_syms && host_os != "mac") {
           args += [
             "--dump-syms",
-            rebase_path("//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms", root_build_dir)
+            rebase_path(
+                "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
+                root_build_dir),
           ]
         }
 
