@@ -11,13 +11,13 @@ import("//build/package/component.gni")
 group("src") {
   testonly = true
   deps = [
-    ":logger_integration_go_tests",
-    ":logger_integration_go_tests_lib",
+    ":logs_integration_go_tests",
+    ":logs_integration_go_tests_lib",
   ]
 }
 
-go_library("logger_integration_go_tests_lib") {
-  name = "logger_integration_tests"
+go_library("logs_integration_go_tests_lib") {
+  name = "logs_integration_tests"
 
   deps = [
     "//garnet/public/lib/syslog/go/src/syslog",
@@ -25,7 +25,7 @@ go_library("logger_integration_go_tests_lib") {
   ]
 }
 
-go_test("logger_integration_go_tests") {
-  gopackages = [ "logger_integration_tests" ]
-  deps = [ ":logger_integration_go_tests_lib" ]
+go_test("logs_integration_go_tests") {
+  gopackages = [ "logs_integration_tests" ]
+  deps = [ ":logs_integration_go_tests_lib" ]
 }
