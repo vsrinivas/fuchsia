@@ -114,7 +114,11 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
     llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps,
     llcpp::fuchsia::sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
+  // must out-live |complete|
+  fidl::aligned<llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response> response;
+  // must out-live |complete|
   llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result;
+  // ~complete before ~result or ~response
   auto complete = fit::defer([&completer, &result] {
     ZX_DEBUG_ASSERT(!result.has_invalid_tag());
     completer.Reply(std::move(result));
@@ -125,8 +129,8 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
     result.set_err(fidl::unowned_ptr(&status));
     return;
   }
-  fidl::aligned<llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response> response;
   result.set_response(fidl::unowned_ptr(&response));
+  // ~complete, ~result, ~response in that order
 }
 
 void SysmemSecureMemServer::PostToLoop(fit::closure to_run) {
