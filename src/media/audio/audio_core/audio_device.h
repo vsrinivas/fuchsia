@@ -30,6 +30,8 @@ class RingBuffer;
 
 class AudioDevice : public AudioObject, public std::enable_shared_from_this<AudioDevice> {
  public:
+  static std::string UniqueIdToString(const audio_stream_unique_id_t& id);
+
   // Wakeup
   //
   // Called from outside the mixing ExecutionDomain to cause an AudioDevice's::OnWakeup handler to

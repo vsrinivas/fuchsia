@@ -14,9 +14,14 @@
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
-
 namespace {
-std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
+
+constexpr float kDefaultDeviceGain = 0.;
+
+}  // namespace
+
+// static
+std::string AudioDevice::UniqueIdToString(const audio_stream_unique_id_t& id) {
   static_assert(sizeof(id.data) == 16, "Unexpected unique ID size");
   char buf[(sizeof(id.data) * 2) + 1];
 
@@ -26,10 +31,6 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
            d[14], d[15]);
   return std::string(buf, sizeof(buf) - 1);
 }
-
-constexpr float kDefaultDeviceGain = 0.;
-
-}  // namespace
 
 AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
                          DeviceRegistry* registry, LinkMatrix* link_matrix)
@@ -218,7 +219,7 @@ void AudioDevice::GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const
   TRACE_DURATION("audio", "AudioDevice::GetDeviceInfo");
   const auto& drv = *driver();
   out_info->name = drv.manufacturer_name() + ' ' + drv.product_name();
-  out_info->unique_id = AudioDeviceUniqueIdToString(drv.persistent_unique_id());
+  out_info->unique_id = UniqueIdToString(drv.persistent_unique_id());
   out_info->token_id = token();
   out_info->is_input = is_input();
   out_info->is_default = false;
