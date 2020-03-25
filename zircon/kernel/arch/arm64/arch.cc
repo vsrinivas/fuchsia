@@ -97,25 +97,25 @@ uint64_t arm64_get_boot_el() { return arch_boot_el >> 2; }
 zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   // Allocate a stack, indexed by CPU num so that |arm64_secondary_entry| can find it.
   DEBUG_ASSERT_MSG(cpu_num > 0 && cpu_num < SMP_MAX_CPUS, "cpu_num: %u", cpu_num);
-  kstack_t* stack = &_init_thread[cpu_num - 1].stack_;
-  DEBUG_ASSERT(stack->base == 0);
-  zx_status_t status = vm_allocate_kstack(stack);
+  KernelStack* stack = &_init_thread[cpu_num - 1].stack_;
+  DEBUG_ASSERT(stack->base() == 0);
+  zx_status_t status = stack->Init();
   if (status != ZX_OK) {
     return status;
   }
 
   // Get the stack pointers.
-  void* sp = reinterpret_cast<void*>(stack->top);
+  void* sp = reinterpret_cast<void*>(stack->top());
   void* unsafe_sp = nullptr;
   uintptr_t* shadow_call_sp = nullptr;
 #if __has_feature(safe_stack)
-  DEBUG_ASSERT(stack->unsafe_base != 0);
-  unsafe_sp = reinterpret_cast<void*>(stack->unsafe_base + stack->size);
+  DEBUG_ASSERT(stack->unsafe_base() != 0);
+  unsafe_sp = reinterpret_cast<void*>(stack->unsafe_base() + stack->size());
 #endif
 #if __has_feature(shadow_call_stack)
-  DEBUG_ASSERT(stack->shadow_call_base != 0);
+  DEBUG_ASSERT(stack->shadow_call_base() != 0);
   // The shadow call stack grows up.
-  shadow_call_sp = reinterpret_cast<uintptr_t*>(stack->shadow_call_base);
+  shadow_call_sp = reinterpret_cast<uintptr_t*>(stack->shadow_call_base());
 #endif
 
   // Find an empty slot for the low-level stack info.
@@ -146,9 +146,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 
 zx_status_t arm64_free_secondary_stack(uint cpu_num) {
   DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
-  kstack_t* stack = &_init_thread[cpu_num - 1].stack_;
-  zx_status_t status = vm_free_kstack(stack);
-  return status;
+  return _init_thread[cpu_num - 1].stack_.Teardown();
 }
 
 static void arm64_cpu_early_init() {
@@ -259,11 +257,11 @@ void arch_enter_uspace(iframe_t* iframe) {
 
   LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR
           ", 0, %#" PRIxPTR ")\n",
-          iframe->r[0], iframe->r[1], iframe->spsr, ct->stack_.top, iframe->usp, iframe->elr);
+          iframe->r[0], iframe->r[1], iframe->spsr, ct->stack_.top(), iframe->usp, iframe->elr);
 
   arch_disable_ints();
 
-  arm64_uspace_entry(iframe, ct->stack_.top);
+  arm64_uspace_entry(iframe, ct->stack_.top());
   __UNREACHABLE;
 }
 

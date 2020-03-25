@@ -470,7 +470,7 @@ struct Thread {
   // architecture stuff
   struct arch_thread arch_;
 
-  kstack_t stack_;
+  KernelStack stack_;
 
   // entry point
   thread_start_routine entry_;

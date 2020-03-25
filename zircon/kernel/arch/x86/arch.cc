@@ -194,7 +194,7 @@ __NO_SAFESTACK __NO_RETURN void x86_secondary_entry(volatile int* aps_still_boot
 #if __has_feature(safe_stack)
   // Set up the initial unsafe stack pointer.
   x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET,
-                        ROUNDDOWN(thread->stack_.unsafe_base + thread->stack_.size, 16));
+                        ROUNDDOWN(thread->stack_.unsafe_base() + thread->stack_.size(), 16));
 #endif
 
   x86_init_percpu((uint)cpu_num);

@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
 #include <trace.h>
 
@@ -104,90 +105,89 @@ static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* 
   return ZX_OK;
 }
 
-zx_status_t vm_allocate_kstack(kstack_t* stack) {
-  DEBUG_ASSERT(stack->base == 0);
-  DEBUG_ASSERT(stack->size == 0);
-  DEBUG_ASSERT(stack->top == 0);
-  DEBUG_ASSERT(stack->vmar == nullptr);
-#if __has_feature(safe_stack)
-  DEBUG_ASSERT(stack->unsafe_base == 0);
-  DEBUG_ASSERT(stack->unsafe_vmar == nullptr);
-#endif
-#if __has_feature(shadow_call_stack)
-  DEBUG_ASSERT(stack->shadow_call_base == 0);
-  DEBUG_ASSERT(stack->shadow_call_vmar == nullptr);
-#endif
+zx_status_t KernelStack::Init() {
+  DEBUG_ASSERT(size_ == 0);
+  DEBUG_ASSERT(base_ == 0);
+  DEBUG_ASSERT(top_ == 0);
 
   fbl::RefPtr<VmMapping> mapping;
-  fbl::RefPtr<VmAddressRegion> vmar;
-  zx_status_t status = allocate_vmar(kSafe, &mapping, &vmar);
+  zx_status_t status = allocate_vmar(kSafe, &mapping, &vmar_);
   if (status != ZX_OK) {
     return status;
   }
-  stack->size = mapping->size();
-  stack->base = mapping->base();
-  stack->top = mapping->base() + DEFAULT_STACK_SIZE;
-
-  // Stash address of VMAR so we can later free it in |vm_free_kstack|.
-  stack->vmar = fbl::ExportToRawPtr(&vmar);
+  size_ = mapping->size();
+  base_ = mapping->base();
+  top_ = mapping->base() + DEFAULT_STACK_SIZE;
 
 #if __has_feature(safe_stack)
-  status = allocate_vmar(kUnsafe, &mapping, &vmar);
+  DEBUG_ASSERT(unsafe_base_ == 0);
+  status = allocate_vmar(kUnsafe, &mapping, &unsafe_vmar_);
   if (status != ZX_OK) {
-    vm_free_kstack(stack);
     return status;
   }
-  stack->unsafe_base = mapping->base();
-
-  // Stash address of VMAR so we can later free it in |vm_free_kstack|.
-  stack->unsafe_vmar = fbl::ExportToRawPtr(&vmar);
+  unsafe_base_ = mapping->base();
 #endif
 
 #if __has_feature(shadow_call_stack)
-  status = allocate_vmar(kShadowCall, &mapping, &vmar);
+  DEBUG_ASSERT(shadow_call_base_ == 0);
+  status = allocate_vmar(kShadowCall, &mapping, &shadow_call_vmar_);
   if (status != ZX_OK) {
-    vm_free_kstack(stack);
     return status;
   }
-  stack->shadow_call_base = mapping->base();
-
-  // Stash address of VMAR so we can later free it in |vm_free_kstack|.
-  stack->shadow_call_vmar = fbl::ExportToRawPtr(&vmar);
+  shadow_call_base_ = mapping->base();
 #endif
-
   return ZX_OK;
 }
 
-zx_status_t vm_free_kstack(kstack_t* stack) {
-  stack->base = 0;
-  stack->size = 0;
-  stack->top = 0;
+void KernelStack::DumpInfo(int debug_level) {
+  dprintf(debug_level, "\tstack.base 0x%lx, stack.vmar %p, stack.size %zu\n", base_, vmar_.get(),
+          size_);
 #if __has_feature(safe_stack)
-  stack->unsafe_base = 0;
+  dprintf(debug_level, "\tstack.unsafe_base 0x%lx, stack.unsafe_vmar %p\n", unsafe_base_,
+          unsafe_vmar_.get());
 #endif
 #if __has_feature(shadow_call_stack)
-  stack->shadow_call_base = 0;
+  dprintf(debug_level, "\tstack.shadow_call_base 0x%lx, stack.shadow_call_vmar %p\n",
+          shadow_call_base_, shadow_call_vmar_.get());
 #endif
+}
 
-  for (auto field : {
-         &kstack_t::vmar,
-#if __has_feature(safe_stack)
-             &kstack_t::unsafe_vmar,
-#endif
-#if __has_feature(shadow_call_stack)
-             &kstack_t::shadow_call_vmar,
-#endif
-       }) {
-    if (stack->*field != nullptr) {
-      fbl::RefPtr<VmAddressRegion> vmar =
-          fbl::ImportFromRawPtr(static_cast<VmAddressRegion*>(stack->*field));
-      zx_status_t status = vmar->Destroy();
-      if (status != ZX_OK) {
-        return status;
-      }
-      stack->*field = nullptr;
+KernelStack::~KernelStack(){
+  [[maybe_unused]] zx_status_t status = Teardown();
+  DEBUG_ASSERT_MSG(status == ZX_OK, "KernelStack::Teardown returned %d\n", status);
+}
+
+zx_status_t KernelStack::Teardown() {
+  base_ = 0;
+  size_ = 0;
+  top_ = 0;
+
+  if (vmar_) {
+    zx_status_t status = vmar_->Destroy();
+    if ( status != ZX_OK ) {
+      return status;
     }
+    vmar_.reset();
   }
-
+#if __has_feature(safe_stack)
+  unsafe_base_ = 0;
+  if (unsafe_vmar_) {
+    zx_status_t status = unsafe_vmar_->Destroy();
+    if (status != ZX_OK ) {
+      return status;
+    }
+    unsafe_vmar_.reset();
+  }
+#endif
+#if __has_feature(shadow_call_stack)
+  shadow_call_base_ = 0;
+  if (shadow_call_vmar_) {
+    zx_status_t status = shadow_call_vmar_->Destroy();
+    if (status != ZX_OK ) {
+      return status;
+    }
+    shadow_call_vmar_.reset();
+  }
+#endif
   return ZX_OK;
 }

@@ -34,9 +34,9 @@ void x86_init_smp(uint32_t* apic_ids, uint32_t num_cpus) {
   lk_init_secondary_cpus(num_cpus - 1);
 }
 
-static void free_stack_and_thread(Thread* t) {
+static void free_thread(Thread* t) {
   if (t) {
-    vm_free_kstack(&t->stack_);
+    t->~Thread();
     free(t);
   }
 }
@@ -88,8 +88,11 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     }
     init_thread_struct(thread, "");
 
-    status = vm_allocate_kstack(&thread->stack_);
-    bootstrap_data->per_cpu[i].kstack_base = thread->stack_.base;
+    status = thread->stack_.Init();
+    if (status != ZX_OK) {
+      goto cleanup_all;
+    }
+    bootstrap_data->per_cpu[i].kstack_base = thread->stack_.base();
     bootstrap_data->per_cpu[i].thread = thread;
   }
 
@@ -158,7 +161,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
       atomic_and((volatile int*)&mp.online_cpus, ~mask);
 
       // Free the failed AP's thread, it was cancelled before it could use it.
-      free_stack_and_thread(bootstrap_data->per_cpu[i].thread);
+      free_thread(bootstrap_data->per_cpu[i].thread);
       bootstrap_data->per_cpu[i].thread = nullptr;
 
       failed_aps &= ~mask;
@@ -175,7 +178,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
 
 cleanup_all:
   for (unsigned int i = 0; i < count; ++i) {
-    free_stack_and_thread(bootstrap_data->per_cpu[i].thread);
+    free_thread(bootstrap_data->per_cpu[i].thread);
     bootstrap_data->per_cpu[i].thread = nullptr;
   }
 cleanup_aspace:

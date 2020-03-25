@@ -207,7 +207,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
 
   sched_init_thread(t, priority);
 
-  zx_status_t status = vm_allocate_kstack(&t->stack_);
+  zx_status_t status = t->stack_.Init();
   if (status != ZX_OK) {
     if (flags & THREAD_FLAG_FREE_STRUCT) {
       free(t);
@@ -240,17 +240,6 @@ Thread* Thread::Create(const char* name, thread_start_routine entry, void* arg, 
 }
 
 static void free_thread_resources(Thread* t) {
-  if (t->stack_.vmar != nullptr) {
-#if __has_feature(safe_stack)
-    DEBUG_ASSERT(t->stack_.unsafe_vmar != nullptr);
-#endif
-#if __has_feature(shadow_call_stack)
-    DEBUG_ASSERT(t->stack_.shadow_call_vmar != nullptr);
-#endif
-    zx_status_t status = vm_free_kstack(&t->stack_);
-    DEBUG_ASSERT(status == ZX_OK);
-  }
-
   // free the thread structure itself.  Manually trigger the struct's
   // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
   // get triggered.
@@ -524,7 +513,7 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
     list_delete(&current_thread->thread_list_node_);
 
     // queue a dpc to free the stack and, optionally, the thread structure
-    if (current_thread->stack_.base || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
+    if (current_thread->stack_.base() || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
       free_dpc = Dpc(&thread_free_dpc, current_thread);
       zx_status_t status = free_dpc.QueueThreadLocked();
       DEBUG_ASSERT(status == ZX_OK);
@@ -1260,17 +1249,17 @@ void Thread::Current::BecomeIdle() {
  */
 void thread_secondary_cpu_init_early(Thread* t) {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(t->stack_.base != 0);
+  DEBUG_ASSERT(t->stack_.base() != 0);
 
   // Save |t|'s stack because |thread_construct_first| will zero out the whole struct.
-  kstack_t stack = t->stack_;
+  KernelStack stack = ktl::move(t->stack_);
 
   char name[16];
   snprintf(name, sizeof(name), "cpu_init %u", arch_curr_cpu_num());
   thread_construct_first(t, name);
 
   // Restore the stack.
-  t->stack_ = stack;
+  t->stack_ = ktl::move(stack);
 }
 
 /**
@@ -1379,16 +1368,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             t->inherited_priority_, t->remaining_time_slice_);
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
-    dprintf(INFO, "\tstack.base 0x%lx, stack.vmar %p, stack.size %zu\n", t->stack_.base,
-            t->stack_.vmar, t->stack_.size);
-#if __has_feature(safe_stack)
-    dprintf(INFO, "\tstack.unsafe_base 0x%lx, stack.unsafe_vmar %p\n", t->stack_.unsafe_base,
-            t->stack_.unsafe_vmar);
-#endif
-#if __has_feature(shadow_call_stack)
-    dprintf(INFO, "\tstack.shadow_call_base 0x%lx, stack.shadow_call_vmar %p\n",
-            t->stack_.shadow_call_base, t->stack_.shadow_call_vmar);
-#endif
+    t->stack_.DumpInfo(INFO);
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s\n", t->entry_, t->arg_, t->flags_,
             (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
             (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
@@ -1496,8 +1476,8 @@ typedef struct thread_backtrace {
 } thread_backtrace_t;
 
 static zx_status_t thread_read_stack(Thread* t, void* ptr, void* out, size_t sz) {
-  if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack_.base) ||
-      (reinterpret_cast<vaddr_t>(ptr) > (t->stack_.base + t->stack_.size - sizeof(void*)))) {
+  if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack_.base()) ||
+      (reinterpret_cast<vaddr_t>(ptr) > (t->stack_.base() + t->stack_.size() - sizeof(void*)))) {
     return ZX_ERR_NOT_FOUND;
   }
   memcpy(out, ptr, sz);
