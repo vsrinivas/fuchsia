@@ -16,7 +16,7 @@ Set protection of virtual memory pages.
 zx_status_t zx_vmar_protect(zx_handle_t handle,
                             zx_vm_option_t options,
                             zx_vaddr_t addr,
-                            uint64_t len);
+                            size_t len);
 ```
 
 ## DESCRIPTION

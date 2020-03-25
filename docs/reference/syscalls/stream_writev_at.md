@@ -15,7 +15,7 @@ Write data to a stream at the given offset.
 
 zx_status_t zx_stream_writev_at(zx_handle_t handle,
                                 uint32_t options,
-                                uint64_t offset,
+                                zx_off_t offset,
                                 const zx_iovec_t* vector,
                                 size_t num_vector,
                                 size_t* actual);
@@ -81,13 +81,13 @@ unsupported bit set to 1.
  - [`zx_stream_create()`]
  - [`zx_stream_readv()`]
  - [`zx_stream_readv_at()`]
- - [`zx_stream_writev()`]
  - [`zx_stream_seek()`]
+ - [`zx_stream_writev()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_stream_create()`]: stream_create.md
 [`zx_stream_readv()`]: stream_readv.md
 [`zx_stream_readv_at()`]: stream_readv_at.md
-[`zx_stream_writev()`]: stream_writev.md
 [`zx_stream_seek()`]: stream_seek.md
+[`zx_stream_writev()`]: stream_writev.md

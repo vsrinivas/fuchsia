@@ -15,7 +15,7 @@ Create a stream from a VMO.
 
 zx_status_t zx_stream_create(uint32_t options,
                              zx_handle_t vmo,
-                             uint64_t seek,
+                             zx_off_t seek,
                              zx_handle_t* out_stream);
 ```
 
@@ -67,14 +67,14 @@ has an unsupported bit set to 1.
 
  - [`zx_stream_readv()`]
  - [`zx_stream_readv_at()`]
+ - [`zx_stream_seek()`]
  - [`zx_stream_writev()`]
  - [`zx_stream_writev_at()`]
- - [`zx_stream_seek()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_stream_readv()`]: stream_readv.md
 [`zx_stream_readv_at()`]: stream_readv_at.md
+[`zx_stream_seek()`]: stream_seek.md
 [`zx_stream_writev()`]: stream_writev.md
 [`zx_stream_writev_at()`]: stream_writev_at.md
-[`zx_stream_seek()`]: stream_seek.md

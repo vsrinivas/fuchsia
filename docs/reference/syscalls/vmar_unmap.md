@@ -13,7 +13,7 @@ Unmap virtual memory pages.
 ```c
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len);
+zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, size_t len);
 ```
 
 ## DESCRIPTION

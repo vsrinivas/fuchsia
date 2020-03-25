@@ -16,7 +16,7 @@ Modify the seek offset.
 zx_status_t zx_stream_seek(zx_handle_t handle,
                            zx_stream_seek_origin_t whence,
                            int64_t offset,
-                           zx_off_t* out_offset);
+                           zx_off_t* out_seek);
 ```
 
 ## DESCRIPTION

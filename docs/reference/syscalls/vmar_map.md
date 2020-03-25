@@ -15,10 +15,10 @@ Add a memory mapping.
 
 zx_status_t zx_vmar_map(zx_handle_t handle,
                         zx_vm_option_t options,
-                        uint64_t vmar_offset,
+                        size_t vmar_offset,
                         zx_handle_t vmo,
                         uint64_t vmo_offset,
-                        uint64_t len,
+                        size_t len,
                         zx_vaddr_t* mapped_addr);
 ```
 

@@ -45,9 +45,8 @@ def parse_args():
     parser.add_argument('--json',
                         default=os.path.normpath(
                             os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
-                                         'out', 'default.zircon',
-                                         'user-x64-clang', 'gen', 'kernel',
-                                         'syscalls', 'zircon',
+                                         'out', 'default.zircon', 'gen',
+                                         'include', 'zircon', 'syscalls',
                                          'definitions.json')),
                         help='path to kazoo .json output')
     parser.add_argument('--docroot',

@@ -71,14 +71,14 @@ nonzero.
 
  - [`zx_stream_create()`]
  - [`zx_stream_readv_at()`]
+ - [`zx_stream_seek()`]
  - [`zx_stream_writev()`]
  - [`zx_stream_writev_at()`]
- - [`zx_stream_seek()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_stream_create()`]: stream_create.md
 [`zx_stream_readv_at()`]: stream_readv_at.md
+[`zx_stream_seek()`]: stream_seek.md
 [`zx_stream_writev()`]: stream_writev.md
 [`zx_stream_writev_at()`]: stream_writev_at.md
-[`zx_stream_seek()`]: stream_seek.md

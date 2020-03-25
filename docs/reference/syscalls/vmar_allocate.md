@@ -15,8 +15,8 @@ Allocate a new subregion.
 
 zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar,
                              zx_vm_option_t options,
-                             uint64_t offset,
-                             uint64_t size,
+                             size_t offset,
+                             size_t size,
                              zx_handle_t* child_vmar,
                              zx_vaddr_t* child_addr);
 ```

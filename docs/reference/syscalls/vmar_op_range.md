@@ -15,8 +15,8 @@ Perform an operation on VMOs mapped into this VMAR.
 
 zx_status_t zx_vmar_op_range(zx_handle_t handle,
                              uint32_t op,
-                             uint64_t address,
-                             uint64_t size,
+                             zx_vaddr_t address,
+                             size_t size,
                              void* buffer,
                              size_t buffer_size);
 ```
