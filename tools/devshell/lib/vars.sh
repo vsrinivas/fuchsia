@@ -264,6 +264,26 @@ function get-fuchsia-device-addr {
   esac
 }
 
+# get-device-addr-resource returns an address that is properly encased
+# for resource addressing for tools that expect that. In practical
+# terms this just means encasing the address in square brackets if it
+# is an ipv6 address. Note: this is not URL safe as-is, use the -url
+# variant instead for URL formulation.
+function get-device-addr-resource {
+  local addr
+  addr="$(get-fuchsia-device-addr)" || exit $?
+  if _looks_like_ipv4 "${addr}"; then
+    echo "${addr}"
+    return 0
+  fi
+
+  echo "[${addr}]"
+}
+
+function get-device-addr-url {
+  get-device-addr-resource | sed 's#%#%25#'
+}
+
 function fx-find-command {
   local -r cmd=$1
 

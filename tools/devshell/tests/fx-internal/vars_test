@@ -139,4 +139,20 @@ TEST_fx-get-device-ssh-port() {
   BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]:22" get-device-ssh-port)" "22"
 }
 
+TEST_fx-get-device-addr-resource() {
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="127.0.0.1" get-device-addr-resource)" "127.0.0.1"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="127.0.0.1:8811" get-device-addr-resource)" "127.0.0.1"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[::1]" get-device-addr-resource)" "[::1]"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[::1]:22" get-device-addr-resource)" "[::1]"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]" get-device-addr-resource)" "[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]"
+}
+
+TEST_fx-get-device-addr-url() {
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="127.0.0.1" get-device-addr-url)" "127.0.0.1"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="127.0.0.1:8811" get-device-addr-url)" "127.0.0.1"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[::1]" get-device-addr-url)" "[::1]"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[::1]:22" get-device-addr-url)" "[::1]"
+  BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]" get-device-addr-url)" "[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%25enx44070ba0044e]"
+}
+
 BT_RUN_TESTS "$@"
