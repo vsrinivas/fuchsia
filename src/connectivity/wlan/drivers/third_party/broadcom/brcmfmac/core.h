@@ -261,7 +261,8 @@ struct net_device {
   void (*priv_destructor)(net_device*);
   int reg_state;
   int needs_free_net_device;
-  int32_t last_known_rssi_dbm;
+  int8_t last_known_rssi_dbm;
+  int8_t last_known_snr_db;
 };
 
 /*

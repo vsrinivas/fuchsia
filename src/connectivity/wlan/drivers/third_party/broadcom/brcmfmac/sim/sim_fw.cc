@@ -1137,18 +1137,27 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     }
     memcpy(value_out, &auth_state_.auth_type, sizeof(auth_state_.auth_type));
   } else if (!std::strcmp(name, "wsec_key")) {
-    if (value_len != sizeof(wsec_key_)) {
+    if (value_len < sizeof(wsec_key_)) {
       return ZX_ERR_INVALID_ARGS;
     }
     memcpy(value_out, &wsec_key_, sizeof(wsec_key_));
   } else if (!std::strcmp(name, "chanspec")) {
-    if (value_len != sizeof(uint16_t)) {
+    if (value_len < sizeof(uint16_t)) {
       return ZX_ERR_INVALID_ARGS;
     }
     if (!iface_tbl_[ifidx].allocated) {
       return ZX_ERR_BAD_STATE;
     }
     memcpy(value_out, &iface_tbl_[ifidx].chanspec, sizeof(uint16_t));
+  } else if (!std::strcmp(name, "snr")) {
+    if (value_len < sizeof(int32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_BAD_STATE;
+    }
+    int32_t sim_snr = 40;
+    memcpy(value_out, &sim_snr, sizeof(sim_snr));
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'\n", name);

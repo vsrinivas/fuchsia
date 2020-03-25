@@ -1528,19 +1528,27 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   BRCMF_DBG(TRACE, "Exit\n");
 }
 
-static int32_t brcmf_get_rssi(net_device* ndev) {
+static zx_status_t brcmf_get_rssi_snr(net_device* ndev, int8_t* rssi_dbm, int8_t* snr_db) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
-  int32_t rssi;
   int32_t fw_err = 0;
+  int32_t rssi, snr;
 
+  *rssi_dbm = *snr_db = 0;
   zx_status_t status = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RSSI, &rssi, sizeof(rssi), &fw_err);
   if (status != ZX_OK) {
     BRCMF_ERR("could not get rssi: %s, fw err %s\n", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    return 0;
-  } else {
-    return rssi;
+    return status;
   }
+  status = brcmf_fil_iovar_data_get(ifp, "snr", &snr, sizeof(snr), &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("could not get snr: %s, fw err %s\n", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+    return status;
+  }
+  *rssi_dbm = rssi;
+  *snr_db = snr;
+  return status;
 }
 
 static void cfg80211_signal_ind(net_device* ndev) {
@@ -1549,11 +1557,13 @@ static void cfg80211_signal_ind(net_device* ndev) {
   // Send signal report indication only if client is in connected state
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
     wlanif_signal_report_indication signal_ind;
-    int32_t rssi = brcmf_get_rssi(ndev);
-    if (rssi != 0) {
+    int8_t rssi, snr;
+    if (brcmf_get_rssi_snr(ndev, &rssi, &snr) == ZX_OK) {
       signal_ind.rssi_dbm = rssi;
+      signal_ind.snr_db = snr;
       // Store the value in ndev (dumped out when link goes down)
       ndev->last_known_rssi_dbm = rssi;
+      ndev->last_known_snr_db = snr;
       wlanif_impl_ifc_signal_report(&ndev->if_proto, &signal_ind);
     }
   } else {
@@ -3700,8 +3710,9 @@ static bool brcmf_is_linkdown(const net_device* ndev, const struct brcmf_event_m
     BRCMF_DBG(CONN, "Processing link down\n");
     // Adding this log for debugging disconnect issues.
     // TODO(karthikrish) : Move this to CONN level for production code
-    BRCMF_INFO("Link Down Event: event: %d flags: 0x%x reason: %d status: %d last rssi: %d\n",
-               event, flags, e->reason, e->status, ndev->last_known_rssi_dbm);
+    BRCMF_INFO("Link Down Event: %d flg: 0x%x reas: %d sts: %d rssi: %d snr: %d\n",
+               event, flags, e->reason, e->status, ndev->last_known_rssi_dbm,
+               ndev->last_known_snr_db);
     return true;
   }
   return false;
