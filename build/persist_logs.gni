@@ -10,7 +10,7 @@ import("//build/config.gni")
 # persisted and, for example, control at the global level whether logs are
 # consuming disk space.
 declare_args() {
-  persist_logs = is_debug
+  persist_logs = false
 }
 
 # Adds a config to persist logs to disk
@@ -75,9 +75,7 @@ template("persist_logs") {
 
   action(logs_action_name) {
     script = "//build/gn/gen_persistent_log_config.py"
-    outputs = [
-      output_file,
-    ]
+    outputs = [ output_file ]
     args = [ name ] + rebase_path(outputs, root_build_dir)
     if (log_tags != []) {
       args += [ "--tags" ]
@@ -107,14 +105,8 @@ template("persist_logs") {
 
   config_data(target_name) {
     for_pkg = "sysmgr"
-    sources = [
-      rebase_path(output_file),
-    ]
-    outputs = [
-      "${target_name}_log_listener.config",
-    ]
-    deps = [
-      ":$logs_action_name",
-    ]
+    sources = [ rebase_path(output_file) ]
+    outputs = [ "${target_name}_log_listener.config" ]
+    deps = [ ":$logs_action_name" ]
   }
 }
