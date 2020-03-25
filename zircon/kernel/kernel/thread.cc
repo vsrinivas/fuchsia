@@ -1440,6 +1440,7 @@ void dump_thread_user_tid_locked(uint64_t tid, bool full) {
 }
 
 Thread* thread_id_to_thread_slow(uint64_t tid) {
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   Thread* t;
   list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
     if (t->user_tid_ == tid) {

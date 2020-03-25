@@ -404,7 +404,7 @@ struct Thread {
   friend class OwnedWaitQueue;
 
   int magic_;
-  struct list_node thread_list_node_;
+  struct list_node thread_list_node_ TA_GUARDED(thread_lock);
 
   // active bits
   struct list_node queue_node_;
@@ -568,7 +568,7 @@ extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 // find a thread based on the thread id
 // NOTE: used only for debugging, its a slow linear search through the
 // global thread list
-Thread* thread_id_to_thread_slow(uint64_t tid);
+Thread* thread_id_to_thread_slow(uint64_t tid) TA_EXCL(thread_lock);
 
 static inline bool thread_lock_held(void) { return spin_lock_held(&thread_lock); }
 
