@@ -225,12 +225,32 @@ executable("tx_data_test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+executable("beacon_lost_test") {
+  output_name = "beacon_lost_test"
+  testonly = true
+  sources = [ "beacon_lost_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
 unittest_package("brcmfmac_sim_test") {
   package_name = "brcmfmac_sim_test"
   deps = [
     ":active_scan_test",
     ":assoc_test",
     ":auth_test",
+    ":beacon_lost_test",
     ":create_softap_test",
     ":dynamic_if_test",
     ":firmware_config_test",
@@ -283,6 +303,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "tx_data_test"
+      environments = basic_envs
+    },
+    {
+      name = "beacon_lost_test"
       environments = basic_envs
     },
   ]

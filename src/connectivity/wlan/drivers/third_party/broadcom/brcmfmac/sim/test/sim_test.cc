@@ -14,6 +14,9 @@ SimTest::SimTest() {
 
   dev_mgr_ = std::make_shared<simulation::FakeDevMgr>();
   parent_dev_ = reinterpret_cast<zx_device_t*>(instance_num_++);
+  // The sim test is strictly a theoretical observer in the simulation environment thus it should be
+  // able to see everything
+  rx_sensitivity_ = std::numeric_limits<double>::lowest();
 }
 
 zx_status_t SimTest::Init() {

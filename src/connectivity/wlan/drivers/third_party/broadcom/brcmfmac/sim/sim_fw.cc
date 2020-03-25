@@ -56,6 +56,8 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
 
 SimFirmware::~SimFirmware() = default;
 
+simulation::StationIfc* SimFirmware::GetHardwareIfc() { return &hw_; }
+
 void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
   *chip = BRCM_CC_4356_CHIP_ID;
   *chiprev = 2;
@@ -760,13 +762,11 @@ void SimFirmware::DisassocLocalClient(brcmf_scb_val_le* scb_val) {
   if (assoc_state_.state == AssocState::ASSOCIATED) {
     common::MacAddr srcAddr(mac_addr_);
 
-    // Transmit the disassoc req and since there is no response for
-    // it, indicate disassoc done to driver.
+    // Transmit the disassoc req and since there is no response for it, indicate disassoc done to
+    // driver now
     simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, *bssid, reason);
     hw_.Tx(&disassoc_req_frame);
-    assoc_state_.state = AssocState::NOT_ASSOCIATED;
-    auth_state_.state = AuthState::NOT_AUTHENTICATED;
-    SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
+    SetStateToDisassociated();
   } else {
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
   }
@@ -793,11 +793,17 @@ void SimFirmware::HandleDisassocForClientIF(const common::MacAddr& src, const co
     return;
   }
 
-  assoc_state_.state = AssocState::NOT_ASSOCIATED;
-  // Notify the driver that the AP has disassoc'ed us
-  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
-
+  SetStateToDisassociated();
   AssocClearContext();
+}
+
+// precondition: was associated
+void SimFirmware::SetStateToDisassociated() {
+  // Disable beacon watchdog that triggers disconnect
+  DisableBeaconWatchdog();
+
+  // Proprogate disassociation to driver code
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
 }
 
 // Assoc Request from Client for the SoftAP IF
@@ -1393,7 +1399,43 @@ void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame,
   }
 }
 
+// Start or restart the beacon watchdog. This is a timeout event mirroring how the firmware can
+// detect when a connection is lost from the lack of beacons received.
+void SimFirmware::RestartBeaconWatchdog() {
+  DisableBeaconWatchdog();
+  assoc_state_.is_beacon_watchdog_active = true;
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&SimFirmware::HandleBeaconTimeout, this);
+  hw_.RequestCallback(handler, beacon_timeout_, &assoc_state_.beacon_watchdog_id_);
+}
+
+void SimFirmware::DisableBeaconWatchdog() {
+  if (assoc_state_.is_beacon_watchdog_active) {
+    hw_.CancelCallback(assoc_state_.beacon_watchdog_id_);
+  }
+}
+
+void SimFirmware::HandleBeaconTimeout() {
+  // Ignore if we are not associated
+  if (assoc_state_.state != AssocState::ASSOCIATED) {
+    return;
+  }
+
+  assoc_state_.is_beacon_watchdog_active = false;
+  // Indicate to the driver that we're disassociating due to lost beacons
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, 0,
+                    BRCMF_E_REASON_LOW_RSSI);
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, 0,
+                    BRCMF_E_REASON_DEAUTH);
+  AssocClearContext();
+}
+
 void SimFirmware::RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame) {
+  // if we're associated with this AP, start/restart the beacon watchdog
+  if (assoc_state_.state == AssocState::ASSOCIATED && frame->bssid_ == assoc_state_.opts->bssid) {
+    RestartBeaconWatchdog();
+  }
+
   if (scan_state_.state != ScanState::SCANNING || scan_state_.opts->is_active) {
     return;
   }
@@ -1533,7 +1575,7 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
   brcmf_event_msg_be* msg_be;
   size_t payload_offset;
   // Assert if ifidx is not valid
-  if(event_type != BRCMF_E_IF)
+  if (event_type != BRCMF_E_IF)
     ZX_ASSERT(ifidx < kMaxIfSupported && iface_tbl_[ifidx].allocated);
   auto buf = CreateEventBuffer(payload_size, &msg_be, &payload_offset);
   msg_be->flags = htobe16(flags);

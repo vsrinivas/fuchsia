@@ -127,6 +127,10 @@ wlanif_impl_ifc_protocol_ops_t DynamicIfTest::sme_ops_ = {
         [](void* cookie, const wlanif_auth_ind_t* ind) {
           static_cast<DynamicIfTest*>(cookie)->OnAuthInd(ind);
         },
+    .deauth_ind =
+        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+          // Ignore
+        },
     .assoc_conf =
         [](void* cookie, const wlanif_assoc_confirm_t* resp) {
           static_cast<DynamicIfTest*>(cookie)->OnAssocConf(resp);

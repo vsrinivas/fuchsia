@@ -58,7 +58,7 @@ class Environment {
   void AddStation(StationIfc* sta) { stations_[sta] = new Location(0, 0); }
 
   // Add a station into the environment at specific location.
-  void AddStation(StationIfc* sta, uint32_t x, uint32_t y) { stations_[sta] = new Location(x, y); }
+  void AddStation(StationIfc* sta, int32_t x, int32_t y) { stations_[sta] = new Location(x, y); }
 
   // Remove a station from the environment.
   void RemoveStation(StationIfc* sta) {
@@ -67,7 +67,7 @@ class Environment {
   }
 
   // Change the location of a station in the environment.
-  void MoveStation(StationIfc* sta, uint32_t x, uint32_t y) {
+  void MoveStation(StationIfc* sta, int32_t x, int32_t y) {
     delete stations_[sta];
     stations_[sta] = new Location(x, y);
   }

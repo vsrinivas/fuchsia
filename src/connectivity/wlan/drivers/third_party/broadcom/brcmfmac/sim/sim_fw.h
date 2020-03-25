@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
@@ -39,6 +40,9 @@ namespace wlan::brcmfmac {
 constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request
 constexpr zx::duration kAuthTimeout = zx::sec(1);
+// The amount of time we will wait for a beacon from an associated device before disassociating
+// Timing based off broadcom firmware black box testing
+constexpr zx::duration kBeaconTimeout = zx::sec(5);
 
 class SimFirmware {
   class BcdcResponse {
@@ -126,6 +130,8 @@ class SimFirmware {
     uint8_t num_attempts;
     // The interface idx on which the assoc is being done
     uint16_t ifidx;
+    bool is_beacon_watchdog_active = false;
+    uint64_t beacon_watchdog_id_;
   };
 
   struct AuthState {
@@ -153,6 +159,7 @@ class SimFirmware {
   explicit SimFirmware(brcmf_simdev* simdev, simulation::Environment* env);
   ~SimFirmware();
 
+  simulation::StationIfc* GetHardwareIfc();
   void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
   int32_t GetPM();
   // Num of clients currently associated with the SoftAP IF
@@ -265,7 +272,10 @@ class SimFirmware {
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(brcmf_scb_val_le* scb_val);
-
+  void SetStateToDisassociated();
+  void RestartBeaconWatchdog();
+  void DisableBeaconWatchdog();
+  void HandleBeaconTimeout();
   // Handlers for events from hardware
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info);
 
@@ -333,6 +343,7 @@ class SimFirmware {
   uint32_t wsec_ = 0;
   struct brcmf_wsec_key_le wsec_key_;
   uint32_t wpa_auth_ = 0;
+  zx::duration beacon_timeout_ = kBeaconTimeout;
 };
 
 }  // namespace wlan::brcmfmac

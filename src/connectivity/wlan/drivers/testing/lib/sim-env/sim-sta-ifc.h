@@ -25,6 +25,18 @@ class StationIfc {
 
   // Receive notification of a simulation event
   virtual void ReceiveNotification(void* payload) = 0;
+
+  // Change station's receiver sensitivity
+  void setRxSensitivity(double rxSensitivity) { rx_sensitivity_ = rxSensitivity; }
+
+  // Get station's receiver sensitivity
+  double getRxSensitivity() { return rx_sensitivity_; }
+
+  // Default rx sensitivity of dBm
+  static constexpr double kDefaultRxSensitivity = -101;
+
+  // rx sensitivity of this stations receiver
+  double rx_sensitivity_ = kDefaultRxSensitivity;
 };
 
 }  // namespace wlan::simulation

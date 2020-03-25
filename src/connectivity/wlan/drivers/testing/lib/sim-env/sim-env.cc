@@ -26,12 +26,16 @@ void Environment::Run() {
 }
 
 void Environment::Tx(const SimFrame* frame, const WlanTxInfo& tx_info, StationIfc* sender) {
-  for (auto& sta : stations_) {
-    if (sta.first != sender) {
+  for (auto& staLocPair : stations_) {
+    StationIfc* sta = staLocPair.first;
+    if (sta != sender) {
       double signal_strength =
-          signal_loss_model_->CalcSignalStrength(stations_.at(sender), stations_.at(sta.first));
+          signal_loss_model_->CalcSignalStrength(stations_.at(sender), stations_.at(sta));
       WlanRxInfo rx_info = {.channel = tx_info.channel, .signal_strength = signal_strength};
-      sta.first->Rx(frame, rx_info);
+      // Only deliver frame if the station is sensitive enough to pick it up
+      if (signal_strength >= sta->rx_sensitivity_) {
+        sta->Rx(frame, rx_info);
+      }
     }
   }
 }

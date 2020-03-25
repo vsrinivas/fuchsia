@@ -119,12 +119,15 @@ wlanif_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
         [](void* cookie, const wlanif_auth_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnAuthConf(resp);
         },
+    .deauth_ind =
+        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+          // Ignore
+        },
     .assoc_conf =
         [](void* cookie, const wlanif_assoc_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnAssocConf(resp);
         },
-    .signal_report =
-    [](void* cookie, const wlanif_signal_report_indication* ind) {},
+    .signal_report = [](void* cookie, const wlanif_signal_report_indication* ind) {},
 };
 
 void AuthTest::Init() {
