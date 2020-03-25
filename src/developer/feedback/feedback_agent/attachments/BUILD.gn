@@ -57,6 +57,7 @@ source_set("static_attachments") {
 
   deps = [
     "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:files",
     "//src/lib/files",
     "//src/lib/syslog/cpp",
   ]

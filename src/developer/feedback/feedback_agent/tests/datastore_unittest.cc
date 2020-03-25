@@ -29,6 +29,8 @@
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/file_size.h"
+#include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -109,15 +111,23 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     InjectServiceProvider(logger_.get());
   }
 
-  void SetUpPreviousSystemLog(const std::string& content) {
-    ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, content.c_str(), content.size()));
-  }
-
   void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProvider> product_provider) {
     product_provider_ = std::move(product_provider);
     if (product_provider_) {
       InjectServiceProvider(product_provider_.get());
     }
+  }
+
+  void WriteCurrentLogsFile(const std::string& content) {
+    const FileSize kFileSize = FileSize::Kilobytes(1);
+    FX_CHECK(content.size() < kFileSize.to_bytes())
+        << "This helper does not support a string that large";
+    RotatingFileSetWriter writer(kCurrentLogsFilePaths, kFileSize * kCurrentLogsFilePaths.size());
+    writer.Write(content);
+  }
+
+  void WritePreviousLogsFile(const std::string& content) {
+    ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, content.c_str(), content.size()));
   }
 
   std::string device_id() {
@@ -382,9 +392,9 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
-TEST_F(DatastoreTest, GetAttachments_PreviousSysLog) {
+TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   const std::string previous_log_contents = "LAST SYSTEM LOG";
-  SetUpPreviousSystemLog(previous_log_contents);
+  WriteCurrentLogsFile(previous_log_contents);
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
   fit::result<Attachments> attachments = GetAttachments();
@@ -394,6 +404,27 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSysLog) {
 
   EXPECT_THAT(GetStaticAttachments(),
               ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+
+  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
+  for (const auto& file : kCurrentLogsFilePaths) {
+    ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
+  }
+}
+
+TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
+  const std::string previous_log_contents = "LAST SYSTEM LOG";
+  WritePreviousLogsFile(previous_log_contents);
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+
+  fit::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_ok());
+  EXPECT_THAT(attachments.take_value(),
+              ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+
+  EXPECT_THAT(GetStaticAttachments(),
+              ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+
+  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
 }
 
 TEST_F(DatastoreTest, GetAttachments_SysLog) {

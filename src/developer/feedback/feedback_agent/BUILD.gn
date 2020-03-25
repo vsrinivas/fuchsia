@@ -226,7 +226,6 @@ source_set("feedback_agent_src") {
     ":constants",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:files",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]

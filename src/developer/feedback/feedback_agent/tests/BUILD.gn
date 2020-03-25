@@ -302,6 +302,7 @@ executable("datastore_unittest") {
     "//src/developer/feedback/testing/stubs:inspect",
     "//src/developer/feedback/testing/stubs:logger",
     "//src/developer/feedback/testing/stubs:product_info_provider",
+    "//src/developer/feedback/utils:files",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",

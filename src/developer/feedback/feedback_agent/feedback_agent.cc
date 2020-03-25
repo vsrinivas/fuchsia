@@ -11,8 +11,6 @@
 #include <cinttypes>
 
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/utils/rotating_file_set.h"
-#include "src/lib/files/path.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -36,26 +34,6 @@ std::unique_ptr<FeedbackAgent> FeedbackAgent::TryCreate(
   return std::make_unique<FeedbackAgent>(dispatcher, std::move(services), root_node, config);
 }
 
-namespace {
-
-void MovePreviousLogs() {
-  RotatingFileSetReader log_reader(kCurrentLogsFilePaths);
-
-  if (log_reader.Concatenate(kPreviousLogsFilePath)) {
-    FX_LOGS(INFO) << "Found logs from previous boot, available at " << kPreviousLogsFilePath;
-  } else {
-    FX_LOGS(ERROR) << "No logs found from previous boot";
-  }
-
-  // Clean up all of the previous log files now that they have been concatenated into a single
-  // in-memory file.
-  for (const auto& file : kCurrentLogsFilePaths) {
-    files::DeletePath(file, /*recursive=*/false);
-  }
-}
-
-}  // namespace
-
 FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
                              inspect::Node* root_node, Config config)
@@ -66,15 +44,7 @@ FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
                  config.attachment_allowlist, &device_id_provider_),
       data_provider_(dispatcher_, services, &cobalt_, &datastore_),
-      data_register_(&datastore_) {
-  // We need to move the logs from the previous boot before spawning the system log recorder process
-  // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
-  // providers see the complete previous logs, this needs to be done before spawning any data
-  // providers to avoid parallel attempts to read and write the previous logs file.
-  // TODO(fxb/44891): this is too late as the Datastore has already been initialized. Find a way to
-  // do it once per boot cycle and before the Datastore is instantiated.
-  MovePreviousLogs();
-}
+      data_register_(&datastore_) {}
 
 void FeedbackAgent::SpawnSystemLogRecorder() {
   zx_handle_t process;
