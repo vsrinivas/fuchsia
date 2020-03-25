@@ -83,6 +83,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   ~ThreadDispatcher();
 
   static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread_; }
+  static void ExitCurrent() __NO_RETURN { Thread::Current::Get()->user_thread_->Exit(); }
 
   // Dispatcher implementation.
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
@@ -98,7 +99,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Is the caller's responsibility to ensure this thread is registered with the parent process,
   // as such this is only expected to be called from the ProcessDispatcher.
   zx_status_t MakeRunnable(const EntryState& entry, bool suspended);
-  void Exit() __NO_RETURN;
   void Kill();
 
   // Suspends the thread.
@@ -210,6 +210,10 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // ThreadDispatcher, and so that it can access the "thread_" member of the class so that
   // wait_queue operations can be performed on ThreadDispatchers
   friend class FutexContext;
+
+  // Exit the current Thread. It is an error to call this on anything other than the current
+  // thread. Please use ExitCurrent() instead of calling this directly.
+  void Exit() __NO_RETURN;
 
   // kernel level entry point
   static int StartRoutine(void* arg);

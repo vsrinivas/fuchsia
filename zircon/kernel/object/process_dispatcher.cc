@@ -205,7 +205,7 @@ void ProcessDispatcher::Exit(int64_t retcode) {
     SetStateLocked(State::DYING);
   }
 
-  ThreadDispatcher::GetCurrent()->Exit();
+  ThreadDispatcher::ExitCurrent();
 
   __UNREACHABLE;
 }

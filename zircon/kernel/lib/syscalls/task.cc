@@ -140,7 +140,7 @@ zx_status_t sys_thread_start(zx_handle_t handle, zx_vaddr_t thread_entry, zx_vad
 
 void sys_thread_exit() {
   LTRACE_ENTRY;
-  ThreadDispatcher::GetCurrent()->Exit();
+  ThreadDispatcher::ExitCurrent();
 }
 
 // zx_status_t zx_thread_read_state
@@ -331,7 +331,7 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
 
 void sys_process_exit(int64_t retcode) {
   LTRACEF("retcode %" PRId64 "\n", retcode);
-  ProcessDispatcher::GetCurrent()->Exit(retcode);
+  ProcessDispatcher::ExitCurrent(retcode);
 }
 
 // zx_status_t zx_process_read_memory

@@ -247,7 +247,7 @@ zx_status_t dispatch_user_exception(uint exception_type,
 
   // Either the current thread or its whole process was killed, we can now stop
   // it from running.
-  thread->Exit();
+  ThreadDispatcher::ExitCurrent();
   panic("fell out of thread exit somehow!\n");
   __UNREACHABLE;
 }

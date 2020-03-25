@@ -62,6 +62,12 @@ class ProcessDispatcher final
     return current->process();
   }
 
+  static void ExitCurrent(int64_t retcode) __NO_RETURN {
+    ThreadDispatcher* current = ThreadDispatcher::GetCurrent();
+    DEBUG_ASSERT(current);
+    current->process()->Exit(retcode);
+  }
+
   // Dispatcher implementation
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PROCESS; }
   void on_zero_handles() final;
@@ -216,7 +222,6 @@ class ProcessDispatcher final
   void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
   zx_status_t set_name(const char* name, size_t len) final;
 
-  void Exit(int64_t retcode) __NO_RETURN;
   void Kill(int64_t retcode);
 
   // Suspends the process.
@@ -381,6 +386,10 @@ class ProcessDispatcher final
 
     return ZX_OK;
   }
+
+  // Exit the current Process. It is an error to call this on anything other than the current
+  // process. Please use ExitCurrent() instead of calling this directly.
+  void Exit(int64_t retcode) __NO_RETURN;
 
   // compute the vdso code address and store in vdso_code_address_
   uintptr_t cache_vdso_code_address();
