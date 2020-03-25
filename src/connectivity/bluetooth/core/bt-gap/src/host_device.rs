@@ -9,12 +9,13 @@ use {
     fidl_fuchsia_bluetooth_control::{self as control, HostData, PairingOptions},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability, PairingDelegateMarker},
+    fidl_fuchsia_mem::Buffer,
     fuchsia_bluetooth::{
         inspect::Inspectable,
         types::{BondingData, HostInfo, Peer, PeerId},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::{Future, FutureExt, StreamExt},
+    futures::{Future, FutureExt, StreamExt, TryFutureExt},
     parking_lot::RwLock,
     pin_utils::pin_mut,
     std::{convert::TryInto, path::PathBuf, sync::Arc},
@@ -128,6 +129,10 @@ impl HostDevice {
 
     pub fn enable_background_scan(&self, enable: bool) -> types::Result<()> {
         self.host.enable_background_scan(enable).map_err(Error::from)
+    }
+
+    pub fn get_inspect_vmo(&self) -> impl Future<Output = types::Result<Buffer>> {
+        self.host.get_inspect_vmo().map_err(Error::from)
     }
 }
 

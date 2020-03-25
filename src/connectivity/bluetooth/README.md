@@ -180,11 +180,11 @@ example:
 ### Inspecting Component State
 
 The Bluetooth system supports inspection through the [Inspect API](/docs/development/inspect).
-bt-gap, bt-a2dp-sink, and bt-snoop all expose information though Inspect.
+bt-gap, bt-host, bt-a2dp-sink, and bt-snoop all expose information though Inspect.
 
 #### Usage
 
-* bt-gap: `fx iquery bt-gap` exposes information on host devices managed by bt-gap, pairing capabilities, stored bonds, and actively connected peers.
+* bt-gap/bt-host: `fx iquery bt-gap` exposes information on host devices managed by bt-gap, pairing capabilities, stored bonds, and actively connected peers.
 * bt-a2dp-sink: `fx iquery bt-a2dp-sink` exposes information on audio streaming capabilities and active streams
 * bt-snoop: `fx iquery bt-snoop` exposes information about which hci devices are being logged and how much data is stored.
 * All Bluetooth components: `fx iquery bt-*`

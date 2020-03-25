@@ -25,6 +25,7 @@ use crate::{
 async fn close_channel_when_client_dropped() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<ControlMarker>()?;
     let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
+    let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
     let watch_peers_broker = hanging_get::HangingGetBroker::new(
         HashMap::new(),
         |_, _| true,
@@ -41,6 +42,7 @@ async fn close_channel_when_client_dropped() -> Result<(), Error> {
         Stash::stub()?,
         placeholder_node(),
         gas_channel_sender,
+        host_vmo_sender,
         watch_peers_broker.new_publisher(),
         watch_peers_broker.new_registrar(),
         watch_hosts_broker.new_publisher(),

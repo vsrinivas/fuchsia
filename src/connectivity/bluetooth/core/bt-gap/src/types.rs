@@ -4,8 +4,7 @@
 
 use {
     anyhow::format_err, fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_sys as sys,
-    fuchsia_bluetooth::bt_fidl_status,
-    thiserror::Error,
+    fidl_fuchsia_mem::Buffer, fuchsia_bluetooth::bt_fidl_status, thiserror::Error,
 };
 
 /// Type representing Possible errors raised in the operation of BT-GAP
@@ -161,4 +160,13 @@ pub fn status_response(result: Result<()>) -> bt::Status {
         Ok(()) => bt_fidl_status!(),
         Err(err) => err.as_status(),
     }
+}
+
+/// Data needed to serve an Inspect VMO file. It is used to pass new Inspect VMOs over a channel
+/// from HostDispatcher to the service_fs_task loop.
+pub struct HostInspectVmo {
+    /// Used in the the file name to uniquely identify it.
+    pub name: String,
+    /// Buffer containing VMO that the virtual Inspect file will serve.
+    pub buffer: Buffer,
 }

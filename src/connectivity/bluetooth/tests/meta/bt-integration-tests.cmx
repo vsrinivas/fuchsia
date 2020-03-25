@@ -31,7 +31,10 @@
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.bluetooth.sys.Bootstrap",
-            "fuchsia.bluetooth.sys.HostWatcher"
+            "fuchsia.bluetooth.sys.HostWatcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ],
         "system": [
             "driver/bt-hci-emulator.so"

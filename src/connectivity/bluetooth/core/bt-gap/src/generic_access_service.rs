@@ -212,6 +212,7 @@ mod tests {
         let (local_service_client, _local_service_server) =
             create_endpoints::<LocalServiceMarker>().unwrap();
         let (gas_task_channel, generic_access_req_stream) = mpsc::channel::<ServiceDelegateReq>(0);
+        let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
         let (gatt_server, _gatt_server_remote) =
             create_proxy_and_stream::<Server_Marker>().unwrap();
         let gas_proxy = GasProxy {
@@ -244,6 +245,7 @@ mod tests {
             stash,
             system_inspect,
             gas_task_channel,
+            host_vmo_sender,
             watch_peers_broker.new_publisher(),
             watch_peers_broker.new_registrar(),
             watch_hosts_broker.new_publisher(),

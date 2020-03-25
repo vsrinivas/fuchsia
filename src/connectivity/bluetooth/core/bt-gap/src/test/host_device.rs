@@ -7,10 +7,12 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
     fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
+    fidl_fuchsia_mem::Buffer,
     fuchsia_bluetooth::{
         inspect::{placeholder_node, Inspectable},
         types::{Address, BondingData, HostId, HostInfo, Peer, PeerId},
     },
+    fuchsia_zircon as zx,
     futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
     std::path::PathBuf,
@@ -98,6 +100,44 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let host_name = host.read().get_info().local_name.clone();
     println!("name: {:?}", host_name);
     assert!(host_name == Some(name));
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_inspect_vmo() -> Result<(), Error> {
+    let (client, server) = create_fidl_endpoints::<HostMarker>()?;
+
+    let info = HostInfo {
+        id: HostId(1),
+        technology: TechnologyType::DualMode,
+        address: Address::Public([0, 0, 0, 0, 0, 0]),
+        local_name: None,
+        active: false,
+        discoverable: false,
+        discovering: false,
+    };
+
+    let host = Arc::new(RwLock::new(HostDevice::new(
+        PathBuf::from("/dev/class/bt-host/test"),
+        client,
+        Inspectable::new(info.clone(), placeholder_node()),
+    )));
+
+    let server = Arc::new(RwLock::new(server));
+
+    let inspect_vmo = host.read().get_inspect_vmo();
+    let expect_fidl = expect_call(server.clone(), |_, e| match e {
+        HostRequest::GetInspectVmo { responder } => {
+            let vmo = zx::Vmo::create(0).map_err(|_| format_err!("creating vmo failed"))?;
+            let mut buffer = Buffer { vmo: vmo, size: 0 };
+            responder.send(&mut buffer)?;
+            Ok(())
+        }
+        _ => Err(format_err!("Unexpected!")),
+    });
+    let (inspect_result, expect_result) = join!(inspect_vmo, expect_fidl);
+    let _ = inspect_result.expect("did not receive inspect VMO");
+    let _ = expect_result.expect("FIDL result unsatisfied");
     Ok(())
 }
 

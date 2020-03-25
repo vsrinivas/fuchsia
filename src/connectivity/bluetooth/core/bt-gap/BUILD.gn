@@ -43,6 +43,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 
