@@ -97,6 +97,7 @@ fn create_request<T: Into<String>>(url_string: T) -> http::Request {
         method: Some(String::from("GET")),
         headers: None,
         body: None,
+        deadline: None,
     }
 }
 
