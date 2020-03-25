@@ -237,8 +237,10 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 	// Sort the resulting shards by the basename of the first test. Otherwise,
 	// changes to the input set of tests (adding, removing or renaming a test)
 	// result in confusing reordering of the shard names. This ensures that a
-	// given named shard (e.g. "QEMU-(1)") will generally contain the same set
-	// of tests across multiple builds, even if the input set of tests changes.
+	// given named shard (e.g. "QEMU-(1)") will contain roughly the same set of
+	// longer-running tests across multiple builds, even if the input set of
+	// tests changes. Shorter tests are more likely to be switched between
+	// shards because we're sorting by the name of the longest test.
 	sort.Slice(h, func(i, j int) bool {
 		return h[i].tests[0].Name < h[j].tests[0].Name
 	})
