@@ -53,6 +53,7 @@ source_set("hermetic_audio_test") {
     ":constants",
     ":test_fixture",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
