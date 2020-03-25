@@ -14,7 +14,7 @@ protocol Factory {
     /// See `fuchsia.media.AudioCore` for more information on the operation of a
     /// `fuchsia.media.AudioCapturer`.
     CreateCapturer(request<fuchsia.media.AudioCapturer> request)
-        -> (handle<clock> reference_clock, fuchsia.media.StreamType stream_type);
+        -> (handle<clock> reference_clock, fuchsia.media.AudioStreamType stream_type);
 
     /// Creates a new `fuchsia.media.AudioRenderer` that is capable of producing audio in
     /// the ultrasonic frequency range.
@@ -22,5 +22,5 @@ protocol Factory {
     /// See `fuchsia.media.AudioCore` for more information on the operation of a
     /// `fuchsia.media.AudioRenderer`.
     CreateRenderer(request<fuchsia.media.AudioRenderer> renderer)
-        -> (handle<clock> reference_clock, fuchsia.media.StreamType stream_type);
+        -> (handle<clock> reference_clock, fuchsia.media.AudioStreamType stream_type);
 };
