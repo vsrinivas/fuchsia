@@ -538,7 +538,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.log-test",
 #------------------
 #------------------
 #------------------
@@ -1090,7 +1089,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.log-test",
 #------------------
 #------------------
 #------------------
@@ -2942,7 +2940,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/lockdep/test:lockdep-test-manifest",
 #------------------
 #------------------
-    #":test.sys.log-test",
+    "//zircon/system/utest/log:log-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/logger:logger-manifest",
@@ -3604,7 +3602,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/lockdep/test:lockdep-test-manifest",
 #------------------
 #------------------
-    #":test.sys.log-test",
+    "//zircon/system/utest/log:log-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/logger:logger-manifest",
