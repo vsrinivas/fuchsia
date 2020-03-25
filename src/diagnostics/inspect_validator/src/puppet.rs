@@ -8,7 +8,7 @@ use {
         metrics::Metrics,
     },
     anyhow::{format_err, Context as _, Error},
-    fidl_test_inspect_validate as validate,
+    fidl_fuchsia_inspect as fidl_inspect, fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, Vmo},
@@ -79,8 +79,12 @@ impl Puppet {
     }
 }
 
+#[allow(dead_code)]
 struct Connection {
     fidl: validate::ValidateProxy,
+    // Connection to Tree FIDL if Puppet supports it.
+    // Puppets can add support by implementing InitializeTree method.
+    root_link_channel: Option<fidl_inspect::TreeProxy>,
     // We need to keep the 'app' un-dropped on non-local connections so the
     // remote program doesn't go away. But we never use it once we have the
     // FIDL connection.
@@ -102,10 +106,21 @@ impl Connection {
     }
 
     fn new(fidl: validate::ValidateProxy, app: Option<fuchsia_component::client::App>) -> Self {
-        Self { fidl, _app: app }
+        Self { fidl, root_link_channel: None, _app: app }
+    }
+
+    async fn fetch_link_channel(fidl: &validate::ValidateProxy) -> Option<fidl_inspect::TreeProxy> {
+        let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
+        let response = fidl.initialize_tree(params).await;
+        if let Ok((Some(tree_client_end), validate::TestResult::Ok)) = response {
+            tree_client_end.into_proxy().ok()
+        } else {
+            None
+        }
     }
 
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
+        self.root_link_channel = Self::fetch_link_channel(&self.fidl).await;
         let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
         let out = self.fidl.initialize(params).await?;
         let handle: Option<zx::Handle>;
