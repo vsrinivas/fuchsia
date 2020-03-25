@@ -35,9 +35,27 @@ const (
 	componentV2Suffix = ".cm"
 )
 
+// For testability
+type cmdRunner interface {
+	Run(ctx context.Context, command []string, stdout, stderr io.Writer) error
+}
+
+// For testability
+type sshRunner interface {
+	Close() error
+	ReconnectIfNecessary(ctx context.Context) (*ssh.Client, error)
+	Run(ctx context.Context, command []string, stdout, stderr io.Writer) error
+}
+
+// For testability
+type dataSinkCopier interface {
+	Copy(remoteDir, localDir string) (runtests.DataSinkMap, error)
+	Close() error
+}
+
 // subprocessTester executes tests in local subprocesses.
 type subprocessTester struct {
-	r *runner.SubprocessRunner
+	r cmdRunner
 }
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
@@ -68,11 +86,12 @@ func (t *subprocessTester) Close() error {
 
 // fuchsiaSSHTester executes fuchsia tests over an SSH connection.
 type fuchsiaSSHTester struct {
-	r              *runner.SSHRunner
-	client         *ssh.Client
-	copier         *runtests.DataSinkCopier
-	useRuntests    bool
-	localOutputDir string
+	r                           sshRunner
+	client                      *ssh.Client
+	copier                      dataSinkCopier
+	useRuntests                 bool
+	localOutputDir              string
+	connectionErrorRetryBackoff retry.Backoff
 }
 
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
@@ -97,11 +116,12 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 		return nil, err
 	}
 	return &fuchsiaSSHTester{
-		r:              r,
-		client:         client,
-		copier:         copier,
-		useRuntests:    useRuntests,
-		localOutputDir: localOutputDir,
+		r:                           r,
+		client:                      client,
+		copier:                      copier,
+		useRuntests:                 useRuntests,
+		localOutputDir:              localOutputDir,
+		connectionErrorRetryBackoff: retry.NewConstantBackoff(time.Second),
 	}, nil
 }
 
@@ -126,7 +146,7 @@ func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
 	setCommand(&test, t.useRuntests, dataOutputDir)
 
-	testErr := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 2), func() error {
+	testErr := retry.Retry(ctx, retry.WithMaxRetries(t.connectionErrorRetryBackoff, 2), func() error {
 		testErr := t.r.Run(ctx, test.Command, stdout, stderr)
 		if !errors.Is(testErr, sshutil.ConnectionError) {
 			return testErr

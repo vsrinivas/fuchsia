@@ -19,13 +19,13 @@ import (
 	"runtime"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	build "go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
+	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
+	testrunner "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
