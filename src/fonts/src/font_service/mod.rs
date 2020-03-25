@@ -7,6 +7,7 @@
 mod asset;
 mod builder;
 mod family;
+mod inspect;
 mod typeface;
 
 use {

@@ -11,5 +11,5 @@ mod typeface;
 
 pub use {
     collection::{Collection, TypefaceCollectionBuilder},
-    typeface::{Typeface, TypefaceId, TypefaceInfoAndCharSet},
+    typeface::{Typeface, TypefaceId, TypefaceInfoAndCharSet, TypefaceInspectData},
 };

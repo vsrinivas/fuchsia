@@ -79,6 +79,7 @@ rustc_binary("font_provider") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:heck",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
@@ -91,6 +92,7 @@ rustc_binary("font_provider") {
   ]
 
   test_deps = [
+    "//src/lib/intl/unicode_utils/char_collection",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:pretty_assertions",
   ]

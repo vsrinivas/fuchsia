@@ -98,10 +98,12 @@ impl Iterator for CharSetRangeIterator<'_> {
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct CharSet {
     ranges: Vec<CharSetRange>,
+    len: usize,
 }
 
 impl CharSet {
     pub fn new(mut code_points: Vec<u32>) -> CharSet {
+        let len = code_points.len();
         code_points.sort_unstable();
 
         let mut ranges = vec![];
@@ -116,7 +118,7 @@ impl CharSet {
         if !range.is_empty() {
             ranges.push(range)
         }
-        CharSet { ranges }
+        CharSet { ranges, len }
     }
 
     pub fn contains(&self, c: u32) -> bool {
@@ -136,6 +138,11 @@ impl CharSet {
 
     pub fn is_empty(&self) -> bool {
         self.ranges.is_empty()
+    }
+
+    /// Returns the number of code points in the set.
+    pub fn len(&self) -> usize {
+        self.len
     }
 
     /// Iterate over all the characters in the the `CharSet` in code point order.

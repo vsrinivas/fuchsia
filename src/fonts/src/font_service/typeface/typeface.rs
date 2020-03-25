@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::font_service::AssetId,
+    crate::font_service::{inspect::zero_pad, AssetId},
     anyhow::{format_err, Error},
     char_set::CharSet,
     fidl_fuchsia_fonts::{FamilyName, GenericFontFamily, Slant, Style2, TypefaceRequest, Width},
     fidl_fuchsia_fonts_experimental::TypefaceInfo,
     fidl_fuchsia_intl::LocaleId,
+    fuchsia_inspect as finspect,
+    heck::KebabCase,
+    itertools::Itertools,
     manifest::v2,
     std::collections::BTreeSet,
 };
@@ -166,11 +169,106 @@ impl From<TypefaceInfoAndCharSet> for TypefaceInfo {
     }
 }
 
+/// Inspect data for a `Typeface`.
+#[derive(Debug)]
+pub struct TypefaceInspectData {
+    /// The main `Node` for the typeface.
+    node: finspect::Node,
+    /// Numeric asset ID.
+    asset_id: finspect::UintProperty,
+    /// Path or URL to the asset.
+    asset_location: Option<finspect::StringProperty>,
+    /// Index of the typeface within the font asset.
+    font_index: finspect::UintProperty,
+    /// Style properties of the typeface.
+    style: finspect::Node,
+    /// Languages supported by the asset, as a sequence of BCP-47 language tags joined on ", ".
+    languages: finspect::StringProperty,
+    /// Number of code points covered by the typeface.
+    code_point_count: finspect::UintProperty,
+    /// Name of the font family. This should only be filled in in contexts where the typefaces are
+    /// not already grouped by family (e.g. fallback chain).
+    family_name: Option<finspect::StringProperty>,
+}
+
+impl TypefaceInspectData {
+    #![allow(dead_code)]
+
+    /// Creates a new `TypefaceInspectData`, which contains a `Node` with details.
+    ///
+    /// * `parent_node`: The node that will contain this node.
+    /// * `node_name`: Arbitrary display name for this node that depends on the context in which the
+    ///    node is displayed.
+    /// * `typeface`: The typeface for which Inspect data should be generated.
+    /// * `asset_location_lookup`: A closure for retrieving an asset's path or URL by asset ID.
+    pub fn new(
+        parent_node: &finspect::Node,
+        node_name: &str,
+        typeface: &Typeface,
+        asset_location_lookup: &impl Fn(AssetId) -> Option<String>,
+    ) -> Self {
+        let node = parent_node.create_child(node_name);
+        let asset_id = node.create_uint("asset_id", typeface.asset_id.0.into());
+        let asset_location = (*asset_location_lookup)(typeface.asset_id)
+            .map(|location| node.create_string("asset_location", &location));
+
+        let font_index = node.create_uint("font_index", typeface.font_index.into());
+        let style = {
+            let style = node.create_child("style");
+            style.record_string("slant", format!("{:?}", typeface.slant).to_kebab_case());
+            style.record_uint("weight", typeface.weight.into());
+            style.record_string("width", format!("{:?}", typeface.width).to_kebab_case());
+            style
+        };
+        let languages = node.create_string("languages", typeface.languages.iter().join(", "));
+        let code_point_count = node.create_uint("code_point_count", typeface.char_set.len() as u64);
+        let family_name = None;
+        TypefaceInspectData {
+            node,
+            asset_id,
+            asset_location,
+            font_index,
+            style,
+            languages,
+            code_point_count,
+            family_name,
+        }
+    }
+
+    /// Creates a new `TypefaceInspectData`, which contains a `Node` with details. The node's name
+    /// is a padded numeric string (because Inspect doesn't support node arrays).
+    ///
+    /// * `parent_node`: The node that will contain this node.
+    /// * `node_index`: The index of the typeface node within the list in which it's being shown.
+    /// * `node_count`: The total number of sibling typeface nodes.
+    /// * `typeface`: The typeface for which Inspect data should be generated.
+    /// * `asset_location_lookup`: A closure for retrieving an asset's path or URL by asset ID.
+    pub fn with_numbered_node_name(
+        parent_node: &finspect::Node,
+        node_index: usize,
+        node_count: usize,
+        typeface: &Typeface,
+        asset_location_lookup: &impl Fn(AssetId) -> Option<String>,
+    ) -> Self {
+        Self::new(parent_node, &zero_pad(node_index, node_count), typeface, asset_location_lookup)
+    }
+
+    /// Allows specifying a font family name, for use in Inspect contexts where it isn't obvious.
+    pub fn with_family_name(mut self, family_name: &str) -> Self {
+        let family_name = Some((&self.node).create_string("family_name", family_name));
+        self.family_name = family_name;
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        char_collection::char_collect,
         fidl_fuchsia_fonts::{Slant, Width, WEIGHT_NORMAL},
+        finspect::assert_inspect_tree,
+        maplit::btreeset,
     };
 
     #[test]
@@ -183,5 +281,59 @@ mod tests {
         };
 
         assert!(Typeface::new(AssetId(0), manifest_typeface, None).is_err())
+    }
+
+    #[test]
+    fn test_typeface_inspect_data() {
+        let inspector = finspect::Inspector::new();
+
+        let typeface = Typeface {
+            asset_id: AssetId(5),
+            font_index: 2,
+            slant: Slant::Upright,
+            weight: 300,
+            width: Width::UltraCondensed,
+            languages: btreeset!("es-ES".to_string(), "en-US".to_string()),
+            char_set: char_collect!(0x0..=0xFF).into(),
+            generic_family: Some(GenericFontFamily::Fantasy),
+        };
+
+        let inspect_data = TypefaceInspectData::with_numbered_node_name(
+            inspector.root(),
+            17,
+            150,
+            &typeface,
+            &|asset_id| {
+                if asset_id == AssetId(5) {
+                    Some("/path/to/asset-5.ttf".to_string())
+                } else {
+                    None
+                }
+            },
+        );
+
+        assert_inspect_tree!(inspector, root: {
+            "017": {
+                asset_id: 5u64,
+                asset_location: "/path/to/asset-5.ttf",
+                font_index: 2u64,
+                style: {
+                    slant: "upright",
+                    weight: 300u64,
+                    width: "ultra-condensed",
+                },
+                languages: "en-US, es-ES",
+                code_point_count: 256u64,
+            },
+        });
+
+        let _inspect_data = inspect_data.with_family_name("Alpha");
+
+        assert_inspect_tree!(inspector, root: {
+            "017": contains {
+                asset_id: 5u64,
+                family_name: "Alpha",
+            },
+        });
     }
 }
