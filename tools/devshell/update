@@ -4,40 +4,11 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Software delivery
-### perform a full update of a target system
+### alias for fx ota
 
-## usage: fx update [-h|--help]
-##
-## Ask the target to update all packages that it has, then do an OTA. The
-## target will use any update server available to it to do the update. This
-## requires the target have a update server available to it. The 'serve' fx
-## command is typically used to make your development host available to the
-## target as an update server.
-##
-## Arguments:
-##   -h|--help    Print out this message.
+## usage: fx update
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
 fx-config-read
 
-function main {
-  fx-standard-switches "$@"
-  set -- "${FX_ARGV[@]}"
-
-  check-for-amber-server || return 1
-
-  for pkg in $(cat "${FUCHSIA_BUILD_DIR}/cache_packages.list"); do
-    buf=$(fx-command-run shell pkgctl resolve "fuchsia-pkg://fuchsia.com/${pkg}" 2>&1)
-    status=$?
-    if [[ "${status}" -ne 0 ]]; then
-      echo >&2 "$buf"
-      exit "${status}"
-    else
-      echo >&2 "Updated ${pkg}"
-    fi
-  done
-  fx-command-run ota
-}
-
-main "$@"
+fx-command-run ota "$@"
