@@ -24,6 +24,7 @@ namespace astro {
 #define GPIO_SD_EMMC_RESET S905D2_GPIOX(6)
 #define GPIO_SOC_WIFI_LPO_32k768 S905D2_GPIOX(16)
 #define GPIO_SOC_BT_REG_ON S905D2_GPIOX(17)
+#define GPIO_AMBER_LED S905D2_GPIOAO(11)
 
 }  // namespace astro
 

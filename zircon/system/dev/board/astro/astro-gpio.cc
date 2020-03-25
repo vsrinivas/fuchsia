@@ -94,6 +94,8 @@ static const gpio_pin_t gpio_pins[] = {
     // For Bluetooth.
     {GPIO_SOC_WIFI_LPO_32k768},
     {GPIO_SOC_BT_REG_ON},
+    // For lights.
+    {GPIO_AMBER_LED},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -130,12 +132,6 @@ zx_status_t Astro::GpioInit() {
   if (!gpio_impl_.is_valid()) {
     zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d\n", __func__, status);
     return ZX_ERR_INTERNAL;
-  }
-
-  // Enable mute LED so it will be controlled by mute switch.
-  status = gpio_impl_.ConfigOut(S905D2_GPIOAO(11), 1);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
   }
 
 #ifdef GPIO_TEST

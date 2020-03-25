@@ -211,6 +211,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // CPU Device.
       "sys/platform/05:03:1e",
       "class/cpu-ctrl/000",
+      // LED.
+      "class/light/000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
