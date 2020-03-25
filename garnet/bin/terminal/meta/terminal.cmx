@@ -18,7 +18,6 @@
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
             "fuchsia.net.NameLookup",
-            "fuchsia.pkg.PackageCache",
             "fuchsia.pkg.PackageResolverAdmin",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
