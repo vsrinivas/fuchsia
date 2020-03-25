@@ -65,6 +65,8 @@ information on buffering modes, see
 
 ### Trace client {#trace-client}
 
+Note: There can be multiple trace clients in the Fuchsia tracing system.
+
 The trace client is a component that processes the data that trace providers
 generate. A system can have multiple trace providers and trace clients. A trace
 client contacts the trace manager to request that tracing should either start
@@ -152,4 +154,9 @@ The trace manager delivers the resulting trace archive to its client through
 a socket. This data is formed according to the
 [Fuchsia trace format](/docs/reference/tracing/trace-format.md),
 but it may contain nonsensical data if trace providers deliberately emit garbage data.
+
+Figure 1 shows the components of the Fuchsia tracing system and the way how the
+components communicate with one another.
+
+![This figure shows the Fuchsia tracing system.](images/fuchsia-tracing.png "Figure 1: Fuchsia tracing system")
 
