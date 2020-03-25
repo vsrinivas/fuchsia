@@ -332,7 +332,7 @@ zx_status_t MtDsiHost::Shutdown(std::unique_ptr<MtSysConfig>& syscfg) {
   syscfg->PowerDown(MODULE_DSI0);
   lcd_->PowerOff();
   if (power_.is_valid()) {
-    power_.DisablePowerDomain();
+    power_.UnregisterPowerDomain();
   }
   return ZX_OK;
 }
@@ -342,7 +342,9 @@ zx_status_t MtDsiHost::PowerOn(std::unique_ptr<MtSysConfig>& syscfg) {
   syscfg->PowerOn(MODULE_DSI0);
   lcd_->PowerOn();
   if (power_.is_valid()) {
-    power_.EnablePowerDomain();
+    uint32_t min_voltage, max_voltage;
+    power_.GetSupportedVoltageRange(&min_voltage, &max_voltage);
+    power_.RegisterPowerDomain(min_voltage, max_voltage);
   }
   return ZX_OK;
 }

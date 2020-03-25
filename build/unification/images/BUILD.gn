@@ -1474,6 +1474,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/bus/drivers/platform:platform-bus-manifest",
     "//src/devices/bus/drivers/platform:platform-bus.proxy-manifest",
     "//src/devices/power/drivers/power:power-manifest",
+    "//src/devices/power/drivers/power:power-test-manifest",
     "//src/devices/pwm/drivers/pwm:pwm-manifest",
     "//src/devices/gpio/drivers/qcom-gpio:qcom-gpio-manifest",
     "//src/devices/fw/drivers/qcom-pil:qcom-pil-manifest",

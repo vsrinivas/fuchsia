@@ -433,10 +433,10 @@ zx_status_t Fragment::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_
   auto* resp = reinterpret_cast<PowerProxyResponse*>(resp_buf);
   *out_resp_size = sizeof(*resp);
   switch (req->op) {
-    case PowerOp::ENABLE:
-      return power_client_.proto_client().EnablePowerDomain();
-    case PowerOp::DISABLE:
-      return power_client_.proto_client().DisablePowerDomain();
+    case PowerOp::REGISTER:
+      return power_client_.proto_client().RegisterPowerDomain(req->min_voltage, req->max_voltage);
+    case PowerOp::UNREGISTER:
+      return power_client_.proto_client().UnregisterPowerDomain();
     case PowerOp::GET_STATUS:
       return power_client_.proto_client().GetPowerDomainStatus(&resp->status);
     case PowerOp::GET_SUPPORTED_VOLTAGE_RANGE:

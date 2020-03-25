@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
 #include <ddk/binding.h>
@@ -239,11 +240,59 @@ static zx_status_t test_power(power_protocol_t* power) {
   zx_status_t status;
   uint32_t value;
 
+  uint32_t min_voltage = 0, max_voltage = 0;
+  if ((status = power_get_supported_voltage_range(power, &min_voltage, &max_voltage)) != ZX_OK) {
+    // Not a fixed power domain.
+    zxlogf(ERROR, "Unable to get supported voltage from power domain\n");
+    return status;
+  }
+
+  // These are the limits in the test power-impl driver
+  if (min_voltage != 10 && max_voltage != 1000) {
+    zxlogf(ERROR, "%s: Got wrong supported voltages\n", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+
+  if ((status = power_register_power_domain(power, 50, 800)) != ZX_OK) {
+    zxlogf(ERROR, "Unable to register for power domain\n");
+    return status;
+  }
+
+  power_domain_status_t out_status;
+  if ((status = power_get_power_domain_status(power, &out_status) != ZX_OK)) {
+    zxlogf(ERROR, "Unable to power domain status\n");
+    return status;
+  }
+
+  if (out_status != POWER_DOMAIN_STATUS_ENABLED) {
+    zxlogf(ERROR, "power domain should have been enabled after registration\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  uint32_t out_actual_voltage = 0;
+  if ((status = power_request_voltage(power, 30, &out_actual_voltage)) != ZX_OK) {
+    zxlogf(ERROR, "Unable to request a particular voltage. Got out_voltage as %d\n",
+           out_actual_voltage);
+    return status;
+  }
+
+  // We registered to the domain with voltage range 50-800. 30 will be rounded to 50.
+  if (out_actual_voltage != 50) {
+    zxlogf(ERROR, "Generic power driver failed to set correct voltage. Got out_voltage as %d\n",
+           out_actual_voltage);
+    return ZX_ERR_INTERNAL;
+  }
+
   // Write a register and read it back
   if ((status = power_write_pmic_ctrl_reg(power, 0x1234, 6)) != ZX_OK) {
     return status;
   }
   if ((status = power_read_pmic_ctrl_reg(power, 0x1234, &value)) != ZX_OK || value != 6) {
+    return status;
+  }
+
+  if ((status = power_unregister_power_domain(power) != ZX_OK)) {
+    zxlogf(ERROR, "Unable to unregister for power domain\n");
     return status;
   }
 

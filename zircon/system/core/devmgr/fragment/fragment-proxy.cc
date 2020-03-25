@@ -721,20 +721,22 @@ zx_status_t FragmentProxy::PDevGetProtocol(uint32_t proto_id, uint32_t index, vo
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t FragmentProxy::PowerEnablePowerDomain() {
+zx_status_t FragmentProxy::PowerRegisterPowerDomain(uint32_t min_voltage, uint32_t max_voltage) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
-  req.op = PowerOp::ENABLE;
+  req.op = PowerOp::REGISTER;
+  req.min_voltage = min_voltage;
+  req.max_voltage = max_voltage;
 
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t FragmentProxy::PowerDisablePowerDomain() {
+zx_status_t FragmentProxy::PowerUnregisterPowerDomain() {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
-  req.op = PowerOp::DISABLE;
+  req.op = PowerOp::UNREGISTER;
 
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }

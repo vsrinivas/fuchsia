@@ -8,6 +8,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/fragment-device.h>
 #include <fbl/array.h>
 
 #include "fidl-helper.h"
@@ -115,6 +116,9 @@ class Bind {
   // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                         void* protocol);
+  // Internal fake implementation of ddk functionality.
+  virtual zx_status_t DeviceOpenProtocolSessionMultibindable(const zx_device_t* dev,
+                                                             uint32_t proto_id, void* protocol);
 
   // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceRebind(zx_device_t* device);
@@ -137,6 +141,7 @@ class Bind {
   bool make_visible_called_ = false;
   bool suspend_complete_called_ = false;
   bool resume_complete_called_ = false;
+  bool device_open_protocol_session_multibindable_ = false;
 
   int add_metadata_calls_ = 0;
   size_t metadata_length_ = 0;

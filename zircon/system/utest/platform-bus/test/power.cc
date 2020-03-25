@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "ddk/protocol/power.h"
+
+#include <zircon/errors.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -50,6 +54,12 @@ class TestPowerDevice : public DeviceType,
   uint32_t last_index_ = 0;
   uint32_t last_addr_ = 0;
   uint32_t last_value_ = 0;
+
+  // Values for domains with indexes 0 - 3
+  uint32_t min_voltage_[4] = {10, 10, 10, 10};
+  uint32_t max_voltage_[4] = {1000, 1000, 1000, 1000};
+  uint32_t cur_voltage_[4] = {0, 0, 0, 0};
+  bool enabled_[4] = {false, false, false, false};
 };
 
 zx_status_t TestPowerDevice::Init() {
@@ -100,36 +110,67 @@ void TestPowerDevice::DdkUnbindDeprecated() {}
 void TestPowerDevice::DdkRelease() { delete this; }
 
 zx_status_t TestPowerDevice::PowerImplEnablePowerDomain(uint32_t index) {
-  // TODO(ravoorir): to be implemented
+  if (index >= 4) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  enabled_[index] = true;
+  zxlogf(ERROR, "%s: Enabling power domain for index:%d\n", __func__, index);
   return ZX_OK;
 }
 
 zx_status_t TestPowerDevice::PowerImplDisablePowerDomain(uint32_t index) {
-  // TODO(ravoorir): to be implemented
+  if (index >= 4) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!enabled_[index]) {
+    zxlogf(ERROR, "%s: Power domain is not enabled: index:%d\n", __func__, index);
+    return ZX_ERR_UNAVAILABLE;
+  }
+  enabled_[index] = false;
   return ZX_OK;
 }
 
 zx_status_t TestPowerDevice::PowerImplGetPowerDomainStatus(uint32_t index,
                                                            power_domain_status_t* out_status) {
-  // TODO(ravoorir): to be implemented
+  if (index >= 4) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_status = POWER_DOMAIN_STATUS_DISABLED;
+  if (enabled_[index]) {
+    *out_status = POWER_DOMAIN_STATUS_ENABLED;
+  }
   return ZX_OK;
 }
 
 zx_status_t TestPowerDevice::PowerImplGetSupportedVoltageRange(uint32_t index,
                                                                uint32_t* min_voltage,
                                                                uint32_t* max_voltage) {
-  // TODO(ravoorir): to be implemented
+  if (index >= 4) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *min_voltage = min_voltage_[index];
+  *max_voltage = max_voltage_[index];
   return ZX_OK;
 }
 
 zx_status_t TestPowerDevice::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
                                                      uint32_t* actual_voltage) {
-  // TODO(ravoorir): to be implemented
-  return ZX_OK;
+  if (index >= 4) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (voltage >= min_voltage_[index] && voltage <= max_voltage_[index]) {
+    *actual_voltage = voltage;
+    cur_voltage_[index] = voltage;
+    return ZX_OK;
+  }
+  return ZX_ERR_INVALID_ARGS;
 }
 
 zx_status_t TestPowerDevice::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
-  // TODO(ravoorir): to be implemented
+  if (index >= 4) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *current_voltage = cur_voltage_[index];
   return ZX_OK;
 }
 

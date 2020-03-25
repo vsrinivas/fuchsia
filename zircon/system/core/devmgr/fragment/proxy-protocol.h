@@ -213,8 +213,8 @@ struct ClockProxyResponse {
 
 // ZX_PROTOCOL_POWER proxy support.
 enum class PowerOp {
-  ENABLE,
-  DISABLE,
+  REGISTER,
+  UNREGISTER,
   GET_STATUS,
   GET_SUPPORTED_VOLTAGE_RANGE,
   REQUEST_VOLTAGE,
@@ -229,6 +229,8 @@ struct PowerProxyRequest {
   uint32_t set_voltage;
   uint32_t reg_addr;
   uint32_t reg_value;
+  uint32_t min_voltage;
+  uint32_t max_voltage;
 };
 
 struct PowerProxyResponse {

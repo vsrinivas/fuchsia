@@ -13,15 +13,22 @@ enum PowerDomainStatus : uint8 {
 
 [Layout = "ddk-protocol"]
 protocol Power {
-    /// Enable power domain
-    EnablePowerDomain() -> (zx.status s);
-    /// Disable power domain
-    DisablePowerDomain() -> (zx.status s);
-    /// Get Supported Voltage Range
+    /// Register the callee for this power domain. The callee will be registered until
+    /// UnregisterPowerDomain is called. Any voltage changes to the power domain will
+    /// be made considering the min_needed_voltage(in uV) and max_supported_voltage(in uV) published here.
+    /// If voltages mentioned are out of supported voltage range of domain(obtained by calling
+    /// GetSupportedVoltageRange), the callee will be registered with the supported voltage range.
+    RegisterPowerDomain(uint32 min_needed_voltage, uint32 max_supported_voltage) -> (zx.status s);
+    /// Unregister the callee for this power domain. The callee will no longer be considered as
+    /// a dependent of this power domain.
+    UnregisterPowerDomain() -> (zx.status s);
+    /// Get Supported Voltage Range. min and max are in micorVolts(uV)
     GetSupportedVoltageRange() -> (zx.status s, uint32 min, uint32 max);
-    /// Request a particular voltage
+    /// Request a particular voltage. The actual_voltage is the voltage that the power domain
+    /// is transitioned to after considering supported voltage ranges of all the registered
+    /// dependents. "voltage" should be in uV.
     RequestVoltage(uint32 voltage) -> (zx.status s, uint32 actual_voltage);
-    /// Get current voltage
+    /// Get current voltage in uV.
     GetCurrentVoltage(uint32 index) -> (zx.status s, uint32 current_voltage);
     /// Get power domain status
     GetPowerDomainStatus() -> (zx.status s, PowerDomainStatus status);

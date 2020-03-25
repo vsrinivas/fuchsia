@@ -202,6 +202,15 @@ zx_status_t Bind::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Bind::DeviceOpenProtocolSessionMultibindable(const zx_device_t* device,
+                                                         uint32_t proto_id, void* protocol) {
+  if (device != kFakeDevice) {
+    bad_device_ = true;
+  }
+  device_open_protocol_session_multibindable_ = true;
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Bind::DeviceRebind(zx_device_t* device) {
   if (device != kFakeDevice) {
     bad_device_ = true;
@@ -307,6 +316,15 @@ zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, vo
   }
   return fake_ddk::Bind::Instance()->DeviceGetProtocol(device, proto_id, protocol);
 }
+__EXPORT
+zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev, uint32_t proto_id,
+                                                       void* protocol) {
+  if (!fake_ddk::Bind::Instance()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return fake_ddk::Bind::Instance()->DeviceOpenProtocolSessionMultibindable(dev, proto_id,
+                                                                            protocol);
+}
 
 __EXPORT
 const char* device_get_name(zx_device_t* device) {
@@ -363,8 +381,8 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
   return ZX_OK;
 }
 
-__EXPORT __WEAK
-zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
+__EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
+                                          size_t* size) {
   // This is currently a no-op.
   *fw = ZX_HANDLE_INVALID;
   *size = fake_ddk::kFakeFWSize;

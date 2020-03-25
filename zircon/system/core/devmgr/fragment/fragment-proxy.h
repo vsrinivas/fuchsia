@@ -104,8 +104,8 @@ class FragmentProxy : public FragmentProxyBase,
                             zx_device_t** out_device);
   zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_out_protocol_buffer,
                               size_t out_protocol_size, size_t* out_out_protocol_actual);
-  zx_status_t PowerEnablePowerDomain();
-  zx_status_t PowerDisablePowerDomain();
+  zx_status_t PowerRegisterPowerDomain(uint32_t min_needed_voltage, uint32_t max_supported_voltage);
+  zx_status_t PowerUnregisterPowerDomain();
   zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
   zx_status_t PowerGetSupportedVoltageRange(uint32_t* min_voltage, uint32_t* max_voltage);
   zx_status_t PowerRequestVoltage(uint32_t _voltage, uint32_t* actual_voltage);

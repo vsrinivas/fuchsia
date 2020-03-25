@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("power") {
@@ -24,6 +25,34 @@ driver_module("power") {
   ]
 }
 
+test("power-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "generic-power-driver-test"
+  sources = [
+    "power-test.cc",
+    "power.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.power",
+    "//zircon/system/banjo/ddk.protocol.powerimpl",
+  ]
+}
+
 migrated_manifest("power-manifest") {
   deps = [ ":power" ]
+}
+
+migrated_manifest("power-test-manifest") {
+  deps = [ ":power-test" ]
 }

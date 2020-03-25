@@ -16,11 +16,11 @@ protocol PowerImpl {
     EnablePowerDomain(uint32 index) -> (zx.status s);
     /// Disable a power domain
     DisablePowerDomain(uint32 index) -> (zx.status s);
-    /// Get Supported Voltage Range
+    /// Get Supported Voltage Range. min and max are in uV.
     GetSupportedVoltageRange(uint32 index) -> (zx.status s, uint32 min, uint32 max);
-    /// Request for a particular voltage
+    /// Request for a particular voltage. "voltage" and actual_voltage are in microvolts(uV)
     RequestVoltage(uint32 index, uint32 voltage) -> (zx.status s, uint32 actual_voltage);
-    /// Get current voltage
+    /// Get current voltage in uV.
     GetCurrentVoltage(uint32 index) -> (zx.status s, uint32 current_voltage);
     /// Write to ctrl register of PMIC
     WritePmicCtrlReg(uint32 index, uint32 reg_addr, uint32 value) -> (zx.status s);
