@@ -48,16 +48,29 @@ dst=${args[$nargs-1]}
 srcs=( "${args[@]:0:$nargs-1}" )
 host="$(get-fuchsia-device-addr)"
 
+sftp_args=()
+
+port="$(get-device-ssh-port)"
+if [[ -n "${port}" ]]; then
+  sftp_args+=( "-P" "${port}" )
+fi
+
+sftp_args+=(
+  "-q"
+  "-b" "-"
+  "[${host}]"
+)
+
 if [[ "${to_target}" = "true" ]]; then
   (
   for src in "${srcs[@]}"; do
     echo "put \"${src}\" \"${dst}\""
   done
-  ) | fx-command-run sftp -q -b - "[${host}]" > /dev/null
+  ) | fx-command-run sftp "${sftp_args[@]}" > /dev/null
 else
   (
   for src in "${srcs[@]}"; do
     echo "get \"${src}\" \"${dst}\""
   done
-  ) | fx-command-run sftp -q -b - "[${host}]" > /dev/null
+  ) | fx-command-run sftp "${sftp_args[@]}" > /dev/null
 fi

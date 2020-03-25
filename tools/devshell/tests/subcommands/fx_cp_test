@@ -1,0 +1,48 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of 'fx cp'
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/cp"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/sftp"
+)
+
+declare fx sftp
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  sftp="${BT_TEMP_DIR}/tools/devshell/sftp"
+}
+
+# ensure that "fx -d ipv4:port cp" calls sftp with expected address and port number
+TEST_cp_ipv4_port() {
+  BT_EXPECT ${fx} -d "127.0.0.1:8022" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
+  BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "-P" "8022"
+  BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "[127.0.0.1]"
+}
+
+# ensure that "fx -d [ipv6]:port cp" calls sftp with expected address and port number
+TEST_cp_ipv6_port() {
+  BT_EXPECT ${fx} -d "[fe80::7:8%eth0]:222" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
+  BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "-P" "222"
+  BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "[fe80::7:8%eth0]"
+}
+
+# ensure that "fx -d addr cp" calls sftp with expected address and no port number
+TEST_cp_addr() {
+  BT_EXPECT ${fx} -d "127.0.0.1" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
+  BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "[127.0.0.1]"
+  BT_EXPECT btf::does-mock-args-not-contain "${sftp}.mock_state" "-P"
+}
+
+BT_RUN_TESTS "$@"
