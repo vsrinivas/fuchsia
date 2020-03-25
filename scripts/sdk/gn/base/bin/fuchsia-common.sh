@@ -9,7 +9,7 @@
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
-
+FUCHSIA_PROPERTY_NAMES=("device-addr" "device-port" "device-name")
 function is-mac {
   [[ "$(uname -s)" == "Darwin" ]] && return 0
   return 1
@@ -55,6 +55,34 @@ function fx-error {
     echo -e >&2 "\033[1;31mERROR:\033[0m $*"
   else
     echo -e >&2 "ERROR: $*"
+  fi
+}
+
+function get-fuchsia-property-names {
+  echo "${FUCHSIA_PROPERTY_NAMES[@]}"
+}
+
+function is-valid-fuchsia-property {
+  [[ "${FUCHSIA_PROPERTY_NAMES[*]}" =~ $1 ]]
+}
+
+function set-fuchsia-property {
+  local prop_path
+  prop_path="$(get-fuchsia-sdk-data-dir)/.properties/$1.txt"
+  if ! mkdir -p "$(dirname "${prop_path}")"; then
+    fx-error "Cannot write property to $prop_path"
+    exit 1
+  fi
+  echo "$2" > "${prop_path}"
+}
+
+function get-fuchsia-property {
+  local prop_path
+  prop_path="$(get-fuchsia-sdk-data-dir)/.properties/$1.txt"
+  if [[ -e "${prop_path}" ]]; then
+    cat "${prop_path}"
+  else
+    echo ""
   fi
 }
 

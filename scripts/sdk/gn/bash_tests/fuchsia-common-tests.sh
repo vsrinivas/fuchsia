@@ -230,5 +230,39 @@ EOF
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/kill-running-pm_output.txt" "WARNING: Killing existing pm process"
 }
 
+TEST_get-fuchsia-property-names() {
+  # Don't copy the property names here, just confirm it is a list and they are valid.
+  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-property-names
+  BT_ASSERT_FUNCTION_EXISTS is-valid-fuchsia-property
+
+  IFS=" " read -r -a prop_list <<< "$(get-fuchsia-property-names)"
+
+  # There should be between 1 and 10 properties
+  BT_ASSERT "(( ${#prop_list[@]} > 1 && ${#prop_list[@]} <= 10  ))"
+
+  for prop in "${prop_list[@]}"; do
+    BT_ASSERT is-valid-fuchsia-property "${prop}"
+  done
+}
+
+
+TEST_is-valid-fuchsia-property()  {
+  BT_ASSERT is-valid-fuchsia-property "device-port"
+  BT_ASSERT_FAIL  is-valid-fuchsia-property "random-value"
+}
+
+TEST_set_and_get-fuchsia-property() {
+  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-property
+  BT_ASSERT_FUNCTION_EXISTS set-fuchsia-property
+
+  BT_EXPECT set-fuchsia-property "device-port" 100
+  value="$(get-fuchsia-property "device-port")"
+  BT_EXPECT_EQ "$value" "100"
+
+  BT_EXPECT set-fuchsia-property "device-port" ""
+  value="$(get-fuchsia-property "device-port")"
+  BT_EXPECT_EQ "$value" ""
+}
+
 
 BT_RUN_TESTS "$@"
