@@ -53,7 +53,7 @@ fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
     let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
     if !opt.disable_klog {
-        log_manager.spawn_klogger()?;
+        log_manager.spawn_klog_drainer()?;
     }
 
     let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
@@ -109,8 +109,8 @@ fn main() -> Result<(), Error> {
     let log_manager3 = log_manager.clone();
 
     fs.dir("svc")
-        .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
-        .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream))
+        .add_fidl_service(move |stream| log_manager2.spawn_log_handler(stream))
+        .add_fidl_service(move |stream| log_manager3.spawn_log_sink_handler(stream))
         .add_fidl_service(move |stream| {
             let all_archive_accessor =
                 archive_accessor::ArchiveAccessor::new(all_inspect_repository.clone());
