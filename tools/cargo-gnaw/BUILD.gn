@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+if (is_host) {
+  rustc_binary("cargo-gnaw-bin") {
+    name = "gnaw"
+
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:cargo_metadata",
+      "//third_party/rust_crates:semver",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_derive",
+      "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:toml",
+    ]
+  }
+
+  rustc_test("cargo-gnaw-tests") {
+    source_root = "src/main.rs"
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:cargo_metadata",
+      "//third_party/rust_crates:semver",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_derive",
+      "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:toml",
+    ]
+  }
+}
+
+install_host_tools("cargo-gnaw") {
+  deps = [ ":cargo-gnaw-bin" ]
+  outputs = [ "gnaw" ]
+}
+
+# This is not visible outside of this file. CQ cannot use these tests currently
+# since they depend on environment variables.
+#
+# They are still available for local testing
+group("tests") {
+  visibility = [":*", "//:additional_universe_packages"]
+  testonly = true
+  deps = [ ":cargo-gnaw-tests($host_toolchain)" ]
+}

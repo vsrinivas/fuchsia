@@ -1,0 +1,12 @@
+[package]
+name = "simple_deps"
+version = "0.1.0"
+authors = ["Benjamin Brittain <bwb@google.com>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.27"
+
+# gn config
+[[gn.crate.anyhow."1.0.27"]]
+rustflags = ["--cfg=backtrace"]

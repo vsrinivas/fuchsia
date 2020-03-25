@@ -1,0 +1,10 @@
+{gn_rule}("{target_name}") {{
+  crate_name = "{crate_name}"
+  crate_root = "{root_path}"
+  output_name = "{output_name}"
+  {cfgs}
+  {dependencies}
+  {rustenv}
+  {rustflags}
+  {aliased_deps}
+}}

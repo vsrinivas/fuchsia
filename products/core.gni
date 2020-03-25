@@ -88,6 +88,10 @@ base_package_labels += [
 # remove these tools from the base package set.
 base_package_labels += [ "//src/sys/pkg:tools" ]
 
+# cargo-gnaw is currently part of all build graphs, but it should only
+# built by fx tooling
+base_package_labels += [ "//tools/cargo-gnaw" ]
+
 cache_package_labels += []
 
 universe_package_labels += [ "//bundles:tools" ]
