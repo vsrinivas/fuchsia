@@ -140,8 +140,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
                         zx::duration overflow_duration);
   void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
 
-  using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
-
+  using PcbList = ::fbl::SizedDoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
   void CreateOptimalReferenceClock();
   void EstablishDefaultReferenceClock();
 
@@ -209,6 +208,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   uint32_t payload_buf_frames_ = 0;
 
   WakeupEvent mix_wakeup_;
+  zx::time finish_buffers_signal_time_ FXL_GUARDED_BY(pending_lock_){0};
   WakeupEvent finish_buffers_wakeup_;
   async::TaskClosureMethod<BaseCapturer, &BaseCapturer::MixTimerThunk> mix_timer_
       FXL_GUARDED_BY(mix_domain_->token()){this};

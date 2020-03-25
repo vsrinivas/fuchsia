@@ -500,15 +500,19 @@ void BaseCapturer::RecomputeMinFenceTime() {
   }
 }
 
+// TODO(48598): Remove these and revert back to FX_DCHECK.
+#define FXB_48598_DCHECK(level) FX_CHECK(level)
+
 zx_status_t BaseCapturer::Process() {
   TRACE_DURATION("audio", "BaseCapturer::Process");
+  uint32_t packets_produced = 0;
   while (true) {
     // Start by figure out what state we are currently in for this cycle.
     bool async_mode = false;
     switch (state_.load()) {
       // If we are still waiting for a VMO, we should not be operating right now.
       case State::WaitingForVmo:
-        FX_DCHECK(false);
+        FXB_48598_DCHECK(false);
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
 
@@ -546,8 +550,9 @@ zx_status_t BaseCapturer::Process() {
         auto& p = pending_capture_buffers_.front();
 
         // This should have been established by CaptureAt; it had better still be true.
-        FX_DCHECK((static_cast<uint64_t>(p.offset_frames) + p.num_frames) <= payload_buf_frames_);
-        FX_DCHECK(p.filled_frames < p.num_frames);
+        FXB_48598_DCHECK((static_cast<uint64_t>(p.offset_frames) + p.num_frames) <=
+                         payload_buf_frames_);
+        FXB_48598_DCHECK(p.filled_frames < p.num_frames);
 
         // If we don't know our timeline transformation, then the next buffer we produce is
         // guaranteed to be discontinuous relative to the previous one (if any).
@@ -556,7 +561,7 @@ zx_status_t BaseCapturer::Process() {
         }
 
         // If we are running, there is no way our shared buffer can get stolen out from under us.
-        FX_DCHECK(payload_buf_.start() != nullptr);
+        FXB_48598_DCHECK(payload_buf_.start() != nullptr);
 
         uint64_t offset_bytes =
             format_.bytes_per_frame() * static_cast<uint64_t>(p.offset_frames + p.filled_frames);
@@ -595,7 +600,7 @@ zx_status_t BaseCapturer::Process() {
       async_next_frame_offset_ = 0;
       if (!QueueNextAsyncPendingBuffer()) {
         // If this fails, QueueNextAsyncPendingBuffer should have already shut us down. Assert this.
-        FX_DCHECK(state_.load() == State::Shutdown);
+        FXB_48598_DCHECK(state_.load() == State::Shutdown);
         return ZX_ERR_INTERNAL;
       }
       continue;
@@ -651,15 +656,15 @@ zx_status_t BaseCapturer::Process() {
 
     // Mix the requested number of frames from sources to intermediate buffer, then into output.
     auto buf = mix_stage_->LockBuffer(now, frame_count_, mix_frames);
-    FX_DCHECK(buf);
-    FX_DCHECK(buf->start().Floor() == frame_count_);
-    FX_DCHECK(buf->length().Floor() == mix_frames);
+    FXB_48598_DCHECK(buf);
+    FXB_48598_DCHECK(buf->start().Floor() == frame_count_);
+    FXB_48598_DCHECK(buf->length().Floor() == mix_frames);
     if (!buf) {
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
     }
 
-    FX_DCHECK(output_producer_ != nullptr);
+    FXB_48598_DCHECK(output_producer_ != nullptr);
     output_producer_->ProduceOutput(reinterpret_cast<float*>(buf->payload()), mix_target,
                                     mix_frames);
 
@@ -674,13 +679,13 @@ zx_status_t BaseCapturer::Process() {
         if (buffer_sequence_number == p.sequence_number) {
           // Update the filled status of the buffer.
           p.filled_frames += mix_frames;
-          FX_DCHECK(p.filled_frames <= p.num_frames);
+          FXB_48598_DCHECK(p.filled_frames <= p.num_frames);
 
           // Assign a timestamp if one has not already been assigned.
           if (p.capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
             auto [clock_mono_to_fractional_dest_frames, _] =
                 clock_mono_to_fractional_dest_frames_->get();
-            FX_DCHECK(clock_mono_to_fractional_dest_frames.invertible());
+            FXB_48598_DCHECK(clock_mono_to_fractional_dest_frames.invertible());
             p.capture_timestamp = clock_mono_to_fractional_dest_frames.Inverse().Apply(
                 FractionalFrames<int64_t>(frame_count_).raw_value());
           }
@@ -689,7 +694,14 @@ zx_status_t BaseCapturer::Process() {
           buffer_finished = p.filled_frames >= p.num_frames;
           if (buffer_finished) {
             wakeup_service_thread = finished_capture_buffers_.is_empty();
+            if (wakeup_service_thread) {
+              finish_buffers_signal_time_ = now;
+            }
             finished_capture_buffers_.push_back(pending_capture_buffers_.pop_front());
+            if (++packets_produced % 20 == 0) {
+              FX_LOGS_FIRST_N(WARNING, 100) << "Process producing a lot of packets "
+                                            << packets_produced << " frame_count_ " << frame_count_;
+            }
           }
         } else {
           // It looks like we were flushed while we were mixing. Invalidate our timeline function,
@@ -712,11 +724,13 @@ zx_status_t BaseCapturer::Process() {
     // If in async mode, and we just finished a buffer, queue a new pending buffer (or die trying).
     if (buffer_finished && async_mode && !QueueNextAsyncPendingBuffer()) {
       // If this fails, QueueNextAsyncPendingBuffer should have already shut us down. Assert this.
-      FX_DCHECK(state_.load() == State::Shutdown);
+      FXB_48598_DCHECK(state_.load() == State::Shutdown);
       return ZX_ERR_INTERNAL;
     }
   }  // while (true)
 }
+
+#undef FXB_48598_DCHECK
 
 void BaseCapturer::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,
                                     FractionalFrames<int64_t> frac_source_mix_point,
@@ -911,16 +925,29 @@ void BaseCapturer::FinishBuffersThunk() {
   }
 
   PcbList finished;
+  zx::time signal_time;
   {
     std::lock_guard<std::mutex> pending_lock(pending_lock_);
     finished = std::move(finished_capture_buffers_);
+    signal_time = finish_buffers_signal_time_;
+    finish_buffers_signal_time_ = zx::time(0);
   }
 
+  auto now = zx::clock::get_monotonic();
+  auto time_to_schedule = now - signal_time;
+  if (signal_time != zx::time(0) && time_to_schedule > zx::msec(500)) {
+    FX_LOGS(WARNING) << "FinishBuffersThunk took " << time_to_schedule.to_msecs()
+                     << "ms to schedule";
+  }
   FinishBuffers(finished);
 }
 
 void BaseCapturer::FinishBuffers(const PcbList& finished_buffers) {
   TRACE_DURATION("audio", "BaseCapturer::FinishBuffers");
+  if (finished_buffers.size() > 50) {
+    FX_LOGS_FIRST_N(WARNING, 100) << "Finishing large batch of capture buffers: "
+                                  << finished_buffers.size();
+  }
   for (const auto& finished_buffer : finished_buffers) {
     // If there is no callback tied to this buffer (meaning that it was generated while operating in
     // async mode), and it is not filled at all, just skip it.
