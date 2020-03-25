@@ -25,6 +25,7 @@ sdk://fidl/fuchsia.castconfig
 sdk://fidl/fuchsia.castremotecontrol
 sdk://fidl/fuchsia.castsetup
 sdk://fidl/fuchsia.castsysteminfo
+sdk://fidl/fuchsia.castwindow
 sdk://fidl/fuchsia.cobalt
 sdk://fidl/fuchsia.component
 sdk://fidl/fuchsia.component.runner
