@@ -177,15 +177,16 @@ git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
 
 ### fidlc tests
 
-fidlc tests are at:
+`fidlc` tests are at:
 
 * [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 * [//zircon/system/utest/fidl/][fidlc-tests].
 * [//src/lib/fidl/c/coding_tables_tests/][fidlc-coding-tables-tests].
 * [//src/lib/fidl/c/simple_tests][fidl-simple](C runtime tests).
 
+To build and run `fidlc` tests:
+
 ```sh
-# build & run fidlc tests
 fx build system/utest:host
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
 ```
@@ -197,7 +198,30 @@ fx build system/utest:host
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug -- --case attributes_tests
 ```
 
+Alternatively, it is faster to invoke ninja targets directly:
+
+```sh
+ninja -C out/default.zircon \
+    host-x64-linux-clang/obj/tools/fidl/fidlc \
+    host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test
+
+./out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
+```
+
+Build and run fidl-coding-tables tests:
+
+Note: `--with-base` puts all zircon tests in `/boot` with the `bringup.x64`
+target, or `/system` when you the `core.x64` target.
+
+```sh
+fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
+fx build
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
+>>>>>>> 6a061a72892... [fidl] Direct ninja targets for fidlc workflow
+```
+
 To regenerate the FIDL definitions used in unit testing, run:
+
 ```sh
 fx build zircon/tools
 $FUCHSIA_DIR/out/default.zircon/tools/fidlc \
@@ -205,7 +229,8 @@ $FUCHSIA_DIR/out/default.zircon/tools/fidlc \
   --files $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.test.fidl
 ```
 
-To regenerate the `fidlc` JSON goldens, ensure `fidlc` is built and up to date, then run:
+To regenerate the `fidlc` JSON goldens, ensure `fidlc` is built and up to date,
+then run:
 
 ```sh
 fx exec $FUCHSIA_DIR/zircon/tools/fidl/testdata/regen.sh
