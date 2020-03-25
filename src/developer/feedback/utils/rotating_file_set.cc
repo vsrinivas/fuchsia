@@ -25,21 +25,21 @@ RotatingFileSetWriter::RotatingFileSetWriter(const std::vector<const std::string
   current_file_.Open(file_paths_.front());
 }
 
-void RotatingFileSetWriter::Write(const std::string& line) {
-  TRACE_DURATION("feedback:io", "RotatingFileSetWriter::Write", "line_size", line.size());
+void RotatingFileSetWriter::Write(const std::string& str) {
+  TRACE_DURATION("feedback:io", "RotatingFileSetWriter::Write", "str_size", str.size());
 
-  if (individual_file_size_.to_bytes() < line.size()) {
+  if (individual_file_size_.to_bytes() < str.size()) {
     return;
   }
 
-  if (current_file_.BytesRemaining() < line.size()) {
+  if (current_file_.BytesRemaining() < str.size()) {
     current_file_.Close();
     RotateFilePaths();
 
     // This re-creates the first file in the list.
     current_file_.Open(file_paths_.front());
   }
-  current_file_.Write(line);
+  current_file_.Write(str);
 }
 
 void RotatingFileSetWriter::RotateFilePaths() {

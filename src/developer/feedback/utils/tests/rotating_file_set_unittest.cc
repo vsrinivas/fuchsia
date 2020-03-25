@@ -32,13 +32,10 @@ TEST_F(RotatingFileSetTest, Writer_SingleFileInSet) {
       files::JoinPath(RootDirectory(), "file0.txt"),
   };
 
-  // Destroy |writer| at the end of this scope to force its underlying buffer to flush.
-  {
-    RotatingFileSetWriter writer(file_paths, FileSize::Megabytes(1));
+  RotatingFileSetWriter writer(file_paths, FileSize::Megabytes(1));
 
-    writer.Write("line1\n");
-    writer.Write("line2\n");
-  }
+  writer.Write("line1\n");
+  writer.Write("line2\n");
 
   std::string file_contents;
   ReadFileContents(file_paths[0], &file_contents);
@@ -52,16 +49,13 @@ TEST_F(RotatingFileSetTest, Writer_MultipleFilesInSet_ManyRotations) {
       files::JoinPath(RootDirectory(), "file2.txt"),
   };
 
-  // Destroy |writer| at the end of this scope to force its underlying buffer to flush.
-  {
-    RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
+  RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
 
-    writer.Write("line1\n");
-    writer.Write("line2\n");
-    writer.Write("line3\n");
-    writer.Write("line4\n");
-    writer.Write("line5\n");
-  }
+  writer.Write("line1\n");
+  writer.Write("line2\n");
+  writer.Write("line3\n");
+  writer.Write("line4\n");
+  writer.Write("line5\n");
 
   std::string file_contents;
   ReadFileContents(file_paths[0], &file_contents);
@@ -79,16 +73,13 @@ TEST_F(RotatingFileSetTest, Reader_ConcatenatesCorrectly) {
       files::JoinPath(RootDirectory(), "file2.txt"),
   };
 
-  // Destroy |writer| at the end of this scope to force its underlying buffer to flush.
-  {
-    RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
+  RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
 
-    writer.Write("line1\n");
-    writer.Write("line2\n");
-    writer.Write("line3\n");
-    writer.Write("line4\n");
-    writer.Write("line5\n");
-  }
+  writer.Write("line1\n");
+  writer.Write("line2\n");
+  writer.Write("line3\n");
+  writer.Write("line4\n");
+  writer.Write("line5\n");
 
   const std::string output_file = files::JoinPath(RootDirectory(), "output.txt");
   RotatingFileSetReader reader(file_paths);
@@ -106,16 +97,13 @@ TEST_F(RotatingFileSetTest, Reader_ConcatenatesCorrectlyWhenSetContainsEmptyFile
       files::JoinPath(RootDirectory(), "file2.txt"),
   };
 
-  // Destroy |writer| at the end of this scope to force its underlying buffer to flush.
-  {
-    RotatingFileSetWriter writer(file_paths, FileSize::Megabytes(6));
+  RotatingFileSetWriter writer(file_paths, FileSize::Megabytes(6));
 
-    writer.Write("line1\n");
-    writer.Write("line2\n");
-    writer.Write("line3\n");
-    writer.Write("line4\n");
-    writer.Write("line5\n");
-  }
+  writer.Write("line1\n");
+  writer.Write("line2\n");
+  writer.Write("line3\n");
+  writer.Write("line4\n");
+  writer.Write("line5\n");
 
   const std::string output_file = files::JoinPath(RootDirectory(), "output.txt");
   RotatingFileSetReader reader(file_paths);

@@ -27,7 +27,7 @@ const std::vector<const std::string> kLogFileNames = {
     "file3.txt",
 };
 
-constexpr zx::duration kDelayBetweenResponses = zx::msec(5);
+// constexpr zx::duration kDelayBetweenResponses = zx::msec(5);
 
 class SystemLogRecorderTest : public UnitTestFixture {
  public:
@@ -66,66 +66,7 @@ class SystemLogRecorderTest : public UnitTestFixture {
   std::vector<const std::string> log_file_paths_;
 };
 
-TEST_F(SystemLogRecorderTest, Check_RecordsLogsCorrectly) {
-  // This constant needs to be kept in sync with the messages that are logged by the stub. If a
-  // message is larger that 42 bytes, the values needs to increase to accomodate that message.
-  constexpr FileSize kMaxLogLineSize = FileSize::Bytes(42);
-
-  const std::vector<std::vector<fuchsia::logger::LogMessage>> dumps({
-      {
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 1"),
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 2"),
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 3"),
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 4"),
-
-      },
-      {
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 5"),
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 6"),
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 7"),
-          stubs::BuildLogMessage(FX_LOG_INFO, "line 8"),
-      },
-
-  });
-
-  const std::vector<fuchsia::logger::LogMessage> messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 9"),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 10"),
-
-  });
-
-  auto logger = std::make_unique<stubs::LoggerDelayedResponses>(dispatcher(), dumps, messages,
-                                                                kDelayBetweenResponses);
-
-  const zx::duration total_dump_delays = logger->TotalDelayBetweenDumps();
-  const zx::duration total_message_delays = logger->TotalDelayBetweenMessages();
-
-  SetUpLogger(std::move(logger));
-
-  // Set up the system log recorder to hold up to |log_file_paths_.size()| lines at a time.
-  SetUpSystemLogRecorder(kMaxLogLineSize * log_file_paths_.size());
-
-  StartRecording();
-
-  // Run the loop for as much time needed to ensure at the stub calls LogMany() and Log() as
-  // specified in the constructor.
-  RunLoopFor(total_dump_delays + total_message_delays);
-
-  const std::string output_path = files::JoinPath(RootDirectory(), "output.txt");
-
-  RotatingFileSetReader reader(log_file_paths_);
-
-  // We can't expect "line 10" to be present because the line won't been flushed to disk until the
-  // underlying file is closed. This won't happen until another line is written into the logs.
-  std::string contents;
-  while (contents != R"([15604.000][07559][07687][] INFO: line 7
-[15604.000][07559][07687][] INFO: line 8
-[15604.000][07559][07687][] INFO: line 9
-)") {
-    reader.Concatenate(output_path);
-    ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  }
-}
+// TODO(44891): Add test cases.
 
 }  // namespace
 }  // namespace feedback

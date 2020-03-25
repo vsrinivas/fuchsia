@@ -36,15 +36,7 @@ class WriteOnlyFile {
   uint64_t BytesRemaining() const;
 
  private:
-  // Flush the underlying buffer.
-  void Flush();
-
   int fd_ = -1;
-
-  // We flush every 4096 bytes.
-  char buf_[4096u];
-  const char buf_end_ = '\0';
-  char* buf_p_;
 
   const FileSize capacity_;
   FileSize capacity_remaining_;

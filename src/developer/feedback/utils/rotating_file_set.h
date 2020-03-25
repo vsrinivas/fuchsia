@@ -43,7 +43,7 @@ class RotatingFileSetWriter {
  public:
   RotatingFileSetWriter(const std::vector<const std::string>& file_paths, FileSize total_size);
 
-  void Write(const std::string& line);
+  void Write(const std::string& str);
 
  private:
   void RotateFilePaths();
