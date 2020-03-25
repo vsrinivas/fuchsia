@@ -1303,18 +1303,19 @@ void Scheduler::Migrate(Thread* thread) {
   }
 }
 
-void Scheduler::MigrateUnpinnedThreads(cpu_num_t current_cpu) {
+void Scheduler::MigrateUnpinnedThreads() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_migrate_unpinned"_stringref};
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
-  DEBUG_ASSERT(current_cpu == arch_curr_cpu_num());
+
+  const cpu_num_t current_cpu = arch_curr_cpu_num();
+  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
 
   // Prevent this CPU from being selected as a target for scheduling threads.
   mp_set_curr_cpu_active(false);
 
   const SchedTime now = CurrentTime();
   Scheduler* const current = Get(current_cpu);
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
 
   RunQueue pinned_threads;
   cpu_mask_t cpus_to_reschedule_mask = 0;
@@ -1655,9 +1656,7 @@ void sched_reschedule() { Scheduler::Reschedule(); }
 
 void sched_resched_internal() { Scheduler::RescheduleInternal(); }
 
-void sched_transition_off_cpu(cpu_num_t current_cpu) {
-  Scheduler::MigrateUnpinnedThreads(current_cpu);
-}
+void sched_transition_off_cpu() { Scheduler::MigrateUnpinnedThreads(); }
 
 void sched_migrate(Thread* thread) { Scheduler::Migrate(thread); }
 

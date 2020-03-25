@@ -78,7 +78,7 @@ class Scheduler {
   friend void sched_change_deadline(Thread* thread, const zx_sched_deadline_params_t& params);
   friend bool sched_unblock(Thread* t);
   friend bool sched_unblock_list(struct list_node* list);
-  friend void sched_transition_off_cpu(cpu_num_t old_cpu);
+  friend void sched_transition_off_cpu();
   friend void sched_preempt_timer_tick(zx_time_t now);
 
   // Static scheduler methods called by the wrapper API above.
@@ -93,7 +93,7 @@ class Scheduler {
   static bool Unblock(list_node* thread_list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
   static void UnblockIdle(Thread* idle_thread) TA_REQ(thread_lock);
   static void Migrate(Thread* thread) TA_REQ(thread_lock);
-  static void MigrateUnpinnedThreads(cpu_num_t current_cpu) TA_REQ(thread_lock);
+  static void MigrateUnpinnedThreads() TA_REQ(thread_lock);
   static void ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);
   static void ChangeDeadline(Thread* thread, const SchedDeadlineParams& params,

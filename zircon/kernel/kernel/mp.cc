@@ -226,8 +226,7 @@ static void mp_unplug_trampoline(void) {
   Thread* ct = Thread::Current::Get();
   auto unplug_done = reinterpret_cast<event_t*>(ct->arg_);
 
-  cpu_num_t cpu_num = arch_curr_cpu_num();
-  sched_transition_off_cpu(cpu_num);
+  sched_transition_off_cpu();
 
   // Note that before this invocation, but after we stopped accepting
   // interrupts, we may have received a synchronous task to perform.

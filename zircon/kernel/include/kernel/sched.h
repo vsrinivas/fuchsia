@@ -49,7 +49,7 @@ void sched_change_deadline(Thread* t, const zx_sched_deadline_params_t& params) 
 bool sched_unblock(Thread* t) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
 bool sched_unblock_list(struct list_node* list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
 
-void sched_transition_off_cpu(cpu_num_t old_cpu) TA_REQ(thread_lock);
+void sched_transition_off_cpu() TA_REQ(thread_lock);
 
 // sched_preempt_timer_tick is called when the preemption timer for a CPU has fired.
 //
