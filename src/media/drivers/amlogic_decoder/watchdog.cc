@@ -16,7 +16,13 @@ Watchdog::Watchdog(Owner* owner) : owner_(owner), loop_(&kAsyncLoopConfigNeverAt
 void Watchdog::Start() {
   std::lock_guard<std::mutex> lock(mutex_);
   ZX_ASSERT(!timer_running_);
-  constexpr uint32_t kTimeoutMs = 200;
+  // TODO(48599): Change this timeout back to 200ms (or at least lower than 15 seconds) after
+  // Vp9Decoder::OnSignaledWatchdog() is able to successfully reset.  As a rule of thumb, unless we do something to
+  // get higher priority / higher scheduling policy for interrupt handling thread, this duration should be on the order
+  // of 1/2 the typical interval between keyframe(s), as we're making a tradeoff between recovering by waiting and
+  // recovering by resetting, and streams shouldn't be corrupted, so we should give plenty of time for waiting to
+  // work, as that is likely to skip fewer frames overall.
+  constexpr uint32_t kTimeoutMs = 15000;
   timeout_time_ = zx::deadline_after(zx::msec(kTimeoutMs));
 
   timer_.set(timeout_time_, zx::duration());
