@@ -80,6 +80,13 @@ BaseCapturer::BaseCapturer(
   // the device where the capturer is initially routed.
   CreateOptimalReferenceClock();
   EstablishDefaultReferenceClock();
+  zx_status_t status =
+      finish_buffers_wakeup_.Activate(context_.threading_model().FidlDomain().dispatcher(),
+                                      [this](WakeupEvent* event) -> zx_status_t {
+                                        FinishBuffersThunk();
+                                        return ZX_OK;
+                                      });
+  FX_DCHECK(status == ZX_OK) << "Failed to activate FinishBuffers wakeup signal";
 }
 
 BaseCapturer::~BaseCapturer() {
@@ -111,7 +118,10 @@ fit::promise<> BaseCapturer::Cleanup() {
                     completer.complete_ok();
                   });
 
-  return bridge.consumer.promise();
+  // After CleanupFromMixThread is done, no more work will happen on the mix dispatch thread. We
+  // need to now ensure our finish_buffers signal is De-asserted.
+  return bridge.consumer.promise().then(
+      [this](fit::result<>&) { finish_buffers_wakeup_.Deactivate(); });
 }
 
 void BaseCapturer::CleanupFromMixThread() {
@@ -696,8 +706,7 @@ zx_status_t BaseCapturer::Process() {
 
     // If we need to poke the service thread, do so.
     if (wakeup_service_thread) {
-      async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
-                      [this]() { FinishBuffersThunk(); });
+      finish_buffers_wakeup_.Signal();
     }
 
     // If in async mode, and we just finished a buffer, queue a new pending buffer (or die trying).

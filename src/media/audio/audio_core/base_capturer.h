@@ -209,6 +209,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   uint32_t payload_buf_frames_ = 0;
 
   WakeupEvent mix_wakeup_;
+  WakeupEvent finish_buffers_wakeup_;
   async::TaskClosureMethod<BaseCapturer, &BaseCapturer::MixTimerThunk> mix_timer_
       FXL_GUARDED_BY(mix_domain_->token()){this};
 
