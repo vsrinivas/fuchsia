@@ -30,6 +30,7 @@ fidl("fuchsia.ui.input") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input2",
+    "//sdk/fidl/fuchsia.ui.input3",
     "//sdk/fidl/fuchsia.ui.views",
   ]
 }

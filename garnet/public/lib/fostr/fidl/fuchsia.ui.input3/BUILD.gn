@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/build/fostr/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.ui.input3") {
+  fidl_target = "//sdk/fidl/fuchsia.ui.input3"
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.input",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.views",
+  ]
+}

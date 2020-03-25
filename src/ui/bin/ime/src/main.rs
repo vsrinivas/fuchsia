@@ -28,7 +28,8 @@ async fn main() -> Result<(), Error> {
         .context("error initializing keyboard service")?;
     let mut fs = ServiceFs::new();
     fs.dir("svc")
-        .add_fidl_service(|stream| keyboard_service.spawn_keyboard_service(stream))
+        .add_fidl_service(|stream| keyboard_service.spawn_keyboard2_service(stream))
+        .add_fidl_service(|stream| keyboard_service.spawn_keyboard3_service(stream))
         .add_fidl_service(|stream| keyboard_service.spawn_ime_service(stream))
         .add_fidl_service(|stream| ime_service.bind_ime_visibility_service(stream))
         .add_fidl_service(|stream| ime_service.bind_text_input_context(stream));

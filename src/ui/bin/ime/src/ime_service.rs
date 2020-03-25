@@ -214,7 +214,8 @@ impl ImeService {
                 fx_vlog!(tag: "ime", 1, "InjectInput triggered: {:?}", event);
                 self.inject_input(event).await;
             }
-            uii::ImeServiceRequest::DispatchKey { .. } => {
+            uii::ImeServiceRequest::DispatchKey { .. }
+            | uii::ImeServiceRequest::DispatchKey3 { .. } => {
                 // Transitional: DispatchKey should be handled by keyboard/Service.
                 // See Service.spawn_ime_service() for handing DispatchKey.
                 // In future, Keyboard service will receive keys directly.
