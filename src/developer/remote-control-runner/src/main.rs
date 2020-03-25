@@ -15,6 +15,9 @@ async fn send_request(proxy: RemoteControlProxy) -> Result<(), Error> {
     let result = proxy.identify_host().await?;
     match result {
         Ok(_) => {
+            // NOTE: this string is used as a comparison point to see if this succeeded
+            // by the ffx daemon. If you change this string, also change the corresponding
+            // check in the daemon.
             println!("Successfully connected to RCS.");
             Ok(())
         }

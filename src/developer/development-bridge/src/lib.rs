@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{LOCAL_SOCAT, MAX_RETRY_COUNT, SOCAT, SOCKET, TARGET_SOCAT},
+    crate::constants::{
+        AUTOSTART_MIN_RETRY_COUNT, LOCAL_SOCAT, MAX_RETRY_COUNT, RETRY_DELAY, SOCAT, SOCKET,
+        TARGET_SOCAT,
+    },
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::mdns::MdnsTargetFinder,
     crate::target::{Target, TargetCollection},
@@ -21,6 +24,7 @@ use {
     futures::channel::mpsc,
     futures::lock::Mutex,
     futures::prelude::*,
+    futures::select,
     hoist::spawn,
     std::process::Command,
     std::rc::Rc,
@@ -72,8 +76,10 @@ impl Daemon {
             Arc::clone(&target_collection),
             Arc::clone(&discovered_target_hooks),
         );
-        let mut peer_id = Daemon::find_remote_control().await?;
+        let mut peer_id =
+            Daemon::find_remote_control().await?.expect("could not find or start remote control");
         let remote_control_proxy = Daemon::create_remote_control_proxy(&mut peer_id).await?;
+        log::info!("Successfully connected to RCS");
         // TODO(awdavies): Add in RCS-callback, making this mut.
         let d = Daemon {
             remote_control_proxy,
@@ -160,30 +166,75 @@ impl Daemon {
         Ok(RemoteControlProxy::new(proxy))
     }
 
-    async fn find_remote_control() -> Result<NodeId, Error> {
-        let svc = hoist::connect_as_service_consumer()?;
-        // Sometimes list_peers doesn't properly report the published services - retry a few times
-        // but don't loop indefinitely.
-        for _ in 0..MAX_RETRY_COUNT {
-            let peers = svc.list_peers().await?;
-            for peer in peers {
-                if peer.description.services.is_none() {
-                    continue;
+    async fn find_remote_control() -> Result<Option<NodeId>, Error> {
+        let (mut tx, mut rx) = futures::channel::mpsc::unbounded();
+
+        spawn(async move {
+            let svc = hoist::connect_as_service_consumer().unwrap();
+            loop {
+                let peers = svc.list_peers().await.unwrap();
+                for peer in peers {
+                    if peer.description.services.is_none() {
+                        continue;
+                    }
+                    if peer
+                        .description
+                        .services
+                        .unwrap()
+                        .iter()
+                        .find(|name| *name == RemoteControlMarker::NAME)
+                        .is_none()
+                    {
+                        continue;
+                    }
+                    tx.send(peer.id).await.unwrap();
+                    // In the future we'll want to keep going here and keep
+                    // looking for new RCS instances. For now, just exit,
+                    // because we wouldn't know what to do with another one
+                    // even if we did find it.
+                    return;
                 }
-                if peer
-                    .description
-                    .services
-                    .unwrap()
-                    .iter()
-                    .find(|name| *name == RemoteControlMarker::NAME)
-                    .is_none()
-                {
-                    continue;
-                }
-                return Ok(peer.id);
             }
+        });
+
+        let mut peer_id: Option<NodeId> = None;
+        for i in 0..MAX_RETRY_COUNT {
+            if i == AUTOSTART_MIN_RETRY_COUNT {
+                println!(
+                    "Could not find the RCS after {} attempts. Attempting to start it...",
+                    AUTOSTART_MIN_RETRY_COUNT
+                );
+                Daemon::start_remote_control().await?;
+                println!("RCS started successfully");
+            }
+
+            // TODO(jwing) use async-std here instead once we have it in-tree.
+            let fut = futures::compat::Compat01As03::new(tokio::timer::Delay::new(
+                std::time::Instant::now() + RETRY_DELAY,
+            ));
+
+            select! {
+                id = rx.next() => { peer_id = id; break },
+                _ = fut.fuse() => {}
+            };
         }
-        panic!("No remote control found.  Is a device connected?")
+
+        return Ok(peer_id);
+    }
+
+    async fn start_remote_control() -> Result<(), Error> {
+        let output = Command::new("fx")
+            .arg("run")
+            .arg("fuchsia-pkg://fuchsia.com/remote-control-runner#meta/remote-control-runner.cmx")
+            .stdin(std::process::Stdio::null())
+            .output()
+            .expect("failed to execute `fx run`");
+
+        if !output.stdout.starts_with("Successfully".as_bytes()) {
+            panic!("Starting RCS failed. Check target system logs for details.");
+        }
+
+        Ok(())
     }
 
     pub async fn handle_request(&self, req: DaemonRequest, quiet: bool) -> Result<(), Error> {
