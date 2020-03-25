@@ -75,7 +75,7 @@ impl EventSourceFactory {
             HooksRegistration::new(
                 "EventSourceFactory",
                 // TODO(fxb/48359): track destroyed to clean up any stored data.
-                vec![EventType::CapabilityRouted],
+                vec![EventType::CapabilityRouted, EventType::Resolved],
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
         ]);
@@ -110,17 +110,15 @@ impl EventSourceFactory {
             (None, FrameworkCapability::Protocol(source_path))
                 if *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
             {
-                let mut event_source_registry = self.event_source_registry.lock().await;
-                let event_source = match event_source_registry.get(&target_moniker) {
-                    // If no EventSource is present, first create it.
-                    None => {
-                        let event_source = self.create(target_moniker.clone()).await?;
-                        event_source_registry.insert(target_moniker.clone(), event_source.clone());
-                        event_source
-                    }
-                    Some(event_source) => event_source.clone(),
-                };
-                Ok(Some(Box::new(event_source) as Box<dyn CapabilityProvider>))
+                let event_source_registry = self.event_source_registry.lock().await;
+                if let Some(event_source) = event_source_registry.get(&target_moniker) {
+                    return Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>));
+                } else {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "Unable to find EventSource in registry for {}",
+                        target_moniker
+                    )));
+                }
             }
             (c, _) => return Ok(c),
         }
@@ -145,6 +143,20 @@ impl Hook for EventSourceFactory {
                         capability_provider.take(),
                     )
                     .await?;
+            }
+            EventPayload::Resolved { decl } => {
+                if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE_PATH) {
+                    let key = event.target_moniker.clone();
+                    let mut event_source_registry = self.event_source_registry.lock().await;
+                    // It is currently assumed that a component instance's declaration
+                    // is resolved only once. Someday, this may no longer be true if individual
+                    // components can be updated.
+                    assert!(!event_source_registry.contains_key(&key));
+                    // An EventSource is created on resolution in order to ensure that discovery
+                    // and resolution of children is not missed.
+                    let event_source = self.create(key.clone()).await?;
+                    event_source_registry.insert(key, event_source);
+                }
             }
             _ => {}
         }

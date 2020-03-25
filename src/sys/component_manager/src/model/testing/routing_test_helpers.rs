@@ -785,6 +785,7 @@ pub mod capability_util {
             .subscribe(&mut event_types, client_end)
             .await
             .expect("failed to use service");
+        event_source_proxy.start_component_tree().await.expect("failed to start component tree");
         assert_eq!(res.is_ok(), should_succeed);
     }
 

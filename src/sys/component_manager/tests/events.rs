@@ -205,7 +205,12 @@ impl EventStream {
         if expected_moniker == event.target_moniker() {
             Ok(event)
         } else {
-            Err(format_err!("Incorrect moniker"))
+            Err(format_err!(
+                "Incorrect moniker for {:?}. Expected: {}, Got: {}.",
+                T::TYPE,
+                expected_moniker,
+                event.target_moniker()
+            ))
         }
     }
 

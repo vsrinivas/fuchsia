@@ -147,7 +147,6 @@ async fn realm_offered_event_source_test() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // fxb/48882
 async fn nested_event_source_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/nested_reporter.cm",

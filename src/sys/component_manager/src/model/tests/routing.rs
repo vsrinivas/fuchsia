@@ -2390,11 +2390,6 @@ async fn use_event_from_grandparent() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
-                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
-                }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Realm,
                     source_name: "started_on_a".into(),
