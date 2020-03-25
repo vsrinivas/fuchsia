@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{validate::ROOT_ID, Data, Metrics, Node, Payload, Property, ROOT_NAME},
+    super::{validate::ROOT_ID, Data, LazyNode, Metrics, Node, Payload, Property, ROOT_NAME},
     crate::metrics::{BlockMetrics, BlockStatus},
     anyhow::{bail, format_err, Error},
     fuchsia_inspect::{
@@ -15,6 +15,7 @@ use {
         },
         reader as ireader,
     },
+    fuchsia_inspect_node_hierarchy::LinkNodeDisposition,
     fuchsia_zircon::Vmo,
     std::{
         self,
@@ -53,26 +54,45 @@ pub struct Scanner {
     final_nodes: HashMap<u32, Node>,
     final_properties: HashMap<u32, Property>,
     metrics: Metrics,
+    child_trees: Option<HashMap<String, LazyNode>>,
 }
 
 impl TryFrom<&[u8]> for Scanner {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        Scanner::scan(ireader::snapshot::Snapshot::try_from(bytes)?, bytes)
+        let scanner = Scanner::new(None);
+        scanner.scan(ireader::snapshot::Snapshot::try_from(bytes)?, bytes)
     }
 }
 
 impl TryFrom<&Vmo> for Scanner {
     type Error = Error;
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
-        // NOTE: In any context except a controlled test, it's not safe to read the VMO manually -
-        // the contents may differ or even be invalid (mid-update).
-        let size = vmo.get_size()?;
-        let mut buffer = vec![0u8; size as usize];
-        vmo.read(&mut buffer[..], 0)?;
-        Scanner::scan(ireader::snapshot::Snapshot::try_from(vmo)?, &buffer)
+        let scanner = Scanner::new(None);
+        scanner.scan(ireader::snapshot::Snapshot::try_from(vmo)?, &vmo_as_buffer(vmo)?)
     }
+}
+
+#[allow(dead_code)]
+impl TryFrom<LazyNode> for Scanner {
+    type Error = Error;
+
+    fn try_from(mut vmo_tree: LazyNode) -> Result<Self, Self::Error> {
+        let snapshot = ireader::snapshot::Snapshot::try_from(vmo_tree.vmo())?;
+        let buffer = vmo_as_buffer(vmo_tree.vmo())?;
+        let scanner = Scanner::new(vmo_tree.take_children());
+        scanner.scan(snapshot, &buffer)
+    }
+}
+
+fn vmo_as_buffer(vmo: &Vmo) -> Result<Vec<u8>, Error> {
+    // NOTE: In any context except a controlled test, it's not safe to read the VMO manually -
+    // the contents may differ or even be invalid (mid-update).
+    let size = vmo.get_size()?;
+    let mut buffer = vec![0u8; size as usize];
+    vmo.read(&mut buffer[..], 0)?;
+    Ok(buffer)
 }
 
 fn low_bits(number: u8, n_bits: usize) -> u8 {
@@ -160,38 +180,62 @@ fn check_zero_bits(
 }
 
 impl Scanner {
-    pub fn scan(snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
-        let mut ret = Scanner::new();
+    fn new(child_trees: Option<HashMap<String, LazyNode>>) -> Scanner {
+        let mut ret = Scanner {
+            nodes: HashMap::new(),
+            names: HashMap::new(),
+            properties: HashMap::new(),
+            extents: HashMap::new(),
+            metrics: Metrics::new(),
+            final_nodes: HashMap::new(),
+            final_properties: HashMap::new(),
+            child_trees,
+        };
+        // The ScannedNode at 0 is the "root" node. It exists to receive pointers to objects
+        // whose parent is 0 while scanning the VMO.
+        ret.nodes.insert(
+            0,
+            ScannedNode {
+                validated: true,
+                parent: 0,
+                name: 0,
+                children: HashSet::new(),
+                properties: HashSet::new(),
+                metrics: None,
+            },
+        );
+        ret
+    }
+
+    fn scan(mut self, snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
         for block in snapshot.scan() {
             match block.block_type_or() {
-                Ok(BlockType::Free) => ret.process_free(block)?,
-                Ok(BlockType::Reserved) => ret.process_reserved(block)?,
-                Ok(BlockType::Header) => ret.process_header(block)?,
-                Ok(BlockType::NodeValue) => ret.process_node(block)?,
+                Ok(BlockType::Free) => self.process_free(block)?,
+                Ok(BlockType::Reserved) => self.process_reserved(block)?,
+                Ok(BlockType::Header) => self.process_header(block)?,
+                Ok(BlockType::NodeValue) => self.process_node(block)?,
                 Ok(BlockType::IntValue)
                 | Ok(BlockType::UintValue)
                 | Ok(BlockType::DoubleValue)
                 | Ok(BlockType::ArrayValue)
                 | Ok(BlockType::BufferValue)
-                | Ok(BlockType::BoolValue) => ret.process_property(block, buffer)?,
-                Ok(BlockType::Extent) => ret.process_extent(block, buffer)?,
-                Ok(BlockType::Name) => ret.process_name(block, buffer)?,
-                Ok(BlockType::Tombstone) => ret.process_tombstone(block)?,
-                Ok(BlockType::LinkValue) => {
-                    return Err(format_err!("LinkValue isn't supported yet."))
-                }
+                | Ok(BlockType::BoolValue)
+                | Ok(BlockType::LinkValue) => self.process_property(block, buffer)?,
+                Ok(BlockType::Extent) => self.process_extent(block, buffer)?,
+                Ok(BlockType::Name) => self.process_name(block, buffer)?,
+                Ok(BlockType::Tombstone) => self.process_tombstone(block)?,
                 Err(error) => return Err(error),
             }
         }
-        let (mut new_nodes, mut new_properties) = ret.make_valid_node_tree(ROOT_ID)?;
+        let (mut new_nodes, mut new_properties) = self.make_valid_node_tree(ROOT_ID)?;
         for (node, id) in new_nodes.drain(..) {
-            ret.final_nodes.insert(id, node);
+            self.final_nodes.insert(id, node);
         }
         for (property, id) in new_properties.drain(..) {
-            ret.final_properties.insert(id, property);
+            self.final_properties.insert(id, property);
         }
-        ret.record_unused_metrics();
-        Ok(ret)
+        self.record_unused_metrics();
+        Ok(self)
     }
 
     pub fn data(self) -> Data {
@@ -218,31 +262,6 @@ impl Scanner {
         for (_, extent) in self.extents.drain() {
             self.metrics.record(&extent.metrics, BlockStatus::NotUsed);
         }
-    }
-    fn new() -> Scanner {
-        let mut ret = Scanner {
-            nodes: HashMap::new(),
-            names: HashMap::new(),
-            properties: HashMap::new(),
-            extents: HashMap::new(),
-            metrics: Metrics::new(),
-            final_nodes: HashMap::new(),
-            final_properties: HashMap::new(),
-        };
-        // The ScannedNode at 0 is the "root" node. It exists to receive pointers to objects
-        // whose parent is 0 while scanning the VMO.
-        ret.nodes.insert(
-            0,
-            ScannedNode {
-                validated: true,
-                parent: 0,
-                name: 0,
-                children: HashSet::new(),
-                properties: HashSet::new(),
-                metrics: None,
-            },
-        );
-        ret
     }
 
     fn use_node(&mut self, node_id: u32) -> Result<ScannedNode, Error> {
@@ -386,6 +405,7 @@ impl Scanner {
     }
 
     fn build_scanned_payload(
+        &mut self,
         block: &Block<&[u8]>,
         block_type: BlockType,
     ) -> Result<ScannedPayload, Error> {
@@ -431,6 +451,30 @@ impl Scanner {
                     }
                 }
             }
+            BlockType::LinkValue => {
+                let child_trees = self
+                    .child_trees
+                    .as_mut()
+                    .ok_or(format_err!("LinkValue encountered without child tree."))?;
+                let child_name = &self
+                    .names
+                    .get(&block.name_index()?)
+                    .ok_or(format_err!(
+                        "Child name not found for LinkValue block {}.",
+                        block.index()
+                    ))?
+                    .name;
+                let child_tree = child_trees.remove(child_name).ok_or(format_err!(
+                    "Lazy node not found for LinkValue block {} with name {}.",
+                    block.index(),
+                    child_name
+                ))?;
+                ScannedPayload::Link {
+                    content: block.link_content_index()?,
+                    disposition: block.link_node_disposition()?,
+                    scanned_tree: Scanner::try_from(child_tree)?,
+                }
+            }
             illegal_type => {
                 return Err(format_err!("No way I should see {:?} for BlockType", illegal_type))
             }
@@ -444,7 +488,7 @@ impl Scanner {
         let id = block.index();
         let parent = block.parent_index()?;
         let block_type = block.block_type_or()?;
-        let payload = Self::build_scanned_payload(&block, block_type)?;
+        let payload = self.build_scanned_payload(&block, block_type)?;
         let property = ScannedProperty {
             name: block.name_index()?,
             parent,
@@ -491,31 +535,28 @@ impl Scanner {
     fn make_valid_property(&mut self, id: u32) -> Result<Property, Error> {
         let scanned_property = self.use_property(id)?;
         let name = self.use_owned_name(scanned_property.name)?;
-        let payload = self.make_valid_payload(&scanned_property.payload)?;
+        let payload = self.make_valid_payload(scanned_property.payload)?;
         Ok(Property { id, name, parent: scanned_property.parent, payload })
     }
 
-    fn make_valid_payload(&mut self, payload: &ScannedPayload) -> Result<Payload, Error> {
+    fn make_valid_payload(&mut self, payload: ScannedPayload) -> Result<Payload, Error> {
         Ok(match payload {
-            ScannedPayload::Int(data) => Payload::Int(*data),
-            ScannedPayload::Uint(data) => Payload::Uint(*data),
-            ScannedPayload::Double(data) => Payload::Double(*data),
-            ScannedPayload::Bool(data) => Payload::Bool(*data),
-            ScannedPayload::IntArray(data, format) => {
-                Payload::IntArray(data.clone(), format.clone())
-            }
-            ScannedPayload::UintArray(data, format) => {
-                Payload::UintArray(data.clone(), format.clone())
-            }
-            ScannedPayload::DoubleArray(data, format) => {
-                Payload::DoubleArray(data.clone(), format.clone())
-            }
+            ScannedPayload::Int(data) => Payload::Int(data),
+            ScannedPayload::Uint(data) => Payload::Uint(data),
+            ScannedPayload::Double(data) => Payload::Double(data),
+            ScannedPayload::Bool(data) => Payload::Bool(data),
+            ScannedPayload::IntArray(data, format) => Payload::IntArray(data, format),
+            ScannedPayload::UintArray(data, format) => Payload::UintArray(data, format),
+            ScannedPayload::DoubleArray(data, format) => Payload::DoubleArray(data, format),
             ScannedPayload::Bytes { length, link } => {
-                Payload::Bytes(self.make_valid_vector(*length, *link)?)
+                Payload::Bytes(self.make_valid_vector(length, link)?)
             }
             ScannedPayload::String { length, link } => Payload::String(
-                std::str::from_utf8(&self.make_valid_vector(*length, *link)?)?.to_owned(),
+                std::str::from_utf8(&self.make_valid_vector(length, link)?)?.to_owned(),
             ),
+            ScannedPayload::Link { content, disposition, scanned_tree } => {
+                Payload::Link { content, disposition, parsed_data: scanned_tree.data() }
+            }
         })
     }
 
@@ -586,6 +627,7 @@ enum ScannedPayload {
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
+    Link { content: u32, disposition: LinkNodeDisposition, scanned_tree: Scanner },
 }
 
 #[cfg(test)]

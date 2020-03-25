@@ -11,6 +11,7 @@ use {
     anyhow::{bail, format_err, Error},
     difference,
     fuchsia_inspect::{self, format::block::ArrayFormat},
+    fuchsia_inspect_node_hierarchy::LinkNodeDisposition,
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
         self,
@@ -85,6 +86,7 @@ enum Payload {
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
+    Link { content: u32, disposition: LinkNodeDisposition, parsed_data: Data },
 }
 
 impl Property {

@@ -25,6 +25,7 @@ validator_deps = [
   "//src/lib/fuchsia-component",
   "//src/lib/fuchsia-url",
   "//src/lib/inspect/rust/fuchsia-inspect",
+  "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
   "//src/lib/syslog/rust:syslog",
   "//src/lib/zircon/rust:fuchsia-zircon",
   "//third_party/rust_crates:anyhow",
