@@ -128,7 +128,7 @@ pub fn send_beacon(
     Ok(())
 }
 
-fn send_authentication(
+pub fn send_authentication(
     channel: &WlanChan,
     bssid: &mac::Bssid,
     proxy: &WlantapPhyProxy,
@@ -154,9 +154,10 @@ fn send_authentication(
     Ok(())
 }
 
-fn send_association_response(
+pub fn send_association_response(
     channel: &WlanChan,
     bssid: &mac::Bssid,
+    status_code: mac::StatusCode,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
@@ -171,7 +172,7 @@ fn send_association_response(
             ),
             mac::AssocRespHdr: &mac::AssocRespHdr {
                 capabilities: mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true),
-                status_code: mac::StatusCode::SUCCESS,
+                status_code,
                 aid: 2, // does not matter
             },
         },
@@ -283,8 +284,13 @@ fn handle_connect_events(
                                 .expect("Error sending fake authentication frame.");
                         }
                         Some(mac::MgmtBody::AssociationReq { .. }) => {
-                            send_association_response(&CHANNEL, bssid, &phy)
-                                .expect("Error sending fake association response frame.");
+                            send_association_response(
+                                &CHANNEL,
+                                bssid,
+                                mac::StatusCode::SUCCESS,
+                                &phy,
+                            )
+                            .expect("Error sending fake association response frame.");
                             if let Some(authenticator) = authenticator {
                                 let mut updates = wlan_rsn::rsna::UpdateSink::default();
                                 authenticator

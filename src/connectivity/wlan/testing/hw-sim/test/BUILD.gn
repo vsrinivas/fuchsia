@@ -11,6 +11,7 @@ test_package("wlan-hw-sim-test") {
     "configure_legacy_privacy_on",
     "connect_to_open_network",
     "connect_to_wpa2_network",
+    "connect_with_failed_association",
     "ethernet_tx_rx",
     "multi_ifaces",
     "multiple_clients_ap",
@@ -38,6 +39,10 @@ test_package("wlan-hw-sim-test") {
     },
     {
       name = "connect_to_wpa2_network"
+      environments = basic_envs
+    },
+    {
+      name = "connect_with_failed_association"
       environments = basic_envs
     },
     {

@@ -1,0 +1,30 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
+                "fuchsia.wlan.device.service.DeviceService": [
+                    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
+                    "--isolated_devmgr"
+                ],
+                "fuchsia.wlan.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"
+                ],
+                "fuchsia.wlan.service.Wlan": [
+                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/connect_with_failed_association"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.stash.SecureStore",
+            "fuchsia.wlan.devmgr.IsolatedDevmgr",
+            "fuchsia.wlan.service.Wlan",
+            "fuchsia.wlan.device.service.DeviceService"
+        ]
+    }
+}
