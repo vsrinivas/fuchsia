@@ -83,12 +83,6 @@ test_package("cobalt_tests") {
     },
     {
       path = rebase_path(
-              get_label_info("app:global_metrics_registry", "target_gen_dir") +
-              "/global_metrics_registry.pb")
-      dest = "global_metrics_registry.pb"
-    },
-    {
-      path = rebase_path(
               get_label_info("app:testapp_metrics_registry", "target_gen_dir") +
               "/testapp_metrics_registry.pb")
       dest = "testapp_metrics_registry.pb"

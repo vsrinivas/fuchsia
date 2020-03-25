@@ -24,7 +24,6 @@
 #include "src/cobalt/bin/app/user_consent_watcher.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
-#include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
@@ -94,8 +93,7 @@ class CobaltApp {
   friend class CreateCobaltConfigTest;
 
   static CobaltConfig CreateCobaltConfig(
-      async_dispatcher_t* dispatcher,
-      cobalt::logger::ProjectContextFactory* global_project_context_factory,
+      async_dispatcher_t* dispatcher, const std::string& global_metrics_registry_path,
       const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
       utils::FuchsiaHTTPClient::LoaderFactory http_loader_factory,
       std::chrono::seconds target_interval, std::chrono::seconds min_interval,
@@ -106,7 +104,6 @@ class CobaltApp {
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
             std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
-            std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
             bool start_event_aggregator_worker, bool watch_for_user_consent);
 
   static encoder::ClientSecret getClientSecret();

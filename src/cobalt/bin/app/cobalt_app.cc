@@ -11,7 +11,6 @@
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
 
@@ -34,7 +33,7 @@ constexpr char kLocalLogFilePath[] = "/data/cobalt_observations.pb";
 
 const size_t kClearcutMaxRetries = 5;
 
-std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_registry_path) {
+std::unique_ptr<CobaltRegistry> ReadRegistry(const std::string& global_metrics_registry_path) {
   std::ifstream registry_file_stream;
   registry_file_stream.open(global_metrics_registry_path);
   FXL_CHECK(registry_file_stream && registry_file_stream.good())
@@ -44,12 +43,16 @@ std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_reg
                                        std::istreambuf_iterator<char>());
   FXL_CHECK(!global_metrics_registry_bytes.empty())
       << "Could not read the Cobalt global metrics registry: " << global_metrics_registry_path;
-  return global_metrics_registry_bytes;
+
+  auto cobalt_registry = std::make_unique<CobaltRegistry>();
+  FXL_CHECK(cobalt_registry->ParseFromString(global_metrics_registry_bytes))
+      << "Unable to parse global metrics registry at: " << global_metrics_registry_path;
+
+  return cobalt_registry;
 }
 
 CobaltConfig CobaltApp::CreateCobaltConfig(
-    async_dispatcher_t* dispatcher,
-    cobalt::logger::ProjectContextFactory* global_project_context_factory,
+    async_dispatcher_t* dispatcher, const std::string& global_metrics_registry_path,
     const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
     FuchsiaHTTPClient::LoaderFactory http_loader_factory, std::chrono::seconds target_interval,
     std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
@@ -69,14 +72,6 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
         ReadPublicKeyPem(configuration_data.AnalyzerPublicKeyPath()),
         std::make_unique<FuchsiaHTTPClient>(dispatcher, std::move(http_loader_factory)),
         kClearcutMaxRetries);
-  }
-
-  auto internal_project_context =
-      global_project_context_factory->NewProjectContext(logger::kCustomerId, logger::kProjectId);
-  if (!internal_project_context) {
-    FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
-                      "include the expected internal metrics project. "
-                      "Cobalt-measuring-Cobalt will be disabled.";
   }
 
   CobaltConfig cfg = {
@@ -105,7 +100,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
 
       .api_key = configuration_data.GetApiKey(),
       .client_secret = CobaltApp::getClientSecret(),
-      .internal_logger_project_context = std::move(internal_project_context),
+      .global_registry = ReadRegistry(global_metrics_registry_path),
 
       .local_aggregation_backfill_days = event_aggregator_backfill_days,
 
@@ -121,9 +116,6 @@ CobaltApp CobaltApp::CreateCobaltApp(
     bool start_event_aggregator_worker, bool use_memory_observation_store,
     size_t max_bytes_per_observation_store, const std::string& product_name,
     const std::string& board_name, const std::string& version) {
-  auto global_project_context_factory =
-      std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
-
   // Create the configuration data from the data in the filesystem.
   FuchsiaConfigurationData configuration_data;
 
@@ -132,7 +124,7 @@ CobaltApp CobaltApp::CreateCobaltApp(
   auto system_clock = std::make_unique<FuchsiaSystemClock>(context_ptr->svc());
 
   auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
-      dispatcher, global_project_context_factory.get(), configuration_data, system_clock.get(),
+      dispatcher, kMetricsRegistryPath, configuration_data, system_clock.get(),
       [context_ptr]() { return context_ptr->svc()->Connect<fuchsia::net::http::Loader>(); },
       target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
       use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
@@ -141,16 +133,14 @@ CobaltApp CobaltApp::CreateCobaltApp(
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
   return CobaltApp(std::move(context), dispatcher, std::move(cobalt_service),
-                   std::move(system_clock), std::move(global_project_context_factory),
-                   start_event_aggregator_worker, configuration_data.GetWatchForUserConsent());
+                   std::move(system_clock), start_event_aggregator_worker,
+                   configuration_data.GetWatchForUserConsent());
 }
 
-CobaltApp::CobaltApp(
-    std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-    std::unique_ptr<CobaltServiceInterface> cobalt_service,
-    std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
-    std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
-    bool start_event_aggregator_worker, bool watch_for_user_consent)
+CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+                     std::unique_ptr<CobaltServiceInterface> cobalt_service,
+                     std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
+                     bool start_event_aggregator_worker, bool watch_for_user_consent)
     : context_(std::move(context)),
       cobalt_service_(std::move(cobalt_service)),
       system_clock_(std::move(system_clock)),
@@ -170,14 +160,13 @@ CobaltApp::CobaltApp(
   });
 
   // Create LoggerFactory protocol implementation and start serving it.
-  logger_factory_impl_.reset(new LoggerFactoryImpl(global_project_context_factory, &timer_manager_,
-                                                   cobalt_service_.get()));
+  logger_factory_impl_.reset(new LoggerFactoryImpl(&timer_manager_, cobalt_service_.get()));
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
   // Create MetricEventLoggerFactory protocol implementation and start serving it.
-  metric_event_logger_factory_impl_ = std::make_unique<MetricEventLoggerFactoryImpl>(
-      std::move(global_project_context_factory), cobalt_service_.get());
+  metric_event_logger_factory_impl_ =
+      std::make_unique<MetricEventLoggerFactoryImpl>(cobalt_service_.get());
   context_->outgoing()->AddPublicService(
       metric_event_logger_factory_bindings_.GetHandler(metric_event_logger_factory_impl_.get()));
 

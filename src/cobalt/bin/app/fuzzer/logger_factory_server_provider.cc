@@ -17,7 +17,6 @@
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/clearcut/uploader.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
 
 // Source of cobalt::logger::kConfig
@@ -27,6 +26,14 @@ namespace {
 
 ::fidl::fuzzing::ServerProvider<::fuchsia::cobalt::LoggerFactory, ::cobalt::LoggerFactoryImpl>*
     fuzzer_server_provider;
+
+std::unique_ptr<cobalt::CobaltRegistry> ToRegistry(const std::string& registry) {
+  auto cobalt_registry = std::make_unique<cobalt::CobaltRegistry>();
+  if (!cobalt_registry->ParseFromString(registry)) {
+    FX_LOGS(ERROR) << "Unable to parse global metrics";
+  }
+  return cobalt_registry;
+}
 
 cobalt::CobaltConfig cfg = {
     .file_system = std::make_unique<cobalt::util::PosixFileSystem>(),
@@ -43,10 +50,10 @@ cobalt::CobaltConfig cfg = {
     .initial_interval = std::chrono::seconds(10),
 
     .target_pipeline = std::make_unique<cobalt::LocalPipeline>(),
+    .global_registry = ToRegistry(cobalt::Base64Decode(cobalt::logger::kConfig)),
 
     .api_key = "",
     .client_secret = cobalt::encoder::ClientSecret::GenerateNewSecret(),
-    .internal_logger_project_context = nullptr,
 
     .local_aggregation_backfill_days = 4,
 };
@@ -67,12 +74,7 @@ zx_status_t fuzzer_init() {
         ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller);
   }
 
-  std::string config = cobalt::Base64Decode(cobalt::logger::kConfig);
-  auto global_project_context_factory =
-      std::make_shared<cobalt::logger::ProjectContextFactory>(config);
-
-  return fuzzer_server_provider->Init(global_project_context_factory, &timer_manager,
-                                      &cobalt_service);
+  return fuzzer_server_provider->Init(&timer_manager, &cobalt_service);
 }
 
 zx_status_t fuzzer_connect(zx_handle_t channel_handle, async_dispatcher_t* dispatcher) {

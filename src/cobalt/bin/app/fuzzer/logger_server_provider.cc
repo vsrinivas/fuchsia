@@ -14,7 +14,6 @@
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/utils/base64.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
 
 // Source of cobalt::logger::kConfig
@@ -43,7 +42,6 @@ cobalt::CobaltConfig cfg = {
 
     .api_key = "",
     .client_secret = cobalt::encoder::ClientSecret::GenerateNewSecret(),
-    .internal_logger_project_context = nullptr,
 
     .local_aggregation_backfill_days = 4,
 };

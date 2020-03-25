@@ -17,7 +17,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "third_party/abseil-cpp/absl/strings/match.h"
-#include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/testing/fake_cobalt_service.h"
 
 namespace cobalt {
@@ -51,11 +50,8 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
       std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
       const std::string& product_name, const std::string& board_name, const std::string& version) {
-    auto global_project_context_factory = std::make_shared<logger::ProjectContextFactory>(
-        ReadGlobalMetricsRegistryBytes(metrics_registry_path));
-
     return CobaltApp::CreateCobaltConfig(
-        dispatcher(), global_project_context_factory.get(), configuration_data, &clock_,
+        dispatcher(), metrics_registry_path, configuration_data, &clock_,
         [this] {
           return service_directory_provider_.service_directory()
               ->Connect<fuchsia::net::http::Loader>();
@@ -105,42 +101,17 @@ TEST_F(CreateCobaltConfigTest, GA) {
   EXPECT_EQ(config.release_stage, ReleaseStage::GA);
 }
 
-TEST_F(CreateCobaltConfigTest, InternalLogger) {
-  ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
-  FuchsiaConfigurationData configuration_data(kTestDir, kTestDir);
-  CobaltConfig config = CreateCobaltConfig(
-      // Use the global metrics registry that contains the cobalt_internal project.
-      "/pkg/data/global_metrics_registry.pb", configuration_data, std::chrono::seconds(1),
-      std::chrono::seconds(2), std::chrono::seconds(3), 4, true, 1048000, "core", "x64", "0.1.2");
-  ASSERT_NE(config.internal_logger_project_context, nullptr);
-  std::string internal_metrics_name = config.internal_logger_project_context->FullyQualifiedName();
-  EXPECT_TRUE(absl::StrContains(internal_metrics_name, "cobalt_internal"));
-}
-
-TEST_F(CreateCobaltConfigTest, InternalLoggerNotFound) {
-  ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
-  FuchsiaConfigurationData configuration_data(kTestDir, kTestDir);
-  CobaltConfig config = CreateCobaltConfig(
-      // Use the testapp metrics registry that does not contain the cobalt_internal project.
-      "/pkg/data/testapp_metrics_registry.pb", configuration_data, std::chrono::seconds(1),
-      std::chrono::seconds(2), std::chrono::seconds(3), 4, true, 1048000, "core", "x64", "0.1.2");
-  EXPECT_EQ(config.internal_logger_project_context, nullptr);
-}
-
 class CobaltAppTest : public gtest::TestLoopFixture {
  public:
   CobaltAppTest()
       : ::gtest::TestLoopFixture(),
         context_provider_(),
-        testapp_project_context_factory_(std::make_shared<logger::ProjectContextFactory>(
-            ReadGlobalMetricsRegistryBytes("/pkg/data/testapp_metrics_registry.pb"))),
         timekeeper_(context_provider_.context()),
         clock_(new FuchsiaSystemClock(context_provider_.public_service_directory())),
         fake_service_(new testing::FakeCobaltService()),
         cobalt_app_(context_provider_.TakeContext(), dispatcher(),
                     std::unique_ptr<testing::FakeCobaltService>(fake_service_),
-                    std::unique_ptr<FuchsiaSystemClock>(clock_), testapp_project_context_factory_,
-                    true, false) {}
+                    std::unique_ptr<FuchsiaSystemClock>(clock_), true, false) {}
 
  protected:
   void SetUp() override {
@@ -180,7 +151,6 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   }
 
   sys::testing::ComponentContextProvider context_provider_;
-  std::shared_ptr<logger::ProjectContextFactory> testapp_project_context_factory_;
   testapp::FakeTimekeeper timekeeper_;
   FuchsiaSystemClock* clock_;
   testing::FakeCobaltService* fake_service_;
@@ -198,8 +168,11 @@ TEST_F(CobaltAppTest, CreateLogger) {
   EXPECT_EQ(fake_logger->call_count(), 0);
 }
 
-TEST_F(CobaltAppTest, CreateLoggerInvalidArgument) {
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+TEST_F(CobaltAppTest, CreateLoggerNoValidLogger) {
+  // Make sure that the CobaltService returns nullptr for the next call to NewLogger().
+  fake_service_->FailNextNewLogger();
+
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::OK;
   fuchsia::cobalt::LoggerPtr logger;
   factory_->CreateLoggerFromProjectId(/*project_id=*/987654321, logger.NewRequest(),
                                       [&](fuchsia::cobalt::Status status_) { status = status_; });
@@ -251,8 +224,11 @@ TEST_F(CobaltAppTest, CreateMetricEventLogger) {
   EXPECT_EQ(fake_logger->call_count(), 0);
 }
 
-TEST_F(CobaltAppTest, CreateMetricEventLoggerInvalidArgument) {
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+TEST_F(CobaltAppTest, CreateMetricEventLoggerNoValidLogger) {
+  // Make sure that the CobaltService returns nullptr for the next call to NewLogger().
+  fake_service_->FailNextNewLogger();
+
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::OK;
   fuchsia::cobalt::ProjectSpec project;
   project.set_customer_id(1);
   project.set_project_id(987654321);

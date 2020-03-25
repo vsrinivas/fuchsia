@@ -11,27 +11,15 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
-#include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {
 
 class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
-  LoggerFactoryImpl(
-      std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
-      TimerManager* timer_manager, CobaltServiceInterface* cobalt_service);
+  LoggerFactoryImpl(TimerManager* timer_manager, CobaltServiceInterface* cobalt_service);
 
  private:
-  // Constructs a new LoggerImpl based on |project_context|, binds it to
-  // |request|, and stores the binding in |binding_set|.
-  // |LoggerInterface| should be Logger or LoggerSimple.
-  template <typename LoggerInterface>
-  void BindNewLogger(
-      std::unique_ptr<logger::ProjectContext> project_context,
-      fidl::InterfaceRequest<LoggerInterface> request,
-      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
-
   // Extracts the Cobalt 1.0 project with the given |project_id| from the global CobaltRegistry, if
   // there is such a project in the registry, and uses this to construct a LoggerImpl. Binds this to
   // |request| and stores the binding in |binding_set|. |callback| will be invoked with OK upon
@@ -54,7 +42,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   fidl::BindingSet<fuchsia::cobalt::LoggerSimple, std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
 
-  std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory_;
   TimerManager* timer_manager_;             // not owned
   CobaltServiceInterface* cobalt_service_;  // not owned
 

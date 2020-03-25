@@ -69,7 +69,6 @@ source_set("lib") {
     "//third_party/cobalt/src/lib/util:pem_util",
     "//third_party/cobalt/src/lib/util:posix_file_system",
     "//third_party/cobalt/src/logger",
-    "//third_party/cobalt/src/logger:project_context_factory",
     "//third_party/cobalt/src/public:cobalt_config",
     "//third_party/cobalt/src/public:cobalt_service",
     "//third_party/cobalt/src/public:cobalt_service_interface",
