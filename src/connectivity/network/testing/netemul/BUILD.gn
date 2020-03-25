@@ -5,9 +5,7 @@
 group("netemul") {
   testonly = true
   public_deps = [
-    "runner:netemul_devmgr",
-    "runner:netemul_sandbox",
-    "runner/runner:netemul_runner",
+    ":base",
 
     # The following packages are needed to run the netemul guest integration test.
     "//garnet/packages/prod:guest_runner",
@@ -16,6 +14,18 @@ group("netemul") {
     "//src/connectivity/network/tun/network-tun",
     "//src/virtualization/lib/guest_interaction",
     "//src/virtualization/packages",
+  ]
+}
+
+# This group includes only the base packages required to run a netemul test.
+# You can use this group in your `fx set` line if you don't require the guest packages, it'll make
+# your image considerably smaller.
+group("base") {
+  testonly = true
+  public_deps = [
+    "runner:netemul_devmgr",
+    "runner:netemul_sandbox",
+    "runner/runner:netemul_runner",
   ]
 }
 
