@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/remote_control_runner_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

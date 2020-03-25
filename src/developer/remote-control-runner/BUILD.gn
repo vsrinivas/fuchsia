@@ -1,0 +1,62 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/test_spec.gni")
+
+group("remote-control-runner") {
+  testonly = true
+
+  public_deps = [ ":pkg" ]
+}
+
+rustc_binary("bin") {
+  name = "remote-control-runner"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/developer/remote-control/service:remote-control-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+test_package("remote-control-runner-tests") {
+  deps = [ ":bin_test" ]
+
+  tests = [
+    {
+      name = "remote_control_runner_bin_test"
+    },
+  ]
+}
+
+package("pkg") {
+  package_name = "remote-control-runner"
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "remote_control_runner"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/remote-control-runner.cmx")
+      dest = "remote-control-runner.cmx"
+    },
+  ]
+}

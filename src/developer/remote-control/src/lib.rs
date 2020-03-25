@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_test_manager as ftest_manager,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::prelude::*,
+    std::rc::Rc,
 };
 
 mod component_control;
@@ -35,7 +36,7 @@ impl RemoteControlService {
     }
 
     pub async fn serve_stream<'a>(
-        &'a self,
+        self: Rc<Self>,
         mut stream: rcs::RemoteControlRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("next RemoteControl request")? {
@@ -48,7 +49,7 @@ impl RemoteControlService {
                     controller,
                     responder,
                 } => {
-                    let mut response = self.spawn_component_async(
+                    let mut response = self.clone().spawn_component_async(
                         &component_url,
                         args,
                         stdout,
@@ -58,10 +59,10 @@ impl RemoteControlService {
                     responder.send(&mut response).context("sending StartComponent response")?;
                 }
                 rcs::RemoteControlRequest::RebootDevice { reboot_type, responder } => {
-                    self.reboot_device(reboot_type, responder).await?;
+                    self.clone().reboot_device(reboot_type, responder).await?;
                 }
                 rcs::RemoteControlRequest::IdentifyHost { responder } => {
-                    self.identify_host(responder).await?;
+                    self.clone().identify_host(responder).await?;
                 }
                 rcs::RemoteControlRequest::LaunchSuite {
                     test_url,
@@ -99,7 +100,7 @@ impl RemoteControlService {
     }
 
     pub fn spawn_component_async(
-        &self,
+        self: &Rc<Self>,
         component_name: &str,
         argv: Vec<String>,
         stdout: fidl::Socket,
@@ -140,7 +141,7 @@ impl RemoteControlService {
     }
 
     pub async fn reboot_device<'a>(
-        &'a self,
+        self: &Rc<Self>,
         reboot_type: rcs::RebootType,
         responder: rcs::RemoteControlRebootDeviceResponder,
     ) -> Result<(), Error> {
@@ -157,7 +158,7 @@ impl RemoteControlService {
     }
 
     pub async fn identify_host<'a>(
-        &'a self,
+        self: &Rc<Self>,
         responder: rcs::RemoteControlIdentifyHostResponder,
     ) -> Result<(), Error> {
         let ilist = match self.netstack_proxy.list_interfaces().await {
@@ -339,16 +340,16 @@ mod tests {
     }
 
     fn setup_rcs() -> rcs::RemoteControlProxy {
-        let service: RemoteControlService;
-        service = RemoteControlService::new_with_proxies(
+        let service: Rc<RemoteControlService>;
+        service = Rc::new(RemoteControlService::new_with_proxies(
             setup_fake_admin_service(),
             setup_fake_netstack_service(),
             setup_fake_harness_service(),
-        );
+        ));
 
         let (rcs_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
-        fasync::spawn(async move {
+        fasync::spawn_local(async move {
             service.serve_stream(stream).await.unwrap();
         });
 

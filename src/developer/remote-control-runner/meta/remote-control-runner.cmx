@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/remote_control_runner"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.developer.remotecontrol.RemoteControl",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
