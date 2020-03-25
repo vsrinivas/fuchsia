@@ -28,6 +28,7 @@ version = "0.1.0"
 anyhow = "1.0.25"
 arbitrary = { version = "0.4.0", features = ["derive"] }
 argh = "0.1"
+async-trait = "0.1.11"
 base64 = "0.9"
 bitfield = "0.13"
 bitflags = "1"
@@ -116,7 +117,6 @@ features = ["chrono", "tracing-log"]
 
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]
-async-trait = "0.1.11"
 bincode = "1"
 bytes = "0.5.4"
 crossbeam = "0.7.3"

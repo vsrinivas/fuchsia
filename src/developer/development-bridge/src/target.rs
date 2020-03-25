@@ -4,8 +4,10 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+use futures::lock::Mutex;
 
 use crate::net::IsLinkLocal;
 
@@ -74,7 +76,7 @@ impl Display for TargetAddr {
 
 #[derive(Debug)]
 pub struct TargetCollection {
-    map: HashMap<String, Target>,
+    map: HashMap<String, Arc<Mutex<Target>>>,
 }
 
 impl TargetCollection {
@@ -82,10 +84,11 @@ impl TargetCollection {
         Self { map: HashMap::new() }
     }
 
-    pub fn merge_insert(&mut self, t: Target) {
+    pub async fn merge_insert(&mut self, t: Target) {
         // TODO(awdavies): better merging (using more indices for matching).
-        match self.map.get_mut(&t.nodename) {
+        match self.map.get(&t.nodename) {
             Some(to_update) => {
+                let mut to_update = to_update.lock().await;
                 to_update.addrs.extend(&t.addrs);
                 // Ignore out-of-order packets.
                 if to_update.last_response < t.last_response {
@@ -93,12 +96,12 @@ impl TargetCollection {
                 }
             }
             None => {
-                self.map.insert(t.nodename.clone(), t);
+                self.map.insert(t.nodename.clone(), Arc::new(Mutex::new(t)));
             }
         }
     }
 
-    pub fn target_by_nodename(&self, n: &String) -> Option<&Target> {
+    pub fn target_by_nodename(&self, n: &String) -> Option<&Arc<Mutex<Target>>> {
         self.map.get(n)
     }
 }
@@ -141,34 +144,41 @@ mod test {
 
     #[test]
     fn test_target_collection_insert_new() {
-        let mut tc = TargetCollection::new();
-        let nodename = String::from("what");
-        let t = Target::new(&nodename, fake_now());
-        tc.merge_insert(t.clone());
-        assert_eq!(tc.target_by_nodename(&nodename), Some(&t));
-        assert_eq!(tc.target_by_nodename(&"oihaoih".to_string()), None);
+        hoist::run(async move {
+            let mut tc = TargetCollection::new();
+            let nodename = String::from("what");
+            let t = Target::new(&nodename, fake_now());
+            tc.merge_insert(t.clone()).await;
+            assert_eq!(*tc.target_by_nodename(&nodename).unwrap().lock().await, t);
+            match tc.target_by_nodename(&"oihaoih".to_string()) {
+                Some(_) => panic!("string lookup should return Nobne"),
+                _ => (),
+            }
+        });
     }
 
     #[test]
     fn test_target_collection_merge() {
-        let mut tc = TargetCollection::new();
-        let nodename = String::from("bananas");
-        let mut t1 = Target::new(&nodename, fake_now());
-        let mut t2 = Target::new(&nodename, fake_elapsed());
-        let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let a2 = IpAddr::V6(Ipv6Addr::new(
-            0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
-        ));
-        t1.addrs.insert((a1.clone(), 1).into());
-        t2.addrs.insert((a2.clone(), 1).into());
-        tc.merge_insert(t2.clone());
-        tc.merge_insert(t1.clone());
-        let merged_target = tc.target_by_nodename(&nodename).unwrap();
-        assert_ne!(merged_target, &t1);
-        assert_ne!(merged_target, &t2);
-        assert_eq!(merged_target.addrs.len(), 2);
-        assert_eq!(merged_target.last_response, fake_elapsed());
-        assert!(merged_target.addrs.contains(&(a1, 1).into()));
-        assert!(merged_target.addrs.contains(&(a2, 1).into()));
+        hoist::run(async move {
+            let mut tc = TargetCollection::new();
+            let nodename = String::from("bananas");
+            let mut t1 = Target::new(&nodename, fake_now());
+            let mut t2 = Target::new(&nodename, fake_elapsed());
+            let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+            let a2 = IpAddr::V6(Ipv6Addr::new(
+                0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
+            ));
+            t1.addrs.insert((a1.clone(), 1).into());
+            t2.addrs.insert((a2.clone(), 1).into());
+            tc.merge_insert(t2.clone()).await;
+            tc.merge_insert(t1.clone()).await;
+            let merged_target = tc.target_by_nodename(&nodename).unwrap().lock().await;
+            assert_ne!(*merged_target, t1);
+            assert_ne!(*merged_target, t2);
+            assert_eq!(merged_target.addrs.len(), 2);
+            assert_eq!(merged_target.last_response, fake_elapsed());
+            assert!(merged_target.addrs.contains(&(a1, 1).into()));
+            assert!(merged_target.addrs.contains(&(a2, 1).into()));
+        });
     }
 }

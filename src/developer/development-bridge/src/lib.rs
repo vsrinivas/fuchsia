@@ -9,6 +9,7 @@ use {
     crate::target::{Target, TargetCollection},
     anyhow::{Context, Error},
     ascendd_lib::run_ascendd,
+    async_trait::async_trait,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
@@ -22,6 +23,7 @@ use {
     futures::prelude::*,
     hoist::spawn,
     std::process::Command,
+    std::rc::Rc,
     std::sync::Arc,
     std::time::Duration,
 };
@@ -43,45 +45,99 @@ async fn start_ascendd() {
     Command::new(SOCAT).arg(LOCAL_SOCAT).arg(TARGET_SOCAT).spawn().unwrap();
 }
 
+/// A locked TargetCollection that has been acquired via the Mutex::lock fn.
+pub type GuardedTargetCollection = Arc<Mutex<TargetCollection>>;
+
+#[async_trait]
+pub trait DiscoveryHook {
+    async fn on_new_target(&self, nodename: &String, tc: &GuardedTargetCollection);
+}
+
 // Daemon
 #[derive(Clone)]
 pub struct Daemon {
     remote_control_proxy: RemoteControlProxy,
     target_collection: Arc<Mutex<TargetCollection>>,
+
+    discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
 }
 
 impl Daemon {
     pub async fn new() -> Result<Daemon, Error> {
         let (tx, rx) = mpsc::unbounded::<Target>();
         let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
-        Daemon::spawn_receiver_loop(rx, Arc::clone(&target_collection));
+        let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
+        Daemon::spawn_receiver_loop(
+            rx,
+            Arc::clone(&target_collection),
+            Arc::clone(&discovered_target_hooks),
+        );
+        let mut peer_id = Daemon::find_remote_control().await?;
+        let remote_control_proxy = Daemon::create_remote_control_proxy(&mut peer_id).await?;
+        // TODO(awdavies): Add in RCS-callback, making this mut.
+        let d = Daemon {
+            remote_control_proxy,
+            target_collection: Arc::clone(&target_collection),
+            discovered_target_hooks: Arc::clone(&discovered_target_hooks),
+        };
+
+        // MDNS must be started as late as possible to avoid races with registered
+        // hooks.
         let config =
             TargetFinderConfig { broadcast_interval: Duration::from_secs(120), mdns_ttl: 255 };
         let mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(&tx)?;
 
-        let mut peer_id = Daemon::find_remote_control().await?;
-        let remote_control_proxy = Daemon::create_remote_control_proxy(&mut peer_id).await?;
-        Ok(Daemon { remote_control_proxy, target_collection })
+        Ok(d)
+    }
+
+    pub async fn register_hook(&mut self, cb: impl DiscoveryHook + 'static) {
+        let mut hooks = self.discovered_target_hooks.lock().await;
+        hooks.push(Rc::new(cb));
     }
 
     pub fn spawn_receiver_loop(
         mut rx: mpsc::UnboundedReceiver<Target>,
         tc: Arc<Mutex<TargetCollection>>,
+        hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
     ) {
         spawn(async move {
             loop {
                 let target = rx.next().await.unwrap();
-                let mut targets = tc.lock().await;
-                targets.merge_insert(target);
+                let nodename = target.nodename.clone();
+                let mut tc_mut = tc.lock().await;
+                tc_mut.merge_insert(target).await;
+                let tc_clone = Arc::clone(&tc);
+                let hooks_clone = (*hooks.lock().await).clone();
+                spawn(async move {
+                    futures::future::join_all(
+                        hooks_clone.iter().map(|hook| hook.on_new_target(&nodename, &tc_clone)),
+                    )
+                    .await;
+                });
             }
         });
+    }
+
+    pub fn new_with_proxy_and_rx(
+        remote_control_proxy: RemoteControlProxy,
+        rx: mpsc::UnboundedReceiver<Target>,
+    ) -> Daemon {
+        let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
+        let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
+        Daemon::spawn_receiver_loop(
+            rx,
+            Arc::clone(&target_collection),
+            Arc::clone(&discovered_target_hooks),
+        );
+        Daemon { remote_control_proxy, target_collection, discovered_target_hooks }
     }
 
     pub fn new_with_proxy(remote_control_proxy: RemoteControlProxy) -> Daemon {
         Daemon {
             remote_control_proxy,
             target_collection: Arc::new(Mutex::new(TargetCollection::new())),
+            discovered_target_hooks: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -267,11 +323,14 @@ pub async fn start() -> Result<(), Error> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::target::TargetState;
+    use chrono::Utc;
     use fidl::endpoints::create_proxy;
     use fidl_fidl_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
         ComponentControllerMarker, RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
     };
+    use std::collections::HashSet;
 
     fn spawn_daemon_server_with_fake_remote_control(stream: DaemonRequestStream) {
         spawn(async move {
@@ -332,6 +391,55 @@ mod test {
                 .await
                 .unwrap()
                 .unwrap();
+        });
+
+        Ok(())
+    }
+
+    struct TestHookFirst {
+        callbacks_done: mpsc::UnboundedSender<bool>,
+    }
+
+    #[async_trait]
+    impl DiscoveryHook for TestHookFirst {
+        async fn on_new_target(&self, nodename: &String, tc: &GuardedTargetCollection) {
+            let t = Arc::clone(&tc.lock().await.target_by_nodename(nodename).unwrap());
+            let t = t.lock().await;
+            assert_eq!(t.nodename, "nothin");
+            assert_eq!(t.state, TargetState::Unknown);
+            assert_eq!(t.addrs, HashSet::new());
+            self.callbacks_done.unbounded_send(true).unwrap();
+        }
+    }
+
+    struct TestHookSecond {
+        callbacks_done: mpsc::UnboundedSender<bool>,
+    }
+
+    #[async_trait]
+    impl DiscoveryHook for TestHookSecond {
+        async fn on_new_target(&self, _nodename: &String, _tc: &GuardedTargetCollection) {
+            self.callbacks_done.unbounded_send(true).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_receive_target() -> Result<(), Error> {
+        hoist::run(async move {
+            let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
+            let (tx, rx) = mpsc::unbounded::<Target>();
+            let mut daemon = Daemon::new_with_proxy_and_rx(setup_fake_remote_control_service(), rx);
+            daemon.register_hook(TestHookFirst { callbacks_done: tx_from_callback.clone() }).await;
+            daemon.register_hook(TestHookSecond { callbacks_done: tx_from_callback }).await;
+            tx.unbounded_send(Target {
+                nodename: String::from("nothin"),
+                last_response: Utc::now(),
+                state: TargetState::Unknown,
+                addrs: HashSet::new(),
+            })
+            .unwrap();
+            assert!(rx_from_callback.next().await.unwrap());
+            assert!(rx_from_callback.next().await.unwrap());
         });
 
         Ok(())
