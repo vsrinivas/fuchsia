@@ -460,7 +460,7 @@ where
                             flags: _,
                             responder,
                         } => {
-                            // TODO(brunodalbo) handle control and flags
+                            // TODO(https://fxbug.dev/21106): handle control.
                             // TODO(brunodalbo) we're flattenting the parts of the
                             // message in `data` into a single Vec. There may be a
                             // way to avoid this by using the FragmentedBuffer
@@ -471,6 +471,19 @@ where
                                     addr,
                                     data.into_iter().map(|v| v.into_iter()).flatten().collect()
                                 )
+                            );
+                        }
+                        DatagramSocketRequest::SendMsg2 {
+                            addr,
+                            data,
+                            control: _,
+                            flags: _,
+                            responder,
+                        } => {
+                            // TODO(https://fxbug.dev/21106): handle control.
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.send_msg(addr, data,)
                             );
                         }
                         DatagramSocketRequest::NodeGetFlags { responder } => {

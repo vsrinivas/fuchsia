@@ -456,24 +456,38 @@ static fdio_ops_t fdio_datagram_socket_ops = {
         [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
           auto const sio = reinterpret_cast<zxio_datagram_socket_t*>(fdio_get_zxio(io));
 
-          size_t total = 0;
-          for (int i = 0; i < msg->msg_iovlen; ++i) {
-            total += msg->msg_iov[i].iov_len;
-          }
+          std::vector<uint8_t> data;
+          auto vec = [&msg, &data]() -> fidl::VectorView<uint8_t> {
+            switch (msg->msg_iovlen) {
+              case 0: {
+                return fidl::VectorView<uint8_t>();
+              }
+              case 1: {
+                auto const& iov = msg->msg_iov[0];
+                return fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(iov.iov_base)),
+                                        iov.iov_len);
+              }
+              default: {
+                size_t total = 0;
+                for (int i = 0; i < msg->msg_iovlen; ++i) {
+                  total += msg->msg_iov[i].iov_len;
+                }
+                // TODO(abarth): avoid this copy.
+                data.reserve(total);
+                for (int i = 0; i < msg->msg_iovlen; ++i) {
+                  auto const& iov = msg->msg_iov[i];
+                  std::copy_n(static_cast<const uint8_t*>(iov.iov_base), iov.iov_len,
+                              std::back_inserter(data));
+                }
+                return fidl::unowned_vec(data);
+              }
+            }
+          };
 
-          std::vector<fidl::VectorView<uint8_t>> data;
-          data.reserve(msg->msg_iovlen);
-
-          for (int i = 0; i < msg->msg_iovlen; ++i) {
-            data.push_back(fidl::VectorView(
-                fidl::unowned_ptr(reinterpret_cast<uint8_t*>(msg->msg_iov[i].iov_base)),
-                msg->msg_iov[i].iov_len));
-          }
-
-          auto response = sio->client.SendMsg(
+          auto response = sio->client.SendMsg2(
               fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(msg->msg_name)),
                                msg->msg_namelen),
-              fidl::unowned_vec(data),
+              vec(),
               fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(msg->msg_control)),
                                msg->msg_controllen),
               static_cast<int16_t>(flags));

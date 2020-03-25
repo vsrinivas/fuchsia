@@ -943,18 +943,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, addrLen, dataLen, controlLe
 	}), nil
 }
 
-func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr []uint8, data [][]uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsgResult, error) {
-	var writeOpts tcpip.WriteOptions
-	if len(addr) != 0 {
-		addr, err := decodeAddr(addr)
-		if err != nil {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
-		}
-		writeOpts.To = &addr
-	}
-	// TODO(21106): do something with control.
-	// TODO(tamird): do something with flags.
-
+func (s *datagramSocketImpl) SendMsg(ctx fidl.Context, addr []uint8, data [][]uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsgResult, error) {
 	dataLen := 0
 	for _, data := range data {
 		dataLen += len(data)
@@ -963,9 +952,34 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr []uint8, data [][]uint
 	for _, data := range data {
 		b = append(b, data...)
 	}
+	result, err := s.SendMsg2(ctx, addr, b, control, flags)
+	if err != nil {
+		return socket.DatagramSocketSendMsgResult{}, err
+	}
+	switch w := result.Which(); w {
+	case socket.DatagramSocketSendMsg2ResultResponse:
+		return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{
+			Len: result.Response.Len,
+		}), nil
+	case socket.DatagramSocketSendMsg2ResultErr:
+		return socket.DatagramSocketSendMsgResultWithErr(result.Err), nil
+	default:
+		panic(fmt.Sprintf("unexpected result type: %d", w))
+	}
+}
 
+func (s *datagramSocketImpl) SendMsg2(_ fidl.Context, addr []uint8, data []uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsg2Result, error) {
+	var writeOpts tcpip.WriteOptions
+	if len(addr) != 0 {
+		addr, err := decodeAddr(addr)
+		if err != nil {
+			return socket.DatagramSocketSendMsg2ResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		}
+		writeOpts.To = &addr
+	}
+	// TODO(https://fxbug.dev/21106): do something with control.
 	for {
-		n, resCh, err := s.ep.Write(tcpip.SlicePayload(b), writeOpts)
+		n, resCh, err := s.ep.Write(tcpip.SlicePayload(data), writeOpts)
 		if resCh != nil {
 			if err != tcpip.ErrNoLinkAddress {
 				panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
@@ -974,9 +988,9 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr []uint8, data [][]uint
 			continue
 		}
 		if err != nil {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
+			return socket.DatagramSocketSendMsg2ResultWithErr(tcpipErrorToCode(err)), nil
 		}
-		return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
+		return socket.DatagramSocketSendMsg2ResultWithResponse(socket.DatagramSocketSendMsg2Response{Len: n}), nil
 	}
 }
 

@@ -58,6 +58,8 @@ protocol DatagramSocket {
     RecvMsg(uint32 addr_len, uint32 data_len, uint32 control_len, int16 flags) -> (sockaddr addr, bytes data, bytes control, uint32 truncated) error int32;
     /// Sends a message on the socket.
     SendMsg(sockaddr addr, vector<bytes>:MAX data, bytes control, int16 flags) -> (int64 len) error int32;
+    /// Sends a message on the socket.
+    SendMsg2(sockaddr addr, bytes:MAX data, bytes control, int16 flags) -> (int64 len) error int32;
 };
 
 /// A stream socket.
