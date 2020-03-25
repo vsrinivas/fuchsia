@@ -2724,6 +2724,8 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-large-integration-manifest",
 #------------------
+    "//zircon/system/ulib/blobfs/test:blobfs-integration-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-paged-manifest",
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-unit-manifest",
 #------------------
@@ -3384,6 +3386,8 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-large-integration-manifest",
 #------------------
+    "//zircon/system/ulib/blobfs/test:blobfs-integration-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-paged-manifest",
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-unit-manifest",
 #------------------

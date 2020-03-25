@@ -21,7 +21,9 @@ group("test") {
   testonly = true
   deps = [
     ":blobfs-integration",
+    ":blobfs-integration-paged",
     ":blobfs-large-integration",
+    ":blobfs-large-integration-paged",
     ":blobfs-unit",
     ":zstd-fuzzer",
     ":zstd-seekable-fuzzer",
@@ -231,6 +233,58 @@ test("blobfs-large-integration") {
   ]
 }
 
+test("blobfs-integration-paged") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  test_group = "fs"
+  sources = [
+    "integration/blobfs_integration_paged_main.cc",
+    "integration/launch.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test("blobfs-large-integration-paged") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  test_group = "fs"
+  sources = [
+    "integration/large_integration_paged_main.cc",
+    "integration/launch.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
@@ -291,4 +345,12 @@ migrated_manifest("blobfs-integration-manifest") {
 
 migrated_manifest("blobfs-large-integration-manifest") {
   deps = [ ":blobfs-large-integration" ]
+}
+
+migrated_manifest("blobfs-integration-paged-manifest") {
+  deps = [ ":blobfs-integration-paged" ]
+}
+
+migrated_manifest("blobfs-large-integration-paged-manifest") {
+  deps = [ ":blobfs-large-integration-paged" ]
 }
