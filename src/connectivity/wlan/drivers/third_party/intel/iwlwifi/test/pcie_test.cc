@@ -656,6 +656,10 @@ TEST_F(TxTest, UnmapCmdQueue) {
 }
 
 static zx_status_t iwl_pcie_cmdq_reclaim_locked(struct iwl_trans* trans, int txq_id, uint32_t idx) {
+  if (txq_id < 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   struct iwl_txq* txq = IWL_TRANS_GET_PCIE_TRANS(trans)->txq[txq_id];
 
   mtx_lock(&txq->lock);
