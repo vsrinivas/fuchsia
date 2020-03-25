@@ -30,18 +30,26 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
     return static_cast<ArgType*>(arg_);
   }
 
-  // Queue an already filled out dpc, optionally reschedule immediately to run the dpc thread.
-  // the deferred procedure runs in a dedicated thread that runs at DPC_THREAD_PRIORITY
-  // |Queue| will not block; it may wait briefly for a spinlock.
+  // Queue this object and signal the worker thread to execute it.
+  //
+  // |Queue| will not block, but it may wait briefly for a spinlock.
+  //
+  // If |reschedule| is true, ask the scheduler to reschedule immediately.  The thread chosen by the
+  // scheduler to execute next may or may not be the DPC worker thread.
+  //
+  // |Queue| may return before or after the Dpc has executed.  It is the caller's responsibilty to
+  // ensure that a queued Dpc object is not destroyed prior to its execution.
   //
   // Returns ZX_ERR_ALREADY_EXISTS if |this| is already queued.
   zx_status_t Queue(bool reschedule);
 
-  // Queue a dpc, but must be holding the thread lock.
-  // This does not force a reschedule.
-  // QueueThreadLocked will not block; it may wait briefly for a spinlock.
-  // |this| may be deallocated once the function starts executing.
-  // |func_| may requeue the DPC if needed.
+  // Queue this object and signal the worker thread to execute it.
+  //
+  // This method is similar to |Queue| with |reschedule| equal to false, except that it must be
+  // called while holding the ThreadLock.
+  //
+  // |QueueThreadLocked| may return before or after the Dpc has executed.  It is the caller's
+  // responsibilty to ensure that a queued Dpc object is not destroyed prior to its execution.
   //
   // Returns ZX_ERR_ALREADY_EXISTS if |this| is already queued.
   zx_status_t QueueThreadLocked() TA_REQ(thread_lock);
@@ -54,9 +62,13 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
   // Shutting down a DPC queue is a two-phase process.  This is the first phase.  See
   // |ShutdownTransitionOffCpu| for the second phase.
   //
-  // This function:
+  // This method:
   // - tells |cpu|'s DPC thread to stop servicing its queue then
   // - waits, up to |deadline|, for it to finish any in-progress DPC and join
+  //
+  // Because this method blocks until the DPC thread has terminated, it is critical that the caller
+  // not hold any locks that might be needed by any previously queued DPCs.  Otheriwse, deadlock may
+  // occur.
   //
   // Upon successful completion, |cpu|'s DPC queue may contain unexecuted DPCs and new ones may be
   // added by |Queue|.  However, they will not execute (on any CPU) until |ShutdownTransitionOffCpu|
