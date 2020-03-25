@@ -56,10 +56,6 @@ class VmoBuffer final : public BlockBuffer {
 
   vmoid_t vmoid() const final { return vmoid_; }
 
-  // Expected callers should access this object through the vmoid (registered
-  // with a block device).
-  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
-
   void* Data(size_t index) final;
 
   const void* Data(size_t index) const final;

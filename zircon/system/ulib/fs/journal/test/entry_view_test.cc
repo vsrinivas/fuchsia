@@ -19,7 +19,6 @@ class Buffer : public storage::BlockBuffer {
   size_t capacity() const final { return kCapacity; }
   uint32_t BlockSize() const final { return kBlockSize; }
   vmoid_t vmoid() const final { return BLOCK_VMOID_INVALID; }
-  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
   void* Data(size_t index) final { return &buffer_[index * kBlockSize]; }
   const void* Data(size_t index) const final { return &buffer_[index * kBlockSize]; }
 
