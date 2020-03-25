@@ -6,7 +6,7 @@
 
 //! `stash` provides key/value storage to components.
 
-use anyhow::{Context as _, Error};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -24,37 +24,49 @@ mod accessor;
 mod instance;
 mod store;
 
-use fidl_fuchsia_stash::{SecureStoreMarker, StoreMarker, StoreRequest, StoreRequestStream};
+use fidl_fuchsia_stash::{
+    SecureStoreMarker, Store2Marker, StoreMarker, StoreRequest, StoreRequestStream,
+};
 
+#[derive(Debug, PartialEq)]
 struct StashSettings {
     backing_file: String,
     secure_mode: bool,
+    secondary_store: bool,
 }
 
 impl Default for StashSettings {
     fn default() -> StashSettings {
-        StashSettings { backing_file: "/data/stash.store".to_string(), secure_mode: false }
+        StashSettings {
+            backing_file: "/data/stash.store".to_string(),
+            secure_mode: false,
+            secondary_store: false,
+        }
     }
 }
 
-impl TryFrom<env::Args> for StashSettings {
-    type Error = ();
-    fn try_from(mut args: env::Args) -> Result<StashSettings, ()> {
-        // ignore arg[0]
-        let _ = args.next();
+impl TryFrom<Vec<String>> for StashSettings {
+    type Error = anyhow::Error;
+    fn try_from(args: Vec<String>) -> Result<StashSettings, Error> {
+        // ignore args[0]
+        let mut iter = args.iter().skip(1);
         let mut res = StashSettings::default();
-        while let Some(flag) = args.next() {
+        while let Some(flag) = iter.next() {
             match flag.as_str() {
                 "--backing_file" => {
-                    if let Some(f) = args.next() {
-                        res.backing_file = f;
+                    if let Some(f) = iter.next() {
+                        res.backing_file = f.to_string();
                     } else {
-                        return Err(());
+                        return Err(format_err!("Must specify argument to --backing_file"));
                     }
                 }
                 "--secure" => res.secure_mode = true,
-                _ => return Err(()),
+                "--secondary_store" => res.secondary_store = true,
+                _ => return Err(format_err!("Unknown flag: {}", flag)),
             }
+        }
+        if res.secure_mode && res.secondary_store {
+            return Err(format_err!("--secure and --secondary_store are mutually exclusive"));
         }
         return Ok(res);
     }
@@ -63,10 +75,11 @@ impl TryFrom<env::Args> for StashSettings {
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["stash"])?;
 
-    let r_opts: Result<StashSettings, ()> = env::args().try_into();
+    let r_opts: Result<StashSettings, Error> = env::args().collect::<Vec<String>>().try_into();
 
     match r_opts {
-        Err(_) => {
+        Err(msg) => {
+            println!("{}", msg);
             print_help();
             process::exit(1);
         }
@@ -75,7 +88,13 @@ fn main() -> Result<(), Error> {
             let store_manager =
                 Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(&opts.backing_file))?));
 
-            let name = if opts.secure_mode { SecureStoreMarker::NAME } else { StoreMarker::NAME };
+            let name = if opts.secure_mode {
+                SecureStoreMarker::NAME
+            } else if opts.secondary_store {
+                Store2Marker::NAME
+            } else {
+                StoreMarker::NAME
+            };
             inspect::component::inspector().root().record_bool("secure_mode", opts.secure_mode);
 
             let mut fs = ServiceFs::new();
@@ -104,6 +123,8 @@ USAGE:
 FLAGS:
         --secure                Disables support for handling raw bytes. This flag Should be used
                                 when running in critical path of verified boot.
+        --secondary_store       Serves fuchsia.store.Store2 instead of fuchsia.store.Store.
+                                Specifying both --secondary_store and --secure is an error.
         --backing_file <FILE>   location of backing file for the store"
     )
 }
@@ -145,4 +166,58 @@ fn stash_server(
         }
         .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args_to_settings(args: &str) -> Result<StashSettings, Error> {
+        args.split_whitespace().map(|s| s.to_string()).collect::<Vec<String>>().try_into()
+    }
+
+    fn assert_args_to_settings(args: &str, settings: StashSettings) {
+        assert_eq!(args_to_settings(args).unwrap(), settings);
+    }
+
+    fn assert_args_error(args: &str) {
+        assert!(args_to_settings(args).is_err());
+    }
+
+    #[test]
+    fn test_args() {
+        assert_args_to_settings("", StashSettings::default());
+        assert_args_to_settings("stash", StashSettings::default());
+        assert_args_to_settings(
+            "stash --secure",
+            StashSettings { secure_mode: true, ..Default::default() },
+        );
+        assert_args_to_settings(
+            "stash --secondary_store",
+            StashSettings { secondary_store: true, ..Default::default() },
+        );
+        assert_args_to_settings(
+            "stash --backing_file foo",
+            StashSettings { backing_file: "foo".to_string(), ..Default::default() },
+        );
+        assert_args_to_settings(
+            "stash --secure --backing_file foo",
+            StashSettings {
+                secure_mode: true,
+                backing_file: "foo".to_string(),
+                ..Default::default()
+            },
+        );
+        assert_args_to_settings(
+            "stash --secondary_store --backing_file foo",
+            StashSettings {
+                secondary_store: true,
+                backing_file: "foo".to_string(),
+                ..Default::default()
+            },
+        );
+        assert_args_error("stash --secure --secondary_store");
+        assert_args_error("stash --backing_file");
+        assert_args_error("stash --secure --secondary_store --backing_file");
+    }
 }
