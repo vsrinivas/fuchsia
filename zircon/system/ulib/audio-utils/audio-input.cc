@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/affine/transform.h>
+#include <lib/zx/clock.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
 
@@ -66,10 +70,6 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     printf("Failed to establish ring buffer (%u frames, res %d)\n", ring_frames, res);
     return res;
   }
-
-  zx_duration_t duration_nsec =
-      static_cast<zx_time_t>(ZX_SEC(1) * static_cast<double>(duration_seconds));
-  zx_time_t stop_time = zx_time_add_duration(zx_clock_get_monotonic(), duration_nsec);
   printf("Recording for %.1f seconds\n", duration_seconds);
 
   res = StartRingBuffer();
@@ -78,62 +78,53 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     return res;
   }
 
-  uint32_t rd_ptr = 0;
-  bool peer_connected = true;
-  while (true) {
-    zx_signals_t sigs;
+  uint32_t rd_ptr = 0;    // Our read ptr for the ring buffer.
+  uint32_t wr_ptr = 0;    // Estimated write ptr in the ring buffer.
+  uint32_t consumed = 0;  // Total bytes consumed.
+  uint32_t produced = 0;  // Estimated total bytes produced.
+  long frames_expected = std::lround(frame_rate_ * duration_seconds);
+  int64_t bytes_expected = frame_sz_ * frames_expected;
 
-    res = rb_ch_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time(stop_time), &sigs);
+  // A transformation from time to bytes captured safe to read. We wait until we have received about
+  // 4 FIFOs before start reading to make sure we are behind the HW. We start the transformation at
+  // -2 FIFOs and wake up after another 2 FIFOs.
+  auto mono_to_safe_read_bytes = affine::Transform{static_cast<int64_t>(start_time_),
+                                                   -2 * static_cast<int64_t>(fifo_depth_),
+                                                   {frame_rate_ * frame_sz_, zx::sec(1).get()}};
+  auto next_wake_time = zx::time(mono_to_safe_read_bytes.ApplyInverse(2 * fifo_depth_));
 
-    // If we get a timeout error, we have hit our stop time.
-    if (res == ZX_ERR_TIMED_OUT)
-      break;
+  while (consumed < bytes_expected) {
+    // We specify a floor to avoid not having a reasonable deadline per loop.
+    constexpr auto kFloorWait = zx::msec(10);
+    auto floor_wake_time = zx::clock::get_monotonic() + kFloorWait;
+    if (next_wake_time < floor_wake_time) {
+      next_wake_time = floor_wake_time;
+    }
+    zx::nanosleep(next_wake_time);
+    auto safe_read = mono_to_safe_read_bytes.Apply(zx::clock::get_monotonic().get());
 
-    if (res != ZX_OK) {
-      printf("Failed to wait for notification (res %d)\n", res);
-      break;
+    consumed = std::min(safe_read, bytes_expected);
+    uint32_t increment = consumed - produced;
+
+    // We want to process about 2 FIFOs worth of samples in each loop.
+    next_wake_time = zx::time(mono_to_safe_read_bytes.ApplyInverse(safe_read + 2 * fifo_depth_));
+
+    wr_ptr += increment;
+    produced += increment;
+    if (wr_ptr > rb_sz_) {
+      wr_ptr -= rb_sz_;
     }
 
-    if (sigs & ZX_CHANNEL_PEER_CLOSED) {
-      printf("Peer closed connection during record!\n");
-      peer_connected = false;
-      break;
-    }
-
-    audio_rb_position_notify_t pos_notif;
-
-    uint32_t bytes_read, junk;
-    res = rb_ch_.read(0, &pos_notif, nullptr, sizeof(pos_notif), 0, &bytes_read, &junk);
-    if (res != ZX_OK) {
-      printf("Failed to read notification from ring buffer channel (res %d)\n", res);
-      break;
-    }
-
-    if (bytes_read != sizeof(pos_notif)) {
-      printf("Bad size when reading notification from ring buffer channel (%u != %zu)\n",
-             bytes_read, sizeof(pos_notif));
-      res = ZX_ERR_INTERNAL;
-      break;
-    }
-
-    if (pos_notif.hdr.cmd != AUDIO_RB_POSITION_NOTIFY) {
-      printf(
-          "Unexpected command type when reading notification from ring "
-          "buffer channel (cmd %04x)\n",
-          pos_notif.hdr.cmd);
-      res = ZX_ERR_INTERNAL;
-      break;
-    }
-
-    uint32_t todo = pos_notif.ring_buffer_pos + rb_sz_ - rd_ptr;
-    if (todo >= rb_sz_)
+    uint32_t todo = wr_ptr + rb_sz_ - rd_ptr;
+    if (todo >= rb_sz_) {
       todo -= rb_sz_;
+    }
 
     ZX_DEBUG_ASSERT(todo < rb_sz_);
     ZX_DEBUG_ASSERT(rd_ptr < rb_sz_);
 
     uint32_t space = rb_sz_ - rd_ptr;
-    uint32_t amt = fbl::min(space, todo);
+    uint32_t amt = std::min(space, todo);
     auto data = static_cast<const uint8_t*>(rb_virt_) + rd_ptr;
 
     res = zx_cache_flush(data, amt, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
@@ -174,9 +165,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     }
   }
 
-  if (peer_connected) {
-    StopRingBuffer();
-  }
+  StopRingBuffer();
 
   zx_status_t finalize_res = sink.Finalize();
   return (res == ZX_OK) ? finalize_res : res;
