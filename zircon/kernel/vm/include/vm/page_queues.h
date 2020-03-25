@@ -49,6 +49,8 @@ class PageQueues {
   void MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
   // Removes the page from any page list and returns ownership of the queue_node.
   void Remove(vm_page_t* page);
+  // Batched version of Remove that also places all the pages in the specified list
+  void RemoveArrayIntoList(vm_page_t** page, size_t count, list_node_t* out_list);
 
   // Helper struct to group queue length counts returned by DebugQueueCounts.
   struct Counts {
@@ -82,6 +84,8 @@ class PageQueues {
   // wired pages include kernel data structures or memory pinned for devices and these pages must
   // not be touched in any way, removing both eviction and other strategies such as compression.
   list_node_t wired_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
+
+  void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
 
   bool DebugPageInList(const list_node_t* list, const vm_page_t* page) const;
 };

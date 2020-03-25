@@ -17,6 +17,7 @@
 #include <arch/ops.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <ktl/array.h>
 #include <ktl/move.h>
 #include <vm/bootreserve.h>
 #include <vm/fault.h>
@@ -104,17 +105,57 @@ bool SlotHasPinnedPage(VmPageOrMarker* slot) {
   return slot && slot->IsPage() && slot->Page()->object.pin_count > 0;
 }
 
-// Convenience function that produces a callback suitable for passing to VmPageList::RemovePages
-auto FreePageIntoList(list_node_t* free_list) {
-  return [free_list](VmPageOrMarker* p, uint64_t off) {
-    if (p->IsPage()) {
-      vm_page_t* page = p->ReleasePage();
-      DEBUG_ASSERT(!list_in_list(&page->queue_node));
-      list_add_tail(free_list, &page->queue_node);
+// Helper class for collecting pages to performed batched Removes from the page queue to not incur
+// its spinlock overhead for every single page. Pages that it removes from the page queue get placed
+// into a provided list. Note that pages are not moved into the list until *after* Flush has been
+// called and Flush must be called prior to object destruction.
+class BatchPQRemove {
+ public:
+  BatchPQRemove(list_node_t* free_list) : free_list_(free_list) {}
+  ~BatchPQRemove() { DEBUG_ASSERT(count_ == 0); }
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BatchPQRemove);
+
+  // Add a page to the batch set. Automatically calls |Flush| if the limit is reached.
+  void Push(vm_page_t* page) {
+    DEBUG_ASSERT(page);
+    DEBUG_ASSERT(list_in_list(&page->queue_node));
+    pages_[count_] = page;
+    count_++;
+    if (count_ == kMaxPages) {
+      Flush();
     }
-    *p = VmPageOrMarker::Empty();
-  };
-}
+  }
+
+  // Performs |Remove| on any pending pages. This allows you to know that all pages are in the
+  // original list so that you can do operations on the list.
+  void Flush() {
+    if (count_ > 0) {
+      pmm_page_queues()->RemoveArrayIntoList(pages_.data(), count_, free_list_);
+      count_ = 0;
+    }
+  }
+
+  // Produces a callback suitable for passing to VmPageList::RemovePages that will |Push| any pages
+  auto RemovePagesCallback() {
+    return [this](VmPageOrMarker* p, uint64_t off) {
+      if (p->IsPage()) {
+        vm_page_t* page = p->ReleasePage();
+        Push(page);
+      }
+      *p = VmPageOrMarker::Empty();
+    };
+  }
+
+ private:
+  // The value of 64 was chosen as there is minimal performance gains originally measured by using
+  // higher values. There is an incentive on this being as small as possible due to this typically
+  // being created on the stack, and our stack space is limited.
+  static constexpr size_t kMaxPages = 64;
+
+  size_t count_ = 0;
+  ktl::array<vm_page_t*, kMaxPages> pages_;
+  list_node_t* free_list_ = nullptr;
+};
 
 }  // namespace
 
@@ -176,18 +217,22 @@ VmObjectPaged::~VmObjectPaged() {
 
   list_node_t list;
   list_initialize(&list);
+
+  BatchPQRemove page_remover(&list);
   // free all of the pages attached to us
-  page_list_.RemoveAllPages([this, &list](vm_page_t* page) {
+  page_list_.RemoveAllPages([this, &page_remover](vm_page_t* page) {
+    page_remover.Push(page);
     if (this->is_contiguous()) {
+      // Don't use unpin page since we already removed it from the page queue.
       page->object.pin_count--;
     }
     ASSERT(page->object.pin_count == 0);
-    list_add_tail(&list, &page->queue_node);
   });
 
   if (page_source_) {
     page_source_->Close();
   }
+  page_remover.Flush();
 
   pmm_free(&list);
 }
@@ -238,7 +283,10 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
         // page.
         AssertHeld(this->lock_);
         RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
-        list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+        vm_page_t* page = p.ReleasePage();
+        pmm_page_queues()->Remove(page);
+        DEBUG_ASSERT(!list_in_list(&page->queue_node));
+        list_add_tail(&free_list, &page->queue_node);
         p = VmPageOrMarker::Marker();
       }
     }
@@ -340,7 +388,9 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
 
     // Mark the pages as pinned, so they can't be physically rearranged
     // underneath us.
+    DEBUG_ASSERT(p->object.pin_count == 0);
     p->object.pin_count++;
+    pmm_page_queues()->SetWired(p);
 
     *slot = VmPageOrMarker::Page(p);
   }
@@ -463,6 +513,9 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
   DEBUG_ASSERT(!partial_cow_release_);
   DEBUG_ASSERT(parent_start_limit_ == 0);  // Should only ever be set for hidden vmos
 
+  // Moving our page list would be bad if we had a page source and potentially have pages with
+  // links back to this object.
+  DEBUG_ASSERT(!page_source_);
   // Move everything into the hidden parent, for immutability
   hidden_parent->page_list_ = ktl::move(page_list_);
   hidden_parent->size_ = size_;
@@ -815,13 +868,19 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
 
   list_node freed_pages;
   list_initialize(&freed_pages);
+  BatchPQRemove page_remover(&freed_pages);
 
   const uint64_t visibility_start_offset = child.parent_offset_ + child.parent_start_limit_;
   const uint64_t merge_start_offset = child.parent_offset_;
   const uint64_t merge_end_offset = child.parent_offset_ + child.parent_limit_;
 
-  page_list_.RemovePages(FreePageIntoList(&freed_pages), 0, visibility_start_offset);
-  page_list_.RemovePages(FreePageIntoList(&freed_pages), merge_end_offset, MAX_SIZE);
+  // Hidden parents are not supposed to have page sources, but we assert it here anyway because a
+  // page source would make the way we move pages between objects incorrect, as we would break any
+  // potential back links.
+  DEBUG_ASSERT(!page_source_);
+
+  page_list_.RemovePages(page_remover.RemovePagesCallback(), 0, visibility_start_offset);
+  page_list_.RemovePages(page_remover.RemovePagesCallback(), merge_end_offset, MAX_SIZE);
 
   if (child.parent_offset_ + child.parent_limit_ > parent_limit_) {
     // Update the child's parent limit to ensure that it won't be able to see more
@@ -865,10 +924,13 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
 
   if (is_contiguous()) {
     vm_page_t* p;
+    page_remover.Flush();
     list_for_every_entry (&freed_pages, p, vm_page_t, queue_node) {
       // The pages that have been freed all come from contigous hidden vmos, so they can
       // either be contiguously pinned or have been migrated into their other child.
       DEBUG_ASSERT(p->object.pin_count <= 1);
+      // We don't call UnpinPage here since we have already freed the page and don't want to
+      // move it into a different page queue.
       p->object.pin_count = 0;
     }
   }
@@ -924,17 +986,16 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
 
     list_node covered_pages;
     list_initialize(&covered_pages);
+    BatchPQRemove covered_remover(&covered_pages);
 
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
-    child.page_list_.MergeOnto(page_list_, [&covered_pages](vm_page_t* p) {
-      DEBUG_ASSERT(!list_in_list(&p->queue_node));
-      list_add_tail(&covered_pages, &p->queue_node);
-    });
+    child.page_list_.MergeOnto(page_list_,
+                               [&covered_remover](vm_page_t* p) { covered_remover.Push(p); });
     child.page_list_ = ktl::move(page_list_);
 
-#ifdef DEBUG_ASSERT_IMPLEMENTED
     vm_page_t* p;
+    covered_remover.Flush();
     list_for_every_entry (&covered_pages, p, vm_page_t, queue_node) {
       // The page was already present in |child|, so it should be split at least
       // once. And being split twice is obviously bad.
@@ -944,26 +1005,28 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
       // and must be unpinned themselves.
       ASSERT(p->object.pin_count == 0);
     }
-#endif
     list_splice_after(&covered_pages, &freed_pages);
   } else {
     // Merge our page list into the child page list and update all the necessary metadata.
     child.page_list_.MergeFrom(
         page_list_, merge_start_offset, merge_end_offset,
-        [&freed_pages, this_is_contig = this->is_contiguous()](vm_page* page, uint64_t offset) {
+        [&page_remover, this_is_contig = this->is_contiguous(), this](vm_page* page,
+                                                                      uint64_t offset) {
           if (this_is_contig) {
             // If this vmo is contiguous, unpin the pages that aren't needed. The pages
             // are either original contig pages (which should have a pin_count of 1),
             // or they're forked pages where the original is already in the contig
             // child (in which case pin_count should be 0).
             DEBUG_ASSERT(page->object.pin_count <= 1);
-            page->object.pin_count = 0;
+            if (page->object.pin_count == 1) {
+              UnpinPage(page, offset);
+            }
           }
-          list_add_tail(&freed_pages, &page->queue_node);
+          page_remover.Push(page);
         },
-        [&freed_pages, this_is_contig = this->is_contiguous(),
-         child_is_contig = child.is_contiguous(),
-         removed_left](VmPageOrMarker* page_or_marker, uint64_t offset) {
+        [&page_remover, this_is_contig = this->is_contiguous(),
+         child_is_contig = child.is_contiguous(), removed_left,
+         this](VmPageOrMarker* page_or_marker, uint64_t offset) {
           DEBUG_ASSERT(page_or_marker->IsPage());
           vm_page_t* page = page_or_marker->Page();
           if (child_is_contig) {
@@ -974,7 +1037,9 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
             // This vmo was contiguous but the child isn't, so unpin the pages. Similar
             // to above, this should be at most 1.
             DEBUG_ASSERT(page->object.pin_count <= 1);
-            page->object.pin_count = 0;
+            if (page->object.pin_count == 1) {
+              UnpinPage(page, offset);
+            }
           } else {
             // Neither is contiguous, so the page shouldn't have been pinned.
             DEBUG_ASSERT(page->object.pin_count == 0);
@@ -984,7 +1049,7 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
             // This happens when the pages was already migrated into child but then
             // was migrated further into child's descendants. The page can be freed.
             page = page_or_marker->ReleasePage();
-            list_add_tail(&freed_pages, &page->queue_node);
+            page_remover.Push(page);
           } else {
             // Since we recursively fork on write, if the child doesn't have the
             // page, then neither of its children do.
@@ -994,6 +1059,7 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
         });
   }
 
+  page_remover.Flush();
   if (!list_is_empty(&freed_pages)) {
     pmm_free(&freed_pages);
   }
@@ -1295,6 +1361,15 @@ zx_status_t VmObjectPaged::AddPageLocked(VmPageOrMarker* p, uint64_t offset, boo
   if (page->IsPage()) {
     return ZX_ERR_ALREADY_EXISTS;
   }
+  // If this is actually a real page, we need to place it into the appropriate queue.
+  if (p->IsPage()) {
+    vm_page_t* page = p->Page();
+    if (page->object.pin_count == 0) {
+      SetNotWired(page, offset);
+    } else {
+      pmm_page_queues()->SetWired(page);
+    }
+  }
   *page = ktl::move(*p);
 
   if (do_range_update) {
@@ -1395,6 +1470,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
       target_page->object.cow_right_split = 0;
       VmPageOrMarker removed = target_page_owner->page_list_.RemovePage(target_page_offset);
       vm_page* removed_page = removed.ReleasePage();
+      pmm_page_queues()->Remove(removed_page);
       DEBUG_ASSERT(removed_page == target_page);
     } else {
       // Otherwise we need to fork the page.
@@ -1506,6 +1582,8 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
     DEBUG_ASSERT(!(!left && page->object.cow_right_split));
     vm_page* removed = typed_parent->page_list_.RemovePage(offset + parent_offset_).ReleasePage();
     DEBUG_ASSERT(removed == page);
+    pmm_page_queues()->Remove(removed);
+    DEBUG_ASSERT(!list_in_list(&removed->queue_node));
     list_add_tail(free_list, &removed->queue_node);
   } else {
     if (left) {
@@ -2012,7 +2090,10 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   // unmap all of the pages in this range on all the mapping regions
   RangeChangeUpdateLocked(offset, new_len, RangeChangeOp::Unmap);
 
-  page_list_.RemovePages(FreePageIntoList(&free_list), offset, offset + new_len);
+  BatchPQRemove page_remover(&free_list);
+
+  page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + new_len);
+  page_remover.Flush();
 
   return ZX_OK;
 }
@@ -2224,7 +2305,10 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
     if (!SlotHasPinnedPage(slot) &&
         (!can_see_parent || (parent_immutable() && !parent_has_content()))) {
       if (slot && slot->IsPage()) {
-        list_add_tail(free_list, &page_list_.RemovePage(offset).ReleasePage()->queue_node);
+        vm_page_t* page = page_list_.RemovePage(offset).ReleasePage();
+        pmm_page_queues()->Remove(page);
+        DEBUG_ASSERT(!list_in_list(&page->queue_node));
+        list_add_tail(free_list, &page->queue_node);
       }
       continue;
     }
@@ -2255,6 +2339,7 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
       if (!result) {
         return ZX_ERR_NO_MEMORY;
       }
+      SetNotWired(p, offset);
       *slot = VmPageOrMarker::Page(p);
       continue;
     }
@@ -2276,7 +2361,10 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
 
     // Remove any page that could be hanging around in the slot before we make it a marker.
     if (slot->IsPage()) {
-      list_add_tail(free_list, &slot->ReleasePage()->queue_node);
+      vm_page_t* page = slot->ReleasePage();
+      pmm_page_queues()->Remove(page);
+      DEBUG_ASSERT(!list_in_list(&page->queue_node));
+      list_add_tail(free_list, &page->queue_node);
     }
     *slot = VmPageOrMarker::Marker();
   }
@@ -2326,6 +2414,11 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
         }
 
         p->object.pin_count++;
+        if (p->object.pin_count == 1) {
+          pmm_page_queues()->MoveToWired(p);
+        } else {
+          DEBUG_ASSERT(list_in_list(&p->queue_node));
+        }
         pin_range_end = off + PAGE_SIZE;
         return ZX_ERR_NEXT;
       },
@@ -2343,6 +2436,35 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
   pinned_page_count_ += (end_page_offset - start_page_offset) / PAGE_SIZE;
 
   return ZX_OK;
+}
+
+void VmObjectPaged::MoveToNotWired(vm_page_t* page, uint64_t offset) {
+  if (page_source_) {
+    pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+  } else {
+    pmm_page_queues()->MoveToUnswappable(page);
+  }
+}
+
+void VmObjectPaged::SetNotWired(vm_page_t* page, uint64_t offset) {
+  if (page_source_) {
+    pmm_page_queues()->SetPagerBacked(page, this, offset);
+  } else {
+    pmm_page_queues()->SetUnswappable(page);
+  }
+}
+
+void VmObjectPaged::UnpinPage(vm_page_t* page, uint64_t offset) {
+  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+  ASSERT(page->object.pin_count > 0);
+  page->object.pin_count--;
+  if (page->object.pin_count == 0) {
+    MoveToNotWired(page, offset);
+  } else {
+    // Only check that the page is on *some* list, using the PageQueues::DebugPageIsWired check is
+    // too expensive here.
+    DEBUG_ASSERT(list_in_list(&page->queue_node));
+  }
 }
 
 void VmObjectPaged::Unpin(uint64_t offset, uint64_t len) {
@@ -2371,14 +2493,11 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
   const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [](const auto& page, uint64_t off) {
+      [this](const auto& page, uint64_t off) {
         if (page.IsMarker()) {
           return ZX_ERR_NOT_FOUND;
         }
-        vm_page* p = page.Page();
-        DEBUG_ASSERT(p->state() == VM_PAGE_STATE_OBJECT);
-        ASSERT(p->object.pin_count > 0);
-        p->object.pin_count--;
+        UnpinPage(page.Page(), off);
         return ZX_ERR_NEXT;
       },
       [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_NOT_FOUND; }, start_page_offset,
@@ -2462,12 +2581,14 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
     skip_split_bits = false;
   }
 
+  BatchPQRemove page_remover(free_list);
+
   // Free any pages that were already split into the other child. For pages that haven't been split
   // into the other child, we need to ensure they're univisible.
   auto parent = VmObjectPaged::AsVmObjectPaged(parent_);
   AssertHeld(parent->lock_);
   parent->page_list_.RemovePages(
-      [skip_split_bits, &free_list, left = this == &parent->left_child_locked()](
+      [skip_split_bits, &page_remover, left = this == &parent->left_child_locked()](
           VmPageOrMarker* page_or_mark, uint64_t offset) {
         if (page_or_mark->IsMarker()) {
           *page_or_mark = VmPageOrMarker::Empty();
@@ -2480,7 +2601,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
         // a page is split (i.e. have two directional split bits instead of a single split bit).
         if (left ? page->object.cow_right_split : page->object.cow_left_split) {
           page = page_or_mark->ReleasePage();
-          list_add_tail(free_list, &page->queue_node);
+          page_remover.Push(page);
           return;
         }
         if (skip_split_bits) {
@@ -2499,6 +2620,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
         }
       },
       parent_range_start, parent_range_end);
+  page_remover.Flush();
 }
 
 void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t root_end,
@@ -2520,6 +2642,8 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
   auto cur = this;
   uint64_t cur_start = root_start;
   uint64_t cur_end = root_end;
+
+  BatchPQRemove page_remover(free_list);
 
   do {
     AssertHeld(cur->lock_);
@@ -2551,7 +2675,8 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
           // start offset will be set to head_end.
           uint64_t head_end =
               fbl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
-          parent->page_list_.RemovePages(FreePageIntoList(free_list), parent_range_start, head_end);
+          parent->page_list_.RemovePages(page_remover.RemovePagesCallback(), parent_range_start,
+                                         head_end);
 
           if (start == cur->parent_start_limit_) {
             cur->parent_start_limit_ = head_end;
@@ -2582,7 +2707,8 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
         // If the tail region is non-empty, recurse into the parent. Note that
         // we do put this vmo back on the stack, which makes it simpler to walk back
         // up the tree.
-        parent->page_list_.RemovePages(FreePageIntoList(free_list), tail_start, parent_range_end);
+        parent->page_list_.RemovePages(page_remover.RemovePagesCallback(), tail_start,
+                                       parent_range_end);
 
         DEBUG_ASSERT((cur_end & 1) == 0);  // cur_end is page aligned
         uint64_t scratch = cur_end >> 1;   // gcc is finicky about setting bitfields
@@ -2609,6 +2735,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
   } while (cur != nullptr);
 
   DEBUG_ASSERT(cur_end == root_end);
+  page_remover.Flush();
 }
 
 zx_status_t VmObjectPaged::Resize(uint64_t s) {
@@ -2634,6 +2761,8 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
   list_node_t free_list;
   list_initialize(&free_list);
+
+  BatchPQRemove page_remover(&free_list);
 
   // see if we're shrinking or expanding the vmo
   if (s < size_) {
@@ -2674,7 +2803,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     // again, even if the parent is later reenlarged. So update the child parent limits.
     UpdateChildParentLimitsLocked(s);
 
-    page_list_.RemovePages(FreePageIntoList(&free_list), start, end);
+    page_list_.RemovePages(page_remover.RemovePagesCallback(), start, end);
   } else if (s > size_) {
     // expanding
     // figure the starting and ending page offset that is affected
@@ -2689,6 +2818,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
   // save bytewise size
   size_ = s;
 
+  page_remover.Flush();
   guard.Release();
   pmm_free(&free_list);
 
@@ -2989,6 +3119,15 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
     return ZX_ERR_BAD_STATE;
   }
 
+  page_list_.ForEveryPageInRange(
+      [](const auto& p, uint64_t off) {
+        if (p.IsPage()) {
+          pmm_page_queues()->Remove(p.Page());
+        }
+        return ZX_ERR_NEXT;
+      },
+      offset, offset + len);
+
   *pages = page_list_.TakePages(offset, len);
 
   return ZX_OK;
@@ -3018,7 +3157,9 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
     if (status == ZX_OK) {
       new_pages_len += PAGE_SIZE;
     } else if (src_page.IsPage()) {
-      list_add_tail(&free_list, &src_page.ReleasePage()->queue_node);
+      vm_page_t* page = src_page.ReleasePage();
+      DEBUG_ASSERT(!list_in_list(&page->queue_node));
+      list_add_tail(&free_list, &page->queue_node);
 
       if (likely(status == ZX_ERR_ALREADY_EXISTS)) {
         status = ZX_OK;

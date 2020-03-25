@@ -328,6 +328,17 @@ class VmObjectPaged final : public VmObject {
   zx_status_t ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
                               uint64_t zero_end_offset, Guard<fbl::Mutex>* guard) TA_REQ(lock_);
 
+  // Unpins a page and potentially moves it into a different page queue should its pin
+  // count reach zero.
+  void UnpinPage(vm_page_t* page, uint64_t offset);
+
+  // Updates the page queue of an existing page, moving it to whichever non wired queue
+  // is appropriate.
+  void MoveToNotWired(vm_page_t* page, uint64_t offset);
+
+  // Places a newly added page into the appropriate non wired page queue.
+  void SetNotWired(vm_page_t* page, uint64_t offset);
+
   // Outside of initialization/destruction, hidden vmos always have two children. For
   // clarity, whichever child is first in the list is the 'left' child, and whichever
   // child is second is the 'right' child. Children of a paged vmo will always be paged

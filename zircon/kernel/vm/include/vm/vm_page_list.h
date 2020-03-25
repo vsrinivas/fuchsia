@@ -16,6 +16,7 @@
 #include <fbl/macros.h>
 #include <ktl/unique_ptr.h>
 #include <vm/page.h>
+#include <vm/pmm.h>
 #include <vm/vm.h>
 
 // RAII helper for representing owned pages in a page list node. This supports being in one of

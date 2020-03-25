@@ -942,6 +942,39 @@ static bool vmo_create_maximum_size() {
   END_TEST;
 }
 
+// Helper that tests if all pages in a vmo in the specified range pass the given predicate.
+template <typename F>
+static bool AllPagesMatch(VmObject* vmo, F pred, uint64_t offset, uint64_t len) {
+  struct Context {
+    bool result;
+    F pred;
+  } context = {true, ktl::move(pred)};
+  zx_status_t status = vmo->Lookup(
+      offset, len,
+      [](void* context, size_t offset, size_t index, paddr_t pa) {
+        Context* c = reinterpret_cast<Context*>(context);
+        const vm_page_t* p = paddr_to_vm_page(pa);
+        if (!c->pred(p)) {
+          c->result = false;
+          return ZX_ERR_STOP;
+        }
+        return ZX_OK;
+      },
+      &context);
+  return status == ZX_OK ? context.result : false;
+}
+
+static bool PagesInUnswappableQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
+  return AllPagesMatch(
+      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsUnswappable(p); }, offset,
+      len);
+}
+
+static bool PagesInWiredQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
+  return AllPagesMatch(
+      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsWired(p); }, offset, len);
+}
+
 // Creates a vm object, commits memory.
 static bool vmo_commit_test() {
   BEGIN_TEST;
@@ -955,6 +988,7 @@ static bool vmo_commit_test() {
   ASSERT_EQ(ZX_OK, ret, "committing vm object\n");
   EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), PAGE_SIZE * vmo->AttributedPages(),
             "committing vm object\n");
+  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), 0, alloc_size));
   END_TEST;
 }
 
@@ -993,6 +1027,7 @@ static bool vmo_pin_test() {
 
   status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status, "pinning committed range\n");
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
   status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
   EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
@@ -1002,6 +1037,7 @@ static bool vmo_pin_test() {
   EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
 
   vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
+  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
   status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
@@ -1010,6 +1046,7 @@ static bool vmo_pin_test() {
   EXPECT_EQ(ZX_OK, status, "committing range\n");
   status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status, "pinning committed range\n");
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
   status = vmo->Resize(0);
   EXPECT_EQ(ZX_ERR_BAD_STATE, status, "resizing pinned range\n");
@@ -1034,11 +1071,14 @@ static bool vmo_multiple_pin_test() {
 
   status = vmo->CommitRange(0, alloc_size);
   EXPECT_EQ(ZX_OK, status, "committing range\n");
+  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), 0, alloc_size));
 
   status = vmo->Pin(0, alloc_size);
   EXPECT_EQ(ZX_OK, status, "pinning whole range\n");
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
   status = vmo->Pin(PAGE_SIZE, 4 * PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status, "pinning subrange\n");
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
   for (unsigned int i = 1; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
     status = vmo->Pin(0, PAGE_SIZE);
@@ -1048,6 +1088,8 @@ static bool vmo_multiple_pin_test() {
   EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
 
   vmo->Unpin(0, alloc_size);
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
+  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
   status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
   EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
   status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE);
@@ -1120,6 +1162,8 @@ static bool vmo_create_contiguous_test() {
   ASSERT_TRUE(vmo, "vmobject creation\n");
 
   EXPECT_TRUE(vmo->is_contiguous(), "vmo is contig\n");
+
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
   paddr_t last_pa;
   auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
@@ -2227,6 +2271,8 @@ static bool vmpl_page_gap_iter_test() {
     for (unsigned j = 0; j < (1 << kCount); j++) {
       for (unsigned k = 0; k < kCount; k++) {
         if (j & (1 << k)) {
+          // Ensure pages are in an initialized state every iteration.
+          pages[k] = (vm_page_t){};
           list[k] = pages + k;
         } else {
           list[k] = nullptr;

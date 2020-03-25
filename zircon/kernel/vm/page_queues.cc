@@ -89,12 +89,26 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint6
   list_add_head(&pager_backed_, &page->queue_node);
 }
 
-void PageQueues::Remove(vm_page_t* page) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+void PageQueues::RemoveLocked(vm_page_t* page) {
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   page->object.set_object(nullptr);
   page->object.set_page_offset(0);
   list_delete(&page->queue_node);
+}
+
+void PageQueues::Remove(vm_page_t* page) {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  RemoveLocked(page);
+}
+
+void PageQueues::RemoveArrayIntoList(vm_page_t** pages, size_t count, list_node_t* out_list) {
+  DEBUG_ASSERT(pages);
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  for (size_t i = 0; i < count; i++) {
+    DEBUG_ASSERT(pages[i]);
+    RemoveLocked(pages[i]);
+    list_add_tail(out_list, &pages[i]->queue_node);
+  }
 }
 
 PageQueues::Counts PageQueues::DebugQueueCounts() const {
