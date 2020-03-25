@@ -18,7 +18,7 @@ constexpr uint32_t kHighPriority = 23;
 constexpr char kServicePathPrefix[] = "/svc/";
 constexpr char kProfileName[] = "src/media/playback/mediaplayer";
 
-fit::result<const zx::profile&, zx_status_t> GetHighPriorityProfile() {
+fit::result<zx::unowned_profile, zx_status_t> GetHighPriorityProfile() {
   static zx::profile profile;
   static zx_status_t status = []() {
     zx::channel server_channel, client_channel;
@@ -58,7 +58,7 @@ fit::result<const zx::profile&, zx_status_t> GetHighPriorityProfile() {
     return fit::error(status);
   }
 
-  return fit::ok<const zx::profile&>(profile);
+  return fit::ok<zx::unowned_profile>(zx::unowned_profile{profile});
 }
 
 }  // namespace
@@ -70,8 +70,8 @@ zx_status_t ThreadPriority::SetToHigh(zx::thread* thread) {
     return result.error();
   }
 
-  zx_status_t status = thread ? thread->set_profile(result.value(), 0)
-                              : zx::thread::self()->set_profile(result.value(), 0);
+  zx_status_t status = thread ? thread->set_profile(*result.value(), 0)
+                              : zx::thread::self()->set_profile(*result.value(), 0);
 
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to set thread profile";
