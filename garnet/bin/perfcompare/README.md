@@ -1,5 +1,27 @@
 # perfcompare: Performance comparison tool
 
+## Dependencies
+
+There are two ways to run the perfcompare tool with the required
+dependencies (currently just the `scipy` Python library):
+
+* Via `vpython`:
+
+  ```sh
+  ./prebuilt/third_party/vpython/vpython garnet/bin/perfcompare/perfcompare.py
+  ```
+
+  This will automatically download prebuilt, hermetic versions of
+  dependencies.  `vpython` is used for running perfcompare on the
+  Infra builders.
+
+* On Linux, when using Debian/Ubuntu, the dependencies can be
+  installed using APT:
+
+  ```sh
+  sudo apt-get install python-scipy
+  ```
+
 ## Example: Running perf tests locally and comparing results
 
 The perfcompare tool can be used to run perf tests locally and to
