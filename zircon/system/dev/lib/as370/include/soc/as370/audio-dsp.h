@@ -31,6 +31,7 @@ class CicFilter {
 
   int32_t integrator_state[kMaxIndex][kOrder] = {};
   int32_t differentiator_state[kMaxIndex][kOrder] = {};
+  int32_t dc[kMaxIndex] = {};
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_AUDIO_DSP_H_

@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include <unistd.h>
 #include <zircon/assert.h>
 
@@ -15,15 +14,16 @@
 // differentiator undoes intergrator's overflow and wrapping.
 [[clang::no_sanitize("undefined")]]
 #endif
-uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
-                           void* input,
-                           uint32_t input_size,  // e.g. 16K.
-                           void* output,
-                           uint32_t input_total_channels,   // e.g. 2.
-                           uint32_t input_channel,          // e.g. 0 or 1.
-                           uint32_t output_total_channels,  // e.f. 2.
-                           uint32_t output_channel,         // e.g. 0  or 1.
-                           uint32_t multiplier_shift) {
+uint32_t
+CicFilter::Filter(uint32_t index,  // e.g. 0.
+                  void* input,
+                  uint32_t input_size,  // e.g. 16K.
+                  void* output,
+                  uint32_t input_total_channels,   // e.g. 2.
+                  uint32_t input_channel,          // e.g. 0 or 1.
+                  uint32_t output_total_channels,  // e.f. 2.
+                  uint32_t output_channel,         // e.g. 0  or 1.
+                  uint32_t multiplier_shift) {
 #ifdef TESTING_CAPTURE_PDM
   static_cast<void>(integrator_state);
   static_cast<void>(differentiator_state);
@@ -94,9 +94,20 @@ uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
     } else {
       result <<= multiplier_shift;
     }
-    out[output_channel] = static_cast<int16_t>(result >> 16);  // 16 output bits per channel.
+
+    // 16 output bits per channel.
+    out[output_channel] = static_cast<int16_t>((result - dc[index]) >> 16);
     out += output_total_channels;
     amount_pcm += static_cast<uint32_t>(output_total_channels * sizeof(int16_t));
+
+    // DC is calculated via a low pass filter as an exponentially weighted moving average
+    // using a constant k = 1 / 4096 that makes the calculation fast and has a frequency corner
+    // fc = k / ((1 - k) x 2 x pi x dT) = 1.87Hz for a 48kHz rate input (dT = 1 / 48K = 20.83usecs).
+    // TODO(andresoportus): Potential improvements include a more sophisticated CIC filter,
+    // configuration via metadata of the parameters used (here shift_dc_filter), and paralelization
+    // of the filtering process.
+    constexpr uint32_t shift_dc_filter = 12;
+    dc[index] += (result - dc[index]) >> shift_dc_filter;
   }
 #endif
   return amount_pcm;
