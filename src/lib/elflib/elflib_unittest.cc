@@ -429,4 +429,26 @@ TEST(ElfLib, SectionOverflow) {
   EXPECT_EQ("Architecture doesn't support GetPLTOffsets.", warnings[0]);
 }
 
+// Checks that we can load a library which has a big plt (535 entries) on AArch64.
+TEST(ElfLib, AArch64Plt) {
+  std::unique_ptr<ElfLib> elf =
+      ElfLib::Create(GetTestBinaryPath(std::string("6d4d8ac190ecc7.debug")));
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto plt = elf->GetPLTOffsets();
+  auto warnings = elf->GetAndClearWarnings();
+  for (const auto& warning : warnings) {
+    std::cout << warning << '\n';
+  }
+  ASSERT_EQ(plt.size(), 535U);
+  ASSERT_NE(plt.find("_zx_channel_create"), plt.end());
+  EXPECT_EQ(642864U, plt["_zx_channel_create"]);
+  ASSERT_NE(plt.find("_zx_channel_read"), plt.end());
+  EXPECT_EQ(651120U, plt["_zx_channel_read"]);
+  ASSERT_NE(plt.find("_zx_channel_write"), plt.end());
+  EXPECT_EQ(642848U, plt["_zx_channel_write"]);
+  ASSERT_TRUE(warnings.empty());
+}
+
 }  // namespace elflib

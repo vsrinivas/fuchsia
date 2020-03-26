@@ -56,6 +56,10 @@ test_package("elflib_tests") {
 
   resources = [
     {
+      path = "test_data/6d4d8ac190ecc7.debug"
+      dest = "6d4d8ac190ecc7.debug"
+    },
+    {
       path = "test_data/stripped_example.elf"
       dest = "stripped_example.elf"
     },

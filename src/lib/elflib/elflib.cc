@@ -643,7 +643,7 @@ class ElfLib::PltEntryBuffer {
  public:
   PltEntryBuffer(ElfLib* lib)
       : ptr_(nullptr), end_(nullptr), start_(nullptr), size_(0), lib_(lib) {}
-  virtual void SetRegion(const uint8_t* ptr, size_t size) {
+  void SetRegion(const uint8_t* ptr, size_t size) {
     size_ = size;
     end_ = ptr + size;
     start_ = ptr + (IgnoredEntryCount() * EntrySize());
@@ -663,7 +663,7 @@ class ElfLib::PltEntryBuffer {
   bool MarkInBound() const { return ptr_ >= start_ && ptr_ + EntrySize() <= end_; }
 
   // Move the mark to the next position.  Also increments the index by one.
-  void IncrementMark() { ptr_ += EntrySize(); }
+  virtual void IncrementMark() { ptr_ += EntrySize(); }
 
   // The size of a PLT entry in this buffer.
   virtual size_t EntrySize() const = 0;
@@ -715,9 +715,7 @@ class PltEntryBufferX86 : public ElfLib::PltEntryBuffer {
 class PltEntryBufferArm : public ElfLib::PltEntryBuffer {
  public:
   explicit PltEntryBufferArm(ElfLib* lib) : PltEntryBuffer(lib) {}
-  virtual uint32_t MarkIndex() const override {
-    return (RawOffset() - rela_base_) / sizeof(uint64_t);
-  }
+  virtual uint32_t MarkIndex() const override { return index_; }
   virtual bool VerifyAtMark() const override {
     // Prefix for adrp is 1??10000.
     if ((GetPltPtr()->adrp & 0x9F000000) != 0x90000000) {
@@ -742,23 +740,14 @@ class PltEntryBufferArm : public ElfLib::PltEntryBuffer {
     return true;
   }
 
+  void IncrementMark() override {
+    PltEntryBuffer::IncrementMark();
+    ++index_;
+  }
+
   virtual size_t EntrySize() const override { return sizeof(PltEntryArm); }
 
   virtual int IgnoredEntryCount() const override { return 2; }
-
-  virtual void SetRegion(const uint8_t* start, size_t size) override {
-    // The offset of the first entry in the rela table.  There is really only
-    // one PLT entry in the first 8 quadwords - the default / lookup entry. It
-    // is not associated with a symbol, starts at offset 1, and points to the
-    // base of the rela table. So, to find the base of the rela table, we set
-    // ptr_ to be 1 offset from the start, read the base of the rela table out
-    // of that PLT entry, and then immediately call SetRegion to set ptr_ to the
-    // first PLT entry that is associated with a symbol.
-    ptr_ = start + sizeof(uint32_t);
-    rela_base_ = RawOffset() + sizeof(uint32_t);
-
-    PltEntryBuffer::SetRegion(start, size);
-  }
 
  private:
   // A PLT entry consists of 4 ARM instructions: an adrp that gives the page
@@ -777,20 +766,9 @@ class PltEntryBufferArm : public ElfLib::PltEntryBuffer {
 
   static_assert(sizeof(PltEntryArm) == 16);
 
-  uint64_t RawOffset() const {
-    // LDR with unsigned offset is encoded:
-    // [size2 1 1 1 0 0 1 0 1 imm12 reg reg ]
-    // The destination of the LDR is imm12 << size2
-    uint32_t size = (0xC0000000 & GetPltPtr()->ldr) >> 30;
-    uint32_t immediate_ldr = (0x3FFC00 & GetPltPtr()->ldr) >> 10;
-    uint32_t offset = immediate_ldr << size;
-
-    return offset;
-  }
-
   const PltEntryArm* GetPltPtr() const { return reinterpret_cast<const PltEntryArm*>(ptr_); }
 
-  uint64_t rela_base_;
+  uint32_t index_ = 0;
 };
 
 std::map<std::string, uint64_t> ElfLib::GetPLTOffsets() {
