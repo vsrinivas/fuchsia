@@ -400,7 +400,8 @@ class Performance {
     if (!await runProcess(converter, args)) {
       throw AssertionError('Running catapult_converter failed');
     }
-    _log.info('Conversion to catapult results format completed.');
+    _log.info('Conversion to catapult results format completed.'
+        ' Output file: $outputFileName');
     return Future.value(File(outputFileName));
   }
 }
