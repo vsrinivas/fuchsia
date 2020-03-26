@@ -109,8 +109,18 @@ mod test {
         let actions = build_map!((
             "foo",
             build_map!(
-                ("fires", Action { trigger: "true".to_string(), print: "good".to_string() }),
-                ("inert", Action { trigger: "false".to_string(), print: "what?!?".to_string() })
+                (
+                    "fires",
+                    Action { trigger: "true".to_string(), print: "good".to_string(), tag: None }
+                ),
+                (
+                    "inert",
+                    Action {
+                        trigger: "false".to_string(),
+                        print: "what?!?".to_string(),
+                        tag: None
+                    }
+                )
             )
         ));
         let good_trial = Trial {

@@ -35,6 +35,14 @@ pub struct Options {
     /// Directories to read "inspect.json" files from.
     #[structopt(long = "directory")]
     directories: Vec<String>,
+
+    /// Which tags we should include
+    #[structopt(long = "tag")]
+    tags: Vec<String>,
+
+    /// Which tags we should exclude
+    #[structopt(long = "exclude-tag")]
+    exclude_tags: Vec<String>,
 }
 
 fn main() {

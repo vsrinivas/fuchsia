@@ -1,0 +1,11 @@
+{
+    select: {},
+    eval: {
+        c: "100 > 1"
+    },
+
+    act: {
+        act1: {trigger: "c", print: "trigger foo tag", tag: "foo"}
+    },
+    test: {}
+}

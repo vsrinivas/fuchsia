@@ -40,7 +40,13 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn run_command(inspect: &str, configs: &Vec<&str>, format: Option<&str>) -> Result<Output, Error> {
+fn run_command(
+    inspect: &str,
+    configs: &Vec<&str>,
+    tags: &Vec<&str>,
+    exclude_tags: &Vec<&str>,
+    format: Option<&str>,
+) -> Result<Output, Error> {
     let mut args = Vec::new();
     match format {
         Some(string) => {
@@ -63,6 +69,14 @@ fn run_command(inspect: &str, configs: &Vec<&str>, format: Option<&str>) -> Resu
             config
         ));
     }
+    for tag in tags.iter() {
+        args.push("--tag".to_owned());
+        args.push(format!("{}", tag));
+    }
+    for tag in exclude_tags.iter() {
+        args.push("--exclude-tag".to_owned());
+        args.push(format!("{}", tag));
+    }
     match Command::new(COMMAND.to_string()).args(args).output() {
         Ok(o) => Ok(o),
         Err(err) => return Err(anyhow!("Command didn't run: {:?}", err.kind())),
@@ -73,12 +87,14 @@ fn run_command(inspect: &str, configs: &Vec<&str>, format: Option<&str>) -> Resu
 fn report_error(
     inspect: &str,
     config: &Vec<&str>,
+    tags: &Vec<&str>,
+    exclude_tags: &Vec<&str>,
     format: Option<&str>,
     rc: i32,
     substring: &str,
     should_output: bool,
 ) -> bool {
-    match run_command(inspect, config, format) {
+    match run_command(inspect, config, tags, exclude_tags, format) {
         Ok(output) => {
             let stdout =
                 std::str::from_utf8(&output.stdout).unwrap_or("Non-UTF8 return from command");
@@ -119,24 +135,26 @@ fn report_error(
 fn look_for_error() -> bool {
     let mut failed = false;
     macro_rules! should {
-        (@internal $name:expr, $inspect:expr, $config:expr, $format:expr, $rc:expr, $string:expr,
-                $contains:expr) => {
+        (@internal $name:expr, $inspect:expr, $config:expr, $tags:expr, $exclude_tags:expr,
+            $format:expr, $rc:expr, $string:expr, $contains:expr) => {
             println!("Testing: {}", $name);
-            if report_error($inspect, $config, $format, $rc, $string, $contains) {
+            if report_error($inspect, $config, $tags, $exclude_tags, $format, $rc, $string, $contains) {
                 failed = true;
             }
         };
-        ($name:expr, $inspect:expr, $config:expr, $format:expr, $rc:expr, not $out:expr) => {
-            should!(@internal $name, $inspect, $config, $format, $rc, $out, false);
+        ($name:expr, $inspect:expr, $config:expr, $tags:expr, $exclude_tags:expr, $format:expr, $rc:expr, not $out:expr) => {
+            should!(@internal $name, $inspect, $config, $tags, $exclude_tags, $format, $rc, $out, false);
         };
-        ($name:expr, $inspect:expr, $config:expr, $format:expr, $rc:expr, $out:expr) => {
-            should!(@internal $name, $inspect, $config, $format, $rc, $out, true);
+        ($name:expr, $inspect:expr, $config:expr, $tags:expr, $exclude_tags:expr, $format:expr, $rc:expr, $out:expr) => {
+            should!(@internal $name, $inspect, $config, $tags, $exclude_tags, $format, $rc, $out, true);
         };
     }
     should!(
         "Report missing inspect.json",
         "not_found_file",
         &vec!["sample.triage"],
+        &vec![],
+        &vec![],
         None,
         0,
         "Couldn't read Inspect file"
@@ -145,16 +163,26 @@ fn look_for_error() -> bool {
         "Report missing config file",
         "inspect.json",
         &vec!["cfg2"],
+        &vec![],
+        &vec![],
         None,
         0,
         "Couldn't read config file"
     );
     should!("Successfully read correct files",
-        "inspect.json", &vec!["other.triage", "sample.triage"], None, 0, not "Couldn't");
+        "inspect.json",
+        &vec!["other.triage", "sample.triage"],
+        &vec![],
+        &vec![],
+        None,
+        0,
+        not "Couldn't");
     should!(
         "Use namespace in actions",
         "inspect.json",
         &vec!["other.triage", "sample.triage"],
+        &vec![],
+        &vec![],
         None,
         0,
         "Warning: 'act1' in 'other' detected 'yes on A!': 'sample::c1' was true"
@@ -163,6 +191,8 @@ fn look_for_error() -> bool {
         "Use namespace in metrics",
         "inspect.json",
         &vec!["other.triage", "sample.triage"],
+        &vec![],
+        &vec![],
         None,
         0,
         "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
@@ -171,15 +201,28 @@ fn look_for_error() -> bool {
         "Fail on missing namespace",
         "inspect.json",
         &vec!["sample.triage"],
+        &vec![],
+        &vec![],
         None,
         0,
         "Bad namespace"
     );
-    should!("Die on bad format arg", "inspect.json", &vec!["sample.triage"], Some("foo"), 1, "");
+    should!(
+        "Die on bad format arg",
+        "inspect.json",
+        &vec!["sample.triage"],
+        &vec![],
+        &vec![],
+        Some("foo"),
+        1,
+        ""
+    );
     should!(
         "Normal output on text format",
         "inspect.json",
         &vec!["other.triage", "sample.triage"],
+        &vec![],
+        &vec![],
         Some("text"),
         0,
         "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
@@ -188,9 +231,51 @@ fn look_for_error() -> bool {
         "CSV output on csv format",
         "inspect.json",
         &vec!["other.triage", "sample.triage"],
+        &vec![],
+        &vec![],
         Some("csv"),
         0,
         "inspect.json,true,false,false,true"
+    );
+    should!(
+        "include tagged actions",
+        "inspect.json",
+        &vec!["sample_tags.triage"],
+        &vec!["foo"],
+        &vec![],
+        None,
+        0,
+        "Warning: 'act1' in 'sample_tags' detected 'trigger foo tag': 'c' was true"
+    );
+    should!(
+        "only runs included actions",
+        "inspect.json",
+        &vec!["sample_tags.triage"],
+        &vec!["not_included"],
+        &vec![],
+        None,
+        0,
+        ""
+    );
+    should!(
+        "included tags override excludes",
+        "inspect.json",
+        &vec!["sample_tags.triage"],
+        &vec!["foo"],
+        &vec!["foo"],
+        None,
+        0,
+        "Warning: 'act1' in 'sample_tags' detected 'trigger foo tag': 'c' was true"
+    );
+    should!(
+        "exclude actions with excluded tags",
+        "inspect.json",
+        &vec!["sample_tags.triage"],
+        &vec![],
+        &vec!["foo"],
+        None,
+        0,
+        ""
     );
     failed
 }

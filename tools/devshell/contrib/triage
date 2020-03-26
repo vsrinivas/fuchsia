@@ -16,6 +16,8 @@
 ##    --inspect <path-to-inspect.json>   Path to inspect.json
 ##    --output_format <format>           How the results should be formatted.
 ##    --directory <dir>                  Directory to get an inspect.json file from
+##    --tag <tag>                        Adds an action tag to include
+##    --exclude-tag <tag>                Adds an action tag to exclude
 ##    --test                             Run self-tests (only)
 ##
 ## 0 or more --config paths may be given. Path is relative to CWD, or absolute.
@@ -23,7 +25,7 @@
 ##   If 0 paths are given, config defaults to
 ##   /src/diagnostics/config/triage/*.triage.
 ##
-## 0 or more --directories paths may be given. Path is relative to CWD, or
+## 0 or more --directory paths may be given. Path is relative to CWD, or
 ##   absolute.
 ##   If path is a directory, path/*.triage will be loaded.
 ##   If 0 paths are given, config defaults to
@@ -34,6 +36,16 @@
 ##
 ## 1 --output_format type can be given. Currently only text and csv are supported.
 ##   Text is the default option.
+##
+## 0 or more --tag values may be given. If tags are provided, only actions with
+##   matching tags will be included.
+##
+## 0 or more --exclude-tag values may be given. If exclude tags are provided,
+##   actions with matching tags will be excluded. This value is ignored if
+##   any --tag values are included.
+##
+## If no --tag values or --exclude-tag values are included then all of the
+##   actions will be included.
 
 set -e
 trap 'echo Failed: ${BASH_COMMAND}' ERR
@@ -47,6 +59,8 @@ inspect=""
 output_format=""
 testit=""
 directories=( )
+tags=( )
+exclude_tags=( )
 flags=""
 
 # Flag parsing.
@@ -71,6 +85,14 @@ while [[ "$1" =~ ^- ]]; do
     --directory)
       shift
       directories+=( "$1" )
+      ;;
+    --tag)
+      shift
+      tags+=( "$1" )
+      ;;
+    --exclude-tag)
+    shift
+      exclude_tags+=( "$1" )
       ;;
     --test)
       testit="yes"
@@ -113,6 +135,16 @@ done
 for directory in "${directories[@]}"
 do
   flags="${flags} --directory ${directory}"
+done
+
+for tag in "${tags[@]}"
+do
+	flags="${flags} --tag ${tag}"
+done
+
+for tag in "${exclude_tags[@]}"
+do
+  flags="${flags} --exclude-tag ${tag}"
 done
 
 if [ -z "${output_format}" ]; then

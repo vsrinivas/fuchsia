@@ -89,8 +89,9 @@ pub type ActionsSchema = HashMap<String, Action>;
 /// the string from [print] will be printed as a warning.
 #[derive(Deserialize, Debug)]
 pub struct Action {
-    pub trigger: String, // The name of a boolean Metric
-    pub print: String,   // What to print if trigger is true
+    pub trigger: String,     // The name of a boolean Metric
+    pub print: String,       // What to print if trigger is true
+    pub tag: Option<String>, // An optional tag to associate with this Action
 }
 
 impl ActionContext<'_> {
@@ -163,11 +164,15 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "do_true".to_string(),
-            Action { trigger: "true".to_string(), print: "True was fired".to_string() },
+            Action { trigger: "true".to_string(), print: "True was fired".to_string(), tag: None },
         );
         action_file.insert(
             "do_false".to_string(),
-            Action { trigger: "false".to_string(), print: "False was fired".to_string() },
+            Action {
+                trigger: "false".to_string(),
+                print: "False was fired".to_string(),
+                tag: None,
+            },
         );
         actions.insert("file".to_string(), action_file);
         let inspect_context =

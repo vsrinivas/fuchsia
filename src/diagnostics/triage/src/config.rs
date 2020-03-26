@@ -126,7 +126,10 @@ impl InspectContext {
 
 /// Parses the inspect.json file and all the config files.
 pub fn initialize(options: Options) -> Result<StateHolder, Error> {
-    let Options { directories, output_format, inspect, config_files, .. } = options;
+    let Options { directories, output_format, inspect, config_files, tags, exclude_tags, .. } =
+        options;
+
+    let action_tag_directive = action_tag_directive_from_tags(tags, exclude_tags);
 
     let mut inspect_contexts = Vec::new();
     inspect_contexts.push(InspectContext::initialize_from_file(inspect.unwrap())?);
@@ -158,6 +161,8 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
             Err(e) => bail!("Parsing file '{}': {}", file_name, e),
         };
         let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } = file_config;
+
+        let file_actions = filter_actions(file_actions, &action_tag_directive);
         let mut file_metrics = HashMap::new();
         for (key, value) in file_selectors.into_iter() {
             file_metrics.insert(key, Metric::Selector(value));
@@ -187,9 +192,69 @@ fn base_name(path: &String) -> Result<String, Error> {
     bail!("Bad path {} - can't find file_stem", path)
 }
 
+/// A value which directs how to include Actions based on their tags.
+enum ActionTagDirective {
+    /// Include all of the Actions in the Config
+    AllowAll,
+
+    /// Only include the Actions which match the given tags
+    Include(Vec<String>),
+
+    /// Include all tags excluding the given tags
+    Exclude(Vec<String>),
+}
+
+/// Creates a new ActionTagDirective based on the following rules,
+///
+/// - AllowAll iff tags is empty and exclude_tags is empty.
+/// - Include if tags is not empty and exclude_tags is empty.
+/// - Include if tags is not empty and exclude_tags is not empty, in this
+///   situation the exclude_ags will be ignored since include implies excluding
+///   all other tags.
+/// - Exclude iff tags is empty and exclude_tags is not empty.
+fn action_tag_directive_from_tags(
+    tags: Vec<String>,
+    exclude_tags: Vec<String>,
+) -> ActionTagDirective {
+    match (tags.is_empty(), exclude_tags.is_empty()) {
+        // tags are not empty
+        (false, _) => ActionTagDirective::Include(tags),
+        // tags are empty, exclude_tags are not empty
+        (true, false) => ActionTagDirective::Exclude(exclude_tags),
+        _ => ActionTagDirective::AllowAll,
+    }
+}
+
+/// Exfiltrates the actions in the ActionsSchema.
+///
+/// This method will enumerate the actions in the ActionsSchema and determine
+/// which Actions are included based on the directive. Actions only contain a
+/// single tag so an Include directive implies that all other tags should be
+/// excluded and an Exclude directive implies that all other tags should be
+/// included.
+fn filter_actions(actions: ActionsSchema, action_directive: &ActionTagDirective) -> ActionsSchema {
+    match action_directive {
+        ActionTagDirective::AllowAll => actions,
+        ActionTagDirective::Include(tags) => actions
+            .into_iter()
+            .filter(|(_, a)| match &a.tag {
+                Some(tag) => tags.contains(tag),
+                None => false,
+            })
+            .collect(),
+        ActionTagDirective::Exclude(tags) => actions
+            .into_iter()
+            .filter(|(_, a)| match &a.tag {
+                Some(tag) => !tags.contains(tag),
+                None => true,
+            })
+            .collect(),
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use {super::*, anyhow::Error};
+    use {super::*, crate::act::Action, anyhow::Error};
 
     // initialize() will be tested in the integration test: "fx triage --test"
     // TODO(cphoenix) - set up dirs under test/ and test initialize() here.
@@ -220,5 +285,180 @@ mod test {
             "Should have returned 'Err' on 'GARBAGE'"
         );
         Ok(())
+    }
+
+    #[test]
+    fn action_tag_directive_from_tags_allow_all() {
+        let result = action_tag_directive_from_tags(vec![], vec![]);
+        match result {
+            ActionTagDirective::AllowAll => (),
+            _ => panic!("failed to create correct ActionTagDirective"),
+        }
+    }
+
+    #[test]
+    fn action_tag_directive_from_tags_include() {
+        let result =
+            action_tag_directive_from_tags(vec!["t1".to_string(), "t2".to_string()], vec![]);
+        match result {
+            ActionTagDirective::Include(tags) => {
+                assert_eq!(tags, vec!["t1".to_string(), "t2".to_string()])
+            }
+            _ => panic!("failed to create correct ActionTagDirective"),
+        }
+    }
+
+    #[test]
+    fn action_tag_directive_from_tags_include_override_exclude() {
+        let result = action_tag_directive_from_tags(
+            vec!["t1".to_string(), "t2".to_string()],
+            vec!["t3".to_string()],
+        );
+        match result {
+            ActionTagDirective::Include(tags) => {
+                assert_eq!(tags, vec!["t1".to_string(), "t2".to_string()])
+            }
+            _ => panic!("failed to create correct ActionTagDirective"),
+        }
+    }
+
+    #[test]
+    fn action_tag_directive_from_tags_exclude() {
+        let result =
+            action_tag_directive_from_tags(vec![], vec!["t1".to_string(), "t2".to_string()]);
+        match result {
+            ActionTagDirective::Exclude(tags) => {
+                assert_eq!(tags, vec!["t1".to_string(), "t2".to_string()])
+            }
+            _ => panic!("failed to create correct ActionTagDirective"),
+        }
+    }
+
+    // helper macro to create an ActionsSchema
+    macro_rules! actions_schema {
+        ( $($key:expr => $trigger:expr, $print:expr, $tag:expr),+ ) => {
+            {
+                let mut m =  ActionsSchema::new();
+                $(
+                    let action = Action {
+                        trigger: $trigger.to_string(),
+                        print: $print.to_string(),
+                        tag: $tag
+                    };
+                    m.insert($key.to_string(), action);
+                )+
+                m
+            }
+        }
+    }
+
+    // helper macro to create an ActionsSchema
+    macro_rules! assert_has_action {
+        ($result:expr, $key:expr, $trigger:expr, $print:expr) => {
+            let a = $result.get(&$key.to_string());
+            assert!(a.is_some());
+            let a = a.unwrap();
+            assert_eq!(a.trigger, $trigger.to_string());
+            assert_eq!(a.print, $print.to_string());
+        };
+    }
+
+    #[test]
+    fn filter_actions_allow_all() {
+        let result = filter_actions(
+            actions_schema! {
+                "no_tag" => "t1", "foo", None,
+                "tagged" => "t2", "bar", Some("tag".to_string())
+            },
+            &ActionTagDirective::AllowAll,
+        );
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn filter_actions_include_one_tag() {
+        let result = filter_actions(
+            actions_schema! {
+                "1" => "t1", "p1", Some("ignore".to_string()),
+                "2" => "t2", "p2", Some("tag".to_string()),
+                "3" => "t3", "p3", Some("tag".to_string())
+            },
+            &ActionTagDirective::Include(vec!["tag".to_string()]),
+        );
+        assert_eq!(result.len(), 2);
+        assert_has_action!(result, "2", "t2", "p2");
+        assert_has_action!(result, "3", "t3", "p3");
+    }
+
+    #[test]
+    fn filter_actions_include_many_tags() {
+        let result = filter_actions(
+            actions_schema! {
+                "1" => "t1", "p1", Some("ignore".to_string()),
+                "2" => "t2", "p2", Some("tag1".to_string()),
+                "3" => "t3", "p3", Some("tag2".to_string()),
+                "4" => "t4", "p4", Some("tag2".to_string())
+            },
+            &ActionTagDirective::Include(vec!["tag1".to_string(), "tag2".to_string()]),
+        );
+        assert_eq!(result.len(), 3);
+        assert_has_action!(result, "2", "t2", "p2");
+        assert_has_action!(result, "3", "t3", "p3");
+        assert_has_action!(result, "4", "t4", "p4");
+    }
+
+    #[test]
+    fn filter_actions_exclude_one_tag() {
+        let result = filter_actions(
+            actions_schema! {
+                "1" => "t1", "p1", Some("ignore".to_string()),
+                "2" => "t2", "p2", Some("tag".to_string()),
+                "3" => "t3", "p3", Some("tag".to_string())
+            },
+            &ActionTagDirective::Exclude(vec!["tag".to_string()]),
+        );
+        assert_eq!(result.len(), 1);
+        assert_has_action!(result, "1", "t1", "p1");
+    }
+
+    #[test]
+    fn filter_actions_exclude_many() {
+        let result = filter_actions(
+            actions_schema! {
+                "1" => "t1", "p1", Some("ignore".to_string()),
+                "2" => "t2", "p2", Some("tag1".to_string()),
+                "3" => "t3", "p3", Some("tag2".to_string()),
+                "4" => "t4", "p4", Some("tag2".to_string())
+            },
+            &ActionTagDirective::Exclude(vec!["tag1".to_string(), "tag2".to_string()]),
+        );
+        assert_eq!(result.len(), 1);
+        assert_has_action!(result, "1", "t1", "p1");
+    }
+
+    #[test]
+    fn filter_actions_include_does_not_include_empty_tag() {
+        let result = filter_actions(
+            actions_schema! {
+                "1" => "t1", "p1", None,
+                "2" => "t2", "p2", Some("tag".to_string())
+            },
+            &ActionTagDirective::Include(vec!["tag".to_string()]),
+        );
+        assert_eq!(result.len(), 1);
+        assert_has_action!(result, "2", "t2", "p2");
+    }
+
+    #[test]
+    fn filter_actions_exclude_does_include_empty_tag() {
+        let result = filter_actions(
+            actions_schema! {
+                "1" => "t1", "p1", None,
+                "2" => "t2", "p2", Some("tag".to_string())
+            },
+            &ActionTagDirective::Exclude(vec!["tag".to_string()]),
+        );
+        assert_eq!(result.len(), 1);
+        assert_has_action!(result, "1", "t1", "p1");
     }
 }
