@@ -1,0 +1,17 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Device discovery
+### list all nearby devices
+
+## usage: fx list-devices
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-standard-switches "$@"
+fx-config-read
+
+fx-device-finder list -netboot -ipv4=false -full
