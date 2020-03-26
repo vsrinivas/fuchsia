@@ -99,9 +99,9 @@ The version semver in each cell denotes the version point that was tested.
 | ICU version | `default` | `renaming` | `renaming`, `icu_version_in_env`|
 | ----------- | ------------------- | ---------------------- | ----- |
 | 63.x        | ???                   | ???                      | ??? |
-| 64.2        | 0.0.{3,4,5}             | ???                      | ??? |
-| 65.1        | 0.0.5                 | 0.0.5                    | 0.0.5 |
-| 66.0.1      | 0.0.5                 | ???                      | ??? |
+| 64.2        | 0.1.0                 | ???                      | ??? |
+| 65.1        | 0.1.0                 | 0.1.0                    | 0.1.0 |
+| 66.0.1      | 0.1.0                 | ???                      | ??? |
 
 > API versions that differ in the minor version number only should be
 > compatible; but since it is time consuming to test all versions and

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Implementation of the functions in the ICU4C `ustring.h` header.
+//! # Implemuntation of the functions in the ICU4C `ustring.h` header.
 //!
 //! This is where the UTF-8 strings get converted back and forth to the UChar
 //! representation.
@@ -146,7 +146,7 @@ impl TryFrom<&UChar> for String {
         common::Error::ok_or_warning(status)?;
         let s = String::from_utf8(buf);
         match s {
-            Err(_) => Err(common::Error::wrapper("could not convert to utf8")),
+            Err(e) => Err(e.into()),
             Ok(x) => {
                 trace!("result UChar*->utf8: {:?}", x);
                 Ok(x)

@@ -56,8 +56,7 @@ impl UCalendar {
         cal_type: sys::UCalendarType,
     ) -> Result<UCalendar, common::Error> {
         let mut status = common::Error::OK_CODE;
-        let asciiz_locale =
-            ffi::CString::new(locale).map_err(|_| common::Error::string_with_interior_nul())?;
+        let asciiz_locale = ffi::CString::new(locale).map_err(|e| common::Error::wrapper(e))?;
         // Requires that zone_id contains a valid Unicode character representation with known
         // beginning and length.  asciiz_locale must be a pointer to a valid C string.  The first
         // condition is assumed to be satisfied by ustring::UChar, and the second should be

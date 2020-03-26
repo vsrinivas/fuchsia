@@ -39,6 +39,17 @@ impl Enumeration {
     pub fn repr(&mut self) -> *mut sys::UEnumeration {
         self.rep
     }
+
+    /// Creates an empty `Enumeration`.
+    pub fn empty() -> Self {
+        Enumeration::try_from(&vec![][..]).unwrap()
+    }
+}
+
+impl Default for Enumeration {
+    fn default() -> Self {
+        Self::empty()
+    }
 }
 
 /// Creates an enumeration iterator from a vector of UTF-8 strings.
@@ -113,17 +124,16 @@ impl Iterator for Enumeration {
 /// Implements `ucal_openCountryTimeZones`.
 // This should be in the `ucal` crate, but not possible because of the raw enum initialization.
 // Tested in uenum.
-pub fn open_country_time_zones(country: &str) -> Result<crate::Enumeration, common::Error> {
+pub fn open_country_time_zones(country: &str) -> Result<Enumeration, common::Error> {
     let mut status = common::Error::OK_CODE;
-    let asciiz_country =
-        ffi::CString::new(country).map_err(|_| common::Error::string_with_interior_nul())?;
+    let asciiz_country = ffi::CString::new(country)?;
     // Requires that the asciiz country be a pointer to a valid C string.
     let raw_enum = unsafe {
         assert!(common::Error::is_ok(status));
         versioned_function!(ucal_openCountryTimeZones)(asciiz_country.as_ptr(), &mut status)
     };
     common::Error::ok_or_warning(status)?;
-    Ok(crate::Enumeration {
+    Ok(Enumeration {
         raw: None,
         rep: raw_enum,
     })
@@ -136,10 +146,9 @@ pub fn open_time_zone_id_enumeration(
     zone_type: sys::USystemTimeZoneType,
     region: &str,
     raw_offset: Option<i32>,
-) -> Result<crate::Enumeration, common::Error> {
+) -> Result<Enumeration, common::Error> {
     let mut status = common::Error::OK_CODE;
-    let asciiz_region =
-        ffi::CString::new(region).map_err(|_| common::Error::string_with_interior_nul())?;
+    let asciiz_region = ffi::CString::new(region)?;
     let mut repr_raw_offset: i32 = raw_offset.unwrap_or_default();
 
     // asciiz_region should be a valid asciiz pointer. raw_offset is an encoding
@@ -157,7 +166,7 @@ pub fn open_time_zone_id_enumeration(
         )
     };
     common::Error::ok_or_warning(status)?;
-    Ok(crate::Enumeration {
+    Ok(Enumeration {
         raw: None,
         rep: raw_enum,
     })
@@ -168,17 +177,39 @@ pub fn open_time_zone_id_enumeration(
 /// Implements `ucal_openTimeZones`
 // This should be in the `ucal` crate, but not possible because of the raw enum initialization.
 // Tested in uenum.
-pub fn open_time_zones() -> Result<crate::Enumeration, common::Error> {
+pub fn open_time_zones() -> Result<Enumeration, common::Error> {
     let mut status = common::Error::OK_CODE;
     let raw_enum = unsafe {
         assert!(common::Error::is_ok(status));
         versioned_function!(ucal_openTimeZones)(&mut status)
     };
     common::Error::ok_or_warning(status)?;
-    Ok(crate::Enumeration {
+    Ok(Enumeration {
         raw: None,
         rep: raw_enum,
     })
+}
+
+/// Implements `uloc_openKeywords`.
+// This should be in the `uloc` crate, but this is not possible because of the raw enum
+// initialization. Tested in `uloc`.
+pub fn uloc_open_keywords(locale: &str) -> Result<Enumeration, common::Error> {
+    let mut status = common::Error::OK_CODE;
+    let asciiz_locale = ffi::CString::new(locale)?;
+    let raw_enum = unsafe {
+        assert!(common::Error::is_ok(status));
+        versioned_function!(uloc_openKeywords)(asciiz_locale.as_ptr(), &mut status)
+    };
+    common::Error::ok_or_warning(status)?;
+    // "No error but null" means that there are no keywords
+    if raw_enum.is_null() {
+        Ok(Enumeration::empty())
+    } else {
+        Ok(Enumeration {
+            raw: None,
+            rep: raw_enum,
+        })
+    }
 }
 
 #[cfg(test)]

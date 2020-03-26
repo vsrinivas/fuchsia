@@ -18,7 +18,7 @@
 
 use {
     rust_icu_sys as sys,
-    std::{borrow::Cow, ffi, os},
+    std::{ffi, os},
     thiserror::Error,
 };
 
@@ -39,8 +39,8 @@ pub enum Error {
 
     /// Errors originating from the wrapper code.  For example when pre-converting input into
     /// UTF8 for input that happens to be malformed.
-    #[error("wrapper error: {}", _0)]
-    Wrapper(Cow<'static, str>),
+    #[error(transparent)]
+    Wrapper(anyhow::Error),
 }
 
 impl Error {
@@ -79,12 +79,6 @@ impl Error {
         } else {
             Ok(())
         }
-    }
-
-    /// An error occurring when a string with interior NUL byte is converted to C string.
-    // TODO(fmil): rework common::Error to be more rustful.
-    pub fn string_with_interior_nul() -> Self {
-        Error::wrapper("attempted to convert a string with interior NUL byte")
     }
 
     /// Returns true if this error has the supplied `code`.
@@ -128,8 +122,26 @@ impl Error {
         }
     }
 
-    pub fn wrapper(msg: impl Into<Cow<'static, str>>) -> Self {
-        Self::Wrapper(msg.into())
+    pub fn wrapper(source: impl Into<anyhow::Error>) -> Self {
+        Self::Wrapper(source.into())
+    }
+}
+
+impl From<ffi::NulError> for Error {
+    fn from(e: ffi::NulError) -> Self {
+        Self::wrapper(e)
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(e: std::str::Utf8Error) -> Self {
+        Self::wrapper(e)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(e: std::string::FromUtf8Error) -> Self {
+        Self::wrapper(e)
     }
 }
 
@@ -154,7 +166,7 @@ impl CStringVec {
         let mut rep = Vec::with_capacity(strings.len());
         // Convert all to asciiz strings and insert into the vector.
         for elem in strings {
-            let asciiz = ffi::CString::new(*elem).map_err(|_| Error::string_with_interior_nul())?;
+            let asciiz = ffi::CString::new(*elem)?;
             rep.push(asciiz);
         }
         let c_rep = rep.iter().map(|e| e.as_ptr()).collect();
