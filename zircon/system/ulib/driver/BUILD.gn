@@ -2,6 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("driver") {
-  public_deps = [ "$zx/system/core/devmgr/devhost:driver" ]
+# THIS IS A DUMMY NO-OP THAT EXPORTS THE REQUIRED SYMBOLS FOR THE ZN BUILD
+# LOOK IN //SRC/DEVICES FOR THE DRIVER. tHIS DRIVER IS NEVER PUT IN THE ZBI
+# AND IS ONLY PROVIDED AS A LINK TARGET.
+zx_library("driver") {
+  shared = true
+  static = false
+
+  sources = [ "api.cc" ]
+
+  deps = [ "$zx/system/ulib/ddk" ]
+
+  # Since the tracing support is brought in via an archive, we need explicit
+  # references to ensure everything is present.
+  libs = [ "$zx/system/ulib/trace-engine/ddk-exports.ld" ]
+
+  assert_no_deps = [ "$zx/system/ulib/trace-engine:trace-engine.shared" ]
+
+  metadata = {
+    # This library is on the allowlist for driver() shared library deps.
+    # It doesn't cause driver-denylist-check.sh to fail, and it prunes the
+    # metadata walk here so our own deps are not subject to the check.
+    driver_shlib_denylist = []
+    driver_shlib_denylist_barrier = []
+  }
 }
