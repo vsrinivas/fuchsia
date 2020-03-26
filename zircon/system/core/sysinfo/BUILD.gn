@@ -2,20 +2,45 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("sysinfo") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("sysinfo") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_dir = "$root_out_dir/zircon-migrated"
   sources = [
     "main.cc",
     "sysinfo.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:llcpp",
-    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/svc",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/svc",
+    "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
   ]
+}
+
+migrated_manifest("sysinfo-manifest") {
+  deps = [ ":sysinfo" ]
 }

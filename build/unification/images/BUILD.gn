@@ -102,7 +102,6 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
-    ":bin.sysinfo",
 #------------------
 #------------------
 #------------------
@@ -1308,7 +1307,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/syscall-check:syscall-check-manifest",
 #------------------
 #------------------
-    #":bin.sysinfo",
+    "//zircon/system/core/sysinfo:sysinfo-manifest",
 #------------------
     "//zircon/system/uapp/tee-test:tee-test-manifest",
     "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
