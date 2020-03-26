@@ -545,9 +545,11 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
 
 void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
-  ZX_DEBUG_ASSERT(clone_watcher_.object() != ZX_HANDLE_INVALID);
+  if (!tearing_down_) {
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
+    ZX_DEBUG_ASSERT(clone_watcher_.object() != ZX_HANDLE_INVALID);
+  }
   clone_watcher_.set_object(ZX_HANDLE_INVALID);
   clone_ref_ = nullptr;
 }
@@ -822,6 +824,7 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   if (clone_watcher_.is_pending()) {
     clone_watcher_.Cancel();
     clone_watcher_.set_object(ZX_HANDLE_INVALID);
+    tearing_down_ = true;
     return std::move(clone_ref_);
   }
   return nullptr;

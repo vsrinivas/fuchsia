@@ -180,6 +180,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Monitors the current VMO, keeping a reference to the Vnode
   // alive while the |out| VMO (and any clones it may have) are open.
   zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size);
+
+  // Receives notifications when all clones vended by CloneDataVmo() are released.
   void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal);
 
@@ -277,8 +279,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   zx::event readable_event_ = {};
 
-  uint32_t fd_count_ = {};
-  uint32_t map_index_ = {};
+  uint32_t fd_count_ = 0;
+  uint32_t map_index_ = 0;
+  bool tearing_down_ = false;
 
   // TODO(smklein): We are only using a few of these fields, such as:
   // - blob_size
