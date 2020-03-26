@@ -43,7 +43,10 @@ impl LogManager {
         Self {
             inner: Arc::new(Mutex::new(ManagerInner {
                 listeners: Vec::new(),
-                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+                log_msg_buffer: buffer::MemoryBoundedBuffer::new(
+                    OLD_MSGS_BUF_SIZE,
+                    node.create_child("buffer_stats"),
+                ),
                 stats: stats::LogManagerStats::new(node),
             })),
         }
@@ -290,7 +293,10 @@ mod tests {
                 warning_logs: 2u64,
                 error_logs: 0u64,
                 fatal_logs: 0u64,
-            }
+                buffer_stats: {
+                    rolled_out_entries: 0u64,
+                }
+            },
         });
     }
 
@@ -370,7 +376,10 @@ mod tests {
                 warning_logs: 1u64,
                 error_logs: 1u64,
                 fatal_logs: 1u64,
-            }
+                buffer_stats: {
+                    rolled_out_entries: 0u64,
+                }
+            },
         });
     }
 
@@ -465,10 +474,12 @@ mod tests {
         fn new() -> Self {
             let inspector = inspect::Inspector::new();
             let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+            let node = inspector.root().create_child("log_stats");
+            let buffer_node = node.create_child("buffer_stats");
             let inner = Arc::new(Mutex::new(ManagerInner {
                 listeners: Vec::new(),
-                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
-                stats: stats::LogManagerStats::new(inspector.root().create_child("log_stats")),
+                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE, buffer_node),
+                stats: stats::LogManagerStats::new(node),
             }));
 
             let lm = LogManager { inner };
