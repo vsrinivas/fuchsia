@@ -244,8 +244,8 @@ class AutoPin {
   ~AutoPin();
 
  private:
-  cpu_mask_t prev_cpu_mask_;
   Thread* thread_;
+  cpu_mask_t prev_affinity_;
 };
 
 bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value);
