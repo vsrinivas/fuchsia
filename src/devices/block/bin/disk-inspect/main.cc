@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <getopt.h>
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
 #include <zircon/status.h>
@@ -26,16 +27,62 @@
 
 namespace {
 
-namespace fuchsia_partition = llcpp::fuchsia::hardware::block::partition;
+constexpr char kUsageMessage[] = R"""(
+Tool for inspecting a block device as a filesystem.
+
+disk-inspect --device /dev/class/block/002 --name minfs
+
+Options:
+  --device (-d) path : Specifies the block device to use.
+  --name (-n) : What filesystem type to represent the block device. Only
+                supports "minfs" for now.
+)""";
+
+// Configuration info (what to do).
+struct Config {
+  const char* path;
+  const char* name;
+};
+
+bool GetOptions(int argc, char** argv, Config* config) {
+  while (true) {
+    struct option options[] = {
+        {"device", required_argument, nullptr, 'd'},
+        {"name", required_argument, nullptr, 'n'},
+        {"help", no_argument, nullptr, 'h'},
+        {nullptr, 0, nullptr, 0},
+    };
+    int opt_index;
+    int c = getopt_long(argc, argv, "d:n:h", options, &opt_index);
+    if (c < 0) {
+      break;
+    }
+    switch (c) {
+      case 'd':
+        config->path = optarg;
+        break;
+      case 'n':
+        config->name = optarg;
+        break;
+      case 'h':
+        std::cout << kUsageMessage << "\n";
+        return false;
+    }
+  }
+  return argc == optind;
+}
+
+bool ValidateOptions(const Config& config) { return !(!config.path || !config.name); }
 
 fit::result<uint32_t, std::string> GetBlockSize(const std::string& name) {
   if (name == "minfs") {
     return fit::ok(minfs::kMinfsBlockSize);
   }
-  return fit::error("FS with label \"" + name + "\" is not supported for inspection.\n");
+  return fit::error("FS with label \"" + name +
+                    "\" is not supported for inspection.\nSupported types: minfs\n");
 }
 
-std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path) {
+std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path, const char* fs_name) {
   fbl::unique_fd fd(open(path, O_RDONLY));
 
   zx::channel channel;
@@ -45,21 +92,13 @@ std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path) {
     return nullptr;
   }
 
-  auto name_resp = fuchsia_partition::Partition::Call::GetName(channel.borrow());
-  if (!name_resp.ok()) {
-    std::cerr << "Get block device name failed.\n";
+  std::string name(fs_name);
+  auto size_result = GetBlockSize(name);
+
+  if (size_result.is_error()) {
+    std::cerr << size_result.take_error();
     return nullptr;
   }
-  if (name_resp->status != ZX_OK) {
-    std::cerr << "Could not get block device fs name: " << name_resp->status << "\n";
-    return nullptr;
-  }
-  if (name_resp->name.is_null()) {
-    std::cerr << "Block device name is null.\n";
-    return nullptr;
-  }
-  std::string name(name_resp->name.begin(), name_resp->name.size());
-  std::cout << "Found block partition label: " << name << "\n";
 
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   status = block_client::RemoteBlockDevice::Create(std::move(channel), &device);
@@ -67,12 +106,7 @@ std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path) {
     std::cerr << "Cannot create remote device: " << status << "\n";
     return nullptr;
   }
-  auto size_result = GetBlockSize(name);
 
-  if (size_result.is_error()) {
-    std::cerr << size_result.take_error();
-    return nullptr;
-  }
   uint32_t block_size = size_result.take_value();
   std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
   status = disk_inspector::InspectorTransactionHandler::Create(std::move(device), block_size,
@@ -101,18 +135,25 @@ std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path) {
 }  //  namespace
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "usage: " << argv[0] << " <device path>\n";
+  Config config = {};
+  if (!GetOptions(argc, argv, &config)) {
+    std::cout << kUsageMessage << "\n";
     return -1;
   }
 
-  std::unique_ptr<disk_inspector::CommandHandler> handler = GetHandler(argv[1]);
+  if (!ValidateOptions(config)) {
+    std::cout << kUsageMessage << "\n";
+    return -1;
+  }
+
+  std::unique_ptr<disk_inspector::CommandHandler> handler = GetHandler(config.path, config.name);
   if (handler == nullptr) {
     std::cerr << "Could not get inspector at path. Closing.\n";
     return -1;
   }
 
-  std::cout << "Starting inspector. Type \"help\" to get available commands.\n";
+  std::cout << "Starting " << config.name
+            << " inspector. Type \"help\" to get available commands.\n";
   std::cout << "Type \"exit\" to quit the application.\n";
   while (true) {
     std::string command_str;
