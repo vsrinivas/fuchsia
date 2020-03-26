@@ -7,6 +7,7 @@
 #include <debug.h>
 #include <err.h>
 #include <lib/cmdline.h>
+#include <ktl/atomic.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
@@ -76,10 +77,10 @@ static void ktrace_report_probes(void) {
 
 typedef struct ktrace_state {
   // where the next record will be written
-  int offset;
+  ktl::atomic<uint32_t> offset;
 
   // mask of groups we allow, 0 == tracing disabled
-  int grpmask;
+  ktl::atomic<int> grpmask;
 
   // total size of the trace buffer
   uint32_t bufsize;
@@ -89,6 +90,9 @@ typedef struct ktrace_state {
 
   // raw trace buffer
   uint8_t* buffer;
+
+  // buffer is full or not
+  ktl::atomic<bool> buffer_full;
 } ktrace_state_t;
 
 static ktrace_state_t KTRACE_STATE;
@@ -104,7 +108,7 @@ ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
   if (ks->marker) {
     max = ks->marker;
   } else {
-    max = ks->offset;
+    max = ks->offset.load();
     if (max > ks->bufsize) {
       max = ks->bufsize;
     }
@@ -136,14 +140,14 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     case KTRACE_ACTION_START:
       options = KTRACE_GRP_TO_MASK(options);
       ks->marker = 0;
-      atomic_store(&ks->grpmask, options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
+      ks->grpmask.store(options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
       ktrace_report_live_processes();
       ktrace_report_live_threads();
       break;
 
     case KTRACE_ACTION_STOP: {
-      atomic_store(&ks->grpmask, 0);
-      uint32_t n = ks->offset;
+      ks->grpmask.store(0);
+      uint32_t n = ks->offset.load();
       if (n > ks->bufsize) {
         ks->marker = ks->bufsize;
       } else {
@@ -154,7 +158,8 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 
     case KTRACE_ACTION_REWIND:
       // roll back to just after the metadata
-      atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
+      ks->offset.store(KTRACE_RECSIZE * 2);
+      ks->buffer_full.store(false);
       ktrace_report_syscalls();
       ktrace_report_probes();
       ktrace_report_vcpu_meta();
@@ -226,6 +231,7 @@ void ktrace_init(unsigned level) {
   // The last packet written can overhang the end of the buffer,
   // so we reduce the reported size by the max size of a record
   ks->bufsize = mb - 256;
+  ks->buffer_full.store(false);
 
   dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ks->buffer, mb);
 
@@ -239,10 +245,10 @@ void ktrace_init(unsigned level) {
   rec[1].b = static_cast<uint32_t>(n >> 32);
 
   // enable tracing
-  atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
+  ks->offset.store(KTRACE_RECSIZE * 2);
   ktrace_report_syscalls();
   ktrace_report_probes();
-  atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
+  ks->grpmask.store(KTRACE_GRP_TO_MASK(grpmask));
 
   // report names of existing threads
   ktrace_report_live_threads();
@@ -257,14 +263,25 @@ void ktrace_init(unsigned level) {
   ktrace_probe(TraceAlways, TraceContext::Thread, "ktrace_ready"_stringref);
 }
 
+static inline bool ktrace_enabled(uint32_t tag, ktrace_state_t* ks) {
+  if (tag & ks->grpmask.load())
+    return true;
+  return false;
+}
+
+static inline void ktrace_disable(ktrace_state_t* ks) {
+  ks->grpmask.store(0);
+  ks->buffer_full.store(true);
+}
+
 void ktrace_tiny(uint32_t tag, uint32_t arg) {
   ktrace_state_t* ks = &KTRACE_STATE;
-  if (tag & atomic_load(&ks->grpmask)) {
+  if (ktrace_enabled(tag, ks)) {
     tag = (tag & 0xFFFFFFF0) | 2;
-    int off;
-    if ((off = atomic_add(&ks->offset, KTRACE_HDRSIZE)) >= static_cast<int>(ks->bufsize)) {
+    uint32_t off;
+    if ((off = (ks->offset.fetch_add(KTRACE_HDRSIZE))) >= (ks->bufsize)) {
       // if we arrive at the end, stop
-      atomic_store(&ks->grpmask, 0);
+      ktrace_disable(ks);
     } else {
       ktrace_header_t* hdr = reinterpret_cast<ktrace_header_t*>(ks->buffer + off);
       hdr->ts = ktrace_timestamp();
@@ -276,14 +293,13 @@ void ktrace_tiny(uint32_t tag, uint32_t arg) {
 
 void* ktrace_open(uint32_t tag, uint64_t ts) {
   ktrace_state_t* ks = &KTRACE_STATE;
-  if (!(tag & atomic_load(&ks->grpmask))) {
+  if (!ktrace_enabled(tag, ks))
     return nullptr;
-  }
 
-  int off;
-  if ((off = atomic_add(&ks->offset, KTRACE_LEN(tag))) >= static_cast<int>(ks->bufsize)) {
+  uint32_t off;
+  if ((off = ks->offset.fetch_add(KTRACE_LEN(tag))) >= (ks->bufsize)) {
     // if we arrive at the end, stop
-    atomic_store(&ks->grpmask, 0);
+    ktrace_disable(ks);
     return nullptr;
   }
 
@@ -298,16 +314,16 @@ void* ktrace_open(uint32_t tag, uint64_t ts) {
 
 void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
   ktrace_state_t* ks = &KTRACE_STATE;
-  if ((tag & atomic_load(&ks->grpmask)) || always) {
+  if (ktrace_enabled(tag, ks) || (always && !ks->buffer_full.load())) {
     const uint32_t len = static_cast<uint32_t>(strnlen(name, ZX_MAX_NAME_LEN - 1));
 
     // set size to: sizeof(hdr) + len + 1, round up to multiple of 8
     tag = (tag & 0xFFFFFFF0) | ((KTRACE_NAMESIZE + len + 1 + 7) >> 3);
 
-    int off;
-    if ((off = atomic_add(&ks->offset, KTRACE_LEN(tag))) >= static_cast<int>(ks->bufsize)) {
+    uint32_t off;
+    if ((off = ks->offset.fetch_add(KTRACE_LEN(tag))) >= (ks->bufsize)) {
       // if we arrive at the end, stop
-      atomic_store(&ks->grpmask, 0);
+      ktrace_disable(ks);
     } else {
       ktrace_rec_name_t* rec = reinterpret_cast<ktrace_rec_name_t*>(ks->buffer + off);
       rec->tag = tag;
