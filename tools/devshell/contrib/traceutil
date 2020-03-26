@@ -1,0 +1,18 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Fuchsia tracing utility
+## Usage: traceutil <flags> <subcommand> <subcommand args>
+##
+## See 'fx traceutil --help' for more help
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
+fx-config-read
+
+fx-export-device-address
+export TRACEUTIL_TARGET_HOST="${FX_DEVICE_ADDR}"
+export TRACEUTIL_TARGET_PORT="${FX_SSH_PORT}"
+exec "${FUCHSIA_BUILD_DIR}/host-tools/traceutil" "$@"

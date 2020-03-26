@@ -65,7 +65,16 @@ The run variant executes the subcommand in a subshell and the exec variant
 `fx-command-help` prints the command output for the currently running
 subcommand.
 
-TODO(raggi): rename the following two functions:
+`fx-export-device-address` resolves the current device as currently
+configured by set-device, or detected via `device-finder` and
+exports:
+
+* `FX_DEVICE_NAME` the device name as either set using `-d`, `fx
+  set-device`, or resolved by search.
+* `FX_DEVICE_ADDR` the device fuchsia address as resolved.
+* `FX_SSH_ADDR` the device address formatted as required for `ssh(1)`.
+  (IPv6 includes `[]`).
+* `FX_SSH_PORT` the device SSH port if set via `fx set-device`.
 
 `get-device-name` returns either the device name that the user has set with
 `fx set-device` or `fx -d <device-name>`. If the user has not set a default
@@ -73,8 +82,21 @@ device, the command will run device discovery, and will return a discovered
 device name provided there is only one device discovered.
 
 `get-fuchsia-device-addr` consumes `get-device-name` and returns the Fuchsia
-IPv6 address of the device. The returned address is the "netstack address",
-not the "netsvc address".
+address of the device. The returned address is the "netstack address", not
+the "netsvc address".
+
+`get-device-addr-resource` is the same as `get-fuchsia-device-addr`, except
+that it ensures the address is correctly formatted for use by tools such as
+`ssh(1)`, i.e. for IPv6 addresses, the address is encased in `[]`.
+
+`get-device-addr-url` is the same as `get-device-addr-resource` except that
+it ensures that IPv6 scopes are appropriately percent-encoded.
+
+`fx-device-finder` invokes the `device-finder` program with the given
+arguments. It reports an error to the user and exits if the program is not
+present in the build output. Most scripts should prefer one of the
+aforementioned `get-*` functions to perform related operations instead, as
+`fx-device-finder` usage will not be `fx set-device` aware.
 
 The `vars.sh` script may define additional functions, however, they are
 considered internal and may change more often. Users can request additional

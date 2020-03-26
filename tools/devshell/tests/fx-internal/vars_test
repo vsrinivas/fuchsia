@@ -155,4 +155,33 @@ TEST_fx-get-device-addr-url() {
   BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]" get-device-addr-url)" "[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%25enx44070ba0044e]"
 }
 
+TEST_fx-export-device-address() {
+  unset FUCHSIA_DEVICE_NAME
+  unset FX_DEVICE_NAME
+  unset FX_DEVICE_ADDR
+  unset FX_SSH_ADDR
+  unset FX_SSH_PORT
+
+  export FUCHSIA_DEVICE_NAME="[::2%lo0]:1234"
+  fx-export-device-address
+
+  BT_EXPECT_EQ "${FX_DEVICE_NAME}" "[::2%lo0]"
+  BT_EXPECT_EQ "${FX_DEVICE_ADDR}" "::2%lo0"
+  BT_EXPECT_EQ "${FX_SSH_ADDR}" "[::2%lo0]"
+  BT_EXPECT_EQ "${FX_SSH_PORT}" "1234"
+
+  unset -f fx-device-finder
+  fx-device-finder() {
+    echo "::3%lo0"
+  }
+
+  export FUCHSIA_DEVICE_NAME="foo-bar-baz-quux:1234"
+  fx-export-device-address
+
+  BT_EXPECT_EQ "${FX_DEVICE_NAME}" "foo-bar-baz-quux"
+  BT_EXPECT_EQ "${FX_DEVICE_ADDR}" "::3%lo0"
+  BT_EXPECT_EQ "${FX_SSH_ADDR}" "[::3%lo0]"
+  BT_EXPECT_EQ "${FX_SSH_PORT}" "1234"
+}
+
 BT_RUN_TESTS "$@"

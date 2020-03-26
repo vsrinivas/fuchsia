@@ -174,6 +174,15 @@ function is-valid-device {
   fi
 }
 
+# fx-export-device-address is "public API" to commands that wish to
+# have the exported variables set.
+function fx-export-device-address {
+  export FX_DEVICE_NAME="$(get-device-name)"
+  export FX_DEVICE_ADDR="$(get-fuchsia-device-addr)"
+  export FX_SSH_ADDR="$(get-device-addr-resource)"
+  export FX_SSH_PORT="$(get-device-ssh-port)"
+}
+
 function get-device-ssh-port {
   local device
   device="$(get-device-raw)" || exit $?
@@ -210,6 +219,16 @@ function _looks_like_ipv6 {
   [[ "${#colons}" -le 7 ]] || return 1
 }
 
+function fx-device-finder {
+  local -r finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
+  if [[ ! -f "${finder}" ]]; then
+    fx-error "Device finder binary not found."
+    fx-error "Run \"fx build\" to build host tools."
+    exit 1
+  fi
+  "${finder}" "$@"
+}
+
 function get-fuchsia-device-addr {
   fx-config-read
   local device
@@ -229,17 +248,11 @@ function get-fuchsia-device-addr {
     return
   fi
 
-  local -r finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
-  if [[ ! -f "${finder}" ]]; then
-    fx-error "Device finder binary not found."
-    fx-error "Run \"fx build\" to build host tools."
-    exit 1
-  fi
   local output devices
   case "$device" in
     "")
         # Note: the arguments below enable netboot, mdns is always enabled as well.
-        output="$("${finder}" list -netboot -ipv4=false "$@")" || {
+        output="$(fx-device-finder list -netboot -ipv4=false "$@")" || {
           code=$?
           fx-error "Device discovery failed with status: $code"
           exit $code
@@ -248,7 +261,7 @@ function get-fuchsia-device-addr {
           fx-error "Multiple devices found."
           fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
           # Note: the arguments below enable netboot, mdns is always enabled as well.
-          devices="$("${finder}" list -netboot -ipv4=false -full)" || {
+          devices="$(fx-device-finder list -netboot -ipv4=false -full)" || {
             code=$?
             fx-error "Device discovery failed with status: $code"
             exit $code
@@ -260,7 +273,7 @@ function get-fuchsia-device-addr {
         fi
         echo "${output}" ;;
      # Note: the arguments below enable netboot, mdns is always enabled as well.
-     *) "${finder}" resolve -device-limit 1 -netboot -ipv4=false "$@" "$device" ;;
+     *) fx-device-finder resolve -device-limit 1 -netboot -ipv4=false "$@" "$device" ;;
   esac
 }
 
