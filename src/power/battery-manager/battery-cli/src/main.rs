@@ -315,11 +315,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_component::{
-        client::{launch, launcher},
-        //fuchsia_single_component_package_url,
-    };
-
+    use fuchsia_component::client::{launch, launcher};
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_battery_percentage() {
