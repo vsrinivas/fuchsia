@@ -59,10 +59,10 @@ pub enum ModelError {
         #[source]
         err: RunnerError,
     },
-    #[error("capability discovery error: {}", err)]
+    // TODO: Spin this off into RoutingError and define concrete subtypes.
+    #[error("{}", detail)]
     CapabilityDiscoveryError {
-        #[source]
-        err: ClonableError,
+        detail: String,
     },
     #[error("storage error: {}", err)]
     StorageError {
@@ -135,8 +135,8 @@ impl ModelError {
         ModelError::ManifestInvalid { url: url.into(), err: err.into().into() }
     }
 
-    pub fn capability_discovery_error(err: impl Into<Error>) -> ModelError {
-        ModelError::CapabilityDiscoveryError { err: err.into().into() }
+    pub fn capability_discovery_error(detail: impl Into<String>) -> ModelError {
+        ModelError::CapabilityDiscoveryError { detail: detail.into().into() }
     }
 
     pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {

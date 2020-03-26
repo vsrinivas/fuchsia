@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::PKG_PATH,
-    crate::model::{error::ModelError, realm::WeakRealm, rights::Rights, routing},
+    crate::{
+        capability::ComponentCapability,
+        constants::PKG_PATH,
+        model::{error::ModelError, realm::WeakRealm, rights::Rights, routing},
+    },
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
@@ -182,7 +185,6 @@ impl IncomingNamespace {
         let use_ = use_.clone();
         let (client_end, server_end) =
             create_endpoints().expect("could not create storage proxy endpoints");
-        let cloned_target_path = target_path.clone();
         let route_on_usage = async move {
             // Wait for the channel to become readable.
             let server_end = fasync::Channel::from_channel(server_end.into_channel())
@@ -206,9 +208,12 @@ impl IncomingNamespace {
             )
             .await;
             if let Err(e) = res {
+                let cap = ComponentCapability::Use(use_);
                 error!(
-                    "failed to route directory {} from {}: {:?}",
-                    cloned_target_path, &target_realm.abs_moniker, e
+                    "Failed to route directory `{}` from component `{}`: {}",
+                    cap.source_id(),
+                    &target_realm.abs_moniker,
+                    e
                 );
             }
         };
@@ -278,9 +283,12 @@ impl IncomingNamespace {
                     )
                     .await;
                     if let Err(e) = res {
+                        let cap = ComponentCapability::Use(use_);
                         error!(
-                            "failed to route service for component {}: {:?}",
-                            &target_realm.abs_moniker, e
+                            "Failed to route protocol `{}` from component `{}`: {}",
+                            cap.source_id(),
+                            &target_realm.abs_moniker,
+                            e
                         );
                     }
                 });

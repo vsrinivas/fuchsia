@@ -18,7 +18,6 @@ use {
             routing,
         },
     },
-    anyhow::format_err,
     async_trait::async_trait,
     cm_rust::{CapabilityName, CapabilityPath, UseDecl, UseEventDecl},
     fidl::endpoints::ServerEnd,
@@ -114,7 +113,7 @@ impl EventSourceFactory {
                 if let Some(event_source) = event_source_registry.get(&target_moniker) {
                     return Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>));
                 } else {
-                    return Err(ModelError::capability_discovery_error(format_err!(
+                    return Err(ModelError::capability_discovery_error(format!(
                         "Unable to find EventSource in registry for {}",
                         target_moniker
                     )));
@@ -302,7 +301,7 @@ impl EventSource {
                     let (source_name, scope_moniker) = self.route_event(event_decl, &realm).await?;
                     result
                         .entry(source_name.to_string().try_into().map_err(|e| {
-                            ModelError::capability_discovery_error(format_err!(
+                            ModelError::capability_discovery_error(format!(
                                 "Unknown event: {}",
                                 e
                             ))

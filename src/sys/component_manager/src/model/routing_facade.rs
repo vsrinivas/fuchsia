@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::CapabilitySource,
+        capability::{CapabilitySource, ComponentCapability},
         model::{
             realm::WeakRealm,
             routing::{open_capability_at_source, route_expose_capability, route_use_capability},
@@ -147,9 +147,12 @@ fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
                 )
                 .await;
                 if let Err(e) = res {
+                    let cap = ComponentCapability::UsedExpose(expose);
                     error!(
-                        "failed to route service from expose decl `{:?}` for exposed dir {}: {:?}",
-                        &expose, &realm.abs_moniker, e
+                        "Failed to route capability `{}` from component `{}`: {}",
+                        cap.source_id(),
+                        &realm.abs_moniker,
+                        e
                     );
                 }
             });

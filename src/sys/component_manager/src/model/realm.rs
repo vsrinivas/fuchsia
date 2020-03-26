@@ -16,7 +16,6 @@ use {
         routing,
         runner::{NullRunner, RemoteRunner, Runner},
     },
-    anyhow::format_err,
     clonable_error::ClonableError,
     cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -486,23 +485,22 @@ impl Realm {
         let server_end = ServerEnd::new(server_chan);
         let execution = self.lock_execution().await;
         if execution.runtime.is_none() {
-            return Err(ModelError::capability_discovery_error(format_err!(
-                "component hosting capability isn't running: {}",
+            return Err(ModelError::capability_discovery_error(format!(
+                "Component hosting capability isn't running: {}",
                 self.abs_moniker
             )));
         }
         let runtime = execution.runtime.as_ref().expect("bind_instance_open_outgoing: no runtime");
         let out_dir =
             &runtime.outgoing_dir.as_ref().ok_or(ModelError::capability_discovery_error(
-                format_err!("component hosting capability is non-executable: {}", self.abs_moniker),
+                format!("Component hosting capability is non-executable: {}", self.abs_moniker),
             ))?;
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
         let path = io_util::canonicalize_path(path);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
-            ModelError::capability_discovery_error(format_err!(
-                "failed to open outgoing dir for {}: {}",
-                self.abs_moniker,
-                e
+            ModelError::capability_discovery_error(format!(
+                "Failed to open outgoing directory for `{}`: {}",
+                self.abs_moniker, e
             ))
         })?;
         Ok(())
@@ -512,8 +510,8 @@ impl Realm {
         let server_end = ServerEnd::new(server_chan);
         let execution = self.lock_execution().await;
         if execution.runtime.is_none() {
-            return Err(ModelError::capability_discovery_error(format_err!(
-                "component hosting capability isn't running: {}",
+            return Err(ModelError::capability_discovery_error(format!(
+                "Component hosting capability isn't running: {}",
                 self.abs_moniker
             )));
         }

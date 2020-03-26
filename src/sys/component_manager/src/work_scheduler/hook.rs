@@ -14,7 +14,7 @@ use {
             WorkScheduler, WORK_SCHEDULER_CAPABILITY_PATH, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
         },
     },
-    anyhow::{format_err, Error},
+    anyhow::{ Error},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -72,8 +72,8 @@ impl WorkScheduler {
                 // Only clients that expose the Worker protocol to the framework can
                 // use WorkScheduler.
                 if !self.verify_worker_exposed_to_framework(&scope_moniker).await {
-                    return Err(ModelError::capability_discovery_error(format_err!(
-                        "Component {} does not expose Worker to framework",
+                    return Err(ModelError::capability_discovery_error(format!(
+                        "Component `{}` does not expose Worker to framework",
                         scope_moniker
                     )));
                 }
