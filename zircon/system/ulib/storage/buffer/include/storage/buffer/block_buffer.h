@@ -27,6 +27,10 @@ class BlockBuffer {
   // Returns the vmoid of the underlying BlockBuffer, if one exists.
   virtual vmoid_t vmoid() const = 0;
 
+  // Returns a handle to the underlying VMO, if one exists. Ownership of the VMO
+  // is not being transferred to the caller.
+  virtual zx_handle_t Vmo() const = 0;
+
   // Returns data starting at block |index| in the buffer.
   virtual void* Data(size_t index) = 0;
 

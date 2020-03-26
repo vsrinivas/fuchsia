@@ -26,6 +26,7 @@ class DataBuffer final : public storage::BlockBuffer {
   size_t capacity() const final { return data_.size() / kMinfsBlockSize; }
   uint32_t BlockSize() const final { return kMinfsBlockSize; }
   vmoid_t vmoid() const final { return 0; }
+  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
   void* Data(size_t index) final { return &data_[index * kMinfsBlockSize]; }
   const void* Data(size_t index) const final { return &data_[index * kMinfsBlockSize]; }
 
