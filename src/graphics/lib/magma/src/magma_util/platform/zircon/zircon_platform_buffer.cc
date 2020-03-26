@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "platform_trace.h"
-#include "zircon_platform_handle.h"
 
 namespace magma {
 

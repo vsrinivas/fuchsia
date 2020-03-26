@@ -25,10 +25,7 @@ source_set("buffer") {
     "zircon_platform_buffer.h",
   ]
 
-  public_deps = [
-    ":handle",
-    "..:buffer_header",
-  ]
+  public_deps = [ "..:buffer_header" ]
 
   deps = [
     "$magma_build_root/src/magma_util:macros",
@@ -47,6 +44,7 @@ source_set("bus_mapper") {
 
   public_deps = [
     ":buffer",
+    ":handle",
     "//src/graphics/lib/magma/src/magma_util/platform:bus_mapper_header",
   ]
 
@@ -111,6 +109,7 @@ source_set("device") {
 
   deps = [
     ":bus_mapper",
+    ":handle",
     ":interrupt",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
@@ -299,14 +298,17 @@ source_set("semaphore") {
 source_set("port") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [ "zircon_platform_port.cc" ]
+  sources = [
+    "zircon_platform_port.cc",
+    "zircon_platform_port.h",
+  ]
 
-  deps = [
+  public_deps = [
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/public/lib/fit",
-    "$zircon_build_root/public/lib/zx",
     "..:port_header",
   ]
+
+  deps = [ "$zircon_build_root/public/lib/zx" ]
 }
 
 source_set("trace") {

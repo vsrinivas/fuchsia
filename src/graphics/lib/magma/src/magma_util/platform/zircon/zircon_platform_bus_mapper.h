@@ -11,6 +11,7 @@
 
 #include "platform_bus_mapper.h"
 #include "zircon_platform_buffer.h"
+#include "zircon_platform_handle.h"
 
 namespace magma {
 

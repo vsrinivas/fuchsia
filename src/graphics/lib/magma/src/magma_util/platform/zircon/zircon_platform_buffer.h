@@ -13,7 +13,6 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include "platform_object.h"
-#include "zircon_platform_handle.h"
 
 namespace magma {
 
