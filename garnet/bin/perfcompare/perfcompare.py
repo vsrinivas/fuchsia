@@ -442,8 +442,12 @@ def RunLocal(args, out_fh, run_cmd):
     os.mkdir(by_boot_dir)
 
     for boot_idx in xrange(args.boots):
-        run_cmd(args.reboot_cmd, shell=True)
-        run_cmd(args.iter_cmd, shell=True)
+        # This prefix enables error-checking in the shell commands, for
+        # both safety and convenience.
+        errexit_prefix = 'set -o errexit -o nounset; '
+        run_cmd(errexit_prefix + args.reboot_cmd, shell=True)
+        run_cmd(errexit_prefix + args.iter_cmd, shell=True)
+
         boot_dir = os.path.join(by_boot_dir, 'boot%06d' % boot_idx)
         os.mkdir(boot_dir)
         dataset_files = sorted(glob.glob(args.iter_file))
@@ -578,7 +582,9 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         help='Command for running a performance test. '
         ' This command is run locally: it is passed to the shell. '
         ' This command is expected to write its output to the file (or files)'
-        ' specified by --iter_file')
+        ' specified by --iter_file. '
+        ' Note that error-checking is enabled for this shell command (using'
+        ' "set -o errexit -o nounset")')
     subparser.add_argument(
         '--iter_file', required=True,
         help='File(s) that the performance test will write its results to. '
@@ -589,7 +595,8 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
     subparser.add_argument(
         '--reboot_cmd', default='fx reboot && fx wait',
         help='Command to use for rebooting Fuchsia.  This is optional. '
-        ' The default is %(default)r')
+        ' The default is %(default)r.  As with --iter_cmd, error-checking is'
+        ' enabled for this shell command')
     subparser.add_argument(
         '--dest', required=True,
         help='Destination directory for writing the multi-boot dataset')

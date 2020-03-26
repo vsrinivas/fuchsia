@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -484,7 +485,7 @@ class RunLocalTest(TempDirTestCase):
         def DummyRunCmd(cmd, shell=False):
             self.assertEquals(shell, True)
             commands.append(cmd)
-            if cmd == 'my_iter_cmd':
+            if cmd == 'set -o errexit -o nounset; my_iter_cmd':
                 WriteJsonFile(iter_temp_file,
                               [{'label': 'MyTest',
                                 'test_suite': 'example_suite',
@@ -499,7 +500,9 @@ class RunLocalTest(TempDirTestCase):
                           '--reboot_cmd', 'my_reboot_cmd',
                           '--dest', dest_dir],
                          stdout, run_cmd=DummyRunCmd)
-        self.assertEquals(commands, ['my_reboot_cmd', 'my_iter_cmd'] * 4)
+        self.assertEquals(commands,
+                          ['set -o errexit -o nounset; my_reboot_cmd',
+                           'set -o errexit -o nounset; my_iter_cmd'] * 4)
         GOLDEN.AssertCaseEq('run_local', stdout.getvalue())
 
     # "run_local" should give an error if the temporary files specified by
@@ -517,6 +520,37 @@ class RunLocalTest(TempDirTestCase):
                 '--dest', dest_dir]
         self.assertRaises(AssertionError,
                           lambda: perfcompare.Main(args, sys.stdout))
+
+    # Check that error-checking is enabled in the shell commands that
+    # run_local runs.
+    def test_errexit_error_checking_in_shell_commands(self):
+        iter_temp_file = os.path.join(
+            self.MakeTempDir(), 'result.fuchsiaperf.json')
+        stdout = StringIO.StringIO()
+
+        def get_args():
+            dest_dir = os.path.join(self.MakeTempDir(), 'new_dir')
+            return ['run_local',
+                    '--boots=4',
+                    '--iter_file', iter_temp_file,
+                    '--dest', dest_dir]
+
+        perfcompare.Main(
+            get_args() + ['--iter_cmd', 'true', '--reboot_cmd', 'true'],
+            stdout)
+        # Check that the failure of the "false" command gets caught.
+        self.assertRaises(
+            subprocess.CalledProcessError,
+            lambda: perfcompare.Main(
+                get_args() + ['--iter_cmd', 'false; true',
+                              '--reboot_cmd', 'true'],
+                stdout))
+        self.assertRaises(
+            subprocess.CalledProcessError,
+            lambda: perfcompare.Main(
+                get_args() + ['--iter_cmd', 'true',
+                              '--reboot_cmd', 'false; true'],
+                stdout))
 
 
 if __name__ == '__main__':
