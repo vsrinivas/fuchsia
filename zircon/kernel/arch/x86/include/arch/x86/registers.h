@@ -53,7 +53,7 @@
 #define X86_ARCH_CAPABILITIES_RSBA (1ull << 2)
 #define X86_ARCH_CAPABILITIES_SSB_NO (1ull << 4)
 #define X86_ARCH_CAPABILITIES_MDS_NO (1ull << 5)
-#define X86_ARCH_CAPABILITIES_TSX_CTRL (1ull << 6)
+#define X86_ARCH_CAPABILITIES_TSX_CTRL (1ull << 7)
 #define X86_ARCH_CAPABILITIES_TAA_NO (1ull << 8)
 #define X86_MSR_IA32_FLUSH_CMD 0x0000010b          /* L1D$ Flush control */
 #define X86_MSR_IA32_TSX_CTRL 0x00000122           /* Control to enable/disable TSX instructions */
