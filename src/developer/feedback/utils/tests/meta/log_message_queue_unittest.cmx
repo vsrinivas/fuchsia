@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/log_message_queue_unittest"
-    }
-}

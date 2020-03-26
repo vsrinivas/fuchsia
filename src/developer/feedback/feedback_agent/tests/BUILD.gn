@@ -507,8 +507,8 @@ executable("system_log_recorder_unittest") {
   sources = [ "system_log_recorder_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/feedback_agent:system_log_recorder_src",
     "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//src/developer/feedback/feedback_agent/system_log_recorder:src",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",

@@ -31,9 +31,6 @@ test_package("feedback_utils_tests") {
       name = "log_format_unittest"
     },
     {
-      name = "log_message_queue_unittest"
-    },
-    {
       name = "promise_unittest"
     },
     {
@@ -63,7 +60,6 @@ test_package("feedback_utils_tests") {
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
     ":log_format_unittest",
-    ":log_message_queue_unittest",
     ":promise_unittest",
     ":rotating_file_set_unittest",
     ":time_unittest",
@@ -136,20 +132,6 @@ executable("log_format_unittest") {
     "//src/developer/feedback/utils:logs",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("log_message_queue_unittest") {
-  testonly = true
-
-  sources = [ "log_message_queue_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/utils:logs",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
-    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 }

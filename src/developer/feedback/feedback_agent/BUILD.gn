@@ -34,7 +34,7 @@ package("feedback_agent") {
 
   deps = [
     ":main",
-    ":system_log_recorder",
+    "//src/developer/feedback/feedback_agent/system_log_recorder",
   ]
 }
 
@@ -57,20 +57,6 @@ executable("main") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
-  ]
-}
-
-executable("system_log_recorder") {
-  sources = [ "system_log_recorder_main.cc" ]
-
-  deps = [
-    ":constants",
-    ":system_log_recorder_src",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }
 
@@ -242,27 +228,4 @@ source_set("inspect_manager") {
   deps = [ "//src/lib/fxl" ]
 
   public_deps = [ "//src/developer/feedback/utils:inspect_node_manager" ]
-}
-
-source_set("system_log_recorder_src") {
-  public = [ "system_log_recorder.h" ]
-
-  sources = [
-    "system_log_recorder.cc",
-    "system_log_recorder.h",
-  ]
-
-  public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:files",
-    "//src/developer/feedback/utils:logs",
-    "//zircon/system/fidl/fuchsia-logger",
-  ]
-
-  deps = [
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/trace",
-  ]
 }
