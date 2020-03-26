@@ -144,6 +144,8 @@ source_set("audio_core_lib") {
     "threading_model.cc",
     "threading_model.h",
     "throttle_output.h",
+    "ultrasound_factory.cc",
+    "ultrasound_factory.h",
     "usage_reporter_impl.cc",
     "usage_reporter_impl.h",
     "usage_settings.cc",
@@ -161,6 +163,7 @@ source_set("audio_core_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/syslog/cpp",
     "//third_party/rapidjson",

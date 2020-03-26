@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/ultrasound_factory.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 using namespace media::audio;
@@ -58,6 +59,7 @@ int main(int argc, const char** argv) {
 
   AudioCoreImpl audio_core(context.get());
   auto thermal_agent = ThermalAgent::CreateAndServe(context.get());
+  auto ultrasound_factory = UltrasoundFactory::CreateAndServe(context.get());
 
   ProfileProvider profile_provider(context->component_context());
   context->component_context().outgoing()->AddPublicService(
