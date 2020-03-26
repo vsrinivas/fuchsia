@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::{vec_deque, VecDeque};
+use std::collections::VecDeque;
 
 /// A Memory bounded buffer. MemoryBoundedBuffer does not calculate the size of `item`,
 /// rather it takes the size as argument and then maintains its internal buffer.
@@ -13,33 +13,12 @@ pub(super) struct MemoryBoundedBuffer<T> {
     capacity: usize,
 }
 
-/// `MemoryBoundedBuffer` mutable iterator.
-struct IterMut<'a, T> {
-    inner: vec_deque::IterMut<'a, (T, usize)>,
-}
-
-impl<'a, T: 'a> Iterator for IterMut<'a, T> {
-    type Item = (&'a mut T, usize);
-
-    #[inline]
-    fn next(&mut self) -> Option<(&'a mut T, usize)> {
-        self.inner.next().map(|(t, s)| (t, *s))
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
-}
-
 impl<T> MemoryBoundedBuffer<T> {
-    /// capacity in bytes
     pub fn new(capacity: usize) -> MemoryBoundedBuffer<T> {
         assert!(capacity > 0, "capacity should be more than 0");
         MemoryBoundedBuffer { inner: VecDeque::new(), capacity: capacity, total_size: 0 }
     }
 
-    /// size in bytes
     pub fn push(&mut self, item: T, size: usize) {
         self.inner.push_back((item, size));
         self.total_size += size;
@@ -49,8 +28,8 @@ impl<T> MemoryBoundedBuffer<T> {
         }
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&'_ mut T, usize)> {
-        IterMut { inner: self.inner.iter_mut() }
+    pub fn iter(&mut self) -> impl Iterator<Item = &(T, usize)> {
+        self.inner.iter()
     }
 }
 
@@ -64,10 +43,7 @@ mod tests {
         m.push(1, 4);
         m.push(2, 4);
         m.push(3, 4);
-        assert_eq!(
-            &m.iter_mut().collect::<Vec<(&mut i32, usize)>>()[..],
-            &[(&mut 1, 4), (&mut 2, 4), (&mut 3, 4)]
-        );
+        assert_eq!(&m.iter().collect::<Vec<&(i32, usize)>>()[..], &[&(1, 4), &(2, 4), &(3, 4)]);
     }
 
     #[test]
@@ -76,15 +52,9 @@ mod tests {
         m.push(1, 4);
         m.push(2, 4);
         m.push(3, 5);
-        assert_eq!(
-            &m.iter_mut().collect::<Vec<(&mut i32, usize)>>()[..],
-            &[(&mut 2, 4), (&mut 3, 5)]
-        );
+        assert_eq!(&m.iter().collect::<Vec<&(i32, usize)>>()[..], &[&(2, 4), &(3, 5)]);
         m.push(4, 4);
         m.push(5, 4);
-        assert_eq!(
-            &m.iter_mut().collect::<Vec<(&mut i32, usize)>>()[..],
-            &[(&mut 4, 4), (&mut 5, 4)]
-        );
+        assert_eq!(&m.iter().collect::<Vec<&(i32, usize)>>()[..], &[&(4, 4), &(5, 4)]);
     }
 }

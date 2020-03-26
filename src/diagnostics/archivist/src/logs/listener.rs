@@ -36,8 +36,9 @@ impl ListenerWrapper {
     }
 
     /// This fn assumes that logs have already been filtered.
-    pub fn send_filtered_logs(&self, log_messages: &mut Vec<&mut LogMessage>) -> ListenerStatus {
-        if let Err(e) = self.listener.log_many(&mut log_messages.iter_mut().map(|x| &mut **x)) {
+    pub fn send_filtered_logs(&self, log_messages: &mut Vec<LogMessage>) -> ListenerStatus {
+        let res = self.listener.log_many(&mut log_messages.iter_mut());
+        if let Err(e) = res {
             if e.is_closed() {
                 ListenerStatus::Stale
             } else {

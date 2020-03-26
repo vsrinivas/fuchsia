@@ -199,8 +199,10 @@ impl LogManager {
         {
             let mut log_length = 0;
             let mut v = vec![];
-            for (msg, s) in shared_members.log_msg_buffer.iter_mut() {
-                if lw.filter(msg) {
+            for (msg, s) in shared_members.log_msg_buffer.iter() {
+                // TODO(fxbug.dev/7989) remove clone for mutable reference when FTP-057 impl'd
+                let mut msg = msg.clone();
+                if lw.filter(&mut msg) {
                     if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                         if listener::ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
                             return;
