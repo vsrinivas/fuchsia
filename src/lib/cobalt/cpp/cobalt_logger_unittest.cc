@@ -264,6 +264,10 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerSimpleFromProjectIdCallback callback) override {}
 
+  void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id,
+                                   fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+                                   CreateLoggerFromProjectSpecCallback callback) override {}
+
   FakeLoggerImpl* logger() { return logger_.get(); }
   uint32_t received_project_id() { return received_project_id_; }
 

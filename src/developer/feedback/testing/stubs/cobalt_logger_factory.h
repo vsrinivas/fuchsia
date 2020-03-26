@@ -63,6 +63,12 @@ class CobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
       fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectIdCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
+  void CreateLoggerFromProjectSpec(
+      uint32_t customer_id, uint32_t project_id,
+      ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectSpecCallback callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   std::unique_ptr<CobaltLoggerBase> logger_;
   std::unique_ptr<fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
