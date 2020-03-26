@@ -241,7 +241,7 @@ async fn get_hash(
     let hash_or_status =
         hash_from_repo_or_cache(&repo_manager, &rewriter, &system_cache_list, &pkg_url).await;
 
-    trace::duration_end!("app", "get-hash", "status" => Status::from(hash_or_status.err().unwrap_or(Status::OK)).to_string().as_str());
+    trace::duration_end!("app", "get-hash", "status" => hash_or_status.err().unwrap_or(Status::OK).to_string().as_str());
     hash_or_status
 }
 
@@ -265,7 +265,7 @@ async fn resolve(
 
     let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
     let merkle_or_status = queued_fetch.await.expect("expected queue to be open");
-    trace::duration_end!("app", "resolve", "status" => Status::from(merkle_or_status.err().unwrap_or(Status::OK)).to_string().as_str());
+    trace::duration_end!("app", "resolve", "status" => merkle_or_status.err().unwrap_or(Status::OK).to_string().as_str());
     match merkle_or_status {
         Ok(merkle) => {
             let selectors = vec![];

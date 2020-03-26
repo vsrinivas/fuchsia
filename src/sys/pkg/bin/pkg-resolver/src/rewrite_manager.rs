@@ -122,13 +122,13 @@ impl RewriteManager {
 
     /// Return an iterator through all rewrite rules in the order they should be applied to
     /// incoming `fuchsia-pkg://` URLs.
-    pub fn list<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
+    pub fn list(&self) -> impl Iterator<Item = &Rule> {
         self.dynamic_rules.iter().chain(self.list_static())
     }
 
     /// Return an iterator through all static rewrite rules in the order they should be applied to
     /// incoming `fuchsia-pkg://` URLs, after all dynamic rules have been considered.
-    pub fn list_static<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
+    pub fn list_static(&self) -> impl Iterator<Item = &Rule> {
         self.static_rules.iter()
     }
 
@@ -179,7 +179,7 @@ impl Transaction {
 
     /// Return an iterator through all dynamic rewrite rules in the order they should be applied to
     /// incoming `fuchsia-pkg://` URLs.
-    pub fn list_dynamic<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
+    pub fn list_dynamic(&self) -> impl Iterator<Item = &Rule> {
         self.dynamic_rules.iter()
     }
 }

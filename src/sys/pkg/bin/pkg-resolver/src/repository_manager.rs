@@ -83,7 +83,7 @@ impl MirrorStats {
         Self {
             network_blips: inspect_util::Counter::new(&node, "network_blips"),
             network_rate_limits: inspect_util::Counter::new(&node, "network_rate_limits"),
-            node: node,
+            node,
         }
     }
     pub fn network_blips(&self) -> &inspect_util::Counter {
@@ -314,7 +314,7 @@ async fn open_cached_or_new_repository(
 
     // It's still possible we raced with some other connection attempt
     let mut repositories = repositories.write();
-    repo = Arc::clone(repositories.entry(url.clone()).or_insert(repo.clone()));
+    repo = Arc::clone(repositories.entry(url.clone()).or_insert_with(|| repo.clone()));
     Ok(repo)
 }
 

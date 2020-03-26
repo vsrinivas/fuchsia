@@ -26,7 +26,7 @@ pub struct RepositoryService {
 
 impl RepositoryService {
     pub fn new(repo_manager: Arc<RwLock<RepositoryManager>>) -> Self {
-        RepositoryService { repo_manager: repo_manager }
+        RepositoryService { repo_manager }
     }
 
     pub async fn run(

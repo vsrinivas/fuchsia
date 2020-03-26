@@ -295,7 +295,7 @@ where
             }
         }
         fx_log_err!("AutoClient for {:?} event stream closed.", self.auto_url);
-        return HandleSseEndState::Reconnect;
+        HandleSseEndState::Reconnect
     }
 
     async fn wait_before_reconnecting() {

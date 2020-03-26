@@ -105,7 +105,9 @@ fn create_rewrite_rule_for_tuf_config_name(
         .ok()
         .and_then(|url| repo_manager.get(&url))
         .or_else(|| repo_manager.get_repo_for_channel(tuf_config_name))
-        .ok_or(format_err!("Unable to find repo for tuf_config_name: {:?}", tuf_config_name))?;
+        .ok_or_else(|| {
+            format_err!("Unable to find repo for tuf_config_name: {:?}", tuf_config_name)
+        })?;
 
     let rule = Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/")?;
     channel_inspect_state.tuf_config_name.set(&tuf_config_name);
@@ -127,7 +129,7 @@ async fn get_tuf_config_name_from_vbmeta_impl(
 ) -> Result<String, Error> {
     let repo_config = proxy.get_string("tuf_repo_config").await?;
     if let Some(hostname) = repo_config {
-        Ok(hostname.to_string())
+        Ok(hostname)
     } else {
         Err(format_err!("Could not find tuf_repo_config in vbmeta"))
     }

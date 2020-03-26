@@ -61,7 +61,7 @@ impl PackageCache {
     pub async fn open(
         &self,
         merkle: BlobId,
-        selectors: &Vec<String>,
+        selectors: &[String],
         dir_request: ServerEnd<DirectoryMarker>,
     ) -> Result<(), PackageOpenError> {
         let fut = self.cache.open(

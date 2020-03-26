@@ -127,7 +127,7 @@ fn validate_package_urls<P: AsRef<Path>>(
     let path = file_path.as_ref();
     let mut errors = vec![];
     for url in package_urls {
-        match validate_package_url(Some(path.clone()), &url) {
+        match validate_package_url(Some(path), &url) {
             Ok(()) => {}
             Err(err) => {
                 errors.push(err);

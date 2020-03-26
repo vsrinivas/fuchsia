@@ -350,10 +350,10 @@ async fn load_system_cache_list() -> system_image::CachePackages {
 
     let cache_list = CachePackages::deserialize(cache_file);
     match cache_list {
-        Ok(cl) => return cl,
+        Ok(cl) => cl,
         Err(e) => {
             fx_log_err!("error opening package cache: {}", e);
-            return empty;
+            empty
         }
-    };
+    }
 }
