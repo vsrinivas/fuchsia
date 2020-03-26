@@ -9,7 +9,6 @@ use {
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
         types::{HostId, HostInfo},
     },
-    fuchsia_syslog::fx_log_info,
     futures::future::{self, BoxFuture, FutureExt},
     std::{collections::HashMap, convert::TryFrom},
 };
@@ -27,9 +26,7 @@ pub type HostWatcherHarness = ExpectationHarness<HostWatcherState, HostWatcherPr
 async fn watch_hosts(harness: HostWatcherHarness) -> Result<(), Error> {
     let proxy = harness.aux().clone();
     loop {
-        fx_log_info!("Calling HostWatcher.Watch()");
         let hosts = proxy.watch().await?;
-        fx_log_info!("Hosts updated: {:?}", hosts);
         let hosts: Result<HashMap<HostId, HostInfo>, Error> = hosts
             .into_iter()
             .map(|info| {

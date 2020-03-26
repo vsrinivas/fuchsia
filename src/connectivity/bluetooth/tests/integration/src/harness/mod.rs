@@ -87,7 +87,7 @@ where
     fx_log_info!("[ RUN      ] {}...", name);
     let result = executor.run_singlethreaded(run_with_harness(test));
     if let Err(err) = &result {
-        fx_log_err!("[   \x1b[31mFAILED\x1b[0m ] {}: Error running test: {}", name, err);
+        fx_log_err!("[   \x1b[31mFAILED\x1b[0m ] {}: Error running test: {:?}", name, err);
     } else {
         fx_log_info!("[   \x1b[32mPASSED\x1b[0m ] {}", name);
     }

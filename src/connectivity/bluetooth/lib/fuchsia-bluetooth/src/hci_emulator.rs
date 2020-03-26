@@ -8,7 +8,7 @@ use {
         device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
         util::open_rdwr,
     },
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context, Error},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_device_test::{DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN},
@@ -54,8 +54,13 @@ impl Emulator {
     /// will be published; to do so it must be explicitly configured and created with a call to
     /// `publish()`
     pub async fn create(name: &str) -> Result<Emulator, Error> {
-        let dev = TestDevice::create(name).await?;
-        let emulator = dev.bind().await?;
+        let dev = TestDevice::create(name)
+            .await
+            .context(format!("Error creating hci-emulator test device '{}'", name))?;
+        let emulator = dev
+            .bind()
+            .await
+            .context(format!("Error binding hci-emulator test device '{}'", name))?;
         Ok(Emulator { dev: Some(dev), emulator: emulator })
     }
 
@@ -135,7 +140,8 @@ impl TestDevice {
         }
 
         // Connect to the test control device and obtain a channel to the RootDevice capability.
-        let control_dev = open_rdwr(CONTROL_DEVICE)?;
+        let control_dev =
+            open_rdwr(CONTROL_DEVICE).context(format!("Error opening file {}", CONTROL_DEVICE))?;
         let root_device = RootDeviceProxy::new(fasync::Channel::from_channel(
             fdio::clone_channel(&control_dev)?,
         )?);
@@ -150,7 +156,7 @@ impl TestDevice {
                 Err(format_err!("timed out waiting to create bt-hci-emulator device {}", name))
             })
             .await?;
-        zx::Status::ok(status)?;
+        zx::Status::ok(status).context(format!("Error creating test device '{}'", name))?;
 
         Ok(TestDevice(fdio::create_fd(zx::Handle::from(local))?))
     }

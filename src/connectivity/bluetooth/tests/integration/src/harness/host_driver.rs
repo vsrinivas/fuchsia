@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
@@ -173,14 +173,28 @@ impl EmulatorHarness for HostDriverHarness {
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
-    let emulator = Emulator::create("bt-integration-test-host").await?;
-    let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
+    let emulator = Emulator::create("bt-integration-test-host")
+        .await
+        .context("Error creating emulator root device")?;
+    let host_dev = emulator
+        .publish_and_wait_for_host(Emulator::default_settings())
+        .await
+        .context("Error publishing emulator hci device")?;
 
     // Open a Host FIDL interface channel to the bt-host device.
-    let fidl_handle = host::open_host_channel(&host_dev.file())?;
-    let host_proxy = HostProxy::new(fasync::Channel::from_channel(fidl_handle.into())?);
+    let fidl_handle =
+        host::open_host_channel(&host_dev.file()).context("Error opening host device file")?;
+    let host_proxy = HostProxy::new(
+        fasync::Channel::from_channel(fidl_handle.into())
+            .context("Error creating async channel from host device")?,
+    );
 
-    let host_info = host_proxy.watch_state().await?.try_into()?;
+    let host_info = host_proxy
+        .watch_state()
+        .await
+        .context("Error calling WatchState()")?
+        .try_into()
+        .context("Invalid HostInfo received")?;
     let host_path = host_dev.path().to_path_buf();
     let peers = HashMap::new();
 

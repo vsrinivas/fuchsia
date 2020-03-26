@@ -110,9 +110,11 @@ impl DeviceWatcher {
         &'a mut self,
         path: &'a Path,
     ) -> impl Future<Output = Result<(), Error>> + 'a {
+        let path_str = path.display();
         let t = self.timeout;
-        self.removed_helper(path)
-            .on_timeout(t.after_now(), || Err(format_err!("timed out waiting for device")))
+        self.removed_helper(path).on_timeout(t.after_now(), move || {
+            Err(format_err!("timed out waiting for device {}", path_str))
+        })
     }
 
     // Private functions:
@@ -157,8 +159,10 @@ impl DeviceWatcher {
         events: Vec<WatchEvent>,
     ) -> impl Future<Output = Result<DeviceFile, Error>> + 'a {
         let t = self.timeout;
-        self.watch_helper(topo_path, events)
-            .on_timeout(t.after_now(), || Err(format_err!("timed out waiting for device")))
+        let path_str = topo_path.display();
+        self.watch_helper(topo_path, events).on_timeout(t.after_now(), move || {
+            Err(format_err!("timed out waiting for device {}", path_str))
+        })
     }
 
     // Helper for watching for removal.
@@ -183,7 +187,6 @@ mod tests {
     use fidl_fuchsia_device_test::{
         DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
     };
-
     fn timeout() -> zx::Duration {
         zx::Duration::from_seconds(10)
     }
@@ -236,6 +239,9 @@ mod tests {
             .expect("Expected to be notified of existing test device");
         assert_eq!(dev.path(), found.path());
         assert_eq!(dev.topo_path(), found.topo_path());
+
+        // Cleanup after ourselves
+        remove_test_dev(&dev).expect("Failed to remove test device");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -251,6 +257,9 @@ mod tests {
             .expect("Expected to be notified of new test device");
         assert_eq!(dev.path(), found.path());
         assert_eq!(dev.topo_path(), found.topo_path());
+
+        // Cleanup after ourselves
+        remove_test_dev(&dev).expect("Failed to remove test device");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
