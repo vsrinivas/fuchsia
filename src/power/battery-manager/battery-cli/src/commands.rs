@@ -84,10 +84,14 @@ macro_rules! gen_commands {
 
 gen_commands! {
     Command {
-        Get = ("get", [], "Get all information of the battery state"),
-        Set = ("set", ["state:value"], "Set state of battery in one line"),
-        Reconnect = ("reconnect", [], "Connect the real battery and disconnect the simulator"),
-        Disconnect = ("disconnect", [], "Disconnect the real battery and connnect to the simulator"),
+        Get = ("get", [],
+            "Get all information of the battery state"),
+        Set = ("set", ["<attribute1 value1> ... [attributeN valueN]", "--help"],
+            "Set state of battery in one line | Print help message"),
+        Reconnect = ("reconnect", [],
+            "Connect the real battery and disconnect the simulator"),
+        Disconnect = ("disconnect", [],
+            "Disconnect the real battery and connnect to the simulator"),
         Help = ("help", [], "Help message"),
         Exit = ("exit", [], "Exit/Close REPL"),
         Quit = ("quit", [], "Quit/Close REPL"),

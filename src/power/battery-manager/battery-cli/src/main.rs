@@ -71,6 +71,45 @@ async fn print_battery_info(service: &BatterySimulatorProxy) -> Result<(), Error
     Ok(())
 }
 
+fn print_set_help_message() {
+    println!(concat!(
+        "'set' modifies the state of the simulated battery. ",
+        "Modifications only take place once disconnected.\n",
+        "The usage of set is as follows:\n\n",
+        "set <battery_attribute battery_attribute_value>\n\n",
+        "The corresponding field and field values is as follows:\n\n",
+        "\tBatteryPercentage\n",
+        "\t\tAny int value from [1..100]\n",
+        "\tChargeSource\n",
+        "\t\tUNKNOWN\n",
+        "\t\tNONE\n",
+        "\t\tAC_ADAPTER\n",
+        "\t\tUSB\n",
+        "\t\tWIRELESS\n",
+        "\tChargeStatus\n",
+        "\t\tUNKNOWN\n",
+        "\t\tNOT_CHARGING\n",
+        "\t\tCHARGING\n",
+        "\t\tDISCHARGING\n",
+        "\tLevelStatus\n",
+        "\t\tUNKNOWN\n",
+        "\t\tOK\n",
+        "\t\tWARNING\n",
+        "\t\tLOW\n",
+        "\t\tCRITICAL\n",
+        "\tBatteryStatus\n",
+        "\t\tUNKOWN\n",
+        "\t\tOK\n",
+        "\t\tNOT_AVAILABLE\n",
+        "\t\tNOT_PRESENT\n",
+        "\tTimeRemaining\n",
+        "\t\tInt value representing time in seconds\n\n",
+        "Examples:\n",
+        "set ChargeSource WIRELESS BatteryPercentage 12\n",
+        "set ChargeStatus DISCHARGING TimeRemaining 100 BatteryPercentage 2"
+    ))
+}
+
 fn set_time_remaining(time_remaining: &str, service: &BatterySimulatorProxy) -> Result<(), Error> {
     let time = time_remaining.parse::<u64>()?;
     let duration = Duration::new(time, 0);
@@ -86,7 +125,7 @@ fn set_charge_source(charge_source: &str, service: &BatterySimulatorProxy) -> Re
         "USB" => fpower::ChargeSource::Usb,
         "WIRELESS" => fpower::ChargeSource::Wireless,
         _ => {
-            println!("{} does not exist as an option for ChargeSource", charge_source);
+            println!("{} does not exist as an option for ChargeSource. Type set --help for more information", charge_source);
             return Ok(());
         }
     };
@@ -100,7 +139,7 @@ fn set_battery_percentage(
 ) -> Result<(), Error> {
     let percent: f32 = battery_percentage.parse().unwrap();
     if percent < 0.0 || percent > 100.0 {
-        println!("Please enter battery percent from 0 to 100 ");
+        println!("Please enter battery percent from 0 to 100");
         return Ok(());
     }
     service.set_battery_percentage(percent)?;
@@ -114,7 +153,7 @@ fn set_battery_status(battery_status: &str, service: &BatterySimulatorProxy) -> 
         "NOT_AVAILABLE" => fpower::BatteryStatus::NotAvailable,
         "NOT_PRESENT" => fpower::BatteryStatus::NotPresent,
         _ => {
-            println!("{} does not exist as an option for BatteryStatus", battery_status);
+            println!("{} does not exist as an option for BatteryStatus. Type set --help for more information", battery_status);
             return Ok(());
         }
     };
@@ -130,7 +169,7 @@ fn set_level_status(level_status: &str, service: &BatterySimulatorProxy) -> Resu
         "LOW" => fpower::LevelStatus::Low,
         "CRITICAL" => fpower::LevelStatus::Critical,
         _ => {
-            println!("{} does not exist as an option for LevelStatus", level_status);
+            println!("{} does not exist as an option for LevelStatus. Type set --help for more information", level_status);
             return Ok(());
         }
     };
@@ -146,7 +185,7 @@ fn set_charge_status(charge_status: &str, service: &BatterySimulatorProxy) -> Re
         "DISCHARGING" => fpower::ChargeStatus::Discharging,
         "FULL" => fpower::ChargeStatus::Full,
         _ => {
-            println!("{} does not exist as an option for ChargeStatus", charge_status);
+            println!("{} does not exist as an option for ChargeStatus. Type set --help for more information", charge_status);
             return Ok(());
         }
     };
@@ -159,9 +198,16 @@ fn set_charge_status(charge_status: &str, service: &BatterySimulatorProxy) -> Re
 // <Value> is the fields corresponding value. The "..." signifies the repetition of
 // the previous pattern of field and value.
 async fn set_all_information(args: String, service: &BatterySimulatorProxy) -> Result<(), Error> {
+    if !service.is_simulating().await? {
+        println!("Please disconnect before running set. Type <set --help> for more information");
+        return Ok(());
+    }
     let commands: Vec<&str> = args.split(" ").collect();
-    if commands.len() % 2 != 0 {
-        println!("Incorrect number of args");
+    if commands.len() <= 1 || commands[0] == "--help" {
+        print_set_help_message();
+        return Ok(());
+    } else if commands.len() % 2 != 0 {
+        println!("Incorrect number of args. Type <set --help> for more information");
         return Ok(());
     }
     for i in (0..).take(commands.len()).step_by(2) {
@@ -316,6 +362,24 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use fuchsia_component::client::{launch, launcher};
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_disconnect() {
+        // Connect to service
+        const BM_URL: &str = "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cmx";
+        let launcher = launcher().unwrap();
+        let app = launch(&launcher, BM_URL.to_string(), None).unwrap();
+        let battery_simulator = app.connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        // Disconnect battery
+        let res = battery_simulator.disconnect_real_battery();
+        assert!(res.is_ok(), "Failed to disconnect");
+        // Test disconnect
+        let res = battery_simulator.is_simulating().await;
+        assert_eq!(res.unwrap(), true);
+        // Reconnect battery
+        let res = battery_simulator.reconnect_real_battery();
+        assert!(res.is_ok(), "Failed to reconnect");
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_battery_percentage() {
