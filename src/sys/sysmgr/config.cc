@@ -111,6 +111,11 @@ bool Config::ParseServiceMap(const rapidjson::Document& document, const std::str
         continue;
       }
       std::string service_key = reg.name.GetString();
+      if (services->find(service_key) != services->end()) {
+        json_parser_.ReportError(StringPrintf("Duplicate definition in map for '%s': %s", kServices,
+                                              service_key.c_str()));
+        continue;
+      }
       auto launch_info =
           GetLaunchInfo(reg.value, StringPrintf("%s.%s", key.c_str(), service_key.c_str()));
       if (launch_info) {
