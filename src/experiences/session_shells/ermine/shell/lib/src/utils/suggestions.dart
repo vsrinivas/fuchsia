@@ -5,6 +5,7 @@
 import 'package:fidl_fuchsia_sys_index/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:meta/meta.dart';
 
@@ -74,16 +75,20 @@ class SuggestionService {
       return newSuggestions;
     }
 
-    final results = await _componentIndex.fuzzySearch(query);
-    newSuggestions.addAll(results.map((url) {
-      final re = RegExp(r'fuchsia-pkg://fuchsia.com/(.+)#meta/.+');
-      final name = re.firstMatch(url)?.group(1);
-      return Suggestion(
-        id: '$url:${DateTime.now().millisecondsSinceEpoch}',
-        url: url,
-        title: name,
-      );
-    }));
+    try {
+      final results = await _componentIndex.fuzzySearch(query);
+      newSuggestions.addAll(results.map((url) {
+        final re = RegExp(r'fuchsia-pkg://fuchsia.com/(.+)#meta/.+');
+        final name = re.firstMatch(url)?.group(1);
+        return Suggestion(
+          id: '$url:${DateTime.now().millisecondsSinceEpoch}',
+          url: url,
+          title: name,
+        );
+      }));
+    } on Exception catch (e) {
+      log.info('Component Index error: $e');
+    }
 
     return newSuggestions.take(maxSuggestions);
   }
