@@ -553,7 +553,7 @@ async fn main() -> Result<(), Error> {
 
     let service_defs = vec![make_profile_service_definition()];
 
-    let (connect_client, mut connect_requests) =
+    let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
 
     profile_svc.advertise(
@@ -570,13 +570,24 @@ async fn main() -> Result<(), Error> {
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    let (results_client, mut results_requests) =
+    let (results_client, results_requests) =
         create_request_stream().context("SearchResults creation")?;
 
     profile_svc.search(ServiceClassProfileIdentifier::AudioSource, &ATTRS, results_client)?;
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
+    handle_profile_events(peers, controller_pool, profile_svc, connect_requests, results_requests)
+        .await
+}
+
+async fn handle_profile_events(
+    peers: Arc<Mutex<ConnectedPeers>>,
+    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
+    profile_svc: ProfileProxy,
+    mut connect_requests: ConnectionReceiverRequestStream,
+    mut results_requests: SearchResultsRequestStream,
+) -> Result<(), Error> {
     loop {
         select! {
             connect_request = connect_requests.try_next() => {
@@ -595,6 +606,7 @@ async fn main() -> Result<(), Error> {
                 let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
 
                 handle_services_found(&peer_id.into(), &attributes, peers.clone(), controller_pool.clone(), profile_svc.clone());
+                responder.send()?;
             }
             complete => break,
         }
@@ -612,7 +624,7 @@ mod tests {
     use fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC};
     use fuchsia_bluetooth::types::PeerId;
     use futures::channel::mpsc;
-    use futures::{task::Poll, StreamExt};
+    use futures::{pin_mut, task::Poll, StreamExt};
     use matches::assert_matches;
 
     fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
@@ -627,7 +639,6 @@ mod tests {
 
     fn setup_connected_peer_test() -> (
         fasync::Executor,
-        PeerId,
         Arc<Mutex<ConnectedPeers>>,
         ProfileProxy,
         ProfileRequestStream,
@@ -637,7 +648,6 @@ mod tests {
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
-        let id = PeerId(1);
         let inspect = inspect::Inspector::new();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             Streams::new(),
@@ -649,7 +659,43 @@ mod tests {
 
         let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
-        (exec, id, peers, proxy, stream, controller_pool)
+        (exec, peers, proxy, stream, controller_pool)
+    }
+
+    #[test]
+    fn test_responds_to_search_results() {
+        let (mut exec, peers, profile_proxy, _profile_stream, controller_pool) =
+            setup_connected_peer_test();
+        let (results_proxy, results_stream) = create_proxy_and_stream::<SearchResultsMarker>()
+            .expect("SearchResults proxy should be created");
+        let (_connect_proxy, connect_stream) =
+            create_proxy_and_stream::<ConnectionReceiverMarker>()
+                .expect("ConnectionReceiver proxy should be created");
+
+        let handler_fut = handle_profile_events(
+            peers,
+            controller_pool,
+            profile_proxy,
+            connect_stream,
+            results_stream,
+        );
+        pin_mut!(handler_fut);
+
+        let res = exec.run_until_stalled(&mut handler_fut);
+        assert!(res.is_pending());
+
+        // Report a search result, which should be replied to.
+        let mut attributes = vec![];
+        let results_fut =
+            results_proxy.service_found(&mut PeerId(1).into(), None, &mut attributes.iter_mut());
+        pin_mut!(results_fut);
+
+        let res = exec.run_until_stalled(&mut handler_fut);
+        assert!(res.is_pending());
+        match exec.run_until_stalled(&mut results_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected a response from the result, got {:?}", x),
+        };
     }
 
     #[test]
@@ -824,10 +870,11 @@ mod tests {
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
-        let (mut exec, id, peers, proxy, mut prof_stream, controller_pool) =
+        let (mut exec, peers, proxy, mut prof_stream, controller_pool) =
             setup_connected_peer_test();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
+        let peer_id = PeerId(1);
 
         // Simulate getting the service found event.
         let attributes = vec![Attribute {
@@ -838,7 +885,7 @@ mod tests {
             ])))]),
         }];
         handle_services_found(
-            &id,
+            &peer_id,
             &attributes,
             peers.clone(),
             controller_pool.clone(),
@@ -849,7 +896,7 @@ mod tests {
 
         // At this point, a remote peer was found, but hasn't connected yet. There
         // should be no entry for it.
-        assert!(!peers.lock().is_connected(&id));
+        assert!(!peers.lock().is_connected(&peer_id));
 
         // Fast forward time by 5 seconds. In this time, the remote peer has not
         // connected.
@@ -875,17 +922,18 @@ mod tests {
 
         // The remote peer did not connect to us, A2DP Sink should initiate a connection
         // and insert into `peers`.
-        assert!(peers.lock().is_connected(&id));
+        assert!(peers.lock().is_connected(&peer_id));
     }
 
     #[test]
     /// Tests that A2DP sink does not assume the initiator role when a peer connects
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
-        let (mut exec, id, peers, proxy, mut prof_stream, controller_pool) =
+        let (mut exec, peers, proxy, mut prof_stream, controller_pool) =
             setup_connected_peer_test();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
+        let peer_id = PeerId(1);
 
         // Simulate getting the service found event.
         let attributes = vec![Attribute {
@@ -896,7 +944,7 @@ mod tests {
             ])))]),
         }];
         handle_services_found(
-            &id,
+            &peer_id,
             &attributes,
             peers.clone(),
             controller_pool.clone(),
@@ -905,7 +953,7 @@ mod tests {
 
         // At this point, a remote peer was found, but hasn't connected yet. There
         // should be no entry for it.
-        assert!(!peers.lock().is_connected(&id));
+        assert!(!peers.lock().is_connected(&peer_id));
 
         // Fast forward time by .5 seconds. The threshold is 1 second, so the timer
         // to initiate connections has not been triggered.
@@ -917,12 +965,12 @@ mod tests {
         let (_remote, transport) =
             zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
         let channel = Channel { socket: Some(transport), ..Channel::new_empty() };
-        handle_connection(&id, channel, false, &mut peers.lock(), &mut controller_pool.lock());
+        handle_connection(&peer_id, channel, false, &mut peers.lock(), &mut controller_pool.lock());
 
         run_to_stalled(&mut exec);
 
         // The remote peer connected to us, and should be in the map.
-        assert!(peers.lock().is_connected(&id));
+        assert!(peers.lock().is_connected(&peer_id));
 
         // Fast forward time by 4.5 seconds. Ensure no outbound connection is initiated
         // by us, since the remote peer has assumed the INT role.

@@ -409,7 +409,7 @@ async fn main() -> Result<(), Error> {
 
     let service_defs = vec![make_profile_service_definition()];
 
-    let (connect_client, mut connect_requests) =
+    let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
 
     profile_svc
@@ -428,15 +428,24 @@ async fn main() -> Result<(), Error> {
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    let (results_client, mut results_requests) =
+    let (results_client, results_requests) =
         create_request_stream().context("SearchResults creation")?;
 
     profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
-    let mut peers = Peers::new(opts.source, profile_svc);
+    let peers = Peers::new(opts.source, profile_svc);
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
+    handle_profile_events(peers, controller_pool, connect_requests, results_requests).await
+}
+
+async fn handle_profile_events(
+    mut peers: Peers,
+    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
+    mut connect_requests: ConnectionReceiverRequestStream,
+    mut results_requests: SearchResultsRequestStream,
+) -> Result<(), Error> {
     loop {
         select! {
             connect_request = connect_requests.try_next() => {
@@ -469,6 +478,7 @@ async fn main() -> Result<(), Error> {
                     protocol,
                     attributes
                 );
+                responder.send()?;
                 let profile = match find_profile_descriptors(&attributes) {
                     Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
                     Err(_) => {
@@ -489,7 +499,44 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl::endpoints::create_proxy_and_stream;
+    use futures::{pin_mut, task::Poll};
     use matches::assert_matches;
+
+    #[test]
+    fn test_responds_to_search_results() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (profile_proxy, _profile_stream) =
+            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let (results_proxy, results_stream) = create_proxy_and_stream::<SearchResultsMarker>()
+            .expect("SearchResults proxy should be created");
+        let (_connect_proxy, connect_stream) =
+            create_proxy_and_stream::<ConnectionReceiverMarker>()
+                .expect("ConnectionReceiver proxy should be created");
+
+        let peers = Peers::new(AudioSourceType::BigBen, profile_proxy);
+        let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
+
+        let handler_fut =
+            handle_profile_events(peers, controller_pool, connect_stream, results_stream);
+        pin_mut!(handler_fut);
+
+        let res = exec.run_until_stalled(&mut handler_fut);
+        assert!(res.is_pending());
+
+        // Report a search result. This should be replied to.
+        let mut attributes = vec![];
+        let results_fut =
+            results_proxy.service_found(&mut PeerId(1).into(), None, &mut attributes.iter_mut());
+        pin_mut!(results_fut);
+
+        let res = exec.run_until_stalled(&mut handler_fut);
+        assert!(res.is_pending());
+        match exec.run_until_stalled(&mut results_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected a response from the result, got {:?}", x),
+        };
+    }
 
     #[test]
     fn test_stream_selection() {
