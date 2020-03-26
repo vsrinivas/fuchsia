@@ -157,12 +157,14 @@ void x86_amd_init_percpu(void) {
   }
 
   // Quirks
-  auto processor_id = cpuid.ReadProcessorId();
-  switch (processor_id.family()) {
-  case 0x17:
-    if (processor_id.model() > 0x0 && processor_id.model() <= 0xF) {
-      x86_amd_init_percpu_17h_zen1_quirks(&cpuid, &msr);
+  if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {
+    auto processor_id = cpuid.ReadProcessorId();
+    switch (processor_id.family()) {
+    case 0x17:
+      if (processor_id.model() > 0x0 && processor_id.model() <= 0xF) {
+        x86_amd_init_percpu_17h_zen1_quirks(&cpuid, &msr);
+      }
+      break;
     }
-    break;
   }
 }
