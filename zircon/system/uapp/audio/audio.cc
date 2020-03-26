@@ -7,6 +7,8 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <optional>
+
 #include <audio-proto-utils/format-utils.h>
 #include <audio-utils/audio-device-stream.h>
 #include <audio-utils/audio-input.h>
@@ -47,6 +49,15 @@ enum class Command {
   RECORD,
 };
 
+static std::optional<uint32_t> GetUint32(const char* arg) {
+  char* end = nullptr;
+  auto result = strtol(arg, &end, 0);
+  if (*end != '\0' || result < 0 || (result == 0 && arg == end)) {
+    return {};
+  }
+  return {result};
+}
+
 void usage(const char* prog_name) {
   // clang-format off
   printf("usage:\n");
@@ -61,7 +72,7 @@ void usage(const char* prog_name) {
          "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
          "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
          "  -c <channels>    : Number of channels to use.  Defaults to 2\n"
-         "  -a <active>      : Active channel (choose from 0 to <channels> - 1 inclusive).\n"
+         "  -a <active>      : Active channel mask (e.g. 0xf or 15 for channels 0, 1, 2 and 3).\n"
          "                     Defaults to all channels active (not set).\n");
   printf("\nValid command are\n");
   printf("info   : Fetches capability and status info for the specified stream\n");
@@ -322,10 +333,12 @@ int main(int argc, const char** argv) {
         // Attempt to parse it.
         if (++arg >= argc)
           return -1;
-        if (sscanf(argv[arg], "%u", o.val) != 1) {
+        std::optional<uint32_t> value = GetUint32(argv[arg]);
+        if (!value.has_value()) {
           printf("Failed to parse %s option, \"%s\"\n", o.tag, argv[arg]);
           return -1;
         }
+        *o.val = value.value();
         ++arg;
         parsed_option = true;
         break;

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <limits>
+#include "sine-source.h"
+
 #include <math.h>
 #include <zircon/assert.h>
 
-#include "sine-source.h"
+#include <limits>
+
+#include <fbl/algorithm.h>
 
 zx_status_t SineSource::Init(float freq, float amp, float duration_secs, uint32_t frame_rate,
                              uint32_t channels, uint32_t active,
@@ -149,7 +151,7 @@ zx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint
     auto val = static_cast<ComputedType>(amp_ * sin(pos));
 
     for (uint32_t j = 0; j < channels_; ++j) {
-      if (active_ == kAllChannelsActive || active_ == j) {
+      if (active_ == kAllChannelsActive || (active_ & (1 << j))) {
         *(buf++) = Traits::encode(val);
       } else {
         *(buf++) = Traits::SilenceValue;
