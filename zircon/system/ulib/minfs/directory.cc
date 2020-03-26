@@ -33,6 +33,7 @@
 #endif
 
 #include "minfs-private.h"
+#include "unowned_vmo_buffer.h"
 #include "vnode.h"
 
 namespace minfs {
@@ -101,13 +102,14 @@ void Directory::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old
 #ifdef __Fuchsia__
 void Directory::IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                                blk_t count) {
-  storage::Operation op = {
+  storage::Operation operation = {
       .type = storage::OperationType::kWrite,
       .vmo_offset = vmo_offset,
       .dev_offset = dev_offset,
       .length = count,
   };
-  transaction->EnqueueMetadata(vmo_.get(), std::move(op));
+  UnownedVmoBuffer buffer(zx::unowned_vmo(vmo_.get()));
+  transaction->EnqueueMetadata(operation, &buffer);
 }
 
 bool Directory::HasPendingAllocation(blk_t vmo_offset) { return false; }

@@ -26,18 +26,10 @@ class PendingWork {
  public:
   virtual ~PendingWork() = default;
 
-#ifdef __Fuchsia__
-  // Identifies that an extent of metadata blocks should be written to disk at a later point in
-  // time.
-  // TODO(rvargas): Remove this version.
-  virtual void EnqueueMetadata(WriteData source, storage::Operation operation) = 0;
-#else
-  // Identifies that an extent of metadata blocks should be written to disk at a later point in
-  // time.
+  // Enqueues a metadata-write operation.
   virtual void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) = 0;
-#endif
 
-  // Identifies that an extent of data blocks should be written to disk at a later point in time.
+  // Enqueues a data-write operation.
   // Write to data blocks must be done in a separate transaction from metadata updates to ensure
   // that all user data goes out to disk before associated metadata.
   virtual void EnqueueData(WriteData source, storage::Operation operation) = 0;

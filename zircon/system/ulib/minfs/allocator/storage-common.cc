@@ -8,6 +8,7 @@
 
 #include "allocator.h"
 #include "storage.h"
+#include "unowned_vmo_buffer.h"
 
 namespace minfs {
 
@@ -63,7 +64,7 @@ void PersistentStorage::PersistRange(PendingWork* transaction, WriteData data, s
   blk_t block_count = last_rel_block - first_rel_block + 1;
   blk_t abs_block = metadata_.MetadataStartBlock() + first_rel_block;
 
-  storage::Operation op = {
+  storage::Operation operation = {
       .type = storage::OperationType::kWrite,
       .vmo_offset = first_rel_block,
       .dev_offset = abs_block,
@@ -71,11 +72,12 @@ void PersistentStorage::PersistRange(PendingWork* transaction, WriteData data, s
   };
 
 #ifdef __Fuchsia__
-  transaction->EnqueueMetadata(data, op);
+  zx::unowned_vmo vmo(data);
+  UnownedVmoBuffer buffer(vmo);
 #else
   UnownedBuffer buffer(data);
-  transaction->EnqueueMetadata(op, &buffer);
 #endif
+  transaction->EnqueueMetadata(operation, &buffer);
 }
 
 void PersistentStorage::PersistAllocate(PendingWork* write_transaction, size_t count) {

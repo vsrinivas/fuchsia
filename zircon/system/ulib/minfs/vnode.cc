@@ -33,6 +33,7 @@
 #include "directory.h"
 #include "file.h"
 #include "minfs-private.h"
+#include "unowned_vmo_buffer.h"
 #include "vnode.h"
 
 namespace minfs {
@@ -416,13 +417,14 @@ zx_status_t VnodeMinfs::BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* para
       // Only update the indirect block if an entry was deleted, and the indirect block
       // itself was not deleted.
 #ifdef __Fuchsia__
-      storage::Operation op = {
+      storage::Operation operation = {
           .type = storage::OperationType::kWrite,
           .vmo_offset = params->GetOffset() + i,
           .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
           .length = 1,
       };
-      op_args->transaction->EnqueueMetadata(vmo_indirect_->vmo().get(), std::move(op));
+      UnownedVmoBuffer buffer(zx::unowned_vmo(vmo_indirect_->vmo()));
+      op_args->transaction->EnqueueMetadata(operation, &buffer);
 #else
       fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, entry);
 #endif
@@ -489,13 +491,14 @@ zx_status_t VnodeMinfs::BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* pa
       // Only update the indirect block if an entry was deleted, and the indirect block
       // itself was not deleted.
 #ifdef __Fuchsia__
-      storage::Operation op = {
+      storage::Operation operation = {
           .type = storage::OperationType::kWrite,
           .vmo_offset = params->GetOffset() + i,
           .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
           .length = 1,
       };
-      op_args->transaction->EnqueueMetadata(vmo_indirect_->vmo().get(), std::move(op));
+      UnownedVmoBuffer buffer(zx::unowned_vmo(vmo_indirect_->vmo()));
+      op_args->transaction->EnqueueMetadata(operation, &buffer);
 #else
       fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, dientry);
 #endif

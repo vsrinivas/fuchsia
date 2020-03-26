@@ -10,6 +10,8 @@
 
 #include <storage/buffer/block_buffer.h>
 
+#include "unowned_vmo_buffer.h"
+
 namespace minfs {
 
 namespace {
@@ -91,13 +93,14 @@ void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inod
   char* inodata = reinterpret_cast<char*>(inode_table_.start()) + inoblock_rel * kMinfsBlockSize;
   memcpy(inodata + off_of_ino, inode, kMinfsInodeSize);
 
-  storage::Operation op = {
+  storage::Operation operation = {
       .type = storage::OperationType::kWrite,
       .vmo_offset = inoblock_rel,
       .dev_offset = inoblock_abs,
       .length = 1,
   };
-  transaction->EnqueueMetadata(inode_table_.vmo().get(), std::move(op));
+  UnownedVmoBuffer buffer(zx::unowned_vmo(inode_table_.vmo()));
+  transaction->EnqueueMetadata(operation, &buffer);
 }
 
 const Allocator* InodeManager::GetInodeAllocator() const { return inode_allocator_.get(); }

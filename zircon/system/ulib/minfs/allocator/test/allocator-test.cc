@@ -343,8 +343,8 @@ TEST(AllocatorTest, AllocateSwap) {
 
 class FakeTransaction : public PendingWork {
  public:
-  void EnqueueMetadata(WriteData source, storage::Operation operation) final {
-    storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(source),
+  void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final {
+    storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(buffer->Vmo()),
                                                          .op = std::move(operation)};
     metadata_operations_.Add(std::move(unbuffered_operation));
   }

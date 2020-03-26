@@ -13,6 +13,8 @@
 #include <bitmap/raw-bitmap.h>
 #include <minfs/superblock.h>
 
+#include "unowned_vmo_buffer.h"
+
 namespace minfs {
 
 SuperblockManager::SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper)
@@ -52,15 +54,15 @@ zx_status_t SuperblockManager::Create(block_client::BlockDevice* device, const S
 
 void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock write_backup) {
   UpdateChecksum(MutableInfo());
-  auto data = mapping_.vmo().get();
 
-  storage::Operation op = {
+  storage::Operation operation = {
       .type = storage::OperationType::kWrite,
       .vmo_offset = 0,
       .dev_offset = kSuperblockStart,
       .length = 1,
   };
-  transaction->EnqueueMetadata(data, std::move(op));
+  UnownedVmoBuffer buffer(zx::unowned_vmo(mapping_.vmo()));
+  transaction->EnqueueMetadata(operation, &buffer);
 
   if (write_backup == UpdateBackupSuperblock::kUpdate) {
     blk_t superblock_dev_offset = kNonFvmSuperblockBackup;
@@ -69,13 +71,8 @@ void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock w
       superblock_dev_offset = kFvmSuperblockBackup;
     }
 
-    storage::Operation op = {
-        .type = storage::OperationType::kWrite,
-        .vmo_offset = 0,
-        .dev_offset = superblock_dev_offset,
-        .length = 1,
-    };
-    transaction->EnqueueMetadata(data, std::move(op));
+    operation.dev_offset = superblock_dev_offset,
+    transaction->EnqueueMetadata(operation, &buffer);
   }
 }
 

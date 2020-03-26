@@ -75,8 +75,8 @@ Transaction::~Transaction() {
 }
 
 #ifdef __Fuchsia__
-void Transaction::EnqueueMetadata(WriteData source, storage::Operation operation) {
-  storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(source),
+void Transaction::EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) {
+  storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(buffer->Vmo()),
                                                        .op = operation};
   metadata_operations_.Add(std::move(unbuffered_operation));
 }

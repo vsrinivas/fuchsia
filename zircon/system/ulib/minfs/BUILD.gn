@@ -126,4 +126,5 @@ zx_library("minfs") {
       "vnode-allocation.cc",
     ]
   }
+  include_dirs = [ "." ]
 }

@@ -60,12 +60,7 @@ class Transaction final : public PendingWork {
   ////////////////
   // PendingWork interface.
 
-#ifdef __Fuchsia__
-  void EnqueueMetadata(WriteData source, storage::Operation operation) final;
-#else
   void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final;
-#endif
-
   void EnqueueData(WriteData source, storage::Operation operation) final;
 
   ////////////////

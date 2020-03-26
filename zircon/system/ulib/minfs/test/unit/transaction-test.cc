@@ -12,6 +12,7 @@
 #include <zxtest/zxtest.h>
 
 #include "minfs-private.h"
+#include "unowned_vmo_buffer.h"
 
 namespace minfs {
 namespace {
@@ -295,7 +296,8 @@ TEST_F(TransactionTest, EnqueueAndVerifyMetadataWork) {
       .dev_offset = 3,
       .length = 4,
   };
-  transaction.EnqueueMetadata(1, std::move(op));
+  UnownedVmoBuffer buffer(zx::unowned_vmo(1));
+  transaction.EnqueueMetadata(op, &buffer);
 
   fbl::Vector<storage::UnbufferedOperation> meta_operations =
       transaction.RemoveMetadataOperations();
