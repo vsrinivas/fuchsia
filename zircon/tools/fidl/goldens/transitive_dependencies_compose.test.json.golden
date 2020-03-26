@@ -36,7 +36,7 @@
           "name": "GetFoo",
           "location": {
             "filename": "bottom.test.fidl",
-            "line": 9,
+            "line": 8,
             "column": 5
           },
           "has_request": true,
@@ -62,7 +62,7 @@
               "name": "foo",
               "location": {
                 "filename": "bottom.test.fidl",
-                "line": 9,
+                "line": 8,
                 "column": 22
               },
               "field_shape_v1": {
@@ -93,7 +93,7 @@
       "name": "bottom/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "bottom.test.fidl",
-        "line": 9,
+        "line": 8,
         "column": 17
       },
       "anonymous": true,
@@ -107,7 +107,7 @@
           "name": "foo",
           "location": {
             "filename": "bottom.test.fidl",
-            "line": 9,
+            "line": 8,
             "column": 22
           },
           "field_shape_v1": {

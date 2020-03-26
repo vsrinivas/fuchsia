@@ -965,11 +965,6 @@ Libraries::Libraries() {
   }, {
     /* any value */
   }));
-  AddAttributeSchema("FragileBase", AttributeSchema({
-    AttributeSchema::Placement::kProtocolDecl,
-  }, {
-    "",
-  }));
   AddAttributeSchema("Layout", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
   }, {
@@ -3063,14 +3058,6 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       }
       if (decl->kind != Decl::Kind::kProtocol)
         return Fail(name, "This declaration is not a protocol");
-      if (!decl->HasAttribute("FragileBase")) {
-        std::string message = "protocol ";
-        message += NameFlatName(name);
-        message += " is not marked by [FragileBase] attribute, disallowing protocol ";
-        message += NameFlatName(protocol_declaration->name);
-        message += " from composing it";
-        return Fail(name, message);
-      }
       auto composed_protocol = static_cast<const Protocol*>(decl);
       auto span = composed_protocol->name.span();
       assert(span);

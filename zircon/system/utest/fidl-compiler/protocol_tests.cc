@@ -68,18 +68,15 @@ bool valid_protocol_composition() {
   TestLibrary library(R"FIDL(
 library example;
 
-[FragileBase]
 protocol A {
     MethodA();
 };
 
-[FragileBase]
 protocol B {
     compose A;
     MethodB();
 };
 
-[FragileBase]
 protocol C {
     compose A;
     MethodC();
@@ -180,7 +177,6 @@ bool invalid_cannot_compose_yourself() {
   TestLibrary library(R"FIDL(
 library example;
 
-[FragileBase]
 protocol Narcisse {
     compose Narcisse;
 };
@@ -200,7 +196,6 @@ bool invalid_cannot_compose_twice_the_same_protocol() {
   TestLibrary library(R"FIDL(
 library example;
 
-[FragileBase]
 protocol Parent {
     Method();
 };
@@ -282,18 +277,15 @@ bool invalid_composed_protocols_have_clashing_names() {
   TestLibrary library(R"FIDL(
 library example;
 
-[FragileBase]
 protocol A {
     MethodA();
 };
 
-[FragileBase]
 protocol B {
     compose A;
     MethodB();
 };
 
-[FragileBase]
 protocol C {
     compose A;
     MethodC();
@@ -323,12 +315,10 @@ library a;
 // a.b/lo and a.cv/f have colliding computed ordinals, so this is an illegal
 // FIDL definition.
 
-[FragileBase]
 protocol b {
    lo();
 };
 
-[FragileBase]
 protocol cv {
     compose b;
     f();
@@ -339,7 +329,7 @@ protocol cv {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0].c_str(),
                  "Multiple methods with the same ordinal in a protocol; "
-                 "previous was at example.fidl:9:4. "
+                 "previous was at example.fidl:8:4. "
                  "Consider using attribute [Selector=\"f_\"] to change the name used to "
                  "calculate the ordinal.");
 
@@ -352,7 +342,6 @@ bool invalid_simple_constraint_applies_to_composed_methods_too() {
   TestLibrary library(R"FIDL(
 library example;
 
-[FragileBase]
 protocol NotSimple {
     Complex(vector<uint64> arg);
 };
@@ -367,31 +356,6 @@ protocol YearningForSimplicity {
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0].c_str(), "member 'arg' is not simple");
-
-  END_TEST;
-}
-
-bool invalid_missing_fragile_base_on_composed_protocol() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol NoFragileBase {
-};
-
-protocol Child {
-    compose NoFragileBase;
-};
-
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "protocol example/NoFragileBase is not marked by [FragileBase] "
-                 "attribute, disallowing protocol example/Child from "
-                 "composing it");
 
   END_TEST;
 }
@@ -413,5 +377,4 @@ RUN_TEST(invalid_no_other_pragma_than_compose)
 RUN_TEST(invalid_composed_protocols_have_clashing_names)
 RUN_TEST(invalid_composed_protocols_have_clashing_ordinals)
 RUN_TEST(invalid_simple_constraint_applies_to_composed_methods_too)
-RUN_TEST(invalid_missing_fragile_base_on_composed_protocol)
 END_TEST_CASE(protocol_tests)

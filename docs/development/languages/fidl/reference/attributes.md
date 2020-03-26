@@ -5,7 +5,6 @@ The following FIDL attributes are supported:
 * [`[Deprecated]`](#deprecated)
 * [`[Discoverable]`](#discoverable)
 * [`[Doc]`](#doc)
-* [`[FragileBase]`](#fragilebase)
 * [`[Internal]`](#internal)
 * [`[Layout]`](#layout)
 * [`[MaxBytes]`](#maxbytes)
@@ -93,14 +92,6 @@ the target language.
 
 Note: To be identical, the `[Doc]` version should be `[Doc = " Foo\n"]`. Note
 the space before the "Foo" and the line-feed "`\n`".
-
-## `[FragileBase]` {#fragilebase}
-
-**USAGE**: `[FragileBase]`
-
-**MEANING**:
-Denotes that the interface can be composed, otherwise it cannot.
-See also [Protocol Composition][composition].
 
 ## `[Internal]` {#internal}
 

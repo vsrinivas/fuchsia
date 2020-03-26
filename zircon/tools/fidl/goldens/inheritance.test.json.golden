@@ -10,15 +10,9 @@
       "name": "fidl.test.json/super",
       "location": {
         "filename": "inheritance.test.fidl",
-        "line": 4,
+        "line": 3,
         "column": 10
       },
-      "maybe_attributes": [
-        {
-          "name": "FragileBase",
-          "value": ""
-        }
-      ],
       "methods": [
         {
           "ordinal": 3393112382468259840,
@@ -26,7 +20,7 @@
           "name": "foo",
           "location": {
             "filename": "inheritance.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 5
           },
           "has_request": true,
@@ -39,7 +33,7 @@
               "name": "s",
               "location": {
                 "filename": "inheritance.test.fidl",
-                "line": 5,
+                "line": 4,
                 "column": 16
               },
               "field_shape_v1": {
@@ -69,7 +63,7 @@
               "name": "y",
               "location": {
                 "filename": "inheritance.test.fidl",
-                "line": 5,
+                "line": 4,
                 "column": 29
               },
               "field_shape_v1": {
@@ -97,7 +91,7 @@
       "name": "fidl.test.json/sub",
       "location": {
         "filename": "inheritance.test.fidl",
-        "line": 8,
+        "line": 7,
         "column": 10
       },
       "methods": [
@@ -107,7 +101,7 @@
           "name": "foo",
           "location": {
             "filename": "inheritance.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 5
           },
           "has_request": true,
@@ -120,7 +114,7 @@
               "name": "s",
               "location": {
                 "filename": "inheritance.test.fidl",
-                "line": 5,
+                "line": 4,
                 "column": 16
               },
               "field_shape_v1": {
@@ -150,7 +144,7 @@
               "name": "y",
               "location": {
                 "filename": "inheritance.test.fidl",
-                "line": 5,
+                "line": 4,
                 "column": 29
               },
               "field_shape_v1": {
@@ -181,7 +175,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance.test.fidl",
-        "line": 5,
+        "line": 4,
         "column": 8
       },
       "anonymous": true,
@@ -194,7 +188,7 @@
           "name": "s",
           "location": {
             "filename": "inheritance.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 16
           },
           "field_shape_v1": {
@@ -218,7 +212,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "inheritance.test.fidl",
-        "line": 5,
+        "line": 4,
         "column": 22
       },
       "anonymous": true,
@@ -231,7 +225,7 @@
           "name": "y",
           "location": {
             "filename": "inheritance.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 29
           },
           "field_shape_v1": {
@@ -255,7 +249,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance.test.fidl",
-        "line": 5,
+        "line": 4,
         "column": 8
       },
       "anonymous": true,
@@ -268,7 +262,7 @@
           "name": "s",
           "location": {
             "filename": "inheritance.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 16
           },
           "field_shape_v1": {
@@ -292,7 +286,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "inheritance.test.fidl",
-        "line": 5,
+        "line": 4,
         "column": 22
       },
       "anonymous": true,
@@ -305,7 +299,7 @@
           "name": "y",
           "location": {
             "filename": "inheritance.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 29
           },
           "field_shape_v1": {

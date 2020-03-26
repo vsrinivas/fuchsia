@@ -6,14 +6,12 @@ library fidl.examples.ordinals;
 
 using zx;
 
-[FragileBase]
 protocol Foo {
     SomeMethod();
     SomeMethodWithAResponse() -> ();
     -> SomeEvent(zx.status response);
 };
 
-[FragileBase]
 protocol Bar {
     DoIt();
 };

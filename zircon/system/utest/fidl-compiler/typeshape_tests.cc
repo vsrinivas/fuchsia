@@ -2547,7 +2547,6 @@ bool protocol_child_and_parent() {
   TestLibrary parent_library("parent.fidl", R"FIDL(
 library parent;
 
-[FragileBase]
 protocol Parent {
   Sync() -> ();
 };

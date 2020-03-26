@@ -1,6 +1,5 @@
 library fidl.test.json;
 
-[FragileBase]
 protocol Parent {
     First(request<Parent> request);
 };

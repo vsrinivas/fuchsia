@@ -10,15 +10,9 @@
       "name": "fidl.test.json/Parent",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
-        "line": 4,
+        "line": 3,
         "column": 10
       },
-      "maybe_attributes": [
-        {
-          "name": "FragileBase",
-          "value": ""
-        }
-      ],
       "methods": [
         {
           "ordinal": 7397547062406938624,
@@ -26,7 +20,7 @@
           "name": "First",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 5
           },
           "has_request": true,
@@ -40,7 +34,7 @@
               "name": "request",
               "location": {
                 "filename": "inheritance_with_recursive_decl.test.fidl",
-                "line": 5,
+                "line": 4,
                 "column": 27
               },
               "field_shape_v1": {
@@ -69,7 +63,7 @@
       "name": "fidl.test.json/Child",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
-        "line": 8,
+        "line": 7,
         "column": 10
       },
       "methods": [
@@ -79,7 +73,7 @@
           "name": "First",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 5
           },
           "has_request": true,
@@ -93,7 +87,7 @@
               "name": "request",
               "location": {
                 "filename": "inheritance_with_recursive_decl.test.fidl",
-                "line": 5,
+                "line": 4,
                 "column": 27
               },
               "field_shape_v1": {
@@ -122,7 +116,7 @@
           "name": "Second",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
-            "line": 10,
+            "line": 9,
             "column": 5
           },
           "has_request": true,
@@ -136,7 +130,7 @@
               "name": "request",
               "location": {
                 "filename": "inheritance_with_recursive_decl.test.fidl",
-                "line": 10,
+                "line": 9,
                 "column": 28
               },
               "field_shape_v1": {
@@ -168,7 +162,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
-        "line": 5,
+        "line": 4,
         "column": 10
       },
       "anonymous": true,
@@ -182,7 +176,7 @@
           "name": "request",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 27
           },
           "field_shape_v1": {
@@ -206,7 +200,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
-        "line": 10,
+        "line": 9,
         "column": 11
       },
       "anonymous": true,
@@ -220,7 +214,7 @@
           "name": "request",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
-            "line": 10,
+            "line": 9,
             "column": 28
           },
           "field_shape_v1": {
@@ -244,7 +238,7 @@
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
-        "line": 5,
+        "line": 4,
         "column": 10
       },
       "anonymous": true,
@@ -258,7 +252,7 @@
           "name": "request",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 27
           },
           "field_shape_v1": {
