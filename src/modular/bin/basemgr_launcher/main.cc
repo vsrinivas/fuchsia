@@ -74,18 +74,19 @@ std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
 }
 
 std::string GetUsage() {
-  return R"(A thin wrapper that takes a config file from stdin and maps it to
-/config_override/data/startup.config for a new basemgr instance.
+  return R"(Control the lifecycle of instances of basemgr.
 
-  Usage:
+Usage: basemgr_launcher [<command>]
 
-cat myconfig.json | fx shell basemgr_launcher
+  <command>
+    (none)    Launches a new instance of basemgr with a modular JSON configuration
+              read from stdin.
+    shutdown  Terminates the running instance of basemgr, if found.
 
-<command>
-shutdown
-  Usage: fx shell basemgr_launcher shutdown
-  Shutdown the running instance of basemgr.
+Exmaples (from host machine):
 
+  $ cat myconfig.json | fx shell basemgr_launcher
+  $ fx shell basemgr_launcher shutdown
 )";
 }
 
