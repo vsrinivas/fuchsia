@@ -25,22 +25,26 @@ import (
 	"thinfs/zircon/rpc"
 
 	"fuchsia.googlesource.com/pm/pkg"
+	"fuchsia.googlesource.com/pmd/allowlist"
 	"fuchsia.googlesource.com/pmd/blobfs"
 	"fuchsia.googlesource.com/pmd/index"
 )
 
 // Filesystem is the top level container for a pkgfs server
 type Filesystem struct {
-	root      *rootDirectory
-	static    *index.StaticIndex
-	index     *index.DynamicIndex
-	blobfs    *blobfs.Manager
-	mountInfo mountInfo
-	mountTime time.Time
+	root                                    *rootDirectory
+	static                                  *index.StaticIndex
+	index                                   *index.DynamicIndex
+	blobfs                                  *blobfs.Manager
+	mountInfo                               mountInfo
+	mountTime                               time.Time
+	allowedNonStaticPackages                *allowlist.Allowlist
+	logNonBaseExecutableOpens               bool
+	enforceNonBaseExecutabilityRestrictions bool
 }
 
 // New initializes a new pkgfs filesystem server
-func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool) (*Filesystem, error) {
+func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool, enforceNonBaseExecutabilityRestrictions bool) (*Filesystem, error) {
 	bm, err := blobfs.New(blobDir)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
@@ -54,6 +58,8 @@ func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool) (
 		mountInfo: mountInfo{
 			parentFd: -1,
 		},
+		logNonBaseExecutableOpens:               true,
+		enforceNonBaseExecutabilityRestrictions: enforceNonBaseExecutabilityRestrictions,
 	}
 
 	f.root = &rootDirectory{
@@ -83,7 +89,6 @@ func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool) (
 			"packages": &packagesRoot{
 				unsupportedDirectory:      unsupportedDirectory("/packages"),
 				fs:                        f,
-				allowedNonStaticPackages:  nil,
 				enforceNonStaticAllowlist: enforcePkgfsPackagesNonStaticAllowlist,
 			},
 			"versions": &versionsDirectory{
@@ -100,6 +105,7 @@ func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool) (
 // staticIndexPath is the path inside the system package directory that contains the static packages for that system version.
 const staticIndexPath = "data/static_packages"
 const cacheIndexPath = "data/cache_packages"
+const disableExecutabilityEnforcementPath = "data/pkgfs_disable_executability_restrictions"
 const packagesAllowlistPath = "data/pkgfs_packages_non_static_packages_allowlist.txt"
 
 // loadStaticIndex loads the blob specified by root from blobfs. A non-nil
@@ -157,22 +163,32 @@ func (f *Filesystem) retrievePackagesAllowlist(pd *packageDir) {
 		return
 	}
 
-	packagesDirectory := f.root.dirs["packages"]
-	packagesRoot, ok := packagesDirectory.(*packagesRoot)
-	if !ok {
-		log.Printf("pkgfs: couldn't coerce packages directory to a packagesRoot...")
+	if err := f.loadAllowedNonStaticPackages(blob); err != nil {
+		log.Printf("pkgfs: could not load pkgfs/packages allowlist: %v", err)
 		return
 	}
+}
 
-	err := packagesRoot.setAllowedNonStaticPackages(blob)
+func (f *Filesystem) loadAllowedNonStaticPackages(blob string) error {
+	allowListFile, err := f.blobfs.Open(blob)
 	if err != nil {
-		log.Printf("pkgfs: could not load pkgfs/packages allowlist: %v", err)
+		return fmt.Errorf("could not load non_static_pkgs allowlist from blob %s: %v", blob, err)
 	}
+	defer allowListFile.Close()
+
+	allowList, err := allowlist.LoadFrom(allowListFile)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("pkgfs: parsed non-static pkgs allowlist: %v", allowList)
+	f.allowedNonStaticPackages = allowList
+	return nil
 }
 
 // SetSystemRoot sets/updates the merkleroot (and static index) that backs the /system partition and static package index.
 func (f *Filesystem) SetSystemRoot(merkleroot string) error {
-	pd, err := newPackageDirFromBlob(merkleroot, f)
+	pd, err := newPackageDirFromBlob(merkleroot, f, true)
 	if err != nil {
 		return err
 	}
@@ -209,7 +225,36 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	// and pass it off to the packages root directory.
 	f.retrievePackagesAllowlist(pd)
 
+	// If the marker blob is known (even if it doesn't exist in blobfs),
+	// silently disable logging and enforcement of executability
+	// restrictions.
+	if _, ok := pd.getBlobFor(disableExecutabilityEnforcementPath); ok {
+		f.logNonBaseExecutableOpens = false
+	}
+
 	return nil
+}
+
+// shouldAllowExecutableOpenByPackageName determines if a package should be
+// allowed to open blobs as executable. Contents of a package can be executed
+// if it is in the static index (without any runtime changes) or if it is in
+// the allowlist.
+func (f *Filesystem) shouldAllowExecutableOpenByPackageName(packageName string) bool {
+	inStaticIndex := f.static != nil && f.static.HasStaticName(packageName)
+	inAllowList := f.allowedNonStaticPackages != nil && f.allowedNonStaticPackages.Contains(packageName)
+
+	return inStaticIndex || inAllowList
+}
+
+// shouldAllowExecutableOpenByPackageRoot determines if a package should be
+// allowed to open blobs as executable. Contents of a package can be executed
+// if it is in the static index (without any runtime changes) or if it is in
+// the allowlist.
+func (f *Filesystem) shouldAllowExecutableOpenByPackageRoot(packageRoot string, packageName string) bool {
+	inStaticIndex := f.static != nil && f.static.HasStaticRoot(packageRoot)
+	inAllowList := f.allowedNonStaticPackages != nil && f.allowedNonStaticPackages.Contains(packageName)
+
+	return inStaticIndex || inAllowList
 }
 
 func (f *Filesystem) Blockcount() int64 {
@@ -358,7 +403,7 @@ func (fs *Filesystem) GC() error {
 	for _, pkgRoot := range allPackageBlobs {
 		allBlobs[pkgRoot] = struct{}{}
 
-		pDir, err := newPackageDirFromBlob(pkgRoot, fs)
+		pDir, err := newPackageDirFromBlob(pkgRoot, fs, false)
 		if err != nil {
 			log.Printf("GC: failed getting package from blob %s: %s", pkgRoot, err)
 			continue
@@ -422,7 +467,7 @@ func (fs *Filesystem) ValidateStaticIndex() (map[string]struct{}, map[string]str
 			missing[pkgRoot] = struct{}{}
 		}
 
-		pDir, err := newPackageDirFromBlob(pkgRoot, fs)
+		pDir, err := newPackageDirFromBlob(pkgRoot, fs, false)
 		if err != nil {
 			log.Printf("pmd_validate: failed getting package from blob %s: %s", pkgRoot, err)
 			pDir.Close()

@@ -28,12 +28,13 @@ type packageDir struct {
 	fs         *Filesystem
 	merkleroot string
 	contents   map[string]packagedItem
+	executable bool
 
 	// if this packagedir is a subdirectory, then this is the prefix name
 	subdir *string
 }
 
-func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, error) {
+func newPackageDir(name, version string, filesystem *Filesystem, executable bool) (*packageDir, error) {
 	var merkleroot string
 	var foundInStatic bool
 	p := pkg.Package{Name: name, Version: version}
@@ -49,7 +50,7 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 		}
 	}
 
-	return newPackageDirFromBlob(merkleroot, filesystem)
+	return newPackageDirFromBlob(merkleroot, filesystem, executable)
 }
 
 func isExecutablePath(path string) bool {
@@ -59,7 +60,7 @@ func isExecutablePath(path string) bool {
 }
 
 // Initialize a package directory server interface from a package meta.far
-func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, error) {
+func newPackageDirFromBlob(blob string, filesystem *Filesystem, executable bool) (*packageDir, error) {
 	f, err := filesystem.blobfs.Open(blob)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -97,6 +98,7 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 		merkleroot:           blob,
 		fs:                   filesystem,
 		contents:             map[string]packagedItem{},
+		executable:           executable,
 	}
 
 	lines := bytes.Split(buf, []byte("\n"))
@@ -186,10 +188,22 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if root, ok := d.contents[name]; ok {
-		if flags.Execute() && !root.executable {
-			return nil, nil, nil, fs.ErrPermission
+		if flags.Execute() {
+			if !root.executable {
+				return nil, nil, nil, fs.ErrPermission
+			}
+
+			// TODO(48930) Remove this temporary feature when possible.
+			if !d.executable && d.fs.logNonBaseExecutableOpens {
+				log.Printf("pkgfs: attempted executable open of %s, but this will soon not be allowed due to executability restrictions in pkgfs. See fxb/48902", name)
+
+				if d.fs.enforceNonBaseExecutabilityRestrictions {
+					return nil, nil, nil, fs.ErrPermission
+				}
+			}
 		}
 		return nil, nil, &fs.Remote{Channel: d.fs.blobfs.Channel(), Path: root.blobId, Flags: flags}, nil
+
 	}
 
 	dirname := name + "/"

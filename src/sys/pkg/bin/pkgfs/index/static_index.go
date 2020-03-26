@@ -103,6 +103,20 @@ func (idx *StaticIndex) LoadFrom(f io.Reader) error {
 	return nil
 }
 
+// HasStaticName looks for a package with the given `name` in the static static
+// index, ignoring any runtime updates made to the static index.
+func (idx *StaticIndex) HasStaticName(name string) bool {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	for k := range idx.roots {
+		if k.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // HasName looks for a package with the given `name`
 func (idx *StaticIndex) HasName(name string) bool {
 	idx.mu.RLock()
@@ -179,6 +193,20 @@ func (idx *StaticIndex) GetRoot(root string) (pkg.Package, bool) {
 		}
 	}
 	return pkg.Package{}, false
+}
+
+// HasStaticRoot looks for a package by merkleroot in the static static index,
+// ignoring any runtime updates made to the static index.
+func (idx *StaticIndex) HasStaticRoot(root string) bool {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	for _, rt := range idx.roots {
+		if root == rt {
+			return true
+		}
+	}
+	return false
 }
 
 // Set sets the given package to the given root. TODO(PKG-16) This method should

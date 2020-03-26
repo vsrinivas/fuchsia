@@ -5,17 +5,19 @@
 #![cfg(test)]
 use {
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_merkle::Hash,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
-    io_util,
+    fuchsia_zircon::Status,
     matches::assert_matches,
+    pkgfs::package::OpenRights,
     pkgfs_ramdisk::PkgfsRamdisk,
-    std::collections::HashSet,
-    std::fmt::Debug,
-    std::future::Future,
-    std::io::{self, Read, Write},
-    std::path::Path,
+    std::{
+        collections::HashSet,
+        fmt::Debug,
+        future::Future,
+        io::{self, Read, Write},
+    },
 };
 
 fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, io::Error> {
@@ -1250,14 +1252,7 @@ async fn test_pkgfs_with_system_image() {
         .await
         .expect("build package");
 
-    let system_image_package = PackageBuilder::new("system_image")
-        .add_resource_at(
-            "data/static_packages",
-            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
-        )
-        .build()
-        .await
-        .unwrap();
+    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1293,19 +1288,11 @@ async fn test_pkgfs_with_system_image() {
 async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
     let pkg = example_package().await;
 
-    let system_image_package = PackageBuilder::new("system_image")
-        .add_resource_at(
-            "data/pkgfs_packages_non_static_packages_allowlist.txt",
-            "example".as_bytes(),
-        )
-        .add_resource_at(
-            "data/cache_packages",
-            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
-        )
-        .add_resource_at("data/static_packages", "".as_bytes())
+    let system_image_package = SystemImageBuilder::new(&[])
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["example"])
         .build()
-        .await
-        .unwrap();
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1342,19 +1329,11 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
 async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     let pkg = example_package().await;
 
-    let system_image_package = PackageBuilder::new("system_image")
-        .add_resource_at(
-            "data/pkgfs_packages_non_static_packages_allowlist.txt",
-            "not_example".as_bytes(),
-        )
-        .add_resource_at(
-            "data/cache_packages",
-            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
-        )
-        .add_resource_at("data/static_packages", "".as_bytes())
+    let system_image_package = SystemImageBuilder::new(&[])
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["not_example"])
         .build()
-        .await
-        .unwrap();
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1392,19 +1371,11 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
 async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
     let pkg = example_package().await;
 
-    let system_image_package = PackageBuilder::new("system_image")
-        .add_resource_at(
-            "data/pkgfs_packages_non_static_packages_allowlist.txt",
-            "not_example".as_bytes(),
-        )
-        .add_resource_at(
-            "data/cache_packages",
-            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
-        )
-        .add_resource_at("data/static_packages", "".as_bytes())
+    let system_image_package = SystemImageBuilder::new(&[])
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["not_example"])
         .build()
-        .await
-        .unwrap();
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1435,12 +1406,88 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
     pkgfs.stop().await.expect("shutting down pkgfs");
 }
 
-// For our pkgfs executability lockdown, we need to be able to test whether
-// or not we can open files in pkgfs as executable. This test serves as a proof of concept
-// that we can, and will be a jumping off point for the testing of the actual work.
+async fn executable_package() -> Package {
+    PackageBuilder::new("execute")
+        .add_resource_at("meta/bin1", "please don't put binaries in meta fars".as_bytes())
+        .add_resource_at("subdir/bin2", "or random subdirectories".as_bytes())
+        .add_resource_at("bin/bin3", "/bin is good".as_bytes())
+        .add_resource_at("lib/bin4", "/lib too".as_bytes())
+        .build()
+        .await
+        .unwrap()
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Executability {
+    AllowExecute,
+    BlockExecute,
+}
+
+async fn verify_executable_package_rights_on_pkg_dir(
+    pkgdir: pkgfs::package::Directory,
+    executability: Executability,
+) {
+    // All resources should be openable without execute rights.
+    assert_matches!(pkgdir.open_file("meta/bin1", OpenRights::Read).await, Ok(_));
+    assert_matches!(pkgdir.open_file("subdir/bin2", OpenRights::Read).await, Ok(_));
+    assert_matches!(pkgdir.open_file("bin/bin3", OpenRights::Read).await, Ok(_));
+    assert_matches!(pkgdir.open_file("lib/bin4", OpenRights::Read).await, Ok(_));
+
+    // Metadata is never allowed to be executable.
+    assert_matches!(
+        pkgdir.open_file("meta/bin1", OpenRights::ReadExecute).await,
+        Err(pkgfs::OpenError::OpenError(_))
+    );
+
+    match executability {
+        Executability::AllowExecute => {
+            assert_matches!(pkgdir.open_file("subdir/bin2", OpenRights::ReadExecute).await, Ok(_));
+            assert_matches!(pkgdir.open_file("bin/bin3", OpenRights::ReadExecute).await, Ok(_));
+            assert_matches!(pkgdir.open_file("lib/bin4", OpenRights::ReadExecute).await, Ok(_));
+        }
+
+        Executability::BlockExecute => {
+            // See //garnet/go/src/thinfs/zircon/rpc/rpc.go's errorToZx for why fs.ErrPermission maps
+            // to Status::BAD_HANDLE instead of Status::ACCESS_DENIED.
+            assert_matches!(
+                pkgdir.open_file("subdir/bin2", OpenRights::ReadExecute).await,
+                Err(pkgfs::OpenError::OpenError(Status::BAD_HANDLE))
+            );
+            assert_matches!(
+                pkgdir.open_file("bin/bin3", OpenRights::ReadExecute).await,
+                Err(pkgfs::OpenError::OpenError(Status::BAD_HANDLE))
+            );
+            assert_matches!(
+                pkgdir.open_file("lib/bin4", OpenRights::ReadExecute).await,
+                Err(pkgfs::OpenError::OpenError(Status::BAD_HANDLE))
+            );
+        }
+    }
+}
+
+async fn verify_executable_package_rights(
+    pkgfs: &PkgfsRamdisk,
+    pkg: &Package,
+    executability: Executability,
+) {
+    let root_dir_proxy = pkgfs.root_dir_proxy().unwrap();
+    let pkg_merkle = pkg.meta_far_merkle_root();
+
+    // Peform the same checks against the package opened through /pkgfs/packages and
+    // /pkgfs/versions.
+
+    let pkgfs_packages = pkgfs::packages::Client::open_from_pkgfs_root(&root_dir_proxy).unwrap();
+    let pkgdir = pkgfs_packages.open_package("execute", None).await.unwrap();
+    verify_executable_package_rights_on_pkg_dir(pkgdir, executability).await;
+
+    let pkgfs_versions = pkgfs::versions::Client::open_from_pkgfs_root(&root_dir_proxy).unwrap();
+    let pkgdir = pkgfs_versions.open_package(pkg_merkle).await.unwrap();
+    verify_executable_package_rights_on_pkg_dir(pkgdir, executability).await;
+}
+
 #[fasync::run_singlethreaded(test)]
-async fn test_pkgfs_open_executable() {
-    let pkg = example_package().await;
+async fn executability_enforcement_allows_base_package() {
+    let pkg = executable_package().await;
     let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
@@ -1449,19 +1496,164 @@ async fn test_pkgfs_open_executable() {
     let pkgfs = PkgfsRamdisk::builder()
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(true)
         .start()
         .unwrap();
 
-    // Now try to open a file as executable.
-    let root_dir_proxy = pkgfs.root_dir_proxy().expect("retrieving root dir proxy");
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
 
-    io_util::open_file(
-        &root_dir_proxy,
-        &Path::new("packages/example/0/a/b"),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
-    )
-    .expect("opening file as executable");
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
 
-    drop(root_dir_proxy);
+#[fasync::run_singlethreaded(test)]
+async fn executability_enforcement_blocks_cache_package() {
+    let pkg = executable_package().await;
+    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(true)
+        .start()
+        .unwrap();
+
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::BlockExecute).await;
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn executability_enforcement_allows_allowlisted_package() {
+    let pkg = executable_package().await;
+    let system_image_package = SystemImageBuilder::new(&[])
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["execute"])
+        .build()
+        .await;
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(true)
+        .start()
+        .unwrap();
+
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn executability_enforcement_blocks_unknown_package() {
+    let pkg = executable_package().await;
+    let system_image_package = SystemImageBuilder::new(&[]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(true)
+        .start()
+        .unwrap();
+
+    install(&pkgfs, &pkg);
+
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::BlockExecute).await;
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn executability_enforcement_allows_unknown_package_if_dynamically_disabled() {
+    let pkg = executable_package().await;
+    let system_image_package = SystemImageBuilder::new(&[]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(false)
+        .start()
+        .unwrap();
+
+    install(&pkgfs, &pkg);
+
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn executability_enforcement_blocks_update_to_base_package() {
+    let pkg1 = PackageBuilder::new("execute")
+        .add_resource_at("bin/app", "run me".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let pkg2 = executable_package().await;
+    let system_image_package = SystemImageBuilder::new(&[&pkg1]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg1.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(true)
+        .start()
+        .unwrap();
+    let pkgfs_versions =
+        pkgfs::versions::Client::open_from_pkgfs_root(&pkgfs.root_dir_proxy().unwrap()).unwrap();
+
+    // Install a different package with the same name so the static index is updated.
+    install(&pkgfs, &pkg2);
+
+    // The base package is executable.
+    let pkgdir1 = pkgfs_versions.open_package(pkg1.meta_far_merkle_root()).await.unwrap();
+    assert_matches!(pkgdir1.open_file("bin/app", OpenRights::ReadExecute).await, Ok(_));
+
+    // But the update to it isn't.
+    let pkgdir2 = pkgfs_versions.open_package(pkg2.meta_far_merkle_root()).await.unwrap();
+    verify_executable_package_rights_on_pkg_dir(pkgdir2, Executability::BlockExecute).await;
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn open_executable_allowed_when_statically_disabled() {
+    let pkg = executable_package().await;
+    let system_image_package = SystemImageBuilder::new(&[])
+        .cache_packages(&[&pkg])
+        .pkgfs_disable_executability_restrictions()
+        .build()
+        .await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_non_base_executability_restrictions(true)
+        .start()
+        .unwrap();
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
+
+    let pkgfs = pkgfs
+        .into_builder()
+        .unwrap()
+        .enforce_non_base_executability_restrictions(false)
+        .start()
+        .unwrap();
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
+
     pkgfs.stop().await.expect("shutting down pkgfs");
 }

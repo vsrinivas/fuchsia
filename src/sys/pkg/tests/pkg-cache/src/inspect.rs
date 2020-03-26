@@ -121,10 +121,11 @@ async fn assume_all_blobs_in_base_on_error() {
 
 async fn pkgfs_with_restrictions_enabled(restrictions_enabled: bool) -> PkgfsRamdisk {
     let blobfs = BlobfsRamdisk::start().unwrap();
-    let system_image_package = SystemImageBuilder::new(&[])
-        .pkgfs_disable_executability_restrictions(!restrictions_enabled)
-        .build()
-        .await;
+    let mut system_image_package = SystemImageBuilder::new(&[]);
+    if !restrictions_enabled {
+        system_image_package = system_image_package.pkgfs_disable_executability_restrictions();
+    }
+    let system_image_package = system_image_package.build().await;
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     PkgfsRamdisk::builder()
         .blobfs(blobfs)

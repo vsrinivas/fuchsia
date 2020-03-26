@@ -84,7 +84,7 @@ func tmain(m *testing.M) int {
 		runtime.KeepAlive(blobd)
 	}()
 
-	pkgfs, err := New(syscall.FDIOForFD(int(blobd.Fd())).(*fdio.Directory), false)
+	pkgfs, err := New(syscall.FDIOForFD(int(blobd.Fd())).(*fdio.Directory), false, false)
 	panicerr(err)
 	pkgfs.static.LoadFrom(strings.NewReader(
 		fmt.Sprintf("static-package/0=%s\n", bi[0].Merkle.String())))

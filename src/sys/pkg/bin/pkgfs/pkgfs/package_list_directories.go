@@ -5,54 +5,26 @@
 package pkgfs
 
 import (
-	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
 	"thinfs/fs"
 	"time"
-
-	"fuchsia.googlesource.com/pmd/allowlist"
 )
 
 type packagesRoot struct {
 	unsupportedDirectory
 
 	fs                        *Filesystem
-	allowedNonStaticPackages  *allowlist.Allowlist
 	enforceNonStaticAllowlist bool
 }
 
 func (pr *packagesRoot) isAllowedNonStaticPackage(packageName string) bool {
-	if pr.allowedNonStaticPackages == nil {
+	if pr.fs.allowedNonStaticPackages == nil {
 		return false
 	}
 
-	return pr.allowedNonStaticPackages.Contains(packageName)
-}
-
-func (pr *packagesRoot) loadAllowedNonStaticPackages(blob string) (*allowlist.Allowlist, error) {
-	allowListFile, err := pr.fs.blobfs.Open(blob)
-	if err != nil {
-		return nil, fmt.Errorf("could not load non_static_pkgs allowlist from blob %s: %v", blob, err)
-	}
-	defer allowListFile.Close()
-
-	return allowlist.LoadFrom(allowListFile)
-}
-
-func (pr *packagesRoot) setAllowedNonStaticPackages(blob string) error {
-	allowedNonStaticPackages, err := pr.loadAllowedNonStaticPackages(blob)
-	if err != nil {
-		log.Printf("pkgfs: couldn't load allowed non-static packages list: %v", err)
-		return err
-	}
-
-	pr.allowedNonStaticPackages = allowedNonStaticPackages
-
-	log.Printf("pkgfs: parsed non-static pkgs allowlist: %v", allowedNonStaticPackages)
-
-	return nil
+	return pr.fs.allowedNonStaticPackages.Contains(packageName)
 }
 
 func (pr *packagesRoot) Dup() (fs.Directory, error) {
@@ -177,7 +149,7 @@ func (pld *packageListDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Di
 
 	parts := strings.Split(name, "/")
 
-	d, err := newPackageDir(pld.packageName, parts[0], pld.fs)
+	d, err := newPackageDir(pld.packageName, parts[0], pld.fs, pld.fs.shouldAllowExecutableOpenByPackageName(pld.packageName))
 	if err != nil {
 		return nil, nil, nil, err
 	}

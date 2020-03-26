@@ -14,6 +14,7 @@ use {
 pub struct SystemImageBuilder<'a> {
     static_packages: &'a [&'a Package],
     cache_packages: Option<&'a [&'a Package]>,
+    pkgfs_non_static_packages_allowlist: Option<&'a [&'a str]>,
     pkgfs_disable_executability_restrictions: bool,
 }
 
@@ -23,28 +24,31 @@ impl<'a> SystemImageBuilder<'a> {
         Self {
             static_packages,
             cache_packages: None,
+            pkgfs_non_static_packages_allowlist: None,
             pkgfs_disable_executability_restrictions: false,
         }
     }
 
     /// Use the supplied cache_packages with the system image. Call at most once.
-    pub fn cache_packages(self, cache_packages: &'a [&'a Package]) -> Self {
+    pub fn cache_packages(mut self, cache_packages: &'a [&'a Package]) -> Self {
         assert!(self.cache_packages.is_none());
-        Self {
-            static_packages: self.static_packages,
-            cache_packages: Some(cache_packages),
-            pkgfs_disable_executability_restrictions: self.pkgfs_disable_executability_restrictions,
-        }
+        self.cache_packages = Some(cache_packages);
+        self
     }
 
-    /// Add a config file which disables pkgfs/versions exec restrictions. Call at most once.
-    pub fn pkgfs_disable_executability_restrictions(self, disable: bool) -> Self {
-        assert_eq!(self.pkgfs_disable_executability_restrictions, false);
-        Self {
-            static_packages: self.static_packages,
-            cache_packages: self.cache_packages,
-            pkgfs_disable_executability_restrictions: disable,
-        }
+    /// Use the supplied allowlist for the data file for pkgfs's /pkgfs/packages non-static
+    /// packages allowlist. Call at most once.
+    pub fn pkgfs_non_static_packages_allowlist(mut self, allowlist: &'a [&'a str]) -> Self {
+        assert_eq!(self.pkgfs_non_static_packages_allowlist, None);
+        self.pkgfs_non_static_packages_allowlist = Some(allowlist);
+        self
+    }
+
+    /// Disable enforcement of executability restrictions for packages that are not base or
+    /// allowlisted.
+    pub fn pkgfs_disable_executability_restrictions(mut self) -> Self {
+        self.pkgfs_disable_executability_restrictions = true;
+        self
     }
 
     /// Build the system_image package.
@@ -73,11 +77,16 @@ impl<'a> SystemImageBuilder<'a> {
                 .unwrap();
             builder = builder.add_resource_at("data/cache_packages", bytes.as_slice());
         }
-        if self.pkgfs_disable_executability_restrictions {
+        if let Some(allowlist) = &self.pkgfs_non_static_packages_allowlist {
+            let contents = allowlist.join("\n");
             builder = builder.add_resource_at(
-                "data/pkgfs_disable_executability_restrictions",
-                vec![].as_slice(),
+                "data/pkgfs_packages_non_static_packages_allowlist.txt",
+                contents.as_bytes(),
             );
+        }
+        if self.pkgfs_disable_executability_restrictions {
+            builder = builder
+                .add_resource_at("data/pkgfs_disable_executability_restrictions", &[] as &[u8]);
         }
         async move { builder.build().await.unwrap() }
     }

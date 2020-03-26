@@ -23,6 +23,8 @@ func Main() {
 		enforcePkgfsPackagesNonStaticAllowlist = flag.Bool("enforcePkgfsPackagesNonStaticAllowlist",
 			false,
 			"Whether to enforce the allowlist of non-static packages allowed to appear in /pkgfs/packages")
+		enforceNonBaseExecutabilityRestrictions = flag.Bool("enforceNonBaseExecutabilityRestrictions", false,
+			"Whether to enforce the restrictions to executability of files in packages to just packages in base or the allowlist")
 	)
 
 	log.SetPrefix("pkgsvr: ")
@@ -37,7 +39,8 @@ func Main() {
 	}
 
 	log.Printf("pkgfs: enforce pkgfs/packages non-static allowlist: %v", *enforcePkgfsPackagesNonStaticAllowlist)
-	fs, err := pkgfs.New(blobDir.(*fdio.Directory), *enforcePkgfsPackagesNonStaticAllowlist)
+	log.Printf("pkgfs: enforce executability restrictions: %v", *enforceNonBaseExecutabilityRestrictions)
+	fs, err := pkgfs.New(blobDir.(*fdio.Directory), *enforcePkgfsPackagesNonStaticAllowlist, *enforceNonBaseExecutabilityRestrictions)
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}

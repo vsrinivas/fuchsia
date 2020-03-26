@@ -38,12 +38,12 @@ func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.D
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	_, found := d.fs.index.GetRoot(parts[0])
+	pkg, found := d.fs.index.GetRoot(parts[0])
 	if !found {
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	pd, err := newPackageDirFromBlob(parts[0], d.fs)
+	pd, err := newPackageDirFromBlob(parts[0], d.fs, d.fs.shouldAllowExecutableOpenByPackageRoot(parts[0], pkg.Name))
 	if err != nil {
 		return nil, nil, nil, err
 	}

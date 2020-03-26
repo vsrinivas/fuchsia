@@ -23,6 +23,7 @@ const PKGSVR_PATH: &str = "/pkg/bin/pkgsvr";
 #[derive(Debug, Default)]
 pub struct PkgfsArgs {
     enforce_packages_non_static_allowlist: Option<bool>,
+    enforce_non_base_executability_restrictions: Option<bool>,
     system_image_merkle: Option<Hash>,
 }
 
@@ -33,6 +34,13 @@ impl PkgfsArgs {
         if let Some(value) = &self.enforce_packages_non_static_allowlist {
             argv.push(
                 CString::new(format!("--enforcePkgfsPackagesNonStaticAllowlist={}", value))
+                    .unwrap(),
+            );
+        }
+
+        if let Some(value) = &self.enforce_non_base_executability_restrictions {
+            argv.push(
+                CString::new(format!("--enforceNonBaseExecutabilityRestrictions={}", value))
                     .unwrap(),
             );
         }
@@ -69,6 +77,15 @@ impl PkgfsRamdiskBuilder {
     /// Specify whether or not pkgfs should enforce the /pkgfs/packages non-static allowlist.
     pub fn enforce_packages_non_static_allowlist(mut self, value: impl Into<Option<bool>>) -> Self {
         self.args.enforce_packages_non_static_allowlist = value.into();
+        self
+    }
+
+    /// Specify whether or not pkgfs should enforce the non-base executability restrictions.
+    pub fn enforce_non_base_executability_restrictions(
+        mut self,
+        value: impl Into<Option<bool>>,
+    ) -> Self {
+        self.args.enforce_non_base_executability_restrictions = value.into();
         self
     }
 
