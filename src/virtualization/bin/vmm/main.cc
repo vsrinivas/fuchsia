@@ -72,6 +72,13 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
 
+static zx_gpaddr_t alloc_device_addr(size_t device_size) {
+  static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
+  zx_gpaddr_t ret = next_device_addr;
+  next_device_addr += device_size;
+  return ret;
+}
+
 static zx_status_t read_guest_cfg(const char* cfg_path, fuchsia::virtualization::GuestConfig* cfg) {
   std::string cfg_str;
   if (files::ReadFileToString(cfg_path, &cfg_str)) {
@@ -82,13 +89,6 @@ static zx_status_t read_guest_cfg(const char* cfg_path, fuchsia::virtualization:
     guest_config::SetDefaults(cfg);
   }
   return ZX_OK;
-}
-
-static zx_gpaddr_t alloc_device_addr(size_t device_size) {
-  static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
-  zx_gpaddr_t ret = next_device_addr;
-  next_device_addr += device_size;
-  return ret;
 }
 
 int main(int argc, char** argv) {
