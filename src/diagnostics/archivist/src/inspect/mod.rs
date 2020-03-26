@@ -117,7 +117,6 @@ impl InspectDataCollector {
             Some(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds()),
         )
         .await?
-        .entries
         .into_iter()
         {
             // We are only currently interested in inspect VMO files (root.inspect) and

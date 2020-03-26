@@ -44,7 +44,7 @@ impl FactoryStoreFacade {
         let req: ListFilesRequest = from_value(args)?;
         let dir_proxy = self.get_directory_for_provider(req.provider)?;
 
-        let dir_entries = readdir_recursive(&dir_proxy, /*timeout=*/ None).await?.entries;
+        let dir_entries = readdir_recursive(&dir_proxy, /*timeout=*/ None).await?;
         let file_paths: Vec<String> = dir_entries
             .into_iter()
             .filter(|entry| entry.kind == DirentKind::File)

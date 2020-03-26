@@ -34,15 +34,22 @@ pub async fn all_locations(root: &str) -> Result<Vec<InspectLocation>, Error> {
         &path.to_string_lossy().to_string(),
         io_util::OPEN_RIGHT_READABLE,
     )?;
-    let result =
-        files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds())).await?;
 
-    for error in result.errors {
-        eprintln!("Error: {}", error)
-    }
+    let entries =
+        match files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds()))
+            .await
+        {
+            Err(files_async::Error::ReadDirRecursive { partial_results, errors }) => {
+                for error in errors {
+                    eprintln!("Error: {}", error)
+                }
+                Ok(partial_results)
+            }
+            Ok(results) => Ok(results),
+            e => e,
+        }?;
 
-    let locations = result
-        .entries
+    let locations = entries
         .into_iter()
         .filter_map(|entry| {
             let mut path = PathBuf::from(&root);

@@ -213,7 +213,6 @@ impl Package {
         // Verify no other entries exist in the served directory.
         for path in files_async::readdir_recursive(dir, /*timeout=*/ None)
             .await?
-            .entries
             .into_iter()
             .map(|entry| entry.name)
         {
