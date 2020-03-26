@@ -25,6 +25,39 @@ const _delay = Duration(seconds: 10);
 /// The path to the catapult converter binary.  It must exist in the package.
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 
+/// Collects uptime information.
+class Uptime {
+  // Elapsed time since last reboot.
+  Duration sinceReboot;
+
+  // Elapsed time from power-on until the time measurement was taken.  Could be
+  // different than duration since reboot if the system monotonic clock is not
+  // reset to zero.
+  Duration sincePowerOn;
+
+  // Low estimate for when reboot measurement was taken, from host side, wall clock.
+  DateTime lowRebootWallClock;
+
+  // High estimate for when reboot measurement was taken, from host side, wall clock.
+  DateTime highRebootWallClock;
+
+  Uptime(this.lowRebootWallClock, this.sinceReboot, this.highRebootWallClock,
+      this.sincePowerOn);
+
+  /// Returns an estimate of how long it was from Unix epoch to reboot.
+  Duration sinceEpoch() {
+    final Duration diff = highRebootWallClock.difference(lowRebootWallClock);
+    final Duration halfDiff = Duration(microseconds: diff.inMicroseconds ~/ 2);
+    final DateTime average = lowRebootWallClock.add(halfDiff);
+    final rebootWallClock =
+        average.difference(DateTime.fromMillisecondsSinceEpoch(0));
+    return rebootWallClock - sinceReboot;
+  }
+
+  /// Elapsed time from power on until last reboot.
+  Duration get rebootSincePowerOn => sincePowerOn - sinceReboot;
+}
+
 void main() {
   Logger.root
     ..level = Level.ALL
@@ -47,16 +80,136 @@ void main() {
     sl4fDriver.close();
   });
 
-  /// Exports the reboot timing results to a fuchsiaperf file.
-  Future<void> exportTimings(String testSuite, Duration rebootDuration) async {
-    final rebootResults = [
-      // Host-side measurement of reboot duration.  Normally a measurement
-      // fixture should not post-process results, but our test dashboard can't
-      // deal with it at the moment.
-      sl4f.TestCaseResults('Reboot', sl4f.Unit.milliseconds, [
-        rebootDuration.inMilliseconds.toDouble(),
-      ]),
+  // Finds the duration passed between the instant system timer showed zero and
+  // the instant timekeeper was started.
+  //
+  // Uptime is tricky.  The system's uptime as reported by the monotonic clock
+  // apparently doesn't always get reset to zero on a reboot.  So we may get a
+  // monotonic clock reading that is showing a reading based on a zero reference
+  // point unrelated to a recent reboot.
+  //
+  // Here's a proposed pragmatic way out.  Seeing as timekeeper is started
+  // fairly early in a device's lifetime, we try to detect how long ago
+  // timekeeper was started with reference to the zero point of the monotonic
+  // clock.  If this time was too far in the past, assume that the duration
+  // timer was not reset.  If this was within ~1 minute of zero reference
+  // point, assume that the clock was indeed starting at zero.  Otherwise adopt
+  // an arbitrary reference point which places startup of timekeeper.cmx about
+  // 15 seconds after reboot.
+  //
+  // While this makes relative time measurements meaningless, we can still
+  // compare successive runs and measure absolute time changes.
+  Future<Uptime> findRebootTimestamp(
+      sl4f.Inspect inspect, dynamic diagnostics) async {
+    for (final item in diagnostics) {
+      if (!item.toString().contains('timekeeper.cmx')) {
+        continue;
+      }
+      final lowRebootWallClock = DateTime.now();
+      final inspectResult = await inspect.inspectRecursively([item]);
+      final highRebootWallClock = DateTime.now();
+
+      final healthRoot = inspectResult?.single['contents']['root'];
+      final uptimeNanos =
+          healthRoot['current']['system_uptime_monotonic_nanos'];
+      final uptime = Duration(microseconds: uptimeNanos ~/ 1e3);
+      var sinceReboot = uptime;
+      if (sinceReboot > Duration(minutes: 1)) {
+        // If the system monotonic clock measures duration since power-on,
+        // instead of duration since reboot, compute the adjusted uptime.
+        final start = Duration(
+            microseconds: healthRoot['start_time_monotonic_nanos'] ~/ 1e3);
+        sinceReboot = sinceReboot - start + Duration(seconds: 15);
+      }
+      return Uptime(
+          lowRebootWallClock, sinceReboot, highRebootWallClock, uptime);
+    }
+
+    log.info('System uptime was not found, using zero values instead.');
+    return Uptime(DateTime.now(), Duration.zero, DateTime.now(), Duration.zero);
+  }
+
+  List<sl4f.TestCaseResults> record(String programName, String nodeName,
+      dynamic root, String metricName, String renamedMetric, Duration reboot) {
+    final node = root[nodeName];
+    if (node == null) {
+      return [];
+    }
+    final metricValue = (node[metricName] ?? 0) ~/ 1e3;
+    final duration = Duration(microseconds: metricValue);
+    List<sl4f.TestCaseResults> results = [
+      sl4f.TestCaseResults(
+          '$renamedMetric/$programName', sl4f.Unit.milliseconds, [
+        duration.inMilliseconds.toDouble() - reboot.inMilliseconds.toDouble()
+      ])
     ];
+    return results;
+  }
+
+  // Records all results under 'node'.  The content of 'node' is assumed to
+  // consist only of timestamps.
+  List<sl4f.TestCaseResults> recordAll(String programName, String nodeName,
+      dynamic root, String renamedMetrics, Duration reboot) {
+    final node = root[nodeName];
+    if (node == null) {
+      return [];
+    }
+    List<sl4f.TestCaseResults> result = [];
+    node.forEach((metric, measuredNanos) {
+      final Duration vd = Duration(microseconds: measuredNanos ~/ 1e3);
+      final Duration record = vd - reboot;
+      result.add(sl4f.TestCaseResults('$renamedMetrics/$programName/$metric',
+          sl4f.Unit.milliseconds, [record.inMilliseconds.toDouble()]));
+    });
+    return result;
+  }
+
+  /// Exports the reboot timing results to a fuchsiaperf file.  Requires that
+  /// the `catapult_converter` binary is added to the runtime_deps, see the
+  /// BUILD.gn file in this directory for the mechanics.
+  Future<void> exportTimings(String testSuite, Duration rebootDuration) async {
+    var rebootResults = [
+      // The host-side measurement of reboot duration.
+      sl4f.TestCaseResults('Reboot', sl4f.Unit.milliseconds,
+          [rebootDuration.inMilliseconds.toDouble()]),
+    ];
+
+    var inspect = sl4f.Inspect(sl4fDriver.ssh);
+
+    final diagnostics =
+        (await inspect.retrieveHubEntries(filter: 'diagnostics')) ?? [];
+
+    final Uptime uptime = await findRebootTimestamp(inspect, diagnostics);
+
+    // Shorten program names like:
+    // /hub/c/program.cmx/1245/out/diagnostics -> program.cmx
+    // /hub/c/program.cmx/1245/out/diagnostics/root.inspect -> program.cmx
+    final componentRe =
+        RegExp(r'/c/([^/]*)/[0-9]+/out/diagnostics(/root.inspect)*');
+    // Collect all health nodes and other metrics relevant for the boot process
+    // from the running programs.  Some programs, like 'timekeeper' and `kcounter_inspect`
+    // are more interesting since they have metrics useful for analyzing the timing of the
+    // boot process.
+    for (final item in diagnostics) {
+      final label = componentRe.firstMatch(item)?.group(1) ?? item;
+      final inspectResult = await inspect.inspectRecursively([item]);
+      final rootNode = inspectResult?.single['contents']['root'];
+      if (rootNode == null) {
+        continue;
+      }
+
+      // For all nodes that have it, add health node information.
+      rebootResults.addAll(record(
+              label,
+              'fuchsia.inspect.Health',
+              rootNode,
+              'start_timestamp_nanos',
+              'TimeToStart',
+              uptime.rebootSincePowerOn) +
+          // Record all durations under the node named 'fuchsia.inspect.Timestamps'.
+          recordAll(label, 'fuchsia.inspect.Timestamps', rootNode, 'Durations',
+              uptime.sinceEpoch()));
+    }
 
     List<Map<String, dynamic>> results = [];
     for (final result in rebootResults) {
