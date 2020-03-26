@@ -6,8 +6,8 @@
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_HANDLER_TEST_H_
 
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/lib/escher/test/vk_debug_report_callback_registry.h"
-#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_callback_registry.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_collector.h"
 #include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 
 namespace scenic_impl {

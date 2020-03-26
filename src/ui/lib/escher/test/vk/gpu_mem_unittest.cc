@@ -6,11 +6,12 @@
 
 #include <iostream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/impl/gpu_mem_slab.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 

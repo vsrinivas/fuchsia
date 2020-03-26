@@ -6,7 +6,7 @@
 
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 
 namespace {
 

@@ -4,15 +4,15 @@
 
 #include "src/ui/lib/escher/geometry/intersection.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/acceleration/uniform_grid.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/vk/vulkan_tester.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 
 namespace {
 

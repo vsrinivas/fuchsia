@@ -5,10 +5,12 @@
 #include "src/ui/lib/escher/geometry/transform.h"
 
 #include <cmath>
-#include <glm/glm.hpp>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
+
+#include <glm/glm.hpp>
 
 namespace {
 using namespace escher;

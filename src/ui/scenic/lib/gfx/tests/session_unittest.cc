@@ -6,7 +6,7 @@
 #include <lib/ui/scenic/cpp/commands.h>
 
 #include "gtest/gtest.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"

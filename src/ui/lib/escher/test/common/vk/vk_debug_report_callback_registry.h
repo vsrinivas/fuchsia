@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_VK_DEBUG_REPORT_CALLBACK_REGISTRY_H_
-#define SRC_UI_LIB_ESCHER_TEST_VK_DEBUG_REPORT_CALLBACK_REGISTRY_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_CALLBACK_REGISTRY_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_CALLBACK_REGISTRY_H_
 
 #include <utility>
 #include <vector>
 
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer_macros.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
 namespace escher::test {
@@ -56,4 +56,4 @@ class VkDebugReportCallbackRegistry {
 
 }  // namespace impl
 }  // namespace escher::test
-#endif  // SRC_UI_LIB_ESCHER_TEST_VK_DEBUG_REPORT_CALLBACK_REGISTRY_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_CALLBACK_REGISTRY_H_

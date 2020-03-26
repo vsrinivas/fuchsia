@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 
 VK_TEST(EscherVulkanSmokeTest, OnlyIfSupported) {
   // This test should not run if Vulkan tests are suppressed.

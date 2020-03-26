@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"

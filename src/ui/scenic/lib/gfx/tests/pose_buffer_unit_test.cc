@@ -7,7 +7,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"

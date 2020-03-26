@@ -4,11 +4,11 @@
 
 #include "src/ui/lib/escher/renderer/frame.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 
 namespace escher {
 

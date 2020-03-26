@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_
-#define SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_
 
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros_internal.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer_macros_internal.h"
 
 // Note: All the macros below can be only used in classes containing  and its derived
 // classes (e.g. TestWithVkValidationLayer)
@@ -110,4 +110,4 @@
   } while (0)
 // clang-format on
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_TEST_WITH_VK_VALIDATION_LAYER_MACROS_H_

@@ -23,6 +23,13 @@ if (is_mac) {
       "//src/lib/fxl/test:gtest_main",
     ]
   }
+
+  test("escher_renderer_tests") {
+    deps = [
+      ":no_op_mac_unittest",
+      "//src/lib/fxl/test:gtest_main",
+    ]
+  }
 } else {
   # TODO: Consider breaking this out into two binaries, one that uses
   # glslang and one that does not. This would ensure we always hav a
@@ -30,11 +37,6 @@ if (is_mac) {
   # where those diverge.
   test("escher_unittests") {
     sources = [
-      "debug/debug_font_unittest.cc",
-      "debug/paper_renderer_test.cc",
-      "fake_gpu_allocator.cc",
-      "fixtures/readback_test.cc",
-      "fixtures/readback_test.h",
       "flatland/rectangle_compositor_unittest.cc",
       "flatland/rectangle_renderable_unittest.cc",
       "fs/hack_filesystem_unittest.cc",
@@ -43,28 +45,26 @@ if (is_mac) {
       "geometry/intersection_unittest.cc",
       "geometry/interval_unittest.cc",
       "geometry/plane_unittest.cc",
-      "gpu_allocator_unittest.cc",
-      "gpu_mem_unittest.cc",
+      "geometry/transform_unittest.cc",
+      "hmd/pose_buffer_latching_test.cc",
       "impl/image_cache_unittest.cc",
       "math/rotations_unittest.cc",
-      "mesh_spec_unittest.cc",
-      "object_unittest.cc",
       "paper/paper_draw_call_factory_unittest.cc",
       "paper/paper_render_config_unittest.cc",
       "paper/paper_shape_cache_unittest.cc",
       "paper/paper_transform_stack_unittest.cc",
-      "pose_buffer_latching_test.cc",
-      "protected_memory_unittest.cc",
       "renderer/batch_gpu_downloader_unittest.cc",
       "renderer/batch_gpu_uploader_unittest.cc",
       "renderer/buffer_cache_unittest.cc",
       "renderer/frame_unittest.cc",
+      "renderer/protected_memory_unittest.cc",
       "renderer/render_queue_unittest.cc",
       "renderer/sampler_cache_unittest.cc",
       "run_all_unittests.cc",
       "scene/directional_light_unittest.cc",
+      "scene/object_unittest.cc",
+      "shape/mesh_spec_unittest.cc",
       "shape/rounded_rect_unittest.cc",
-      "transform_unittest.cc",
       "util/align_unittest.cc",
       "util/bit_ops_unittest.cc",
       "util/bitmap_unittest.cc",
@@ -84,7 +84,10 @@ if (is_mac) {
       "vk/command_buffer_unittest.cc",
       "vk/descriptor_set_allocator_unittest.cc",
       "vk/descriptor_set_layout_unittest.cc",
+      "vk/fake_gpu_allocator.cc",
       "vk/framebuffer_allocator_unittest.cc",
+      "vk/gpu_allocator_unittest.cc",
+      "vk/gpu_mem_unittest.cc",
       "vk/image_layout_updater_unittest.cc",
       "vk/image_view_allocator_unittest.cc",
       "vk/naive_image_unittest.cc",
@@ -103,14 +106,12 @@ if (is_mac) {
     deps = [
       ":force_examples_to_build_on_host",
       ":force_paper_shader_compiler_to_build_on_host",
-      ":gtest_escher",
       "base:base_unittests",
       "//src/lib/fxl",
+      "//src/ui/lib/escher/test/common:gtest_escher",
+      "//src/ui/lib/escher/test/common:readback_fixtures",
       "//third_party/googletest:gmock",
     ]
-
-    # TODO(46717): Fix the leaks and remove this.
-    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
     if (escher_use_runtime_glsl) {
       deps += [
@@ -147,83 +148,30 @@ if (is_mac) {
       "//third_party/glm",
     ]
 
+    # TODO(46717): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
     # TODO(46802): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
   }
-}
 
-# Extends GTest with VK_TEST() and VK_TEST_F() macros, which behave just like
-# TEST() and TEST_F(), except that they are dynamically disabled when Vulkan
-# is not available.
-source_set("gtest_vulkan") {
-  testonly = true
-
-  public_deps = [
-    "//src/ui/lib/escher:vulkan",
-    "//third_party/googletest:gtest",
-  ]
-
-  deps = [ "//src/ui/lib/escher/util:check_vulkan_support" ]
-
-  sources = [
-    "gtest_vulkan.cc",
-    "gtest_vulkan.h",
-    "gtest_vulkan_internal.h",
-  ]
-}
-
-# Builds upon gtest_vulkan to provide the functions SetUpTestEscher()
-# and TearDownTestEscher(), which should be called from main(), and
-# GetTestEscher(), which may be called from VK_TEST().  All of these
-# functions are in namespace escher.
-source_set("gtest_escher") {
-  testonly = true
-  if (escher_use_runtime_glsl) {
-    public_deps = [ ":gtest_escher_with_runtime_glsl" ]
-  } else {
-    public_deps = [ ":gtest_escher_no_runtime_glsl" ]
-  }
-}
-
-template("gtest_escher_library") {
-  source_set(target_name) {
-    testonly = true
-
-    forward_variables_from(invoker, "*")
-
+  test("escher_renderer_tests") {
     sources = [
-      "gtest_escher.cc",
-      "gtest_escher.h",
-      "test_with_vk_validation_layer.cc",
-      "test_with_vk_validation_layer.h",
-      "test_with_vk_validation_layer_macros.h",
-      "test_with_vk_validation_layer_macros_internal.h",
-      "vk_debug_report_callback_registry.cc",
-      "vk_debug_report_callback_registry.h",
-      "vk_debug_report_collector.cc",
-      "vk_debug_report_collector.h",
+      "debug/debug_font_unittest.cc",
+      "debug/paper_renderer_test.cc",
+      "run_all_unittests.cc",
     ]
-    public_deps = [ ":gtest_vulkan" ]
 
-    # Explicitly check for runtime glsl here instead of simply
-    # doing "public_deps += [ "//src/ui/lib/escher" ] and letting
-    # it set automatically, so that we can have tests with and without
-    # glsl, regardless of what the rest of Scenic is doing.
-    if (gtest_escher_library_use_runtime_glsl) {
-      public_deps += [ "//src/ui/lib/escher:escher_with_glslang" ]
-    } else {
-      public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+    deps = [
+      "//src/ui/lib/escher/test/common:gtest_escher",
+      "//src/ui/lib/escher/test/common:readback_fixtures",
+    ]
+
+    if (is_linux) {
+      deps += [ "//src/ui/lib/escher/shaders:linux_shader_data" ]
     }
   }
-}
-
-gtest_escher_library("gtest_escher_no_runtime_glsl") {
-  gtest_escher_library_use_runtime_glsl = false
-}
-
-gtest_escher_library("gtest_escher_with_runtime_glsl") {
-  gtest_escher_library_use_runtime_glsl = true
 }
 
 # Guarantees that buildbots at least build the Escher examples on Linux,

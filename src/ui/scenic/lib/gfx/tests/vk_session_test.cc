@@ -5,7 +5,7 @@
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
-#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_collector.h"
 
 using namespace escher;
 

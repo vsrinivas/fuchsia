@@ -10,7 +10,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"

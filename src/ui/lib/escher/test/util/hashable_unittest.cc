@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/util/hashable.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/util/hash_map.h"
 #include "src/ui/lib/escher/util/hasher.h"
 

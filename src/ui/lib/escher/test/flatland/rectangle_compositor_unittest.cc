@@ -4,8 +4,8 @@
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
@@ -13,8 +13,8 @@
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
-#include "src/ui/lib/escher/test/fixtures/readback_test.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/readback_test.h"
 #include "src/ui/lib/escher/types/color.h"
 #include "src/ui/lib/escher/types/color_histogram.h"
 #include "src/ui/lib/escher/vk/texture.h"

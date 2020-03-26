@@ -354,7 +354,7 @@ executable("feedback_agent_integration_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/lib/uuid:uuid",
-    "//src/ui/lib/escher/test:gtest_vulkan",
+    "//src/ui/lib/escher/test/common:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",

@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/vk/command_buffer.h"
 
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
 
 namespace {

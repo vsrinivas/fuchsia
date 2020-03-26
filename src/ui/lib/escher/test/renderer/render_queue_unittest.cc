@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/renderer/render_queue.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/renderer/render_queue_context.h"
 
 namespace {

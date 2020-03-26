@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_GTEST_ESCHER_H_
-#define SRC_UI_LIB_ESCHER_TEST_GTEST_ESCHER_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_ESCHER_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_ESCHER_H_
 
 #include <gtest/gtest.h>
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros_internal.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer_macros_internal.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -68,4 +68,4 @@ class EscherEnvironment : public ::testing::Environment {
 }  // namespace test
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_GTEST_ESCHER_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_ESCHER_H_

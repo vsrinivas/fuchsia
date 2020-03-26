@@ -8,7 +8,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
 

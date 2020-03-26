@@ -6,14 +6,14 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/vk/vulkan_tester.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/buffer_factory.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
-#include "test/test_with_vk_validation_layer_macros.h"
+#include "test/common/test_with_vk_validation_layer_macros.h"
 #include "third_party/granite/vk/command_buffer.h"
 
 namespace escher {

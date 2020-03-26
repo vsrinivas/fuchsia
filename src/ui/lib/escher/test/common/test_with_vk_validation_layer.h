@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_H_
-#define SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_TEST_WITH_VK_VALIDATION_LAYER_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_TEST_WITH_VK_VALIDATION_LAYER_H_
 
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros.h"
-#include "src/ui/lib/escher/test/vk_debug_report_callback_registry.h"
-#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer_macros.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_callback_registry.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_collector.h"
 
 namespace escher::test {
 
@@ -123,4 +123,4 @@ class TestWithVkValidationLayer : public ::testing::Test {
 
 }  // namespace escher::test
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_TEST_WITH_VK_VALIDATION_LAYER_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_TEST_WITH_VK_VALIDATION_LAYER_H_

@@ -15,7 +15,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/shape/mesh.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/image_utils.h"

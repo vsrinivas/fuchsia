@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/test_with_vk_validation_layer.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -61,17 +62,16 @@ auto CorrectImageCreateInfo() {
 }  // anonymous namespace
 
 VK_TEST(ValidationLayer, ValidationLayerIsSupported) {
-  std::optional<std::string> validation_layer_name =
-      VulkanInstance::GetValidationLayerName();
+  std::optional<std::string> validation_layer_name = VulkanInstance::GetValidationLayerName();
 
   ASSERT_TRUE(validation_layer_name);
   ASSERT_TRUE(*validation_layer_name == "VK_LAYER_KHRONOS_validation" ||
               *validation_layer_name == "VK_LAYER_LUNARG_standard_validation");
 
-  VulkanInstance::Params instance_params {
-      { *validation_layer_name }, // layer_names
-      { VK_EXT_DEBUG_REPORT_EXTENSION_NAME }, // extension_names
-      false // requires_surface
+  VulkanInstance::Params instance_params{
+      {*validation_layer_name},              // layer_names
+      {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},  // extension_names
+      false                                  // requires_surface
   };
   VulkanInstancePtr vulkan_instance = VulkanInstance::New(instance_params);
   ASSERT_TRUE(vulkan_instance);

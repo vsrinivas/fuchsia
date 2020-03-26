@@ -13,7 +13,7 @@
 #include "src/ui/lib/escher/paper/paper_timestamp_graph.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
-#include "src/ui/lib/escher/test/fixtures/readback_test.h"
+#include "src/ui/lib/escher/test/common/readback_test.h"
 #include "src/ui/lib/escher/types/color.h"
 #include "src/ui/lib/escher/types/color_histogram.h"
 #include "src/ui/lib/escher/util/image_utils.h"

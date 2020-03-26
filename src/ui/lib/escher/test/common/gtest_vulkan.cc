@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
+
+#include "src/ui/lib/escher/test/common/gtest_vulkan_internal.h"
 
 #include <vulkan/vulkan.hpp>
-
-#include "src/ui/lib/escher/test/gtest_vulkan_internal.h"
 
 namespace testing {
 namespace internal {

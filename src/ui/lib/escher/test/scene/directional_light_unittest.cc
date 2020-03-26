@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/scene/directional_light.h"
 
-#include <glm/gtc/epsilon.hpp>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
+#include <glm/gtc/epsilon.hpp>
 
 namespace {
 using namespace escher;

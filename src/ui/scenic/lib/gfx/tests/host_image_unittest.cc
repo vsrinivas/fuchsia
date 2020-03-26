@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/images/cpp/images.h"
 #include "lib/ui/scenic/cpp/commands.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
@@ -98,9 +98,8 @@ VK_TEST_F(HostImageTest, DupVmoGPUTest) {
       vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
 
   auto memory_requirements = GetBufferRequirements(device, kVmoSize, kUsageFlags);
-  auto memory = AllocateExportableMemory(
-      device, physical_device, memory_requirements,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto memory = AllocateExportableMemory(device, physical_device, memory_requirements,
+                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   // Import valid Vulkan device memory into Scenic.
   zx::vmo vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);

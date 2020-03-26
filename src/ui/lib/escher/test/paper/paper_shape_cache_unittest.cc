@@ -8,7 +8,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/shape/rounded_rect.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
 namespace {

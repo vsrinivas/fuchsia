@@ -1,7 +1,8 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include "src/ui/lib/escher/test/fake_gpu_allocator.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/vk/fake_gpu_allocator.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/naive_gpu_allocator.h"
 #include "src/ui/lib/escher/vk/vma_gpu_allocator.h"

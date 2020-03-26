@@ -4,13 +4,13 @@
 
 #include "src/ui/lib/escher/debug/debug_font.h"
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
-#include "src/ui/lib/escher/test/fixtures/readback_test.h"
+#include "src/ui/lib/escher/test/common/readback_test.h"
 #include "src/ui/lib/escher/types/color.h"
 #include "src/ui/lib/escher/types/color_histogram.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace {
 using namespace escher;

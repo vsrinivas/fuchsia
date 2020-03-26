@@ -60,4 +60,5 @@ Escher can also build on Linux.  In order to do so, you need to:
 
     ```
     fx build host_x64/escher_unittests && out/default/host_x64/escher_unittests
+    fx build host_x64/escher_renderer_tests && out/default/host_x64/escher_renderer_tests
     ```

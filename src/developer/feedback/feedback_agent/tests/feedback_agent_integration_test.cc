@@ -30,7 +30,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"

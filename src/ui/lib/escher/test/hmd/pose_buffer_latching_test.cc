@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "gtest_escher.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
@@ -11,7 +11,8 @@
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/scene/camera.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/epsilon_compare.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"

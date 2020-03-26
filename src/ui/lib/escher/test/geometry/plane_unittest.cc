@@ -5,13 +5,14 @@
 // TODO(ES-139): make GLM_FORCE_RADIANS the default.  We rely on this below for
 // creating quaternions.
 #define GLM_FORCE_RADIANS
-#include <glm/gtc/quaternion.hpp>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/lib/escher/geometry/plane_ops.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/lib/escher/geometry/type_utils.h"
+
+#include <glm/gtc/quaternion.hpp>
 
 namespace {
 

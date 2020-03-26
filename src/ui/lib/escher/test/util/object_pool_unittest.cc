@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/util/object_pool.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 using namespace escher;

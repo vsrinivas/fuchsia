@@ -1,0 +1,90 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/ui/lib/escher/build_args.gni")
+
+# Extends GTest with VK_TEST() and VK_TEST_F() macros, which behave just like
+# TEST() and TEST_F(), except that they are dynamically disabled when Vulkan
+# is not available.
+source_set("gtest_vulkan") {
+  testonly = true
+
+  public_deps = [
+    "//src/ui/lib/escher:vulkan",
+    "//third_party/googletest:gtest",
+  ]
+
+  deps = [ "//src/ui/lib/escher/util:check_vulkan_support" ]
+
+  sources = [
+    "gtest_vulkan.cc",
+    "gtest_vulkan.h",
+    "gtest_vulkan_internal.h",
+  ]
+}
+
+# Builds upon gtest_vulkan to provide the functions SetUpTestEscher()
+# and TearDownTestEscher(), which should be called from main(), and
+# GetTestEscher(), which may be called from VK_TEST().  All of these
+# functions are in namespace escher.
+source_set("gtest_escher") {
+  testonly = true
+  if (escher_use_runtime_glsl) {
+    public_deps = [ ":gtest_escher_with_runtime_glsl" ]
+  } else {
+    public_deps = [ ":gtest_escher_no_runtime_glsl" ]
+  }
+}
+
+template("gtest_escher_library") {
+  source_set(target_name) {
+    testonly = true
+
+    forward_variables_from(invoker, "*")
+
+    sources = [
+      "gtest_escher.cc",
+      "gtest_escher.h",
+      "test_with_vk_validation_layer.cc",
+      "test_with_vk_validation_layer.h",
+      "test_with_vk_validation_layer_macros.h",
+      "test_with_vk_validation_layer_macros_internal.h",
+      "vk/vk_debug_report_callback_registry.cc",
+      "vk/vk_debug_report_callback_registry.h",
+      "vk/vk_debug_report_collector.cc",
+      "vk/vk_debug_report_collector.h",
+    ]
+    public_deps = [ ":gtest_vulkan" ]
+
+    # Explicitly check for runtime glsl here instead of simply
+    # doing "public_deps += [ "//src/ui/lib/escher" ] and letting
+    # it set automatically, so that we can have tests with and without
+    # glsl, regardless of what the rest of Scenic is doing.
+    if (gtest_escher_library_use_runtime_glsl) {
+      public_deps += [ "//src/ui/lib/escher:escher_with_glslang" ]
+    } else {
+      public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+    }
+  }
+}
+
+gtest_escher_library("gtest_escher_no_runtime_glsl") {
+  gtest_escher_library_use_runtime_glsl = false
+}
+
+gtest_escher_library("gtest_escher_with_runtime_glsl") {
+  gtest_escher_library_use_runtime_glsl = true
+}
+
+source_set("readback_fixtures") {
+  sources = [
+    "readback_test.cc",
+    "readback_test.h",
+  ]
+
+  deps = [ ":gtest_escher" ]
+
+  testonly = true
+}

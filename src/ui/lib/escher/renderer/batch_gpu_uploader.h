@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 
+#include <algorithm>
 #include <variant>
 
 #include "src/ui/lib/escher/escher.h"
@@ -98,8 +99,9 @@ class BatchGpuUploader {
     // The lambda needs to be mutable so that |host_data| can be moved out.
     ScheduleWriteBuffer(
         target,
-        [host_data = std::move(host_data), requested_size = real_copy_size](
-            uint8_t* host_buffer_ptr, size_t copy_size) mutable {
+        [host_data = std::move(host_data), real_copy_size](uint8_t* host_buffer_ptr,
+                                                           size_t copy_size) mutable {
+          size_t requested_size = real_copy_size;
           FXL_DCHECK(copy_size >= requested_size);
           memcpy(static_cast<void*>(host_buffer_ptr), host_data.data(),
                  std::min(copy_size, requested_size));
@@ -150,7 +152,7 @@ class BatchGpuUploader {
     ScheduleWriteImage(
         target,
         [host_data = std::move(host_data)](uint8_t* host_buffer_ptr, size_t copy_size) mutable {
-          auto requested_size = host_data.size() * sizeof(T);
+          size_t requested_size = host_data.size() * sizeof(T);
           FXL_DCHECK(copy_size >= requested_size);
           memcpy(static_cast<void*>(host_buffer_ptr), host_data.data(),
                  std::min(copy_size, requested_size));

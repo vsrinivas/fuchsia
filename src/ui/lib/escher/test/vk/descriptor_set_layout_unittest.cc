@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
 

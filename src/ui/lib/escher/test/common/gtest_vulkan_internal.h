@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
-#define SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_VULKAN_INTERNAL_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_VULKAN_INTERNAL_H_
 
 #include <string>
 
@@ -82,4 +82,4 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
       GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::AddToRegistry();                     \
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody()
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_VULKAN_INTERNAL_H_

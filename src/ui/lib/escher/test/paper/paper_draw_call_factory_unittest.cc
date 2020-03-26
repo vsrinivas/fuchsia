@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"
 
-#include <glm/gtc/matrix_access.hpp>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
+#include <glm/gtc/matrix_access.hpp>
 
 namespace {
 using namespace escher;

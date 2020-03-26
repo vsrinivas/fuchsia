@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_FAKE_GPU_ALLOCATOR_H_
-#define SRC_UI_LIB_ESCHER_TEST_FAKE_GPU_ALLOCATOR_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_VK_FAKE_GPU_ALLOCATOR_H_
+#define SRC_UI_LIB_ESCHER_TEST_VK_FAKE_GPU_ALLOCATOR_H_
 
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
 
@@ -55,4 +55,4 @@ class FakeGpuAllocator : public GpuAllocator {
 }  // namespace test
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_FAKE_GPU_ALLOCATOR_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_VK_FAKE_GPU_ALLOCATOR_H_

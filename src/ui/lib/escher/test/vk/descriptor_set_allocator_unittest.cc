@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/vk/impl/descriptor_set_allocator.h"
 
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 
 namespace {
 using namespace escher;

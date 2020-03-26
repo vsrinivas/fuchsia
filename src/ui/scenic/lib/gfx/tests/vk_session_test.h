@@ -5,9 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/vk_debug_report_callback_registry.h"
-#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_callback_registry.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_collector.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 

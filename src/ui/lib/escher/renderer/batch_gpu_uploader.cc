@@ -52,7 +52,7 @@ void BatchGpuUploader::ScheduleWriteBuffer(const BufferPtr& target,
                                            vk::DeviceSize target_offset, vk::DeviceSize copy_size) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::ScheduleWriteBuffer");
   vk::DeviceSize src_offset = AlignedToNext(current_offset_, kByteAlignment);
-  auto writeable_size = target->size() - target_offset;
+  vk::DeviceSize writeable_size = target->size() - target_offset;
   FXL_DCHECK(writeable_size >= copy_size) << "copy_size + target_offset exceeds the buffer size";
   auto write_size = std::min(copy_size, writeable_size);
   auto region = vk::BufferCopy(src_offset, target_offset, write_size);

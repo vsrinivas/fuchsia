@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/fake_gpu_allocator.h"
+#include "src/ui/lib/escher/test/vk/fake_gpu_allocator.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/util/image_utils.h"
 
 namespace {

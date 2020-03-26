@@ -28,7 +28,7 @@ if (is_mac) {
       "//src/lib/fxl",
       "//src/ui/examples/escher/rainfall:rainfall_demo",
       "//src/ui/examples/escher/waterfall:waterfall_demo",
-      "//src/ui/lib/escher/test:gtest_escher_with_runtime_glsl",
+      "//src/ui/lib/escher/test/common:gtest_escher_with_runtime_glsl",
     ]
 
     # TODO(46717): Fix the leaks and remove this.

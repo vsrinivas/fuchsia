@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_FIXTURES_READBACK_TEST_H_
-#define SRC_UI_LIB_ESCHER_TEST_FIXTURES_READBACK_TEST_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_READBACK_TEST_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_READBACK_TEST_H_
+
+#include <vector>
 
 #include <gtest/gtest.h>
 
-#include <vector>
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -67,4 +68,4 @@ class ReadbackTest : public ::testing::Test {
 
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_FIXTURES_READBACK_TEST_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_READBACK_TEST_H_

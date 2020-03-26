@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/paper/paper_transform_stack.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/geometry/plane_ops.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 

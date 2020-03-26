@@ -5,7 +5,7 @@
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
 
 #if ESCHER_USE_RUNTIME_GLSL

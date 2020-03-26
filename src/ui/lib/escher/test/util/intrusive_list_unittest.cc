@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/util/intrusive_list.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 using namespace escher;

@@ -202,6 +202,7 @@ group("all") {
     "//src/ui/bin/shortcut:tests",
     "//src/ui/examples/escher/test:escher_examples_test($host_toolchain)",
     "//src/ui/lib/escher:escher_tests",
+    "//src/ui/lib/escher/test:escher_renderer_tests($host_toolchain)",
     "//src/ui/lib/escher/test:escher_unittests($host_toolchain)",
     "//src/ui/testing/text:text_test_suite",
     "//src/ui/testing/text:text_test_suite_tests",

@@ -22,6 +22,7 @@ config("test_for_glsl_spirv_mismatch_config") {
 
 test_package("escher_tests") {
   deps = [
+    "test:escher_renderer_tests",
     "test:escher_unittests",
     "//src/ui/examples/escher/test:escher_examples_test",
   ]
@@ -29,6 +30,10 @@ test_package("escher_tests") {
   tests = [
     {
       name = "escher_unittests"
+      environments = basic_envs + magma_libvulkan_hardware_envs
+    },
+    {
+      name = "escher_renderer_tests"
       environments = basic_envs + magma_libvulkan_hardware_envs
     },
     {
@@ -476,5 +481,8 @@ source_set("escher") {
 
 group("unittests") {
   testonly = true
-  deps = [ "//src/ui/lib/escher/test:escher_unittests" ]
+  deps = [
+    "//src/ui/lib/escher/test:escher_renderer_tests",
+    "//src/ui/lib/escher/test:escher_unittests",
+  ]
 }

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_H_
-#define SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_VULKAN_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_VULKAN_H_
 
-#include "src/ui/lib/escher/test/gtest_vulkan_internal.h"
+#include "src/ui/lib/escher/test/common/gtest_vulkan_internal.h"
 #include "src/ui/lib/escher/util/check_vulkan_support.h"
 
 #include <vulkan/vulkan.hpp>
@@ -27,4 +27,4 @@
 // Tests that require Vulkan are suppressed if Vulkan is not supported.
 #define VK_TESTS_SUPPRESSED() (!escher::VulkanIsSupported())
 
-#endif  // SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_GTEST_VULKAN_H_

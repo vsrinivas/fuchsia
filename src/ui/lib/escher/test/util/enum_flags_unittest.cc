@@ -6,7 +6,8 @@
 
 #include <array>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 
 namespace escher {

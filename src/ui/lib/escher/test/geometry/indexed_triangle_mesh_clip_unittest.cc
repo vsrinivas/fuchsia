@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_clip.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/mesh/tessellation.h"
 
 namespace {

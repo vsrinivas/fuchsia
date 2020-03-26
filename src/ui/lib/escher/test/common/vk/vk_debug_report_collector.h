@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_TEST_VK_DEBUG_REPORT_COLLECTOR_H_
-#define SRC_UI_LIB_ESCHER_TEST_VK_DEBUG_REPORT_COLLECTOR_H_
+#ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_COLLECTOR_H_
+#define SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_COLLECTOR_H_
 
 #include <string>
 #include <vector>
@@ -101,4 +101,4 @@ class VkDebugReportCollector {
 
 }  // namespace impl
 }  // namespace escher::test
-#endif  // SRC_UI_LIB_ESCHER_TEST_VK_DEBUG_REPORT_COLLECTOR_H_
+#endif  // SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_COLLECTOR_H_

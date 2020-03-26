@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"

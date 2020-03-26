@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/renderer/buffer_cache.h"
 
-#include "gtest/gtest.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/vk/vulkan_tester.h"
+#include <gtest/gtest.h>
+
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 
 namespace escher {
 

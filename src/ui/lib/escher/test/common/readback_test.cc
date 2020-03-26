@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/fixtures/readback_test.h"
+#include "src/ui/lib/escher/test/common/readback_test.h"
 
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/frame.h"

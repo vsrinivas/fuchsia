@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/profiling/timestamp_profiler.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace escher {
 TEST(Trace, EmptyInput) {

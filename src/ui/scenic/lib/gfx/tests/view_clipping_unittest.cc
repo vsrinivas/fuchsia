@@ -10,7 +10,7 @@
 #include "sdk/lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"

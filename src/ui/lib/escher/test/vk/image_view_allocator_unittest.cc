@@ -6,7 +6,7 @@
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/vk/image_view.h"
 #include "src/ui/lib/escher/vk/texture.h"
 

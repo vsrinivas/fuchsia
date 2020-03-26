@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/vk_debug_report_collector.h"
+#include "src/ui/lib/escher/test/common/vk/vk_debug_report_collector.h"
 
 #include <gtest/gtest.h>
 

@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/lib/escher/test/flib/util.h"
