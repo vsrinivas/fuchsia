@@ -99,6 +99,7 @@ class Host(object):
             pkg = fuzz_spec['fuzzers_package']
             for tgt in fuzz_spec['fuzzers']:
                 self.fuzzers.append((pkg, tgt))
+        self.fuzzers.sort()
 
     def set_build_dir(self, build_dir):
         """Configure the host using data from a build directory."""
