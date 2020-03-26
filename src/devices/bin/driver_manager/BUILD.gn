@@ -37,6 +37,8 @@ source_set("lib") {
     "fdio.cc",
     "fidl.cc",
     "init_task.cc",
+    "log.cc",
+    "log.h",
     "resume_task.cc",
     "suspend_task.cc",
     "system_instance.cc",

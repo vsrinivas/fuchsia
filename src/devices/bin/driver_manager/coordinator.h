@@ -150,6 +150,9 @@ struct DevmgrArgs {
   // Disables the netsvc if set to true. This can be used for testing purposes,
   // where it is not necessary to have the netsvc running.
   bool disable_netsvc = false;
+  // Connect the stdout and stderr file descriptors for this program to a
+  // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
+  bool log_to_debuglog = false;
 };
 
 struct CoordinatorConfig {

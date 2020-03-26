@@ -24,6 +24,9 @@
 
 // clang-format on
 
+// Connect the stdout and stderr for this program to the kernel's debuglog.
+int init_stdout_and_stderr(void);
+
 extern uint32_t log_flags;
 
 #define log(flag, fmt...)         \

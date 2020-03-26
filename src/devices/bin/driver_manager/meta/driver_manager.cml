@@ -1,5 +1,8 @@
 {
-  "program": { "binary": "bin/driver_manager" },
+  "program": {
+    "binary": "bin/driver_manager",
+    "args": ["--log-to-debuglog"],
+  },
   "use": [
     { "runner": "elf" },
 

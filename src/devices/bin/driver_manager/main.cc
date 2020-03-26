@@ -118,6 +118,7 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     kNoStartSvchost,
     kDisableBlockWatcher,
     kDisableNetsvc,
+    kLogToDebuglog,
   };
   option options[] = {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
@@ -126,6 +127,7 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
       {"no-start-svchost", no_argument, nullptr, kNoStartSvchost},
       {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
       {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
+      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
   };
 
   auto print_usage_and_exit = [options]() {
@@ -167,6 +169,9 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
         break;
       case kDisableNetsvc:
         out->disable_netsvc = true;
+        break;
+      case kLogToDebuglog:
+        out->log_to_debuglog = true;
         break;
       default:
         print_usage_and_exit();
@@ -226,6 +231,14 @@ int main(int argc, char** argv) {
 
   DevmgrArgs devmgr_args;
   ParseArgs(argc, argv, &devmgr_args);
+  if (devmgr_args.log_to_debuglog) {
+    zx_status_t status = init_stdout_and_stderr();
+    if (status != ZX_OK) {
+      log(ERROR, "driver_manager: failed to initialize logging: '%s'",
+          zx_status_get_string(status));
+      return status;
+    }
+  }
   // Set up the default values for our arguments if they weren't given.
   if (devmgr_args.driver_search_paths.size() == 0) {
     devmgr_args.driver_search_paths.push_back("/boot/driver");
