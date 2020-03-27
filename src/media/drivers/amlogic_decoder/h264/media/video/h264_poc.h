@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "base/macros.h"
+#include "chromium_utils.h"
 
 namespace media {
 

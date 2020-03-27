@@ -25,6 +25,8 @@ source_set("h264_parser") {
     "media/video/h264_level_limits.h",
     "media/video/h264_parser.cc",
     "media/video/h264_parser.h",
+    "media/video/h264_poc.cc",
+    "media/video/h264_poc.h",
   ]
   deps = [
     "//src/lib/fxl",
