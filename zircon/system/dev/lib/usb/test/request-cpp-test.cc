@@ -563,9 +563,10 @@ TEST(UsbRequestQueue, MultipleLayerWithCallback) {
 
   constexpr size_t kBaseReqSize = sizeof(usb_request_t);
   constexpr size_t kFirstLayerReqSize = FirstLayerReq::RequestSize(kBaseReqSize);
+  constexpr int iter_count = 10;
 
   usb::RequestQueue<uint64_t> queue;
-  for (size_t i = 0; i < 10; i++) {
+  for (size_t i = 0; i < iter_count; i++) {
     std::optional<SecondLayerReq> request;
     ASSERT_EQ(SecondLayerReq::Alloc(&request, 0, 0, kFirstLayerReqSize), ZX_OK);
     *request->private_storage() = i;
@@ -592,9 +593,10 @@ TEST(UsbRequestQueue, MultipleLayerWithCallback) {
   size_t count = 0;
   for (auto request = queue.pop(); request; request = queue.pop()) {
     EXPECT_EQ(*request->private_storage(), count);
+    request->Release();  // Copy elision.
     ++count;
   }
-  EXPECT_EQ(count, 10);
+  EXPECT_EQ(count, iter_count);
 }
 
 TEST(UsbRequestTest, Alloc) {
@@ -608,6 +610,7 @@ TEST(UsbRequestTest, Init) {
   std::optional<Request> request;
   ASSERT_OK(Request::Alloc(&request, 0, 0, kParentReqSize));
   EXPECT_OK(request->Init(vmo, 0, 0, 0));
+  free(request->take());
 }
 
 TEST(UsbRequestTest, AllocVmo) {
