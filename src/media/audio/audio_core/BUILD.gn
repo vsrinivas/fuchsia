@@ -225,6 +225,7 @@ executable("unittest_bin") {
     "audio_admin_unittest.cc",
     "audio_capturer_unittest.cc",
     "audio_device_settings_unittest.cc",
+    "audio_device_unittest.cc",
     "audio_driver_unittest.cc",
     "audio_input_unittest.cc",
     "audio_output_unittest.cc",

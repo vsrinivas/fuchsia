@@ -32,6 +32,26 @@ std::string AudioDevice::UniqueIdToString(const audio_stream_unique_id_t& id) {
   return std::string(buf, sizeof(buf) - 1);
 }
 
+// static
+fit::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std::string& id) {
+  if (id.size() != 32) {
+    return fit::error();
+  }
+
+  audio_stream_unique_id_t unique_id;
+  auto& d = unique_id.data;
+  const auto captured =
+      sscanf(id.c_str(),
+             "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
+             &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], &d[6], &d[7], &d[8], &d[9], &d[10], &d[11],
+             &d[12], &d[13], &d[14], &d[15]);
+  if (captured != 16) {
+    return fit::error();
+  }
+
+  return fit::ok(unique_id);
+}
+
 AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
                          DeviceRegistry* registry, LinkMatrix* link_matrix)
     : AudioObject(type),
