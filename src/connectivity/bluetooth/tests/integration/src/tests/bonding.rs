@@ -75,6 +75,11 @@ const TEST_ADDR2: Address = Address::Public([1, 2, 3, 4, 5, 6]);
 const TEST_NAME1: &str = "Name1";
 const TEST_NAME2: &str = "Name2";
 
+async fn test_add_no_bonds_succeeds(harness: HostDriverHarness) -> Result<(), Error> {
+    let status = add_bonds(&harness, vec![]).await?;
+    expect_true!(status.error.is_none())
+}
+
 // Tests initializing bonded LE devices.
 async fn test_add_bonded_devices_success(harness: HostDriverHarness) -> Result<(), Error> {
     // Peers should be initially empty.
@@ -169,6 +174,7 @@ pub fn run_all() -> Result<(), Error> {
     run_suite!(
         "bt-host driver bonding",
         [
+            test_add_no_bonds_succeeds,
             test_add_bonded_devices_success,
             test_add_bonded_devices_no_ltk_fails,
             test_add_bonded_devices_duplicate_entry,
