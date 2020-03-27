@@ -99,6 +99,63 @@ extern "C" {
 
 typedef struct vk_swapchain vk_swapchain_t;
 
+// Swapchain staging means providing an intermediate target image to the client
+// instead of the real swapchain image, and ensuring that its content is
+// blitted or copied to the swapchain when vk_swapchain_present_image() is
+// called.
+//
+// This is useful in the following cases:
+//
+//  - The client wants a pixel format that is not supported by the
+//    swapchain implementation. E.g. the clients wants R8G8B8A but the
+//    swapchain only supports B8G8R8A8.
+//
+// - The client wants an image usage that is not supported by the swapchain
+//   implementation. E.g. Intel GPUs do not support the
+//   VK_IMAGE_USAGE_STORAGE_BIT usage flag, which means shaders cannot write
+//   directly to swapchain images.
+//
+// Staging requires a full blit/transfer per swapchain present event, and
+// thus can be expensive, but it is a useful fallback when no other solution
+// works.
+//
+// Valid values are:
+//
+// NONE: Never enable swapchain staging (the default). Asking for an unsupported
+// (pixel_format, image_usage) combination will simply fail.
+//
+// IF_NEEDED: Enable swapchain staging if needed, as detected by
+// vk_swapchain_create() based on configuration values and the surface's
+// presentation formats and feature flags.
+//
+// FORCED: Force swapchain staging, even if it is not needed. This is only
+// useful for debugging and unit-testing.
+//
+// NOTE: Not all (pixel_format, image_usage) combinations are supported. For
+// now, the following are guaranteed to work:
+//
+//   - FORCED staging, where the intermediate and swapchain images share
+//     the same format, and image usage.
+//
+//   - IF_NEEDED, when the client asks for VK_FORMAT_B8G8R8A8_UNORM with a
+//     VK_IMAGE_USAGE_STORAGE_BIT flag that is not supported by the swapchain.
+//     In this case, the target image will use VK_FORMAT_R8G8B8A8_UNORM
+//     format internally, but its image view will swap the R and B channels,
+//     to its content can be directly transferred to the swapchain image
+//     without pixel format conversion.
+//
+//   - IF_NEEDED, when the client asks for VK_FORMAT_A8R8G8B8_UNORM but the
+//     swapchain only supports VK_FORMAT_B8G8R8A8_UNORM. The same technique
+//     as above is used to swap the R and B channels of the target image in
+//     its image view.
+//
+typedef enum
+{
+  VK_SWAPCHAIN_STAGING_MODE_NONE = 0,
+  VK_SWAPCHAIN_STAGING_MODE_IF_NEEDED,
+  VK_SWAPCHAIN_STAGING_MODE_FORCED,
+} vk_swapchain_staging_mode_t;
+
 typedef struct
 {
   // The Vulkan instance, device, physical device, device and allocator to use.
@@ -117,6 +174,7 @@ typedef struct
   // Maximum number of inflight frames to send to the swapchain.
   // This should be at least 1, and will be capped by the max number of
   // swapchain images supported by the surface / presentation engine.
+  // Use 2 for double-buffering, and 3 for triple-buffering.
   uint32_t max_frames;
 
   // Favorite surface pixel format. If not 0, the swapchain will try to
@@ -125,13 +183,15 @@ typedef struct
   VkFormat pixel_format;
 
   // Set to true to disable synchronization to the vertical blanking period.
-  // Will result in tearing, but useful for benchmarking. Ignored if
-  // |disable_present| is set.
+  // Will result in tearing, but useful for benchmarking.
   bool disable_vsync;
 
   // If not 0, this is taken as the required image usage bits for the
   // swapchain creation. Default will be VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.
   VkImageUsageFlags image_usage_flags;
+
+  // Swapchain staging mode, default is to disable it.
+  vk_swapchain_staging_mode_t staging_mode;
 
   // TODO(digit): Provide a way to suggest a favorite presentation mode.
   // TODO(digit): Provide a way to provide an old swapchain to support resizes.

@@ -38,6 +38,7 @@ DemoAppBase::initAfterDevice(const DemoAppBase::Config & config)
     .wanted_format = config.wanted_format,
 
     .require_swapchain_image_shader_storage = config.require_swapchain_image_shader_storage,
+    .require_swapchain_transfers            = config.require_swapchain_transfers,
   };
   if (config.enable_swapchain_queue)
     {

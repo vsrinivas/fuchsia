@@ -43,6 +43,9 @@ DemoAppSpinel::DemoAppSpinel(const Config & config) : config_no_clear_(config.no
   DemoAppBase::Config app_config                    = config.app;
   app_config.require_swapchain_image_shader_storage = true;
 
+  // Spinel requires this format for now!
+  app_config.wanted_format = VK_FORMAT_B8G8R8A8_UNORM;
+
   ASSERT_MSG(this->DemoAppBase::initAfterDevice(app_config), "Could not initialize application!\n");
 
   spinel_env_ = vk_app_state_get_spinel_environment(&device_.vk_app_state());
@@ -57,6 +60,7 @@ DemoAppSpinel::DemoAppSpinel(const Config & config) : config_no_clear_(config.no
 DemoAppSpinel::~DemoAppSpinel()
 {
   LOG("DESTRUCTOR\n");
+  vkDestroySampler(device_.vk_device(), surface_sampler_, device_.vk_allocator());
   spn_context_release(spinel_context_);
   LOG("DESTRUCTOR COMPLETED\n");
 }

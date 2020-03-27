@@ -61,12 +61,10 @@ spn_composition_set_clip(spn_composition_t composition, uint32_t const clip[4])
 
 DemoAppMold::DemoAppMold(const Config & config) : config_no_clear_(config.no_clear)
 {
-  DemoAppBase::Config app_config    = config.app;
-  app_config.enable_swapchain_queue = true;
-
-  // Mold can render to either BGRA or RGBA buffers, but the former
-  // is preferred for performance reasons.
-  app_config.wanted_format = VK_FORMAT_B8G8R8A8_UNORM;
+  DemoAppBase::Config app_config         = config.app;
+  app_config.enable_swapchain_queue      = true;
+  app_config.require_swapchain_transfers = true;
+  app_config.wanted_format               = VK_FORMAT_B8G8R8A8_UNORM;
 
   this->DemoAppBase::init(app_config);
   mold_context_create(&spinel_context_);

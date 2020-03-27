@@ -64,6 +64,8 @@ class DemoAppBase {
     // render directly into such images.
     bool require_swapchain_image_shader_storage = false;
 
+    bool require_swapchain_transfers = false;
+
     // Set to true to enable a swapchain queue. If set, the derived
     // class should call acquireSwapchainQueueImage() and
     // presentSwapchainQueueImage() in its drawFrame() method.

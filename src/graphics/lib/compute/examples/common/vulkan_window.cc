@@ -38,27 +38,12 @@ VulkanWindow::init(VulkanDevice * device, const VulkanWindow::Config & config)
   VkImageUsageFlags image_usage    = 0;
 
   // Check that rendering directly to the swapchain is supported
+
   if (config.require_swapchain_image_shader_storage)
-    {
-      vk_device_surface_info_t surface_info;
-      vk_device_surface_info_init(&surface_info,
-                                  device_->vk_physical_device(),
-                                  window_surface,
-                                  device_->vk_instance());
+    image_usage |= VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-      VkFormat format = vk_device_surface_info_find_presentation_format(&surface_info,
-                                                                        VK_IMAGE_USAGE_STORAGE_BIT,
-                                                                        VK_FORMAT_UNDEFINED);
-      vk_device_surface_info_destroy(&surface_info);
-
-      if (format == VK_FORMAT_UNDEFINED)
-        {
-          fprintf(stderr, "ERROR: display surface does not support VK_IMAGE_USAGE_STORAGE_BIT!\n");
-          return false;
-        }
-
-      image_usage = VK_IMAGE_USAGE_STORAGE_BIT;
-    }
+  if (config.require_swapchain_transfers)
+    image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
   VkFormat wanted_format = config.wanted_format;
 
@@ -77,6 +62,9 @@ VulkanWindow::init(VulkanDevice * device, const VulkanWindow::Config & config)
     .pixel_format      = wanted_format,
     .disable_vsync     = config.disable_vsync,
     .image_usage_flags = image_usage,
+    .staging_mode      = config.require_swapchain_image_shader_storage
+                      ? VK_SWAPCHAIN_STAGING_MODE_IF_NEEDED
+                      : VK_SWAPCHAIN_STAGING_MODE_NONE,
   };
   swapchain_ = vk_swapchain_create(&swapchain_config);
 

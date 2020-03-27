@@ -62,6 +62,12 @@ class VulkanWindow {
     // render directly into such images.
     bool require_swapchain_image_shader_storage = false;
 
+    // Set to true if this window requires that buffers or images
+    // be copied to swapchain images. For example when unsing the Mold
+    // library to render into a VkBuffer, then copying it into the
+    // swapchain's VkImage.
+    bool require_swapchain_transfers = false;
+
     // If unset (the default), the drawFrame() method should only
     // call acquireSwapchainImage() and presentSwapchainImage().
     bool enable_swapchain_queue = false;

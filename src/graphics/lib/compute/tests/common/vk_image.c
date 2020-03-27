@@ -6,7 +6,8 @@
 
 #include <stdbool.h>
 
-#include "tests/common/utils.h"     // For ASSERT() macros.
+#include "tests/common/utils.h"  // For ASSERT() macros.
+#include "tests/common/vk_strings.h"
 #include "tests/common/vk_utils.h"  // For vk() macro.
 
 void
@@ -159,9 +160,9 @@ vk_image_alloc_device_local(vk_image_t *                  image,
     image_tiling = VK_IMAGE_TILING_LINEAR;
   else
     ASSERT_MSG(false,
-               "Device does not support image usage %X for format %d\n",
-               image_usage,
-               image_format);
+               "Device does not support image usage %s for format %s\n",
+               vk_image_usage_flags_to_string(image_usage),
+               vk_format_to_string(image_format));
 
   vk_image_alloc_generic(image,
                          image_format,

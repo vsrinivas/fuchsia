@@ -10,6 +10,7 @@
 #include "vk_device_surface_info.h"
 #include "vk_format_matcher.h"
 #include "vk_strings.h"
+#include "vk_swapchain_staging.h"
 #include "vk_utils.h"
 
 // Set to 1 to enable debug traces to stdout.
@@ -66,6 +67,7 @@ struct vk_swapchain
 #if DEBUG_SWAPCHAIN
   VkFence frame_acquired_fences[MAX_VK_SWAPCHAIN_IMAGES];
 #endif
+  vk_swapchain_staging_t * staging;  // NULL if not enabled.
 };
 
 VkSwapchainKHR
@@ -77,6 +79,9 @@ vk_swapchain_get_swapchain_khr(const vk_swapchain_t * swapchain)
 VkSurfaceFormatKHR
 vk_swapchain_get_format(const vk_swapchain_t * swapchain)
 {
+  if (swapchain->staging)
+    return vk_swapchain_staging_get_format(swapchain->staging);
+
   return swapchain->surface_format;
 }
 
@@ -102,6 +107,10 @@ VkImage
 vk_swapchain_get_image(const vk_swapchain_t * swapchain, uint32_t image_index)
 {
   ASSERT_MSG(image_index < swapchain->image_count, "Invalid image index: %u\n", image_index);
+
+  if (swapchain->staging)
+    return vk_swapchain_staging_get_image(swapchain->staging, image_index);
+
   return swapchain->images[image_index];
 }
 
@@ -109,6 +118,10 @@ VkImageView
 vk_swapchain_get_image_view(const vk_swapchain_t * swapchain, uint32_t image_index)
 {
   ASSERT_MSG(image_index < swapchain->image_count, "Invalid image index: %u\n", image_index);
+
+  if (swapchain->staging)
+    return vk_swapchain_staging_get_image_view(swapchain->staging, image_index);
+
   return swapchain->image_views[image_index];
 }
 
@@ -230,14 +243,16 @@ vk_swapchain_create(const vk_swapchain_config_t * config)
                "This device does not support presenting to this surface!\n");
   }
 
-  vk_swapchain_t * swapchain = calloc(1, sizeof(*swapchain));
+  vk_swapchain_t * swapchain = malloc(sizeof(*swapchain));
 
-  swapchain->instance        = config->instance;
-  swapchain->device          = config->device;
-  swapchain->physical_device = config->physical_device;
-  swapchain->allocator       = config->allocator;
-  swapchain->surface_khr     = config->surface_khr;
-  swapchain->frame_count     = config->max_frames;
+  *swapchain = (vk_swapchain_t){
+    .instance        = config->instance,
+    .device          = config->device,
+    .physical_device = config->physical_device,
+    .allocator       = config->allocator,
+    .surface_khr     = config->surface_khr,
+    .frame_count     = config->max_frames,
+  };
 
   // Grab surface info
   vk_device_surface_info_t surface_info;
@@ -256,14 +271,151 @@ vk_swapchain_create(const vk_swapchain_config_t * config)
   if (!image_usage)
     image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  ASSERT_MSG((surface_info.capabilities.supportedUsageFlags & image_usage) == image_usage,
-             "This device does not support presenting with %s (only %s)",
-             vk_image_usage_flags_to_string(image_usage),
-             vk_image_usage_flags_to_string(surface_info.capabilities.supportedUsageFlags));
+  VkFormat          staging_format = VK_FORMAT_UNDEFINED;
+  VkImageUsageFlags staging_usage  = (VkImageUsageFlags)0;
 
   VkFormat format = vk_device_surface_info_find_presentation_format(&surface_info,
                                                                     image_usage,
                                                                     config->pixel_format);
+
+  if (format == VK_FORMAT_UNDEFINED)
+    {
+      PRINT("Could not find presentation format for: (format:%s,usage:%s)\n",
+            vk_format_to_string(config->pixel_format),
+            vk_image_usage_flags_to_string(image_usage));
+    }
+
+  bool try_swapchain_staging = false;
+
+  switch (config->staging_mode)
+    {
+      case VK_SWAPCHAIN_STAGING_MODE_NONE:
+        break;
+
+      case VK_SWAPCHAIN_STAGING_MODE_IF_NEEDED:
+        try_swapchain_staging =
+          format == VK_FORMAT_UNDEFINED && ((config->pixel_format == VK_FORMAT_B8G8R8A8_UNORM &&
+                                             (image_usage & VK_IMAGE_USAGE_STORAGE_BIT) != 0) ||
+                                            (config->pixel_format == VK_FORMAT_R8G8B8A8_UNORM));
+        break;
+
+      case VK_SWAPCHAIN_STAGING_MODE_FORCED:
+        // Force swapchain staging, even if the swapchain doesn't require it.
+        // Useful to benchmark the impact of staging.
+        PRINT("Forcing swapchain staging\n");
+        if (format != VK_FORMAT_UNDEFINED)
+          {
+            staging_format = format;
+            staging_usage  = image_usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+          }
+        else
+          {
+            try_swapchain_staging = true;
+          }
+        break;
+    }
+
+  if (try_swapchain_staging)
+    {
+      VkImageUsageFlags usage2 =
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+      format = vk_device_surface_info_find_presentation_format(&surface_info,
+                                                               usage2,
+                                                               config->pixel_format);
+      PRINT("Trying to enable swapchain staging!\n"
+            "Found presentation format %s for (format:%s,usage %s)\n",
+            vk_format_to_string(format),
+            vk_format_to_string(config->pixel_format),
+            vk_image_usage_flags_to_string(usage2));
+
+      // Find a compatible format that matches the proper image usage.
+      vk_format_matcher_t matcher;
+      VkImageUsageFlags   usage1 = image_usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+      vk_format_matcher_init_for_image_usage(&matcher, usage1, config->physical_device);
+
+      if (format == VK_FORMAT_UNDEFINED)
+        format = config->pixel_format;
+
+      if (format != VK_FORMAT_UNDEFINED)
+        {
+          uint32_t         compat_count   = 0;
+          const VkFormat * compat_formats = NULL;
+
+          // Find compatible formats that have the same encoding (e.g. UNORM or SRGB, etc)
+          // as the desired pixel format. Otherwise, colors will be shifted unexpectedly.
+          // NOTE: Order in the lists below is important.
+          switch (format)
+            {
+                case VK_FORMAT_B8G8R8A8_UNORM: {
+                  static const VkFormat formats[] = {
+                    VK_FORMAT_B8G8R8A8_UNORM,
+                    VK_FORMAT_R8G8B8A8_UNORM,
+                    VK_FORMAT_A8B8G8R8_UNORM_PACK32,
+                  };
+                  compat_count   = ARRAY_SIZE(formats);
+                  compat_formats = formats;
+                  break;
+                }
+                case VK_FORMAT_B8G8R8A8_SRGB: {
+                  static const VkFormat formats[] = {
+                    VK_FORMAT_B8G8R8A8_SRGB,
+                    VK_FORMAT_R8G8B8A8_SRGB,
+                  };
+                  compat_count   = ARRAY_SIZE(formats);
+                  compat_formats = formats;
+                  break;
+                }
+                case VK_FORMAT_R8G8B8A8_UNORM: {
+                  static const VkFormat formats[] = {
+                    VK_FORMAT_R8G8B8A8_UNORM,
+                    VK_FORMAT_B8G8R8A8_UNORM,
+                  };
+                  compat_count   = ARRAY_SIZE(formats);
+                  compat_formats = formats;
+                  break;
+                }
+                case VK_FORMAT_R8G8B8A8_SRGB: {
+                  static const VkFormat formats[] = {
+                    VK_FORMAT_B8G8R8A8_SRGB,
+                    VK_FORMAT_R8G8B8A8_SRGB,
+                  };
+                  compat_count   = ARRAY_SIZE(formats);
+                  compat_formats = formats;
+                  break;
+                }
+              default:;
+            }
+          for (uint32_t nn = 0; nn < compat_count; ++nn)
+            {
+              PRINT("  Probing %s for %s\n",
+                    vk_format_to_string(compat_formats[nn]),
+                    vk_image_usage_flags_to_string(usage1));
+              vk_format_matcher_probe(&matcher, compat_formats[nn]);
+            }
+        }
+
+      //vk_format_matcher_probe_compatible_formats_for(&matcher, config->pixel_format);
+      if (vk_format_matcher_done(&matcher, &staging_format, NULL))
+        {
+          // Fine, swapchain staging can be enabled.
+          staging_usage = usage1;
+          image_usage   = usage2;
+          PRINT("Swapchain staging format=%s usage=%s, swapchain format=%s usage=%s\n",
+                vk_format_to_string(staging_format),
+                vk_image_usage_flags_to_string(staging_usage),
+                vk_format_to_string(format),
+                vk_image_usage_flags_to_string(image_usage));
+        }
+      else
+        {
+          PRINT("Unable to find format compatible with %s and usage %s\n",
+                vk_format_to_string(format),
+                vk_image_usage_flags_to_string(usage1));
+
+          format = VK_FORMAT_UNDEFINED;
+        }
+    }
+
   if (format == VK_FORMAT_UNDEFINED)
     {
       if (config->pixel_format == VK_FORMAT_UNDEFINED)
@@ -279,6 +431,13 @@ vk_swapchain_create(const vk_swapchain_config_t * config)
                      vk_image_usage_flags_to_string(image_usage),
                      vk_format_to_string(config->pixel_format));
         }
+    }
+
+  if (staging_usage != 0)
+    {
+      // Staging requires transfering from the target to the swapchain image.
+      staging_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+      image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
   swapchain->surface_format = (VkSurfaceFormatKHR){
@@ -421,6 +580,20 @@ vk_swapchain_create(const vk_swapchain_config_t * config)
                                         VK_IMAGE_LAYOUT_UNDEFINED,
                                         VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
+  if (staging_usage != (VkImageUsageFlags)0)
+    swapchain->staging = vk_swapchain_staging_create(swapchain->image_count,
+                                                     swapchain->frame_count,
+                                                     staging_usage,
+                                                     staging_format,
+                                                     swapchain->surface_extent,
+                                                     swapchain->surface_format.format,
+                                                     swapchain->images,
+                                                     device,
+                                                     config->physical_device,
+                                                     config->present_queue_family,
+                                                     config->present_queue_index,
+                                                     allocator);
+
   return swapchain;
 }
 
@@ -526,10 +699,20 @@ vk_swapchain_present_image(vk_swapchain_t * swapchain)
 {
   uint32_t frame_index = swapchain->frame_index;
 
+  VkSemaphore wait_semaphore = swapchain->frame_rendered_semaphores[frame_index];
+
+  if (swapchain->staging)
+    {
+      wait_semaphore = vk_swapchain_staging_present_image(swapchain->staging,
+                                                          swapchain->image_index,
+                                                          frame_index,
+                                                          wait_semaphore);
+    }
+
   const VkPresentInfoKHR presentInfo = {
     .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores    = &swapchain->frame_rendered_semaphores[frame_index],
+    .pWaitSemaphores    = &wait_semaphore,
     .swapchainCount     = 1,
     .pSwapchains        = &swapchain->swapchain_khr,
     .pImageIndices      = &swapchain->image_index,
@@ -551,8 +734,7 @@ vk_swapchain_present_image(vk_swapchain_t * swapchain)
         swapchain->image_counter,
         frame_index,
         swapchain->image_index,
-        swapchain->frame_rendered_semaphores[frame_index]);
-  //SLEEP(2);
+        wait_semaphore);
 
   swapchain->frame_index = (frame_index + 1) % swapchain->frame_count;
   swapchain->image_counter += 1;
@@ -565,6 +747,12 @@ vk_swapchain_destroy(vk_swapchain_t * swapchain)
   VkDevice                      device      = swapchain->device;
   const VkAllocationCallbacks * allocator   = swapchain->allocator;
   uint32_t                      image_count = swapchain->image_count;
+
+  if (swapchain->staging)
+    {
+      vk_swapchain_staging_destroy(swapchain->staging);
+      swapchain->staging = NULL;
+    }
 
   for (uint32_t nn = 0; nn < swapchain->frame_count; ++nn)
     {

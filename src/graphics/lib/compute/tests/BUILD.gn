@@ -93,6 +93,7 @@ source_set("common_vk") {
     "common/vk_surface.h",
     "common/vk_swapchain.h",
     "common/vk_swapchain_queue.h",
+    "common/vk_swapchain_staging.h",
     "common/vk_utils.h",
   ]
   sources = [
@@ -117,6 +118,8 @@ source_set("common_vk") {
     "common/vk_swapchain.h",
     "common/vk_swapchain_queue.c",
     "common/vk_swapchain_queue.h",
+    "common/vk_swapchain_staging.c",
+    "common/vk_swapchain_staging.h",
     "common/vk_utils.c",
     "common/vk_utils.h",
   ]
@@ -132,6 +135,16 @@ source_set("common_vk") {
   } else {
     sources += [ "common/vk_surface_glfw.c" ]
     deps += [ "//third_party/glfw:glfw" ]
+
+    # Work-around bug in //third_party/glfw:glfw definition.
+    if (is_linux) {
+      libs = [
+        "X11",
+        "Xinerama",
+        "Xcursor",
+        "Xrandr",
+      ]
+    }
   }
 
   public_deps = [
@@ -150,6 +163,7 @@ graphics_compute_unittests("common_vk_unittests") {
     "common/vk_sampler_unittest.cc",
     "common/vk_strings_unittest.cc",
     "common/vk_surface_unittest.cc",
+    "common/vk_swapchain_unittest.cc",
     "common/vk_utils_unittest.cc",
   ]
   deps = [ ":common_vk" ]
