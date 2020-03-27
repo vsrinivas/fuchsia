@@ -20,9 +20,11 @@
 namespace camera {
 
 struct CollectionView {
+  fuchsia::sysmem::ImageFormat_2 image_format;
   fuchsia::sysmem::BufferCollectionPtr collection;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   fuchsia::images::ImagePipe2Ptr image_pipe;
+  uint32_t image_pipe_id;
   std::unique_ptr<scenic::Material> material;
   std::unique_ptr<scenic::Rectangle> rectangle;
   std::unique_ptr<scenic::ShapeNode> node;
@@ -55,8 +57,8 @@ class BufferCollage {
   // Updates the view to show the given |buffer_index| in for the given |collection_id|'s node.
   // Holds |release_fence| until the buffer is no longer needed, then closes the handle. If
   // non-null, |subregion| specifies what sub-region of the buffer to display.
-  void ShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
-                  std::optional<fuchsia::math::Rect> subregion);
+  void PostShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
+                      std::optional<fuchsia::math::Rect> subregion);
 
  private:
   BufferCollage();
@@ -67,6 +69,13 @@ class BufferCollage {
   // Registers the provider interface's error handler to invoke Stop.
   template <typename T>
   void SetStopOnError(fidl::InterfacePtr<T>& p, std::string name = T::Name_);
+
+  // See PostShowBuffer.
+  void ShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
+                  std::optional<fuchsia::math::Rect> subregion);
+
+  // Repositions scenic nodes to fit all collections on the screen.
+  void UpdateLayout();
 
   // |scenic::Session| callbacks.
   void OnScenicError(zx_status_t status);

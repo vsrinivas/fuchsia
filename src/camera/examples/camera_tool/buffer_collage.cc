@@ -92,7 +92,8 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
   displayer->stop_callback_ = std::move(stop_callback);
 
   // Create a scenic session and set its event handlers.
-  displayer->session_ = std::make_unique<scenic::Session>(displayer->scenic_.get());
+  displayer->session_ =
+      std::make_unique<scenic::Session>(displayer->scenic_.get(), displayer->loop_.dispatcher());
   displayer->session_->set_error_handler(
       fit::bind_member(displayer.get(), &BufferCollage::OnScenicError));
   displayer->session_->set_event_handler(
@@ -117,11 +118,6 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
 fit::promise<uint32_t> BufferCollage::AddCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token, fuchsia::sysmem::ImageFormat_2 image_format,
     std::string description) {
-  if (!collection_views_.empty()) {
-    FX_LOGS(ERROR) << "Multiple collections not supported yet.";
-    Stop();
-    return fit::make_result_promise<uint32_t>(fit::error());
-  }
   auto collection_id = next_collection_id_++;
   FX_LOGS(DEBUG) << "Adding collection with ID " << collection_id << ".";
   ZX_ASSERT(collection_views_.find(collection_id) == collection_views_.end());
@@ -130,6 +126,7 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
   oss << " (" << collection_id << ")";
   SetStopOnError(collection_view.collection, "Collection" + oss.str());
   SetStopOnError(collection_view.image_pipe, "Image Pipe" + oss.str());
+  collection_view.image_format = image_format;
 
   // Bind and duplicate the token.
   fuchsia::sysmem::BufferCollectionTokenPtr token_ptr;
@@ -150,20 +147,12 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
   collection_view.collection->Sync([this, collection_id, token = std::move(scenic_token),
                                     result = std::move(scenic_bridge.completer)]() mutable {
     auto& view = collection_views_[collection_id];
-    auto image_pipe_id = session_->AllocResourceId();
-    auto command = scenic::NewCreateImagePipe2Cmd(image_pipe_id,
+    view.image_pipe_id = session_->AllocResourceId();
+    auto command = scenic::NewCreateImagePipe2Cmd(view.image_pipe_id,
                                                   view.image_pipe.NewRequest(loop_.dispatcher()));
     session_->Enqueue(std::move(command));
     view.image_pipe->AddBufferCollection(1, std::move(token));
-    view.material = std::make_unique<scenic::Material>(session_.get());
-    view.material->SetTexture(image_pipe_id);
-    view.rectangle = std::make_unique<scenic::Rectangle>(session_.get(), 1024, 640);
-    view.node = std::make_unique<scenic::ShapeNode>(session_.get());
-    view.node->SetShape(*view.rectangle);
-    view.node->SetMaterial(*view.material);
-    view.node->SetTranslation(512, 320, 0);
-    view_->AddChild(*view.node);
-    session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
+    UpdateLayout();
     result.complete_ok();
   });
 
@@ -231,7 +220,37 @@ void BufferCollage::RemoveCollection(uint32_t id) {
     view_->DetachChild(*it->second.node);
     it->second.collection->Close();
     collection_views_.erase(it);
-    session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
+    UpdateLayout();
+  });
+}
+
+void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index,
+                                   zx::eventpair release_fence,
+                                   std::optional<fuchsia::math::Rect> subregion) {
+  async::PostTask(loop_.dispatcher(), [=, release_fence = std::move(release_fence)]() mutable {
+    ShowBuffer(collection_id, buffer_index, std::move(release_fence), subregion);
+  });
+}
+
+void BufferCollage::Stop() {
+  presenter_ = nullptr;
+  scenic_ = nullptr;
+  allocator_ = nullptr;
+  view_ = nullptr;
+  collection_views_.clear();
+  loop_.Quit();
+  if (stop_callback_) {
+    stop_callback_();
+    stop_callback_ = nullptr;
+  }
+}
+
+template <typename T>
+void BufferCollage::SetStopOnError(fidl::InterfacePtr<T>& p, std::string name) {
+  p.set_error_handler([this, name, &p](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << name << " disconnected unexpectedly.";
+    p = nullptr;
+    Stop();
   });
 }
 
@@ -268,26 +287,80 @@ void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
                                       [](fuchsia::images::PresentationInfo info) {});
 }
 
-void BufferCollage::Stop() {
-  presenter_ = nullptr;
-  scenic_ = nullptr;
-  allocator_ = nullptr;
-  view_ = nullptr;
-  collection_views_.clear();
-  loop_.Quit();
-  if (stop_callback_) {
-    stop_callback_();
-    stop_callback_ = nullptr;
+// Calculate the grid size needed to fit |n| elements by alternately adding rows and columns.
+static std::tuple<uint32_t, uint32_t> GetGridSize(uint32_t n) {
+  uint32_t rows = 0;
+  uint32_t cols = 0;
+  while (rows * cols < n) {
+    if (rows == cols) {
+      ++cols;
+    } else {
+      ++rows;
+    }
   }
+  return {rows, cols};
 }
 
-template <typename T>
-void BufferCollage::SetStopOnError(fidl::InterfacePtr<T>& p, std::string name) {
-  p.set_error_handler([this, name, &p](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << name << " disconnected unexpectedly.";
-    p = nullptr;
-    Stop();
-  });
+// Calculate the center of an element |index| in a grid with |n| elements.
+static std::tuple<float, float> GetCenter(uint32_t index, uint32_t n) {
+  auto [rows, cols] = GetGridSize(n);
+  uint32_t row = index / cols;
+  uint32_t col = index % cols;
+  float y = (row + 0.5f) / rows;
+  float x = (col + 0.5f) / cols;
+  // Center-align the last row if it is not fully filled.
+  if (row == rows - 1) {
+    x += (rows * cols - n) * 0.5f / cols;
+  }
+  return {x, y};
+}
+
+// Calculate the size of an element scaled uniformly to fit a given extent.
+static std::tuple<float, float> ScaleToFit(float element_width, float element_height,
+                                           float box_width, float box_height) {
+  float x_scale = box_width / element_width;
+  float y_scale = box_height / element_height;
+  float scale = std::min(x_scale, y_scale);
+  return {element_width * scale, element_height * scale};
+}
+
+void BufferCollage::UpdateLayout() {
+  // TODO(49070): resolve constraints even if node is not visible
+  // There is no intrinsic need to present the views prior to extents being known.
+  if (!view_extents_) {
+    constexpr fuchsia::ui::gfx::BoundingBox kDefaultBoundingBox{
+        .min{.x = 0, .y = 0, .z = 0}, .max{.x = 640, .y = 480, .z = 1024}};
+    view_extents_ = kDefaultBoundingBox;
+  }
+
+  auto [rows, cols] = GetGridSize(collection_views_.size());
+  float view_width = view_extents_->max.x - view_extents_->min.x;
+  float view_height = view_extents_->max.y - view_extents_->min.y;
+  constexpr float kPadding = 4.0f;
+  float cell_width = view_width / cols - kPadding;
+  float cell_height = view_height / rows - kPadding;
+
+  for (auto& [id, view] : collection_views_) {
+    if (view.node) {
+      view_->DetachChild(*view.node);
+    }
+  }
+  uint32_t index = 0;
+  for (auto& [id, view] : collection_views_) {
+    view.material = std::make_unique<scenic::Material>(session_.get());
+    view.material->SetTexture(view.image_pipe_id);
+    auto [element_width, element_height] = ScaleToFit(
+        view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
+    view.rectangle =
+        std::make_unique<scenic::Rectangle>(session_.get(), element_width, element_height);
+    view.node = std::make_unique<scenic::ShapeNode>(session_.get());
+    view.node->SetShape(*view.rectangle);
+    view.node->SetMaterial(*view.material);
+    auto [x, y] = GetCenter(index++, collection_views_.size());
+    view.node->SetTranslation(view_width * x, view_height * y, 0);
+    view_->AddChild(*view.node);
+  }
+  session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
 }
 
 void BufferCollage::OnScenicError(zx_status_t status) {
@@ -298,7 +371,14 @@ void BufferCollage::OnScenicError(zx_status_t status) {
 void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   for (const auto& event : events) {
     if (event.is_gfx() && event.gfx().is_view_properties_changed()) {
-      view_extents_ = event.gfx().view_properties_changed().properties.bounding_box;
+      auto aabb = event.gfx().view_properties_changed().properties.bounding_box;
+      // TODO(49069): bounding box should never be empty
+      if (aabb.max.x == aabb.min.x || aabb.max.y == aabb.min.y || aabb.max.z == aabb.min.z) {
+        view_extents_.reset();
+      } else {
+        view_extents_ = aabb;
+      }
+      UpdateLayout();
     }
   }
 }

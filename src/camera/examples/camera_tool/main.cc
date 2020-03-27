@@ -58,69 +58,84 @@ int main(int argc, char* argv[]) {
 
   // Create a virtual camera to drive the collage.
   // TODO: replace with DeviceWatcher and real camera content.
-  status = context->svc()->Connect(allocator.NewRequest());
-  auto camera_result = camera::VirtualCamera::Create(std::move(allocator));
-  if (camera_result.is_error()) {
-    FX_PLOGS(ERROR, camera_result.error()) << "Failed to create VirtualCamera.";
-    return 0;
-  }
-  auto camera = camera_result.take_value();
-
   auto MakeError = [&](std::string name) {
     return [&, name](zx_status_t status) {
       FX_PLOGS(ERROR, status) << name << " disconnected unexpectedly.";
       loop.Quit();
     };
   };
-  fuchsia::camera3::DevicePtr device;
-  device.set_error_handler(MakeError("Camera"));
-  camera->GetHandler()(device.NewRequest());
+  constexpr uint32_t kNumStreams = 8;
+  struct {
+    std::unique_ptr<camera::VirtualCamera> camera;
+    fuchsia::camera3::DevicePtr device;
+    fuchsia::camera3::StreamPtr stream;
+    fit::bridge<fuchsia::sysmem::ImageFormat_2> bridge;
+    fit::function<void(fuchsia::camera3::FrameInfo)> frame_handler;
+    uint32_t collection_id;
+  } streams[kNumStreams];
+  for (uint32_t i = 0; i < kNumStreams; ++i) {
+    auto& camera = streams[i].camera;
+    auto& device = streams[i].device;
+    auto& stream = streams[i].stream;
+    auto& bridge = streams[i].bridge;
+    auto& frame_handler = streams[i].frame_handler;
+    auto& collection_id = streams[i].collection_id;
 
-  fuchsia::camera3::StreamPtr stream;
-  stream.set_error_handler(MakeError("Stream"));
-  device->ConnectToStream(0, stream.NewRequest());
+    fuchsia::sysmem::AllocatorHandle allocator;
+    status = context->svc()->Connect(allocator.NewRequest());
+    auto camera_result = camera::VirtualCamera::Create(std::move(allocator));
+    if (camera_result.is_error()) {
+      FX_PLOGS(ERROR, camera_result.error()) << "Failed to create VirtualCamera.";
+      return 0;
+    }
+    camera = camera_result.take_value();
 
-  fuchsia::sysmem::AllocatorPtr allocator_ptr;
-  allocator_ptr.set_error_handler(MakeError("Allocator"));
-  status = context->svc()->Connect(allocator_ptr.NewRequest());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to request Allocator service.";
-    return 0;
+    device.set_error_handler(MakeError("Camera"));
+    camera->GetHandler()(device.NewRequest());
+
+    stream.set_error_handler(MakeError("Stream"));
+    device->ConnectToStream(0, stream.NewRequest());
+
+    fuchsia::sysmem::AllocatorPtr allocator_ptr;
+    allocator_ptr.set_error_handler(MakeError("Allocator"));
+    status = context->svc()->Connect(allocator_ptr.NewRequest());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to request Allocator service.";
+      return 0;
+    }
+
+    device->GetConfigurations([&](std::vector<fuchsia::camera3::Configuration> configurations) {
+      ZX_ASSERT(!configurations.empty());
+      ZX_ASSERT(!configurations[0].streams.empty());
+      bridge.completer.complete_ok(configurations[0].streams[0].image_format);
+    });
+
+    fuchsia::sysmem::BufferCollectionTokenHandle token;
+    allocator_ptr->AllocateSharedCollection(token.NewRequest());
+    stream->SetBufferCollection(std::move(token));
+    collection_id = 0;
+    frame_handler = [&](fuchsia::camera3::FrameInfo info) {
+      collage->PostShowBuffer(collection_id, info.buffer_index, std::move(info.release_fence),
+                              std::nullopt);
+      stream->GetNextFrame(frame_handler.share());
+    };
+    stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+      auto promise = bridge.consumer.promise()
+                         .and_then([&](fuchsia::sysmem::ImageFormat_2& image_format) {
+                           return collage->AddCollection(std::move(token), image_format,
+                                                         "Virtual Camera Stream 0:0");
+                         })
+                         .and_then([&](uint32_t& returned_collection_id) {
+                           collection_id = returned_collection_id;
+                           stream->GetNextFrame(frame_handler.share());
+                         })
+                         .or_else([&] {
+                           FX_LOGS(ERROR) << "Failed to add collection";
+                           loop.Quit();
+                         });
+      fit::run_single_threaded(std::move(promise));
+    });
   }
-
-  fit::bridge<fuchsia::sysmem::ImageFormat_2> bridge;
-  device->GetConfigurations([&](std::vector<fuchsia::camera3::Configuration> configurations) {
-    ZX_ASSERT(!configurations.empty());
-    ZX_ASSERT(!configurations[0].streams.empty());
-    bridge.completer.complete_ok(configurations[0].streams[0].image_format);
-  });
-
-  fuchsia::sysmem::BufferCollectionTokenHandle token;
-  allocator_ptr->AllocateSharedCollection(token.NewRequest());
-  stream->SetBufferCollection(std::move(token));
-  uint32_t collection_id = 0;
-  fit::function<void(fuchsia::camera3::FrameInfo)> frame_handler =
-      [&](fuchsia::camera3::FrameInfo info) {
-        collage->ShowBuffer(collection_id, info.buffer_index, std::move(info.release_fence),
-                            std::nullopt);
-        stream->GetNextFrame(frame_handler.share());
-      };
-  stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
-    auto promise = bridge.consumer.promise()
-                       .and_then([&](fuchsia::sysmem::ImageFormat_2& image_format) {
-                         return collage->AddCollection(std::move(token), image_format,
-                                                       "Virtual Camera Stream 0:0");
-                       })
-                       .and_then([&](uint32_t& returned_collection_id) {
-                         collection_id = returned_collection_id;
-                         stream->GetNextFrame(frame_handler.share());
-                       })
-                       .or_else([&] {
-                         FX_LOGS(ERROR) << "Failed to add collection";
-                         loop.Quit();
-                       });
-    fit::run_single_threaded(std::move(promise));
-  });
 
   // Run the loop.
   status = loop.Run();
