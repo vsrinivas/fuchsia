@@ -48,6 +48,7 @@ recovery_packages = [
   "//src/sys/pkg/bin/pkg-resolver",
   "//src/sys/stash",
   "//src/sys/timekeeper",
+  "//src/connectivity/network/http_client",
 ]
 
 recovery_eng_packages =
