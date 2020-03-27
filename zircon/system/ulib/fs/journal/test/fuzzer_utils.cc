@@ -33,16 +33,16 @@ using storage::VmoBuffer;
 
 // FuzzedVmoidRegistry
 
-zx_status_t FuzzedVmoidRegistry::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
+zx_status_t FuzzedVmoidRegistry::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   vmos_.emplace(std::make_pair(next_vmoid_, zx::unowned_vmo(vmo.get())));
-  *out = next_vmoid_;
+  *out = storage::Vmoid(next_vmoid_);
   next_vmoid_ =
       static_cast<vmoid_t>(ReservedVmoid::kMaxReserved) + static_cast<vmoid_t>(vmos_.size());
   return ZX_OK;
 }
 
-zx_status_t FuzzedVmoidRegistry::DetachVmo(vmoid_t vmoid) {
-  vmos_.erase(vmoid);
+zx_status_t FuzzedVmoidRegistry::BlockDetachVmo(storage::Vmoid vmoid) {
+  vmos_.erase(vmoid.TakeId());
   return ZX_OK;
 }
 

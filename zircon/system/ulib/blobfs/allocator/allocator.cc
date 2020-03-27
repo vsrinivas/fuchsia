@@ -18,6 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
+#include <storage/buffer/owned_vmoid.h>
 
 #include "extent-reserver.h"
 #include "iterator/extent-iterator.h"
@@ -65,29 +66,25 @@ zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
     return status;
   }
 
-  vmoid_t block_map_vmoid = BLOCK_VMOID_INVALID;
-  vmoid_t node_map_vmoid = BLOCK_VMOID_INVALID;
+  storage::OwnedVmoid block_map_vmoid;
+  storage::OwnedVmoid node_map_vmoid;
 
-  // Always attempt to detach vmoids before returning. Even if one or both vmoids are invalid,
-  // this is okay since the return status is ignored.
-  auto detach_vmoids = fbl::MakeAutoCall([this, &block_map_vmoid, &node_map_vmoid]() {
-    space_manager_->DetachVmo(block_map_vmoid);
-    space_manager_->DetachVmo(node_map_vmoid);
-  });
-
-  status = space_manager_->AttachVmo(block_map_.StorageUnsafe()->GetVmo(), &block_map_vmoid);
+  // TODO(fxb/49093): Change to use fit::result<OwnedVmo, zx_status_t>.
+  status = space_manager_->BlockAttachVmo(block_map_.StorageUnsafe()->GetVmo(),
+                                          &block_map_vmoid.GetReference(space_manager_));
   if (status != ZX_OK) {
     return status;
   }
 
-  status = space_manager_->AttachVmo(node_map_.vmo(), &node_map_vmoid);
+  status = space_manager_->BlockAttachVmo(node_map_.vmo(),
+                                          &node_map_vmoid.GetReference(space_manager_));
   if (status != ZX_OK) {
     return status;
   }
 
   const auto info = space_manager_->Info();
-  txn.Enqueue(block_map_vmoid, 0, BlockMapStartBlock(info), BlockMapBlocks(info));
-  txn.Enqueue(node_map_vmoid, 0, NodeMapStartBlock(info), NodeMapBlocks(info));
+  txn.Enqueue(block_map_vmoid.get(), 0, BlockMapStartBlock(info), BlockMapBlocks(info));
+  txn.Enqueue(node_map_vmoid.get(), 0, NodeMapStartBlock(info), NodeMapBlocks(info));
 
   return txn.Transact();
 }

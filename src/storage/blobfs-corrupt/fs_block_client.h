@@ -16,7 +16,11 @@
 // indices instead of device block indices. This class is not threadsafe.
 class FsBlockClient {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FsBlockClient);
+  // Not copyable or movable.
+  FsBlockClient(FsBlockClient&) = delete;
+  FsBlockClient& operator=(FsBlockClient&) = delete;
+
+  ~FsBlockClient();
 
   // Creates a new FsBlockClient using the given BlockDevice.
   static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device,
@@ -36,14 +40,14 @@ class FsBlockClient {
  private:
   FsBlockClient(std::unique_ptr<block_client::BlockDevice> device,
                 fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo,
-                fuchsia_hardware_block_VmoId vmoid);
+                storage::Vmoid vmoid);
   uint64_t device_blocks_per_blobfs_block() const;
   uint64_t fs_block_to_device_block(uint64_t block) const;
 
   std::unique_ptr<block_client::BlockDevice> device_;
   fuchsia_hardware_block_BlockInfo block_info_;
   zx::vmo vmo_;
-  fuchsia_hardware_block_VmoId vmoid_;
+  storage::Vmoid vmoid_;
 };
 
 #endif  // SRC_STORAGE_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_

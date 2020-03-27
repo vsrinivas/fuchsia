@@ -20,23 +20,16 @@ const uint32_t kBlockSize = 8192;
 constexpr char kGoldenLabel[] = "test-vmo";
 
 class MockVmoidRegistry : public VmoidRegistry {
- public:
-  bool detached() const { return detached_; }
-
  private:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
-    *out = kGoldenVmoid;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, Vmoid* out) override {
+    *out = Vmoid(kGoldenVmoid);
     return ZX_OK;
   }
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final {
-    EXPECT_EQ(kGoldenVmoid, vmoid);
-    EXPECT_FALSE(detached_);
-    detached_ = true;
+  zx_status_t BlockDetachVmo(Vmoid vmoid) final {
+    EXPECT_EQ(kGoldenVmoid, vmoid.TakeId());
     return ZX_OK;
   }
-
-  bool detached_ = false;
 };
 
 TEST(BlockBufferViewTest, EmptyView) {

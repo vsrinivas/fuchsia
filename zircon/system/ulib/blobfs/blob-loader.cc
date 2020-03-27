@@ -216,7 +216,7 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
   BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(node_index);
   status = StreamBlocks(&block_iter, merkle_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid.vmoid(), vmo_offset, kDataStart + dev_offset,
+                          txn.Enqueue(vmoid.get(), vmo_offset, kDataStart + dev_offset,
                                       length);
                           return ZX_OK;
                         });
@@ -348,7 +348,7 @@ zx_status_t BlobLoader::LoadDataInternal(uint32_t node_index, const Inode& inode
 
   status = StreamBlocks(&block_iter, data_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid.vmoid(), vmo_offset - merkle_blocks,
+                          txn.Enqueue(vmoid.get(), vmo_offset - merkle_blocks,
                                       kDataStart + dev_offset, length);
                           return ZX_OK;
                         });

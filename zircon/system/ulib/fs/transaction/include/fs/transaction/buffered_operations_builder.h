@@ -11,6 +11,9 @@
 #include <fs/transaction/block_transaction.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
+#ifdef __Fuchsia__
+#include <storage/buffer/owned_vmoid.h>
+#endif
 
 namespace fs {
 
@@ -33,12 +36,21 @@ class BufferedOperationsBuilder {
   // Removes the vector of requests, and returns them to the caller.
   std::vector<storage::BufferedOperation> TakeOperations();
 
+#ifdef __Fuchsia__
+  // Adds a vmoid that needs to be detached once the operations have completed.
+  void AddVmoid(storage::OwnedVmoid vmoid) {
+    vmoids_.push_back(std::move(vmoid));
+  }
+#endif
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(BufferedOperationsBuilder);
 
  private:
   std::vector<storage::BufferedOperation> operations_;
 
-#ifndef __Fuchsia__
+#ifdef __Fuchsia__
+  std::vector<storage::OwnedVmoid> vmoids_;
+#else
   TransactionHandler* device_;
 #endif
 };

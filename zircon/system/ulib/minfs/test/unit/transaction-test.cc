@@ -77,7 +77,7 @@ class FakeStorage : public AllocatorStorage {
 
   ~FakeStorage() {}
 
-  zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid) final {
+  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final {
     return ZX_OK;
   }
 
@@ -122,7 +122,7 @@ class FakeBlockDevice : public block_client::BlockDevice {
     return ZX_OK;
   }
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final { return ZX_OK; }
-  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* out_vmoid) final {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final {
     return ZX_OK;
   }
 

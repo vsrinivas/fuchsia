@@ -19,8 +19,8 @@ PersistentStorage::PersistentStorage(block_client::BlockDevice* device, Superblo
       grow_cb_(std::move(grow_cb)),
       metadata_(std::move(metadata)) {}
 
-zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid) {
-  return device_->BlockAttachVmo(vmo, vmoid);
+zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* out) {
+  return device_->BlockAttachVmo(vmo, &out->GetReference(device_));
 }
 
 zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,

@@ -30,14 +30,14 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   void SetNextVmoid(vmoid_t vmoid) { next_vmoid_ = vmoid; }
 
  private:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) override {
     vmos_.emplace(std::make_pair(next_vmoid_, zx::unowned_vmo(vmo.get())));
-    *out = next_vmoid_++;
+    *out = storage::Vmoid(next_vmoid_++);
     return ZX_OK;
   }
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final {
-    vmos_.erase(vmoid);
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final {
+    vmos_.erase(vmoid.TakeId());
     return ZX_OK;
   }
 

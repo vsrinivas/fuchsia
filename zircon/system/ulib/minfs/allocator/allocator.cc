@@ -46,12 +46,13 @@ Allocator::~Allocator() {
 
 zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
   AutoLock lock(&lock_);
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   zx_status_t status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &vmoid);
   if (status != ZX_OK) {
     return status;
   }
-  UnownedBuffer buffer(vmoid.id);
+  UnownedBuffer buffer(vmoid.TakeId());
+  builder->AddVmoid(std::move(vmoid));
   storage_->Load(builder, &buffer);
   return ZX_OK;
 }

@@ -166,7 +166,7 @@ zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_
 }
 
 zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo,
-                                            fuchsia_hardware_block_VmoId* out_vmoid) {
+                                            storage::Vmoid* out_vmoid) {
   zx::vmo xfer_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
   if (status != ZX_OK) {
@@ -175,7 +175,7 @@ zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo,
 
   fbl::AutoLock lock(&lock_);
   vmos_.insert(std::make_pair(next_vmoid_, std::move(xfer_vmo)));
-  out_vmoid->id = next_vmoid_++;
+  *out_vmoid = storage::Vmoid(next_vmoid_++);
   return ZX_OK;
 }
 

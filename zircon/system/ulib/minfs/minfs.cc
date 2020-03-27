@@ -35,6 +35,7 @@
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <fs/pseudo_dir.h>
+#include <storage/buffer/owned_vmoid.h>
 #endif
 
 #include <utility>
@@ -1279,7 +1280,7 @@ zx_status_t Minfs::InitializeUnjournalledWriteback() {
 }
 
 zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
-                                 fuchsia_hardware_block_VmoId* out_vmoid) {
+                                 storage::Vmoid* out_vmoid) {
   zx_status_t status = zx::vmo::create(blocks * kMinfsBlockSize, 0, out_vmo);
   if (status != ZX_OK) {
     return status;
@@ -1305,11 +1306,12 @@ zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transac
   }
 
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
-  zx_status_t status = CreateAndRegisterVmo(device, &vmo, 1, &vmoid);
+  storage::Vmoid returned_vmoid;
+  zx_status_t status = CreateAndRegisterVmo(device, &vmo, 1, &returned_vmoid);
   if (status != ZX_OK) {
     return status;
   }
+  storage::OwnedVmoid vmoid(std::move(returned_vmoid), device);
 
   if (opcode == BLOCKIO_WRITE) {
     // Prepare fifo transaction for write.
@@ -1322,7 +1324,7 @@ zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transac
 
   const uint32_t kDiskBlocksPerFsBlock = kMinfsBlockSize / transaction_handler->DeviceBlockSize();
   request.opcode = opcode;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.group = transaction_handler->BlockGroupID();
   request.length = kDiskBlocksPerFsBlock;
   request.vmo_offset = 0;
@@ -1339,9 +1341,7 @@ zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transac
       return status;
     }
   }
-
-  request.opcode = BLOCKIO_CLOSE_VMO;
-  return transaction_handler->Transaction(&request, 1);
+  return ZX_OK;
 }
 
 zx_status_t WriteDataToDisk(fs::TransactionHandler* transaction_handler,

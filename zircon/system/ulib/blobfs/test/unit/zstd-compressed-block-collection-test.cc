@@ -64,10 +64,10 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
     uint32_t num_merkle_blocks = static_cast<uint32_t>(num_merkle_blocks64);
     zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     ASSERT_OK(mapper_.CreateAndMap(num_vmo_bytes, map_options, nullptr, &vmo_));
-    ASSERT_OK(fs_->AttachVmo(vmo_, &vmoid_));
+    ASSERT_OK(fs_->BlockAttachVmo(vmo_, &vmoid_.GetReference(fs_.get())));
 
     *out_coll = std::make_unique<ZSTDCompressedBlockCollection>(
-        vmoid_, &mapper_, SpaceManager(), TransactionHandler(), NodeFinder(),
+        vmoid_.get(), &mapper_, SpaceManager(), TransactionHandler(), NodeFinder(),
         LookupInode(blob_info), num_merkle_blocks);
   }
 
@@ -120,7 +120,7 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::vmo vmo_;
   fzl::VmoMapper mapper_;
-  vmoid_t vmoid_;
+  storage::OwnedVmoid vmoid_;
 };
 
 TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobRead) {

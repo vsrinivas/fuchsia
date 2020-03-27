@@ -73,14 +73,14 @@ void BadSetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector, void* da
     ASSERT_OK(zx::vmo::create(count, 0, &buffer));
     ASSERT_OK(buffer.write(data, 0, count));
 
-    fuchsia_hardware_block_VmoId id;
-    ASSERT_OK(temp->BlockAttachVmo(buffer, &id));
+    storage::OwnedVmoid vmoid;
+    ASSERT_OK(temp->BlockAttachVmo(buffer, &vmoid.GetReference(temp.get())));
 
     std::vector<block_fifo_request_t> reqs = {{
         .opcode = BLOCKIO_WRITE,
         .reqid = 0x0,
         .group = 0,
-        .vmoid = id.id,
+        .vmoid = vmoid.get(),
         .length = static_cast<uint32_t>(count / kBlockSize),
         .vmo_offset = 0,
         .dev_offset = 0,

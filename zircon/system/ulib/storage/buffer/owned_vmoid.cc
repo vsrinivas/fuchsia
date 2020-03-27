@@ -8,8 +8,6 @@
 #include <zircon/device/block.h>
 #include <zircon/status.h>
 
-#include <optional>
-
 #include "storage/buffer/vmoid_registry.h"
 
 namespace storage {
@@ -31,26 +29,23 @@ OwnedVmoid::~OwnedVmoid() {
 }
 
 zx_status_t OwnedVmoid::AttachVmo(const zx::vmo& vmo) {
-  vmoid_t vmoid;
   zx_status_t status;
-  if ((status = vmoid_registry_->AttachVmo(vmo, &vmoid)) != ZX_OK) {
+  if ((status = vmoid_registry_->BlockAttachVmo(vmo, &vmoid_)) != ZX_OK) {
     return status;
   }
-  vmoid_ = vmoid;
   return ZX_OK;
 }
 
 void OwnedVmoid::Reset() {
-  if (vmoid_) {
-    vmoid_registry_->DetachVmo(*vmoid_);
-    vmoid_ = std::nullopt;
+  if (vmoid_.IsAttached()) {
+    vmoid_registry_->BlockDetachVmo(std::move(vmoid_));
   }
 }
 
 void OwnedVmoid::MoveFrom(OwnedVmoid&& other) {
+  Reset();
   vmoid_registry_ = other.vmoid_registry_;
-  vmoid_ = other.vmoid_;
-  other.vmoid_ = std::nullopt;
+  vmoid_ = std::move(other.vmoid_);
 }
 
 }  // namespace storage

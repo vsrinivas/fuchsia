@@ -13,6 +13,7 @@
 #include <thread>
 
 #include <block-client/cpp/remote-block-device.h>
+#include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 
 namespace block_client {
@@ -176,15 +177,15 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
-  fuchsia_hardware_block_VmoId vmoid;
-  ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid));
-  ASSERT_EQ(kGoldenVmoid, vmoid.id);
+  storage::OwnedVmoid vmoid;
+  ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
+  ASSERT_EQ(kGoldenVmoid, vmoid.get());
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_READ;
   request.reqid = 1;
   request.group = 0;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = 1;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -205,6 +206,7 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   });
 
   ASSERT_OK(device->FifoTransaction(&request, 1));
+  vmoid.TakeId();
   server_thread.join();
 }
 

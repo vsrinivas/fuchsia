@@ -21,13 +21,13 @@ class MockVmoidRegistry : public VmoidRegistry {
   bool detached() const { return detached_; }
 
  private:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
-    *out = kGoldenVmoid;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, Vmoid* out) override {
+    *out = Vmoid(kGoldenVmoid);
     return ZX_OK;
   }
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final {
-    EXPECT_EQ(kGoldenVmoid, vmoid);
+  zx_status_t BlockDetachVmo(Vmoid vmoid) final {
+    EXPECT_EQ(kGoldenVmoid, vmoid.TakeId());
     EXPECT_FALSE(detached_);
     detached_ = true;
     return ZX_OK;
@@ -44,11 +44,11 @@ TEST(VmoBufferTest, EmptyTest) {
 
 TEST(VmoBufferTest, TestLabel) {
   class MockRegistry : public MockVmoidRegistry {
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final {
+    zx_status_t BlockAttachVmo(const zx::vmo& vmo, Vmoid* out) final {
       char name[ZX_MAX_NAME_LEN];
       EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
       EXPECT_STR_EQ(kGoldenLabel, name);
-      *out = kGoldenVmoid;
+      *out = Vmoid(kGoldenVmoid);
       return ZX_OK;
     }
   } registry;

@@ -54,7 +54,7 @@ class VmoBuffer final : public BlockBuffer {
 
   uint32_t BlockSize() const final { return block_size_; }
 
-  vmoid_t vmoid() const final { return vmoid_; }
+  vmoid_t vmoid() const final { return vmoid_.get(); }
 
   // Expected callers should access this object through the vmoid (registered
   // with a block device).
@@ -69,7 +69,7 @@ class VmoBuffer final : public BlockBuffer {
 
   VmoidRegistry* vmoid_registry_ = nullptr;
   fzl::OwnedVmoMapper mapper_;
-  vmoid_t vmoid_ = BLOCK_VMOID_INVALID;
+  Vmoid vmoid_;
   uint32_t block_size_ = 0;
   size_t capacity_ = 0;
 };

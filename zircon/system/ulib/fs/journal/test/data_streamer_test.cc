@@ -16,12 +16,15 @@ namespace {
 
 class MockVmoidRegistry : public storage::VmoidRegistry {
  private:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
-    *out = 5;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) override {
+    *out = storage::Vmoid(5);
     return ZX_OK;
   }
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final { return ZX_OK; }
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final {
+    EXPECT_EQ(5, vmoid.TakeId());
+    return ZX_OK;
+  }
 };
 
 class MockTransactionHandler final : public fs::TransactionHandler {

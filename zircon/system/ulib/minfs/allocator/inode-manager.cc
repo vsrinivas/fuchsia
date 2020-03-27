@@ -63,11 +63,13 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
     return status;
   }
 
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::Vmoid vmoid;
   status = device->BlockAttachVmo(mgr->inode_table_.vmo(), &vmoid);
   if (status != ZX_OK) {
     return status;
   }
+  vmoid_t id = vmoid.get();
+  builder->AddVmoid(storage::OwnedVmoid(std::move(vmoid), device));
 
   storage::Operation operation {
       .type = storage::OperationType::kRead,
@@ -76,7 +78,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
       .length = inoblks,
   };
 
-  UnownedBuffer buffer(vmoid.id);
+  UnownedBuffer buffer(id);
   builder->Add(operation, &buffer);
 
   *out = std::move(mgr);

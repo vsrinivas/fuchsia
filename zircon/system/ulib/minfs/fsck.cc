@@ -16,6 +16,9 @@
 #include <fs/journal/format.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
+#ifdef __Fuchsia__
+#include <storage/buffer/owned_vmoid.h>
+#endif
 
 #include "lib/fit/string_view.h"
 #include "minfs-private.h"
@@ -775,9 +778,9 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
 #endif
 #ifdef __Fuchsia__
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   const size_t kVmoBlocks = 1;
-  zx_status_t status = CreateAndRegisterVmo(device, &vmo, kVmoBlocks, &vmoid);
+  zx_status_t status = CreateAndRegisterVmo(device, &vmo, kVmoBlocks, &vmoid.GetReference(device));
   if (status != ZX_OK) {
     return status;
   }
@@ -792,14 +795,14 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
   const uint32_t disk_blocks_per_fs_block =
       kMinfsBlockSize / transaction_handler->DeviceBlockSize();
   request[0].opcode = BLOCKIO_WRITE;
-  request[0].vmoid = vmoid.id;
+  request[0].vmoid = vmoid.get();
   request[0].group = transaction_handler->BlockGroupID();
   request[0].length = disk_blocks_per_fs_block;
   request[0].vmo_offset = 0;
   request[0].dev_offset = kSuperblockStart * disk_blocks_per_fs_block;
 
   request[1].opcode = BLOCKIO_WRITE;
-  request[1].vmoid = vmoid.id;
+  request[1].vmoid = vmoid.get();
   request[1].group = transaction_handler->BlockGroupID();
   request[1].length = disk_blocks_per_fs_block;
   request[1].vmo_offset = 0;
@@ -808,13 +811,7 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
   } else {
     request[1].dev_offset = kFvmSuperblockBackup * disk_blocks_per_fs_block;
   }
-  status = device->FifoTransaction(request, 2);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  request[0].opcode = BLOCKIO_CLOSE_VMO;
-  return (device->FifoTransaction(&request[0], 1));
+  return device->FifoTransaction(request, 2);
 #else
   zx_status_t status = transaction_handler->Writeblk(kSuperblockStart, info);
   if (status != ZX_OK) {
@@ -967,12 +964,13 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
   }
   fs::ReadTxn read_transaction(transaction_handler);
 #ifdef __Fuchsia__
-  fuchsia_hardware_block_VmoId map_vmoid;
-  status = device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(), &map_vmoid);
+  storage::OwnedVmoid map_vmoid;
+  status = device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(),
+                                  &map_vmoid.GetReference(device));
   if (status != ZX_OK) {
     return status;
   }
-  read_transaction.Enqueue(map_vmoid.id, 0, start_block, num_blocks);
+  read_transaction.Enqueue(map_vmoid.get(), 0, start_block, num_blocks);
 #else
   read_transaction.Enqueue(bitmap.StorageUnsafe()->GetData(), 0, start_block, num_blocks);
 #endif

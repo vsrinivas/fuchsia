@@ -24,13 +24,13 @@ class MockVmoidRegistry : public VmoidRegistry {
   const zx::vmo& get_vmo() const { return vmo_; }
 
  private:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
-    *out = default_vmoid();
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, Vmoid* out) override {
+    *out = Vmoid(default_vmoid());
     EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_));
     return ZX_OK;
   }
-  zx_status_t DetachVmo(vmoid_t vmoid) override {
-    EXPECT_EQ(default_vmoid(), vmoid);
+  zx_status_t BlockDetachVmo(Vmoid vmoid) override {
+    EXPECT_EQ(default_vmoid(), vmoid.TakeId());
     vmo_.reset();
     return ZX_OK;
   }

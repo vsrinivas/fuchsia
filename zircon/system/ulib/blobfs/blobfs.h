@@ -115,8 +115,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Allows viewing and controlling the size of the underlying volume.
 
   const Superblock& Info() const final { return info_; }
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
-  zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
   zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
 
@@ -277,7 +277,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   std::unique_ptr<Allocator> allocator_;
 
   fzl::ResizeableVmoMapper info_mapping_;
-  vmoid_t info_vmoid_ = {};
+  storage::Vmoid info_vmoid_;
 
   // A unique identifier for this filesystem instance.
   zx::event fs_id_;
@@ -289,7 +289,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   BlobfsMetrics metrics_ = {};
 
-  vmoid_t transfer_vmoid_ = {};
+  storage::Vmoid transfer_vmoid_;
   bool paging_enabled_ = false;
 
   // Compression is enabled by default. Use the kernel commandline "blobfs.uncompressed"

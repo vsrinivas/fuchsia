@@ -8,6 +8,7 @@
 
 #include <fbl/auto_call.h>
 #include <safemath/checked_math.h>
+#include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 
 using id_allocator::IdAllocator;
@@ -16,23 +17,10 @@ namespace blobfs {
 
 namespace {
 
-void DetachVmo(BlockDevice* device, vmoid_t id) {
-  block_fifo_request_t request;
-  request.opcode = BLOCKIO_CLOSE_VMO;
-  request.vmoid = id;
-  request.length = 0;
-  request.vmo_offset = 0;
-  request.dev_offset = 0;
-
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-}
-
-void AttachVmo(BlockDevice* device, zx::vmo* vmo, vmoid_t* out_id) {
-  fuchsia_hardware_block_VmoId vmoid;
-
-  ASSERT_OK(device->BlockAttachVmo(*vmo, &vmoid));
-
-  *out_id = vmoid.id;
+storage::OwnedVmoid AttachVmo(BlockDevice* device, zx::vmo* vmo) {
+  storage::Vmoid vmoid;
+  EXPECT_OK(device->BlockAttachVmo(*vmo, &vmoid));
+  return storage::OwnedVmoid(std::move(vmoid), device);
 }
 
 // Verify that the |size| and |offset| are |device| block size aligned.
@@ -79,7 +67,7 @@ zx_status_t MockTransactionManager::Transaction(block_fifo_request_t* requests, 
   return ZX_OK;
 }
 
-zx_status_t MockTransactionManager::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
+zx_status_t MockTransactionManager::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   fbl::AutoLock lock(&lock_);
   zx::vmo duplicate_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_vmo);
@@ -87,20 +75,21 @@ zx_status_t MockTransactionManager::AttachVmo(const zx::vmo& vmo, vmoid_t* out) 
     return status;
   }
   attached_vmos_.push_back(std::move(duplicate_vmo));
-  *out = static_cast<uint16_t>(attached_vmos_.size());
-  if (*out == 0) {
+  *out = storage::Vmoid(static_cast<uint16_t>(attached_vmos_.size()));
+  if (out->get() == 0) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_OK;
 }
 
-zx_status_t MockTransactionManager::DetachVmo(vmoid_t vmoid) {
+zx_status_t MockTransactionManager::BlockDetachVmo(storage::Vmoid vmoid) {
   fbl::AutoLock lock(&lock_);
-  if (attached_vmos_.size() < vmoid) {
+  vmoid_t id = vmoid.TakeId();
+  if (attached_vmos_.size() < id) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  attached_vmos_[vmoid - 1].reset();
+  attached_vmos_[id - 1].reset();
   return ZX_OK;
 }
 
@@ -159,14 +148,11 @@ void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_o
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(size, 0, &vmo));
 
-  vmoid_t vmoid;
-  AttachVmo(device, &vmo, &vmoid);
-
-  auto cleanup = fbl::MakeAutoCall([device, vmoid]() { DetachVmo(device, vmoid); });
+  storage::OwnedVmoid vmoid = AttachVmo(device, &vmo);
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_READ;
-  request.vmoid = vmoid;
+  request.vmoid = vmoid.get();
   request.length = safemath::checked_cast<uint32_t>(size / block_size);
   request.vmo_offset = 0;
   request.dev_offset = safemath::checked_cast<uint32_t>(dev_offset / block_size);
@@ -182,13 +168,11 @@ void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_
   ASSERT_OK(zx::vmo::create(size, 0, &vmo));
   ASSERT_OK(vmo.write(buf, 0, size));
 
-  vmoid_t vmoid;
-  AttachVmo(device, &vmo, &vmoid);
-  auto cleanup = fbl::MakeAutoCall([device, vmoid]() { DetachVmo(device, vmoid); });
+  storage::OwnedVmoid vmoid = AttachVmo(device, &vmo);
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid;
+  request.vmoid = vmoid.get();
   request.length = safemath::checked_cast<uint32_t>(size / block_size);
   request.vmo_offset = 0;
   request.dev_offset = safemath::checked_cast<uint32_t>(dev_offset / block_size);

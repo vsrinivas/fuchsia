@@ -58,11 +58,11 @@ class MockTransactionHandler : public fs::TransactionHandler {
 };
 
 void CreateAndRegisterVmo(block_client::BlockDevice* device, size_t blocks, zx::vmo* vmo,
-                          fuchsia_hardware_block_VmoId* vmoid) {
+                          storage::OwnedVmoid* vmoid) {
   fuchsia_hardware_block_BlockInfo info = {};
   ASSERT_OK(device->BlockGetInfo(&info));
   ASSERT_OK(zx::vmo::create(blocks * info.block_size, 0, vmo));
-  ASSERT_OK(device->BlockAttachVmo(*vmo, vmoid));
+  ASSERT_OK(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)));
 }
 
 void FillSuperblockFields(Superblock* info) {
@@ -128,13 +128,13 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
 
   zx::vmo vmo;
   block_fifo_request_t request[2];
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(block, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize));
 
   // Write abm_block and ibm_block to disk.
-  FillWriteRequest(transaction_handler.get(), abm_block, ibm_block, vmoid.id, request);
+  FillWriteRequest(transaction_handler.get(), abm_block, ibm_block, vmoid.get(), request);
 
   ASSERT_OK(device.FifoTransaction(request, 2));
 
@@ -207,12 +207,12 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
 
-  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.id,
+  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.get(),
                    request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
@@ -251,11 +251,11 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
-  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.id,
+  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.get(),
                    request);
   ASSERT_OK(device.FifoTransaction(request, 2));
   // Try to correct the corrupted superblock.
@@ -287,11 +287,11 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   // Write corrupted superblock and backup to disk.
   block_fifo_request_t request[2];
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
-  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.id,
+  FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.get(),
                    request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
@@ -307,7 +307,7 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   // Write abm_block and ibm_block to disk.
   ASSERT_OK(vmo.write(block, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize));
-  FillWriteRequest(transaction_handler.get(), abm_block, ibm_block, vmoid.id, request);
+  FillWriteRequest(transaction_handler.get(), abm_block, ibm_block, vmoid.get(), request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
   // Try to correct the corrupted superblock.

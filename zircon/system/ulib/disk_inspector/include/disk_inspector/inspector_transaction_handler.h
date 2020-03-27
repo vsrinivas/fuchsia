@@ -38,8 +38,8 @@ class InspectorTransactionHandler : public fs::TransactionHandler, public storag
   block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
   // storage::VmoidRegistry interface:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
-  zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
  private:
   explicit InspectorTransactionHandler(std::unique_ptr<block_client::BlockDevice> device,

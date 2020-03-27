@@ -61,19 +61,13 @@ zx_status_t InspectorTransactionHandler::RunOperation(const storage::Operation& 
   return device_->FifoTransaction(&request, 1);
 }
 
-zx_status_t InspectorTransactionHandler::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
-  fuchsia_hardware_block_VmoId vmoid;
-  zx_status_t status = device_->BlockAttachVmo(vmo, &vmoid);
-  *out = vmoid.id;
+zx_status_t InspectorTransactionHandler::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
+  zx_status_t status = device_->BlockAttachVmo(vmo, out);
   return status;
 }
 
-zx_status_t InspectorTransactionHandler::DetachVmo(vmoid_t vmoid) {
-  block_fifo_request_t request = {};
-  request.group = BlockGroupID();
-  request.vmoid = vmoid;
-  request.opcode = BLOCKIO_CLOSE_VMO;
-  return device_->FifoTransaction(&request, 1);
+zx_status_t InspectorTransactionHandler::BlockDetachVmo(storage::Vmoid vmoid) {
+  return device_->BlockDetachVmo(std::move(vmoid));
 }
 
 }  // namespace disk_inspector

@@ -43,6 +43,7 @@ test("storage_buffer") {
     "owned_vmoid_test.cc",
     "ring_buffer_test.cc",
     "vmo_buffer_test.cc",
+    "vmoid_registry_test.cc",
   ]
   deps = [
     "//zircon/public/lib/buffer",

@@ -6,6 +6,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fvm/format.h>
+#include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 
 namespace block_client {
@@ -36,11 +37,11 @@ TEST(FakeBlockDeviceTest, NonEmptyDevice) {
 }
 
 void CreateAndRegisterVmo(BlockDevice* device, size_t blocks, zx::vmo* vmo,
-                          fuchsia_hardware_block_VmoId* vmoid) {
+                          storage::OwnedVmoid* vmoid) {
   fuchsia_hardware_block_BlockInfo info = {};
   ASSERT_OK(device->BlockGetInfo(&info));
   ASSERT_OK(zx::vmo::create(blocks * info.block_size, 0, vmo));
-  ASSERT_OK(device->BlockAttachVmo(*vmo, vmoid));
+  ASSERT_OK(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)));
 }
 
 TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
@@ -49,7 +50,7 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
 
   const size_t kVmoBlocks = 4;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   // Write some data to the device.
@@ -58,7 +59,7 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   ASSERT_OK(vmo.write(src, 0, sizeof(src)));
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -78,7 +79,7 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
 
   // Read data from the fake back into the registered VMO.
   request.opcode = BLOCKIO_READ;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -98,12 +99,12 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_FLUSH;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = 0;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -123,7 +124,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   char src[kVmoBlocks * kBlockSizeDefault];
@@ -132,13 +133,13 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
 
   block_fifo_request_t requests[2];
   requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].vmoid = vmoid.id;
+  requests[0].vmoid = vmoid.get();
   requests[0].length = kVmoBlocks;
   requests[0].vmo_offset = 0;
   requests[0].dev_offset = 0;
 
   requests[1].opcode = BLOCKIO_FLUSH;
-  requests[1].vmoid = vmoid.id;
+  requests[1].vmoid = vmoid.get();
   requests[1].length = 0;
   requests[1].vmo_offset = 0;
   requests[1].dev_offset = 0;
@@ -151,7 +152,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_READ;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -167,7 +168,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   char src[kVmoBlocks * kBlockSizeDefault];
@@ -176,13 +177,13 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
 
   block_fifo_request_t requests[2];
   requests[0].opcode = BLOCKIO_FLUSH;
-  requests[0].vmoid = vmoid.id;
+  requests[0].vmoid = vmoid.get();
   requests[0].length = 0;
   requests[0].vmo_offset = 0;
   requests[0].dev_offset = 0;
 
   requests[1].opcode = BLOCKIO_WRITE;
-  requests[1].vmoid = vmoid.id;
+  requests[1].vmoid = vmoid.get();
   requests[1].length = kVmoBlocks;
   requests[1].vmo_offset = 0;
   requests[1].dev_offset = 0;
@@ -196,7 +197,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_READ;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -211,19 +212,20 @@ TEST(FakeBlockDeviceTest, FifoTransactionClose) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+  vmoid_t id = vmoid.TakeId();
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_CLOSE_VMO;
-  request.vmoid = vmoid.id;
+  request.vmoid = id;
   request.length = 0;
   request.vmo_offset = 0;
   request.dev_offset = 0;
 
-  EXPECT_TRUE(fake_device->IsRegistered(vmoid.id));
+  EXPECT_TRUE(fake_device->IsRegistered(id));
   EXPECT_OK(device->FifoTransaction(&request, 1));
-  EXPECT_FALSE(fake_device->IsRegistered(vmoid.id));
+  EXPECT_FALSE(fake_device->IsRegistered(id));
 }
 
 TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
@@ -232,12 +234,12 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_TRIM;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -256,7 +258,7 @@ TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
 
   const size_t kVmoBlocks = 4;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   // Write some data to the device.
@@ -265,7 +267,7 @@ TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
   ASSERT_OK(vmo.write(src, 0, sizeof(src)));
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE | BLOCKIO_BARRIER_BEFORE;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -288,7 +290,7 @@ TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
 
   // Read data from the fake back into the registered VMO.
   request.opcode = BLOCKIO_READ | BLOCKIO_BARRIER_AFTER;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -311,12 +313,12 @@ TEST(FakeBlockDeviceTest, ClearStats) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_FLUSH;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = 0;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -341,7 +343,7 @@ TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
   const size_t kVmoBlocks = 4;
   const size_t kLimitBlocks = 2;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   // Pre-fill the source buffer.
@@ -353,7 +355,7 @@ TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -394,12 +396,12 @@ TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
@@ -423,14 +425,14 @@ TEST(FakeBlockDeviceTest, BlockLimitFailsMergedTransactions) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   constexpr size_t kRequests = 3;
   block_fifo_request_t requests[kRequests];
   for (size_t i = 0; i < kRequests; i++) {
     requests[i].opcode = BLOCKIO_WRITE;
-    requests[i].vmoid = vmoid.id;
+    requests[i].vmoid = vmoid.get();
     requests[i].length = kVmoBlocks;
     requests[i].vmo_offset = 0;
     requests[i].dev_offset = 0;
@@ -451,12 +453,12 @@ TEST(FakeBlockDeviceTest, BlockLimitResetsDevice) {
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::OwnedVmoid vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid.id;
+  request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;

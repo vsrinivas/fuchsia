@@ -21,15 +21,15 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   bool attached() const { return attached_; }
 
  private:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final {
     EXPECT_FALSE(attached_);
-    *out = kVmoid;
+    *out = storage::Vmoid(kVmoid);
     attached_ = true;
     return ZX_OK;
   }
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final {
-    EXPECT_EQ(kVmoid, vmoid);
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final {
+    EXPECT_EQ(kVmoid, vmoid.TakeId());
     EXPECT_TRUE(attached_);
     attached_ = false;
     return ZX_OK;
@@ -42,7 +42,7 @@ TEST(OwnedVmoidTest, Uninitialized) {
   MockVmoidRegistry registry;
   OwnedVmoid vmoid(&registry);
 
-  EXPECT_FALSE(vmoid.attached());
+  EXPECT_FALSE(vmoid.IsAttached());
 }
 
 TEST(OwnedVmoidTest, AttachDetach) {
@@ -51,12 +51,12 @@ TEST(OwnedVmoidTest, AttachDetach) {
 
   zx::vmo vmo;
   EXPECT_OK(vmoid.AttachVmo(vmo));
-  EXPECT_TRUE(vmoid.attached());
+  EXPECT_TRUE(vmoid.IsAttached());
   EXPECT_TRUE(registry.attached());
-  EXPECT_EQ(vmoid.vmoid(), kVmoid);
+  EXPECT_EQ(vmoid.get(), kVmoid);
 
   vmoid.Reset();
-  EXPECT_FALSE(vmoid.attached());
+  EXPECT_FALSE(vmoid.IsAttached());
   EXPECT_FALSE(registry.attached());
 }
 
@@ -78,8 +78,8 @@ TEST(OwnedVmoidTest, Move) {
     // Move before attach
     OwnedVmoid vmoid(&registry);
     OwnedVmoid vmoid2 = std::move(vmoid);
-    EXPECT_FALSE(vmoid.attached());
-    EXPECT_FALSE(vmoid2.attached());
+    EXPECT_FALSE(vmoid.IsAttached());
+    EXPECT_FALSE(vmoid2.IsAttached());
   }
   {
     // Move after attach
@@ -89,10 +89,10 @@ TEST(OwnedVmoidTest, Move) {
     ASSERT_OK(vmoid.AttachVmo(vmo));
     OwnedVmoid vmoid2 = std::move(vmoid);
 
-    EXPECT_FALSE(vmoid.attached());
-    EXPECT_TRUE(vmoid2.attached());
+    EXPECT_FALSE(vmoid.IsAttached());
+    EXPECT_TRUE(vmoid2.IsAttached());
     EXPECT_TRUE(registry.attached());
-    EXPECT_EQ(vmoid2.vmoid(), kVmoid);
+    EXPECT_EQ(vmoid2.get(), kVmoid);
   }
   {
     // Move after attach/detach
@@ -102,8 +102,8 @@ TEST(OwnedVmoidTest, Move) {
     vmoid.Reset();
     OwnedVmoid vmoid2 = std::move(vmoid);
 
-    EXPECT_FALSE(vmoid.attached());
-    EXPECT_FALSE(vmoid2.attached());
+    EXPECT_FALSE(vmoid.IsAttached());
+    EXPECT_FALSE(vmoid2.IsAttached());
     EXPECT_FALSE(registry.attached());
   }
 }

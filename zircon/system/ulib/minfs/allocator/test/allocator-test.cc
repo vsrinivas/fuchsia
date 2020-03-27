@@ -27,7 +27,7 @@ class FakeStorage : public AllocatorStorage {
   ~FakeStorage() {}
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid) final {
+  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final {
     return ZX_OK;
   }
 #endif
@@ -66,7 +66,8 @@ void CreateAllocator(std::unique_ptr<Allocator>* out) {
   // Give it 1 more than total_elements since element 0 will be unavailable.
   std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements + 1));
   std::unique_ptr<Allocator> allocator;
-  ASSERT_OK(Allocator::Create(nullptr, std::move(storage), &allocator));
+  fs::BufferedOperationsBuilder builder(nullptr);
+  ASSERT_OK(Allocator::Create(&builder, std::move(storage), &allocator));
 
   // Allocate the '0' index (the Allocator assumes that this is reserved).
   AllocatorReservation zero_reservation;

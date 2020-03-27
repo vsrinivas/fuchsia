@@ -13,18 +13,21 @@ zx_library("block-client") {
     "block-client/cpp/remote-block-device.h",
   ]
   sources = [
+    "block-device.cc",
     "block-group-registry.cc",
     "client.c",
     "client.cc",
     "remote-block-device.cc",
   ]
   public_deps = [
-    # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
-    "$zx/system/ulib/zx:headers",
     # <block-client/cpp/fake-device.h> has #include <range/range.h>.
+    # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
     "$zx/system/ulib/range:headers",
+
     # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
     "$zx/system/ulib/storage-metrics:headers",
+    "$zx/system/ulib/storage/buffer:headers",
+    "$zx/system/ulib/zx:headers",
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
     "$zx/system/fidl/fuchsia-device:c.headers",
@@ -64,6 +67,7 @@ zx_library("fake-device") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/range",
     "$zx/system/ulib/storage-metrics",
+    "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/zx",
   ]
   deps = [
@@ -73,6 +77,7 @@ zx_library("fake-device") {
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/range",
     "$zx/system/ulib/storage-metrics",
+    "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/zxtest",
   ]
 }

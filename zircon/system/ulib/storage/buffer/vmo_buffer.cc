@@ -16,7 +16,7 @@ namespace storage {
 VmoBuffer::VmoBuffer(VmoBuffer&& other)
     : vmoid_registry_(std::move(other.vmoid_registry_)),
       mapper_(std::move(other.mapper_)),
-      vmoid_(other.vmoid_),
+      vmoid_(std::move(other.vmoid_)),
       block_size_(other.block_size_),
       capacity_(other.capacity_) {
   other.Reset();
@@ -26,7 +26,7 @@ VmoBuffer& VmoBuffer::operator=(VmoBuffer&& other) {
   if (&other != this) {
     vmoid_registry_ = other.vmoid_registry_;
     mapper_ = std::move(other.mapper_);
-    vmoid_ = other.vmoid_;
+    vmoid_ = std::move(other.vmoid_);
     block_size_ = other.block_size_;
     capacity_ = other.capacity_;
 
@@ -36,21 +36,23 @@ VmoBuffer& VmoBuffer::operator=(VmoBuffer&& other) {
 }
 
 VmoBuffer::~VmoBuffer() {
-  if (vmoid_ != BLOCK_VMOID_INVALID) {
-    vmoid_registry_->DetachVmo(vmoid_);
+  if (vmoid_.IsAttached()) {
+    vmoid_registry_->BlockDetachVmo(std::move(vmoid_));
   }
 }
 
 void VmoBuffer::Reset() {
+  if (vmoid_.IsAttached()) {
+    vmoid_registry_->BlockDetachVmo(std::move(vmoid_));
+  }
   vmoid_registry_ = nullptr;
   mapper_.Reset();
-  vmoid_ = BLOCK_VMOID_INVALID;
   capacity_ = 0;
 }
 
-zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+zx_status_t VmoBuffer::Initialize(storage::VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
                                   const char* label) {
-  ZX_DEBUG_ASSERT(vmoid_ == BLOCK_VMOID_INVALID);
+  ZX_DEBUG_ASSERT(!vmoid_.IsAttached());
   fzl::OwnedVmoMapper mapper;
   zx_status_t status = mapper.CreateAndMap(blocks * block_size, label);
   if (status != ZX_OK) {
@@ -58,8 +60,7 @@ zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, 
     return status;
   }
 
-  vmoid_t vmoid;
-  status = vmoid_registry->AttachVmo(mapper.vmo(), &vmoid);
+  status = vmoid_registry->BlockAttachVmo(mapper.vmo(), &vmoid_);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("VmoBuffer: Failed to attach vmo %s: %s\n", label, zx_status_get_string(status));
     return status;
@@ -67,7 +68,6 @@ zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, 
 
   vmoid_registry_ = vmoid_registry;
   mapper_ = std::move(mapper);
-  vmoid_ = vmoid;
   block_size_ = block_size;
   capacity_ = mapper_.size() / block_size;
   return ZX_OK;

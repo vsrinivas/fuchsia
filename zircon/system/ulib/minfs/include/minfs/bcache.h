@@ -85,8 +85,8 @@ class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
 
   // TODO(rvargas): Move this to BlockDevice.
   // VmoidRegistry interface:
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
-  zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
   ////////////////
   // Other methods.

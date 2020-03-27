@@ -7,6 +7,7 @@
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -36,7 +37,7 @@ class ProxyBlockDevice : public BlockDevice {
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
     return inner_->BlockGetInfo(out_info);
   }
-  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* out_vmoid) {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
     return inner_->BlockAttachVmo(vmo, out_vmoid);
   }
 
@@ -75,20 +76,20 @@ void MockBlockDevice::WriteBlock(uint64_t block_num, uint64_t fs_block_size, con
   ASSERT_OK(zx::vmo::create(fs_block_size, 0, &vmo));
   ASSERT_OK(vmo.write(data, 0, fs_block_size));
 
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::Vmoid vmoid;
   ASSERT_OK(BlockAttachVmo(vmo, &vmoid));
 
   block_fifo_request_t requests[2] = {};
 
   ASSERT_TRUE(fs_block_size % block_size_ == 0);
   requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].vmoid = vmoid.id;
+  requests[0].vmoid = vmoid.get();
   requests[0].length = static_cast<uint32_t>(fs_block_size / block_size_);
   requests[0].vmo_offset = 0;
   requests[0].dev_offset = block_num * fs_block_size / block_size_;
 
   requests[1].opcode = BLOCKIO_CLOSE_VMO;
-  requests[1].vmoid = vmoid.id;
+  requests[1].vmoid = vmoid.TakeId();
 
   ASSERT_OK(FifoTransaction(requests, fbl::count_of(requests)));
 }

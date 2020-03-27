@@ -52,7 +52,8 @@ void BlockingRingBufferImpl::Wake() {
 BlockingRingBuffer::BlockingRingBuffer(std::unique_ptr<RingBuffer> buffer)
     : buffer_(internal::BlockingRingBufferImpl(std::move(buffer))) {}
 
-zx_status_t BlockingRingBuffer::Create(VmoidRegistry* vmoid_registry, const size_t blocks,
+zx_status_t BlockingRingBuffer::Create(storage::VmoidRegistry* vmoid_registry,
+                                       const size_t blocks,
                                        uint32_t block_size, const char* label,
                                        std::unique_ptr<BlockingRingBuffer>* out) {
   std::unique_ptr<RingBuffer> buffer;

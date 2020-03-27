@@ -162,7 +162,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
     blk_t ibno;
     if ((ibno = iarray[i]) != 0) {
       fs_->ValidateBno(ibno);
-      read_transaction.Enqueue(vmoid_indirect_.id, offset + i, ibno + fs_->Info().dat_block, 1);
+      read_transaction.Enqueue(vmoid_indirect_.get(), offset + i, ibno + fs_->Info().dat_block, 1);
     }
   }
 
@@ -254,7 +254,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
     if ((bno = inode_.dnum[d]) != 0) {
       fs_->ValidateBno(bno);
       dnum_count++;
-      read_transaction.Enqueue(vmoid_.id, d, bno + fs_->Info().dat_block, 1);
+      read_transaction.Enqueue(vmoid_.get(), d, bno + fs_->Info().dat_block, 1);
     }
   }
 
@@ -278,7 +278,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
         if ((bno = ientry[j]) != 0) {
           fs_->ValidateBno(bno);
           uint32_t n = kMinfsDirect + i * kMinfsDirectPerIndirect + j;
-          read_transaction.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
+          read_transaction.Enqueue(vmoid_.get(), n, bno + fs_->Info().dat_block, 1);
         }
       }
     }
@@ -320,7 +320,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
               fs_->ValidateBno(bno);
               uint32_t n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
                            j * kMinfsDirectPerIndirect + k;
-              read_transaction.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
+              read_transaction.Enqueue(vmoid_.get(), n, bno + fs_->Info().dat_block, 1);
             }
           }
         }
@@ -774,15 +774,15 @@ VnodeMinfs::~VnodeMinfs() {
   // so the underlying VMO may be released.
   size_t request_count = 0;
   block_fifo_request_t request[2];
-  if (vmo_.is_valid()) {
+  if (vmoid_.IsAttached()) {
     request[request_count].group = fs_->bc_->BlockGroupID();
-    request[request_count].vmoid = vmoid_.id;
+    request[request_count].vmoid = vmoid_.TakeId();
     request[request_count].opcode = BLOCKIO_CLOSE_VMO;
     request_count++;
   }
-  if (vmo_indirect_ != nullptr) {
+  if (vmoid_indirect_.IsAttached()) {
     request[request_count].group = fs_->bc_->BlockGroupID();
-    request[request_count].vmoid = vmoid_indirect_.id;
+    request[request_count].vmoid = vmoid_indirect_.TakeId();
     request[request_count].opcode = BLOCKIO_CLOSE_VMO;
     request_count++;
   }

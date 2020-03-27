@@ -22,13 +22,13 @@ zx_status_t FsBlockClient::Create(std::unique_ptr<BlockDevice> device,
     return status;
   }
 
-  fuchsia_hardware_block_VmoId vmoid;
+  storage::Vmoid vmoid;
   status = device->BlockAttachVmo(vmo, &vmoid);
   if (status != ZX_OK) {
     return status;
   }
 
-  out->reset(new FsBlockClient(std::move(device), block_info, std::move(vmo), vmoid));
+  out->reset(new FsBlockClient(std::move(device), block_info, std::move(vmo), std::move(vmoid)));
   return ZX_OK;
 }
 
@@ -39,7 +39,7 @@ uint64_t FsBlockClient::BlockCount() const {
 zx_status_t FsBlockClient::ReadBlock(uint64_t block, void* data) {
   block_fifo_request_t request = {};
   request.opcode = BLOCKIO_READ;
-  request.vmoid = vmoid_.id;
+  request.vmoid = vmoid_.get();
   request.length = static_cast<uint32_t>(fs_block_to_device_block(1));
   request.vmo_offset = 0;
   request.dev_offset = fs_block_to_device_block(block);
@@ -60,7 +60,7 @@ zx_status_t FsBlockClient::WriteBlock(uint64_t block, const void* data) {
 
   block_fifo_request_t request = {};
   request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid_.id;
+  request.vmoid = vmoid_.get();
   request.length = static_cast<uint32_t>(fs_block_to_device_block(1));
   request.vmo_offset = 0;
   request.dev_offset = fs_block_to_device_block(block);
@@ -70,8 +70,14 @@ zx_status_t FsBlockClient::WriteBlock(uint64_t block, const void* data) {
 
 FsBlockClient::FsBlockClient(std::unique_ptr<BlockDevice> device,
                              fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo,
-                             fuchsia_hardware_block_VmoId vmoid)
-    : device_(std::move(device)), block_info_(block_info), vmo_(std::move(vmo)), vmoid_(vmoid) {}
+                             storage::Vmoid vmoid)
+    : device_(std::move(device)), block_info_(block_info), vmo_(std::move(vmo)),
+      vmoid_(std::move(vmoid)) {}
+
+FsBlockClient::~FsBlockClient() {
+  zx_status_t status = device_->BlockDetachVmo(std::move(vmoid_));
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+}
 
 uint64_t FsBlockClient::device_blocks_per_blobfs_block() const {
   return blobfs::kBlobfsBlockSize / block_info_.block_size;

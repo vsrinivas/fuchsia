@@ -12,14 +12,13 @@
 #include <memory>
 
 #include <block-client/cpp/client.h>
+#include <storage/buffer/vmoid_registry.h>
 
 namespace block_client {
 
 // An interface which virtualizes the connection to the underlying block device.
-class BlockDevice {
+class BlockDevice : public storage::VmoidRegistry {
  public:
-  virtual ~BlockDevice() = default;
-
   // TODO(ZX-4128): Deprecate this interface. Favor reading over the FIFO
   // protocol instead.
   virtual zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const = 0;
@@ -32,8 +31,9 @@ class BlockDevice {
 
   // Block IPC.
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
-  virtual zx_status_t BlockAttachVmo(const zx::vmo& vmo,
-                                     fuchsia_hardware_block_VmoId* out_vmoid) = 0;
+
+  // A default implementation is provided that should work in most if not all cases.
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) override;
 
   // Volume IPC.
   //

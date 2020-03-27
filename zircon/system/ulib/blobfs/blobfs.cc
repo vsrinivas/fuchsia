@@ -47,16 +47,16 @@
 #include "compression/compressor.h"
 #include "iterator/block-iterator.h"
 
-using block_client::RemoteBlockDevice;
-using digest::Digest;
-using fs::Journal;
-using fs::JournalSuperblock;
-using id_allocator::IdAllocator;
-using storage::BlockingRingBuffer;
-using storage::VmoidRegistry;
-
 namespace blobfs {
 namespace {
+
+using ::block_client::RemoteBlockDevice;
+using ::digest::Digest;
+using ::fs::Journal;
+using ::fs::JournalSuperblock;
+using ::id_allocator::IdAllocator;
+using ::storage::BlockingRingBuffer;
+using ::storage::VmoidRegistry;
 
 // Writeback enabled, journaling enabled.
 zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, VmoidRegistry* registry,
@@ -263,7 +263,7 @@ zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
     return status;
-  } else if ((status = fs->AttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
+  } else if ((status = fs->BlockAttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to attach info vmo: %d\n", status);
     return status;
   } else if ((status = fs->CreateFsId()) != ZX_OK) {
@@ -528,24 +528,17 @@ zx_status_t Blobfs::RunOperation(const storage::Operation& operation,
 
 groupid_t Blobfs::BlockGroupID() { return group_registry_.GroupID(); }
 
-zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
-  fuchsia_hardware_block_VmoId vmoid;
-  zx_status_t status = Device()->BlockAttachVmo(vmo, &vmoid);
+zx_status_t Blobfs::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
+  zx_status_t status = Device()->BlockAttachVmo(vmo, out);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach blob VMO: %s\n", zx_status_get_string(status));
     return status;
   }
-
-  *out = vmoid.id;
   return ZX_OK;
 }
 
-zx_status_t Blobfs::DetachVmo(vmoid_t vmoid) {
-  block_fifo_request_t request;
-  request.group = BlockGroupID();
-  request.vmoid = vmoid;
-  request.opcode = BLOCKIO_CLOSE_VMO;
-  return Transaction(&request, 1);
+zx_status_t Blobfs::BlockDetachVmo(storage::Vmoid vmoid) {
+  return Device()->BlockDetachVmo(std::move(vmoid));
 }
 
 zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
@@ -733,6 +726,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   sync_txn.EnqueueFlush();
   sync_txn.Transact();
 
+  BlockDetachVmo(std::move(info_vmoid_));
+  BlockDetachVmo(std::move(transfer_vmoid_));
+
   return std::move(block_device_);
 }
 
@@ -824,7 +820,7 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
 Journal* Blobfs::journal() { return journal_.get(); }
 
 zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
-  return AttachVmo(transfer_vmo, &transfer_vmoid_);
+  return BlockAttachVmo(transfer_vmo, &transfer_vmoid_);
 }
 
 zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
@@ -848,7 +844,7 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
   const uint64_t data_start = DataStartBlock(Info());
   status = StreamBlocks(
       &block_iter, block_count, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(transfer_vmoid_, vmo_offset - start_block, dev_offset + data_start, length);
+        txn.Enqueue(transfer_vmoid_.get(), vmo_offset - start_block, dev_offset + data_start, length);
         return ZX_OK;
       });
   if (status != ZX_OK) {

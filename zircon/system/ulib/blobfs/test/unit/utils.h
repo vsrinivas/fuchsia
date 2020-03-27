@@ -71,9 +71,9 @@ class MockTransactionManager : public TransactionManager {
 
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
 
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
   BlobfsMetrics* Metrics() final { return &metrics_; }
 
@@ -100,8 +100,8 @@ class MockSpaceManager : public SpaceManager {
   const Superblock& Info() const final { return superblock_; }
   zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t DetachVmo(vmoid_t vmoid) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final { return ZX_ERR_NOT_SUPPORTED; }
 
  private:
   Superblock superblock_{};

@@ -91,7 +91,7 @@ enum class BufferType {
 // for buffer generation and verification.
 class MockVmoidRegistry : public storage::VmoidRegistry {
  public:
-  // Sets the next Vmoid which will be allocated when "AttachVmo" is invoked.
+  // Sets the next Vmoid which will be allocated when "BlockAttachVmo" is invoked.
   void SetNextVmoid(vmoid_t vmoid) { next_vmoid_ = vmoid; }
 
   // Initializes a storage::VmoBuffer with |length| blocks, pre-allocated to deterministic data.
@@ -126,9 +126,12 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
 
   // storage::VmoidRegistry interface:
 
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final { return ZX_OK; }
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final {
+    [[maybe_unused]] vmoid_t id = vmoid.TakeId();
+    return ZX_OK;
+  }
 
  private:
   // Using the disk-based journal and info buffers attached to the registry, parse their contents as
@@ -162,7 +165,7 @@ void MockVmoidRegistry::VerifyReplay(
   }
 }
 
-zx_status_t MockVmoidRegistry::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
+zx_status_t MockVmoidRegistry::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   switch (next_vmoid_) {
     case kJournalVmoid:
       EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.journal_vmo));
@@ -174,7 +177,7 @@ zx_status_t MockVmoidRegistry::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
       EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.info_vmo));
       break;
   }
-  *out = next_vmoid_;
+  *out = storage::Vmoid(next_vmoid_);
   return ZX_OK;
 }
 

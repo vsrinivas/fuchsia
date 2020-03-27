@@ -53,8 +53,8 @@ class FuzzedVmoidRegistry final : public storage::VmoidRegistry {
   void SetNextVmoid(ReservedVmoid vmoid) { SetNextVmoid(static_cast<vmoid_t>(vmoid)); }
 
   // storage::VmoidRegistry interface
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
-  zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
  private:
   vmoid_t next_vmoid_ = BLOCK_VMOID_INVALID;

@@ -16,6 +16,7 @@
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
+#include <storage/buffer/owned_vmoid.h>
 #endif
 
 #include "metadata.h"
@@ -33,7 +34,7 @@ class AllocatorStorage {
   virtual ~AllocatorStorage() {}
 
 #ifdef __Fuchsia__
-  virtual zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid) = 0;
+  virtual zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) = 0;
 #endif
 
   // Loads data from disk into |data| using |builder|.
@@ -91,7 +92,7 @@ class PersistentStorage : public AllocatorStorage {
   ~PersistentStorage() {}
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid);
+  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) override;
 #endif
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final;

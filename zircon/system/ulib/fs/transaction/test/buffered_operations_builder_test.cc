@@ -33,13 +33,13 @@ class MockVmoidRegistry : public VmoidRegistry {
  public:
   MockVmoidRegistry(vmoid_t vmoid = kVmoid1) : vmoid_(vmoid) {}
 
-  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final {
-    *out = vmoid_;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final {
+    *out = storage::Vmoid(vmoid_);
     return ZX_OK;
   }
 
-  zx_status_t DetachVmo(vmoid_t vmoid) final {
-    EXPECT_EQ(vmoid_, vmoid);
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final {
+    EXPECT_EQ(vmoid_, vmoid.TakeId());
     return ZX_OK;
   }
 

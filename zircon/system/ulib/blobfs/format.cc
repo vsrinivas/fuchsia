@@ -14,6 +14,7 @@
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
+#include <storage/buffer/owned_vmoid.h>
 
 namespace blobfs {
 namespace {
@@ -121,8 +122,8 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
     return status;
   }
 
-  fuchsia_hardware_block_VmoId vmoid;
-  status = device->BlockAttachVmo(vmo, &vmoid);
+  storage::OwnedVmoid vmoid;
+  status = device->BlockAttachVmo(vmo, &vmoid.GetReference(device));
   if (status != ZX_OK) {
     return status;
   }
@@ -176,25 +177,25 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
 
   block_fifo_request_t requests[4] = {};
   requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].vmoid = vmoid.id;
+  requests[0].vmoid = vmoid.get();
   requests[0].length = static_cast<uint32_t>(FsToDeviceBlocks(superblock_blocks));
   requests[0].vmo_offset = FsToDeviceBlocks(0);
   requests[0].dev_offset = FsToDeviceBlocks(0);
 
   requests[1].opcode = BLOCKIO_WRITE;
-  requests[1].vmoid = vmoid.id;
+  requests[1].vmoid = vmoid.get();
   requests[1].length = static_cast<uint32_t>(FsToDeviceBlocks(blockmap_blocks));
   requests[1].vmo_offset = FsToDeviceBlocks(superblock_blocks);
   requests[1].dev_offset = FsToDeviceBlocks(BlockMapStartBlock(superblock));
 
   requests[2].opcode = BLOCKIO_WRITE;
-  requests[2].vmoid = vmoid.id;
+  requests[2].vmoid = vmoid.get();
   requests[2].length = static_cast<uint32_t>(FsToDeviceBlocks(nodemap_blocks));
   requests[2].vmo_offset = FsToDeviceBlocks(superblock_blocks + blockmap_blocks);
   requests[2].dev_offset = FsToDeviceBlocks(NodeMapStartBlock(superblock));
 
   requests[3].opcode = BLOCKIO_WRITE;
-  requests[3].vmoid = vmoid.id;
+  requests[3].vmoid = vmoid.get();
   requests[3].length = static_cast<uint32_t>(FsToDeviceBlocks(journal_blocks));
   requests[3].vmo_offset = FsToDeviceBlocks(superblock_blocks + blockmap_blocks + nodemap_blocks);
   requests[3].dev_offset = FsToDeviceBlocks(JournalStartBlock(superblock));

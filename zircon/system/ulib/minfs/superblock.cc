@@ -41,10 +41,6 @@ zx_status_t SuperblockManager::Create(block_client::BlockDevice* device, const S
     return status;
   }
 
-  fuchsia_hardware_block_VmoId info_vmoid;
-  if ((status = device->BlockAttachVmo(mapper.vmo(), &info_vmoid)) != ZX_OK) {
-    return status;
-  }
   memcpy(mapper.start(), info, sizeof(Superblock));
 
   auto sb = std::unique_ptr<SuperblockManager>(new SuperblockManager(info, std::move(mapper)));
