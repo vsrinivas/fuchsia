@@ -891,12 +891,11 @@ void vmx_exit(VmxState* vmx_state) {
 }
 
 cpu_mask_t Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-  bool signaled = false;
-  local_apic_state_.interrupt_tracker.Interrupt(vector, type, &signaled);
+  bool signaled = local_apic_state_.interrupt_tracker.Interrupt(vector, type);
   if (signaled || !running_.load()) {
     return 0;
   }
-  return cpu_num_to_mask(hypervisor::cpu_of(vpid_));
+  return cpu_num_to_mask(thread_->LastCpu());
 }
 
 void Vcpu::VirtualInterrupt(uint32_t vector) {

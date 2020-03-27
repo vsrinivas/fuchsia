@@ -138,17 +138,14 @@ class InterruptTracker {
   }
 
   // Tracks the given interrupt, and signals any waiters.
-  void Interrupt(uint32_t vector, InterruptType type, bool* signaled) {
+  bool Interrupt(uint32_t vector, InterruptType type) {
     Track(vector, type);
-    int threads_unblocked = event_signal(&event_, true);
-    if (signaled != nullptr) {
-      *signaled = threads_unblocked > 0;
-    }
+    return event_signal(&event_, true) > 0;
   }
 
   // Tracks the given virtual interrupt, and signals any waiters.
-  void VirtualInterrupt(uint32_t vector) {
-    Interrupt(vector, hypervisor::InterruptType::VIRTUAL, nullptr);
+  bool VirtualInterrupt(uint32_t vector) {
+    return Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
   }
 
   // Waits for an interrupt.

@@ -281,12 +281,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 }
 
 cpu_mask_t Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-  bool signaled = false;
-  gich_state_.Interrupt(vector, type, &signaled);
+  bool signaled = gich_state_.Interrupt(vector, type);
   if (signaled || !running_.load()) {
     return 0;
   }
-  return cpu_num_to_mask(hypervisor::cpu_of(vpid_));
+  return cpu_num_to_mask(thread_->LastCpu());
 }
 
 void Vcpu::VirtualInterrupt(uint32_t vector) {

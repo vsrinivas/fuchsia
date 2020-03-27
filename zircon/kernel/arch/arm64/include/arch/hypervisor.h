@@ -74,8 +74,8 @@ class GichState {
     interrupt_tracker_.Track(vector, type);
   }
 
-  void Interrupt(uint32_t vector, hypervisor::InterruptType type, bool* signaled) {
-    interrupt_tracker_.Interrupt(vector, type, signaled);
+  bool Interrupt(uint32_t vector, hypervisor::InterruptType type) {
+    return interrupt_tracker_.Interrupt(vector, type);
   }
 
   zx_status_t Wait(zx_time_t deadline) { return interrupt_tracker_.Wait(deadline, nullptr); }
