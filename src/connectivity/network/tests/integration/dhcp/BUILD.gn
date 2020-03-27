@@ -5,6 +5,14 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("dhcp_integration_tests") {
+  testonly = true
+  public_deps = [
+    ":netemul_dhcp_tests",
+    "//src/connectivity/network/testing/netemul:guest",
+  ]
+}
+
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/dhcp_validity_test", "")
 }

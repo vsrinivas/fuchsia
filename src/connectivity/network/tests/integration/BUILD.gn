@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
   deps = [
-    "dhcp:netemul_dhcp_tests",
+    "dhcp:dhcp_integration_tests",
     "ip_forward:netemul-ip-forward-test",
   ]
 }
