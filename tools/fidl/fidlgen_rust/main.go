@@ -12,7 +12,8 @@ import (
 	"path"
 
 	"fidl/compiler/backend/types"
-	"fidl/compiler/rust_backend/codegen"
+
+	"fidlgen_rust/codegen"
 )
 
 type flagsDef struct {

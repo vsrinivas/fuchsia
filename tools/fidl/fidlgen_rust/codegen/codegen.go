@@ -11,8 +11,9 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/types"
-	"fidl/compiler/rust_backend/ir"
-	"fidl/compiler/rust_backend/templates"
+
+	"fidlgen_rust/ir"
+	"fidlgen_rust/templates"
 )
 
 type Generator struct {

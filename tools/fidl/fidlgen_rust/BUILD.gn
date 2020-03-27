@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("lib") {
+  name = "fidlgen_rust"
+}
+
+go_binary("fidlgen_rust") {
+  gopackage = "fidlgen_rust"
+
+  sdk_category = "partner"
+
+  deps = [
+    ":lib",
+    "//garnet/go/src/fidl:fidl_lib",
+  ]
+}
+
+go_test("fidlgen_rust_test") {
+  gopackages = [ "fidlgen_rust/codegen" ]
+
+  deps = [
+    ":lib",
+    "//garnet/go/src/fidl:fidl_lib",
+  ]
+}

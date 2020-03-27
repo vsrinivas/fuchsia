@@ -38,7 +38,7 @@ template("fidl_rust") {
 
     visibility = [ ":*" ]
 
-    tool = "//garnet/go/src/fidl:fidlgen_rust"
+    tool = "//tools/fidl/fidlgen_rust"
 
     inputs = [ json_representation ]
 

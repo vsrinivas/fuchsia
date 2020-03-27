@@ -11,7 +11,8 @@ import (
 	"testing"
 
 	"fidl/compiler/backend/typestest"
-	"fidl/compiler/rust_backend/ir"
+
+	"fidlgen_rust/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.
