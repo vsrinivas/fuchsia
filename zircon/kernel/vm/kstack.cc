@@ -108,16 +108,16 @@ static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* 
 zx_status_t KernelStack::Init() {
   DEBUG_ASSERT(size_ == 0);
   DEBUG_ASSERT(base_ == 0);
-  DEBUG_ASSERT(top_ == 0);
 
   fbl::RefPtr<VmMapping> mapping;
   zx_status_t status = allocate_vmar(kSafe, &mapping, &vmar_);
   if (status != ZX_OK) {
     return status;
   }
-  size_ = mapping->size();
+
   base_ = mapping->base();
-  top_ = mapping->base() + DEFAULT_STACK_SIZE;
+  size_ = mapping->size();
+  DEBUG_ASSERT(size_ == DEFAULT_STACK_SIZE);
 
 #if __has_feature(safe_stack)
   DEBUG_ASSERT(unsafe_base_ == 0);
@@ -152,7 +152,7 @@ void KernelStack::DumpInfo(int debug_level) {
 #endif
 }
 
-KernelStack::~KernelStack(){
+KernelStack::~KernelStack() {
   [[maybe_unused]] zx_status_t status = Teardown();
   DEBUG_ASSERT_MSG(status == ZX_OK, "KernelStack::Teardown returned %d\n", status);
 }
@@ -160,11 +160,10 @@ KernelStack::~KernelStack(){
 zx_status_t KernelStack::Teardown() {
   base_ = 0;
   size_ = 0;
-  top_ = 0;
 
   if (vmar_) {
     zx_status_t status = vmar_->Destroy();
-    if ( status != ZX_OK ) {
+    if (status != ZX_OK) {
       return status;
     }
     vmar_.reset();
@@ -173,7 +172,7 @@ zx_status_t KernelStack::Teardown() {
   unsafe_base_ = 0;
   if (unsafe_vmar_) {
     zx_status_t status = unsafe_vmar_->Destroy();
-    if (status != ZX_OK ) {
+    if (status != ZX_OK) {
       return status;
     }
     unsafe_vmar_.reset();
@@ -183,7 +182,7 @@ zx_status_t KernelStack::Teardown() {
   shadow_call_base_ = 0;
   if (shadow_call_vmar_) {
     zx_status_t status = shadow_call_vmar_->Destroy();
-    if (status != ZX_OK ) {
+    if (status != ZX_OK) {
       return status;
     }
     shadow_call_vmar_.reset();

@@ -110,7 +110,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   uintptr_t* shadow_call_sp = nullptr;
 #if __has_feature(safe_stack)
   DEBUG_ASSERT(stack->unsafe_base() != 0);
-  unsafe_sp = reinterpret_cast<void*>(stack->unsafe_base() + stack->size());
+  unsafe_sp = reinterpret_cast<void*>(stack->unsafe_top());
 #endif
 #if __has_feature(shadow_call_stack)
   DEBUG_ASSERT(stack->shadow_call_base() != 0);

@@ -58,9 +58,8 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // set the stack pointer
   t->arch_.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
-  vaddr_t unsafe_top = t->stack_.unsafe_base() + t->stack_.size();
-  DEBUG_ASSERT(IS_ALIGNED(unsafe_top, 16));
-  t->arch_.unsafe_sp = unsafe_top;
+  DEBUG_ASSERT(IS_ALIGNED(t->stack_.unsafe_top(), 16));
+  t->arch_.unsafe_sp = t->stack_.unsafe_top();
 #endif
 
   // initialize the fs, gs and kernel bases to 0.
@@ -140,8 +139,7 @@ __attribute__((target("fsgsbase"))) static void x86_segment_selector_save_state(
 }
 
 __NO_SAFESTACK
-__attribute__((target("fsgsbase"))) static void x86_segment_selector_restore_state(
-    Thread* thread) {
+__attribute__((target("fsgsbase"))) static void x86_segment_selector_restore_state(Thread* thread) {
   set_ds(0);
   set_es(0);
   set_fs(0);
@@ -208,9 +206,8 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) static void x86_segment_selec
         "wrgsbase %[new_gsbase]\n"
         "swapgs\n"
         "wrfsbase %[new_fsbase]\n"
-        : [ old_gsbase ] "=&r"(oldthread->arch_.gs_base)
-        :
-        [ new_gsbase ] "r"(newthread->arch_.gs_base), [ new_fsbase ] "r"(newthread->arch_.fs_base));
+        : [old_gsbase] "=&r"(oldthread->arch_.gs_base)
+        : [new_gsbase] "r"(newthread->arch_.gs_base), [new_fsbase] "r"(newthread->arch_.fs_base));
   } else {
     oldthread->arch_.gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
     write_msr(X86_MSR_IA32_FS_BASE, newthread->arch_.fs_base);
@@ -294,8 +291,7 @@ __NO_SAFESTACK void arch_restore_user_state(Thread* thread) {
   x86_extended_register_restore_state(thread->arch_.extended_register_state);
 }
 
-void arch_set_suspended_general_regs(struct Thread* thread, GeneralRegsSource source,
-                                     void* gregs) {
+void arch_set_suspended_general_regs(struct Thread* thread, GeneralRegsSource source, void* gregs) {
   DEBUG_ASSERT(thread->arch_.suspended_general_regs.gregs == nullptr);
   DEBUG_ASSERT(gregs != nullptr);
   DEBUG_ASSERT_MSG(source == GeneralRegsSource::Iframe || source == GeneralRegsSource::Syscall,

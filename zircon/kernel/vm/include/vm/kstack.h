@@ -41,19 +41,19 @@ class KernelStack {
 
   vaddr_t base() const { return base_; }
   size_t size() const { return size_; }
-  vaddr_t top() const { return top_; }
+  vaddr_t top() const { return base_ + size_; }
 #if __has_feature(safe_stack)
   vaddr_t unsafe_base() const { return unsafe_base_; }
+  vaddr_t unsafe_top() const { return unsafe_base_ + size_; }
 #endif
 #if __has_feature(shadow_call_stack)
   vaddr_t shadow_call_base() const { return shadow_call_base_; }
+  vaddr_t shadow_call_top() const { return shadow_call_base_ + size_; }
 #endif
 
  private:
   vaddr_t base_ = 0;
   size_t size_ = 0;
-  vaddr_t top_ = 0;
-
   fbl::RefPtr<VmAddressRegion> vmar_;
 
 #if __has_feature(safe_stack)

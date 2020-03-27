@@ -45,9 +45,8 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // set the stack pointer
   t->arch_.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
-  vaddr_t unsafe_top = t->stack_.unsafe_base() + t->stack_.size();
-  DEBUG_ASSERT(IS_ALIGNED(unsafe_top, 16));
-  t->arch_.unsafe_sp = unsafe_top;
+  DEBUG_ASSERT(IS_ALIGNED(t->stack_.unsafe_top(), 16));
+  t->arch_.unsafe_sp = t->stack_.unsafe_top();
 #endif
 #if __has_feature(shadow_call_stack)
   // The shadow call stack grows up.

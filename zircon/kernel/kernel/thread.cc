@@ -1480,7 +1480,7 @@ typedef struct thread_backtrace {
 
 static zx_status_t thread_read_stack(Thread* t, void* ptr, void* out, size_t sz) {
   if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack_.base()) ||
-      (reinterpret_cast<vaddr_t>(ptr) > (t->stack_.base() + t->stack_.size() - sizeof(void*)))) {
+      (reinterpret_cast<vaddr_t>(ptr) > (t->stack_.top() - sizeof(void*)))) {
     return ZX_ERR_NOT_FOUND;
   }
   memcpy(out, ptr, sz);
