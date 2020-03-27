@@ -779,7 +779,7 @@ const EnumType dee = EnumType.D;
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "unknown enum member");
+  ASSERT_STR_STR(errors[0].c_str(), "Unknown enum member");
   ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
 
   END_TEST;
@@ -806,7 +806,7 @@ const BitsType dee = BitsType.D;
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "unknown bits member");
+  ASSERT_STR_STR(errors[0].c_str(), "Unknown bits member");
   ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
 
   END_TEST;

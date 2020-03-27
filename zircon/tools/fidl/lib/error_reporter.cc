@@ -26,7 +26,7 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
 }
 
 std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
-                   std::string_view message, size_t squiggle_size = 0u) {
+                   std::string_view message, size_t squiggle_size) {
   if (!span) {
     std::string error = qualifier;
     error.append(": ");
@@ -68,6 +68,17 @@ std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
   error.push_back('\n');
   error.append(squiggle);
   return error;
+}
+
+// Forward decl
+std::string NameFlatConstant(const flat::Constant* constant);
+
+std::string Display(std::string s) {
+  return s;
+}
+
+std::string Display(flat::Constant* c) {
+  return NameFlatConstant(c);
 }
 
 void ErrorReporter::AddError(std::string formatted_message) {

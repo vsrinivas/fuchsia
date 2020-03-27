@@ -1558,6 +1558,11 @@ class Library {
   const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
+  template <typename ...Args>
+  bool Fail(const Error<Args...> err, const Args& ...args);
+  template <typename ...Args>
+  bool Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args);
+
   bool Fail(std::string_view message);
   bool Fail(const std::optional<SourceSpan>& span, std::string_view message);
   bool Fail(const Name& name, std::string_view message) { return Fail(name.span(), message); }

@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "fidl/attributes.h"
+#include "fidl/errors.h"
 #include "fidl/lexer.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"
@@ -1221,6 +1222,18 @@ bool Library::Fail(const std::optional<SourceSpan>& span, std::string_view messa
   return false;
 }
 
+template <typename ...Args>
+bool Library::Fail(const Error<Args...> err, const Args& ...args) {
+  error_reporter_->ReportError(err, args...);
+  return false;
+}
+
+template <typename ...Args>
+bool Library::Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
+  error_reporter_->ReportError(err, span, args...);
+  return false;
+}
+
 void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
                                           const raw::AttributeList* attributes) {
   if (attributes == nullptr)
@@ -1301,13 +1314,8 @@ std::optional<Name> Library::CompileCompoundIdentifier(
                                std::string(member_name.data()));
   }
 
-  std::string message("Unknown dependent library ");
-  message += NameLibrary(library_name);
-  message += " or reference to member of library ";
-  message += NameLibrary(member_library_name);
-  message += ". Did you require it with `using`?";
-  const auto& span = components[0]->span();
-  Fail(span, message);
+  Fail(ErrUnknownDependentLibrary, components[0]->span(),
+       NameLibrary(library_name), NameLibrary(member_library_name));
   return std::nullopt;
 }
 
@@ -1510,10 +1518,7 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   auto filename = using_directive->span().source_file().filename();
   if (!dependencies_.Register(using_directive->span(), filename, dep_library,
                               using_directive->maybe_alias)) {
-    std::string message("Library ");
-    message += NameLibrary(library_name);
-    message += " already imported. Did you require it twice?";
-    return Fail(message);
+    return Fail(ErrDuplicateLibraryImport, NameLibrary(library_name));
   }
 
   // Import declarations, and type aliases of dependent library.
@@ -1969,8 +1974,9 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
   type = TypeResolve(type);
   if (type == nullptr)
     return false;
-  if (type->kind != Type::Kind::kPrimitive)
-    return Fail("or operator can only be applied to primitive-kinded values");
+  if (type->kind != Type::Kind::kPrimitive) {
+    return Fail(ErrOrOperatorOnNonPrimitiveValue);
+  }
   std::unique_ptr<ConstantValue> left_operand_u64;
   std::unique_ptr<ConstantValue> right_operand_u64;
   if (!left_operand.Convert(ConstantValue::Kind::kUint64, &left_operand_u64))
@@ -2091,9 +2097,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          std::ostringstream msg_stream;
-          msg_stream << "unknown enum member";
-          return Fail(identifier_constant->name.span(), msg_stream.str());
+          return Fail(ErrUnknownEnumMember, identifier_constant->name.span());
         }
         break;
       }
@@ -2110,18 +2114,15 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          std::ostringstream msg_stream;
-          msg_stream << "unknown bits member";
-          return Fail(identifier_constant->name.span(), msg_stream.str());
+          return Fail(ErrUnknownBitsMember, identifier_constant->name.span());
         }
         break;
       }
       __FALLTHROUGH;
     }
     default: {
-      std::ostringstream msg_stream;
-      msg_stream << NameFlatConstant(identifier_constant) << " is a type, but a value was expected";
-      return Fail(identifier_constant->name.span(), msg_stream.str());
+      return Fail(ErrExpectedValueButGotType, identifier_constant->name.span(),
+                  identifier_constant);
     }
   }
 

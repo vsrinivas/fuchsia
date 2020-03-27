@@ -5,15 +5,52 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_REPORTER_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_REPORTER_H_
 
+#include <cassert>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "errors.h"
 #include "source_span.h"
 #include "token.h"
 
 namespace fidl {
+
+std::string MakeSquiggle(const std::string& surrounding_line, int column);
+
+std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
+                   std::string_view message, size_t squiggle_size = 0u);
+
+constexpr std::string_view kFormatMarker = "{}";
+
+std::string Display(std::string s);
+std::string Display(flat::Constant* c);
+
+inline std::string FormatErr(std::string_view msg) {
+  // This assert should never fail, because FormatErr is only called by
+  // ReportError -- and calls to ReportError fail at compile time if the # of
+  // args passed in != the number of args in the Error definition.
+  assert(msg.find(kFormatMarker) == std::string::npos &&
+         "number of format string parameters '{}' != number of supplied arguments");
+  return std::string(msg);
+}
+
+template <typename T, typename ...Rest>
+std::string FormatErr(std::string_view msg, T t, Rest ...rest) {
+  size_t i = msg.find(kFormatMarker);
+  // This assert should never fail (see non-template FormatErr)
+  assert(i != std::string::npos &&
+         "number of format string parameters '{}' != number of supplied arguments");
+
+  // Split string at marker, insert formatted parameter
+  std::stringstream s;
+  s << msg.substr(0, i) << Display(t)
+    << msg.substr(i + kFormatMarker.length(), msg.length() - i - kFormatMarker.length());
+
+  return FormatErr(s.str(), rest...);
+}
 
 class ErrorReporter {
  public:
@@ -57,6 +94,22 @@ class ErrorReporter {
     const size_t num_errors_;
     const size_t num_warnings_;
   };
+
+  template <typename ...Args>
+  void ReportError(const Error<Args...> err, const Args& ...args) {
+    ReportErrorWithSpan(std::nullopt, FormatErr(err.msg, args...));
+  }
+  template <typename ...Args>
+  void ReportError(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
+    ReportErrorWithSpan(span, FormatErr(err.msg, args...));
+  }
+
+  void ReportErrorWithSpan(const std::optional<SourceSpan>& span,
+                           std::string_view message) {
+    size_t squiggle_size = span ? span.value().data().size() : 0;
+    auto error = Format("error", span, message, squiggle_size);
+    AddError(std::move(error));
+  }
 
   void ReportErrorWithSquiggle(const SourceSpan& span, std::string_view message);
   void ReportError(const std::optional<SourceSpan>& span, std::string_view message);

@@ -169,6 +169,7 @@ if (current_toolchain == default_toolchain) {
       "parsing_tests.cc",
       "protocol_tests.cc",
       "recursion_detector_tests.cc",
+      "report_error_tests.cc",
       "service_tests.cc",
       "span_tests.cc",
       "strictness_tests.cc",
