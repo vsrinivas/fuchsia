@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::future::BoxFuture,
-    futures::{future, select, Future, FutureExt},
+    futures::{future, select, stream::TryStreamExt, Future, FutureExt},
     pin_utils::pin_mut,
 };
 
@@ -110,48 +110,6 @@ impl TestHarness for () {
     }
 }
 
-/// If A and B are test harnesses, then so is the pair (A,B). This is recursive, so (A, (B, C)) is
-/// also a valid harness (where C is a harness). Any heterogenous list of Harness types is a valid
-/// harness.
-impl<A, B> TestHarness for (A, B)
-where
-    A: TestHarness + Send,
-    B: TestHarness + Send,
-{
-    type Env = (A::Env, B::Env);
-    type Runner = BoxFuture<'static, Result<(), Error>>;
-
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let a = A::init().await?;
-            let b = B::init().await?;
-            // We want to return the first error immediately, if there is one, otherwise
-            // continue until the second future returns either successfully or an error
-            let fut = future::try_select(a.2, b.2)
-                .then(|res| match res {
-                    // One of the futures returned successfully; continue processing the
-                    // other
-                    Ok(future::Either::Left((_, b))) => b.boxed(),
-                    Ok(future::Either::Right((_, a))) => a.boxed(),
-                    // We've received an error; return it
-                    Err(e) => future::ready(Err(e.factor_first().0)).boxed(),
-                })
-                .boxed();
-            Ok(((a.0, b.0), (a.1, b.1), fut))
-        }
-        .boxed()
-    }
-    fn terminate(_env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
-        let (env_a, env_b) = _env;
-        async {
-            let a = A::terminate(env_a).await;
-            let b = B::terminate(env_b).await;
-            a.and(b)
-        }
-        .boxed()
-    }
-}
-
 // Prints out the test name and runs the test.
 macro_rules! run_test {
     ($name:ident) => {{
@@ -168,4 +126,67 @@ macro_rules! run_suite {
         }
         Ok(())
     }}
+}
+
+/// If A and B are test harnesses, then so is the pair (A,B). This is recursive, so (A, (B, C)) is
+/// also a valid harness (where C is a harness). Any heterogenous list of Harness types is a valid
+/// harness. We generate Harness impls for commonly used tuple sizes to avoid requiring nested
+/// tuples.
+macro_rules! generate_tuples {
+    ($(
+        ($($Harness:ident),*),
+    )*) => ($(
+            // The impl below re-uses type names as identifiers, so we allow non_snake_case to
+            // suppress warnings over using 'A' instead of 'a', etc.
+            #[allow(non_snake_case)]
+            impl<$($Harness: TestHarness + Send),*> TestHarness for ($($Harness),*) {
+                type Env = ($($Harness::Env),*);
+                type Runner = BoxFuture<'static, Result<(), Error>>;
+
+                fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+                    async {
+                        $(
+                            let $Harness = $Harness::init().await?;
+                        )*
+
+                        // Create a stream of the result of each future
+                        let runners = futures::stream::select_all(
+                            vec![
+                                $( $Harness.2.boxed().into_stream()),*
+                            ]
+                        );
+
+                        // Use try_collect to return first error or continue to completion
+                        let runner = runners.try_collect::<()>().boxed();
+
+                        let harness = ($($Harness.0),*);
+                        let env = ($($Harness.1),*);
+                        Ok((harness, env, runner))
+                    }
+                    .boxed()
+                }
+
+                fn terminate(environment: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+                    let ($($Harness),*) = environment;
+                    async {
+                        $(
+                            let $Harness = $Harness::terminate($Harness).await;
+                        )*
+                        let done = Ok(());
+                        $(
+                            let done = done.and($Harness);
+                        )*
+                        done
+                    }.boxed()
+                }
+            }
+    )*)
+}
+
+generate_tuples! {
+  (A, B),
+  (A, B, C),
+  (A, B, C, D),
+  (A, B, C, D, E),
+  (A, B, C, D, E, F),
 }
