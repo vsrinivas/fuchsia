@@ -452,13 +452,21 @@ void ProcessDispatcher::FinishDeadTransition() {
   // here. ZX-880
   job_->RemoveChildProcess(this);
 
-  Guard<fbl::Mutex> guard{get_lock()};
-  // If we are critical to a job, take action.
-  if (critical_to_job_ != nullptr) {
-    // Check if we accept any return code, or require it be non-zero.
-    if (!retcode_nonzero_ || retcode_ != 0) {
-      critical_to_job_->Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+  // If we are critical to a job, we need to take action. Similar to the above
+  // comment, we avoid performing the actual call into the job whilst still
+  // holding the lock.
+  fbl::RefPtr<JobDispatcher> kill_job;
+  {
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (critical_to_job_ != nullptr) {
+      // Check if we accept any return code, or require it be non-zero.
+      if (!retcode_nonzero_ || retcode_ != 0) {
+        kill_job = critical_to_job_;
+      }
     }
+  }
+  if (kill_job) {
+    kill_job->Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
   }
 }
 
