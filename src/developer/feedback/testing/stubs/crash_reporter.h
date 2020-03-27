@@ -6,18 +6,20 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_CRASH_REPORTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
 
 #include <optional>
 
+#include "src/lib/fxl/logging.h"
+
 namespace feedback {
 namespace stubs {
 
-class CrashReporter : public fuchsia::feedback::CrashReporter {
+class CrashReporter : public fuchsia::feedback::testing::CrashReporter_TestBase {
  public:
-  // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
       binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::CrashReporter>>(
@@ -25,14 +27,19 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
     };
   }
 
+  void CloseConnection();
+
+  // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
+
+  // |fuchsia::feedback::testing::CrashReporter_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 
   const std::string& crash_signature() { return crash_signature_; };
   const std::string& reboot_log() { return reboot_log_; };
   const std::optional<zx::duration>& uptime() { return uptime_; };
-
- protected:
-  void CloseConnection();
 
  private:
   std::unique_ptr<fidl::Binding<fuchsia::feedback::CrashReporter>> binding_;
@@ -43,6 +50,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
 
 class CrashReporterClosesConnection : public CrashReporter {
  public:
+  // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override {
     CloseConnection();
   }
@@ -50,11 +58,13 @@ class CrashReporterClosesConnection : public CrashReporter {
 
 class CrashReporterAlwaysReturnsError : public CrashReporter {
  public:
+  // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 };
 
 class CrashReporterNoFileExpected : public CrashReporter {
  public:
+  // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 };
 

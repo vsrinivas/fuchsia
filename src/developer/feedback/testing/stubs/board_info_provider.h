@@ -6,30 +6,35 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_BOARD_INFO_PROVIDER_H_
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
+#include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace feedback {
 namespace stubs {
 
-// Stub fuchsia.hwinfo.Board service to return controlled response to GetInfo().
-class BoardInfoProvider : public fuchsia::hwinfo::Board {
+class BoardInfoProvider : public fuchsia::hwinfo::testing::Board_TestBase {
  public:
   BoardInfoProvider(fuchsia::hwinfo::BoardInfo&& info) : info_(std::move(info)) {}
 
-  // Returns a request handler for a binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::hwinfo::Board> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::hwinfo::Board> request) {
       binding_ = std::make_unique<fidl::Binding<fuchsia::hwinfo::Board>>(this, std::move(request));
     };
   }
 
-  // |fuchsia.hwinfo.Board|
+  void CloseConnection();
+
+  // |fuchsia::hwinfo::Board|
   void GetInfo(GetInfoCallback callback) override;
 
- protected:
-  void CloseConnection();
+  // |fuchsia::hwinfo::testing::Board_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 
  private:
   std::unique_ptr<fidl::Binding<fuchsia::hwinfo::Board>> binding_;
@@ -41,7 +46,7 @@ class BoardInfoProviderNeverReturns : public BoardInfoProvider {
  public:
   BoardInfoProviderNeverReturns() : BoardInfoProvider(fuchsia::hwinfo::BoardInfo()) {}
 
-  // |fuchsia.hwinfo.Board|
+  // |fuchsia::hwinfo::Board|
   void GetInfo(GetInfoCallback callback) override;
 };
 

@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_SCENIC_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
@@ -38,10 +39,8 @@ struct TakeScreenshotResponse {
       : screenshot(std::move(data)), success(success){};
 };
 
-//  Scenic service to return canned responses to Scenic::TakeScreenshot().
-class Scenic : public fuchsia::ui::scenic::Scenic {
+class Scenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
-  // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
       total_num_bindings_++;
@@ -49,17 +48,15 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
     };
   }
 
+  void CloseAllConnections() { bindings_.CloseAll(); }
+
   // |fuchsia::ui::scenic::Scenic|.
-  void CreateSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetDisplayInfo(GetDisplayInfoCallback callback) override { FXL_NOTIMPLEMENTED(); }
-  void GetDisplayOwnershipEvent(GetDisplayOwnershipEventCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
   void TakeScreenshot(TakeScreenshotCallback callback) override;
+
+  // |fuchsia::ui::scenic::testing::Scenic_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 
   uint64_t total_num_bindings() { return total_num_bindings_; }
   size_t current_num_bindings() { return bindings_.size(); }
@@ -72,8 +69,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
     return take_screenshot_responses_;
   }
 
-  void CloseAllConnections() { bindings_.CloseAll(); }
-
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
   uint64_t total_num_bindings_ = 0;
@@ -82,16 +77,19 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
 class ScenicAlwaysReturnsFalse : public Scenic {
  public:
+  // |fuchsia::ui::scenic::Scenic|.
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
 class ScenicClosesConnection : public Scenic {
  public:
+  // |fuchsia::ui::scenic::Scenic|.
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
 class ScenicNeverReturns : public Scenic {
  public:
+  // |fuchsia::ui::scenic::Scenic|.
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 

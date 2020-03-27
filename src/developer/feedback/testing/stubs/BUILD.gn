@@ -14,6 +14,7 @@ source_set("board_info_provider") {
   public_deps = [
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
@@ -30,6 +31,7 @@ source_set("channel_provider") {
   public_deps = [
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   deps = [ "//zircon/public/lib/zx" ]
@@ -74,6 +76,7 @@ source_set("crash_reporter") {
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 
@@ -140,6 +143,7 @@ source_set("logger") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
@@ -159,6 +163,7 @@ source_set("product_info_provider") {
   public_deps = [
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
@@ -176,6 +181,7 @@ source_set("network_reachability_provider") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/system/fidl/fuchsia-net",
   ]
 
@@ -218,6 +224,7 @@ source_set("utc_provider") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//src/sys/timekeeper:fuchsia.time",
     "//zircon/public/lib/zx",
   ]

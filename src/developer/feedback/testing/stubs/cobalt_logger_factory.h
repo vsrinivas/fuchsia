@@ -21,7 +21,7 @@ namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
-class CobaltLoggerFactoryBase : public ::fuchsia::cobalt::testing::LoggerFactory_TestBase {
+class CobaltLoggerFactoryBase : public fuchsia::cobalt::testing::LoggerFactory_TestBase {
  public:
   CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
   virtual ~CobaltLoggerFactoryBase() {}
@@ -53,22 +53,12 @@ class CobaltLoggerFactoryBase : public ::fuchsia::cobalt::testing::LoggerFactory
   void CloseLoggerConnection();
   void CloseAllConnections();
 
- protected:
-  void CreateLoggerFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void CreateLoggerSimpleFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
-      fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectIdCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
+  // |fuchsia::cobalt::testing::LoggerFactory_TestBase|
   void NotImplemented_(const std::string& name) override {
     FXL_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
+ protected:
   std::unique_ptr<CobaltLoggerBase> logger_;
   std::unique_ptr<fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
   std::unique_ptr<fidl::Binding<fuchsia::cobalt::LoggerFactory>> factory_binding_;
@@ -81,6 +71,7 @@ class CobaltLoggerFactory : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::move(logger)) {}
 
  private:
+  // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
@@ -93,6 +84,7 @@ class CobaltLoggerFactoryClosesConnection : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::make_unique<CobaltLoggerBase>()) {}
 
  private:
+  // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
@@ -105,6 +97,7 @@ class CobaltLoggerFactoryFailsToCreateLogger : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::make_unique<CobaltLoggerBase>()) {}
 
  private:
+  // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
@@ -117,6 +110,7 @@ class CobaltLoggerFactoryCreatesOnRetry : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::make_unique<CobaltLogger>()), succeed_after_(succeed_after) {}
 
  private:
+  // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
@@ -133,6 +127,7 @@ class CobaltLoggerFactoryDelaysCallback : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::move(logger)), dispatcher_(dispatcher), delay_(delay) {}
 
  private:
+  // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;

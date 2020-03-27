@@ -6,14 +6,17 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_PRODUCT_INFO_PROVIDER_H_
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
+#include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {
 
 // Stub fuchsia.hwinfo.Product service to return controlled response to GetInfo().
-class ProductInfoProvider : public fuchsia::hwinfo::Product {
+class ProductInfoProvider : public fuchsia::hwinfo::testing::Product_TestBase {
  public:
   ProductInfoProvider(fuchsia::hwinfo::ProductInfo&& info) : info_(std::move(info)) {}
 
@@ -25,11 +28,15 @@ class ProductInfoProvider : public fuchsia::hwinfo::Product {
     };
   }
 
-  // |fuchsia.hwinfo.Product|
+  void CloseConnection();
+
+  // |fuchsia::hwinfo::Product|
   void GetInfo(GetInfoCallback callback) override;
 
- protected:
-  void CloseConnection();
+  // |fuchsia::hwinfo::testing::Product_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 
  private:
   std::unique_ptr<fidl::Binding<fuchsia::hwinfo::Product>> binding_;
@@ -41,7 +48,7 @@ class ProductInfoProviderNeverReturns : public ProductInfoProvider {
  public:
   ProductInfoProviderNeverReturns() : ProductInfoProvider(fuchsia::hwinfo::ProductInfo()) {}
 
-  // |fuchsia.hwinfo.Product|
+  // |fuchsia::hwinfo::Product|
   void GetInfo(GetInfoCallback callback) override;
 };
 

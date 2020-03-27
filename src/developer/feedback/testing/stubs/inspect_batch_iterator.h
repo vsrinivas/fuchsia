@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/diagnostics/cpp/fidl_test_base.h>
 
 #include <string>
 #include <vector>
@@ -16,12 +17,14 @@ namespace feedback {
 namespace stubs {
 
 //  Inspect batch iterator service to return controlled response to BatchIterator::GetNext().
-class InspectBatchIteratorBase : public fuchsia::diagnostics::BatchIterator {
+class InspectBatchIteratorBase : public fuchsia::diagnostics::testing::BatchIterator_TestBase {
  public:
   InspectBatchIteratorBase() = default;
 
-  // |fuchsia.diagnostics.BatchIterator|
-  virtual void GetNext(GetNextCallback callback) override { FXL_NOTIMPLEMENTED(); }
+  // |fuchsia::diagnostics::testing::BatchIterator_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 };
 
 class InspectBatchIterator : public InspectBatchIteratorBase {
@@ -49,6 +52,7 @@ class InspectBatchIteratorNeverRespondsAfterOneBatch : public InspectBatchIterat
   InspectBatchIteratorNeverRespondsAfterOneBatch(const std::vector<std::string>& json_batch)
       : json_batch_(json_batch) {}
 
+  // |fuchsia::diagnostics::BatchIterator|
   void GetNext(GetNextCallback callback) override;
 
  private:
@@ -60,6 +64,7 @@ class InspectBatchIteratorNeverResponds : public InspectBatchIteratorBase {
  public:
   InspectBatchIteratorNeverResponds() {}
 
+  // |fuchsia::diagnostics::BatchIterator|
   void GetNext(GetNextCallback callback) override;
 };
 
@@ -67,6 +72,7 @@ class InspectBatchIteratorReturnsError : public InspectBatchIteratorBase {
  public:
   InspectBatchIteratorReturnsError() {}
 
+  // |fuchsia::diagnostics::BatchIterator|
   void GetNext(GetNextCallback callback) override;
 };
 

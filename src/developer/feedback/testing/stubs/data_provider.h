@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_DATA_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
@@ -14,14 +15,11 @@
 namespace feedback {
 namespace stubs {
 
-//  fuchsia.feedback.DataProvider service that returns canned responses for
-// fuchsia::feedback::DataProvider::GetData().
-class DataProvider : public fuchsia::feedback::DataProvider {
+class DataProvider : public fuchsia::feedback::testing::DataProvider_TestBase {
  public:
   DataProvider(fuchsia::feedback::Attachment attachment_bundle)
       : attachment_bundle_(std::move(attachment_bundle)) {}
 
-  // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
       binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::DataProvider>>(
@@ -31,9 +29,10 @@ class DataProvider : public fuchsia::feedback::DataProvider {
 
   // |fuchsia::feedback::DataProvider|
   void GetData(GetDataCallback callback) override;
-  void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
-                     GetScreenshotCallback callback) override {
-    FXL_NOTIMPLEMENTED();
+
+  // |fuchsia::feedback::testing::DataProvider_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
  private:

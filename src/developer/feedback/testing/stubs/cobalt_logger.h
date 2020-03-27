@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl_test_base.h>
 
 #include <utility>
 
@@ -16,7 +17,7 @@ namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub loggers must implement and provides common functionality.
-class CobaltLoggerBase : public fuchsia::cobalt::Logger {
+class CobaltLoggerBase : public fuchsia::cobalt::testing::Logger_TestBase {
  public:
   virtual ~CobaltLoggerBase() = default;
 
@@ -50,65 +51,9 @@ class CobaltLoggerBase : public fuchsia::cobalt::Logger {
   void MarkLogCobaltEventAsCalled() { return MarkFunctionAsCalled(Function::LogCobaltEvent); }
   void MarkLogCobaltEventsAsCalled() { return MarkFunctionAsCalled(Function::LogCobaltEvents); }
 
-  virtual void LogEvent(uint32_t metric_id, uint32_t event_code,
-                        fuchsia::cobalt::Logger::LogEventCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  virtual void LogEventCount(uint32_t metric_id, uint32_t event_code, ::std::string component,
-                             int64_t period_duration_micros, int64_t count,
-                             fuchsia::cobalt::Logger::LogEventCountCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::std::string component,
-                              int64_t elapsed_micros,
-                              fuchsia::cobalt::Logger::LogElapsedTimeCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogFrameRate(uint32_t metric_id, uint32_t event_code, ::std::string component,
-                            float fps,
-                            fuchsia::cobalt::Logger::LogFrameRateCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::std::string component,
-                              int64_t bytes,
-                              fuchsia::cobalt::Logger::LogMemoryUsageCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void StartTimer(uint32_t metric_id, uint32_t event_code, ::std::string component,
-                          ::std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
-                          fuchsia::cobalt::Logger::StartTimerCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void EndTimer(::std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
-                        fuchsia::cobalt::Logger::EndTimerCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogIntHistogram(uint32_t metric_id, uint32_t event_code, ::std::string component,
-                               ::std::vector<fuchsia::cobalt::HistogramBucket> histogram,
-                               fuchsia::cobalt::Logger::LogIntHistogramCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogCustomEvent(uint32_t metric_id,
-                              ::std::vector<fuchsia::cobalt::CustomEventValue> event_values,
-                              fuchsia::cobalt::Logger::LogCustomEventCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
-                              fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogCobaltEvents(::std::vector<fuchsia::cobalt::CobaltEvent> events,
-                               fuchsia::cobalt::Logger::LogCobaltEventsCallback callback) override {
-    FXL_NOTIMPLEMENTED();
+  // |fuchsia::cobalt::testing::Logger_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
  private:
@@ -145,6 +90,8 @@ class CobaltLoggerBase : public fuchsia::cobalt::Logger {
 
 // Always record |metric_id| and |event_code| and call callback with |Status::OK|.
 class CobaltLogger : public CobaltLoggerBase {
+ public:
+  // |fuchsia::cobalt::Logger|
   void LogEvent(uint32_t metric_id, uint32_t event_code,
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
   void LogEventCount(uint32_t metric_id, uint32_t event_code, ::std::string component,
@@ -157,6 +104,8 @@ class CobaltLogger : public CobaltLoggerBase {
 
 // Fail to acknowledge that LogEvent() was called and return |Status::INVALID_ARGUMENTS|.
 class CobaltLoggerFailsLogEvent : public CobaltLoggerBase {
+ public:
+  // |fuchsia::cobalt::Logger|
   void LogEvent(uint32_t metric_id, uint32_t event_code,
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
 };
@@ -166,10 +115,11 @@ class CobaltLoggerIgnoresFirstEvents : public CobaltLoggerBase {
  public:
   CobaltLoggerIgnoresFirstEvents(size_t n) : to_ignore_(n) {}
 
- private:
+  // |fuchsia::cobalt::Logger|
   void LogEvent(uint32_t metric_id, uint32_t event_code,
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
 
+ private:
   size_t to_ignore_;
   size_t num_calls_ = 0;
 };

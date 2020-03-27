@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_INSPECT_ARCHIVE_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/diagnostics/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
@@ -15,14 +16,12 @@
 namespace feedback {
 namespace stubs {
 
-//  Inspect archive service to return controlled response to Archive::ReadInspect().
-class InspectArchive : public fuchsia::diagnostics::Archive {
+class InspectArchive : public fuchsia::diagnostics::testing::Archive_TestBase {
  public:
   InspectArchive() {}
   InspectArchive(std::unique_ptr<InspectBatchIteratorBase> batch_iterator)
       : batch_iterator_(std::move(batch_iterator)) {}
 
-  // Returns a request handler for a binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::diagnostics::Archive> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::diagnostics::Archive> request) {
       archive_binding_ =
@@ -32,8 +31,14 @@ class InspectArchive : public fuchsia::diagnostics::Archive {
 
   void CloseConnection();
 
+  // |fuchsia::diagnostics::Archive|
   void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                          fuchsia::diagnostics::StreamParameters stream_parameters) override;
+
+  // |fuchsia::diagnostics::testing::Archive_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 
  protected:
   std::unique_ptr<fidl::Binding<fuchsia::diagnostics::Archive>> archive_binding_;
@@ -45,6 +50,7 @@ class InspectArchiveClosesArchiveConnection : public InspectArchive {
  public:
   InspectArchiveClosesArchiveConnection() {}
 
+  // |fuchsia::diagnostics::Archive|
   void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                          fuchsia::diagnostics::StreamParameters stream_parameters) override;
 };
@@ -53,6 +59,7 @@ class InspectArchiveClosesIteratorConnection : public InspectArchive {
  public:
   InspectArchiveClosesIteratorConnection() {}
 
+  // |fuchsia::diagnostics::Archive|
   void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                          fuchsia::diagnostics::StreamParameters stream_parameters) override;
 };
