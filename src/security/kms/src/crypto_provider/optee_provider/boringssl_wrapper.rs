@@ -11,6 +11,7 @@ use boringssl_sys::{
     RSA_free, RSA_get0_key, RSA_new, RSA_parse_private_key, RSA_set0_key, BIGNUM as BN, CBB, CBS,
     EC_KEY, EVP_PKEY, RSA,
 };
+use std::convert::{TryFrom, TryInto};
 use std::mem;
 use std::ptr;
 use std::slice;
@@ -28,8 +29,10 @@ impl<'a> BigNum<'a> {
 
     /// Parses the binary data into a big number object.
     pub fn parse(buffer: &[u8]) -> Option<Self> {
+        // Don't panic while unsafe.
+        let buffer_len = buffer.len().try_into().unwrap();
         unsafe {
-            BN_bin2bn(buffer.as_ptr(), buffer.len(), ptr::null_mut())
+            BN_bin2bn(buffer.as_ptr(), buffer_len, ptr::null_mut())
                 .as_mut()
                 .map(|bignum| BigNum { bignum })
         }
@@ -46,7 +49,8 @@ impl<'a> BigNum<'a> {
     pub fn bn_to_vec(bignum: *const BN) -> Option<Vec<u8>> {
         let num_bytes = unsafe { BN_num_bytes(bignum) };
         let mut bignum_binary: Vec<u8> = vec![0; num_bytes as usize];
-        if num_bytes as usize != unsafe { BN_bn2bin(bignum, bignum_binary.as_mut_ptr()) } {
+        let actual = unsafe { BN_bn2bin(bignum, bignum_binary.as_mut_ptr()) };
+        if usize::try_from(num_bytes).unwrap() != usize::try_from(actual).unwrap() {
             return None;
         }
         Some(bignum_binary)
@@ -81,7 +85,9 @@ impl Cbb {
     /// Creates a new CBB with initial size.
     pub fn new(size: usize) -> Option<Self> {
         let mut cbb: CBB = unsafe { mem::zeroed() };
-        let result = unsafe { CBB_init(&mut cbb, size) };
+        // Don't panic while unsafe.
+        let cbb_len = size.try_into().unwrap();
+        let result = unsafe { CBB_init(&mut cbb, cbb_len) };
         if result == 0 {
             return None;
         }
@@ -96,12 +102,12 @@ impl Cbb {
     /// Turns a CBB structure into an AllocatedBuffer.
     pub fn finish(&mut self) -> Option<Vec<u8>> {
         let mut output_bytes: *mut u8 = ptr::null_mut();
-        let mut output_size: usize = 0;
+        let mut output_size = 0;
         let result = unsafe { CBB_finish(&mut self.cbb, &mut output_bytes, &mut output_size) };
         if result == 0 {
             return None;
         }
-        let v = unsafe { slice::from_raw_parts(output_bytes, output_size).to_vec() };
+        let v = unsafe { slice::from_raw_parts(output_bytes, usize::from(output_size)).to_vec() };
         unsafe { OPENSSL_free(output_bytes as *mut std::ffi::c_void) };
         Some(v)
     }
@@ -207,9 +213,11 @@ pub struct RsaPrivateKey<'a> {
 impl<'a> RsaPrivateKey<'a> {
     /// Creates a new RSA private key using the DER format key data.
     pub fn new(key_data: &[u8]) -> Result<Self, &'static str> {
+        // Don't panic while unsafe.
+        let key_data_len = key_data.len().try_into().unwrap();
         let rsa = unsafe {
             let mut cbs: CBS = mem::zeroed();
-            CBS_init(&mut cbs, key_data.as_ptr(), key_data.len());
+            CBS_init(&mut cbs, key_data.as_ptr(), key_data_len);
             RSA_parse_private_key(&mut cbs).as_mut().ok_or("Failed to parse RSA Key!")
         }?;
         Ok(RsaPrivateKey { rsa })
@@ -321,9 +329,11 @@ impl<'a> EcPrivateKey<'a> {
         if ec_group.is_null() {
             return Err("Invalid ec curve type!");
         }
+        // Don't panic while unsafe.
+        let key_data_len = key_data.len().try_into().unwrap();
         let ec_key = unsafe {
             let mut cbs = mem::zeroed();
-            CBS_init(&mut cbs, key_data.as_ptr(), key_data.len());
+            CBS_init(&mut cbs, key_data.as_ptr(), key_data_len);
             EC_KEY_parse_private_key(&mut cbs, ec_group).as_mut().ok_or("Failed to parse EC Key!")
         }?;
         Ok(EcPrivateKey { ec_key })
@@ -433,5 +443,4 @@ mod tests {
         let public_key_data = rsa_public_key.marshal_public_key().unwrap();
         assert_eq!(rsa_key.public().marshal_to_der(), public_key_data);
     }
-
 }

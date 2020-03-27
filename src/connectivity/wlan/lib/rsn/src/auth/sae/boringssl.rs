@@ -18,7 +18,7 @@ use {
         ERR_get_error, ERR_reason_error_string, NID_X9_62_prime256v1, OPENSSL_free, BIGNUM, BN_CTX,
         EC_GROUP, EC_POINT,
     },
-    std::{cmp::Ordering, ffi::CString, fmt, ptr::NonNull},
+    std::{cmp::Ordering, convert::TryInto, ffi::CString, fmt, ptr::NonNull},
 };
 
 fn ptr_or_error<T>(ptr: *mut T) -> Result<NonNull<T>, Error> {
@@ -102,8 +102,10 @@ impl Bignum {
         if bytes.is_empty() {
             Self::new_from_u64(0)
         } else {
+            // Don't panic while unsafe.
+            let bytes_len = bytes.len().try_into().unwrap();
             ptr_or_error(unsafe {
-                BN_bin2bn(&bytes[0] as *const u8, bytes.len(), std::ptr::null_mut())
+                BN_bin2bn(&bytes[0] as *const u8, bytes_len, std::ptr::null_mut())
             })
             .map(Self)
         }

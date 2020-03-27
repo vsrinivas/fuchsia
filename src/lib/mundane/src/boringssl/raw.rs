@@ -53,7 +53,7 @@ impl_traits!(CBS, CDestruct => _);
 #[allow(non_snake_case)]
 #[must_use]
 pub unsafe fn CBB_init(cbb: *mut CBB, initial_capacity: usize) -> Result<(), BoringError> {
-    one_or_err("CBB_init", boringssl_sys::CBB_init(cbb, initial_capacity))
+    one_or_err("CBB_init", boringssl_sys::CBB_init(cbb, initial_capacity.try_into().unwrap_abort()))
 }
 
 #[allow(non_snake_case)]
@@ -74,7 +74,12 @@ pub unsafe fn ED25519_sign(
 ) -> Result<(), BoringError> {
     one_or_err(
         "ED25519_sign",
-        boringssl_sys::ED25519_sign(out as *mut u8, message, message_len, private_key as *const u8),
+        boringssl_sys::ED25519_sign(
+            out as *mut u8,
+            message,
+            message_len.try_into().unwrap_abort(),
+            private_key as *const u8,
+        ),
     )
 }
 
@@ -88,7 +93,7 @@ pub unsafe fn ED25519_verify(
 ) -> bool {
     match boringssl_sys::ED25519_verify(
         message,
-        message_len,
+        message_len.try_into().unwrap_abort(),
         signature as *const u8,
         public_key as *const u8,
     ) {
@@ -195,14 +200,21 @@ pub unsafe fn ECDSA_sign(
 ) -> Result<(), BoringError> {
     one_or_err(
         "ECDSA_sign",
-        boringssl_sys::ECDSA_sign(type_, digest, digest_len, sig, sig_len, key),
+        boringssl_sys::ECDSA_sign(
+            type_,
+            digest,
+            digest_len.try_into().unwrap_abort(),
+            sig,
+            sig_len,
+            key,
+        ),
     )
 }
 
 #[allow(non_snake_case)]
 #[must_use]
 pub unsafe fn ECDSA_size(key: *const EC_KEY) -> Result<NonZeroUsize, BoringError> {
-    NonZeroUsize::new(boringssl_sys::ECDSA_size(key))
+    NonZeroUsize::new(boringssl_sys::ECDSA_size(key).try_into().unwrap_abort())
         .ok_or_else(|| BoringError::consume_stack("ECDSA_size"))
 }
 
@@ -216,7 +228,14 @@ pub unsafe fn ECDSA_verify(
     sig_len: usize,
     key: *const EC_KEY,
 ) -> bool {
-    match boringssl_sys::ECDSA_verify(type_, digest, digest_len, sig, sig_len, key) {
+    match boringssl_sys::ECDSA_verify(
+        type_,
+        digest,
+        digest_len.try_into().unwrap_abort(),
+        sig,
+        sig_len.try_into().unwrap_abort(),
+        key,
+    ) {
         1 => true,
         0 => false,
         // ECDSA_verify promises to only return 0 or 1
@@ -287,15 +306,15 @@ pub unsafe fn EVP_PBE_scrypt(
         "EVP_PBE_scrypt",
         boringssl_sys::EVP_PBE_scrypt(
             password,
-            password_len,
+            password_len.try_into().unwrap_abort(),
             salt,
-            salt_len,
+            salt_len.try_into().unwrap_abort(),
             N,
             r,
             p,
-            max_mem,
+            max_mem.try_into().unwrap_abort(),
             out_key,
-            key_len,
+            key_len.try_into().unwrap_abort(),
         ),
     )
 }
@@ -318,12 +337,12 @@ pub unsafe fn PKCS5_PBKDF2_HMAC(
         "PKCS5_PBKDF2_HMAC",
         boringssl_sys::PKCS5_PBKDF2_HMAC(
             password,
-            password_len,
+            password_len.try_into().unwrap_abort(),
             salt,
-            salt_len,
+            salt_len.try_into().unwrap_abort(),
             iterations,
             digest,
-            key_len,
+            key_len.try_into().unwrap_abort(),
             out_key,
         ),
     )
@@ -347,13 +366,22 @@ pub unsafe fn HMAC_Init_ex(
     key_len: usize,
     md: *const EVP_MD,
 ) -> Result<(), BoringError> {
-    one_or_err("HMAC_Init_ex", boringssl_sys::HMAC_Init_ex(ctx, key, key_len, md, ptr::null_mut()))
+    one_or_err(
+        "HMAC_Init_ex",
+        boringssl_sys::HMAC_Init_ex(
+            ctx,
+            key,
+            key_len.try_into().unwrap_abort(),
+            md,
+            ptr::null_mut(),
+        ),
+    )
 }
 
 #[allow(non_snake_case)]
 pub unsafe fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const u8, data_len: usize) {
     // HMAC_Update promises to return 1.
-    assert_abort_eq!(boringssl_sys::HMAC_Update(ctx, data, data_len), 1);
+    assert_abort_eq!(boringssl_sys::HMAC_Update(ctx, data, data_len.try_into().unwrap_abort()), 1);
 }
 
 #[allow(non_snake_case)]
@@ -376,7 +404,7 @@ pub unsafe fn HMAC_CTX_copy(dest: *mut HMAC_CTX, src: *const HMAC_CTX) -> Result
 #[allow(non_snake_case)]
 pub unsafe fn RAND_bytes(buf: *mut u8, len: usize) {
     // RAND_bytes promises to return 1.
-    assert_abort_eq!(boringssl_sys::RAND_bytes(buf, len), 1);
+    assert_abort_eq!(boringssl_sys::RAND_bytes(buf, len.try_into().unwrap_abort()), 1);
 }
 
 // rsa.h
@@ -433,12 +461,25 @@ pub unsafe fn RSA_sign_pss_mgf1(
     mgf1_md: *const EVP_MD,
     salt_len: c_int,
 ) -> Result<(), BoringError> {
-    one_or_err(
+    let mut tmp_len = 0;
+    let r = one_or_err(
         "RSA_sign_pss_mgf1",
         boringssl_sys::RSA_sign_pss_mgf1(
-            rsa, out_len, out, max_out, in_, in_len, md, mgf1_md, salt_len,
+            rsa,
+            &mut tmp_len,
+            out,
+            max_out.try_into().unwrap_abort(),
+            in_,
+            in_len.try_into().unwrap_abort(),
+            md,
+            mgf1_md,
+            salt_len,
         ),
-    )
+    );
+    if r.is_ok() {
+        *out_len = usize::from(tmp_len);
+    }
+    r
 }
 
 #[allow(non_snake_case)]
@@ -459,7 +500,14 @@ pub unsafe fn RSA_verify(
     sig_len: usize,
     rsa: *mut RSA,
 ) -> bool {
-    match boringssl_sys::RSA_verify(hash_nid, msg, msg_len, sig, sig_len, rsa) {
+    match boringssl_sys::RSA_verify(
+        hash_nid,
+        msg,
+        msg_len.try_into().unwrap_abort(),
+        sig,
+        sig_len.try_into().unwrap_abort(),
+        rsa,
+    ) {
         0 => false,
         1 => true,
         // RSA_verify promises to only return 0 or 1
@@ -479,8 +527,16 @@ pub unsafe fn RSA_verify_pss_mgf1(
     sig: *const u8,
     sig_len: usize,
 ) -> bool {
-    match boringssl_sys::RSA_verify_pss_mgf1(rsa, msg, msg_len, md, mgf1_md, salt_len, sig, sig_len)
-    {
+    match boringssl_sys::RSA_verify_pss_mgf1(
+        rsa,
+        msg,
+        msg_len.try_into().unwrap_abort(),
+        md,
+        mgf1_md,
+        salt_len,
+        sig,
+        sig_len.try_into().unwrap_abort(),
+    ) {
         0 => false,
         1 => true,
         // RSA_verify_pss_mgf1 promises to only return 0 or 1
@@ -527,7 +583,7 @@ macro_rules! sha {
         #[allow(non_snake_case)]
         pub unsafe fn $update(ctx: *mut boringssl_sys::$ctx, data: *const c_void, len: usize) {
             // All XXX_Update functions promise to return 1.
-            assert_abort_eq!(boringssl_sys::$update(ctx, data, len), 1);
+            assert_abort_eq!(boringssl_sys::$update(ctx, data, len.try_into().unwrap_abort()), 1);
         }
         #[allow(non_snake_case)]
         pub unsafe fn $final(

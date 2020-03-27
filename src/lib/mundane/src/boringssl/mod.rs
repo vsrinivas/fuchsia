@@ -156,7 +156,7 @@ impl CStackWrapper<CBB> {
                 let ptr = CBB_data(self.as_const()).unwrap_abort();
                 // TODO(joshlf): Can with_data use this to smuggle out the
                 // reference, outliving the lifetime of self?
-                with_data(slice::from_raw_parts(ptr.as_ptr(), len))
+                with_data(slice::from_raw_parts(ptr.as_ptr(), usize::from(len)))
             }
         }
     }
@@ -166,7 +166,7 @@ impl CStackWrapper<CBS> {
     /// The `CBS_len` function.
     #[must_use]
     pub fn cbs_len(&self) -> usize {
-        unsafe { CBS_len(self.as_const()) }
+        unsafe { usize::from(CBS_len(self.as_const())) }
     }
 
     /// Invokes a callback on a temporary `CBS`.
@@ -182,7 +182,7 @@ impl CStackWrapper<CBS> {
     ) -> O {
         unsafe {
             let mut cbs = MaybeUninit::uninit();
-            CBS_init(cbs.as_mut_ptr(), bytes.as_ptr(), bytes.len());
+            CBS_init(cbs.as_mut_ptr(), bytes.as_ptr(), bytes.len().try_into().unwrap_abort());
             let mut cbs = CStackWrapper::new(cbs.assume_init());
             with_cbs(&mut cbs)
         }
@@ -553,7 +553,7 @@ impl CStackWrapper<HMAC_CTX> {
     pub fn hmac_final(&mut self, out: &mut [u8]) {
         unsafe {
             let size = HMAC_size(self.as_const());
-            assert_abort_eq!(out.len(), size);
+            assert_abort_eq!(out.len(), usize::from(size));
             let mut size = 0;
             // HMAC_Final is documented to fail on allocation failure, but an
             // internal comment states that it's infallible. In either case, we
@@ -860,7 +860,13 @@ pub fn crypto_memcmp(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }
-    unsafe { CRYPTO_memcmp(a.as_ptr() as *const c_void, b.as_ptr() as *const c_void, a.len()) == 0 }
+    unsafe {
+        CRYPTO_memcmp(
+            a.as_ptr() as *const c_void,
+            b.as_ptr() as *const c_void,
+            a.len().try_into().unwrap_abort(),
+        ) == 0
+    }
 }
 
 /// The `RAND_bytes` function.
@@ -922,13 +928,18 @@ fn get_error_stack_trace() -> Vec<String> {
 
     unsafe extern "C" fn error_callback(s: *const c_char, s_len: usize, ctx: *mut c_void) -> c_int {
         let stack_trace = ctx as *mut Vec<String>;
-        let s = ::std::slice::from_raw_parts(s as *const u8, s_len - 1);
+        let s = ::std::slice::from_raw_parts(s as *const u8, s_len);
         (*stack_trace).push(String::from_utf8_lossy(s).to_string());
         1
     }
 
     let mut stack_trace = Vec::new();
-    unsafe { ERR_print_errors_cb(Some(error_callback), &mut stack_trace as *mut _ as *mut c_void) };
+    unsafe {
+        ERR_print_errors_cb(
+            Some(error_callback as unsafe extern "C" fn(*const c_char, _, *mut c_void) -> c_int),
+            &mut stack_trace as *mut _ as *mut c_void,
+        )
+    };
     stack_trace
 }
 
