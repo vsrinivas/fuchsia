@@ -12,21 +12,28 @@ use {
 
 /// Builds a system_image package.
 pub struct SystemImageBuilder<'a> {
-    static_packages: &'a [&'a Package],
+    static_packages: Option<&'a [&'a Package]>,
     cache_packages: Option<&'a [&'a Package]>,
     pkgfs_non_static_packages_allowlist: Option<&'a [&'a str]>,
     pkgfs_disable_executability_restrictions: bool,
 }
 
 impl<'a> SystemImageBuilder<'a> {
-    /// Create an instance of the builder from the (possibly empty) list of base packages.
-    pub fn new(static_packages: &'a [&'a Package]) -> Self {
+    /// Returns an empty `SystemImageBuilder` configured with no static or cache package.
+    pub fn new() -> Self {
         Self {
-            static_packages,
+            static_packages: None,
             cache_packages: None,
             pkgfs_non_static_packages_allowlist: None,
             pkgfs_disable_executability_restrictions: false,
         }
+    }
+
+    /// Use the supplied static_packages with the system image. Call at most once.
+    pub fn static_packages(mut self, static_packages: &'a [&'a Package]) -> Self {
+        assert!(self.static_packages.is_none());
+        self.static_packages = Some(static_packages);
+        self
     }
 
     /// Use the supplied cache_packages with the system image. Call at most once.
@@ -66,7 +73,7 @@ impl<'a> SystemImageBuilder<'a> {
 
         let mut builder = PackageBuilder::new("system_image");
         let mut bytes = vec![];
-        StaticPackages::from_entries(packages_to_entries(self.static_packages))
+        StaticPackages::from_entries(packages_to_entries(self.static_packages.unwrap_or(&[])))
             .serialize(&mut bytes)
             .unwrap();
         builder = builder.add_resource_at("data/static_packages", bytes.as_slice());

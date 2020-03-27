@@ -75,7 +75,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn from_pkgfs_root_open_file_succeeds() {
-        let system_image_package = SystemImageBuilder::new(&[]).build().await;
+        let system_image_package = SystemImageBuilder::new().build().await;
         let blobfs = BlobfsRamdisk::start().unwrap();
         system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
         let pkgfs = PkgfsRamdisk::builder()
@@ -96,7 +96,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn from_pkgfs_root_open_file_fails_on_missing_file() {
-        let system_image_package = SystemImageBuilder::new(&[]).build().await;
+        let system_image_package = SystemImageBuilder::new().build().await;
         let blobfs = BlobfsRamdisk::start().unwrap();
         system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
         let pkgfs = PkgfsRamdisk::builder()

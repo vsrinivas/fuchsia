@@ -44,7 +44,7 @@ async fn test_cache_fallback_succeeds_no_network() {
     // we're getting the one from the cache.
     let repo_pkg = test_package(pkg_name, "repo").await;
     let system_image_package =
-        SystemImageBuilder::new(&[]).cache_packages(&[&cache_pkg]).build().await;
+        SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
@@ -86,7 +86,7 @@ async fn test_cache_fallback_succeeds_no_targets() {
     // we're getting the one from the cache.
     let repo_pkg = test_package(pkg_name, "repo").await;
     let system_image_package =
-        SystemImageBuilder::new(&[]).cache_packages(&[&cache_pkg]).build().await;
+        SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
@@ -133,7 +133,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     // we're getting the one from the cache.
     let repo_pkg = test_package(pkg_name, "repo").await;
     let system_image_package =
-        SystemImageBuilder::new(&[]).cache_packages(&[&cache_pkg]).build().await;
+        SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
@@ -178,7 +178,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
 async fn test_resolve_fails_not_in_repo() {
     let pkg_name = "test_resolve_fails_not_in_repo";
     let pkg = test_package(pkg_name, "stuff").await;
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
 
@@ -211,7 +211,7 @@ async fn test_resolve_prefers_repo() {
     let cache_pkg = test_package(pkg_name, "cache_package").await;
     let repo_pkg = test_package(pkg_name, "repo_package").await;
     let system_image_package =
-        SystemImageBuilder::new(&[]).cache_packages(&[&cache_pkg]).build().await;
+        SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
 

@@ -654,7 +654,7 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_empty_static_index() {
-    let system_image_package = SystemImageBuilder::new(&[]).build().await;
+    let system_image_package = SystemImageBuilder::new().build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -711,7 +711,7 @@ async fn test_pkgfs_with_system_image_meta_far_missing() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_system_image_base_package_missing() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -740,7 +740,7 @@ async fn test_pkgfs_with_system_image_base_package_missing() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -785,7 +785,7 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_install_update() {
     // GC doesn't work without a working system image
-    let system_image_package = SystemImageBuilder::new(&[]).build().await;
+    let system_image_package = SystemImageBuilder::new().build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -909,7 +909,7 @@ async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
 async fn test_pkgfs_with_cache_index() {
     let pkg = example_package().await;
 
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -941,7 +941,7 @@ async fn test_pkgfs_with_cache_index() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -975,7 +975,7 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -1012,7 +1012,7 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_shadowed_cache_package() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1097,7 +1097,7 @@ async fn test_pkgfs_shadowed_cache_package() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1252,7 +1252,7 @@ async fn test_pkgfs_with_system_image() {
         .await
         .expect("build package");
 
-    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1288,7 +1288,7 @@ async fn test_pkgfs_with_system_image() {
 async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
     let pkg = example_package().await;
 
-    let system_image_package = SystemImageBuilder::new(&[])
+    let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["example"])
         .build()
@@ -1329,7 +1329,7 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
 async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     let pkg = example_package().await;
 
-    let system_image_package = SystemImageBuilder::new(&[])
+    let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["not_example"])
         .build()
@@ -1371,7 +1371,7 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
 async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
     let pkg = example_package().await;
 
-    let system_image_package = SystemImageBuilder::new(&[])
+    let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["not_example"])
         .build()
@@ -1488,7 +1488,7 @@ async fn verify_executable_package_rights(
 #[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_allows_base_package() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1508,7 +1508,7 @@ async fn executability_enforcement_allows_base_package() {
 #[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_blocks_cache_package() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1528,7 +1528,7 @@ async fn executability_enforcement_blocks_cache_package() {
 #[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_allows_allowlisted_package() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[])
+    let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["execute"])
         .build()
@@ -1551,7 +1551,7 @@ async fn executability_enforcement_allows_allowlisted_package() {
 #[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_blocks_unknown_package() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).build().await;
+    let system_image_package = SystemImageBuilder::new().build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1572,7 +1572,7 @@ async fn executability_enforcement_blocks_unknown_package() {
 #[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_allows_unknown_package_if_dynamically_disabled() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[]).build().await;
+    let system_image_package = SystemImageBuilder::new().build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1598,7 +1598,7 @@ async fn executability_enforcement_blocks_update_to_base_package() {
         .await
         .unwrap();
     let pkg2 = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[&pkg1]).build().await;
+    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg1]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1629,7 +1629,7 @@ async fn executability_enforcement_blocks_update_to_base_package() {
 #[fasync::run_singlethreaded(test)]
 async fn open_executable_allowed_when_statically_disabled() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new(&[])
+    let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_disable_executability_restrictions()
         .build()

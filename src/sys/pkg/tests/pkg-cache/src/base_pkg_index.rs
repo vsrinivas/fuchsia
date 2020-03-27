@@ -18,7 +18,7 @@ use {
 /// Sets up the test environment and writes the packages out to base.
 async fn setup_test_env(static_packages: &[&Package]) -> TestEnv {
     let blobfs = BlobfsRamdisk::start().unwrap();
-    let system_image_package = SystemImageBuilder::new(static_packages);
+    let system_image_package = SystemImageBuilder::new().static_packages(static_packages);
     let system_image_package = system_image_package.build().await;
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     for pkg in static_packages {

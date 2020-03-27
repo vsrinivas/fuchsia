@@ -17,7 +17,7 @@ async fn assert_base_blob_count(
     count: u64,
 ) {
     let blobfs = BlobfsRamdisk::start().unwrap();
-    let mut system_image_package = SystemImageBuilder::new(static_packages);
+    let mut system_image_package = SystemImageBuilder::new().static_packages(static_packages);
     if let Some(cache_packages) = cache_packages {
         system_image_package = system_image_package.cache_packages(cache_packages);
         for pkg in cache_packages {
@@ -121,7 +121,7 @@ async fn assume_all_blobs_in_base_on_error() {
 
 async fn pkgfs_with_restrictions_enabled(restrictions_enabled: bool) -> PkgfsRamdisk {
     let blobfs = BlobfsRamdisk::start().unwrap();
-    let mut system_image_package = SystemImageBuilder::new(&[]);
+    let mut system_image_package = SystemImageBuilder::new();
     if !restrictions_enabled {
         system_image_package = system_image_package.pkgfs_disable_executability_restrictions();
     }
