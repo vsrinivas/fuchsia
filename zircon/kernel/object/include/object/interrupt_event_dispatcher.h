@@ -10,11 +10,7 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
-#include <fbl/canary.h>
-#include <fbl/intrusive_single_list.h>
 #include <kernel/mp.h>
-#include <ktl/unique_ptr.h>
-#include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
@@ -35,7 +31,6 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
   void MaskInterrupt() final;
   void UnmaskInterrupt() final;
   void UnregisterInterruptHandler() final;
-  bool HasVcpu() const final;
 
   zx_status_t RegisterInterruptHandler();
   static interrupt_eoi IrqHandler(void* ctx);
@@ -43,13 +38,7 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
   void VcpuInterruptHandler();
 
   const uint32_t vector_;
-
-  struct VcpuDispatcherNode
-      : public fbl::SinglyLinkedListable<ktl::unique_ptr<VcpuDispatcherNode>> {
-    VcpuDispatcherNode(fbl::RefPtr<VcpuDispatcher> vcpu) : vcpu_(vcpu) {}
-    fbl::RefPtr<VcpuDispatcher> vcpu_;
-  };
-  fbl::SinglyLinkedList<ktl::unique_ptr<VcpuDispatcherNode>> vcpus_;
+  fbl::RefPtr<VcpuDispatcher> vcpu_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_EVENT_DISPATCHER_H_

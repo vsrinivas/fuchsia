@@ -26,7 +26,6 @@ class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher, ZX_DEFAULT_VC
   ~VcpuDispatcher();
 
   zx_obj_type_t get_type() const { return ZX_OBJ_TYPE_VCPU; }
-  const fbl::RefPtr<GuestDispatcher>& guest() const { return guest_; }
 
   zx_status_t Resume(zx_port_packet_t* packet);
   void PhysicalInterrupt(uint32_t vector);

@@ -24,10 +24,6 @@ zx_status_t zx_interrupt_bind_vcpu(zx_handle_t handle,
 interrupt object is triggered, the interrupt is redirected to the VCPU, in order
 to be processed by a guest with no host intervention.
 
-An interrupt object may be bound to multiple VCPUs, in order to distribute the
-interrupt. Simply invoke `zx_interrupt_bind_vcpu()` with the same *handle*, but
-different *vcpu*s. However, all VCPUs must belong to a single guest.
-
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
@@ -56,7 +52,7 @@ VCPU.
 **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_READ** or *vcpu* lacks
 **ZX_RIGHT_WRITE**.
 
-**ZX_ERR_ALREADY_BOUND** *handle* is already bound to another guest or to a
+**ZX_ERR_ALREADY_BOUND** *handle* is already bound to another vcpu or to a
 port.
 
 **ZX_ERR_INVALID_ARGS** *vcpu* is bound to a different guest than previously

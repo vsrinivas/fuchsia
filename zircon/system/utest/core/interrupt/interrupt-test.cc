@@ -283,11 +283,14 @@ TEST_F(InterruptTest, MAYBE_BindVcpuTest) {
   ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu2));
 
   ASSERT_OK(interrupt.bind_vcpu(vcpu1, 0));
-  ASSERT_OK(interrupt.bind_vcpu(vcpu2, 0));
+  // Binding again to the same VCPU is okay.
+  ASSERT_OK(interrupt.bind_vcpu(vcpu1, 0));
+  // Binding again to a different VCPU is not.
+  ASSERT_EQ(interrupt.bind_vcpu(vcpu2, 0), ZX_ERR_ALREADY_BOUND);
 }
 
 // Tests binding a virtual interrupt to a VCPU
-TEST_F(InterruptTest, UnableToBindVirtualToVcpuAfterPort) {
+TEST_F(InterruptTest, UnableToBindVirtualInterruptToVcpu) {
   zx::interrupt interrupt;
   zx::port port;
   zx::guest guest;
@@ -305,7 +308,6 @@ TEST_F(InterruptTest, UnableToBindVirtualToVcpuAfterPort) {
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
   ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu));
 
-  ASSERT_OK(interrupt.bind(port, 0, 0));
   ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -336,38 +338,6 @@ TEST_F(InterruptTest, MAYBE_UnableToBindToVcpuAfterPort) {
 
   ASSERT_OK(interrupt.bind(port, 0, 0));
   ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_ALREADY_BOUND);
-}
-
-#if defined(__x86_64__)  // fxb/46207
-#define MAYBE_UnableToBindVcpuMultipleGuests DISABLED_UnableToBindToVcpuMultipleGuests
-#else
-#define MAYBE_UnableToBindVcpuMultipleGuests UnableToBindToVcpuMultipleGuests
-#endif
-
-// Tests binding an interrupt to VCPUs from different guests
-TEST_F(InterruptTest, MAYBE_UnableToBindVcpuMultipleGuests) {
-  zx::interrupt interrupt;
-  zx::guest guest1;
-  zx::guest guest2;
-  zx::vmar vmar1;
-  zx::vmar vmar2;
-  zx::vcpu vcpu1;
-  zx::vcpu vcpu2;
-
-  zx_status_t status = zx::guest::create(*root_resource_, 0, &guest1, &vmar1);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    fprintf(stderr, "Guest creation not supported\n");
-    return;
-  }
-  ASSERT_OK(status);
-
-  ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
-  ASSERT_OK(zx::vcpu::create(guest1, 0, 0, &vcpu1));
-  ASSERT_OK(zx::guest::create(*root_resource_, 0, &guest2, &vmar2));
-  ASSERT_OK(zx::vcpu::create(guest2, 0, 0, &vcpu2));
-
-  ASSERT_OK(interrupt.bind_vcpu(vcpu1, 0));
-  ASSERT_EQ(interrupt.bind_vcpu(vcpu2, 0), ZX_ERR_INVALID_ARGS);
 }
 
 // Tests support for null output timestamp
