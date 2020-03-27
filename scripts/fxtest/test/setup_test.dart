@@ -216,7 +216,7 @@ void main() {
           flags: Flags(dryRun: false),
           passThroughTokens: [],
           runnerTokens: [],
-          testNames: [],
+          testNameGroups: [],
         ),
       );
       await cmd.runTests(testBundles).forEach((event) {});
@@ -238,7 +238,7 @@ void main() {
           flags: Flags(dryRun: true),
           passThroughTokens: [],
           runnerTokens: [],
-          testNames: [],
+          testNameGroups: [],
         ),
       );
       await cmd.runTests(testBundles).forEach((event) {});

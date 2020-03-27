@@ -16,11 +16,10 @@ abstract class Checker {
   /// Checkers out of Mixins and avoid requiring a combinatorial amount of
   /// Checker subclasses to solve the possibly combinatorial amount of
   /// situations.
-  bool canHandle(
-      PermutatedTestsConfig testsConfig, TestDefinition testDefinition,
+  bool canHandle(String testName, Flags flags, TestDefinition testDefinition,
       {bool exactMatching}) {
-    return _testPassesConfig(testsConfig, testDefinition) &&
-        _testPassesNameCheck(testsConfig.testName, testDefinition,
+    return _testPassesFlags(flags, testDefinition) &&
+        _testPassesNameCheck(testName, testDefinition,
             exactMatching: exactMatching);
   }
 
@@ -32,16 +31,11 @@ abstract class Checker {
   /// For example, a developer may pass `--host` to signify that they only want
   /// to run host tests, or possibly `--host -XYZ` to append the `XYZ` filter.
   /// In either case, a test either survives all flag checks or not.
-  bool _testPassesConfig(
-    PermutatedTestsConfig testsConfig,
-    TestDefinition testDefinition,
-  ) {
-    if (testsConfig.flags.shouldOnlyRunDeviceTests &&
-        testDefinition.os != 'fuchsia') {
+  bool _testPassesFlags(Flags flags, TestDefinition testDefinition) {
+    if (flags.shouldOnlyRunDeviceTests && testDefinition.os != 'fuchsia') {
       return false;
     }
-    if (testsConfig.flags.shouldOnlyRunHostTests &&
-        testDefinition.os == 'fuchsia') {
+    if (flags.shouldOnlyRunHostTests && testDefinition.os == 'fuchsia') {
       return false;
     }
     return true;
@@ -136,8 +130,8 @@ class PathMatchChecker extends Checker {
     if (exactMatching) return testName == testDefinition.path;
 
     // A dot here signifies that the user ran `fx test .` *from the build
-    // directory itself*, which means that all host test paths, which are
-    // relative from that directory, must obviously pass.
+    // directory itself*, which means that all host test paths which are
+    // relative from that directory must obviously pass.
     // Related to this is that host test paths are written as relative paths,
     // (e.g., no leading slash) and on-device tests are written as absolute
     // paths (often starting with "/pkgfs").

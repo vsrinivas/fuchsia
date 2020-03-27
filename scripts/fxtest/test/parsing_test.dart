@@ -147,7 +147,7 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
         fx: fuchsiaLocator.fx,
-        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/superBigTest.cmx',
+        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx',
         name: 'device test',
       ),
       TestDefinition(
@@ -168,13 +168,13 @@ void main() {
     }) {
       TestsConfig testsConfig;
       var parsedArgs = fxTestArgParser.parse(args);
-      var testNamesCollector = TestNamesCollector([
-        parsedArgs['testNames'],
-        parsedArgs.rest,
-      ]);
+      var testNamesCollector = TestNamesCollector(
+        rawTestNames: parsedArgs.rest,
+        rawArgs: parsedArgs.arguments,
+      );
       testsConfig = TestsConfig.fromArgResults(
         results: parsedArgs,
-        testNames: testNamesCollector.collect(),
+        testNameGroups: testNamesCollector.collect(),
       );
       return tr.aggregateTests(
         buildDir: fuchsiaLocator.buildDir,
@@ -211,10 +211,8 @@ void main() {
 
     test('when the --exact flag is passed for a test packageUrl', () {
       // --exact correctly catches exact packageUrl matches
-      ParsedManifest parsedManifest = parseFromArgs(args: [
-        'fuchsia-pkg://fuchsia.com/fancy#meta/superBigTest.cmx',
-        '--exact'
-      ]);
+      ParsedManifest parsedManifest = parseFromArgs(
+          args: ['fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx', '--exact']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
 
@@ -232,10 +230,7 @@ void main() {
 
     test('when the -d flag is passed', () {
       ParsedManifest parsedManifest = parseFromArgs(
-        args: [
-          'fuchsia-pkg://fuchsia.com/fancy#meta/superBigTest.cmx',
-          '--device'
-        ],
+        args: ['fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx', '--device'],
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
@@ -247,12 +242,12 @@ void main() {
     });
 
     test('when packageUrl.resourcePath is matched', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['superBigTest.cmx']);
+      ParsedManifest parsedManifest = parseFromArgs(args: ['test1.cmx']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
     test('when packageUrl.rawResource is matched', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['superBigTest']);
+      ParsedManifest parsedManifest = parseFromArgs(args: ['test1']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
@@ -281,7 +276,9 @@ void main() {
     });
 
     test('when packageUrl.packageName is matched', () {
-      TestsConfig testsConfig = TestsConfig.all(tNames: ['fancy']);
+      TestsConfig testsConfig = TestsConfig.all(testNameGroups: [
+        ['fancy']
+      ]);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: fuchsiaLocator.buildDir,
@@ -296,7 +293,9 @@ void main() {
     test(
         'when packageUrl.packageName is matched but discriminating '
         'flag prevents', () {
-      TestsConfig testsConfig = TestsConfig.host(tNames: ['fancy']);
+      TestsConfig testsConfig = TestsConfig.host(testNameGroups: [
+        ['fancy']
+      ]);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: fuchsiaLocator.buildDir,
@@ -308,7 +307,9 @@ void main() {
     });
 
     test('when . is passed from the build dir', () {
-      TestsConfig testsConfig = TestsConfig.host(tNames: ['.']);
+      TestsConfig testsConfig = TestsConfig.host(testNameGroups: [
+        ['.']
+      ]);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -336,7 +337,9 @@ void main() {
     });
 
     test('when . is passed from the build dir and there\'s device tests', () {
-      TestsConfig testsConfig = TestsConfig.all(tNames: ['.']);
+      TestsConfig testsConfig = TestsConfig.all(testNameGroups: [
+        ['.']
+      ]);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -357,6 +360,156 @@ void main() {
       );
 
       expect(parsedManifest.testBundles, hasLength(0));
+    });
+  });
+
+  group('tests are aggregated correctly with the -a flag', () {
+    var envReader = MockEnvReader();
+    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+    when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+        .thenReturn('/root/path/fuchsia/out/default');
+    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+
+    void _ignoreEvents(TestEvent _) {}
+    TestsManifestReader tr = TestsManifestReader();
+
+    var tds = <TestDefinition>[
+      TestDefinition(
+        buildDir: fuchsiaLocator.buildDir,
+        os: 'fuchsia',
+        fx: fuchsiaLocator.fx,
+        packageUrl: 'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cmx',
+        name: 'pkg 1 test 1',
+      ),
+      TestDefinition(
+        buildDir: fuchsiaLocator.buildDir,
+        os: 'fuchsia',
+        fx: fuchsiaLocator.fx,
+        packageUrl: 'fuchsia-pkg://fuchsia.com/pkg1#test2.cmx',
+        name: 'pkg 1 test 2',
+      ),
+      TestDefinition(
+        buildDir: fuchsiaLocator.buildDir,
+        os: 'fuchsia',
+        fx: fuchsiaLocator.fx,
+        packageUrl: 'fuchsia-pkg://fuchsia.com/pkg2#test1.cmx',
+        name: 'pkg 2 test 1',
+        path: '//gnsubtree',
+      ),
+      TestDefinition(
+        buildDir: fuchsiaLocator.buildDir,
+        fx: fuchsiaLocator.fx,
+        os: 'linux',
+        path: '/asdf',
+        name: '//host/test',
+      ),
+    ];
+
+    test('specifies an impossible combination of two valid filters', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['pkg1', '-a', '//host/test'],
+        rawTestNames: ['pkg1'],
+      );
+      TestsConfig testsConfig = TestsConfig.all(
+        testNameGroups: collector.collect(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: fuchsiaLocator.buildDir,
+        eventEmitter: _ignoreEvents,
+        testsConfig: testsConfig,
+        testRunner: TestRunner(),
+      );
+
+      expect(parsedManifest.testBundles, hasLength(0));
+    });
+
+    test('is not present to remove other pkg matches', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['pkg1'],
+        rawTestNames: ['pkg1'],
+      );
+      TestsConfig testsConfig = TestsConfig.all(
+        testNameGroups: collector.collect(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: fuchsiaLocator.buildDir,
+        eventEmitter: _ignoreEvents,
+        testsConfig: testsConfig,
+        testRunner: TestRunner(),
+      );
+      var bundles = parsedManifest.testBundles;
+
+      expect(bundles, hasLength(2));
+      expect(bundles[0].testDefinition.name, 'pkg 1 test 1');
+      expect(bundles[1].testDefinition.name, 'pkg 1 test 2');
+    });
+
+    test('combines filters from different fields', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['//gnsubtree', '-a', 'test1'],
+        rawTestNames: ['//gnsubtree'],
+      );
+      TestsConfig testsConfig = TestsConfig.all(
+        testNameGroups: collector.collect(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: fuchsiaLocator.buildDir,
+        eventEmitter: _ignoreEvents,
+        testsConfig: testsConfig,
+        testRunner: TestRunner(),
+      );
+      var bundles = parsedManifest.testBundles;
+
+      expect(bundles, hasLength(1));
+      expect(bundles[0].testDefinition.name, 'pkg 2 test 1');
+    });
+
+    test('is not present to remove other component matches', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test1'],
+        rawTestNames: ['test1'],
+      );
+      TestsConfig testsConfig = TestsConfig.all(
+        testNameGroups: collector.collect(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: fuchsiaLocator.buildDir,
+        eventEmitter: _ignoreEvents,
+        testsConfig: testsConfig,
+        testRunner: TestRunner(),
+      );
+      var bundles = parsedManifest.testBundles;
+
+      expect(bundles, hasLength(2));
+      expect(bundles[0].testDefinition.name, 'pkg 1 test 1');
+      expect(bundles[1].testDefinition.name, 'pkg 2 test 1');
+    });
+
+    test('when it removes other matches', () {
+      var collector = TestNamesCollector(
+        // `-a` flag will filter out `test1`
+        rawArgs: ['pkg1', '-a', 'test2', '//host/test'],
+        rawTestNames: ['pkg1', '//host/test'],
+      );
+      TestsConfig testsConfig = TestsConfig.all(
+        testNameGroups: collector.collect(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: fuchsiaLocator.buildDir,
+        eventEmitter: _ignoreEvents,
+        testsConfig: testsConfig,
+        testRunner: TestRunner(),
+      );
+      var bundles = parsedManifest.testBundles;
+
+      expect(bundles, hasLength(2));
+      expect(bundles[0].testDefinition.name, 'pkg 1 test 2');
+      expect(bundles[1].testDefinition.name, '//host/test');
     });
   });
 }

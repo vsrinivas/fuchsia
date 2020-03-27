@@ -111,7 +111,7 @@ class FuchsiaTestCommand {
       testDefinitions: testDefinitions,
       testsConfig: testsConfig,
       testRunner: SymbolizingTestRunner(
-        fx: '${fuchsiaLocator.fuchsiaDir}/.jiri_root/bin/fx',
+        fx: fuchsiaLocator.fx,
       ),
     );
   }

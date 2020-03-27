@@ -16,7 +16,6 @@ String getFriendlyBuildDir() {
 }
 
 final ArgParser fxTestArgParser = ArgParser()
-  ..addMultiOption('testNames', abbr: 't')
   ..addFlag('help', abbr: 'h', defaultsTo: false, negatable: false)
   ..addFlag('host',
       defaultsTo: false,
@@ -27,6 +26,10 @@ final ArgParser fxTestArgParser = ArgParser()
       defaultsTo: false,
       negatable: false,
       help: 'If true, only runs device tests. The opposite of `--host`')
+  ..addMultiOption('and',
+      abbr: 'a',
+      help: 'When present, adds additional requirements to the preceding '
+          '`testName` filter')
   ..addFlag('printtests',
       defaultsTo: false,
       negatable: false,

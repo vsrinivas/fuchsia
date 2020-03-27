@@ -16,6 +16,7 @@ export 'rebuilder.dart';
 export 'test_bundle.dart';
 export 'test_definition.dart';
 export 'test_event.dart';
+export 'test_matcher.dart';
 export 'test_names_collector.dart';
 export 'test_runner.dart';
 export 'tests_config.dart';

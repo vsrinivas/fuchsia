@@ -125,4 +125,13 @@ class TestBundle {
       result.stderr,
     ].join('\n');
   }
+
+  @override
+  String toString() => [
+        '<TestBundle',
+        '  testName: ${testDefinition.name}',
+        '  extraFlags: $extraFlags',
+        '  runnerFlags: $runnerFlags',
+        '/>',
+      ].join('\n');
 }

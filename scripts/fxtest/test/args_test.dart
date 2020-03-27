@@ -49,19 +49,23 @@ void main() {
           .thenReturn('/root/path/fuchsia/out/default/host_x64/gen');
       var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
       var collector = TestNamesCollector(
-        [
-          ['.'],
-        ],
+        rawTestNames: ['.'],
+        rawArgs: ['.'],
         fuchsiaLocator: fuchsiaLocator,
       );
-      expect(collector.collect(), ['host_x64/gen']);
+      expect(collector.collect(), [
+        ['host_x64/gen']
+      ]);
     });
     test('when a duplicate is passed in', () {
-      var collector = TestNamesCollector([
+      var collector = TestNamesCollector(
+        rawTestNames: ['asdf', 'asdf', 'xyz'],
+        rawArgs: ['asdf', 'asdf', 'xyz'],
+      );
+      expect(collector.collect(), [
         ['asdf'],
-        ['asdf', 'xyz']
+        ['xyz']
       ]);
-      expect(collector.collect(), ['asdf', 'xyz']);
     });
     test('when a dot and duplicate are passed in', () {
       var envReader = MockEnvReader();
@@ -71,13 +75,14 @@ void main() {
           .thenReturn('/root/path/fuchsia/out/default/host_x64');
       var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
       var collector = TestNamesCollector(
-        [
-          ['asdf'],
-          ['asdf', '.']
-        ],
+        rawTestNames: ['asdf', '.', 'asdf'],
+        rawArgs: ['asdf', '.', 'asdf', '--some-flag'],
         fuchsiaLocator: fuchsiaLocator,
       );
-      expect(collector.collect(), ['asdf', 'host_x64']);
+      expect(collector.collect(), [
+        ['asdf'],
+        ['host_x64']
+      ]);
     });
 
     test('when a dot is passed from the build directory', () {
@@ -87,12 +92,13 @@ void main() {
       when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
       var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
       var collector = TestNamesCollector(
-        [
-          ['.']
-        ],
+        rawTestNames: ['.'],
+        rawArgs: ['.'],
         fuchsiaLocator: fuchsiaLocator,
       );
-      expect(collector.collect(), ['.']);
+      expect(collector.collect(), [
+        ['.']
+      ]);
     });
   });
 
@@ -126,7 +132,9 @@ void main() {
       var testsConfig = TestsConfig(
         flags: Flags(),
         runnerTokens: const [],
-        testNames: ['example test'],
+        testNameGroups: [
+          ['example test']
+        ],
         passThroughTokens: ['--xyz'],
       );
       ParsedManifest manifest = tr.aggregateTests(
@@ -155,7 +163,9 @@ void main() {
         flags: Flags(),
         passThroughTokens: [''],
         runnerTokens: const [],
-        testNames: ['example test'],
+        testNameGroups: [
+          ['example test']
+        ],
       );
       ParsedManifest manifest = tr.aggregateTests(
         buildDir: '/custom',
@@ -247,6 +257,108 @@ void main() {
       ArgResults results = fxTestArgParser.parse(['--realm=foo']);
       var testsConfig = TestsConfig.fromArgResults(results: results);
       expect(testsConfig.flags.realm, 'foo');
+    });
+  });
+
+  group('test names are collected correctly', () {
+    test('with one test name', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test_one'],
+        rawTestNames: ['test_one'],
+      );
+      expect(collector.collect(), [
+        ['test_one'],
+      ]);
+    });
+
+    test('with one test name and flags', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test_one', '--exact'],
+        rawTestNames: ['test_one'],
+      );
+      expect(collector.collect(), [
+        ['test_one'],
+      ]);
+    });
+
+    test('with two test names', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test_one', 'test_two'],
+        rawTestNames: ['test_one', 'test_two'],
+      );
+      expect(collector.collect(), [
+        ['test_one'],
+        ['test_two']
+      ]);
+    });
+
+    test('with two test names and flags', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test_one', 'test_two', '--exact'],
+        rawTestNames: ['test_one', 'test_two'],
+      );
+      expect(collector.collect(), [
+        ['test_one'],
+        ['test_two']
+      ]);
+    });
+
+    test('with one test names and AND flags', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test_one', '-a', 'filter-two'],
+        rawTestNames: ['test_one'],
+      );
+      expect(collector.collect(), [
+        ['test_one', 'filter-two'],
+      ]);
+    });
+    test('with two test names and AND flags', () {
+      var collector = TestNamesCollector(
+        rawArgs: ['test_one', '-a', 'filter-two', 'test_two'],
+        rawTestNames: ['test_one', 'test_two'],
+      );
+      expect(collector.collect(), [
+        ['test_one', 'filter-two'],
+        ['test_two'],
+      ]);
+    });
+
+    test('with two test names and multiple AND flags', () {
+      var collector = TestNamesCollector(
+        rawArgs: [
+          'test_one',
+          '-a',
+          'filter-two',
+          '-a',
+          'filter-three',
+          'test_two'
+        ],
+        rawTestNames: ['test_one', 'test_two'],
+      );
+      expect(collector.collect(), [
+        ['test_one', 'filter-two', 'filter-three'],
+        ['test_two'],
+      ]);
+    });
+
+    test('with two test names and AND flags for multiple tests', () {
+      var collector = TestNamesCollector(
+        rawArgs: [
+          'test_one',
+          '-a',
+          'filter-two',
+          '-a',
+          'filter-three',
+          'test_two',
+          '-a',
+          'filter-four'
+        ],
+        rawTestNames: ['test_one', 'test_two'],
+      );
+      expect(collector.collect(), [
+        ['test_one', 'filter-two', 'filter-three'],
+        ['test_two', 'filter-four'],
+      ]);
     });
   });
 }

@@ -92,15 +92,15 @@ class FuchsiaTestCommandCli {
   }
 
   Future<void> run() async {
-    var testNamesCollector = TestNamesCollector([
-      parsedArgs['testNames'],
-      parsedArgs.rest,
-    ]);
+    var testNamesCollector = TestNamesCollector(
+      rawTestNames: parsedArgs.rest,
+      rawArgs: parsedArgs.arguments,
+    );
 
     var testsConfig = TestsConfig.fromArgResults(
       results: parsedArgs,
       passThroughTokens: passThroughTokens,
-      testNames: testNamesCollector.collect(),
+      testNameGroups: testNamesCollector.collect(),
     );
 
     _cmd = buildCommand(testsConfig);

@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:io/ansi.dart';
 import 'package:fxtest/fxtest.dart';
@@ -34,18 +35,17 @@ class ParsedManifest {
 }
 
 class TestsManifestReader {
-  List<Checker> checkers;
+  final TestMatcher matcher;
 
-  TestsManifestReader() {
-    checkers = [
-      NoArgumentsChecker(),
-      ComponentTestChecker(),
-      FullUrlComponentChecker(),
-      UrlNameComponentChecker(),
-      NameMatchChecker(),
-      PathMatchChecker(),
-    ];
-  }
+  TestsManifestReader()
+      : matcher = TestMatcher(checkers: [
+          NoArgumentsChecker(),
+          ComponentTestChecker(),
+          FullUrlComponentChecker(),
+          UrlNameComponentChecker(),
+          NameMatchChecker(),
+          PathMatchChecker(),
+        ]);
 
   /// Reads and parses the tests manifest file at `manifestLocation`.
   Future<List<TestDefinition>> loadTestsJson({
@@ -161,41 +161,42 @@ class TestsManifestReader {
         // more than once.
         if (testIsClaimed) break;
 
-        for (var checker in checkers) {
-          if (checker.canHandle(permutatedTestConfig, testDefinition,
-              exactMatching: exactMatching)) {
-            // Certain test definitions result in multiple entries in `tests.json`,
-            // but invoking the test runner on their shared package name already
-            // captures all tests. Therefore, any such sibling entry further down
-            // `tests.json` will only result in duplicate work.
-            if (seenPackages.contains(testDefinition.executionHandle.handle)) {
-              numDuplicateTests += 1;
-              testIsClaimed = true;
-              break;
-            } else {
-              seenPackages.add(testDefinition.executionHandle.handle);
-            }
-
-            // Now that we know we're seeing this `packageName` for the first
-            // time, we can add it to the queue
-            testBundles.add(
-              TestBundle(
-                testDefinition,
-                runnerFlags: testsConfig.runnerTokens,
-                extraFlags: testsConfig.passThroughTokens,
-                isDryRun: testsConfig.flags.dryRun,
-                raiseOnFailure: testsConfig.flags.shouldFailFast,
-                workingDirectory: buildDir,
-                testRunner: testRunner,
-              ),
-            );
-
-            // Setting this flag breaks out of the Tier 2 (PermutatedTestFlags)
-            // loop
+        if (matcher.matches(
+          testDefinition,
+          permutatedTestConfig,
+          exactMatching: exactMatching,
+        )) {
+          // Certain test definitions result in multiple entries in `tests.json`,
+          // but invoking the test runner on their shared package name already
+          // captures all tests. Therefore, any such sibling entry further down
+          // `tests.json` will only result in duplicate work.
+          if (seenPackages.contains(testDefinition.executionHandle.handle)) {
+            numDuplicateTests += 1;
             testIsClaimed = true;
-            // Break out of the Tier 3 (Checkers) loop
             break;
+          } else {
+            seenPackages.add(testDefinition.executionHandle.handle);
           }
+
+          // Now that we know we're seeing this `packageName` for the first
+          // time, we can add it to the queue
+          testBundles.add(
+            TestBundle(
+              testDefinition,
+              runnerFlags: testsConfig.runnerTokens,
+              extraFlags: testsConfig.passThroughTokens,
+              isDryRun: testsConfig.flags.dryRun,
+              raiseOnFailure: testsConfig.flags.shouldFailFast,
+              workingDirectory: buildDir,
+              testRunner: testRunner,
+            ),
+          );
+
+          // Setting this flag breaks out of the Tier 2 (PermutatedTestFlags)
+          // loop
+          testIsClaimed = true;
+          // Break out of the Tier 3 (Checkers) loop
+          break;
         }
       }
 
@@ -240,7 +241,7 @@ class TestsManifestReader {
 
     int numTests = testsConfig.flags.limit == 0
         ? parsedManifest.testBundles.length
-        : testsConfig.flags.limit;
+        : min(testsConfig.flags.limit, parsedManifest.testBundles.length);
     eventEmitter(TestInfo(
       'Will run $numTests '
       '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',

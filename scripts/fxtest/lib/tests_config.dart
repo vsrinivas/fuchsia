@@ -120,18 +120,18 @@ class TestsConfig {
   final Flags flags;
   final List<String> runnerTokens;
   final List<String> passThroughTokens;
-  final List<String> testNames;
+  final List<List<String>> testNameGroups;
   TestsConfig({
     @required this.flags,
     @required this.runnerTokens,
     @required this.passThroughTokens,
-    @required this.testNames,
+    @required this.testNameGroups,
   });
 
   factory TestsConfig.fromArgResults({
     ArgResults results,
     List<String> passThroughTokens,
-    List<String> testNames,
+    List<List<String>> testNameGroups,
   }) {
     Flags flags = Flags.fromArgResults(results);
     return TestsConfig(
@@ -139,24 +139,29 @@ class TestsConfig {
       runnerTokens:
           flags.realm != null ? ['--realm-label=${flags.realm}'] : const [],
       passThroughTokens: passThroughTokens,
-      testNames: testNames,
+      testNameGroups: testNameGroups,
     );
   }
 
-  factory TestsConfig.all({List<String> tNames, Flags flags}) {
+  factory TestsConfig.all({
+    List<List<String>> testNameGroups,
+    Flags flags,
+  }) {
     return TestsConfig(
       runnerTokens: const [],
       passThroughTokens: const [],
-      testNames: tNames ?? [],
+      testNameGroups: testNameGroups ?? [],
       flags: flags ?? Flags(),
     );
   }
 
-  factory TestsConfig.host({List<String> tNames}) {
+  factory TestsConfig.host({
+    List<List<String>> testNameGroups,
+  }) {
     return TestsConfig(
       runnerTokens: const [],
       passThroughTokens: const [],
-      testNames: tNames,
+      testNameGroups: testNameGroups,
       flags: Flags(
         shouldOnlyRunDeviceTests: false,
         shouldOnlyRunHostTests: true,
@@ -164,9 +169,9 @@ class TestsConfig {
     );
   }
 
-  factory TestsConfig.device(List<String> tNames) {
+  factory TestsConfig.device(List<List<String>> testNameGroups) {
     return TestsConfig(
-      testNames: tNames,
+      testNameGroups: testNameGroups,
       runnerTokens: const [],
       passThroughTokens: const [],
       flags: Flags(
@@ -179,17 +184,17 @@ class TestsConfig {
   Iterable<PermutatedTestsConfig> get permutations sync* {
     // Check for having zero `testName` instances, which indicates that the
     // developer wants a wide-open run that includes as many tests as possible
-    if (testNames.isEmpty) {
+    if (testNameGroups.isEmpty) {
       yield PermutatedTestsConfig(
         flags: flags,
-        testName: null,
+        testNameGroup: null,
       );
       return;
     }
-    for (String testName in testNames) {
+    for (List<String> testNameGroup in testNameGroups) {
       yield PermutatedTestsConfig(
         flags: flags,
-        testName: testName,
+        testNameGroup: testNameGroup,
       );
     }
   }
@@ -198,17 +203,17 @@ class TestsConfig {
 /// An expanded set of flags passed to `fx test` against which all available
 /// tests will be examined.
 class PermutatedTestsConfig {
-  final String testName;
+  final List<String> testNameGroup;
   final Flags flags;
   PermutatedTestsConfig({
     @required this.flags,
-    @required this.testName,
+    @required this.testNameGroup,
   });
 
   @override
   String toString() {
     var chunks = <String>[
-      if (testName != null) testName,
+      if (testNameGroup != null) testNameGroup.join(', '),
       if (flags.shouldOnlyRunDeviceTests) '-d',
       if (flags.shouldOnlyRunHostTests) '-h',
     ];
