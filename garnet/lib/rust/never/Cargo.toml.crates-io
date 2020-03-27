@@ -14,6 +14,7 @@ repository = "https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/rust/
 license = "BSD-3-Clause"
 keywords = ["never", "void", "unstable", "stable"]
 categories = ["no-std", "rust-patterns"]
+include = ["src/*", "Cargo.toml"]
 
 [features]
 std = []
