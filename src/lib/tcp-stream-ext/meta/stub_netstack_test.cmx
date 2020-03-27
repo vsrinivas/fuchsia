@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/tcp-stream-ext-tests#meta/stub_netstack.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/stub_netstack_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}
