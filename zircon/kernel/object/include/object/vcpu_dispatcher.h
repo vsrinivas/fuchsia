@@ -29,9 +29,7 @@ class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher, ZX_DEFAULT_VC
   const fbl::RefPtr<GuestDispatcher>& guest() const { return guest_; }
 
   zx_status_t Resume(zx_port_packet_t* packet);
-  // Adds an interrupt vector to the list of pending interrupts. If the VCPU
-  // is running, this returns a CPU mask that can be used to interrupt it.
-  cpu_mask_t PhysicalInterrupt(uint32_t vector);
+  void PhysicalInterrupt(uint32_t vector);
   void VirtualInterrupt(uint32_t vector);
   zx_status_t ReadState(zx_vcpu_state_t* vcpu_state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);

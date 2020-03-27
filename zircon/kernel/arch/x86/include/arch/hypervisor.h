@@ -94,8 +94,7 @@ class Vcpu {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
   zx_status_t Resume(zx_port_packet_t* packet);
-  cpu_mask_t Interrupt(uint32_t vector, hypervisor::InterruptType type);
-  void VirtualInterrupt(uint32_t vector);
+  void Interrupt(uint32_t vector, hypervisor::InterruptType type);
   zx_status_t ReadState(zx_vcpu_state_t* vcpu_state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
@@ -104,7 +103,6 @@ class Vcpu {
   Guest* const guest_;
   const uint16_t vpid_;
   Thread* const thread_;
-  ktl::atomic<bool> running_;
   LocalApicState local_apic_state_;
   PvClockState pvclock_state_;
   VmxState vmx_state_;

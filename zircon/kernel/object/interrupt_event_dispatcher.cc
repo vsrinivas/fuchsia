@@ -168,12 +168,8 @@ interrupt_eoi InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
 
 void InterruptEventDispatcher::VcpuInterruptHandler() {
   Guard<SpinLock, IrqSave> guard{&spinlock_};
-  cpu_mask_t mask = 0;
   for (const auto& vcpu_node : vcpus_) {
-    mask |= vcpu_node.vcpu_->PhysicalInterrupt(vector_);
-  }
-  if (mask != 0) {
-    mp_interrupt(MP_IPI_TARGET_MASK, mask);
+    vcpu_node.vcpu_->PhysicalInterrupt(vector_);
   }
 }
 

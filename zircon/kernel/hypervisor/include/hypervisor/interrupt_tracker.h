@@ -93,7 +93,6 @@ template <uint32_t N>
 class InterruptTracker {
  public:
   zx_status_t Init() {
-    event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
     Guard<SpinLock, IrqSave> lock{&lock_};
     return bitmap_.Init();
   }
@@ -138,15 +137,13 @@ class InterruptTracker {
   }
 
   // Tracks the given interrupt, and signals any waiters.
-  bool Interrupt(uint32_t vector, InterruptType type) {
+  void Interrupt(uint32_t vector, InterruptType type) {
     Track(vector, type);
-    return event_signal(&event_, true) > 0;
+    event_.Signal();
   }
 
   // Tracks the given virtual interrupt, and signals any waiters.
-  bool VirtualInterrupt(uint32_t vector) {
-    return Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
-  }
+  void VirtualInterrupt(uint32_t vector) { Interrupt(vector, hypervisor::InterruptType::VIRTUAL); }
 
   // Waits for an interrupt.
   zx_status_t Wait(zx_time_t deadline, StateInvalidator* invalidator) {
@@ -155,7 +152,7 @@ class InterruptTracker {
     }
     ktrace_vcpu(TAG_VCPU_BLOCK, VCPU_INTERRUPT);
     do {
-      zx_status_t status = event_wait_deadline(&event_, deadline, true);
+      zx_status_t status = event_.Wait(Deadline::no_slack(deadline));
       if (status == ZX_ERR_TIMED_OUT) {
         break;
       } else if (status != ZX_OK) {
@@ -168,7 +165,7 @@ class InterruptTracker {
   }
 
  private:
-  event_t event_;
+  Event event_{EVENT_FLAG_AUTOUNSIGNAL};
   DECLARE_SPINLOCK(InterruptTracker) lock_;
   InterruptBitmap<N> bitmap_ TA_GUARDED(lock_);
 };

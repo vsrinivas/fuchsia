@@ -17,7 +17,6 @@
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
-#include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/stats.h>
 #include <vm/fault.h>
@@ -693,7 +692,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 }
 
 Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread), running_(false), vmx_state_(/* zero-init */) {}
+    : guest_(guest), vpid_(vpid), thread_(thread), vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
   if (!vmcs_page_.IsAllocated()) {
@@ -885,12 +884,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // flush microarchitectural buffers.
       mds_buff_overwrite();
     }
+
     ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
-    running_.store(true);
     GUEST_STATS_INC(vm_entries);
     status = vmx_enter(&vmx_state_);
     GUEST_STATS_INC(vm_exits);
-    running_.store(false);
 
     SaveGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
@@ -932,19 +930,8 @@ void vmx_exit(VmxState* vmx_state) {
   x86_ltr(selector);
 }
 
-cpu_mask_t Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-  bool signaled = local_apic_state_.interrupt_tracker.Interrupt(vector, type);
-  if (signaled || !running_.load()) {
-    return 0;
-  }
-  return cpu_num_to_mask(thread_->LastCpu());
-}
-
-void Vcpu::VirtualInterrupt(uint32_t vector) {
-  cpu_mask_t mask = Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
-  if (mask != 0) {
-    mp_interrupt(MP_IPI_TARGET_MASK, mask);
-  }
+void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
+  local_apic_state_.interrupt_tracker.Interrupt(vector, type);
 }
 
 template <typename Out, typename In>

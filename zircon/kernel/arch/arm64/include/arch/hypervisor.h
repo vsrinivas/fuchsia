@@ -74,8 +74,8 @@ class GichState {
     interrupt_tracker_.Track(vector, type);
   }
 
-  bool Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-    return interrupt_tracker_.Interrupt(vector, type);
+  void Interrupt(uint32_t vector, hypervisor::InterruptType type) {
+    interrupt_tracker_.Interrupt(vector, type);
   }
 
   zx_status_t Wait(zx_time_t deadline) { return interrupt_tracker_.Wait(deadline, nullptr); }
@@ -112,8 +112,7 @@ class Vcpu {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
   zx_status_t Resume(zx_port_packet_t* packet);
-  cpu_mask_t Interrupt(uint32_t vector, hypervisor::InterruptType type);
-  void VirtualInterrupt(uint32_t vector);
+  void Interrupt(uint32_t vector, hypervisor::InterruptType type);
   zx_status_t ReadState(zx_vcpu_state_t* state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state) { return ZX_ERR_INVALID_ARGS; }
@@ -122,7 +121,6 @@ class Vcpu {
   Guest* guest_;
   const uint8_t vpid_;
   const Thread* thread_;
-  ktl::atomic<bool> running_;
   // We allocate El2State in its own page as it is passed between EL1 and EL2,
   // which have different address space mappings. This ensures that El2State
   // will not cross a page boundary and be incorrectly accessed in EL2.

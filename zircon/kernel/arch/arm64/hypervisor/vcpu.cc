@@ -18,7 +18,6 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/ktrace.h>
 #include <kernel/event.h>
-#include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/stats.h>
 #include <platform/timer.h>
@@ -231,7 +230,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 }
 
 Vcpu::Vcpu(Guest* guest, uint8_t vpid, const Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread), running_(false) {}
+    : guest_(guest), vpid_(vpid), thread_(thread) {}
 
 Vcpu::~Vcpu() {
   __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
@@ -251,11 +250,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       AutoGich auto_gich(ich_state, gich_state_.Pending());
 
       ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
-      running_.store(true);
       GUEST_STATS_INC(vm_entries);
       status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), hcr_);
       GUEST_STATS_INC(vm_exits);
-      running_.store(false);
     }
     gich_state_.SetAllInterruptStates(ich_state);
     if (status == ZX_ERR_NEXT) {
@@ -277,19 +274,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
   return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
-cpu_mask_t Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-  bool signaled = gich_state_.Interrupt(vector, type);
-  if (signaled || !running_.load()) {
-    return 0;
-  }
-  return cpu_num_to_mask(thread_->LastCpu());
-}
-
-void Vcpu::VirtualInterrupt(uint32_t vector) {
-  cpu_mask_t mask = Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
-  if (mask != 0) {
-    mp_interrupt(MP_IPI_TARGET_MASK, mask);
-  }
+void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
+  gich_state_.Interrupt(vector, type);
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
