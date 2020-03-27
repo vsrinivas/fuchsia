@@ -101,26 +101,6 @@ pub fn take_handle<T: HandleBased>(handle: &mut T) -> Handle {
     mem::replace(handle, invalid).into_handle()
 }
 
-/// Copies elements from `src_elements` bitwise into `dst`, using a memcpy.
-fn copy_slice_to_bytes<T: AsBytes + Copy>(src_elements: &[T], dst: &mut [u8]) -> Result<()> {
-    let src = src_elements.as_bytes();
-    let src_size = src.len();
-    let dst_size = dst.len();
-    if src_size != dst_size {
-        return Err(Error::OutOfRange);
-    }
-
-    let src_ptr = src.as_ptr();
-    let dst_ptr = dst.as_mut_ptr();
-
-    // Safety: the two slices cannot overlap because the mutable `dst` reference cannot be aliased.
-    unsafe {
-        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, src_size);
-    }
-
-    Ok(())
-}
-
 /// The maximum recursion depth of encoding and decoding.
 /// Each nested aggregate type (structs, unions, arrays, or vectors) counts as one step in the
 /// recursion depth.
@@ -366,9 +346,9 @@ impl<'a> Encoder<'a> {
 
     /// Append bytes to the very end (out-of-line) of the buffer.
     pub fn append_bytes(&mut self, bytes: &[u8]) {
+        self.buf.extend_from_slice(bytes);
         let new_len = round_up_to_align(self.buf.len(), 8);
         self.buf.resize(new_len, 0);
-        self.buf.extend_from_slice(bytes);
     }
 
     /// Append handles to the buffer.
@@ -751,13 +731,19 @@ macro_rules! impl_slice_encoding_by_copy {
                 if self.len() == 0 {
                     return Ok(());
                 }
-                let bytes_len = self.len() * mem::size_of::<$prim_ty>();
-                encoder.write_out_of_line(bytes_len, |encoder| {
-                    encoder.recurse(|encoder| {
-                        let slot = encoder.next_slice(bytes_len)?;
-                        copy_slice_to_bytes(self, slot)
-                    })
-                })
+                // Get a &[u8] view on the slice using zerocopy::AsBytes.
+                //
+                // NOTE: We are assuming the data layout of &[$prim_ty] in Rust
+                // on this platform matches the FIDL wire format. In particular,
+                // we are assuming a packed array, little-endian byte order,
+                // two's complement integers, and IEEE-754 floats.
+                //
+                // For more information:
+                // https://doc.rust-lang.org/reference/type-layout.html#primitive-data-layout
+                // https://doc.rust-lang.org/reference/types/numeric.html
+                let bytes = self.as_bytes();
+                encoder.append_bytes(bytes);
+                Ok(())
             }
         }
 
@@ -956,11 +942,8 @@ fn encode_byte_slice(encoder: &mut Encoder<'_>, slice_opt: Option<&[u8]>) -> Res
             // Two u64: (len, present)
             (slice.len() as u64).encode(encoder)?;
             ALLOC_PRESENT_U64.encode(encoder)?;
-            encoder.write_out_of_line(slice.len(), |encoder| {
-                let slot = encoder.next_slice(slice.len())?;
-                slot.copy_from_slice(slice);
-                Ok(())
-            })
+            encoder.append_bytes(slice);
+            Ok(())
         }
     }
 }
