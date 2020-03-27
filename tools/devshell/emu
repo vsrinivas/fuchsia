@@ -233,14 +233,6 @@ if [[ "$ACCEL" == "auto" ]]; then
   fi
 fi
 
-if [[ "$GPU" == "auto" ]]; then
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    GPU="swiftshader_indirect"
-  else
-    GPU="host"
-  fi
-fi
-
 case "$FUCHSIA_ARCH" in
 x64)
   ARGS+=("-machine" "q35")
@@ -358,12 +350,21 @@ else
   ARGS+=("-net" "none")
 fi
 
-if [[ "$GPU" == "host" && -z "$DISPLAY" ]]; then
-  echo "To use host GPU acceleration, enable access to X server using:"
-  echo
-  echo "export DISPLAY=:0 && \\"
-  echo "XAUTHORITY=/var/run/lightdm/root/:0 sudo xhost +"
-  exit 1
+# Check for X11 on Linux
+if [[ "$(uname -s)" == "Linux" ]]; then
+  if [[ -z "$DISPLAY" ]]; then
+    echo "To use emulator on Linux, start X, or use a virtual framebuffer:"
+    echo
+    echo "xvfb-run fx emu"
+    exit 1
+  else
+    if [[ "$DISPLAY" != "fakedisplay" ]] && ! xset q >/dev/null 2>&1; then
+      echo "clients must be allowed to connect to DISPLAY. Please run:"
+      echo
+      echo "DISPLAY=$DISPLAY XAUTHORITY=/var/run/lightdm/root/$DISPLAY sudo xhost +"
+      exit 1
+    fi
+  fi
 fi
 
 # Construction of a qcow image prevents aemu from writing back to the

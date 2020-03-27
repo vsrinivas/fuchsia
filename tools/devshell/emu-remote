@@ -1,0 +1,172 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+### Remotely run emulator
+
+## usage: fx emu-remote [--no-emu] [--no-turn] [--no-open] [--display DPY] HOST [DIR] [-- ARGS]
+##
+## Connect to HOST, run a build using fx from DIR, start the emulator,
+## and open WebRTC connection using local browser.
+##
+##  --no-emu      only tunnel, do not start emulator
+##  --no-turn     do not use turn configuration
+##  --no-open     do not open https://web-femu.appspot.com, just run emulator
+##  --display DPY do not start virtual display, use DPY instead
+##
+##  HOST          the hostname to connect to
+##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
+##  ARGS          arguments to pass to emulator
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+emu=true
+turn=true
+open=true
+display="xvfb-run"
+host=""
+dir=""
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  --help|-h)
+    fx-command-help
+    exit 0
+    ;;
+  --no-emu)
+    emu=false
+    ;;
+  --no-turn)
+    turn=false
+    ;;
+  --no-open)
+    open=false
+    ;;
+  --display)
+    shift
+    display="DISPLAY=$1"
+    ;;
+  --)
+	shift
+    break
+    ;;
+  *)
+    if [[ -z "${host}" ]]; then
+      host="$1"
+    elif [[ -z "${dir}" ]]; then
+      dir="$1"
+    else
+      fx-error "unexpected argument: '$1'"
+      exit 1
+    fi
+    ;;
+  esac
+  shift
+done
+
+if [[ -z "${host}" ]]; then
+  fx-error "HOST must be specified"
+  fx-command-help
+  exit 1
+fi
+
+if "${emu}"; then
+  if [[ -z "${dir}" ]]; then
+    if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
+      dir="~/fuchsia"
+    else
+      fx-error "failed to find ~/fuchsia on $host, please specify DIR"
+      fx-command-help
+      exit 1
+    fi
+  fi
+fi
+
+echo "Using remote ${host}:${dir}"
+
+# First we need to check if we already have a control master for the
+# host, if we do, we might already have the forwards and so we don't
+# need to worry about tearing down:
+if ! ssh -O check "${host}" > /dev/null 2>&1; then
+  # If we didn't have a control master, and the device already has 8080
+  # bound, then there's a good chance there's a stale sshd instance
+  # running from another device or another session that will block the
+  # forward, so we'll check for that and speculatively attempt to clean
+  # it up. Unfortunately this means authing twice, but it's likely the
+  # best we can do for now.
+  if ssh "${host}" 'ss -ln | grep :8080' > /dev/null; then
+    ssh "${host}" 'pkill -u $USER sshd'
+    ssh "${host}" -O exit > /dev/null 2>&1
+  fi
+fi
+
+wait_and_open() {
+  timeout=10
+  waited=0
+
+  # Loop until connection is live or timeout expires.
+  while true
+  do
+    # Check if we can connect to the forwarded port.
+    if curl -sI http://localhost:8080 > /dev/null; then
+      open_args=("https://web-femu.appspot.com/")
+
+      # Launch Chrome browser tab for emulator feed.
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        exec open -a "/Applications/Google Chrome.app" "${open_args[@]}"
+      else
+        exec google-chrome "${open_args[@]}"
+      fi
+    fi
+
+    # Continue waiting if we have not reached our timeout.
+    if [ $waited -gt 0 ]; then
+      if [ $waited -ge $timeout ]; then
+        echo "No emulator after waiting $waited seconds, giving up."
+        break
+      fi
+      echo "Waiting for emulator ($(($timeout-$waited)) seconds left).."
+    fi
+    sleep 1
+    waited=$(($waited+1))
+  done
+}
+
+ssh_args=(
+  -6 # We want ipv6 binds for the port forwards.
+  -L "\*:8080:localhost:8080" # Requests to the WebRTC service address locally go to the workstation.
+  -o ExitOnForwardFailure=yes
+  "${host}"
+)
+
+if "${emu}"; then
+  # If the user requested emulator, then we'll check to see if there's a
+  # emulator already running and kill it, this prevents most cases where
+  # signal propagation not make it to "qemu-system".
+  if ssh "$host" 'pgrep -u $USER goldfish-webrtc' > /dev/null; then
+    ssh "$host" 'pkill -u $USER qemu-system; pkill -u $USER goldfish-webrtc'
+  fi
+
+  emu_args=(-x 8080)
+
+  # Add turn configuration if enabled.
+  if "${turn}"; then
+    apikey="AIzaSyBl6TgfdN6FKAQ3nK2GvKNcKNjWLeRGVYQ"
+    emu_args+=(-t "\"curl -s -X POST https://networktraversal.googleapis.com/v1alpha/iceconfig?key=${apikey}\"")
+  fi
+
+  # Starts emulator.
+  ssh_args+=("cd ${dir} && ${display} ./.jiri_root/bin/fx emu ${emu_args[@]} $@")
+
+  # Wait and open page for emulator when ready.
+  if "${open}"; then
+    wait_and_open &
+  fi
+else
+  # Starts nothing, just goes to sleep.
+  ssh_args+=("-nNT")
+fi
+
+exec ssh "${ssh_args[@]}"
