@@ -75,14 +75,6 @@ zx_status_t ShutdownBasemgr(async::Loop* loop) {
 }
 
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
-  // Read the configuration file in from stdin.
-  if (config_str.empty()) {
-    std::string line;
-    while (getline(std::cin, line)) {
-      config_str += line;
-    }
-  }
-
   auto dir = std::make_unique<vfs::PseudoDir>();
   dir->AddEntry(modular_config::kStartupConfigFilePath,
                 std::make_unique<vfs::PseudoFile>(
@@ -155,6 +147,12 @@ int main(int argc, const char** argv) {
     } else {
       std::cerr << GetUsage() << std::endl;
       return ZX_ERR_INVALID_ARGS;
+    }
+  } else {
+    // Read the configuration file in from stdin.
+    std::string line;
+    while (getline(std::cin, line)) {
+      config_str += line;
     }
   }
 

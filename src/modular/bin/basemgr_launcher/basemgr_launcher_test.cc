@@ -58,11 +58,10 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
 
     bool terminated = false;
     int64_t exit_code;
-    controller.events().OnTerminated =
-        [&](int64_t code, fuchsia::sys::TerminationReason reason) {
-          terminated = true;
-          exit_code = code;
-        };
+    controller.events().OnTerminated = [&](int64_t code, fuchsia::sys::TerminationReason reason) {
+      terminated = true;
+      exit_code = code;
+    };
 
     RunLoopUntil([&] { return terminated; });
     return exit_code;
@@ -97,7 +96,7 @@ TEST_F(BasemgrLauncherTest, BaseShellArg) {
 
 TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
   // Launch basemgr.
-  EXPECT_EQ(RunBasemgrLauncher({}), 0);
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
   std::string service_path;
@@ -110,12 +109,14 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
     return false;
   });
 
-  EXPECT_EQ(RunBasemgrLauncher({}), 0);
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
 
   // Check that the first instance of basemgr no longer exists in the hub and that it has been
   // replaced with another instance.
-  RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
-  RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 1; });
+  RunLoopUntil([&] {
+    return files::Glob(service_path).size() == 0; });
+  RunLoopUntil([&] {
+    return files::Glob(kBasemgrHubPathForTests).size() == 1; });
 }
 
 // Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.
@@ -134,13 +135,19 @@ TEST_F(BasemgrLauncherTest, BadArgs) {
       }));
 
   // Run basemgr_launcher with invalid arguments.
-  EXPECT_NE(RunBasemgrLauncher({std::string("--not_supported=") + kInterceptUrl}), 0);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            RunBasemgrLauncher({std::string("--not_supported=") + kInterceptUrl}));
   EXPECT_FALSE(intercepted);
+}
+
+// When shutdown is issued but there is no running basemgr, expect an OK result.
+TEST_F(BasemgrLauncherTest, NoopShutdownReturnsOk) {
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"shutdown"}));
 }
 
 // When shutdown is issued, ensure that basemgr.cmx completely shuts down.
 TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
-  EXPECT_EQ(RunBasemgrLauncher({}), 0);
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
   std::string service_path;
@@ -153,16 +160,16 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
     return false;
   });
 
-  ASSERT_EQ(RunBasemgrLauncher({"shutdown"}), 0);
+  ASSERT_EQ(ZX_OK, RunBasemgrLauncher({"shutdown"}));
 
   // Check that the instance of basemgr no longer exists in the hub and it did not restart.
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
   RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
 }
 
-// WHen shutdown is issued, ensure that scenic.cmx is also terminated.
+// When shutdown is issued, ensure that scenic.cmx is also terminated.
 TEST_F(BasemgrLauncherTest, ShutdownBasemgrShutsdownScenic) {
-  EXPECT_EQ(0, RunBasemgrLauncher({}));
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
   std::string service_path;
@@ -175,7 +182,7 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrShutsdownScenic) {
     return false;
   });
 
-  ASSERT_EQ(RunBasemgrLauncher({"shutdown"}), 0);
+  ASSERT_EQ(ZX_OK, RunBasemgrLauncher({"shutdown"}));
 
   // Check that the instance of basemgr no longer exists in the hub and it did not restart.
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
