@@ -38,6 +38,13 @@ class StreamVolume {
   virtual fuchsia::media::Usage GetStreamUsage() const = 0;
   virtual bool GetStreamMute() const = 0;
 
+  // Returns true if this stream should receive volume commands that factor in
+  // transient loudness adjustments made by audio policy, such as ducking.
+  //
+  // Returns false if the stream should receive volume commands that
+  // exclude transient loudness adjustments made by policy.
+  virtual bool RespectsPolicyAdjustments() const { return true; }
+
   // Propagate a volume to all the stream's links.
   virtual void RealizeVolume(VolumeCommand volume_command) = 0;
 };

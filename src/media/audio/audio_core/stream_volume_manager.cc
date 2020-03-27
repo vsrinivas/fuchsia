@@ -159,7 +159,10 @@ void StreamVolumeManager::UpdateStreamsWithUsage(fuchsia::media::Usage usage) {
 
 void StreamVolumeManager::UpdateStream(StreamVolume* stream, std::optional<Ramp> ramp) {
   const auto usage = stream->GetStreamUsage();
-  const auto usage_gain = usage_gain_settings_.GetAdjustedUsageGain(fidl::Clone(usage));
+  const auto respects_policy_adjustments = stream->RespectsPolicyAdjustments();
+  const auto usage_gain = respects_policy_adjustments
+                              ? usage_gain_settings_.GetAdjustedUsageGain(fidl::Clone(usage))
+                              : usage_gain_settings_.GetUnadjustedUsageGain(fidl::Clone(usage));
   const auto usage_volume = usage_volume_settings_.GetUsageVolume(std::move(usage));
 
   const auto gain_adjustment =

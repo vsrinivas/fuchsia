@@ -17,15 +17,15 @@ using namespace testing;
 
 class MockStreamVolume : public StreamVolume {
  public:
-  MockStreamVolume() = default;
-
   bool GetStreamMute() const override { return mute_; }
   fuchsia::media::Usage GetStreamUsage() const override { return fidl::Clone(usage_); }
+  bool RespectsPolicyAdjustments() const override { return respects_policy_adjustments_; }
   void RealizeVolume(VolumeCommand volume_command) override { volume_command_ = volume_command; }
 
   bool mute_ = false;
   fuchsia::media::Usage usage_;
   VolumeCommand volume_command_ = {};
+  bool respects_policy_adjustments_ = true;
 };
 
 class StreamVolumeManagerTest : public ::gtest::TestLoopFixture {
@@ -50,6 +50,21 @@ TEST_F(StreamVolumeManagerTest, StreamCanUpdateSelf) {
   EXPECT_FLOAT_EQ(mock_.volume_command_.volume, 1.0);
   EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
   EXPECT_EQ(mock_.volume_command_.ramp, std::nullopt);
+}
+
+TEST_F(StreamVolumeManagerTest, StreamCanIgnorePolicy) {
+  const auto usage =
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+  mock_.usage_ = fidl::Clone(usage);
+
+  manager_.SetUsageGainAdjustment(fidl::Clone(usage), Gain::kMinGainDb);
+
+  manager_.NotifyStreamChanged(&mock_);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kMinGainDb);
+
+  mock_.respects_policy_adjustments_ = false;
+  manager_.NotifyStreamChanged(&mock_);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, 0.0);
 }
 
 TEST_F(StreamVolumeManagerTest, UsageChangesUpdateRegisteredStreams) {
