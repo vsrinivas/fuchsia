@@ -26,7 +26,8 @@ namespace {
 fuchsia::net::http::Request MakeRequest(const lib::clearcut::HTTPRequest& request) {
   fuchsia::net::http::Request fx_request;
   fx_request.set_method("POST");
-  fx_request.set_url(request.url);
+  std::vector<uint8_t> url(request.url.begin(), request.url.end());
+  fx_request.set_url(url);
 
   fsl::SizedVmo data;
   auto result = fsl::VmoFromString(request.body, &data);

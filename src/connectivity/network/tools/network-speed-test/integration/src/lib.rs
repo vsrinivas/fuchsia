@@ -26,7 +26,7 @@ fn start_fake_loader(stream: fidl_fuchsia_net_http::LoaderRequestStream) {
                         responder.send(fidl_fuchsia_net_http::Response {
                             error: None,
                             body: Some(rx),
-                            final_url: Some("http://www.test.com".to_string()),
+                            final_url: Some("http://www.test.com".as_bytes().to_vec()),
                             status_code: Some(200),
                             status_line: Some("ok".as_bytes().to_vec()),
                             headers: None,

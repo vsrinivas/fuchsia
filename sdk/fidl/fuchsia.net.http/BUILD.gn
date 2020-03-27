@@ -9,8 +9,5 @@ fidl("fuchsia.net.http") {
 
   sources = [ "client.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.url",
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

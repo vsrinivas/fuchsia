@@ -93,7 +93,7 @@ fn report_results(test_results: &TestResults) {
 
 fn create_request<T: Into<String>>(url_string: T) -> http::Request {
     http::Request {
-        url: Some(url_string.into()),
+        url: Some(url_string.into().as_bytes().to_vec()),
         method: Some(String::from("GET")),
         headers: None,
         body: None,

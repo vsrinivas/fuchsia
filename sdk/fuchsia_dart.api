@@ -37,7 +37,6 @@ sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.policy
 sdk://fidl/fuchsia.ui.views
-sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.web
 sdk://tools/dart_kernel_compiler
 sdk://tools/fidlgen_dart
