@@ -181,8 +181,8 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   }
 
   // Allocate and initialize per-instance data.
-  PaperRenderFuncs::MeshDrawData* draw_data =
-      PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material.color(), drawable_flags);
+  PaperRenderFuncs::MeshDrawData* draw_data = PaperRenderFuncs::NewMeshDrawData(
+      frame_, transform.matrix, material.GetPremultipliedRgba(), drawable_flags);
 
   frame_->cmds()->KeepAlive(texture.get());
 

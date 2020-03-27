@@ -5,12 +5,12 @@
 #ifndef SRC_UI_LIB_ESCHER_MATERIAL_MATERIAL_H_
 #define SRC_UI_LIB_ESCHER_MATERIAL_MATERIAL_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/vk/texture.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -30,6 +30,7 @@ class Material : public fxl::RefCountedThreadSafe<Material> {
   vk::ImageView vk_image_view() const { return image_view_; }
   vk::Sampler vk_sampler() const { return sampler_; }
   const vec4& color() const { return color_; }
+  const vec4 GetPremultipliedRgba() const { return vec4(vec3(color_) * color_.a, color_.a); }
 
   void set_color(vec4 color) { color_ = color; }
   void set_color(vec3 color) { color_ = vec4(color, 1); }

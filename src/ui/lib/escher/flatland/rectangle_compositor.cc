@@ -15,6 +15,8 @@
 namespace escher {
 namespace {
 
+vec4 GetPremultipliedRgba(vec4 rgba) { return vec4(vec3(rgba) * rgba.a, rgba.a); }
+
 // Draws a single renderable at a particular depth value, z.
 void DrawSingle(CommandBuffer* cmd_buf, const RectangleRenderable& renderable, const float& z) {
   TRACE_DURATION("gfx", "RectangleCompositor::DrawSingle");
@@ -50,7 +52,7 @@ void DrawSingle(CommandBuffer* cmd_buf, const RectangleRenderable& renderable, c
   // fragment shader. This is so that the data aligns with the push constant
   // range for the fragment shader only, otherwise it would overlap the ranges
   // for both the vertex and fragment shaders.
-  cmd_buf->PushConstants(renderable.color, /*offset*/ 80U);
+  cmd_buf->PushConstants(GetPremultipliedRgba(renderable.color), /*offset*/ 80U);
 
   // Draw two triangles. The vertex shader knows how to use the gl_VertexIndex
   // of each vertex to compute the appropriate position and UV values.

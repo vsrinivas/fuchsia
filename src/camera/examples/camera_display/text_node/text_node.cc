@@ -20,15 +20,21 @@ TextNode::TextNode(TextNode&& moved) : scenic::Node(std::move(moved)) {}
 TextNode::~TextNode() = default;
 
 zx_status_t TextNode::SetText(const std::string s) {
-  static constexpr const uint32_t kBitmapScale = 1;  // Per-dimension pixel scatter ratio.
-  static constexpr const uint32_t kTextForeground = 0xFF000000;  // Opaque black.
-  static constexpr const uint32_t kTextBackground = 0x7FFFFFFF;  // Semi-transparent white.
+  // Per-dimension pixel scatter ratio.
+  static constexpr const uint32_t kBitmapScale = 1;
+  // Opaque black.
+  static constexpr const uint32_t kTextForeground = 0xFF000000;
+  // Semi-transparent white.
+  // This is used in textures, so we use premultiplied alpha.
+  static constexpr const uint32_t kTextBackground = 0x7F7F7F7F;
+  // Nearly opaque white.
+  // This is used as material color, so we use non-premultiplied alpha instead.
   static constexpr const struct {
     uint8_t r = 0xFF;
     uint8_t g = 0xFF;
     uint8_t b = 0xFF;
     uint8_t a = 0xFE;
-  } kShapeColor;  // Nearly opaque white.
+  } kShapeColor;
 
   const auto& font = gfx_font_9x16;
   static constexpr const uint32_t kFontDataBits = 8;
@@ -38,7 +44,7 @@ zx_status_t TextNode::SetText(const std::string s) {
   image_info.width = (font.width * s.size() + left_pad) * kBitmapScale;
   image_info.height = font.height * kBitmapScale;
   image_info.stride = image_info.width * sizeof(uint32_t);
-  image_info.alpha_format = fuchsia::images::AlphaFormat::NON_PREMULTIPLIED;
+  image_info.alpha_format = fuchsia::images::AlphaFormat::PREMULTIPLIED;
   size_t image_size = image_info.width * image_info.height * sizeof(uint32_t);
 
   zx::vmo vmo;

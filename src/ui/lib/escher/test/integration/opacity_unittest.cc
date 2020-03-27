@@ -397,7 +397,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
 //
 // TODO(47918): Enable this after premultiplied alpha is supported.
 //
-VK_TEST_F(OpacityShapeTest, DISABLED_PremultipliedTexture) {
+VK_TEST_F(OpacityShapeTest, PremultipliedTexture) {
   const glm::vec4 kFuchsia(1, 0, 1, 1);
 
   SetupFrame();

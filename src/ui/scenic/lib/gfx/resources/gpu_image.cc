@@ -65,6 +65,13 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
+  // TODO(47918): Support non-premultiplied alpha format and remove this.
+  if (image_info.alpha_format == fuchsia::images::AlphaFormat::NON_PREMULTIPLIED) {
+    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): Non-premultiplied alpha format "
+                            << "is not supported yet.";
+    return nullptr;
+  }
+
   escher::ImageInfo escher_image_info;
   escher_image_info.format = pixel_format;
   escher_image_info.width = image_info.width;

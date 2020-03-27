@@ -198,17 +198,26 @@ impl View {
             pixel_format: images::PixelFormat::Bgra8,
             color_space: images::ColorSpace::Srgb,
             tiling: images::Tiling::Linear,
-            alpha_format: images::AlphaFormat::NonPremultiplied,
+            alpha_format: images::AlphaFormat::Premultiplied,
         };
         let host_memory = HostMemory::allocate(session.clone(), size_bytes)?;
         let host_image = HostImage::new(&host_memory, 0, image_info);
 
-        // swizzle RGBA to BGRA
+        // Swizzle RGBA to BGRA.
+        // Since PNG files always use non-premultiplied alpha in colors
+        // (https://www.w3.org/TR/PNG-Rationale.html#R.Non-premultiplied-alpha),
+        // We also convert them to premultiplied alpha bitmaps.
         for i in (0..size_bytes).step_by(px_size_bytes) {
             let (r, g, b, a) = (buf[i], buf[i + 1], buf[i + 2], buf[i + 3]);
-            buf[i] = b;
-            buf[i + 1] = g;
-            buf[i + 2] = r;
+            let alpha_factor = (a as f32) / 255.;
+            let (premultiplied_r, premultiplied_g, premultiplied_b) = (
+                (r as f32 * alpha_factor) as u8,
+                (g as f32 * alpha_factor) as u8,
+                (b as f32 * alpha_factor) as u8,
+            );
+            buf[i] = premultiplied_b;
+            buf[i + 1] = premultiplied_g;
+            buf[i + 2] = premultiplied_r;
             buf[i + 3] = a;
         }
 

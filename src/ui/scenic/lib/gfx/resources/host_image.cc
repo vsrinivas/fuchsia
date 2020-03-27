@@ -77,6 +77,12 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
                             << "created using host memory.";
     return nullptr;
   }
+  // TODO(47918): Support non-premultiplied alpha format and remove this.
+  if (image_info.alpha_format == fuchsia::images::AlphaFormat::NON_PREMULTIPLIED) {
+    error_reporter->ERROR() << "Image::CreateFromMemory(): Non-premultiplied alpha format "
+                            << "is not supported yet.";
+    return nullptr;
+  }
 
   size_t image_size = images::ImageSize(image_info);
   if (memory_offset >= memory->size()) {

@@ -496,7 +496,7 @@ void CommandBufferPipelineState::SetToDefaultState(DefaultState default_state) {
     case DefaultState::kTranslucent: {
       // See definition in header for explanation of these blend factors.
       static_state_.blend_enable = true;
-      static_state_.src_color_blend = VK_BLEND_FACTOR_SRC_ALPHA;
+      static_state_.src_color_blend = VK_BLEND_FACTOR_ONE;
       static_state_.dst_color_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
       static_state_.src_alpha_blend = VK_BLEND_FACTOR_ONE;
       static_state_.dst_alpha_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;

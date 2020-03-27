@@ -427,7 +427,7 @@ VK_TEST_F(RectangleCompositorTest, TransparencyFlagOffTest) {
                                            vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram2(bytes.data(), kFramebufferWidth * kFramebufferHeight);
-  constexpr ColorBgra kBlue2(0, 0, 255, 153);
+  constexpr ColorBgra kBlue2(0, 0, 153, 153);  // Premultiplied alpha.
   constexpr ColorBgra kBlend(102, 0, 153, 255);
   constexpr ColorBgra kBlend2(102, 0, 152, 255);
 
