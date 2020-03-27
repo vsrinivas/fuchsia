@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use futures::future::LocalBoxFuture;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{fmt::Debug, str::FromStr, sync::mpsc};
@@ -12,14 +12,11 @@ use thiserror::Error;
 use crate::server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
 
 /// An Sl4f facade that can handle incoming requests.
+#[async_trait(?Send)]
 pub trait Facade: Debug {
     /// Asynchronously handle the incoming request for the given method and arguments, returning a
     /// future object representing the pending operation.
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>>;
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error>;
 
     /// In response to a request to /cleanup, cleanup any cross-request state.
     fn cleanup(&self) {}

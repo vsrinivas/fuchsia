@@ -5,87 +5,80 @@
 use {
     crate::{server::Facade, wlan_policy::facade::WlanPolicyFacade},
     anyhow::{format_err, Error},
+    async_trait::async_trait,
     fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_syslog::macros::*,
-    futures::future::{FutureExt, LocalBoxFuture},
     serde_json::{to_value, Value},
 };
 
+#[async_trait(?Send)]
 impl Facade for WlanPolicyFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        wlan_policy_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "scan_for_networks" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "performing scan for networks");
+                let result = self.scan_for_networks().await?;
+                to_value(result).map_err(|e| format_err!("error handling scan result: {}", e))
+            }
+            "connect" => {
+                let target_ssid = parse_target_ssid(&args)?;
+                let security_type = parse_security_type(&args)?;
+
+                fx_log_info!(tag: "WlanPolicyFacade", "performing wlan connect to SSID: {:?}", target_ssid);
+                let result = self.connect(target_ssid, security_type).await?;
+                to_value(result).map_err(|e| format_err!("error parsing connection result: {}", e))
+            }
+            "remove_network" => {
+                let target_ssid = parse_target_ssid(&args)?;
+                let security_type = parse_security_type(&args)?;
+                let target_pwd = parse_target_pwd(&args)?;
+
+                fx_log_info!(tag: "WlanPolicyFacade", "removing network with SSID: {:?}", target_ssid);
+                let result = self.remove_network(target_ssid, security_type, target_pwd).await?;
+                to_value(result)
+                    .map_err(|e| format_err!("error parsing remove network result: {}", e))
+            }
+            "start_client_connections" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "attempting to start client connections");
+                let result = self.start_client_connections().await?;
+                to_value(result).map_err(|e| {
+                    format_err!("error handling start client connections result: {}", e)
+                })
+            }
+            "stop_client_connections" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "attempting to stop client connections");
+                let result = self.stop_client_connections().await?;
+                to_value(result).map_err(|e| {
+                    format_err!("error handling stop client connections result: {}", e)
+                })
+            }
+            "save_network" => {
+                let target_ssid = parse_target_ssid(&args)?;
+                let security_type = parse_security_type(&args)?;
+                let target_pwd = parse_target_pwd(&args)?;
+
+                fx_log_info!(tag: "WlanPolicyFacade", "saving network with SSID: {:?}", target_ssid);
+                let result = self.save_network(target_ssid, security_type, target_pwd).await?;
+                to_value(result)
+                    .map_err(|e| format_err!("error parsing save network result: {}", e))
+            }
+            "get_saved_networks" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "attempting to get saved networks");
+                let result = self.get_saved_networks().await?;
+                to_value(result)
+                    .map_err(|e| format_err!("error handling get saved networks result: {}", e))
+            }
+            "create_client_controller" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "initializing client controller");
+                let result = self.create_client_controller()?;
+                to_value(result)
+                    .map_err(|e| format_err!("error initializing client controller: {}", e))
+            }
+            _ => return Err(format_err!("unsupported command!")),
+        }
     }
 }
 
-// Takes ACTS method command and executes corresponding FIDL method
-// Packages result into serde::Value
-async fn wlan_policy_method_to_fidl(
-    method_name: String,
-    args: Value,
-    wlan_facade: &WlanPolicyFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "scan_for_networks" => {
-            fx_log_info!(tag: "WlanPolicyFacade", "performing scan for networks");
-            let result = wlan_facade.scan_for_networks().await?;
-            to_value(result).map_err(|e| format_err!("error handling scan result: {}", e))
-        }
-        "connect" => {
-            let target_ssid = parse_target_ssid(&args)?;
-            let security_type = parse_security_type(&args)?;
-
-            fx_log_info!(tag: "WlanPolicyFacade", "performing wlan connect to SSID: {:?}", target_ssid);
-            let result = wlan_facade.connect(target_ssid, security_type).await?;
-            to_value(result).map_err(|e| format_err!("error parsing connection result: {}", e))
-        }
-        "remove_network" => {
-            let target_ssid = parse_target_ssid(&args)?;
-            let security_type = parse_security_type(&args)?;
-            let target_pwd = parse_target_pwd(&args)?;
-
-            fx_log_info!(tag: "WlanPolicyFacade", "removing network with SSID: {:?}", target_ssid);
-            let result = wlan_facade.remove_network(target_ssid, security_type, target_pwd).await?;
-            to_value(result).map_err(|e| format_err!("error parsing remove network result: {}", e))
-        }
-        "start_client_connections" => {
-            fx_log_info!(tag: "WlanPolicyFacade", "attempting to start client connections");
-            let result = wlan_facade.start_client_connections().await?;
-            to_value(result)
-                .map_err(|e| format_err!("error handling start client connections result: {}", e))
-        }
-        "stop_client_connections" => {
-            fx_log_info!(tag: "WlanPolicyFacade", "attempting to stop client connections");
-            let result = wlan_facade.stop_client_connections().await?;
-            to_value(result)
-                .map_err(|e| format_err!("error handling stop client connections result: {}", e))
-        }
-        "save_network" => {
-            let target_ssid = parse_target_ssid(&args)?;
-            let security_type = parse_security_type(&args)?;
-            let target_pwd = parse_target_pwd(&args)?;
-
-            fx_log_info!(tag: "WlanPolicyFacade", "saving network with SSID: {:?}", target_ssid);
-            let result = wlan_facade.save_network(target_ssid, security_type, target_pwd).await?;
-            to_value(result).map_err(|e| format_err!("error parsing save network result: {}", e))
-        }
-        "get_saved_networks" => {
-            fx_log_info!(tag: "WlanPolicyFacade", "attempting to get saved networks");
-            let result = wlan_facade.get_saved_networks().await?;
-            to_value(result)
-                .map_err(|e| format_err!("error handling get saved networks result: {}", e))
-        }
-        "create_client_controller" => {
-            fx_log_info!(tag: "WlanPolicyFacade", "initializing client controller");
-            let result = wlan_facade.create_client_controller()?;
-            to_value(result).map_err(|e| format_err!("error initializing client controller: {}", e))
-        }
-        _ => return Err(format_err!("unsupported command!")),
-    }
-}
 fn parse_target_ssid(args: &Value) -> Result<Vec<u8>, Error> {
     args.get("target_ssid")
         .and_then(|ssid| ssid.as_str().map(|ssid| ssid.as_bytes().to_vec()))

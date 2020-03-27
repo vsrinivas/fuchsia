@@ -5,45 +5,33 @@
 use crate::file::{facade::FileFacade, types::FileMethod};
 use crate::server::Facade;
 use anyhow::Error;
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::{to_value, Value};
 
+#[async_trait(?Send)]
 impl Facade for FileFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        file_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-// Takes SL4F method command and executes corresponding file facade method.
-async fn file_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &FileFacade,
-) -> Result<Value, Error> {
-    match method_name.parse()? {
-        FileMethod::DeleteFile => {
-            let result = facade.delete_file(args).await?;
-            Ok(to_value(result)?)
-        }
-        FileMethod::MakeDir => {
-            let result = facade.make_dir(args).await?;
-            Ok(to_value(result)?)
-        }
-        FileMethod::ReadFile => {
-            let result = facade.read_file(args).await?;
-            Ok(to_value(result)?)
-        }
-        FileMethod::WriteFile => {
-            let result = facade.write_file(args).await?;
-            Ok(to_value(result)?)
-        }
-        FileMethod::Stat => {
-            let result = facade.stat(args).await?;
-            Ok(to_value(result)?)
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.parse()? {
+            FileMethod::DeleteFile => {
+                let result = self.delete_file(args).await?;
+                Ok(to_value(result)?)
+            }
+            FileMethod::MakeDir => {
+                let result = self.make_dir(args).await?;
+                Ok(to_value(result)?)
+            }
+            FileMethod::ReadFile => {
+                let result = self.read_file(args).await?;
+                Ok(to_value(result)?)
+            }
+            FileMethod::WriteFile => {
+                let result = self.write_file(args).await?;
+                Ok(to_value(result)?)
+            }
+            FileMethod::Stat => {
+                let result = self.stat(args).await?;
+                Ok(to_value(result)?)
+            }
         }
     }
 }

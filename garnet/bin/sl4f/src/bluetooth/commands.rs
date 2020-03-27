@@ -4,12 +4,12 @@
 
 use crate::server::Facade;
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_le::{
     AdvertisingData, AdvertisingParameters, ConnectionOptions, ScanFilter,
 };
 use fuchsia_syslog::macros::*;
-use futures::future::{FutureExt, LocalBoxFuture};
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 
@@ -107,13 +107,25 @@ fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String),
     Ok((service_info, local_service_id.to_string()))
 }
 
+#[async_trait(?Send)]
 impl Facade for BleAdvertiseFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        ble_advertise_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        // TODO(armansito): Once the facade supports multi-advertising it should generate and
+        // return a unique ID for each instance. For now we return this dummy ID for the
+        // singleton advertisement.
+        let id = to_value(BleAdvertiseResponse::new(Some("singleton-instance".to_string())))?;
+        match method.as_ref() {
+            "BleAdvertise" => {
+                let params = ble_advertise_args_to_fidl(args)?;
+                self.start_adv(params).await?;
+                Ok(id)
+            }
+            "BleStopAdvertise" => {
+                self.stop_adv();
+                Ok(id)
+            }
+            _ => return Err(format_err!("Invalid BleAdvertise FIDL method: {:?}", method)),
+        }
     }
 
     fn cleanup(&self) {
@@ -125,39 +137,16 @@ impl Facade for BleAdvertiseFacade {
     }
 }
 
-// Takes ACTS method command and executes corresponding BLE
-// Advertise FIDL methods.
-// Packages result into serde::Value
-async fn ble_advertise_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &BleAdvertiseFacade,
-) -> Result<Value, Error> {
-    // TODO(armansito): Once the facade supports multi-advertising it should generate and
-    // return a unique ID for each instance. For now we return this dummy ID for the
-    // singleton advertisement.
-    let id = to_value(BleAdvertiseResponse::new(Some("singleton-instance".to_string())))?;
-    match method_name.as_ref() {
-        "BleAdvertise" => {
-            let params = ble_advertise_args_to_fidl(args)?;
-            facade.start_adv(params).await?;
-            Ok(id)
-        }
-        "BleStopAdvertise" => {
-            facade.stop_adv();
-            Ok(id)
-        }
-        _ => return Err(format_err!("Invalid BleAdvertise FIDL method: {:?}", method_name)),
-    }
-}
-
+#[async_trait(?Send)]
 impl Facade for RwLock<BluetoothFacade> {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        ble_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "BlePublishService" => {
+                let (service_info, local_service_id) = ble_publish_service_to_fidl(args)?;
+                publish_service_async(self, service_info, local_service_id).await
+            }
+            _ => return Err(format_err!("Invalid BLE FIDL method: {:?}", method)),
+        }
     }
 
     fn cleanup(&self) {
@@ -169,29 +158,85 @@ impl Facade for RwLock<BluetoothFacade> {
     }
 }
 
-// Takes ACTS method command and executes corresponding FIDL method
-// Packages result into serde::Value
-async fn ble_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &RwLock<BluetoothFacade>,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "BlePublishService" => {
-            let (service_info, local_service_id) = ble_publish_service_to_fidl(args)?;
-            publish_service_async(&facade, service_info, local_service_id).await
-        }
-        _ => return Err(format_err!("Invalid BLE FIDL method: {:?}", method_name)),
-    }
-}
-
+#[async_trait(?Send)]
 impl Facade for BluetoothControlFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        bt_control_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "BluetoothAcceptPairing" => {
+                let result = self.accept_pairing().await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothInitControl" => {
+                let result = self.init_control_interface_proxy().await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothGetKnownRemoteDevices" => {
+                let result = self.get_known_remote_devices().await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothSetDiscoverable" => {
+                let discoverable = parse_arg!(args, as_bool, "discoverable")?;
+                let result = self.set_discoverable(discoverable).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothSetName" => {
+                let name = parse_arg!(args, as_str, "name")?;
+                let result = self.set_name(name.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothForgetDevice" => {
+                let identifier = parse_arg!(args, as_str, "identifier")?;
+                let result = self.forget(identifier.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothConnectDevice" => {
+                let identifier = parse_arg!(args, as_str, "identifier")?;
+                let result = self.connect(identifier.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothDisconnectDevice" => {
+                let identifier = parse_arg!(args, as_str, "identifier")?;
+                let result = self.disconnect(identifier.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothRequestDiscovery" => {
+                let discovery = parse_arg!(args, as_bool, "discovery")?;
+                let result = self.request_discovery(discovery).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothInputPairingPin" => {
+                let pin = parse_arg!(args, as_str, "pin")?;
+                let result = self.input_pairing_pin(pin.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothGetPairingPin" => {
+                let result = self.get_pairing_pin().await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothGetActiveAdapterAddress" => {
+                let result = self.get_active_adapter_address().await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothPairDevice" => {
+                let identifier = parse_arg!(args, as_str, "identifier")?;
+                let pairing_security_level =
+                    match parse_arg!(args, as_u64, "pairing_security_level") {
+                        Ok(v) => Some(v),
+                        Err(_e) => None,
+                    };
+                let non_bondable = match parse_arg!(args, as_bool, "non_bondable") {
+                    Ok(v) => Some(v),
+                    Err(_e) => None,
+                };
+                let transport = parse_arg!(args, as_u64, "transport")?;
+
+                let result = self
+                    .pair(identifier.to_string(), pairing_security_level, non_bondable, transport)
+                    .await?;
+                Ok(to_value(result)?)
+            }
+            _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method),
+        }
     }
 
     fn cleanup(&self) {
@@ -203,95 +248,97 @@ impl Facade for BluetoothControlFacade {
     }
 }
 
-async fn bt_control_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &BluetoothControlFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "BluetoothAcceptPairing" => {
-            let result = facade.accept_pairing().await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothInitControl" => {
-            let result = facade.init_control_interface_proxy().await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothGetKnownRemoteDevices" => {
-            let result = facade.get_known_remote_devices().await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothSetDiscoverable" => {
-            let discoverable = parse_arg!(args, as_bool, "discoverable")?;
-            let result = facade.set_discoverable(discoverable).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothSetName" => {
-            let name = parse_arg!(args, as_str, "name")?;
-            let result = facade.set_name(name.to_string()).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothForgetDevice" => {
-            let identifier = parse_arg!(args, as_str, "identifier")?;
-            let result = facade.forget(identifier.to_string()).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothConnectDevice" => {
-            let identifier = parse_arg!(args, as_str, "identifier")?;
-            let result = facade.connect(identifier.to_string()).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothDisconnectDevice" => {
-            let identifier = parse_arg!(args, as_str, "identifier")?;
-            let result = facade.disconnect(identifier.to_string()).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothRequestDiscovery" => {
-            let discovery = parse_arg!(args, as_bool, "discovery")?;
-            let result = facade.request_discovery(discovery).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothInputPairingPin" => {
-            let pin = parse_arg!(args, as_str, "pin")?;
-            let result = facade.input_pairing_pin(pin.to_string()).await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothGetPairingPin" => {
-            let result = facade.get_pairing_pin().await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothGetActiveAdapterAddress" => {
-            let result = facade.get_active_adapter_address().await?;
-            Ok(to_value(result)?)
-        }
-        "BluetoothPairDevice" => {
-            let identifier = parse_arg!(args, as_str, "identifier")?;
-            let pairing_security_level = match parse_arg!(args, as_u64, "pairing_security_level") {
-                Ok(v) => Some(v),
-                Err(_e) => None,
-            };
-            let non_bondable = match parse_arg!(args, as_bool, "non_bondable") {
-                Ok(v) => Some(v),
-                Err(_e) => None,
-            };
-            let transport = parse_arg!(args, as_u64, "transport")?;
-
-            let result = facade
-                .pair(identifier.to_string(), pairing_security_level, non_bondable, transport)
-                .await?;
-            Ok(to_value(result)?)
-        }
-        _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method_name),
-    }
-}
-
+#[async_trait(?Send)]
 impl Facade for GattClientFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        gatt_client_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "BleStartScan" => {
+                let filter = ble_scan_to_fidl(args)?;
+                start_scan_async(&self, filter).await
+            }
+            "BleStopScan" => stop_scan_async(self).await,
+            "BleGetDiscoveredDevices" => le_get_discovered_devices_async(self).await,
+            "BleConnectPeripheral" => {
+                let id = parse_identifier(args)?;
+                connect_peripheral_async(self, id).await
+            }
+            "BleDisconnectPeripheral" => {
+                let id = parse_identifier(args)?;
+                disconnect_peripheral_async(self, id).await
+            }
+            "GattcConnectToService" => {
+                let periph_id = parse_identifier(args.clone())?;
+                let service_id = parse_service_identifier(args)?;
+                gattc_connect_to_service_async(self, periph_id, service_id).await
+            }
+            "GattcDiscoverCharacteristics" => gattc_discover_characteristics_async(self).await,
+            "GattcWriteCharacteristicById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let value = parse_write_value(args)?;
+                gattc_write_char_by_id_async(self, id, value).await
+            }
+            "GattcWriteLongCharacteristicById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let offset_as_u64 = parse_offset(args.clone())?;
+                let offset = offset_as_u64 as u16;
+                let value = parse_write_value(args)?;
+                gattc_write_long_char_by_id_async(self, id, offset, value).await
+            }
+            "GattcWriteCharacteristicByIdWithoutResponse" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let value = parse_write_value(args)?;
+                gattc_write_char_by_id_without_response_async(self, id, value).await
+            }
+            "GattcEnableNotifyCharacteristic" => {
+                let id = parse_u64_identifier(args.clone())?;
+                gattc_toggle_notify_characteristic_async(self, id, true).await
+            }
+            "GattcDisableNotifyCharacteristic" => {
+                let id = parse_u64_identifier(args.clone())?;
+                gattc_toggle_notify_characteristic_async(self, id, false).await
+            }
+            "GattcReadCharacteristicById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                gattc_read_char_by_id_async(self, id).await
+            }
+            "GattcReadLongCharacteristicById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let offset_as_u64 = parse_offset(args.clone())?;
+                let offset = offset_as_u64 as u16;
+                let max_bytes_as_u64 = parse_max_bytes(args)?;
+                let max_bytes = max_bytes_as_u64 as u16;
+                gattc_read_long_char_by_id_async(self, id, offset, max_bytes).await
+            }
+            "GattcReadLongDescriptorById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let offset_as_u64 = parse_offset(args.clone())?;
+                let offset = offset_as_u64 as u16;
+                let max_bytes_as_u64 = parse_max_bytes(args)?;
+                let max_bytes = max_bytes_as_u64 as u16;
+                gattc_read_long_desc_by_id_async(self, id, offset, max_bytes).await
+            }
+            "GattcWriteDescriptorById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let value = parse_write_value(args)?;
+                gattc_write_desc_by_id_async(self, id, value).await
+            }
+            "GattcWriteLongDescriptorById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                let offset_as_u64 = parse_offset(args.clone())?;
+                let offset = offset_as_u64 as u16;
+                let value = parse_write_value(args)?;
+                gattc_write_long_desc_by_id_async(self, id, offset, value).await
+            }
+            "GattcReadDescriptorById" => {
+                let id = parse_u64_identifier(args.clone())?;
+                gattc_read_desc_by_id_async(self, id.clone()).await
+            }
+            "GattcListServices" => {
+                let id = parse_identifier(args)?;
+                list_services_async(self, id).await
+            }
+            _ => return Err(format_err!("Invalid Gatt Client FIDL method: {:?}", method)),
+        }
     }
 
     fn cleanup(&self) {
@@ -303,111 +350,20 @@ impl Facade for GattClientFacade {
     }
 }
 
-// Takes ACTS method command and executes corresponding Gatt Client
-// FIDL methods.
-// Packages result into serde::Value
-async fn gatt_client_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &GattClientFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "BleStartScan" => {
-            let filter = ble_scan_to_fidl(args)?;
-            start_scan_async(&facade, filter).await
-        }
-        "BleStopScan" => stop_scan_async(&facade).await,
-        "BleGetDiscoveredDevices" => le_get_discovered_devices_async(&facade).await,
-        "BleConnectPeripheral" => {
-            let id = parse_identifier(args)?;
-            connect_peripheral_async(&facade, id).await
-        }
-        "BleDisconnectPeripheral" => {
-            let id = parse_identifier(args)?;
-            disconnect_peripheral_async(&facade, id).await
-        }
-        "GattcConnectToService" => {
-            let periph_id = parse_identifier(args.clone())?;
-            let service_id = parse_service_identifier(args)?;
-            gattc_connect_to_service_async(&facade, periph_id, service_id).await
-        }
-        "GattcDiscoverCharacteristics" => gattc_discover_characteristics_async(&facade).await,
-        "GattcWriteCharacteristicById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let value = parse_write_value(args)?;
-            gattc_write_char_by_id_async(&facade, id, value).await
-        }
-        "GattcWriteLongCharacteristicById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let offset_as_u64 = parse_offset(args.clone())?;
-            let offset = offset_as_u64 as u16;
-            let value = parse_write_value(args)?;
-            gattc_write_long_char_by_id_async(&facade, id, offset, value).await
-        }
-        "GattcWriteCharacteristicByIdWithoutResponse" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let value = parse_write_value(args)?;
-            gattc_write_char_by_id_without_response_async(&facade, id, value).await
-        }
-        "GattcEnableNotifyCharacteristic" => {
-            let id = parse_u64_identifier(args.clone())?;
-            gattc_toggle_notify_characteristic_async(&facade, id, true).await
-        }
-        "GattcDisableNotifyCharacteristic" => {
-            let id = parse_u64_identifier(args.clone())?;
-            gattc_toggle_notify_characteristic_async(&facade, id, false).await
-        }
-        "GattcReadCharacteristicById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            gattc_read_char_by_id_async(&facade, id).await
-        }
-        "GattcReadLongCharacteristicById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let offset_as_u64 = parse_offset(args.clone())?;
-            let offset = offset_as_u64 as u16;
-            let max_bytes_as_u64 = parse_max_bytes(args)?;
-            let max_bytes = max_bytes_as_u64 as u16;
-            gattc_read_long_char_by_id_async(&facade, id, offset, max_bytes).await
-        }
-        "GattcReadLongDescriptorById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let offset_as_u64 = parse_offset(args.clone())?;
-            let offset = offset_as_u64 as u16;
-            let max_bytes_as_u64 = parse_max_bytes(args)?;
-            let max_bytes = max_bytes_as_u64 as u16;
-            gattc_read_long_desc_by_id_async(&facade, id, offset, max_bytes).await
-        }
-        "GattcWriteDescriptorById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let value = parse_write_value(args)?;
-            gattc_write_desc_by_id_async(&facade, id, value).await
-        }
-        "GattcWriteLongDescriptorById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            let offset_as_u64 = parse_offset(args.clone())?;
-            let offset = offset_as_u64 as u16;
-            let value = parse_write_value(args)?;
-            gattc_write_long_desc_by_id_async(&facade, id, offset, value).await
-        }
-        "GattcReadDescriptorById" => {
-            let id = parse_u64_identifier(args.clone())?;
-            gattc_read_desc_by_id_async(&facade, id.clone()).await
-        }
-        "GattcListServices" => {
-            let id = parse_identifier(args)?;
-            list_services_async(&facade, id).await
-        }
-        _ => return Err(format_err!("Invalid Gatt Client FIDL method: {:?}", method_name)),
-    }
-}
-
+#[async_trait(?Send)]
 impl Facade for GattServerFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        gatt_server_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "GattServerPublishServer" => {
+                let result = self.publish_server(args).await?;
+                Ok(to_value(result)?)
+            }
+            "GattServerCloseServer" => {
+                let result = self.close_server().await;
+                Ok(to_value(result)?)
+            }
+            _ => return Err(format_err!("Invalid Gatt Server FIDL method: {:?}", method)),
+        }
     }
 
     fn cleanup(&self) {
@@ -419,156 +375,116 @@ impl Facade for GattServerFacade {
     }
 }
 
-async fn gatt_server_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &GattServerFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "GattServerPublishServer" => {
-            let result = facade.publish_server(args).await?;
-            Ok(to_value(result)?)
-        }
-        "GattServerCloseServer" => {
-            let result = facade.close_server().await;
-            Ok(to_value(result)?)
-        }
-        _ => return Err(format_err!("Invalid Gatt Server FIDL method: {:?}", method_name)),
-    }
-}
-
+#[async_trait(?Send)]
 impl Facade for ProfileServerFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        profile_server_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "ProfileServerInit" => {
+                let result = self.init_profile_server_proxy().await?;
+                Ok(to_value(result)?)
+            }
+            "ProfileServerAddSearch" => {
+                let result = self.add_search(args).await?;
+                Ok(to_value(result)?)
+            }
+            "ProfileServerAddService" => {
+                let result = self.add_service(args).await?;
+                Ok(to_value(result)?)
+            }
+            "ProfileServerCleanup" => {
+                let result = self.cleanup().await?;
+                Ok(to_value(result)?)
+            }
+            "ProfileServerConnectL2cap" => {
+                let id = parse_identifier(args.clone())?;
+                let psm = parse_psm(args)?;
+                let result = self.connect(id, psm as u16).await?;
+                Ok(to_value(result)?)
+            }
+            "ProfileServerRemoveService" => {
+                let service_id = parse_u64_identifier(args)? as usize;
+                let result = self.remove_service(service_id).await?;
+                Ok(to_value(result)?)
+            }
+            _ => return Err(format_err!("Invalid Profile Server FIDL method: {:?}", method)),
+        }
     }
 }
 
-async fn profile_server_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &ProfileServerFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "ProfileServerInit" => {
-            let result = facade.init_profile_server_proxy().await?;
-            Ok(to_value(result)?)
-        }
-        "ProfileServerAddSearch" => {
-            let result = facade.add_search(args).await?;
-            Ok(to_value(result)?)
-        }
-        "ProfileServerAddService" => {
-            let result = facade.add_service(args).await?;
-            Ok(to_value(result)?)
-        }
-        "ProfileServerCleanup" => {
-            let result = facade.cleanup().await?;
-            Ok(to_value(result)?)
-        }
-        "ProfileServerConnectL2cap" => {
-            let id = parse_identifier(args.clone())?;
-            let psm = parse_psm(args)?;
-            let result = facade.connect(id, psm as u16).await?;
-            Ok(to_value(result)?)
-        }
-        "ProfileServerRemoveService" => {
-            let service_id = parse_u64_identifier(args)? as usize;
-            let result = facade.remove_service(service_id).await?;
-            Ok(to_value(result)?)
-        }
-        _ => return Err(format_err!("Invalid Profile Server FIDL method: {:?}", method_name)),
-    }
-}
-
+#[async_trait(?Send)]
 impl Facade for AvdtpFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        avdtp_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-pub async fn avdtp_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &AvdtpFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "AvdtpInit" => {
-            let role = parse_arg!(args, as_str, "role")?;
-            let result = facade.init_avdtp_service_proxy(role.to_string()).await?;
-            Ok(to_value(result)?)
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "AvdtpInit" => {
+                let role = parse_arg!(args, as_str, "role")?;
+                let result = self.init_avdtp_service_proxy(role.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpGetConnectedPeers" => {
+                let result = self.get_connected_peers().await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpSetConfiguration" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.set_configuration(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpGetConfiguration" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.get_configuration(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpGetCapabilities" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.get_capabilities(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpGetAllCapabilities" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.get_all_capabilities(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpReconfigureStream" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.reconfigure_stream(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpSuspendStream" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.suspend_stream(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpSuspendAndReconfigure" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.suspend_and_reconfigure(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpReleaseStream" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.release_stream(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpEstablishStream" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.establish_stream(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpStartStream" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.start_stream(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpAbortStream" => {
+                let peer_id = parse_u64_identifier(args)?;
+                let result = self.abort_stream(peer_id).await?;
+                Ok(to_value(result)?)
+            }
+            "AvdtpRemoveService" => {
+                let result = self.remove_service().await;
+                Ok(to_value(result)?)
+            }
+            _ => bail!("Invalid AVDTP FIDL method: {:?}", method),
         }
-        "AvdtpGetConnectedPeers" => {
-            let result = facade.get_connected_peers().await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpSetConfiguration" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.set_configuration(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpGetConfiguration" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.get_configuration(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpGetCapabilities" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.get_capabilities(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpGetAllCapabilities" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.get_all_capabilities(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpReconfigureStream" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.reconfigure_stream(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpSuspendStream" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.suspend_stream(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpSuspendAndReconfigure" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.suspend_and_reconfigure(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpReleaseStream" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.release_stream(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpEstablishStream" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.establish_stream(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpStartStream" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.start_stream(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpAbortStream" => {
-            let peer_id = parse_u64_identifier(args)?;
-            let result = facade.abort_stream(peer_id).await?;
-            Ok(to_value(result)?)
-        }
-        "AvdtpRemoveService" => {
-            let result = facade.remove_service().await;
-            Ok(to_value(result)?)
-        }
-        _ => bail!("Invalid AVDTP FIDL method: {:?}", method_name),
     }
 }
 

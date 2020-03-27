@@ -4,36 +4,26 @@
 
 use crate::{location::regulatory_region_facade::RegulatoryRegionFacade, server::Facade};
 use anyhow::{format_err, Error};
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::{to_value, Value};
 
+#[async_trait(?Send)]
 impl Facade for RegulatoryRegionFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        regulatory_region_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-async fn regulatory_region_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &RegulatoryRegionFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "set_region" => {
-            let region =
-                args.get("region").ok_or_else(|| format_err!("Must provide a `region`"))?;
-            let region = region.as_str().ok_or_else(|| format_err!("`region` must be a string"))?;
-            Ok(to_value(facade.set_region(region)?)?)
-        }
-        _ => {
-            return Err(format_err!(
-                "unsupported command {} for regulatory-region-facade!",
-                method_name
-            ))
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "set_region" => {
+                let region =
+                    args.get("region").ok_or_else(|| format_err!("Must provide a `region`"))?;
+                let region =
+                    region.as_str().ok_or_else(|| format_err!("`region` must be a string"))?;
+                Ok(to_value(self.set_region(region)?)?)
+            }
+            _ => {
+                return Err(format_err!(
+                    "unsupported command {} for regulatory-region-facade!",
+                    method
+                ))
+            }
         }
     }
 }

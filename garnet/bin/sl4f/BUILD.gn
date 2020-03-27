@@ -75,6 +75,7 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",

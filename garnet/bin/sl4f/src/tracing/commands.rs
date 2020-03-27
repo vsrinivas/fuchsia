@@ -5,29 +5,17 @@
 use crate::server::Facade;
 use crate::tracing::{facade::TracingFacade, types::TracingMethod};
 use anyhow::Error;
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::Value;
 
+#[async_trait(?Send)]
 impl Facade for TracingFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        tracing_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-// Takes SL4F method command and executes corresponding Tracing methods.
-async fn tracing_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &TracingFacade,
-) -> Result<Value, Error> {
-    match method_name.parse()? {
-        TracingMethod::Initialize => facade.initialize(args).await,
-        TracingMethod::Start => facade.start().await,
-        TracingMethod::Stop => facade.stop().await,
-        TracingMethod::Terminate => facade.terminate(args).await,
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.parse()? {
+            TracingMethod::Initialize => self.initialize(args).await,
+            TracingMethod::Start => self.start().await,
+            TracingMethod::Stop => self.stop().await,
+            TracingMethod::Terminate => self.terminate(args).await,
+        }
     }
 }

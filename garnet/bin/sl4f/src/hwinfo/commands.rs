@@ -4,39 +4,28 @@
 
 use crate::server::Facade;
 use anyhow::Error;
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::{to_value, Value};
 
 use crate::hwinfo::facade::HwinfoFacade;
 
+#[async_trait(?Send)]
 impl Facade for HwinfoFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        hwinfo_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-async fn hwinfo_method_to_fidl(
-    method_name: String,
-    _args: Value,
-    facade: &HwinfoFacade,
-) -> Result<Value, Error> {
-    match method_name.as_ref() {
-        "HwinfoGetDeviceInfo" => {
-            let result = facade.get_device_info().await?;
-            Ok(to_value(result)?)
+    async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "HwinfoGetDeviceInfo" => {
+                let result = self.get_device_info().await?;
+                Ok(to_value(result)?)
+            }
+            "HwinfoGetProductInfo" => {
+                let result = self.get_product_info().await?;
+                Ok(to_value(result)?)
+            }
+            "HwinfoGetBoardInfo" => {
+                let result = self.get_board_info().await?;
+                Ok(to_value(result)?)
+            }
+            _ => bail!("Invalid Hwinfo FIDL method: {:?}", method),
         }
-        "HwinfoGetProductInfo" => {
-            let result = facade.get_product_info().await?;
-            Ok(to_value(result)?)
-        }
-        "HwinfoGetBoardInfo" => {
-            let result = facade.get_board_info().await?;
-            Ok(to_value(result)?)
-        }
-        _ => bail!("Invalid Hwinfo FIDL method: {:?}", method_name),
     }
 }

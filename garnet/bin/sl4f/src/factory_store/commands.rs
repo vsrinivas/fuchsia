@@ -4,30 +4,18 @@
 
 use crate::server::Facade;
 use anyhow::Error;
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::factory_store::facade::FactoryStoreFacade;
 use crate::factory_store::types::FactoryStoreMethod;
 
+#[async_trait(?Send)]
 impl Facade for FactoryStoreFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        factory_store_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-/// Takes JSON-RPC method command and forwards to corresponding FactoryStoreProvider FIDL methods.
-async fn factory_store_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &FactoryStoreFacade,
-) -> Result<Value, Error> {
-    match method_name.parse()? {
-        FactoryStoreMethod::ReadFile => facade.read_file(args).await,
-        FactoryStoreMethod::ListFiles => facade.list_files(args).await,
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.parse()? {
+            FactoryStoreMethod::ReadFile => self.read_file(args).await,
+            FactoryStoreMethod::ListFiles => self.list_files(args).await,
+        }
     }
 }

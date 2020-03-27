@@ -3,46 +3,32 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::{from_value, Value};
 
 use crate::camera_factory::facade::CameraFactoryFacade;
 use crate::camera_factory::types::{SetConfigRequest, WriteCalibrationDataRequest};
 use crate::server::Facade;
 
+#[async_trait(?Send)]
 impl Facade for CameraFactoryFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        camera_factory_method_to_fidl(method, args, self).boxed_local()
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "DetectCamera" => self.detect_camera().await,
+            "Init" => self.init().await,
+            "Start" => self.start().await,
+            "Stop" => self.stop().await,
+            "SetConfig" => {
+                let req: SetConfigRequest = from_value(args)?;
+                self.set_config(req.mode, req.integration_time, req.analog_gain, req.digital_gain)
+                    .await
+            }
+            "CaptureImage" => self.capture_image().await,
+            "WriteCalibrationData" => {
+                let mut req: WriteCalibrationDataRequest = from_value(args)?;
+                self.write_calibration_data(&mut req.calibration_data, req.file_path).await
+            }
+            _ => return Err(format_err!("invalid FIDL method: {}", method)),
+        }
     }
-}
-
-/// Takes JSON-RPC method command and forwards to corresponding CameraFactory FIDL methods.
-pub async fn camera_factory_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &CameraFactoryFacade,
-) -> Result<Value, Error> {
-    let result = match method_name.as_ref() {
-        "DetectCamera" => facade.detect_camera().await,
-        "Init" => facade.init().await,
-        "Start" => facade.start().await,
-        "Stop" => facade.stop().await,
-        "SetConfig" => {
-            let req: SetConfigRequest = from_value(args)?;
-            facade
-                .set_config(req.mode, req.integration_time, req.analog_gain, req.digital_gain)
-                .await
-        }
-        "CaptureImage" => facade.capture_image().await,
-        "WriteCalibrationData" => {
-            let mut req: WriteCalibrationDataRequest = from_value(args)?;
-            facade.write_calibration_data(&mut req.calibration_data, req.file_path).await
-        }
-        _ => return Err(format_err!("invalid FIDL method: {}", method_name)),
-    }?;
-    Ok(result)
 }

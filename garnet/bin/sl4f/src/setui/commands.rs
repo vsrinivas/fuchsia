@@ -4,31 +4,19 @@
 
 use crate::server::Facade;
 use anyhow::Error;
-use futures::future::{FutureExt, LocalBoxFuture};
+use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::setui::facade::SetUiFacade;
 use crate::setui::types::SetUiMethod;
 
+#[async_trait(?Send)]
 impl Facade for SetUiFacade {
-    fn handle_request(
-        &self,
-        method: String,
-        args: Value,
-    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
-        setui_method_to_fidl(method, args, self).boxed_local()
-    }
-}
-
-/// Takes JSON-RPC method command and forwards to corresponding SetUi FIDL method.
-async fn setui_method_to_fidl(
-    method_name: String,
-    args: Value,
-    facade: &SetUiFacade,
-) -> Result<Value, Error> {
-    match method_name.parse()? {
-        SetUiMethod::Mutate => facade.mutate(args).await,
-        SetUiMethod::SetNetwork => facade.set_network(args).await,
-        SetUiMethod::GetNetwork => facade.get_network_setting().await,
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.parse()? {
+            SetUiMethod::Mutate => self.mutate(args).await,
+            SetUiMethod::SetNetwork => self.set_network(args).await,
+            SetUiMethod::GetNetwork => self.get_network_setting().await,
+        }
     }
 }
