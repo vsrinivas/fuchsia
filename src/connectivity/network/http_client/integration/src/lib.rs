@@ -75,11 +75,11 @@ fn setup() -> Result<(u16, App, http::LoaderProxy), Error> {
     Ok((server_port, http_client, loader))
 }
 
-fn make_url(port: u16, path: &str) -> Vec<u8> {
-    format!("http://127.0.0.1:{}{}", port, path).as_bytes().to_vec()
+fn make_url(port: u16, path: &str) -> String {
+    format!("http://127.0.0.1:{}{}", port, path)
 }
 
-fn make_request(method: &str, url: Vec<u8>) -> http::Request {
+fn make_request(method: &str, url: String) -> http::Request {
     http::Request {
         url: Some(url),
         method: Some(method.to_string()),
@@ -227,12 +227,8 @@ async fn test_fetch_response_too_slow() -> Result<(), Error> {
 async fn test_fetch_https() -> Result<(), Error> {
     let (server_port, _http_client, loader) = setup()?;
 
-    let response = loader
-        .fetch(make_request(
-            "GET",
-            format!("https://127.0.0.1:{}", server_port).as_bytes().to_vec(),
-        ))
-        .await?;
+    let response =
+        loader.fetch(make_request("GET", format!("https://127.0.0.1:{}", server_port))).await?;
 
     // Using fhyper::new_client, the request will actually ignore the https:// completely and make
     // the request successfully anyway (Since rouille doesn't care about https either). However,

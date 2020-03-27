@@ -79,7 +79,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
 
   void SetNetworkErrorResponse(fuchsia::net::http::Error error) {
     fuchsia::net::http::Response response;
-    response.set_final_url(ToBytes("https://www.example.com"));
+    response.set_final_url("https://www.example.com");
     response.set_error(error);
     loader_->SetResponse(std::move(response));
   }
