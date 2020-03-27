@@ -17,12 +17,10 @@ UltrasoundFactory::UltrasoundFactory(Context* context) : context_(*context) {
 
 void UltrasoundFactory::CreateCapturer(
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
-    CreateCapturerCallback callback) {
-}
+    CreateCapturerCallback callback) {}
 
 void UltrasoundFactory::CreateRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
-    CreateRendererCallback callback) {
-}
+    CreateRendererCallback callback) {}
 
 }  // namespace media::audio

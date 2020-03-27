@@ -44,9 +44,9 @@ TEST(UsageGainSettingsTest, RenderUsageGainPersistsComponents) {
   const auto test_usage = [&under_test](auto render_usage) {
     under_test.SetUsageGain(fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage)),
                             kArbitraryGainValue);
-    EXPECT_FLOAT_EQ(
-        under_test.GetAdjustedUsageGain(fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage))),
-        kArbitraryGainValue);
+    EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(
+                        fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage))),
+                    kArbitraryGainValue);
 
     under_test.SetUsageGainAdjustment(
         fuchsia::media::Usage::WithRenderUsage(fidl::Clone(render_usage)),

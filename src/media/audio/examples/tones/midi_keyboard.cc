@@ -7,8 +7,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/midi/c/fidl.h>
-#include <lib/fit/defer.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fit/defer.h>
 #include <poll.h>
 #include <unistd.h>
 

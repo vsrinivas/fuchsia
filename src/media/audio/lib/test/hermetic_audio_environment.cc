@@ -5,8 +5,8 @@
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/ultrasound/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/ultrasound/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 

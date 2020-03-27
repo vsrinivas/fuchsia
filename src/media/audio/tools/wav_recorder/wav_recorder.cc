@@ -32,7 +32,7 @@ constexpr char kShowUsageOption1[] = "help";
 constexpr char kShowUsageOption2[] = "?";
 constexpr char kRecordDurationOption[] = "duration";
 constexpr char kDurationDefaultSecs[] = "2.0";
-constexpr float kMaxDurationSecs= 86400.0f;
+constexpr float kMaxDurationSecs = 86400.0f;
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
@@ -61,8 +61,7 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
     if (opt == "")
       opt = kDurationDefaultSecs;
 
-    if (sscanf(opt.c_str(), "%f", &duration) != 1 || duration <= 0
-        || duration > kMaxDurationSecs) {
+    if (sscanf(opt.c_str(), "%f", &duration) != 1 || duration <= 0 || duration > kMaxDurationSecs) {
       printf("Duration must be positive (max: %.1f)!\n", kMaxDurationSecs);
       return;
     }
@@ -96,9 +95,8 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   // TODO (b/148807692): produce a file with exactly the expected number of frames, or timeout.
   if (duration > 0) {
     zx::duration wait_time = zx::sec(duration);
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this]{OnQuit();},
-                           wait_time);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [this] { OnQuit(); }, wait_time);
   } else {
     // Quit if someone hits a key.
     keystroke_waiter_.Wait([this](zx_status_t, uint32_t) { OnQuit(); }, STDIN_FILENO, POLLIN);
@@ -146,8 +144,8 @@ void WavRecorder::Usage() {
   printf(" --%s[=<SECS>]\tSpecify a fixed duration rather than waiting for keystroke\n",
          kRecordDurationOption);
   printf("\t\t\tDuration must be positive (max: %.1f)\n", kMaxDurationSecs);
-  printf("\t\t\tIf only --%s is specified, then a duration of %s is used.\n",
-         kRecordDurationOption, kDurationDefaultSecs);
+  printf("\t\t\tIf only --%s is specified, then a duration of %s is used.\n", kRecordDurationOption,
+         kDurationDefaultSecs);
 
   printf("\n --%s\t\t\tBe verbose; display per-packet info\n", kVerboseOption);
   printf(" --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
