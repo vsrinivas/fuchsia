@@ -186,7 +186,7 @@ impl Loader {
     async fn new(req: net_http::Request) -> Result<Self, Error> {
         let method =
             hyper::Method::from_bytes(req.method.unwrap_or_else(|| "GET".to_string()).as_bytes())?;
-        if let Some(url) = req.url {
+        if let Some(url) = req.url.or(req.url_as_bytes) {
             let url = hyper::Uri::try_from(String::from_utf8(url)?)?;
             let mut headers = hyper::HeaderMap::new();
             if let Some(h) = req.headers {

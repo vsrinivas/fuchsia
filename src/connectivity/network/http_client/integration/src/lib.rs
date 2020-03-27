@@ -82,6 +82,18 @@ fn make_url(port: u16, path: &str) -> Vec<u8> {
 fn make_request(method: &str, url: Vec<u8>) -> http::Request {
     http::Request {
         url: Some(url),
+        url_as_bytes: None,
+        method: Some(method.to_string()),
+        headers: None,
+        body: None,
+        deadline: None,
+    }
+}
+
+fn make_request_with_url_as_bytes(method: &str, url: Vec<u8>) -> http::Request {
+    http::Request {
+        url: None,
+        url_as_bytes: Some(url),
         method: Some(method.to_string()),
         headers: None,
         body: None,
@@ -176,6 +188,19 @@ async fn test_fetch_http() -> Result<(), Error> {
     let (server_port, _http_client, loader) = setup()?;
 
     let response = loader.fetch(make_request("GET", make_url(server_port, "/"))).await?;
+
+    check_response(&response);
+    check_body(response.body);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_fetch_http_with_url_as_bytes() -> Result<(), Error> {
+    let (server_port, _http_client, loader) = setup()?;
+
+    let response =
+        loader.fetch(make_request_with_url_as_bytes("GET", make_url(server_port, "/"))).await?;
 
     check_response(&response);
     check_body(response.body);
