@@ -148,7 +148,7 @@ args+=(
 
 # Launch the e2e shell command if one was specified.
 if [ $# -gt 0 ]; then
-  args+=( send-keys "$@" C-m \; )
+  args+=( send-keys -l "$(printf "%q " "$@")" \; send-keys C-m \; )
 fi
 
 # Capture the log files if requested.
