@@ -7,10 +7,12 @@ package ir
 import "fmt"
 
 type All struct {
-	EncodeSuccess []EncodeSuccess
-	DecodeSuccess []DecodeSuccess
-	EncodeFailure []EncodeFailure
-	DecodeFailure []DecodeFailure
+	EncodeSuccess   []EncodeSuccess
+	DecodeSuccess   []DecodeSuccess
+	EncodeFailure   []EncodeFailure
+	DecodeFailure   []DecodeFailure
+	EncodeBenchmark []EncodeBenchmark
+	DecodeBenchmark []DecodeBenchmark
 }
 
 type EncodeSuccess struct {
@@ -45,6 +47,20 @@ type DecodeFailure struct {
 	Type              string
 	Encodings         []Encoding
 	Err               ErrorCode
+	BindingsAllowlist *LanguageList
+	BindingsDenylist  *LanguageList
+}
+
+type EncodeBenchmark struct {
+	Name              string
+	Value             interface{}
+	BindingsAllowlist *LanguageList
+	BindingsDenylist  *LanguageList
+}
+
+type DecodeBenchmark struct {
+	Name              string
+	Encodings         []Encoding
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
 }

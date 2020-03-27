@@ -240,6 +240,32 @@ var sections = map[string]sectionMetadata{
 			all.DecodeFailure = append(all.DecodeFailure, result)
 		},
 	},
+	"encode_benchmark": {
+		requiredKinds: map[bodyElement]bool{isValue: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		setter: func(name string, body body, all *ir.All) {
+			result := ir.EncodeBenchmark{
+				Name:              name,
+				Value:             body.Value,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.EncodeBenchmark = append(all.EncodeBenchmark, result)
+		},
+	},
+	"decode_benchmark": {
+		requiredKinds: map[bodyElement]bool{isBytes: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		setter: func(name string, body body, all *ir.All) {
+			result := ir.DecodeBenchmark{
+				Name:              name,
+				Encodings:         body.Encodings,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.DecodeBenchmark = append(all.DecodeBenchmark, result)
+		},
+	},
 }
 
 func (p *Parser) parseSection(all *ir.All) error {

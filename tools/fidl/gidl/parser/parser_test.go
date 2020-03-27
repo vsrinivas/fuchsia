@@ -510,6 +510,61 @@ func TestParseDecodeFailureCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
+
+func TestParseEncodeBenchmarkCase(t *testing.T) {
+	gidl := `
+	encode_benchmark("OneStringOfMaxLengthFive-empty") {
+		value = OneStringOfMaxLengthFive {
+			first: "four",
+		},
+	}`
+	all, err := parse(gidl)
+	expectedAll := ir.All{
+		EncodeBenchmark: []ir.EncodeBenchmark{{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Object{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Key: ir.FieldKey{
+							Name: "first",
+						},
+						Value: "four",
+					},
+				},
+			},
+		}},
+	}
+	checkMatch(t, all, expectedAll, err)
+}
+
+func TestParseDecodeBenchmarkCase(t *testing.T) {
+	gidl := `
+	decode_benchmark("OneStringOfMaxLengthFive-empty") {
+		bytes = [
+			16:raw(
+				1, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				// one character missing
+			),
+		],
+	}`
+	all, err := parse(gidl)
+	expectedAll := ir.All{
+		DecodeBenchmark: []ir.DecodeBenchmark{{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Encodings: []ir.Encoding{{
+				WireFormat: ir.V1WireFormat,
+				Bytes: []byte{
+					1, 0, 0, 0, 0, 0, 0, 0, // length
+					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				},
+			}},
+		}},
+	}
+	checkMatch(t, all, expectedAll, err)
+}
+
 func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
