@@ -5,6 +5,7 @@
 #include <lib/async/time.h>
 #include <lib/fidl-async/cpp/async_bind_internal.h>
 #include <lib/fidl-async/cpp/async_transaction.h>
+#include <lib/fidl-async/cpp/client_base.h>
 #include <lib/fidl/epitaph.h>
 #include <zircon/syscalls.h>
 
@@ -15,7 +16,8 @@ namespace fidl {
 namespace internal {
 
 AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                           TypeErasedOnUnboundFn on_unbound_fn, DispatchFn dispatch_fn)
+                           bool is_server, TypeErasedOnUnboundFn on_unbound_fn,
+                           DispatchFn dispatch_fn)
     : wait_({{ASYNC_STATE_INIT},
              &AsyncBinding::OnMessage,
              channel.get(),
@@ -25,7 +27,8 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, 
       channel_(std::move(channel)),
       interface_(impl),
       on_unbound_fn_(std::move(on_unbound_fn)),
-      dispatch_fn_(std::move(dispatch_fn)) {
+      dispatch_fn_(std::move(dispatch_fn)),
+      is_server_(is_server) {
   ZX_ASSERT(channel_);
 }
 
@@ -50,7 +53,7 @@ void AsyncBinding::OnUnbind(zx_status_t epitaph, UnboundReason reason) {
     unbind_ = true;
     // Determine the epitaph and whether to send it.
     if (reason == UnboundReason::kInternalError || epitaph_.send) {
-      send_epitaph = true;
+      send_epitaph = is_server_;
       if (epitaph_.status != ZX_OK)
         epitaph = epitaph_.status;
     }
@@ -111,12 +114,12 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
         return;
       // If there was any error enabling dispatch, destroy the binding.
       if (status != ZX_OK)
-        return OnEnableNextDispatchError(status);
+        return OnDispatchError(status);
     }
 
     // Add the wait back to the dispatcher.
     if ((status = EnableNextDispatch()) != ZX_OK)
-      return OnEnableNextDispatchError(status);
+      return OnDispatchError(status);
   } else {
     ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
     // No epitaph triggered by error due to a PEER_CLOSED.
@@ -205,7 +208,7 @@ zx::channel AsyncBinding::WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_
   return channel;
 }
 
-void AsyncBinding::OnEnableNextDispatchError(zx_status_t error) {
+void AsyncBinding::OnDispatchError(zx_status_t error) {
   ZX_ASSERT(error != ZX_OK);
   if (error == ZX_ERR_CANCELED) {
     OnUnbind(ZX_OK, UnboundReason::kUnbind);
@@ -214,12 +217,12 @@ void AsyncBinding::OnEnableNextDispatchError(zx_status_t error) {
   OnUnbind(error, UnboundReason::kInternalError);
 }
 
-std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedServerBinding(
+std::shared_ptr<AsyncBinding> AsyncBinding::CreateServerBinding(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
-  auto ret = std::shared_ptr<internal::AsyncBinding>(new internal::AsyncBinding(
-      dispatcher, std::move(channel), impl, std::move(on_unbound_fn),
-      [dispatch_fn](std::shared_ptr<internal::AsyncBinding>& binding, fidl_msg_t* msg,
+  auto ret = std::shared_ptr<AsyncBinding>(new AsyncBinding(
+      dispatcher, std::move(channel), impl, true, std::move(on_unbound_fn),
+      [dispatch_fn](std::shared_ptr<AsyncBinding>& binding, fidl_msg_t* msg,
                     bool* binding_released, zx_status_t* status) {
         auto hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
         AsyncTransaction txn(hdr->txid, dispatch_fn, binding_released, status);
@@ -229,10 +232,20 @@ std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedServerBin
   return ret;
 }
 
+std::shared_ptr<AsyncBinding> AsyncBinding::CreateClientBinding(
+    async_dispatcher_t* dispatcher, zx::channel channel, ClientBase* client,
+    DispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
+  auto ret = std::shared_ptr<AsyncBinding>(new AsyncBinding(
+      dispatcher, std::move(channel), client, false, std::move(on_unbound_fn),
+      std::move(dispatch_fn)));
+  ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
+  return ret;
+}
+
 fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
-  auto internal_binding = internal::AsyncBinding::CreateSelfManagedServerBinding(
+  auto internal_binding = AsyncBinding::CreateServerBinding(
       dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {

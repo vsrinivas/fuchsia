@@ -18,6 +18,7 @@ namespace fidl {
 namespace internal {
 
 class AsyncTransaction;
+class ClientBase;
 
 class AsyncBinding {
  public:
@@ -30,9 +31,13 @@ class AsyncBinding {
   // an internal error like not being able to write to the channel occur).
   // The binding is destroyed once no more references are held, including the one returned by
   // this static method.
-  static std::shared_ptr<AsyncBinding> CreateSelfManagedServerBinding(
+  static std::shared_ptr<AsyncBinding> CreateServerBinding(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
       TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
+
+  static std::shared_ptr<AsyncBinding> CreateClientBinding(
+      async_dispatcher_t* dispatcher, zx::channel channel, ClientBase* client,
+      DispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
 
   ~AsyncBinding();
 
@@ -46,11 +51,11 @@ class AsyncBinding {
 
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph)
       __TA_EXCLUDES(lock_) {
-    UnbindInternal(std::move(calling_ref), &epitaph);
+    UnbindInternal(std::move(calling_ref), is_server_ ? &epitaph : nullptr);
   }
 
  protected:
-  AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+  AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl, bool is_server,
                TypeErasedOnUnboundFn on_unbound_fn, DispatchFn dispatch_fn);
 
  private:
@@ -100,7 +105,7 @@ class AsyncBinding {
   zx::channel WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_ref);
 
   // Invokes OnUnbind() with the appropriate arguments based on the status.
-  void OnEnableNextDispatchError(zx_status_t error);
+  void OnDispatchError(zx_status_t error);
 
   // First member of struct so an async_wait_t* can be casted to its containing AsyncBinding*.
   async_wait_t wait_ __TA_GUARDED(lock_);
@@ -110,9 +115,10 @@ class AsyncBinding {
   zx::channel channel_ = {};
   void* interface_ = nullptr;
   TypeErasedOnUnboundFn on_unbound_fn_ = {};
-  DispatchFn dispatch_fn_ = {};
+  const DispatchFn dispatch_fn_;
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
   zx::channel* out_channel_ = nullptr;
+  const bool is_server_;
 
   std::mutex lock_;
   struct {
