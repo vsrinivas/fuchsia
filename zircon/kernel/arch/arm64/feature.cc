@@ -358,7 +358,7 @@ void arm64_feature_debug(bool full) {
     print_feature();
     dprintf(INFO, "ARM cache line sizes: icache %u dcache %u zva %u\n", arm64_icache_size,
             arm64_dcache_size, arm64_zva_size);
-    if (LK_DEBUGLEVEL > 0) {
+    if (DPRINTF_ENABLED_FOR_LEVEL(INFO)) {
       arm64_dump_cache_info(arch_curr_cpu_num());
     }
   }

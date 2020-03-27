@@ -19,7 +19,9 @@
 #define LK_DEBUGLEVEL 0
 #endif
 
-/* debug levels */
+#define DEBUG_PRINT_LEVEL LK_DEBUGLEVEL
+
+/* debug print levels */
 #define CRITICAL 0
 #define ALWAYS 0
 #define INFO 1
@@ -66,11 +68,13 @@ static inline void hexdump8(const void *ptr, size_t len) {
   hexdump8_ex(ptr, len, (uint64_t)((vaddr_t)ptr));
 }
 
-#define dprintf(level, x...)        \
-  do {                              \
-    if ((level) <= LK_DEBUGLEVEL) { \
-      printf(x);                    \
-    }                               \
+#define DPRINTF_ENABLED_FOR_LEVEL(level) ((level) <= (DEBUG_PRINT_LEVEL))
+
+#define dprintf(level, x...)                \
+  do {                                      \
+    if (DPRINTF_ENABLED_FOR_LEVEL(level)) { \
+      printf(x);                            \
+    }                                       \
   } while (0)
 
 /* systemwide halts */
