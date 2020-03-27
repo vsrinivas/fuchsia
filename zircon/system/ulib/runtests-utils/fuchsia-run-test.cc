@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <system_error>
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
@@ -66,37 +67,39 @@ fbl::String RootName(const fbl::String& path) {
   return fbl::String::Concat({"/", fbl::String(start, end - start)});
 }
 
-bool ReadFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
+std::error_code ReadFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
   auto* buf = data;
   ssize_t count = size;
+  off_t off = 0;
   while (count > 0) {
-    ssize_t len = read(fd.get(), buf, count);
-    if (len == -1) {
-      return false;
+    ssize_t len = pread(fd.get(), buf, count, off);
+    if (len <= 0) {
+      return std::error_code{errno, std::generic_category()};
     }
-    count -= len;
     buf += len;
+    count -= len;
+    off += len;
   }
-  lseek(fd.get(), 0, SEEK_SET);
-  return true;
+  return std::error_code{};
 }
 
-bool WriteFile(const fbl::unique_fd& fd, const uint8_t* data, size_t size) {
+std::error_code WriteFile(const fbl::unique_fd& fd, const uint8_t* data, size_t size) {
   auto* buf = data;
   ssize_t count = size;
+  off_t off = 0;
   while (count > 0) {
-    ssize_t len = write(fd.get(), buf, count);
-    if (len == -1) {
-      return false;
+    ssize_t len = pwrite(fd.get(), buf, count, off);
+    if (len <= 0) {
+      return std::error_code{errno, std::generic_category()};
     }
-    count -= len;
     buf += len;
+    count -= len;
+    off += len;
   }
-  lseek(fd.get(), 0, SEEK_SET);
-  return true;
+  return std::error_code{};
 }
 
-bool WriteProfile(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8_t* buf, uint64_t size) {
+bool WriteProfile(const fbl::unique_fd& sink_dir_fd, const char* filename, const uint8_t* buf, uint64_t size) {
   fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_RDWR | O_CREAT, 0666)};
   if (!fd) {
     fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", filename, strerror(errno));
@@ -109,8 +112,8 @@ bool WriteProfile(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8
     return false;
   }
   if (auto file_size = static_cast<uint64_t>(stat.st_size); file_size == 0) {
-    if (!WriteFile(fd, buf, size)) {
-      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(errno));
+    if (std::error_code ec = WriteFile(fd, buf, size); ec) {
+      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(ec.value()));
       return false;
     }
   } else {
@@ -121,8 +124,8 @@ bool WriteProfile(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8
     }
 
     auto dst = std::make_unique<uint8_t[]>(file_size);
-    if (!ReadFile(fd, dst.get(), file_size)) {
-      fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", filename, strerror(errno));
+    if (std::error_code ec = ReadFile(fd, dst.get(), file_size); ec) {
+      fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", filename, strerror(ec.value()));
       return false;
     }
 
@@ -134,8 +137,8 @@ bool WriteProfile(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8
     }
 
     // Write the merged profile.
-    if (!WriteFile(fd, MergeProfiles(buf, dst.get(), file_size), file_size)) {
-      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(errno));
+    if (std::error_code ec = WriteFile(fd, MergeProfiles(buf, dst.get(), file_size), file_size); ec) {
+      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(ec.value()));
       return false;
     }
   }
@@ -143,15 +146,15 @@ bool WriteProfile(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8
   return true;
 }
 
-bool WriteData(fbl::unique_fd& sink_dir_fd, const char* filename, const uint8_t* buf, uint64_t size) {
+bool WriteData(const fbl::unique_fd& sink_dir_fd, const char* filename, const uint8_t* buf, uint64_t size) {
   fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
   if (!fd) {
     fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", filename, strerror(errno));
     return false;
   }
 
-  if (!WriteFile(fd, buf, size)) {
-    fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(errno));
+  if (std::error_code ec = WriteFile(fd, buf, size); ec) {
+    fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(ec.value()));
     return false;
   }
 
