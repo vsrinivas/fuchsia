@@ -19,9 +19,13 @@ DEVTOOLS_LABEL="$(echo "${DEVTOOLS_VERSION}" | tr ':/' '_')"
 # Verifies that the correct commands are run before starting Fuchsia DevTools
 TEST_fdevtools_with_authkeys() {
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
     --version "${DEVTOOLS_VERSION}" \
-    --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
+    --private-key "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key" > "${BT_TEMP_DIR}/launch_devtools.txt"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/sshconfig"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "FDT_SSH_KEY"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key"
 
   # Verify that cipd was called to download the correct path
   # shellcheck disable=SC1090
@@ -37,12 +41,12 @@ TEST_fdevtools_with_authkeys() {
 TEST_fdevtools_noargs() {
 
   # Set the version file to match the mock
-   echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
+  echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" > "${BT_TEMP_DIR}/launch_devtools.txt"
 
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/.ssh/authorized_keys"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/sshconfig"
 
 
   # Verify that cipd was called to download the correct path
@@ -77,10 +81,12 @@ BT_INIT_TEMP_DIR() {
   # Generate an invalid devtools.version that we will never see since --version overrides this
   echo "unused_version_string" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
 
-  # Create empty authorized_keys file to add to the system image, but the contents are not used.
+  # Create empty private_key which SSH would expect to make the connection
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"
-  echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
-    >"${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
+  echo "-----BEGIN TEST-----\
+00000000000000000000000000000000000000000000000000000000000000000000 \
+-----END TEST-----\
+  " >"${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key"
 }
 
 BT_RUN_TESTS "$@"

@@ -25,16 +25,16 @@ usage () {
   echo "Usage: $0"
   echo "  [--work-dir <directory to store image assets>]"
   echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}"
-  echo "  [--authorized-keys <file>]"
-  echo "    The authorized public key file for securing the device.  Defaults to "
-  echo "    ${FUCHSIA_IMAGE_WORK_DIR}/.ssh/authorized_keys, which is generated if needed."
+  echo "  [--private-key <identity file>]"
+  echo "    Uses additional private key when using ssh to access the device."
   echo "  [--version <version>"
   echo "    Specify the CIPD version of DevTools to download."
   echo "    Defaults to devtools.version file with ${VER_DEVTOOLS}"
   echo "  [--help] [-h]"
   echo "    Show command line options available"
 }
-AUTH_KEYS_FILE=""
+
+PRIVATE_KEY_FILE=""
 FDT_ARGS=()
 
 # Parse command line
@@ -44,9 +44,9 @@ case $1 in
     shift
     FUCHSIA_IMAGE_WORK_DIR="${1:-.}"
     ;;
-  --authorized-keys)
+  --private-key)
     shift
-    AUTH_KEYS_FILE="${1}"
+    PRIVATE_KEY_FILE="${1}"
     ;;
   --version)
     shift
@@ -64,11 +64,7 @@ esac
 shift
 done
 
-if [[ "${AUTH_KEYS_FILE}" != "" ]]; then
-  auth_keys_file="${AUTH_KEYS_FILE}"
-else
-  auth_keys_file="$(get-fuchsia-auth-keys-file)"
-fi
+readonly PRIVATE_KEY_FILE
 
 # Do not create directory names with : otherwise LD_PRELOAD or PATH usage will fail.
 # Avoid / to prevent extra sub-directories being created.
@@ -93,11 +89,17 @@ rm "${TEMP_ENSURE}"
 export FDT_TOOLCHAIN="GN"
 FDT_GN_SSH="$(command -v ssh)"
 export FDT_GN_SSH
+check-ssh-config
 FDT_SSH_CONFIG="$(get-fuchsia-sshconfig-file)"
 export FDT_SSH_CONFIG
-export FDT_SSH_KEY="${auth_keys_file}"
 FDT_GN_DEVFIND="$(get-fuchsia-sdk-dir)/tools/device-finder"
 export FDT_GN_DEVFIND
 export FDT_DEBUG="true"
-echo "Starting system_monitor with FDT_ARGS=[${FDT_ARGS[*]}] and FDT_DIR=${FDT_DIR}, FDT_TOOLCHAIN=${FDT_TOOLCHAIN}, FDT_GN_SSH=${FDT_GN_SSH}, FDT_SSH_CONFIG=${FDT_SSH_CONFIG}, FDT_SSH_KEY=${FDT_SSH_KEY}, FDT_GN_DEVFIND=${FDT_GN_DEVFIND}, FDT_DEBUG=${FDT_DEBUG}"
+if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
+  FDT_SSH_KEY="${PRIVATE_KEY_FILE}"
+  export FDT_SSH_KEY
+fi
+echo "Starting system_monitor with FDT_ARGS=[${FDT_ARGS[*]}] and environment:"
+env | grep FDT_
+
 "${FDT_DIR}/system_monitor/linux/system_monitor" "${FDT_ARGS[@]}"
