@@ -178,7 +178,7 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	for _, l := range ep.links {
 		if err := l.WritePacket(r, gso, protocol, pkt); err != nil {
 			return err
@@ -189,7 +189,7 @@ func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.N
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	n := len(pkts)
 	for _, l := range ep.links {
 		i, err := l.WritePackets(r, gso, pkts, protocol)
@@ -221,7 +221,7 @@ func (ep *Endpoint) IsAttached() bool {
 	return ep.dispatcher != nil
 }
 
-func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	// Is the destination link address a multicast/broadcast?
 	//
 	// If the least significant bit of the first octet is 1, then the address is a

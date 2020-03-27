@@ -29,14 +29,14 @@ import (
 type DeliverNetworkPacketArgs struct {
 	SrcLinkAddr, DstLinkAddr tcpip.LinkAddress
 	Protocol                 tcpip.NetworkProtocolNumber
-	Pkt                      tcpip.PacketBuffer
+	Pkt                      stack.PacketBuffer
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
 
-func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	*ch <- DeliverNetworkPacketArgs{
 		SrcLinkAddr: srcLinkAddr,
 		DstLinkAddr: dstLinkAddr,
@@ -219,9 +219,9 @@ func TestEndpoint(t *testing.T) {
 						}
 
 						writeSize := depth + excess
-						pkts := make([]tcpip.PacketBuffer, writeSize)
+						pkts := make([]stack.PacketBuffer, writeSize)
 						for i := range pkts {
-							pkts[i] = tcpip.PacketBuffer{
+							pkts[i] = stack.PacketBuffer{
 								Header: buffer.NewPrependable(int(endpoint.MaxHeaderLength())),
 							}
 						}
@@ -314,7 +314,7 @@ func TestEndpoint(t *testing.T) {
 				LocalLinkAddress:  localLinkAddress,
 				RemoteLinkAddress: remoteLinkAddress,
 			}
-			pb := tcpip.PacketBuffer{
+			pb := stack.PacketBuffer{
 				Data:   buffer.View(body).ToVectorisedView(),
 				Header: hdr,
 			}
@@ -322,7 +322,7 @@ func TestEndpoint(t *testing.T) {
 				SrcLinkAddr: localLinkAddress,
 				DstLinkAddr: remoteLinkAddress,
 				Protocol:    protocol,
-				Pkt: tcpip.PacketBuffer{
+				Pkt: stack.PacketBuffer{
 					Data: buffer.View(packetHeader + body).ToVectorisedView(),
 				},
 			}
@@ -342,7 +342,7 @@ func TestEndpoint(t *testing.T) {
 							SrcLinkAddr: h.SourceAddress(),
 							DstLinkAddr: h.DestinationAddress(),
 							Protocol:    h.Type(),
-							Pkt: tcpip.PacketBuffer{
+							Pkt: stack.PacketBuffer{
 								Data: buffer.View(b[header.EthernetMinimumSize:]).ToVectorisedView(),
 							},
 						}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
@@ -427,7 +427,7 @@ func TestEndpoint(t *testing.T) {
 							SrcLinkAddr: localLinkAddress,
 							DstLinkAddr: remoteLinkAddress,
 							Protocol:    protocol,
-							Pkt: tcpip.PacketBuffer{
+							Pkt: stack.PacketBuffer{
 								Data: buffer.View(payload[:extra]).ToVectorisedView(),
 							},
 						}, args, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {

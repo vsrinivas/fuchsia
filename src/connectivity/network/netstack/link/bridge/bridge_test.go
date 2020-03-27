@@ -126,11 +126,11 @@ func TestEndpoint_Wait(t *testing.T) {
 }
 
 type testNetworkDispatcher struct {
-	pkt   tcpip.PacketBuffer
+	pkt   stack.PacketBuffer
 	count int
 }
 
-func (t *testNetworkDispatcher) DeliverNetworkPacket(_ stack.LinkEndpoint, _, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+func (t *testNetworkDispatcher) DeliverNetworkPacket(_ stack.LinkEndpoint, _, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	t.count++
 	t.pkt = pkt
 }
@@ -138,7 +138,7 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_ stack.LinkEndpoint, _, _ 
 type singlePacketEndpoint struct {
 	stack.LinkEndpoint
 	linkAddr tcpip.LinkAddress
-	pkt      tcpip.PacketBuffer
+	pkt      stack.PacketBuffer
 	full     bool
 }
 
@@ -146,7 +146,7 @@ func (e *singlePacketEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func (e *singlePacketEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+func (e *singlePacketEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	if e.full {
 		return tcpip.ErrWouldBlock
 	}
@@ -167,7 +167,7 @@ func newSinglePacketEndpoint(linkAddr tcpip.LinkAddress) *singlePacketEndpoint {
 // endpoint or floods all endpoints for multicast and broadcast frames.
 func TestBridgeRouting(t *testing.T) {
 	data := []byte{1, 2, 3, 4}
-	pkt := tcpip.PacketBuffer{
+	pkt := stack.PacketBuffer{
 		Data: buffer.View(data).ToVectorisedView(),
 	}
 
@@ -383,7 +383,7 @@ func TestBridge(t *testing.T) {
 				"s1": s1, "s2": s2, "sb": sb,
 			}
 
-			ep2.onWritePacket = func(pkt tcpip.PacketBuffer) {
+			ep2.onWritePacket = func(pkt stack.PacketBuffer) {
 				for i, view := range pkt.Data.Views() {
 					if bytes.Contains(view, []byte(payload)) {
 						t.Errorf("did not expect payload %x to be sent back to ep1 in view %d: %x", payload, i, view)
@@ -538,10 +538,10 @@ type endpoint struct {
 	linkAddr      tcpip.LinkAddress
 	dispatcher    stack.NetworkDispatcher
 	linked        *endpoint
-	onWritePacket func(tcpip.PacketBuffer)
+	onWritePacket func(stack.PacketBuffer)
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	if e.linked == nil {
 		panic(fmt.Sprintf("ep %+v has not been linked to another endpoint; create endpoints with `pipe()`", e))
 	}
@@ -557,7 +557,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.Netw
 	return nil
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	panic("not implemented")
 }
 

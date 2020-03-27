@@ -48,7 +48,7 @@ func (e *Endpoint) IsEnabled() bool {
 }
 
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
-func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	if atomic.LoadUint32(&e.enabled) == 1 {
 		pkt := pkt
 		hdr := pkt.Header
@@ -71,7 +71,7 @@ func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 }
 
 // WritePacket implements stack.LinkEndpoint.
-func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	if atomic.LoadUint32(&e.enabled) == 1 && e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
 		return nil
 	}
@@ -79,11 +79,11 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 }
 
 // WritePackets implements stack.LinkEndpoint.
-func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
 		return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
 	}
-	filtered := make([]tcpip.PacketBuffer, 0, len(pkts))
+	filtered := make([]stack.PacketBuffer, 0, len(pkts))
 	for _, pkt := range pkts {
 		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
 			continue

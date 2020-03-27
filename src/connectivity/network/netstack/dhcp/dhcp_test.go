@@ -58,7 +58,7 @@ type endpoint struct {
 	dispatcher stack.NetworkDispatcher
 	remote     []*endpoint
 	// onWritePacket returns a slice of packets to send and a delay to be added before every send.
-	onWritePacket func(tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration)
+	onWritePacket func(stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration)
 
 	stack.LinkEndpoint
 }
@@ -90,8 +90,8 @@ func (e *endpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
-	pkts := []tcpip.PacketBuffer{pkt}
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+	pkts := []stack.PacketBuffer{pkt}
 	var delay time.Duration
 
 	if fn := e.onWritePacket; fn != nil {
@@ -137,12 +137,12 @@ func addEndpointToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NIC
 func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 	sent := make(chan struct{}, 1)
 	e := endpoint{
-		onWritePacket: func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+		onWritePacket: func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 			select {
 			case sent <- struct{}{}:
 			default:
 			}
-			return []tcpip.PacketBuffer{b}, 0
+			return []stack.PacketBuffer{b}, 0
 		},
 	}
 	s := createTestStack()
@@ -203,7 +203,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 	cond := sync.Cond{L: &mu.Mutex}
 	serverLinkEP := endpoint{
-		onWritePacket: func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+		onWritePacket: func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 			mu.Lock()
 			mu.buffered++
 			for mu.buffered < len(clientLinkEPs) {
@@ -211,7 +211,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 			}
 			mu.Unlock()
 
-			return []tcpip.PacketBuffer{b}, 0
+			return []stack.PacketBuffer{b}, 0
 		},
 	}
 	serverStack := createTestStack()
@@ -388,7 +388,7 @@ func TestDHCP(t *testing.T) {
 	}
 }
 
-func mustMsgType(t *testing.T, b tcpip.PacketBuffer) dhcpMsgType {
+func mustMsgType(t *testing.T, b stack.PacketBuffer) dhcpMsgType {
 	t.Helper()
 
 	h := hdr(b.Data.First())
@@ -440,7 +440,7 @@ func TestDelayRetransmission(t *testing.T) {
 			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-			serverLinkEP.onWritePacket = func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+			serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 				func() {
 					switch mustMsgType(t, b) {
 					case dhcpOFFER:
@@ -463,7 +463,7 @@ func TestDelayRetransmission(t *testing.T) {
 					time.Sleep(10 * time.Millisecond)
 				}()
 
-				return []tcpip.PacketBuffer{b}, 0
+				return []stack.PacketBuffer{b}, 0
 			}
 
 			serverStack := createTestStack()
@@ -569,7 +569,7 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 			var offerSent bool
-			serverLinkEP.onWritePacket = func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+			serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 				switch typ := mustMsgType(t, b); typ {
 				case dhcpOFFER:
 					// Only respond to the first DHCPDISCOVER to avoid unwanted delays on responses to DHCPREQUEST.
@@ -577,9 +577,9 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 						return nil, 0
 					}
 					offerSent = true
-					return []tcpip.PacketBuffer{b}, v.serverDelay
+					return []stack.PacketBuffer{b}, v.serverDelay
 				case dhcpACK:
-					return []tcpip.PacketBuffer{b}, v.serverDelay
+					return []stack.PacketBuffer{b}, v.serverDelay
 				default:
 					t.Fatalf("test server is sending packet with unexpected type: %s", typ)
 					return nil, 0
@@ -637,7 +637,7 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 // with DHCP message type set to `msgType` specified in the argument.
 // This function does not make a deep copy of packet buffer passed in except
 // for the part it has to modify.
-func mustCloneWithNewMsgType(t *testing.T, b tcpip.PacketBuffer, msgType dhcpMsgType) tcpip.PacketBuffer {
+func mustCloneWithNewMsgType(t *testing.T, b stack.PacketBuffer, msgType dhcpMsgType) stack.PacketBuffer {
 	t.Helper()
 
 	// Create a deep copy of the DHCP header from `b`, so we don't mutate the original.
@@ -686,19 +686,19 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	const retransmissionDelay = 50 * time.Millisecond
 	var offerSent bool
 
-	serverLinkEP.onWritePacket = func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+	serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 		switch typ := mustMsgType(t, b); typ {
 		case dhcpOFFER:
 			if offerSent {
 				return nil, 0
 			}
 			offerSent = true
-			return []tcpip.PacketBuffer{
+			return []stack.PacketBuffer{
 				mustCloneWithNewMsgType(t, b, dhcpNAK),
 				b,
 			}, serverDelay
 		case dhcpACK:
-			return []tcpip.PacketBuffer{
+			return []stack.PacketBuffer{
 				mustCloneWithNewMsgType(t, b, dhcpOFFER),
 				b,
 			}, serverDelay
@@ -833,7 +833,7 @@ func TestStateTransition(t *testing.T) {
 			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
 			var blockData uint32 = 0
-			clientLinkEP.onWritePacket = func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+			clientLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 				if atomic.LoadUint32(&blockData) == 1 {
 					return nil, 0
 				}
@@ -845,7 +845,7 @@ func TestStateTransition(t *testing.T) {
 						return nil, 0
 					}
 				}
-				return []tcpip.PacketBuffer{b}, 0
+				return []stack.PacketBuffer{b}, 0
 			}
 
 			serverStack := createTestStack()

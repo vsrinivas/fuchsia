@@ -40,13 +40,13 @@ func (e *endpoint) makeEthernetFields(r *stack.Route, protocol tcpip.NetworkProt
 	return hdr
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	fields := e.makeEthernetFields(r, protocol)
 	header.Ethernet(pkt.Header.Prepend(header.EthernetMinimumSize)).Encode(&fields)
 	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	fields := e.makeEthernetFields(r, protocol)
 	for i := range pkts {
 		// Index into the slice to allow `Prepend` to mutate its receiver.
@@ -60,7 +60,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.LinkEndpoint.Attach(e)
 }
 
-func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	eth := header.Ethernet(pkt.Data.First())
 	if len(eth) < header.EthernetMinimumSize {
 		// TODO(42949): record this in statistics.

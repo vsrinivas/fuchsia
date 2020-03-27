@@ -83,7 +83,7 @@ func (e *syncEndpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *syncEndpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+func (e *syncEndpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	for _, remote := range e.remote {
 		if !remote.IsAttached() {
 			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))

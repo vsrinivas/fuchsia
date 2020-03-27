@@ -370,7 +370,7 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 	return tcpip.LinkAddress(c.Info.Mac.Octets[:])
 }
 
-func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
+func (c *Client) write(pkts []stack.PacketBuffer) (int, *tcpip.Error) {
 	for i := 0; i < len(pkts); {
 		c.tx.mu.Lock()
 		for {
@@ -436,17 +436,17 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 	return len(pkts), nil
 }
 
-func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
-	_, err := c.write([]tcpip.PacketBuffer{pkt})
+func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+	_, err := c.write([]stack.PacketBuffer{pkt})
 	return err
 }
 
-func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts []tcpip.PacketBuffer, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts []stack.PacketBuffer, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	return c.write(pkts)
 }
 
 func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
-	_, err := c.write([]tcpip.PacketBuffer{{
+	_, err := c.write([]stack.PacketBuffer{{
 		Data: vv,
 	}})
 	return err
@@ -584,7 +584,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					entry := c.rx.getReadied()
 
 					var emptyLinkAddress tcpip.LinkAddress
-					dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
+					dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, stack.PacketBuffer{
 						Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
 					})
 
