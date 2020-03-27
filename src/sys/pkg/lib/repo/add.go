@@ -40,11 +40,7 @@ const (
 // offers weaker security guarantees than AddFromConfig (e.g., by allowing a
 // man-in-the-middle attack during the fetching of root keys).
 func AddInsecurely(client *ssh.Client, repoID, repoURL, blobURL string) error {
-	root, err := getRepoRoot(repoURL)
-	if err != nil {
-		return fmt.Errorf("failed to fetch %s: %v", rootJSON, err)
-	}
-	rootKeys, err := GetRootKeys(root)
+	rootKeys, err := GetRootKeysInsecurely(repoURL)
 	if err != nil {
 		return fmt.Errorf("failed to derive public root keys: %s", err)
 	}
@@ -142,6 +138,17 @@ func (sh remoteShell) run(cmd string) error {
 	defer session.Close()
 	log.Print("running command: ", cmd)
 	return session.Run(cmd)
+}
+
+// GetRootKeysInsecurely returns the list of public key config objects from a package
+// repository. Note this is an insecure method, as it leaves the caller open to a
+// man-in-the-middle attack.
+func GetRootKeysInsecurely(repoURL string) ([]KeyConfig, error) {
+	root, err := getRepoRoot(repoURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch %s: %v", rootJSON, err)
+	}
+	return GetRootKeys(root)
 }
 
 func getRepoRoot(repoURL string) (*tuf_data.Root, error) {
