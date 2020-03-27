@@ -83,10 +83,12 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueStr(const std::string& key, char*
     return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
   }
   const std::string string_value(config_value.GetString());
-  if (value_size < (string_value.size() + 1)) {
+  *out_size = string_value.size() + 1;
+  if (value == nullptr) {
+    return WEAVE_NO_ERROR;
+  } else if (value_size < *out_size) {
     return WEAVE_ERROR_BUFFER_TOO_SMALL;
   }
-  *out_size = string_value.size() + 1;
   strncpy(value, string_value.c_str(), *out_size);
   return WEAVE_NO_ERROR;
 }
@@ -102,10 +104,12 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8
   }
   std::string string_value(config_value.GetString());
   const std::string decoded_value(modp_b64_decode(string_value));
-  if (value_size < decoded_value.size()) {
+  *out_size = decoded_value.size();
+  if (value == nullptr) {
+    return WEAVE_NO_ERROR;
+  } else if (value_size < *out_size) {
     return WEAVE_ERROR_BUFFER_TOO_SMALL;
   }
-  *out_size = decoded_value.size();
   memcpy(value, decoded_value.c_str(), decoded_value.size());
   return WEAVE_NO_ERROR;
 }

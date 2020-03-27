@@ -112,6 +112,12 @@ TEST_F(WeaveConfigManagerTest, ReadWriteString) {
 
   char read_value[256];
   size_t read_value_size = 0;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyString, nullptr, 0, &read_value_size),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(read_value_size, kTestValStringSize);
+
+  // Reset read_value_size to confirm it gets verified again in the following check.
+  read_value_size = 0;
   EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyString, read_value, kTestValStringSize,
                                                      &read_value_size),
             WEAVE_NO_ERROR);
@@ -139,6 +145,12 @@ TEST_F(WeaveConfigManagerTest, ReadWriteBinary) {
 
   uint8_t read_value[256];
   size_t read_value_size = 0;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, nullptr, 0, &read_value_size),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(read_value_size, kTestValBinarySize);
+
+  // Reset read_value_size to confirm it gets verified again in the following check.
+  read_value_size = 0;
   EXPECT_EQ(weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, read_value, kTestValBinarySize,
                                                      &read_value_size),
             WEAVE_NO_ERROR);
