@@ -22,7 +22,10 @@ group("lib") {
 group("tests") {
   testonly = true
 
-  deps = [ ":a11y_lib_tests" ]
+  deps = [
+    ":a11y_lib_tests",
+    "semantics/tests:integration",
+  ]
 }
 
 test_package("a11y_lib_tests") {
@@ -36,7 +39,7 @@ test_package("a11y_lib_tests") {
     "magnifier/tests",
     "screen_reader/focus/tests",
     "screen_reader/tests",
-    "semantics/tests",
+    "semantics/tests:unit",
     "tts/tests",
     "view/tests",
   ]

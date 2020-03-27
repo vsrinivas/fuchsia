@@ -4,15 +4,15 @@
 
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-flutter_app("a11y_demo") {
+flutter_app("a11y-demo") {
   main_dart = "lib/main.dart"
 
   manifest = "pubspec.yaml"
 
   meta = [
     {
-      path = rebase_path("meta/a11y_demo.cmx")
-      dest = "a11y_demo.cmx"
+      path = rebase_path("meta/a11y-demo.cmx")
+      dest = "a11y-demo.cmx"
     },
   ]
 

@@ -2,16 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
+import("//build/test/test_package.gni")
+
+group("unit") {
   testonly = true
   public_deps = [ ":semantics_tests" ]
 }
 
+group("integration") {
+  testonly = true
+  public_deps = [
+    ":semantics-integration-tests",
+    "//src/ui/a11y/bin/demo:a11y-demo",
+  ]
+}
+
 executable("semantics_tests") {
   output_name = "semantics_tests"
-
   testonly = true
-
   sources = [
     "semantic_tree_parser.cc",
     "semantic_tree_parser.h",
@@ -43,4 +51,102 @@ executable("semantics_tests") {
 
   # This is a dependency of the semantic tree to perform certain matrix transform operations.
   include_dirs = [ "//third_party/glm" ]
+}
+
+test_package("semantics-integration-tests") {
+  deps = [
+    ":flutter_semantics_tests",
+    ":web_semantics_tests",
+  ]
+
+  tests = [
+    {
+      name = "flutter_semantics_tests"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+    {
+      name = "web_semantics_tests"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+  ]
+
+  data_deps = [
+    "//garnet/packages/prod:scenic",
+    "//src/chromium",
+    "//src/ui/a11y/bin/demo:a11y-demo",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("testdata/static.html")
+      dest = "static.html"
+    },
+  ]
+}
+
+executable("flutter_semantics_tests") {
+  testonly = true
+
+  sources = [ "flutter_semantics_tests.cc" ]
+
+  deps = [
+    ":semantics_integration_test_fixture",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/syslog/cpp",
+    "//src/lib/ui/base_view",
+    "//src/ui/testing/views",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("web_semantics_tests") {
+  testonly = true
+  sources = [ "web_semantics_tests.cc" ]
+  deps = [
+    ":semantics_integration_test_fixture",
+    "//src/chromium/web_runner_tests:mock_server",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/syslog/cpp",
+    "//src/lib/ui/base_view",
+    "//src/ui/a11y/lib/view",
+    "//src/ui/testing/views",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("semantics_integration_test_fixture") {
+  testonly = true
+  sources = [
+    "semantics_integration_test_fixture.cc",
+    "semantics_integration_test_fixture.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/view",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/a11y_demo"
+        "data": "data/a11y-demo"
     },
     "sandbox": {
         "services": [
