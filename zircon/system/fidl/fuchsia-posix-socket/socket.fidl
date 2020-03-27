@@ -5,14 +5,19 @@
 library fuchsia.posix.socket;
 
 using fuchsia.io;
+using zx;
 
 /// Chosen to match `sizeof(struct sockaddr_storage)`.
 using sockaddr = bytes:128;
 
 /// Chosen to be large enough to hold whatever we might want to cram in it. So long as we support
 /// socket options, we don't have a good sense of what we might want to send as payload.
-//TODO(fxbug.dev/20966): link to description of supported socket options.
+// TODO(https://fxbug.dev/44347): replace C structures on the wire with FIDL types.
 using sockopt = bytes:900;
+
+/// An interface name as a sequence of bytes.
+// `sizeof((struct ifreq).ifr_name) == 16`; the last byte is reserved for the null terminator.
+using interface_name = string:15;
 
 /// A network socket.
 ///
@@ -85,4 +90,11 @@ protocol StreamSocket {
 protocol Provider {
     /// Requests a socket with the specified parameters. Error values are defined in errno.h.
     Socket2(int16 domain, int16 type, int16 protocol) -> (BaseSocket s) error int32;
+
+    /// Looks up an interface by its index and returns its name. Returns `ZX_ERR_NOT_FOUND` if the
+    /// specified index doesn't exist.
+    InterfaceIndexToName(uint64 index) -> (interface_name name) error zx.status;
+    /// Looks up an interface by its name and returns its index. Returns `ZX_ERR_NOT_FOUND` if the
+    /// specified name doesn't exist.
+    InterfaceNameToIndex(interface_name name) -> (uint64 index) error zx.status;
 };

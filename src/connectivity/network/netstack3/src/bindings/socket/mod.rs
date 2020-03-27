@@ -132,6 +132,14 @@ where
     /// Handles a `fuchsia.posix.socket.Provider` FIDL request in `req`.
     async fn handle_fidl_socket_provider_request(&self, req: psocket::ProviderRequest) {
         match req {
+            psocket::ProviderRequest::InterfaceIndexToName { index: _, responder } => {
+                // TODO(https://fxbug.dev/48969): implement this method.
+                responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+            }
+            psocket::ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
+                // TODO(https://fxbug.dev/48969): implement this method.
+                responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+            }
             psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
                 responder_send!(responder, &mut self.socket(domain, type_));
             }

@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
             }
         }
@@ -12,7 +11,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.stack.Stack",
             "fuchsia.posix.socket.Provider"
         ]
     }

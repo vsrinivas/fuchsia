@@ -10,5 +10,6 @@ fidl_library("fuchsia-net-stack") {
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-ethernet",
     "$zx/system/fidl/fuchsia-net",
+    "$zx/system/fidl/fuchsia-posix-socket",
   ]
 }

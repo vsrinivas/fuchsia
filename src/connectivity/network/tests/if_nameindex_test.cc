@@ -20,12 +20,12 @@ TEST(IfNameIndexTest, IfNameIndexLookupRoundtrip) {
 TEST(IfNameIndexTest, IfIndexToNameNotFound) {
   char ifname[IF_NAMESIZE] = "";
   ASSERT_EQ(if_indextoname(0, ifname), nullptr);
-  EXPECT_EQ(errno, ENXIO);
+  EXPECT_EQ(errno, ENXIO) << strerror(errno);
 }
 
 TEST(IfNameIndexTest, IfNameToIndexNotFound) {
   char ifname[IF_NAMESIZE] = "";
   ASSERT_EQ(if_nametoindex(ifname), static_cast<unsigned>(0));
-  EXPECT_EQ(errno, ENODEV);
+  EXPECT_EQ(errno, ENODEV) << strerror(errno);
 }
 }  // namespace

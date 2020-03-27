@@ -527,7 +527,7 @@ bool SockScripter::SetBindToDevice(char* arg) {
 
 bool SockScripter::LogBindToDevice(char* arg) {
 #ifdef SO_BINDTODEVICE
-  char name[IFNAMSIZ] = {0};
+  char name[IFNAMSIZ] = {};
   socklen_t name_len = sizeof(name);
   if (api_->getsockopt(sockfd_, SOL_SOCKET, SO_BINDTODEVICE, name, &name_len) < 0) {
     LOG(ERROR) << "Error-Getting SO_BINDTODEVICE failed-"

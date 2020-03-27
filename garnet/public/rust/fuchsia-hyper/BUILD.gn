@@ -20,7 +20,7 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:rustls",
-    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+    "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }
 

@@ -325,7 +325,7 @@ TEST_P(SocketOptsTest, ZeroTtl) {
   int set = 0;
   socklen_t set_sz = sizeof(set);
   EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
-  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
@@ -336,7 +336,7 @@ TEST_P(SocketOptsTest, InvalidLargeTtl) {
   int set = 256;
   socklen_t set_sz = sizeof(set);
   EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
-  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
@@ -347,7 +347,7 @@ TEST_P(SocketOptsTest, InvalidNegativeTtl) {
   int set = -2;
   socklen_t set_sz = sizeof(set);
   EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
-  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
@@ -396,10 +396,10 @@ TEST_P(SocketOptsTest, NullTOS) {
   }
   socklen_t get_sz = sizeof(int);
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, nullptr, &get_sz), -1);
-  EXPECT_EQ(errno, EFAULT);
+  EXPECT_EQ(errno, EFAULT) << strerror(errno);
   int get = -1;
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, nullptr), -1);
-  EXPECT_EQ(errno, EFAULT);
+  EXPECT_EQ(errno, EFAULT) << strerror(errno);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
@@ -430,7 +430,7 @@ TEST_P(SocketOptsTest, InvalidLargeTOS) {
   SockOption t = GetTOSOption();
   if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
-    EXPECT_EQ(errno, EINVAL);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   }
@@ -480,7 +480,7 @@ TEST_P(SocketOptsTest, ZeroTOSOptionSize) {
   SockOption t = GetTOSOption();
   if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
-    EXPECT_EQ(errno, EINVAL);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   }
@@ -504,7 +504,7 @@ TEST_P(SocketOptsTest, SmallTOSOptionSize) {
     socklen_t expect_sz;
     if (IsIPv6()) {
       EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, i), -1);
-      EXPECT_EQ(errno, EINVAL);
+      EXPECT_EQ(errno, EINVAL) << strerror(errno);
       expect_tos = kDefaultTOS;
       expect_sz = i;
     } else {
@@ -583,7 +583,7 @@ TEST_P(SocketOptsTest, InvalidNegativeTOS) {
   int expect;
   if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
-    EXPECT_EQ(errno, EINVAL);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
     expect = 0;
   } else {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
@@ -788,7 +788,7 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLBelowMin) {
   constexpr int kBelowMin = -2;
   SockOption t = GetMcastTTLOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kBelowMin, sizeof(kBelowMin)), -1);
-  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
 
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
@@ -804,7 +804,7 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLAboveMax) {
   constexpr int kAboveMax = 256;
   SockOption t = GetMcastTTLOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kAboveMax, sizeof(kAboveMax)), -1);
-  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
 
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
@@ -2745,7 +2745,7 @@ TEST_P(SocketKindTest, IoctlIndexNameLookupRoundTrip) {
   // and the remaining bytes are gibberish, should match no interfaces.
   memcpy(ifr_ntoi_err.ifr_name, ifr_iton.ifr_name, strnlen(ifr_iton.ifr_name, IFNAMSIZ));
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi_err), -1);
-  EXPECT_EQ(errno, ENODEV);
+  EXPECT_EQ(errno, ENODEV) << strerror(errno);
 }
 
 TEST_P(SocketKindTest, IoctlIndexToNameNotFound) {
@@ -2755,7 +2755,7 @@ TEST_P(SocketKindTest, IoctlIndexToNameNotFound) {
   struct ifreq ifr_iton;
   ifr_iton.ifr_ifindex = -1;
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
-  EXPECT_EQ(errno, ENODEV);
+  EXPECT_EQ(errno, ENODEV) << strerror(errno);
 }
 
 TEST_P(SocketKindTest, IoctlNameToIndexNotFound) {
@@ -2765,7 +2765,7 @@ TEST_P(SocketKindTest, IoctlNameToIndexNotFound) {
   struct ifreq ifr_ntoi;
   *ifr_ntoi.ifr_name = 0;
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), -1);
-  EXPECT_EQ(errno, ENODEV);
+  EXPECT_EQ(errno, ENODEV) << strerror(errno);
 }
 
 TEST(SocketKindTest, IoctlNameIndexLookupForNonSocketFd) {
@@ -2775,12 +2775,12 @@ TEST(SocketKindTest, IoctlNameIndexLookupForNonSocketFd) {
   struct ifreq ifr_iton;
   ifr_iton.ifr_ifindex = 1;
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
-  EXPECT_EQ(errno, ENOTTY);
+  EXPECT_EQ(errno, ENOTTY) << strerror(errno);
 
   struct ifreq ifr_ntoi;
   strcpy(ifr_ntoi.ifr_name, "loblah");
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), -1);
-  EXPECT_EQ(errno, ENOTTY);
+  EXPECT_EQ(errno, ENOTTY) << strerror(errno);
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,

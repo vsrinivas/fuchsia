@@ -6,16 +6,13 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/net/stack/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
-#include <net/if.h>
 #include <poll.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/select.h>
@@ -37,11 +34,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "private-socket.h"
 #include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
-namespace fnet_stack = ::llcpp::fuchsia::net::stack;
+namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 
@@ -2151,64 +2147,6 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
   return (r == ZX_OK || r == ZX_ERR_TIMED_OUT) ? nfds : ERROR(r);
 }
 
-MAKE_GET_SERVICE(get_netstack, fnet_stack::Stack)
-
-int if_index_name_lookup(int req, struct ifreq* ifr) {
-  fnet_stack::Stack::SyncClient* netstack;
-  zx_status_t status = get_netstack(&netstack);
-  if (status != ZX_OK) {
-    return ERRNO(EIO);
-  }
-  switch (req) {
-    case SIOCGIFNAME: {
-      auto result = netstack->GetInterfaceInfo(static_cast<uint64_t>(ifr->ifr_ifindex));
-      zx_status_t status = result.status();
-      if (status != ZX_OK) {
-        return ERROR(status);
-      }
-      const auto& interface_info_res = result.Unwrap()->result;
-      if (interface_info_res.is_err()) {
-        if (interface_info_res.err() == fnet_stack::Error::NOT_FOUND) {
-          return ERRNO(ENODEV);
-        }
-        // GetInterfaceInfo should only return error of type NOT_FOUND, so this is unreachable.
-        return ERRNO(EIO);
-      }
-      const auto& name = interface_info_res.response().info.properties.name;
-      if (name.size() > IFNAMSIZ - 1) {
-        // Last byte in ifr->ifr_name is reserved for null terminator.
-        // There is no way to make a memory-safe copy of all characters from name in this case.
-        // fuchsia.net.stack limits interface_name to 15 bytes, so this is unreachable.
-        return ERRNO(EIO);
-      }
-      strncpy(ifr->ifr_name, name.data(), name.size());
-      ifr->ifr_name[name.size()] = '\0';
-      return 0;
-    }
-    case SIOCGIFINDEX: {
-      // TODO(jayzhuang): discuss with the team to see if it is worth introducing a FIDL API like
-      // `GetInterfaceByName` for this.
-      auto result = netstack->ListInterfaces();
-      zx_status_t status = result.status();
-      if (status != ZX_OK) {
-        return ERROR(status);
-      }
-      for (auto& info : result.Unwrap()->ifs) {
-        const auto& name = info.properties.name;
-        const auto name_len = name.size();
-        const auto ifr_name_len = strnlen(ifr->ifr_name, IFNAMSIZ);
-        if (ifr_name_len == name_len && memcmp(ifr->ifr_name, name.data(), name_len) == 0) {
-          ifr->ifr_ifindex = static_cast<int>(info.id);
-          return 0;
-        }
-      }
-      return ERRNO(ENODEV);
-    }
-    default:
-      return ERRNO(EINVAL);  // should never happen
-  }
-}
-
 __EXPORT
 int ioctl(int fd, int req, ...) {
   fdio_t* io;
@@ -2218,21 +2156,17 @@ int ioctl(int fd, int req, ...) {
 
   va_list ap;
   va_start(ap, req);
-  int ret;
-
-  if (req == SIOCGIFNAME || req == SIOCGIFINDEX) {
-    if (fdio_is_socket(io)) {
-      ret = if_index_name_lookup(req, va_arg(ap, struct ifreq*));
-    } else {
-      ret = ERRNO(ENOTTY);
-    }
-  } else {
-    ret = STATUS(fdio_get_ops(io)->posix_ioctl(io, req, ap));
-  }
-
+  zx_status_t r = fdio_get_ops(io)->posix_ioctl(io, req, ap);
   va_end(ap);
   fdio_release(io);
-  return ret;
+  switch (r) {
+    case ZX_ERR_NOT_FOUND:
+      return ERRNO(ENODEV);
+    case ZX_ERR_NOT_SUPPORTED:
+      return ERRNO(ENOTTY);
+    default:
+      return STATUS(r);
+  }
 }
 
 __EXPORT

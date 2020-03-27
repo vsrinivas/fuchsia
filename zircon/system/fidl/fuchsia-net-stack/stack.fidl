@@ -6,6 +6,7 @@ library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.net;
+using fuchsia.posix.socket;
 
 /// A list of IP addresses for an interface.
 using interface_address_list = vector<InterfaceAddress>:255;
@@ -15,11 +16,6 @@ using device_path = string:255;
 
 /// A list of interface descriptors.
 using interface_list = vector<InterfaceInfo>:255;
-
-/// An alias that may be used to refer to an interface.
-// C struct `ifreq` limits interface name to 16 bytes, with the last byte
-// reserved for null terminator.
-using interface_name = string:15;
 
 enum PresenceStatus {
     /// The interface is added.
@@ -67,8 +63,8 @@ struct InterfaceInfo {
 };
 
 struct InterfaceProperties {
-    /// Human friendly name of the interface. eg. eth001, wlanx35.
-    interface_name name;
+    /// Human-readable name of the interface. eg. eth001, wlanx35.
+    fuchsia.posix.socket.interface_name name;
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.

@@ -1226,6 +1226,26 @@ func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (
 	}
 }
 
+func (sp *providerImpl) InterfaceIndexToName(_ fidl.Context, index uint64) (socket.ProviderInterfaceIndexToNameResult, error) {
+	if info, ok := sp.ns.stack.NICInfo()[tcpip.NICID(index)]; ok {
+		return socket.ProviderInterfaceIndexToNameResultWithResponse(socket.ProviderInterfaceIndexToNameResponse{
+			Name: info.Name,
+		}), nil
+	}
+	return socket.ProviderInterfaceIndexToNameResultWithErr(int32(zx.ErrNotFound)), nil
+}
+
+func (sp *providerImpl) InterfaceNameToIndex(_ fidl.Context, name string) (socket.ProviderInterfaceNameToIndexResult, error) {
+	for id, info := range sp.ns.stack.NICInfo() {
+		if info.Name == name {
+			return socket.ProviderInterfaceNameToIndexResultWithResponse(socket.ProviderInterfaceNameToIndexResponse{
+				Index: uint64(id),
+			}), nil
+		}
+	}
+	return socket.ProviderInterfaceNameToIndexResultWithErr(int32(zx.ErrNotFound)), nil
+}
+
 func tcpipErrorToCode(err *tcpip.Error) int32 {
 	if err != tcpip.ErrConnectStarted {
 		if pc, file, line, ok := runtime.Caller(1); ok {

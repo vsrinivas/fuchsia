@@ -5,8 +5,10 @@
 #include <lib/zx/socket.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <sys/ioctl.h>
 
 #include <safemath/safe_conversions.h>
 
@@ -170,6 +172,64 @@ zx_status_t base_setsockopt(zx::unowned_channel channel, int level, int optname,
   *out_code = 0;
   return ZX_OK;
 }
+
+zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
+                              zx_status_t (*fallback)(fdio_t* io, int req, va_list va)) {
+  switch (req) {
+    case SIOCGIFNAME: {
+      fsocket::Provider::SyncClient* provider;
+      zx_status_t status = fdio_get_socket_provider(&provider);
+      if (status != ZX_OK) {
+        return status;
+      }
+      struct ifreq* ifr = va_arg(va, struct ifreq*);
+      auto response = provider->InterfaceIndexToName(static_cast<uint64_t>(ifr->ifr_ifindex));
+      status = response.status();
+      if (status != ZX_OK) {
+        return status;
+      }
+      auto const& result = response.Unwrap()->result;
+      if (result.is_err()) {
+        return result.err();
+      }
+      auto const& name = result.response().name;
+      size_t n = std::min(name.size(), sizeof(ifr->ifr_name));
+      memcpy(ifr->ifr_name, name.data(), n);
+      memset(ifr->ifr_name + n, 0, sizeof(ifr->ifr_name) - n);
+      return ZX_OK;
+    }
+    case SIOCGIFINDEX: {
+      fsocket::Provider::SyncClient* provider;
+      zx_status_t status = fdio_get_socket_provider(&provider);
+      if (status != ZX_OK) {
+        return status;
+      }
+      struct ifreq* ifr = va_arg(va, struct ifreq*);
+      fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
+      // TODO(https://fxbug.dev/8014): remove this validation when llcpp bindings enforce UTF-8
+      // encoding.
+      for (auto const& b : name) {
+        if (!isprint(b)) {
+          return ZX_ERR_NOT_FOUND;
+        }
+      }
+      auto response = provider->InterfaceNameToIndex(std::move(name));
+      status = response.status();
+      if (status != ZX_OK) {
+        return status;
+      }
+      auto const& result = response.Unwrap()->result;
+      if (result.is_err()) {
+        return result.err();
+      }
+      ifr->ifr_ifindex = static_cast<int>(result.response().index);
+      return ZX_OK;
+    }
+    default:
+      return fallback(io, req, va);
+  }
+}
+
 }  // namespace
 
 static zx_status_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags,
@@ -344,7 +404,10 @@ static fdio_ops_t fdio_datagram_socket_ops = {
           }
           *out_events = events;
         },
-    .posix_ioctl = fdio_default_posix_ioctl,  // not supported
+    .posix_ioctl =
+        [](fdio_t* io, int req, va_list va) {
+          return zxsio_posix_ioctl(io, req, va, fdio_default_posix_ioctl);
+        },
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,
@@ -614,9 +677,11 @@ static fdio_ops_t fdio_stream_socket_ops = {
         },
     .wait_end = zxsio_wait_end_stream,
     .posix_ioctl =
-        [](fdio_t* io, int request, va_list va) {
-          auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
-          return fdio_zx_socket_posix_ioctl(sio->pipe.socket, request, va);
+        [](fdio_t* io, int req, va_list va) {
+          return zxsio_posix_ioctl(io, req, va, [](fdio_t* io, int req, va_list va) {
+            auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
+            return fdio_zx_socket_posix_ioctl(sio->pipe.socket, req, va);
+          });
         },
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,

@@ -6,7 +6,7 @@ use hyper_rustls;
 use rustls;
 
 use {
-    fidl_fuchsia_net_stack::{StackMarker, StackSynchronousProxy},
+    fidl_fuchsia_posix_socket::{ProviderMarker, ProviderSynchronousProxy},
     fuchsia_async::{
         net::{TcpConnector, TcpStream},
         EHandle,
@@ -151,17 +151,15 @@ fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
                 Ok(zone_id_num) => zone_id_num,
                 Err(_) => {
                     let (proxy, server) = zx::Channel::create().expect("failed to create channel");
-                    connect_channel_to_service_at::<StackMarker>(server, "/svc")
-                        .expect("failed to connect to netstack");
-                    let mut netstack = StackSynchronousProxy::new(proxy);
-                    let interface = netstack
-                        .list_interfaces(zx::Time::INFINITE)
-                        .expect("failed to list interfaces")
-                        .into_iter()
-                        .find(|interface| interface.properties.name == zone_id);
-                    match interface {
-                        Some(interface) => interface.id as u32,
-                        None => return None,
+                    connect_channel_to_service_at::<ProviderMarker>(server, "/svc")
+                        .expect("failed to connect to service");
+                    let mut proxy = ProviderSynchronousProxy::new(proxy);
+                    let id = proxy
+                        .interface_name_to_index(zone_id, zx::Time::INFINITE)
+                        .expect("failed to get interface index");
+                    match id {
+                        Ok(id) => id as u32,
+                        Err(_) => return None,
                     }
                 }
             }
