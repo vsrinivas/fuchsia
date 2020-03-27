@@ -50,6 +50,13 @@ declare_args() {
   # TODO(41790): This value is derived from assert_level.  Decouple
   # the two and set kernel_debug_level independently.
   kernel_debug_level = assert_level
+
+  # Controls the verbosity of kernel dprintf messages. The higher the value,
+  # the more dprintf messages emitted. Valid values are 0-2 (inclusive):
+  #   0 - CRITCAL / ALWAYS
+  #   1 - INFO
+  #   2 - SPEW
+  kernel_debug_print_level = 2
 }
 
 declare_args() {

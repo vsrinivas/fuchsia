@@ -124,6 +124,7 @@ if (current_toolchain == default_toolchain) {
       "WITH_DEBUG_LINEBUFFER",
       "ZIRCON_TOOLCHAIN",
       "LK_DEBUGLEVEL=$kernel_debug_level",
+      "DEBUG_PRINT_LEVEL=$kernel_debug_print_level",
     ]
 
     if (!enable_user_pci) {

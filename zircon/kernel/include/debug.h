@@ -19,7 +19,9 @@
 #define LK_DEBUGLEVEL 0
 #endif
 
-#define DEBUG_PRINT_LEVEL LK_DEBUGLEVEL
+#if !defined(DEBUG_PRINT_LEVEL)
+#define DEBUG_PRINT_LEVEL 0
+#endif
 
 /* debug print levels */
 #define CRITICAL 0
