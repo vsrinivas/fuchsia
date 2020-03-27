@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>

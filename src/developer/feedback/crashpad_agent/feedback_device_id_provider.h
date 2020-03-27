@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DEVICE_ID_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>

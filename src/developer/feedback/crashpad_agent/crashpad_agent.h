@@ -8,13 +8,9 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include <cstdint>
 #include <memory>
-#include <string>
-#include <utility>
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"

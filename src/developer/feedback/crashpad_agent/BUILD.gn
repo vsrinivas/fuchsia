@@ -61,7 +61,7 @@ executable("main") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":src",
+    ":agent",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crashpad_agent/info",
@@ -75,6 +75,42 @@ executable("main") {
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("agent") {
+  sources = [
+    "crashpad_agent.cc",
+    "crashpad_agent.h",
+  ]
+
+  public_deps = [
+    ":config",
+    ":crash_server",
+    ":feedback_data_provider",
+    ":feedback_device_id_provider",
+    ":privacy_settings_ptr",
+    ":queue",
+    ":report_util",
+    ":settings",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/crashpad_agent/info",
+    "//src/developer/feedback/utils:utc_time_provider",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+  ]
+
+  deps = [
+    ":constants",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/files",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
 source_set("config") {
   public = [ "config.h" ]
 
@@ -85,7 +121,7 @@ source_set("config") {
 
   deps = [
     ":constants",
-    "//src/lib/files:files",
+    "//src/lib/files",
     "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
@@ -95,6 +131,160 @@ source_set("constants") {
   sources = [ "constants.h" ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
+source_set("crash_server") {
+  sources = [
+    "crash_server.cc",
+    "crash_server.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/crashpad/util",
+  ]
+}
+
+source_set("database") {
+  public = [ "database.h" ]
+
+  sources = [
+    "database.cc",
+    "database.h",
+    "upload_report.cc",
+    "upload_report.h",
+  ]
+
+  public_deps = [
+    "//src/developer/feedback/crashpad_agent/info",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fxl",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+
+  deps = [
+    ":constants",
+    ":report_util",
+    "//src/lib/files",
+    "//src/lib/syslog/cpp",
+  ]
+}
+
+source_set("feedback_data_provider") {
+  sources = [
+    "feedback_data_provider.cc",
+    "feedback_data_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:libfit",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+source_set("feedback_device_id_provider") {
+  sources = [
+    "feedback_device_id_provider.cc",
+    "feedback_device_id_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:libfit",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+source_set("privacy_settings_ptr") {
+  sources = [
+    "privacy_settings_ptr.cc",
+    "privacy_settings_ptr.h",
+  ]
+
+  public_deps = [
+    ":settings",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("queue") {
+  sources = [
+    "queue.cc",
+    "queue.h",
+  ]
+
+  public_deps = [
+    ":crash_server",
+    ":database",
+    ":settings",
+    "//src/developer/feedback/crashpad_agent/info",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//third_party/crashpad/util",
+    "//zircon/public/lib/async",
+    "//zircon/system/fidl/fuchsia-net",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+source_set("report_util") {
+  sources = [
+    "report_util.cc",
+    "report_util.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+  ]
 }
 
 source_set("settings") {
@@ -112,60 +302,6 @@ source_set("settings") {
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
-}
-
-source_set("src") {
-  sources = [
-    "crash_server.cc",
-    "crash_server.h",
-    "crashpad_agent.cc",
-    "crashpad_agent.h",
-    "database.cc",
-    "database.h",
-    "feedback_data_provider.cc",
-    "feedback_data_provider.h",
-    "feedback_device_id_provider.cc",
-    "feedback_device_id_provider.h",
-    "privacy_settings_ptr.cc",
-    "privacy_settings_ptr.h",
-    "queue.cc",
-    "queue.h",
-    "report_util.cc",
-    "report_util.h",
-    "upload_report.cc",
-    "upload_report.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.settings",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/crashpad_agent/info",
-    "//src/developer/feedback/utils:libfit",
-    "//src/developer/feedback/utils:utc_time_provider",
-    "//src/lib/backoff:backoff",
-    "//src/lib/fxl",
-    "//third_party/crashpad/client",
-    "//third_party/crashpad/util",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
-    "//zircon/system/fidl/fuchsia-net",
-  ]
-
-  deps = [
-    ":constants",
-    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
-    "//src/lib/timekeeper:system",
-    "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fbl",
-  ]
 }
 
 ###############################################################################

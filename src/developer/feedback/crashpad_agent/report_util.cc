@@ -12,7 +12,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 

@@ -173,7 +173,7 @@ executable("config_unittest") {
   sources = [ "config_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/crashpad_agent:config",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//third_party/googletest:gtest",
   ]
@@ -218,8 +218,8 @@ executable("crashpad_agent_unittest") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/crashpad_agent:agent",
     "//src/developer/feedback/crashpad_agent:constants",
-    "//src/developer/feedback/crashpad_agent:src",
     "//src/developer/feedback/crashpad_agent/info:info",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -252,7 +252,7 @@ executable("database_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
-    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/crashpad_agent:database",
     "//src/developer/feedback/crashpad_agent/info:info",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -276,7 +276,7 @@ executable("feedback_data_provider_unittest") {
   ]
 
   deps = [
-    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/crashpad_agent:feedback_data_provider",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/fsl:fsl",
@@ -295,7 +295,7 @@ executable("feedback_device_id_provider_unittest") {
   ]
 
   deps = [
-    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/crashpad_agent:feedback_device_id_provider",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
@@ -335,7 +335,7 @@ executable("privacy_settings_ptr_unittest") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.settings",
-    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/crashpad_agent:privacy_settings_ptr",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/files",
@@ -357,7 +357,7 @@ executable("queue_unittest") {
   deps = [
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
-    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/crashpad_agent:queue",
     "//src/developer/feedback/crashpad_agent/info:info",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
