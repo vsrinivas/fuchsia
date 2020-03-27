@@ -9,12 +9,11 @@ use fuchsia_inspect as inspect;
 
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogLevelFilter, LogListenerMarker, LogMessage, LogRequest, LogRequestStream,
-    LogSinkRequest, LogSinkRequestStream,
+    LogFilterOptions, LogListenerMarker, LogMessage, LogRequest, LogRequestStream, LogSinkRequest,
+    LogSinkRequestStream,
 };
 
 mod buffer;
@@ -157,47 +156,24 @@ impl LogManager {
         options: Option<Box<LogFilterOptions>>,
         dump_logs: bool,
     ) {
-        let ll = match log_listener.into_proxy() {
+        let listener = match log_listener.into_proxy() {
             Ok(ll) => ll,
             Err(e) => {
                 eprintln!("Logger: Error getting listener proxy: {:?}", e);
-                // TODO: close channel
                 return;
             }
         };
 
-        let mut lw = listener::ListenerWrapper {
-            listener: ll,
-            min_severity: None,
-            pid: None,
-            tid: None,
-            tags: HashSet::new(),
-        };
-
-        if let Some(mut options) = options {
-            lw.tags = options.tags.drain(..).collect();
-            if lw.tags.len() > fidl_fuchsia_logger::MAX_TAGS as usize {
-                // TODO: close channel
+        let filter = match listener::MessageFilter::new(options) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!("Error creating message filter from provided listener options: {:?}", e);
                 return;
             }
-            for tag in &lw.tags {
-                if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN_BYTES as usize {
-                    // TODO: close channel
-                    return;
-                }
-            }
-            if options.filter_by_pid {
-                lw.pid = Some(options.pid)
-            }
-            if options.filter_by_tid {
-                lw.tid = Some(options.tid)
-            }
-            if options.verbosity > 0 {
-                lw.min_severity = Some(-(options.verbosity as i32))
-            } else if options.min_severity != LogLevelFilter::None {
-                lw.min_severity = Some(options.min_severity as i32)
-            }
-        }
+        };
+
+        let lw = listener::ListenerWrapper { listener, filter };
+
         let mut shared_members = self.inner.lock();
         {
             let mut log_length = 0;
@@ -237,7 +213,9 @@ mod tests {
     use {
         super::*,
         crate::logs::logger::fx_log_packet_t,
-        fidl_fuchsia_logger::{LogFilterOptions, LogMarker, LogProxy, LogSinkMarker, LogSinkProxy},
+        fidl_fuchsia_logger::{
+            LogFilterOptions, LogLevelFilter, LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
+        },
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_zircon as zx,
         std::collections::HashSet,
