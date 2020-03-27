@@ -268,23 +268,27 @@ void VmObject::RemoveChild(VmObject* o, Guard<Mutex>&& adopt) {
 
 void VmObject::OnUserChildRemoved(Guard<fbl::Mutex>&& adopt) {
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
-  Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
 
-  DEBUG_ASSERT(user_child_count_ > 0);
-  --user_child_count_;
-  if (user_child_count_ != 0) {
-    return;
+  // The observer may call back into this object so we must release the shared lock to prevent any
+  // self-deadlock. We explicitly release the lock prior to acquiring the child_observer_lock as
+  // otherwise we have lock ordering issue, since we already allow the shared lock to be acquired
+  // whilst holding the child_observer_lock.
+  {
+    Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+
+    DEBUG_ASSERT(user_child_count_ > 0);
+    --user_child_count_;
+    if (user_child_count_ != 0) {
+      return;
+    }
   }
+  {
+    Guard<fbl::Mutex> observer_guard{&child_observer_lock_};
 
-  Guard<fbl::Mutex> observer_guard{&child_observer_lock_};
-
-  // Drop shared lock before calling out to the observer to reduce the risk of self-deadlock in
-  // case it calls back into this object.
-  guard.Release();
-
-  // Signal the dispatcher that there are no more child VMOS
-  if (child_observer_ != nullptr) {
-    child_observer_->OnZeroChild();
+    // Signal the dispatcher that there are no more child VMOS
+    if (child_observer_ != nullptr) {
+      child_observer_->OnZeroChild();
+    }
   }
 }
 
