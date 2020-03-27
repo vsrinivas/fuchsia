@@ -5,9 +5,9 @@
 use {
     crate::component_control::ComponentController,
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device_manager as fdevmgr,
-    fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
-    fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
+    fidl_fuchsia_device_manager as fdevmgr, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_net_stack as fnetstack, fidl_fuchsia_test_manager as ftest_manager,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::prelude::*,
     std::rc::Rc,
@@ -19,23 +19,31 @@ pub struct RemoteControlService {
     admin_proxy: fdevmgr::AdministratorProxy,
     netstack_proxy: fnetstack::StackProxy,
     harness_proxy: ftest_manager::HarnessProxy,
+    name_provider_proxy: fdevice::NameProviderProxy,
 }
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
-        let (admin_proxy, netstack_proxy, harness_proxy) = Self::construct_proxies()?;
-        return Ok(Self::new_with_proxies(admin_proxy, netstack_proxy, harness_proxy));
+        let (admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy) =
+            Self::construct_proxies()?;
+        return Ok(Self::new_with_proxies(
+            admin_proxy,
+            netstack_proxy,
+            harness_proxy,
+            name_provider_proxy,
+        ));
     }
 
     pub fn new_with_proxies(
         admin_proxy: fdevmgr::AdministratorProxy,
         netstack_proxy: fnetstack::StackProxy,
         harness_proxy: ftest_manager::HarnessProxy,
+        name_provider_proxy: fdevice::NameProviderProxy,
     ) -> Self {
-        return Self { admin_proxy, netstack_proxy, harness_proxy };
+        return Self { admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy };
     }
 
-    pub async fn serve_stream<'a>(
+    pub async fn serve_stream(
         self: Rc<Self>,
         mut stream: rcs::RemoteControlRequestStream,
     ) -> Result<(), Error> {
@@ -84,7 +92,12 @@ impl RemoteControlService {
     }
 
     fn construct_proxies() -> Result<
-        (fdevmgr::AdministratorProxy, fnetstack::StackProxy, ftest_manager::HarnessProxy),
+        (
+            fdevmgr::AdministratorProxy,
+            fnetstack::StackProxy,
+            ftest_manager::HarnessProxy,
+            fdevice::NameProviderProxy,
+        ),
         Error,
     > {
         let admin_proxy =
@@ -96,7 +109,10 @@ impl RemoteControlService {
         let harness_proxy =
             fuchsia_component::client::connect_to_service::<ftest_manager::HarnessMarker>()
                 .map_err(|s| format_err!("Failed to connect to Harness service: {}", s))?;
-        return Ok((admin_proxy, netstack_proxy, harness_proxy));
+        let name_provider_proxy =
+            fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
+                .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
+        return Ok((admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy));
     }
 
     pub fn spawn_component_async(
@@ -140,7 +156,7 @@ impl RemoteControlService {
         return Ok(());
     }
 
-    pub async fn reboot_device<'a>(
+    pub async fn reboot_device(
         self: &Rc<Self>,
         reboot_type: rcs::RebootType,
         responder: rcs::RemoteControlRebootDeviceResponder,
@@ -157,7 +173,7 @@ impl RemoteControlService {
         Ok(())
     }
 
-    pub async fn identify_host<'a>(
+    pub async fn identify_host(
         self: &Rc<Self>,
         responder: rcs::RemoteControlIdentifyHostResponder,
     ) -> Result<(), Error> {
@@ -190,8 +206,32 @@ impl RemoteControlService {
                 result.push(iaddr);
             }
         }
+
+        let nodename = match self.name_provider_proxy.get_device_name().await {
+            Ok(result) => match result {
+                Ok(name) => name,
+                Err(e) => {
+                    log::error!("NameProvider internal error: {}", e);
+                    responder
+                        .send(&mut Err(rcs::IdentifyHostError::GetDeviceNameFailed))
+                        .context("sending GetDeviceName error response")?;
+                    return Ok(());
+                }
+            },
+            Err(e) => {
+                log::error!("Getting nodename failed: {}", e);
+                responder
+                    .send(&mut Err(rcs::IdentifyHostError::GetDeviceNameFailed))
+                    .context("sending GetDeviceName error response")?;
+                return Ok(());
+            }
+        };
+
         responder
-            .send(&mut Ok(rcs::IdentifyHostResponse { addresses: Some(result) }))
+            .send(&mut Ok(rcs::IdentifyHostResponse {
+                nodename: Some(nodename),
+                addresses: Some(result),
+            }))
             .context("sending IdentifyHost response")?;
 
         return Ok(());
@@ -204,6 +244,8 @@ mod tests {
         super::*, fidl::endpoints::create_proxy, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_hardware_ethernet::MacAddress, fuchsia_async as fasync, fuchsia_zircon as zx,
     };
+
+    const NODENAME: &'static str = "thumb-set-human-shred";
 
     // This is the exit code zircon will return when a component is killed.
     const EXIT_CODE_KILLED: i64 = -1024;
@@ -237,6 +279,24 @@ mod tests {
                         responder,
                     }) => {
                         let _ = responder.send(zx::Status::OK.into_raw());
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        proxy
+    }
+
+    fn setup_fake_name_provider_service() -> fdevice::NameProviderProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdevice::NameProviderMarker>().unwrap();
+
+        fasync::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fdevice::NameProviderRequest::GetDeviceName { responder }) => {
+                        let _ = responder.send(&mut Ok(String::from(NODENAME)));
                     }
                     _ => assert!(false),
                 }
@@ -345,6 +405,7 @@ mod tests {
             setup_fake_admin_service(),
             setup_fake_netstack_service(),
             setup_fake_harness_service(),
+            setup_fake_name_provider_service(),
         ));
 
         let (rcs_proxy, stream) =
@@ -460,6 +521,8 @@ mod tests {
         let rcs_proxy = setup_rcs();
 
         let resp = rcs_proxy.identify_host().await.unwrap().unwrap();
+
+        assert_eq!(resp.nodename.unwrap(), NODENAME);
 
         let addrs = resp.addresses.unwrap();
         assert_eq!(addrs.len(), 2);

@@ -4,6 +4,8 @@
 
 library fuchsia.developer.remotecontrol;
 
+using fuchsia.device;
+
 // These are all copied from `fuchsia.net`. We sadly can't depend on fuchsia.net
 // because this has to build on the host.
 
@@ -35,9 +37,12 @@ struct InterfaceAddress {
 
 table IdentifyHostResponse {
     1: vector<InterfaceAddress>:255 addresses;
+    2: string:fuchsia.device.DEVICE_NAME_MAX nodename;
 };
 
 enum IdentifyHostError : uint32 {
     // Indicates that the attempt to list device network interfaces failed.
     LIST_INTERFACES_FAILED = 1;
+    // Indicates that attempting to get the nodename of the target failed.
+    GET_DEVICE_NAME_FAILED = 2;
 };

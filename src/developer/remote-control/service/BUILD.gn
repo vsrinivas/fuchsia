@@ -17,5 +17,6 @@ fidl("remote-control") {
     "//sdk/fidl/fuchsia.test:fuchsia.test",
     "//sdk/fidl/fuchsia.url",
     "//src/sys/test_manager/fidl:test_manager",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device",
   ]
 }
