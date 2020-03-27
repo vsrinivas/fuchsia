@@ -28,6 +28,7 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
+    "//src/sys/pkg/bin/amber:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
@@ -44,6 +45,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
@@ -434,6 +436,22 @@ rustc_test("system_cache_fallback") {
   ]
 }
 
+rustc_test("metrics") {
+  name = "metrics"
+  edition = "2018"
+
+  source_root = "src/metrics.rs"
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/pkg/bin/amber:cobalt_sw_delivery_registry_rustlib",
+    "//third_party/rust_crates:matches",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+  ]
+}
+
 generate_manifest("empty-repo.manifest") {
   visibility = [ ":*" ]
   testonly = true
@@ -481,6 +499,7 @@ test_package("pkg-resolver-integration-tests") {
     ":empty-repo.manifest",
     ":get_hash",
     ":lib",
+    ":metrics",
     ":pkg_resolve_inspect",
     ":resolve_propagates_pkgfs_failure",
     ":resolve_recovers_from_http_errors",
@@ -576,6 +595,11 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "system_cache_fallback"
       dest = "system-cache-fallback"
+      environments = basic_envs
+    },
+    {
+      name = "metrics"
+      dest = "metrics"
       environments = basic_envs
     },
   ]

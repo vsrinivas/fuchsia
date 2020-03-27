@@ -20,6 +20,7 @@
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.boot.Arguments",
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageCache",

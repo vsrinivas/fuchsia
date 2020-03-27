@@ -4,8 +4,10 @@
 
 use {
     anyhow::{Context as _, Error},
+    cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
+    fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
@@ -13,7 +15,7 @@ use {
     fuchsia_trace as trace,
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
-    std::{io, sync::Arc},
+    std::{io, sync::Arc, time::Instant},
     system_image::CachePackages,
 };
 
@@ -54,6 +56,9 @@ use crate::{
 // const SERVER_THREADS: usize = 2;
 const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
 const MAX_CONCURRENT_PACKAGE_FETCHES: usize = 5;
+// Each fetch_blob call emits an event, and a system update fetches about 1,000 blobs in about a
+// minute.
+const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 
 const STATIC_REPO_DIR: &str = "/config/data/repositories";
 const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
@@ -64,15 +69,16 @@ const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
 const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 
 fn main() -> Result<(), Error> {
+    let startup_time = Instant::now();
     fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package resolver");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
-    executor.run_singlethreaded(main_inner_async())
+    executor.run_singlethreaded(main_inner_async(startup_time))
 }
 
-async fn main_inner_async() -> Result<(), Error> {
+async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
 
     let pkg_cache =
@@ -213,6 +219,17 @@ async fn main_inner_async() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     futures.push(fs.collect().boxed_local());
+
+    let (mut cobalt_sender, cobalt_fut) =
+        CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
+            .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    futures.push(cobalt_fut.boxed_local());
+
+    cobalt_sender.log_elapsed_time(
+        metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
+        0,
+        Instant::now().duration_since(startup_time).as_micros() as i64,
+    );
 
     trace::instant!("app", "startup", trace::Scope::Process);
 
