@@ -331,7 +331,37 @@ impl<'a> Encoder<'a> {
     }
 
     fn reserve_out_of_line(&mut self, len: usize) {
-        self.buf.resize(self.offset + round_up_to_align(len, 8), 0);
+        let old_len = self.buf.len();
+        let new_len = self.offset + round_up_to_align(len, 8);
+        // Special case to ensure we use memset when extending length within capacity.
+        if new_len > old_len && new_len <= self.buf.capacity() {
+            let ptr = self.buf.as_mut_ptr();
+            // Safety:
+            // - The `set_len` call is safe because new_len <= capacity.
+            // - The old_len..new_len bytes left uninitialized after `set_len`
+            //   are zeroed by `write_bytes`.
+            unsafe {
+                self.buf.set_len(new_len);
+                // At this point, we could consider leaving the remaining bytes
+                // unintialized, since the wire format accounts for every byte
+                // and they will all be overwritten. For now, we set them all to
+                // zero because:
+                //
+                // 1. The rest of the encoding logic still relies on it, e.g.,
+                //    Encoder::padding simply increases the offset.
+                // 2. It's not clear which costs more: zeroing the entire region
+                //    first, or leaving it uninitialized and writing zeros for
+                //    each area of padding separately.
+                // 3. Uninitialized memory means UB if it is read, and a
+                //    security leak if it is sent in a message without being
+                //    completely overwritten. Before doing this, we would need
+                //    to audit the code carefully and write tests designed to
+                //    discover these sorts of bugs.
+                std::ptr::write_bytes(ptr.offset(old_len as isize), 0, new_len - old_len);
+            }
+        } else {
+            self.buf.resize(new_len, 0);
+        }
     }
 
     /// Append bytes to the very end (out-of-line) of the buffer.
