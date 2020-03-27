@@ -32,6 +32,8 @@ constexpr uint32_t kClientFlags = 0;
 
 constexpr uint32_t VULKAN_ONLY = 1;
 
+constexpr uint32_t kInvalidColorBuffer = 0U;
+
 struct CreateColorBufferCmd {
   uint32_t op;
   uint32_t size;
@@ -284,7 +286,7 @@ zx_status_t Control::Bind() {
 
 void Control::RegisterColorBuffer(zx_koid_t koid) {
   fbl::AutoLock lock(&lock_);
-  color_buffers_[koid] = 0;
+  color_buffers_[koid] = kInvalidColorBuffer;
 }
 
 void Control::FreeColorBuffer(zx_koid_t koid) {
@@ -316,11 +318,10 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
 
   auto it = color_buffers_.find(koid);
   if (it == color_buffers_.end()) {
-    zxlogf(ERROR, "%s: invalid VMO\n", kTag);
-    return ZX_ERR_INVALID_ARGS;
+    return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS);
   }
 
-  if (it->second) {
+  if (it->second != kInvalidColorBuffer) {
     return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn,
                                                                           ZX_ERR_ALREADY_EXISTS);
   }
@@ -361,6 +362,11 @@ zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn)
   auto it = color_buffers_.find(koid);
   if (it == color_buffers_.end()) {
     return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS, 0);
+  }
+
+  if (it->second == kInvalidColorBuffer) {
+    // Color buffer not created yet.
+    return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_ERR_NOT_FOUND, 0);
   }
 
   return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_OK, it->second);
