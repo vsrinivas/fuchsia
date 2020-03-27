@@ -137,6 +137,7 @@ void StreamVolumeManager::NotifyStreamChanged(StreamVolume* stream_volume, Ramp 
 
 void StreamVolumeManager::AddStream(StreamVolume* stream_volume) {
   stream_volumes_.insert(stream_volume);
+  UpdateStream(stream_volume, std::nullopt);
 }
 
 void StreamVolumeManager::RemoveStream(StreamVolume* stream_volume) {
