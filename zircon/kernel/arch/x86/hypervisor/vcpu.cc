@@ -41,8 +41,8 @@ static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
   uint64_t descriptor[] = {eptp, 0};
 
   __asm__ __volatile__("invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
-                       : [ err ] "=r"(err)
-                       : [ descriptor ] "m"(descriptor), [ invalidation ] "r"(invalidation)
+                       : [err] "=r"(err)
+                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
                        : "cc");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
@@ -52,8 +52,8 @@ static zx_status_t vmptrld(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmptrld %[pa];" VMX_ERR_CHECK(err)
-                       : [ err ] "=r"(err)
-                       : [ pa ] "m"(pa)
+                       : [err] "=r"(err)
+                       : [pa] "m"(pa)
                        : "cc", "memory");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
@@ -63,8 +63,8 @@ static zx_status_t vmclear(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmclear %[pa];" VMX_ERR_CHECK(err)
-                       : [ err ] "=r"(err)
-                       : [ pa ] "m"(pa)
+                       : [err] "=r"(err)
+                       : [pa] "m"(pa)
                        : "cc", "memory");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
@@ -75,8 +75,8 @@ static uint64_t vmread(uint64_t field) {
   uint64_t val;
 
   __asm__ __volatile__("vmread %[field], %[val];" VMX_ERR_CHECK(err)
-                       : [ err ] "=r"(err), [ val ] "=m"(val)
-                       : [ field ] "r"(field)
+                       : [err] "=r"(err), [val] "=m"(val)
+                       : [field] "r"(field)
                        : "cc");
 
   DEBUG_ASSERT(err == ZX_OK);
@@ -87,8 +87,8 @@ static void vmwrite(uint64_t field, uint64_t val) {
   uint8_t err;
 
   __asm__ __volatile__("vmwrite %[val], %[field];" VMX_ERR_CHECK(err)
-                       : [ err ] "=r"(err)
-                       : [ val ] "r"(val), [ field ] "r"(field)
+                       : [err] "=r"(err)
+                       : [val] "r"(val), [field] "r"(field)
                        : "cc");
 
   DEBUG_ASSERT(err == ZX_OK);

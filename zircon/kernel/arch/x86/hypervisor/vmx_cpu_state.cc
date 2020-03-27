@@ -24,10 +24,10 @@ static fbl::Array<VmxPage> vmxon_pages TA_GUARDED(GuestMutex::Get());
 static zx_status_t vmxon(paddr_t pa) {
   uint8_t err;
 
-  __asm__ volatile("vmxon %[pa];" VMX_ERR_CHECK(err)
-                   : [ err ] "=r"(err)
-                   : [ pa ] "m"(pa)
-                   : "cc", "memory");
+  __asm__ __volatile__("vmxon %[pa];" VMX_ERR_CHECK(err)
+                       : [err] "=r"(err)
+                       : [pa] "m"(pa)
+                       : "cc", "memory");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
@@ -35,7 +35,7 @@ static zx_status_t vmxon(paddr_t pa) {
 static zx_status_t vmxoff() {
   uint8_t err;
 
-  __asm__ volatile("vmxoff;" VMX_ERR_CHECK(err) : [ err ] "=r"(err) : : "cc");
+  __asm__ __volatile__("vmxoff;" VMX_ERR_CHECK(err) : [err] "=r"(err) : : "cc");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
