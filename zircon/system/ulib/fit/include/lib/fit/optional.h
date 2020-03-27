@@ -13,25 +13,10 @@
 
 namespace fit {
 
-using nullopt_t = std::nullopt_t;
-static constexpr nullopt_t nullopt = std::nullopt;
-
-template <typename T>
-using optional = std::optional<T>;
-
-// Make optional.
-template <typename T>
-constexpr std::optional<std::decay_t<T>> make_optional(T&& value) {
-  return std::optional<std::decay_t<T>>{std::forward<T>(value)};
-}
-template <typename T, typename... Args>
-constexpr std::optional<T> make_optional(Args&&... args) {
-  return std::optional<T>{std::in_place, std::forward<Args>(args)...};
-}
-template <typename T, typename U, typename... Args>
-constexpr std::optional<T> make_optional(std::initializer_list<U> init_list, Args&&... args) {
-  return std::optional<T>{std::in_place, init_list, std::forward<Args>(args)...};
-}
+using std::make_optional;
+using std::nullopt;
+using std::nullopt_t;
+using std::optional;
 
 }  // namespace fit
 

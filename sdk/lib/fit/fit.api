@@ -9,7 +9,7 @@
   "pkg/fit/include/lib/fit/function_traits.h": "4db000fe2c2daba6d1b999c21c851da9",
   "pkg/fit/include/lib/fit/in_place_internal.h": "b64a64b86528517600208d9d54e5ada0",
   "pkg/fit/include/lib/fit/nullable.h": "fbea4ff17f5097d6d9909f32b4be89c6",
-  "pkg/fit/include/lib/fit/optional.h": "0e902831c443b9615c0fafe278f5e917",
+  "pkg/fit/include/lib/fit/optional.h": "0f8c7bd54aa1e2aa66c36b9d7eaa8e46",
   "pkg/fit/include/lib/fit/promise.h": "b1fb8c192fb460581ab45534011e94c5",
   "pkg/fit/include/lib/fit/promise_internal.h": "7179102deb96c00a658f3fc4d8e89452",
   "pkg/fit/include/lib/fit/result.h": "a173d13373456250346b14703a8e84a3",
