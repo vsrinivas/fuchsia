@@ -16,6 +16,7 @@ zx_library("blobfs") {
     "blobfs/fsck.h",
     "blobfs/cache-policy.h",
     "blobfs/mkfs.h",
+    "blobfs/blobfs_inspector.h",
   ]
   sources = [
     "allocator/extent-reserver.cc",
@@ -36,6 +37,7 @@ zx_library("blobfs") {
     "compression/zstd-plain.h",
     "compression/zstd-seekable.cc",
     "compression/zstd-seekable.h",
+    "inspector/blobfs_inspector.cc",
     "inspector/parser.cc",
     "inspector/parser.h",
     "iterator/allocated-extent-iterator.cc",

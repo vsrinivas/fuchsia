@@ -70,6 +70,7 @@ test("blobfs-unit") {
     "unit/blobfs-checker-test.cc",
     "unit/blobfs-pager-test.cc",
     "unit/blobfs-test.cc",
+    "unit/blobfs_inspector_test.cc",
     "unit/compressor-test.cc",
     "unit/create-tests.cc",
     "unit/extent-reserver-test.cc",
