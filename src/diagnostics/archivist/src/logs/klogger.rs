@@ -17,7 +17,7 @@ pub struct KernelLogger {
     buf: Vec<u8>,
 }
 
-pub struct KernelLogsIterator<'a> {
+struct KernelLogsIterator<'a> {
     klogger: &'a mut KernelLogger,
 }
 
@@ -64,8 +64,8 @@ impl KernelLogger {
         }
     }
 
-    pub fn existing_logs<'a>(&'a mut self) -> KernelLogsIterator<'a> {
-        KernelLogsIterator { klogger: self }
+    pub fn existing_logs<'a>(&'a mut self) -> Result<Vec<(LogMessage, usize)>, zx::Status> {
+        KernelLogsIterator { klogger: self }.collect::<Result<Vec<_>, _>>()
     }
 
     pub fn listen(self) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {

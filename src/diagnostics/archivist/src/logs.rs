@@ -56,12 +56,9 @@ impl LogManager {
         let mut kernel_logger =
             klogger::KernelLogger::create().context("creating kernel debuglog bridge")?;
 
-        let existing = kernel_logger
-            .existing_logs()
-            .collect::<Result<Vec<_>, _>>()
-            .context("reading from kernel log iterator")?;
-
-        for (log_msg, size) in existing {
+        for (log_msg, size) in
+            kernel_logger.existing_logs().context("reading from kernel log iterator")?
+        {
             self.ingest_message(log_msg, size, stats::LogSource::Kernel);
         }
 
