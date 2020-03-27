@@ -11,31 +11,6 @@
 
 namespace modular {
 
-namespace {
-
-// Dev auth provider configuration
-constexpr char kDevAuthProviderType[] = "dev";
-
-// Google auth provider configuration
-constexpr char kGoogleAuthProviderType[] = "google";
-
-// Returns the corresponding |auth_provider_type| string that maps to
-// |fuchsia::modular::auth::IdentityProvider| value.
-// TODO(ukode): Convert enum |fuchsia::modular::auth::IdentityProvider| to
-// fidl::String datatype to make it consistent in the future.
-std::string MapIdentityProviderToAuthProviderType(
-    const fuchsia::modular::auth::IdentityProvider idp) {
-  switch (idp) {
-    case fuchsia::modular::auth::IdentityProvider::DEV:
-      return kDevAuthProviderType;
-    case fuchsia::modular::auth::IdentityProvider::GOOGLE:
-      return kGoogleAuthProviderType;
-  }
-  FX_DCHECK(false) << "Unrecognized IDP.";
-}
-
-}  // namespace
-
 SessionUserProviderImpl::SessionUserProviderImpl(
     fuchsia::identity::account::AccountManager* const account_manager,
     fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider,
@@ -88,32 +63,8 @@ void SessionUserProviderImpl::Connect(
 
 void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                                       AddUserCallback callback) {
-  account_manager_->ProvisionFromAuthProvider(
-      authentication_context_provider_binding_.NewBinding(),
-      MapIdentityProviderToAuthProviderType(identity_provider),
-      fuchsia::identity::account::Lifetime::PERSISTENT, nullptr,
-      [weak_this = weak_factory_.GetWeakPtr(),
-       callback = std::move(callback)](auto result) mutable {
-        if (weak_this) {
-          return;
-        }
-        if (result.is_err()) {
-          FX_LOGS(ERROR) << "Failed to provision new account from with "
-                            "provider with error: "
-                         << (uint32_t)result.err();
-          callback(nullptr, "Failed to provision new account from auth provider.");
-          return;
-        }
-        auto response = result.response();
-
-        // To interface with BaseShells that haven't migrated to use
-        // AccountManager, we give them the string account_id to call back
-        // Login with.
-        auto account = fuchsia::modular::auth::Account::New();
-        account->id = std::to_string(response.account_id);
-
-        callback(std::move(account), "");
-      });
+  FX_LOGS(INFO) << "AddUser(IDP) is not implemented yet.";
+    callback(nullptr, "Provision new account from auth provider not supported.");
 }
 
 void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
@@ -130,33 +81,15 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
   } else {
     FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as "
                      "authenticated user";
-    uint64_t account_id = std::atoll(params.account_id->c_str());
-
-    fuchsia::identity::account::AccountPtr account;
-    account_manager_->GetAccount(
-        account_id, authentication_context_provider_binding_.NewBinding(), account.NewRequest(),
-        [](auto result) { FX_LOGS(INFO) << "Got account with error: " << (uint32_t)result.err(); });
-
-    fuchsia::identity::account::PersonaPtr persona;
-    account->GetDefaultPersona(persona.NewRequest(), [](auto result) {
-      FX_LOGS(INFO) << "Got default persona with error: " << (uint32_t)result.err();
-    });
 
     auto account_deprecated = fuchsia::modular::auth::Account::New();
     account_deprecated->id = params.account_id->c_str();
-
-    // Save the newly added user as a joined persona.
-    struct JoinedPersona joined_persona {
-      .account = std::move(account), .persona = std::move(persona),
-    };
-    joined_personas_.emplace_back(std::move(joined_persona));
 
     on_login_(std::move(account_deprecated));
   }
 }
 
 void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
-  joined_personas_.clear();
   account_manager_->GetAccountIds(
       [weak_this = weak_factory_.GetWeakPtr(),
        callback = std::move(callback)](std::vector<uint64_t> account_ids) mutable {

@@ -37,10 +37,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // |AccountListener| to receive updates on newly added/removed accounts. Must
   // be present, and must outlive this instance.
   //
-  // |token_manager_factory| Used to vend token managers for guest login, in
-  // which no account is created. Must be present, and must outlive this
-  // instance.
-  //
   // |auth_context_provider| Used to forward authentication UI requests from
   // auth to the base shell. Must be present.
   //
@@ -101,17 +97,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
   fidl::Binding<fuchsia::identity::account::AccountListener> account_listener_binding_;
-
-  // The personas that are currently, or should be, joined on the session that's
-  // started in modular framework.
-  struct JoinedPersona {
-    // The persona joined on the session.
-    fuchsia::identity::account::PersonaPtr persona;
-
-    // The account associated with the above persona.
-    fuchsia::identity::account::AccountPtr account;
-  };
-  std::vector<JoinedPersona> joined_personas_;
 
   OnInitializeCallback on_initialize_;
   OnLoginCallback on_login_;
