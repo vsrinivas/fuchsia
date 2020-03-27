@@ -22,6 +22,17 @@ go_library("pmd") {
   ]
 }
 
+package("disable-executability-restrictions") {
+  deprecated_system_image = true
+
+  resources = [
+    {
+      dest = "pkgfs_disable_executability_restrictions"
+      path = "disable_executability_restrictions"
+    },
+  ]
+}
+
 test_packages = [
   "allowlist",
   "index",

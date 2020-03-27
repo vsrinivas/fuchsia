@@ -71,6 +71,7 @@ base_package_labels += [
   "//src/sys/core",
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
+  "//src/sys/pkg:pkgfs-disable-executability-restrictions",
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
   "//src/sys/stash:pkg",

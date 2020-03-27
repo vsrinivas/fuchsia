@@ -77,3 +77,7 @@ group("omaha-client-as-update-checker") {
     "bin/omaha-client:omaha-client-config",
   ]
 }
+
+group("pkgfs-disable-executability-restrictions") {
+  public_deps = [ "bin/pkgfs:disable-executability-restrictions" ]
+}
