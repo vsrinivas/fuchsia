@@ -37,8 +37,12 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
-  context->outgoing()->AddPublicService(crash_reporter_bindings.GetHandler(agent.get()));
+  // fuchsia.feedback.CrashReporter
+  context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter>(
+          [&agent](fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+            agent->HandleCrashReporterRequest(std::move(request));
+          }));
 
   loop.Run();
 

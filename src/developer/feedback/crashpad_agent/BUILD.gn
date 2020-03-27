@@ -83,31 +83,20 @@ source_set("agent") {
 
   public_deps = [
     ":config",
-    ":crash_server",
-    ":feedback_data_provider",
-    ":feedback_device_id_provider",
-    ":privacy_settings_ptr",
-    ":queue",
-    ":report_util",
-    ":settings",
+    ":crash_reporter",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crashpad_agent/info",
-    "//src/developer/feedback/utils:utc_time_provider",
     "//src/lib/fxl",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
   ]
 
   deps = [
-    ":constants",
-    "//src/developer/feedback/utils:cobalt",
     "//src/lib/files",
     "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 
@@ -131,6 +120,35 @@ source_set("constants") {
   sources = [ "constants.h" ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
+source_set("crash_reporter") {
+  sources = [
+    "crash_reporter.cc",
+    "crash_reporter.h",
+  ]
+
+  public_deps = [
+    ":crash_server",
+    ":feedback_data_provider",
+    ":feedback_device_id_provider",
+    ":privacy_settings_ptr",
+    ":queue",
+    ":settings",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/crashpad_agent/info",
+    "//src/developer/feedback/utils:utc_time_provider",
+    "//src/lib/timekeeper",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+  ]
+
+  deps = [
+    ":report_util",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/syslog/cpp",
+  ]
 }
 
 source_set("crash_server") {

@@ -6,16 +6,11 @@
 # SOURCES
 ###############################################################################
 source_set("info") {
-  public = [
-    "agent_info.h",
-    "database_info.h",
-    "info_context.h",
-    "queue_info.h",
-  ]
-
   sources = [
     "agent_info.cc",
     "agent_info.h",
+    "crash_reporter_info.cc",
+    "crash_reporter_info.h",
     "database_info.cc",
     "database_info.h",
     "info_context.h",
@@ -33,10 +28,12 @@ source_set("info") {
     "//src/lib/timekeeper",
   ]
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+  ]
 }
 
-# Exposed for testing purposes.
 source_set("inspect_manager") {
   public = [ "inspect_manager.h" ]
 

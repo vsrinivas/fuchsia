@@ -9,8 +9,6 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
-#include "src/developer/feedback/crashpad_agent/settings.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 
 namespace feedback {
 
@@ -21,11 +19,6 @@ struct AgentInfo {
 
   // Exposes the static configuration of the agent.
   void ExposeConfig(const feedback::Config& config);
-
-  // Exposes the mutable settings of the agent.
-  void ExposeSettings(feedback::Settings* settings);
-
-  void LogCrashState(CrashState state);
 
  private:
   std::shared_ptr<InfoContext> context_;

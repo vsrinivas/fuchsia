@@ -4,26 +4,16 @@
 
 #include "src/developer/feedback/crashpad_agent/info/agent_info.h"
 
-#include "src/lib/fxl/logging.h"
-
-using cobalt_registry::kCrashMetricId;
-
-using CrashState = cobalt_registry::CrashMetricDimensionState;
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-AgentInfo::AgentInfo(std::shared_ptr<InfoContext> context) : context_(context) {
-  FXL_CHECK(context);
+AgentInfo::AgentInfo(std::shared_ptr<InfoContext> context) : context_(std::move(context)) {
+  FX_CHECK(context_);
 }
 
 void AgentInfo::ExposeConfig(const feedback::Config& config) {
   context_->InspectManager().ExposeConfig(config);
 }
-
-void AgentInfo::ExposeSettings(feedback::Settings* settings) {
-  context_->InspectManager().ExposeSettings(settings);
-}
-
-void AgentInfo::LogCrashState(CrashState state) { context_->Cobalt().LogOccurrence(state); }
 
 }  // namespace feedback

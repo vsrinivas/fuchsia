@@ -1,9 +1,10 @@
 {
     "program": {
-        "binary": "test/crashpad_agent_unittest"
+        "binary": "test/crash_reporter_unittest"
     },
     "sandbox": {
         "features": [
+            "build-info",
             "isolated-temp"
         ],
         "services": [

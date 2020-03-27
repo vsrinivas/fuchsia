@@ -39,6 +39,9 @@ group("tests") {
 test_package("crashpad_agent_tests") {
   tests = [
     {
+      name = "crash_reporter_unittest"
+    },
+    {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_config_unittest"
 
@@ -151,6 +154,7 @@ test_package("crashpad_agent_tests") {
 
   deps = [
     ":config_unittest",
+    ":crash_reporter_unittest",
     ":crashpad_agent_integration_test",
     ":crashpad_agent_unittest",
     ":database_unittest",
@@ -179,6 +183,47 @@ executable("config_unittest") {
   ]
 }
 
+executable("crash_reporter_unittest") {
+  testonly = true
+
+  sources = [
+    "crash_reporter_unittest.cc",
+    "fake_privacy_settings.cc",
+    "fake_privacy_settings.h",
+    "stub_crash_server.cc",
+    "stub_crash_server.h",
+    "stub_feedback_data_provider.cc",
+    "stub_feedback_data_provider.h",
+    "stub_feedback_device_id_provider.cc",
+    "stub_feedback_device_id_provider.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/crashpad_agent:constants",
+    "//src/developer/feedback/crashpad_agent:crash_reporter",
+    "//src/developer/feedback/crashpad_agent/info:info",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:utc_provider",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper:testing",
+    "//src/sys/timekeeper:fuchsia.time",
+    "//third_party/crashpad/util",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
 executable("crashpad_agent_integration_test") {
   testonly = true
 
@@ -201,41 +246,19 @@ executable("crashpad_agent_integration_test") {
 executable("crashpad_agent_unittest") {
   testonly = true
 
-  sources = [
-    "crashpad_agent_unittest.cc",
-    "fake_privacy_settings.cc",
-    "fake_privacy_settings.h",
-    "stub_crash_server.cc",
-    "stub_crash_server.h",
-    "stub_feedback_data_provider.cc",
-    "stub_feedback_data_provider.h",
-    "stub_feedback_device_id_provider.cc",
-    "stub_feedback_device_id_provider.h",
-  ]
+  sources = [ "crashpad_agent_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.settings",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:agent",
     "//src/developer/feedback/crashpad_agent:constants",
-    "//src/developer/feedback/crashpad_agent/info:info",
-    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/crashpad_agent/info",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:cobalt",
-    "//src/developer/feedback/testing/stubs:utc_provider",
-    "//src/developer/feedback/utils:cobalt",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/lib/timekeeper:testing",
-    "//src/sys/timekeeper:fuchsia.time",
-    "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 
