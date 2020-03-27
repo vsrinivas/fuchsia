@@ -4,7 +4,10 @@
 
 #include "src/developer/memory/monitor/metrics.h"
 
+#include <lib/async/cpp/executor.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/time.h>
 
 #include <gtest/gtest.h>
@@ -21,10 +24,19 @@ using fuchsia::cobalt::EventPayload;
 namespace monitor {
 namespace {
 
-class MetricsUnitTest : public gtest::RealLoopFixture {};
-
-TEST_F(MetricsUnitTest, All) {
-  CaptureSupplier cs({{
+class MetricsUnitTest : public gtest::RealLoopFixture {
+ public:
+  MetricsUnitTest() : executor_(dispatcher()){}
+ protected:
+  // Run a promise to completion on the default async executor.
+  void RunPromiseToCompletion(fit::promise<> promise) {
+    bool done = false;
+    executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(done);
+  }
+  std::vector<CaptureTemplate> Template() {
+    return std::vector<CaptureTemplate>{{
       .time = zx_nsec_from_duration(zx_duration_from_hour(7)),
       .kmem =
           {
@@ -84,9 +96,39 @@ TEST_F(MetricsUnitTest, All) {
               {.koid = 19, .name = "audio_core.cmx", .vmos = {19}},
               {.koid = 20, .name = "context_provider.cmx", .vmos = {20}},
           },
-  }});
+  }};
+  }
+  async::Executor executor_;
+  sys::testing::ComponentContextProvider context_provider_;
+};
+
+TEST_F(MetricsUnitTest, Inspect) {
+  CaptureSupplier cs(Template());
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::msec(10), dispatcher(), &logger, [&cs](Capture* c, CaptureLevel l) {
+  Metrics m(zx::min(5), dispatcher(), context_provider_.context(), &logger, [&cs](Capture* c, CaptureLevel l) {
+    return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
+  });
+  RunLoopUntil([&cs] { return cs.empty(); });
+
+  // [START get_hierarchy]
+  fit::result<inspect::Hierarchy> hierarchy;
+  RunPromiseToCompletion(inspect::ReadFromInspector( m.Inspector()).then(
+      [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+  ASSERT_TRUE(hierarchy.is_ok());
+  // [END get_hierarchy]
+
+  // [START assertions]
+  auto* metric_memory = hierarchy.value().GetByPath({"metrics_memory_usages"});
+  ASSERT_TRUE(metric_memory);
+  auto* usage_readings = metric_memory->node().get_property<inspect::UintPropertyValue>("Graphics");
+  ASSERT_TRUE(usage_readings);
+  EXPECT_EQ(2u, usage_readings->value());
+}
+
+TEST_F(MetricsUnitTest, All) {
+  CaptureSupplier cs(Template());
+  cobalt::FakeLogger_Sync logger;
+  Metrics m(zx::msec(10), dispatcher(), context_provider_.context(), &logger, [&cs](Capture* c, CaptureLevel l) {
     return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
   });
   RunLoopUntil([&cs] { return cs.empty(); });
@@ -198,7 +240,7 @@ TEST_F(MetricsUnitTest, One) {
           },
   }});
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::msec(10), dispatcher(), &logger,
+  Metrics m(zx::msec(10), dispatcher(), context_provider_.context(), &logger,
             [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(21U, logger.event_count());  // 1 + 10 + 10
@@ -230,7 +272,7 @@ TEST_F(MetricsUnitTest, Undigested) {
           },
   }});
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::msec(10), dispatcher(), &logger,
+  Metrics m(zx::msec(10), dispatcher(), context_provider_.context(), &logger,
             [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(22U, logger.event_count());  // 2 + 10 + 10

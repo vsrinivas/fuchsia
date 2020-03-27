@@ -4,6 +4,7 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <string>
 #include <unordered_map>
@@ -18,11 +19,18 @@ namespace monitor {
 
 class Metrics {
  public:
-  Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
+  Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher, sys::ComponentContext* context,
           fuchsia::cobalt::Logger_Sync* logger, memory::CaptureFn capture_cb);
+
+  // Reader side must use the exact name to read from Inspect.
+  // Design doc in go/fuchsia-metrics-to-inspect-design.
+  static constexpr const char* kInspectNodeName = "metrics_memory_usages";
+  static constexpr const char* kInspectTimestampName = "metrics_memory_timestamp";
+  inspect::Inspector Inspector(){ return *(inspector_.inspector()); }
 
  private:
   void CollectMetrics();
+  void WriteDigestToInspect(const memory::Digest& digest);
   void AddKmemEvents(const zx_info_kmem_stats_t& kmem,
                      std::vector<fuchsia::cobalt::CobaltEvent>* events);
   void AddKmemEventsWithUptime(const zx_info_kmem_stats_t& kmem, zx_time_t capture_time,
@@ -39,6 +47,11 @@ class Metrics {
       bucket_name_to_code_;
   memory::Digester digester_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Metrics);
+
+  sys::ComponentInspector inspector_;
+  inspect::Node metric_memory_node_;
+  std::map<std::string, inspect::UintProperty> inspect_memory_usages_;
+  inspect::IntProperty inspect_memory_timestamp_;
 };
 
 }  // namespace monitor

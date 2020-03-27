@@ -20,6 +20,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/developer/memory/metrics",
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/trace",

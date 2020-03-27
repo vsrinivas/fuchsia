@@ -145,7 +145,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       return;
     }
     metrics_ = std::make_unique<Metrics>(
-        kMetricsPollFrequency, dispatcher, logger_.get(),
+        kMetricsPollFrequency, dispatcher, component_context_.get(), logger_.get(),
         [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
   }
 

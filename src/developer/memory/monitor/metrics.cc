@@ -35,7 +35,7 @@ static const std::map<zx_duration_t, TimeSinceBoot> UptimeLevelMap = {
 
 // Metrics polls the memory state periodically asynchroniously using the passed dispatcher and sends
 // information about the memory Digests to Cobalt, in the form of several Events.
-Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
+Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                  fuchsia::cobalt::Logger_Sync* logger, CaptureFn capture_cb)
     : poll_frequency_(poll_frequency),
       dispatcher_(dispatcher),
@@ -68,7 +68,14 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
           {"Cobalt", MemoryMetricDimensionBucket::Cobalt},
           {"Audio", MemoryMetricDimensionBucket::Audio},
           {"Context", MemoryMetricDimensionBucket::Context},
-      }) {
+      }),
+      inspector_(context),
+      metric_memory_node_(inspector_.root().CreateChild(kInspectNodeName)),
+      inspect_memory_timestamp_(metric_memory_node_.CreateInt(kInspectTimestampName, 0)) {
+  for (auto& element : bucket_name_to_code_) {
+    inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(element.first, metric_memory_node_.CreateUint(element.first, 0)));
+  }
+
   task_.PostDelayed(dispatcher_, zx::usec(1));
 }
 
@@ -84,6 +91,8 @@ void Metrics::CollectMetrics() {
   auto str = oss.str();
   std::replace(str.begin(), str.end(), '\n', ' ');
   FX_LOGS(INFO) << str;
+
+  WriteDigestToInspect(digest);
 
   std::vector<fuchsia::cobalt::CobaltEvent> events;
   const auto& kmem = capture.kmem();
@@ -109,6 +118,19 @@ void Metrics::CollectMetrics() {
     FX_LOGS(ERROR) << "LogCobaltEvents() returned status INVALID_ARGUMENTS";
   }
   task_.PostDelayed(dispatcher_, poll_frequency_);
+}
+
+void Metrics::WriteDigestToInspect(const memory::Digest& digest) {
+  TRACE_DURATION("memory_monitor", "Watcher::Metrics::WriteDigestToInspect");
+
+  inspect_memory_timestamp_.Set(digest.time());
+  for (auto const& bucket : digest.buckets()) {
+    if (inspect_memory_usages_.find(bucket.name())!=inspect_memory_usages_.end()){
+      inspect_memory_usages_[bucket.name()].Set(bucket.size());
+    } else {
+      FX_LOGS(INFO) << "Not_in_map: " << bucket.name() << ": " << bucket.size() << "\n";
+    }
+  }
 }
 
 void Metrics::AddKmemEvents(const zx_info_kmem_stats_t& kmem,
