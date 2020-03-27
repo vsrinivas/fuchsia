@@ -1,51 +1,34 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-group("benchmark") {
+group("common") {
   testonly = true
 
-  public_deps = [
-    ":memcpy",
-    ":vkcopy",
-    ":vulkan-benchmark",
-  ]
+  public_deps = [ ":vkcontext" ]
 }
 
-test_package("vulkan-benchmark") {
-  deps = [
-    ":memcpy",
-    ":vkcopy",
-  ]
+test_package("vulkan-test-common") {
+  deps = [ ":vkcontext" ]
 
   tests = [
     {
-      name = "vkcopy"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "test_memcpy"
+      name = "vkcontext"
+      #      environments = magma_libvulkan_hardware_envs
     },
   ]
 }
 
-executable("memcpy") {
-  output_name = "test_memcpy"
-
-  sources = [ "test_memcpy.cc" ]
-}
-
-executable("vkcopy") {
+executable("vkcontext") {
   testonly = true
 
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
   sources = [
     "//src/graphics/tests/common/vulkan_context.cc",
-    "test_vkcopy.cc",
+    "test_vkcontext.cc",
   ]
 
   deps = [ "//src/lib/vulkan" ]
