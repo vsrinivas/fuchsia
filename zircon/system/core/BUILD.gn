@@ -9,9 +9,6 @@ group("core") {
   deps = [
     "bootsvc",
 
-    # TODO(teisenbe): Find a better place to hook these into the dependency graph
-    "ptysvc",
-
     # TODO(bwb): depend on these from GN when build systems are unified. These are
     # data dependencies of devcoordinator
     "$zx/system/core/devmgr/fragment",

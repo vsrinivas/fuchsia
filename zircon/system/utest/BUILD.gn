@@ -38,7 +38,6 @@ if (current_cpu != "") {
       "$zx/system/core/netsvc:netsvc-test",
 #------------------
 #------------------
-      "$zx/system/core/ptysvc:ptysvc-test",
 #------------------
 #------------------
       "$zx/system/core/svchost:crashsvc-test",

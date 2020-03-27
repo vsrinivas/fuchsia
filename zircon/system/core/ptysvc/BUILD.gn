@@ -2,15 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/package.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-zx_executable("ptysvc") {
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+import("//zircon/public/gn/package.gni")
+
+executable("ptysvc") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "main.cc" ]
   deps = [
     ":common",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
   ]
 }
 
@@ -31,34 +53,55 @@ source_set("common") {
     "pty-server.h",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fs-pty",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fs-pty",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-pty:llcpp",
   ]
 
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }
 
-zx_test("ptysvc-test") {
+test("ptysvc-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   test_group = "sys"
 
   sources = [ "pty-tests.cc" ]
   deps = [
     ":common",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
+}
+
+migrated_manifest("ptysvc-manifest") {
+  deps = [ ":ptysvc" ]
+}
+
+migrated_manifest("ptysvc-test-manifest") {
+  deps = [ ":ptysvc-test" ]
 }
