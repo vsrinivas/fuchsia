@@ -112,7 +112,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:60
+From //kernel/params.gni:67
 
 ### enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -310,6 +310,17 @@ the two and set kernel_debug_level independently.
 **Current value (from the default):** `2`
 
 From //kernel/params.gni:52
+
+### kernel_debug_print_level
+Controls the verbosity of kernel dprintf messages. The higher the value,
+the more dprintf messages emitted. Valid values are 0-2 (inclusive):
+  0 - CRITCAL / ALWAYS
+  1 - INFO
+  2 - SPEW
+
+**Current value (from the default):** `2`
+
+From //kernel/params.gni:59
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
