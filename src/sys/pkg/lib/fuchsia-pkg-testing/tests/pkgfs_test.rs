@@ -1349,9 +1349,23 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
 
     // Test the 'Open' path - we shouldn't be able to open a file in our
     // package through /packages.
-    // The 'example' package wasn't in the allowlist, so we expect this to fail
-    d.open_file("packages/example/0/a/b")
-        .expect_err("shouldn't be able to open file in example package");
+    // The 'example' package wasn't in the allowlist but is on the disk,
+    // so we expect this to fail with a permission error, which is bubbled up as Other.
+    assert_eq!(
+        d.open_file("packages/example/0/a/b")
+            .expect_err("shouldn't be able to open file in non-allowlisted package")
+            .kind(),
+        std::io::ErrorKind::Other
+    );
+
+    // The not_on_disk package wasn't in the allowlist but _isn't_ on the disk,
+    // so we expect this to fail with a NotFound.
+    assert_eq!(
+        d.open_file("packages/not_on_disk/0/a/b")
+            .expect_err("shouldn't be able to open file in package not on disk")
+            .kind(),
+        std::io::ErrorKind::NotFound
+    );
 
     // Test the 'Read' path for /packages - listing
     // We should *not* be able to see our package in the /packages directory

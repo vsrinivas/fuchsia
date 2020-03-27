@@ -27,6 +27,19 @@ func (pr *packagesRoot) isAllowedNonStaticPackage(packageName string) bool {
 	return pr.fs.allowedNonStaticPackages.Contains(packageName)
 }
 
+func dynamicIndexHasPackageName(f *Filesystem, name string) bool {
+	pkgs := f.index.List()
+	found := false
+	for _, p := range pkgs {
+		if p.Name == name {
+			found = true
+			break
+		}
+	}
+
+	return found
+}
+
 func (pr *packagesRoot) Dup() (fs.Directory, error) {
 	return pr, nil
 }
@@ -44,17 +57,30 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 
 	packageName := parts[0]
 
-	if (pr.fs.static == nil || (pr.fs.static != nil && !pr.fs.static.HasName(packageName))) && !pr.isAllowedNonStaticPackage(packageName) {
-		log.Printf("pkgfs: attempted open of non-static package %s, see go/pkgfs-base-packages. Full path: %s", packageName, name)
+	// Check for /pkgfs/packages visibility restrictions - we only want to show base packages, and packages on an allowlist
+	if pr.fs.static == nil || (pr.fs.static != nil && !pr.fs.static.HasName(packageName)) {
+		// This package isn't in the static index
 
-		if pr.enforceNonStaticAllowlist {
-			return nil, nil, nil, fs.ErrNotFound
+		if !pr.isAllowedNonStaticPackage(packageName) {
+			// This package isn't allowed by the allowlist to show up
+			// Check if the package is currently on the disk
+			// If it's not on the disk at all, we'll return ErrNotFound later, so do nothing special here
+
+			if dynamicIndexHasPackageName(pr.fs, packageName) {
+				// This package is on the system (indicated by presence in the _dynamic_ index),
+				// but we don't want it to be accessed. Log an error
+				log.Printf("pkgfs: attempted open of non-static package %s from /pkgfs/packages, which is deprecated. Please use the package resolver for accessing package directories, or /pkg to access your own package. See fxb/44527. Full path: %s", packageName, name)
+
+				if pr.enforceNonStaticAllowlist {
+					return nil, nil, nil, fs.ErrPermission
+				}
+			}
 		}
 	}
 
 	pld, err := newPackageListDir(packageName, pr.fs)
 	if err != nil {
-		// If the package isn't on the system at all, we'll return an error here.
+		// If the package isn't on the system at all, we'll return an error here
 		return nil, nil, nil, err
 	}
 
@@ -82,6 +108,7 @@ func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 
 	pkgs := pr.fs.index.List()
 	for _, p := range pkgs {
+		// Check visibility restrictions - only return non-base packages on an allowlist
 		if pr.enforceNonStaticAllowlist && !pr.isAllowedNonStaticPackage(p.Name) {
 			continue
 		}
@@ -110,16 +137,7 @@ type packageListDir struct {
 
 func newPackageListDir(name string, f *Filesystem) (*packageListDir, error) {
 	if !f.static.HasName(name) {
-
-		pkgs := f.index.List()
-		found := false
-		for _, p := range pkgs {
-			if p.Name == name {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !dynamicIndexHasPackageName(f, name) {
 			return nil, fs.ErrNotFound
 		}
 	}
