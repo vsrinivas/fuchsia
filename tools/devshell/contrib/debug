@@ -36,7 +36,63 @@
 ## details.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
+fx-config-read
+
+# Checks to see if a debug agent is listening by knocking on the agent
+# port with nc(1).
+# 1: agent port
+# 2: number of tries
+check_for_agent() {
+  local port="$1"
+  local num_tries="$2"
+
+  while ((num_tries--)); do
+    if nc -w5 -z "$(get-fuchsia-device-addr)" "${port}"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+# Starts a debug agent on the target if it's not there.
+# 1: agent port
+# 2: agent unwind flag
+# 3: agent output path
+# The agent is started in a subprocess that must be waited upon.
+launch_debug_agent() {
+  local port="$1"
+  local unwind_flag="$2"
+  local agent_out="$3"
+  local debug_agent_url="fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx"
+
+  # See if the debug agent is already there.
+  echo "Checking for debug agent on $(get-device-addr-resource):${port}."
+  if fx-command-run "shell" "ps" | grep "debug_agent.cmx" > /dev/null; then
+    echo "Found agent already running."
+    return 0
+  fi
+
+  # Leave the SSH connection open. Will be closed on script end.
+  # We branch out on whether the user used the verbose-agent flag. If so, we
+  # redirect the debug agent output to /dev/null.
+  echo -e "Debug agent not found. Starting one."
+  fx-command-run "run" "${debug_agent_url}" "--port=${port}" "${unwind_flag}" > "${agent_out}" 2>&1 &
+
+  # Bug: 49094, with serve-remote this can not detect a running
+  # agent the way that check_for_agent attempts to, we sleep a very
+  # short time to give the agent a chance to actually start. Ideally
+  # zxdb(1) should handle this instead.
+  sleep 0.5
+
+  # Wait for the debug agent to start.
+  if check_for_agent "${port}" 10; then
+    return 0
+  else
+    fx-error "Timed out trying to find the Debug Agent."
+    return 1
+  fi
+}
 
 # Defaults.
 port=
@@ -122,17 +178,14 @@ if [[ -z "${port}" ]]; then
 fi
 
 if [[ -n "${target_core}" ]]; then
-  target=$(get-fuchsia-device-addr-or-die)
-
-  crashpad_agent_dir=`fx-command-run "ssh" "${target}" "ls /tmp/r/sys" | \
-    grep crashpad_agent`
+  crashpad_agent_dir=`fx-command-run shell ls /tmp/r/sys | grep crashpad_agent`
   if [[ -z "${crashpad_agent_dir}" ]]; then
     fx-error "Could not find crashpad agent directory"
     exit 1
   fi
 
-  core_name=`fx-command-run "ssh" ${target} \
-    "ls /tmp/r/sys/${crashpad_agent_dir}/crashes/completed" | grep -v meta`
+  core_name=`fx-command-run shell \
+    ls "/tmp/r/sys/${crashpad_agent_dir}/crashes/completed" | grep -v meta`
 
   if [[ -z "${core_name}" ]]; then
     fx-error "No cores available on device"
@@ -158,16 +211,15 @@ if [[ -n "${core}" && ! -f "${core}" ]]; then
   exit 1
 fi
 
-connect_ops=
+connect_ops=()
 
 if [[ ! -z "${core}" ]]; then
-  connect_ops="--core ${core}"
+  connect_ops=("--core" "${core}")
 elif [[ ! -z "${no_agent}" ]]; then
   echo "Not starting a debug agent."
 else
-  if launch_debug_agent; then
-    target=$(get-fuchsia-device-addr)
-    connect_ops="--connect [${target}]:${port}"
+  if launch_debug_agent "${port}" "${unwind_flag}" "${agent_out}"; then
+    connect_ops=("--connect" "$(get-device-addr-resource):${port}")
   else
     fx-error "Could not launch debug agent. Exiting. Make sure you're running 'fx serve'."
     exit 1
@@ -176,7 +228,7 @@ fi
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
 "${FUCHSIA_BUILD_DIR}/host-tools/zxdb" \
-  ${connect_ops} \
+  ${connect_ops[@]} \
   "--quit-agent-on-exit" \
   "-b" "${FUCHSIA_BUILD_DIR}" \
   "-s" "${FUCHSIA_BUILD_DIR}" \
@@ -184,4 +236,8 @@ fi
   "-s" "${PREBUILT_CLANG_DIR}/lib/debug" \
   "--symbol-cache" ~ \
   "--symbol-server" "gs://fuchsia-artifacts-release/debug" \
-  $@
+  "$@"
+
+# launch_debug_agent starts the agent in a subprocess, which zxdb will
+# terminate by --quit-agent-on-exit, we want to wait that process however.
+wait
