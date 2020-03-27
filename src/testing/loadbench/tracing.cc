@@ -470,6 +470,8 @@ bool Tracing::WriteHumanReadable(std::ostream& human_readable_file) {
         event_state = kBegin;
       } else if ((record.IsFlow() || record.IsDuration()) && record.IsEnd()) {
         event_state = kEnd;
+      } else {
+        event_state = kNone;
       }
 
       if (record.IsProbeGroup()) {

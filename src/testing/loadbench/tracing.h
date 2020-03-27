@@ -129,6 +129,7 @@ class Tracing {
   enum EventState {
     kBegin,
     kEnd,
+    kNone,
   };
 
   // Performs same action as zx_ktrace_read and does necessary checks.
