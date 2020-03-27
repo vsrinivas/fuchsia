@@ -173,7 +173,7 @@ const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
 const uint32 CLONE_FLAG_SAME_RIGHTS = 0x04000000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol Node {
     /// Create another connection to the same remote object.
     ///
@@ -326,7 +326,7 @@ const uint32 VMO_FLAG_PRIVATE = 0x00010000;
 const uint32 VMO_FLAG_EXACT = 0x00020000;
 
 /// File defines the interface of a node which contains a flat layout of data.
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol File {
     compose Node;
 
@@ -453,7 +453,7 @@ protocol DirectoryWatcher {
 };
 
 /// Directory defines a node which is capable of containing other Objects.
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol Directory {
     compose Node;
 

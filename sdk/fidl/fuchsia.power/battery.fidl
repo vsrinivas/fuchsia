@@ -99,7 +99,6 @@ table BatteryInfo {
 };
 
 /// Provider interface used to obtain battery status details
-[FragileBase]
 protocol BatteryInfoProvider {
     /// Gets battery info
     GetBatteryInfo() -> (BatteryInfo info);

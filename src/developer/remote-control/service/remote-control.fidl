@@ -22,7 +22,7 @@ enum RebootType {
     BOOTLOADER = 3;
 };
 
-[Discoverable, FragileBase]
+[Discoverable]
 protocol RemoteControl {
     // Starts a component asynchronously.
     StartComponent(

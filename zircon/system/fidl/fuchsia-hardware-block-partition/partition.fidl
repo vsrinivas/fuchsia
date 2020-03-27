@@ -17,7 +17,7 @@ struct GUID {
 
 // Partition describes a region of one or more block devices, labelled
 // with distinguishing identifiers.
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol Partition {
     compose block.Block;
 

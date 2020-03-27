@@ -53,7 +53,6 @@ struct Config {
 
 /// Legacy synchronous device interface.
 /// New drivers should implement NewDevice instead.
-[FragileBase]
 protocol Device {
     /// Lookup what type of serial device this is.
     GetClass() -> (Class device_class);

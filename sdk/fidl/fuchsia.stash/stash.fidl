@@ -97,7 +97,7 @@ protocol StoreAccessor {
 };
 
 /// Interface used to interact with a given client's key/value store
-[Discoverable, FragileBase]
+[Discoverable]
 protocol Store {
     /// Identify should be called at the beginning of a connection to identify
     /// which client service's store is to be accessed. In the future this will

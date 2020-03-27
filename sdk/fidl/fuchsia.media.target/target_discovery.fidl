@@ -75,7 +75,6 @@ struct TargetChange {
 };
 
 /// A protocol for adding and removing members of a group target.
-[FragileBase]
 protocol GroupEditor {
     /// Adds a target to this group target.
     ///
@@ -92,7 +91,6 @@ protocol GroupEditor {
 };
 
 /// A protocol for watching the members of a group.
-[FragileBase]
 protocol Group {
     /// Watches for changes to the set of registered targets. Leave a request
     /// hanging to get replies when changes occur. New clients will be caught
@@ -121,7 +119,6 @@ union TargetWatchEvent {
 };
 
 /// A protocol to control the volume of target.
-[FragileBase]
 protocol VolumeControl {
     /// Binds to the target's volume control. If this target is a group,
     /// all member volumes are influenced. These settings persist
@@ -167,7 +164,6 @@ bits CapabilityFlags : uint64 {
 
 /// A protocol for selecting a media target. Commands on this protocol can
 /// change the target on which a media session is rendered.
-[FragileBase]
 protocol Selector {
     /// Renders the media session specified by `session_id` on the target
     /// specified by `target_id`.

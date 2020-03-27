@@ -105,7 +105,6 @@ protocol Paver {
 };
 
 /// Protocol for reading and writing boot partitions.
-[FragileBase]
 protocol DataSink {
     /// Reads partition corresponding to `configuration` and `asset` into a
     /// vmo and returns it.

@@ -76,7 +76,7 @@ const uint16 VMOID_INVALID = 0;
 
 // Defines access to a device which is accessible in block-granularity chunks
 // for reading and writing.
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol Block {
     // Get information about the underlying block device.
     GetInfo() -> (zx.status status, BlockInfo? info);

@@ -93,7 +93,6 @@ protocol Output {
 /// as well as the contents of Output and Input, represent actions that can be
 /// taken by an active device -- actions that should be immediately detected and
 /// reacted upon by the audio subsystem.
-[FragileBase]
 protocol Device {
     compose Configuration;
 
@@ -202,7 +201,6 @@ protocol Device {
 /// calling `Add()` (i.e., after Configuration has been converted into active
 /// Device), this only changes how future Devices will be created; it has no
 /// effect on already-created Devices.
-[FragileBase]
 protocol Configuration {
     /// Set the virtual audio device's name. This corresponds to the value
     /// associated with the device node for this virtual device. This must be

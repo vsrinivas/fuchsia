@@ -7,7 +7,6 @@ library fuchsia.hardware.block;
 using zx;
 
 /// It is treated as a separate protocol for extension if necessary.
-[FragileBase]
 protocol InspectVmoProvider {
     /// Requests the inspect vmo from the entity.
     ///  - |vmo| has |ZX_RIGHTS_DUPLICATE|, |ZX_RIGHTS_TRANSFER|, |ZX_RIGHTS_READ|

@@ -288,7 +288,7 @@ flexible union MetricEventPayload {
 // This interface conforms to the Simple layout so that Simple bindings
 // may be generated for it. For the full interfaces, see Logger and LoggerSimple
 // below.
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol LoggerBase {
     // Logs the fact that an event has occurred.
     //

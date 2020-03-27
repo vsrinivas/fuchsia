@@ -30,7 +30,6 @@ using interface_name = string:15;
 /// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
 /// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
 /// and clients that couple directly to this protocol will make those changes more difficult.
-[FragileBase]
 protocol BaseSocket {
     compose fuchsia.io.Node;
 

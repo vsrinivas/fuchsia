@@ -18,7 +18,6 @@ table MigrationState {
     2: uint8 progress_percentage;
 };
 
-[FragileBase]
 protocol Provider {
     Get(request<fuchsia.io.Directory> dir);
     Processed();

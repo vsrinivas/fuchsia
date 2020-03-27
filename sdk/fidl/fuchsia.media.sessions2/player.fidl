@@ -18,7 +18,6 @@ using fuchsia.media.audio;
 using Domain = string:1000;
 
 /// Controls for a media player.
-[FragileBase]
 protocol PlayerControl {
     /// Plays media.
     Play();

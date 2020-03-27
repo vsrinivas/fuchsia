@@ -269,7 +269,6 @@ union AudioCapturerConfiguration {
 // ++ Consider allowing the mixer to produce compressed audio.
 //
 
-[FragileBase]
 protocol AudioCapturer {
     compose StreamBufferSet;
     compose StreamSource;

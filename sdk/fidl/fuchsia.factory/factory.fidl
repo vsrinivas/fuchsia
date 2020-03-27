@@ -15,7 +15,6 @@ using fuchsia.io;
 /// surfaced by a component that implements FactoryStoreProvider (or any
 /// protocol that depends on it) are expected to be validated for consistency
 /// before being exposed to clients.
-[FragileBase]
 protocol FactoryStoreProvider {
     GetFactoryStore(request<fuchsia.io.Directory> dir);
 };

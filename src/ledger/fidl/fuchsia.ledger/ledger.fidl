@@ -30,7 +30,6 @@ struct PageId {
 /// the service, it can issue a `Sync` command. The response will be send once
 /// all request started before the `Sync` request has been processed by the
 /// service.
-[FragileBase]
 protocol Syncable {
     Sync() -> ();
 };

@@ -8,7 +8,6 @@ using zx;
 
 /// Node defines the minimal protocol for entities which can be accessed
 /// in a filesystem.
-[FragileBase]
 protocol Node {
     /// Creates another connection to the same node.
     ///

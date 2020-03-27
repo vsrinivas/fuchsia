@@ -19,7 +19,6 @@ using fuchsia.media.audio;
 /// `DiscardAllPackets` on the AudioRenderer (and ideally `Stop` before `DiscardAllPackets`), prior
 /// to reconfiguring the renderer.
 ///
-[FragileBase]
 protocol AudioRenderer {
     compose StreamBufferSet;
     compose StreamSink;

@@ -19,7 +19,7 @@ struct TestReport {
     uint32 failure_count;
 };
 
-[Layout = "Simple", FragileBase]
+[Layout = "Simple"]
 protocol Test {
     /// Execute the tests for this device. Returns the status from the test. If
     /// used as part of the Device protocol then Test output will be streamed to

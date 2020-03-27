@@ -15,7 +15,6 @@ enum ErrorReturn : uint32 {
 
 const ErrorReturn ERROR_RETURN_CONST = ErrorReturn.OK;
 
-[FragileBase]
 protocol TestInterface {
     TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
     TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);

@@ -8,7 +8,6 @@ using fuchsia.power;
 using zx;
 
 /// Controller interface to allow modification of battery state.
-[FragileBase]
 protocol BatterySimulatorController {
 
     /// Gets battery info. This should be called after

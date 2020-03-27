@@ -122,7 +122,6 @@ protocol KeyManager {
     DeleteKey(string:MAX_KEY_NAME_SIZE key_name) -> () error Error;
 };
 
-[FragileBase]
 protocol Key {
     /// Get the key origin (generated/imported).
     GetKeyOrigin() -> (KeyOrigin key_origin) error Error;

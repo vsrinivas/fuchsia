@@ -8,7 +8,6 @@ using fuchsia.media;
 using zx;
 
 /// Manages sources on behalf of a Player.
-[FragileBase]
 protocol SourceManager {
     /// Creates a source that reads from a file.
     CreateFileSource(handle<channel> file_channel,
@@ -44,7 +43,6 @@ protocol SourceManager {
 };
 
 /// A source of content that may be used by a player.
-[FragileBase]
 protocol Source {
     // Provides current status immediately after binding and whenever status
     // changes thereafter.
