@@ -32,6 +32,8 @@
 #include <fbl/array.h>
 #include <fbl/vector.h>
 
+#include "log.h"
+
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
 enum class FdioAction {
@@ -78,7 +80,7 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
-    printf("launch failed %s\n", zx_status_get_string(status));
+    log(ERROR, "launch failed %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -193,10 +195,10 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
                             actions.data(), proc.reset_and_get_address(), err_msg);
   }
   if (status != ZX_OK) {
-    printf("driver_manager: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
+    log(ERROR, "driver_manager: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
     return status;
   }
-  printf("driver_manager: launch %s (%s) OK\n", argv[0], name);
+  log(INFO, "driver_manager: launch %s (%s) OK\n", argv[0], name);
   if (out_proc != nullptr) {
     *out_proc = std::move(proc);
   }
@@ -231,9 +233,9 @@ ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {
 
 void ArgumentVector::Print(const char* prefix) const {
   const char* const* argv = argv_;
-  printf("%s: starting", prefix);
+  log(INFO, "%s: starting", prefix);
   for (const char* arg = *argv; arg != nullptr; ++argv, arg = *argv) {
-    printf(" '%s'", *argv);
+    log(INFO, " '%s'", *argv);
   }
-  printf("...\n");
+  log(INFO, "...\n");
 }

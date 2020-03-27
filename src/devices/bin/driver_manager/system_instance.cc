@@ -163,13 +163,13 @@ SystemInstance::SystemInstance(fdio_ns_t* default_ns) : default_ns_(default_ns),
 zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
   zx_status_t status = zx::job::create(root_job, 0u, &svc_job_);
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to create service job: %s\n",
+    log(ERROR, "driver_manager: failed to create service job: %s\n",
             zx_status_get_string(status));
     return 1;
   }
   status = svc_job_.set_property(ZX_PROP_NAME, "zircon-services", 16);
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to set service job name: %s\n",
+    log(ERROR, "driver_manager: failed to set service job name: %s\n",
             zx_status_get_string(status));
     return 1;
   }
@@ -242,7 +242,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   zx::channel virtcon_client;
   status = zx::channel::create(0, &virtcon_client, &virtcon_fidl_);
   if (status != ZX_OK) {
-    printf("Unable to create virtcon channel.\n");
+    log(ERROR, "Unable to create virtcon channel.\n");
     return status;
   }
 
@@ -377,7 +377,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
   zx::channel fs_handle = CloneFs("dev/class/sysmem");
   if (!fs_handle.is_valid()) {
-    printf("driver_manager: failed to clone /dev/class/sysmem\n");
+    log(ERROR, "driver_manager: failed to clone /dev/class/sysmem\n");
     return ZX_ERR_BAD_STATE;
   }
   actions.push_back((fdio_spawn_action_t){
@@ -390,10 +390,10 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   status = fdio_spawn_etc(svc_job_copy.get(), FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC,
                           argv[0], argv, NULL, actions.size(), actions.data(), &proc, errmsg);
   if (status != ZX_OK) {
-    printf("driver_manager: launch %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
+    log(ERROR, "driver_manager: launch %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
     return status;
   } else {
-    printf("driver_manager: launch %s (%s) OK\n", argv[0], name);
+    log(ERROR, "driver_manager: launch %s (%s) OK\n", argv[0], name);
   }
 
   zx::channel svchost_public_remote;
@@ -416,12 +416,12 @@ zx_status_t SystemInstance::ReuseExistingSvchost() {
   zx::channel dir_request;
   zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing_);
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to create svchost_outgoing channel\n");
+    log(ERROR, "driver_manager: failed to create svchost_outgoing channel\n");
     return 1;
   }
   status = fdio_service_connect("/svc", dir_request.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to connect to /svc\n");
+    log(ERROR, "driver_manager: failed to connect to /svc\n");
     return 1;
   }
 
@@ -452,25 +452,25 @@ int SystemInstance::PwrbtnMonitorStarter(Coordinator* coordinator) {
   zx_status_t status =
       svc_job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
   if (status != ZX_OK) {
-    printf("driver_manager: svc_job.duplicate failed %s\n", zx_status_get_string(status));
+    log(ERROR, "driver_manager: svc_job.duplicate failed %s\n", zx_status_get_string(status));
     return 1;
   }
 
   zx::debuglog debuglog;
   if ((status = zx::debuglog::create(coordinator->root_resource(), 0, &debuglog) != ZX_OK)) {
-    printf("driver_manager: cannot create debuglog handle\n");
+    log(ERROR, "driver_manager: cannot create debuglog handle\n");
     return 1;
   }
 
   zx::channel input_handle = CloneFs("dev/class/input");
   if (!input_handle.is_valid()) {
-    printf("driver_manager: failed to clone /dev/input\n");
+    log(ERROR, "driver_manager: failed to clone /dev/input\n");
     return 1;
   }
 
   zx::channel svc_handle = CloneFs("svc");
   if (!svc_handle.is_valid()) {
-    printf("driver_manager: failed to clone /svc\n");
+    log(ERROR, "driver_manager: failed to clone /svc\n");
     return 1;
   }
 
@@ -491,12 +491,12 @@ int SystemInstance::PwrbtnMonitorStarter(Coordinator* coordinator) {
   status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, nullptr,
                           fbl::count_of(actions), actions, nullptr, err_msg);
   if (status != ZX_OK) {
-    printf("driver_manager: spawn %s (%s) failed: %s: %s\n", argv[0], name, err_msg,
+    log(ERROR, "driver_manager: spawn %s (%s) failed: %s: %s\n", argv[0], name, err_msg,
            zx_status_get_string(status));
     return 1;
   }
 
-  printf("driver_manager: launch %s (%s) OK\n", argv[0], name);
+  log(INFO, "driver_manager: launch %s (%s) OK\n", argv[0], name);
   return 0;
 }
 
@@ -546,13 +546,13 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
   for (;;) {
     zx_status_t status = wait_for_file(console_params.device.data(), zx::time::infinite());
     if (status != ZX_OK) {
-      printf("driver_manager: failed to wait for console '%s' (%s)\n", console_params.device.data(),
+      log(ERROR, "driver_manager: failed to wait for console '%s' (%s)\n", console_params.device.data(),
              zx_status_get_string(status));
       return 1;
     }
     fbl::unique_fd fd(open(console_params.device.data(), O_RDWR));
     if (!fd.is_valid()) {
-      printf("driver_manager: failed to open console '%s'\n", console_params.device.data());
+      log(ERROR, "driver_manager: failed to open console '%s'\n", console_params.device.data());
       return 1;
     }
 
@@ -567,14 +567,14 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
       zx::channel virtio_channel;
       status = fdio_get_service_handle(fd.release(), virtio_channel.reset_and_get_address());
       if (status != ZX_OK) {
-        printf("driver_manager: failed to get console handle '%s'\n", console_params.device.data());
+        log(ERROR, "driver_manager: failed to get console handle '%s'\n", console_params.device.data());
         return 1;
       }
 
       zx::channel local, remote;
       status = zx::channel::create(0, &local, &remote);
       if (status != ZX_OK) {
-        printf("driver_manager: failed to create channel for console '%s'\n",
+        log(ERROR, "driver_manager: failed to create channel for console '%s'\n",
                console_params.device.data());
         return 1;
       }
@@ -586,7 +586,7 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
       fdio_t* fdio;
       status = fdio_create(local.release(), &fdio);
       if (status != ZX_OK) {
-        printf("driver_manager: failed to setup fdio for console '%s'\n",
+        log(ERROR, "driver_manager: failed to setup fdio for console '%s'\n",
                console_params.device.data());
         return 1;
       }
@@ -594,7 +594,7 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
       fd.reset(fdio_bind_to_fd(fdio, -1, 3));
       if (!fd.is_valid()) {
         fdio_unsafe_release(fdio);
-        printf("driver_manager: failed to transfer fdio for console '%s'\n",
+        log(ERROR, "driver_manager: failed to transfer fdio for console '%s'\n",
                console_params.device.data());
         return 1;
       }
@@ -603,7 +603,7 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
     zx::channel ldsvc;
     status = clone_fshost_ldsvc(&ldsvc);
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to clone fshost loader for console: %d\n", status);
+      log(ERROR, "driver_manager: failed to clone fshost loader for console: %d\n", status);
       return 1;
     }
 
@@ -613,24 +613,24 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
                                         argv_sh, envp, fd.release(), zx::resource(), nullptr,
                                         nullptr, 0, &proc, FS_ALL);
     if (status != ZX_OK) {
-      printf("driver_manager: failed to launch console shell (%s)\n", zx_status_get_string(status));
+      log(ERROR, "driver_manager: failed to launch console shell (%s)\n", zx_status_get_string(status));
       return 1;
     }
 
     status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
-      printf("driver_manager: failed to wait for console shell termination (%s)\n",
+      log(ERROR, "driver_manager: failed to wait for console shell termination (%s)\n",
              zx_status_get_string(status));
       return 1;
     }
     zx_info_process_t proc_info;
     status = proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
     if (status != ZX_OK) {
-      printf("driver_manager: failed to determine console shell termination cause (%s)\n",
+      log(ERROR, "driver_manager: failed to determine console shell termination cause (%s)\n",
              zx_status_get_string(status));
       return 1;
     }
-    printf(
+    log(INFO,
         "driver_manager: console shell exited (started=%d exited=%d, return_code=%ld), "
         "restarting\n",
         proc_info.started, proc_info.exited, proc_info.return_code);
@@ -668,7 +668,7 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
     zx::channel ldsvc;
     zx_status_t status = clone_fshost_ldsvc(&ldsvc);
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to clone loader for miscsvc: %d\n", status);
+      log(ERROR, "driver_manager: failed to clone loader for miscsvc: %d\n", status);
       return -1;
     }
 
@@ -794,7 +794,7 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
 
   if (!params.clock_backstop.empty()) {
     auto offset = zx::sec(atoi(params.clock_backstop.data()));
-    printf("driver_manager: setting UTC backstop: %ld\n", offset.get());
+    log(INFO, "driver_manager: setting UTC backstop: %ld\n", offset.get());
     zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset.get());
   }
 
@@ -823,7 +823,7 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   // this should switch to use that
   int fd = open("/system-delayed", O_RDONLY);
   if (!fd) {
-    fprintf(stderr,
+    log(ERROR,
             "driver_manager: failed to open /system-delayed! System drivers and autorun:system "
             "won't work!\n");
     return 1;
@@ -864,7 +864,7 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
     zx::channel ldsvc;
     zx_status_t status = clone_fshost_ldsvc(&ldsvc);
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to clone fshost loader for console: %d\n", status);
+      log(ERROR, "driver_manager: failed to clone fshost loader for console: %d\n", status);
       return;
     }
 
@@ -872,7 +872,7 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
                                         nullptr, -1, root_resource, nullptr, nullptr, 0, nullptr,
                                         FS_ALL);
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: autorun \"%s\" failed: %s\n", name,
+      log(ERROR, "driver_manager: autorun \"%s\" failed: %s\n", name,
               zx_status_get_string(status));
     }
   }

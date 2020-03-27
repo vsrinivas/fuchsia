@@ -65,14 +65,14 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
   drv->name.Set(note->name);
 
 #if VERBOSE_DRIVER_LOAD
-  printf("found driver: %s\n", (char*)cookie);
-  printf("        name: %s\n", note->name);
-  printf("      vendor: %s\n", note->vendor);
-  printf("     version: %s\n", note->version);
-  printf("       flags: %#x\n", note->flags);
-  printf("     binding:\n");
+  log(INFO, "found driver: %s\n", (char*)cookie);
+  log(INFO, "        name: %s\n", note->name);
+  log(INFO, "      vendor: %s\n", note->vendor);
+  log(INFO, "     version: %s\n", note->version);
+  log(INFO, "       flags: %#x\n", note->flags);
+  log(INFO, "     binding:\n");
   for (size_t n = 0; n < note->bindcount; n++) {
-    printf("         %03zd: %08x %08x\n", n, bi[n].op, bi[n].arg);
+    log(INFO, "         %03zd: %08x %08x\n", n, bi[n].op, bi[n].arg);
   }
 #endif
 
@@ -112,9 +112,9 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
 
     if (status) {
       if (status == ZX_ERR_NOT_FOUND) {
-        printf("driver_manager: no driver info in '%s'\n", libname);
+        log(INFO, "driver_manager: no driver info in '%s'\n", libname);
       } else {
-        printf("driver_manager: error reading info from '%s'\n", libname);
+        log(ERROR, "driver_manager: error reading info from '%s'\n", libname);
       }
     }
   }
@@ -125,7 +125,7 @@ void load_driver(const char* path, DriverLoadCallback func) {
   // TODO: check for duplicate driver add
   int fd;
   if ((fd = open(path, O_RDONLY)) < 0) {
-    printf("driver_manager: cannot open '%s'\n", path);
+    log(ERROR, "driver_manager: cannot open '%s'\n", path);
     return;
   }
 
@@ -135,9 +135,9 @@ void load_driver(const char* path, DriverLoadCallback func) {
 
   if (status) {
     if (status == ZX_ERR_NOT_FOUND) {
-      printf("driver_manager: no driver info in '%s'\n", path);
+      log(ERROR, "driver_manager: no driver info in '%s'\n", path);
     } else {
-      printf("driver_manager: error reading info from '%s'\n", path);
+      log(ERROR, "driver_manager: error reading info from '%s'\n", path);
     }
   }
 }

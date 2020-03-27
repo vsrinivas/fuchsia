@@ -95,13 +95,13 @@ std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminS
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    printf("driver_manager: Failed connect to fshost admin, failed to create channel: %s\n",
+    log(ERROR, "driver_manager: Failed connect to fshost admin, failed to create channel: %s\n",
            zx_status_get_string(status));
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
   status = fdio_service_connect(kFshostAdminPath, remote.release());
   if (status != ZX_OK) {
-    printf("driver_manager: Failed to connect to fuchsia.fshost.Admin: %s\n",
+    log(ERROR, "driver_manager: Failed to connect to fuchsia.fshost.Admin: %s\n",
            zx_status_get_string(status));
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
@@ -155,11 +155,11 @@ void Coordinator::ShutdownFilesystems() {
   }
   auto result = fshost_admin_client_->Shutdown();
   if (result.status() != ZX_OK) {
-    printf("driver_manager: Failed to cause VFS exit: %s\n", zx_status_get_string(result.status()));
+    log(ERROR, "driver_manager: Failed to cause VFS exit: %s\n", zx_status_get_string(result.status()));
     return;
   }
 
-  printf("driver_manager: Successfully waited for VFS exit completion\n");
+  log(INFO, "driver_manager: Successfully waited for VFS exit completion\n");
 }
 
 zx_status_t Coordinator::InitCoreDevices(const char* sys_device_driver) {
@@ -1325,7 +1325,7 @@ static void dump_suspend_task_dependencies(const SuspendTask* task, int depth = 
     if (status != ZX_OK) {
       strlcpy(process_name, "unknown", sizeof(process_name));
     }
-    printf("Backtrace of threads of process %lu:%s\n", pid, process_name);
+    log(INFO, "Backtrace of threads of process %lu:%s\n", pid, process_name);
     inspector_print_debug_info_for_all_threads(stdout, process->get());
   }
   for (const auto* dependency : task->Dependencies()) {
@@ -1757,7 +1757,7 @@ void Coordinator::BindSystemDrivers() {
   }
   // Bind remaining fallback drivers.
   while ((drv = fallback_drivers_.pop_front()) != nullptr) {
-    printf("driver_manager: fallback driver '%s' is available\n", drv->name.data());
+    log(INFO, "driver_manager: fallback driver '%s' is available\n", drv->name.data());
     drivers_.push_back(drv);
     zx_status_t status = BindDriver(drv);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
@@ -1901,7 +1901,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_Administrator_dispatch),
                   this, &kOps);
     if (status != ZX_OK) {
-      printf("Failed to bind to client channel: %d \n", status);
+      log(ERROR, "Failed to bind to client channel: %d \n", status);
     }
     return status;
   };
@@ -1915,7 +1915,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     auto status = fidl::Bind<llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface>(
         this->config_.dispatcher, std::move(request), this);
     if (status != ZX_OK) {
-      printf("Failed to bind to client channel: %d \n", status);
+      log(ERROR, "Failed to bind to client channel: %d \n", status);
     }
     return status;
   };
@@ -1930,7 +1930,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     auto status = fidl::Bind<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
         this->config_.dispatcher, std::move(request), this);
     if (status != ZX_OK) {
-      printf("Failed to bind to client channel: %d \n", status);
+      log(ERROR, "Failed to bind to client channel: %d \n", status);
     }
     return status;
   };
@@ -1968,7 +1968,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_DebugDumper_dispatch),
                   this, &kOps);
     if (status != ZX_OK) {
-      printf("Failed to bind to client channel: %d \n", status);
+      log(ERROR, "Failed to bind to client channel: %d \n", status);
     }
     return status;
   };

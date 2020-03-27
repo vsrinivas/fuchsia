@@ -12,6 +12,7 @@
 #include "binding_internal.h"
 #include "coordinator.h"
 #include "device.h"
+#include "log.h"
 
 namespace internal {
 
@@ -75,7 +76,7 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
           break;
         default:
           // illegal instruction: abort
-          printf("driver_manager: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
+          log(ERROR, "driver_manager: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
           return false;
       }
     } else {
@@ -95,7 +96,7 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
               goto next_instruction;
             }
           }
-          printf("driver_manager: driver '%s' illegal GOTO\n", ctx->name);
+          log(ERROR, "driver_manager: driver '%s' illegal GOTO\n", ctx->name);
           return false;
         }
         case OP_LABEL:
@@ -103,7 +104,7 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
           break;
         default:
           // illegal instruction: abort
-          printf("driver_manager: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
+          log(ERROR, "driver_manager: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
           return false;
       }
     }

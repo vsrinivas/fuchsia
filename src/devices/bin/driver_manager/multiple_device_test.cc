@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "log.h"
+
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(

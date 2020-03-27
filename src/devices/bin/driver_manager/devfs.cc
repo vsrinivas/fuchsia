@@ -812,7 +812,7 @@ zx::channel devfs_root_clone() { return zx::channel(fdio_service_clone(g_devfs_r
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
   root_devnode = std::make_unique<Devnode>("");
   if (!root_devnode) {
-    printf("driver_manager: failed to allocate devfs root node\n");
+    log(ERROR, "driver_manager: failed to allocate devfs root node\n");
     return;
   }
   root_devnode->ino = 1;

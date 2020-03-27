@@ -131,16 +131,16 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
   };
 
   auto print_usage_and_exit = [options]() {
-    printf("driver_manager: supported arguments:\n");
+    log(INFO, "driver_manager: supported arguments:\n");
     for (const auto& option : options) {
-      printf("  --%s\n", option.name);
+      log(INFO, "  --%s\n", option.name);
     }
     abort();
   };
 
   auto check_not_duplicated = [print_usage_and_exit](const char* arg) {
     if (arg != nullptr) {
-      printf("driver_manager: duplicated argument\n");
+      log(ERROR, "driver_manager: duplicated argument\n");
       print_usage_and_exit();
     }
   };
@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
   // TODO(ZX-4178): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);
   if (status != ZX_OK) {
-    fprintf(stderr,
+    log(INFO,
             "driver_manager: failed to get root resource, assuming test "
             "environment and continuing\n");
   }
@@ -269,19 +269,19 @@ int main(int argc, char** argv) {
   zx::job root_job;
   status = get_root_job(&root_job);
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to get root job: %d\n", status);
+    log(ERROR, "driver_manager: failed to get root job: %d\n", status);
     return 1;
   }
   status = CreateDevhostJob(root_job, &config.devhost_job);
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to create devhost job: %d\n", status);
+    log(ERROR, "driver_manager: failed to create devhost job: %d\n", status);
     return 1;
   }
 
   zx_handle_t oom_event;
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
-    fprintf(stderr,
+    log(INFO,
             "driver_manager: failed to get oom event, assuming test "
             "environment and continuing\n");
   } else {
@@ -294,7 +294,7 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing{loop.dispatcher()};
   status = coordinator.InitOutgoingServices(outgoing.svc_dir());
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to initialize outgoing services\n");
+    log(ERROR, "driver_manager: failed to initialize outgoing services\n");
     return 1;
   }
 
@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
   if (outgoing_svc_dir_client.is_valid()) {
     status = outgoing.Serve(std::move(outgoing_svc_dir_client));
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to bind outgoing services\n");
+      log(ERROR, "driver_manager: failed to bind outgoing services\n");
       return 1;
     }
   }
@@ -336,7 +336,7 @@ int main(int argc, char** argv) {
 
   status = system_instance.PrepareChannels();
   if (status != ZX_OK) {
-    fprintf(stderr, "driver_manager: failed to create other system channels %s\n",
+    log(ERROR, "driver_manager: failed to create other system channels %s\n",
             zx_status_get_string(status));
     return 1;
   }
@@ -349,20 +349,20 @@ int main(int argc, char** argv) {
     }
     status = outgoing.Serve(std::move(root_server));
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to bind outgoing services\n");
+      log(ERROR, "driver_manager: failed to bind outgoing services\n");
       return 1;
     }
     status = system_instance.StartSvchost(root_job, root_client,
                                           driver_manager_params.require_system, &coordinator);
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to start svchost: %s\n",
+      log(ERROR, "driver_manager: failed to start svchost: %s\n",
               zx_status_get_string(status));
       return 1;
     }
   } else {
     status = system_instance.ReuseExistingSvchost();
     if (status != ZX_OK) {
-      fprintf(stderr, "driver_manager: failed to reuse existing svchost: %s\n",
+      log(ERROR, "driver_manager: failed to reuse existing svchost: %s\n",
               zx_status_get_string(status));
       return 1;
     }
@@ -416,7 +416,7 @@ int main(int argc, char** argv) {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
-        fprintf(stderr, "driver_manager: failed to clone fshost loader for driver_host: %s\n",
+        log(ERROR, "driver_manager: failed to clone fshost loader for driver_host: %s\n",
                 zx_status_get_string(status));
       }
       return status;
@@ -431,7 +431,7 @@ int main(int argc, char** argv) {
   }
 
   if (coordinator.require_system() && !coordinator.system_loaded()) {
-    printf(
+    log(INFO,
         "driver_manager: full system required, ignoring fallback drivers until /system is "
         "loaded\n");
   } else {
@@ -454,6 +454,6 @@ int main(int argc, char** argv) {
 
   coordinator.set_running(true);
   status = loop.Run();
-  fprintf(stderr, "driver_manager: coordinator exited unexpectedly: %d\n", status);
+  log(ERROR, "driver_manager: coordinator exited unexpectedly: %d\n", status);
   return status == ZX_OK ? 0 : 1;
 }

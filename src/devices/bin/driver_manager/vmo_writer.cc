@@ -9,6 +9,8 @@
 
 #include <cstdarg>
 
+#include "log.h"
+
 void VmoWriter::Printf(const char* fmt, ...) {
   if (status_ != ZX_OK) {
     return;
@@ -36,7 +38,7 @@ void VmoWriter::Printf(const char* fmt, ...) {
   auto status = vmo_.write(buf, written_, length);
   if (status != ZX_OK) {
     status_ = status;
-    printf("Unable to write to vmo. status: %d \n", status);
+    log(ERROR, "Unable to write to vmo. status: %d \n", status);
     return;
   }
 

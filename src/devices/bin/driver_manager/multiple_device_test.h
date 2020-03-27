@@ -13,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "coordinator_test_utils.h"
+#include "log.h"
 
 class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
  public:
@@ -23,7 +24,7 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
-      printf(
+      log(ERROR,
           "driver_manager: failed to create client for mock fshost admin, failed to create "
           "channel: %s\n",
           zx_status_get_string(status));
@@ -32,7 +33,7 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
 
     status = fidl::Bind(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
-      printf("driver_manager: failed to create client for mock fshost admin, failed to bind: %s\n",
+      log(ERROR, "driver_manager: failed to create client for mock fshost admin, failed to bind: %s\n",
              zx_status_get_string(status));
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
     }
