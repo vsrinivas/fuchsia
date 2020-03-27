@@ -22,6 +22,7 @@ class WeaveConfigReader {
  public:
   virtual ~WeaveConfigReader() = default;
   virtual WEAVE_ERROR ReadConfigValue(const std::string& key, bool* value) const = 0;
+  virtual WEAVE_ERROR ReadConfigValue(const std::string& key, uint16_t* value) const = 0;
   virtual WEAVE_ERROR ReadConfigValue(const std::string& key, uint32_t* value) const = 0;
   virtual WEAVE_ERROR ReadConfigValue(const std::string& key, uint64_t* value) const = 0;
   virtual WEAVE_ERROR ReadConfigValueStr(const std::string& key, char* value, size_t value_size,
@@ -66,6 +67,7 @@ class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
   WeaveConfigManager& operator=(WeaveConfigManager&&) = delete;
 
   WEAVE_ERROR ReadConfigValue(const std::string& key, bool* value) const override;
+  WEAVE_ERROR ReadConfigValue(const std::string& key, uint16_t* value) const override;
   WEAVE_ERROR ReadConfigValue(const std::string& key, uint32_t* value) const override;
   WEAVE_ERROR ReadConfigValue(const std::string& key, uint64_t* value) const override;
   WEAVE_ERROR ReadConfigValueStr(const std::string& key, char* value, size_t value_size,

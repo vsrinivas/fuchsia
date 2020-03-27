@@ -91,27 +91,11 @@ WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreHWInfo() {
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendorId) {
-  uint32_t val;
-  WEAVE_ERROR err = config_data_reader_->ReadConfigValue(kDeviceConfigKey_VendorId, &val);
-  if (WEAVE_NO_ERROR == err) {
-    if (val > UINT16_MAX) {
-      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-    }
-    vendorId = (uint16_t)val;
-  }
-  return err;
+  return config_data_reader_->ReadConfigValue(kDeviceConfigKey_VendorId, &vendorId);
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetProductId(uint16_t& productId) {
-  uint32_t val;
-  WEAVE_ERROR err = config_data_reader_->ReadConfigValue(kDeviceConfigKey_ProductId, &val);
-  if (WEAVE_NO_ERROR == err) {
-    if (val > UINT16_MAX) {
-      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-    }
-    productId = (uint16_t)val;
-  }
-  return err;
+  return config_data_reader_->ReadConfigValue(kDeviceConfigKey_ProductId, &productId);
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t bufSize,

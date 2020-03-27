@@ -49,6 +49,18 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* va
   return WEAVE_NO_ERROR;
 }
 
+WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint16_t* value) const {
+  uint32_t int_value;
+  WEAVE_ERROR error = ReadConfigValue(key, &int_value);
+  if (error != WEAVE_NO_ERROR) {
+    return error;
+  } else if (int_value > UINT16_MAX) {
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+  *value = (uint16_t)int_value;
+  return WEAVE_NO_ERROR;
+}
+
 WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint32_t* value) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;

@@ -84,6 +84,22 @@ TEST_F(WeaveConfigManagerTest, ReadWriteUint) {
   EXPECT_EQ(file_contents, kTestConfigStoreContents);
 }
 
+TEST_F(WeaveConfigManagerTest, ReadUint16InvalidSize) {
+  constexpr char kTestKeyUint16[] = "test-key-uint16";
+  constexpr uint32_t kTestValUint = UINT16_MAX + 1;
+  constexpr char kTestConfigStoreContents[] = "{\"test-key-uint16\":65536}";
+
+  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyUint16, kTestValUint), WEAVE_NO_ERROR);
+
+  uint16_t read_value = 0U;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint16, &read_value),
+            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+
+  std::string file_contents;
+  EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
+  EXPECT_EQ(file_contents, kTestConfigStoreContents);
+}
+
 TEST_F(WeaveConfigManagerTest, ReadWriteUint64) {
   constexpr char kTestKeyUint64[] = "test-key-uint64";
   constexpr uint64_t kTestValUint64 = 123456789U;
@@ -98,6 +114,21 @@ TEST_F(WeaveConfigManagerTest, ReadWriteUint64) {
   std::string file_contents;
   EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
   EXPECT_EQ(file_contents, kTestConfigStoreContents);
+}
+
+TEST_F(WeaveConfigManagerTest, ReadFailOnNegativeValues) {
+  constexpr char kTestKeyUint[] = "test-key-uint";
+  constexpr char kTestKeyUint16[] = "test-key-uint16";
+  constexpr char kTestKeyUint64[] = "test-key-uint64";
+  constexpr char kTestConfigStoreContents[] = "{\"test-key-uint\":-1,\"test-key-uint16\":-1,\"test-key-uint64\":-1}";
+  EXPECT_FALSE(files::IsFile(kWeaveConfigStoreAltTestPath));
+  EXPECT_TRUE(files::WriteFile(kWeaveConfigStoreAltTestPath, kTestConfigStoreContents,
+                               strlen(kTestConfigStoreContents)));
+
+  uint64_t read_value = 0U;
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint, &read_value), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint16, &read_value), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint64, &read_value), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 }
 
 TEST_F(WeaveConfigManagerTest, ReadWriteString) {
