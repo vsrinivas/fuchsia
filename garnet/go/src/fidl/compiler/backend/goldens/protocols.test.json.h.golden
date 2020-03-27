@@ -108,7 +108,7 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
  public:
   static const fidl_type_t* FidlType;
   WithErrorSyntax_ResponseAsStruct_Response() = default;
-  WithErrorSyntax_ResponseAsStruct_Response(std::tuple<int64_t, int64_t, int64_t>&& _value_tuple) {
+  explicit WithErrorSyntax_ResponseAsStruct_Response(std::tuple<int64_t, int64_t, int64_t> _value_tuple) {
     std::tie(a, b, c) = std::move(_value_tuple);
   }
   operator std::tuple<int64_t, int64_t, int64_t>() && {
@@ -213,7 +213,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   WithErrorSyntax_ResponseAsStruct_Result(fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(result.take_value());
+      set_response(WithErrorSyntax_ResponseAsStruct_Response{result.take_value()});
     } else {
       set_err(std::move(result.take_error()));
     }
@@ -251,9 +251,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
  public:
   static const fidl_type_t* FidlType;
   WithErrorSyntax_ErrorAsPrimitive_Response() = default;
-  explicit WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t&& v) : __reserved(std::move(v)) {}
-  uint8_t&& ResultValue_() { return std::move(__reserved); }
-  WithErrorSyntax_ErrorAsPrimitive_Response(std::tuple<>&& _value_tuple) {
+  explicit WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t v) : __reserved(std::move(v)) {}
+  uint8_t ResultValue_() { return std::move(__reserved); }
+  explicit WithErrorSyntax_ErrorAsPrimitive_Response(std::tuple<> _value_tuple) {
   }
   operator std::tuple<>() && {
     return std::make_tuple(
@@ -391,9 +391,9 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
  public:
   static const fidl_type_t* FidlType;
   WithErrorSyntax_ErrorAsEnum_Response() = default;
-  explicit WithErrorSyntax_ErrorAsEnum_Response(uint8_t&& v) : __reserved(std::move(v)) {}
-  uint8_t&& ResultValue_() { return std::move(__reserved); }
-  WithErrorSyntax_ErrorAsEnum_Response(std::tuple<>&& _value_tuple) {
+  explicit WithErrorSyntax_ErrorAsEnum_Response(uint8_t v) : __reserved(std::move(v)) {}
+  uint8_t ResultValue_() { return std::move(__reserved); }
+  explicit WithErrorSyntax_ErrorAsEnum_Response(std::tuple<> _value_tuple) {
   }
   operator std::tuple<>() && {
     return std::make_tuple(

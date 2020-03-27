@@ -135,10 +135,8 @@ class {{ .Name }} final {
     if (result.is_ok()) {
       {{- if eq 0 .Result.ValueArity }}
       set_response({{ .Result.ValueStructDecl }}{});
-      {{- else if eq 1 .Result.ValueArity }}
-      set_response({{ .Result.ValueStructDecl }}{result.take_value()});
       {{- else }}
-      set_response(result.take_value());
+      set_response({{ .Result.ValueStructDecl }}{result.take_value()});
       {{- end }}
     } else {
       set_err(std::move(result.take_error()));

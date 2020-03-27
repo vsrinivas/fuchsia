@@ -33,9 +33,9 @@ class Example_foo_Response final {
  public:
   static const fidl_type_t* FidlType;
   Example_foo_Response() = default;
-  explicit Example_foo_Response(int64_t&& v) : y(std::move(v)) {}
-  int64_t&& ResultValue_() { return std::move(y); }
-  Example_foo_Response(std::tuple<int64_t>&& _value_tuple) {
+  explicit Example_foo_Response(int64_t v) : y(std::move(v)) {}
+  int64_t ResultValue_() { return std::move(y); }
+  explicit Example_foo_Response(std::tuple<int64_t> _value_tuple) {
     std::tie(y) = std::move(_value_tuple);
   }
   operator std::tuple<int64_t>() && {

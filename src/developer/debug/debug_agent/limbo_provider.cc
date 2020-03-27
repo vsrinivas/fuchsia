@@ -160,7 +160,7 @@ zx_status_t LimboProvider::RetrieveException(zx_koid_t process_koid,
   if (result.is_err())
     return result.err();
 
-  *out = std::move(result.response().ResultValue_());
+  *out = result.response().ResultValue_();
   return ZX_OK;
 }
 

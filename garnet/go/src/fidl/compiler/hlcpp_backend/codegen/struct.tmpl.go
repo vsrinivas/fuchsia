@@ -21,10 +21,10 @@ class {{ .Name }} final {
   {{ .Name }}() = default;
 
   {{- if eq 1 (len .Members) }}
-  explicit {{ .Name }}({{ (index .Members 0).Type.Decl }}&& v) : {{ (index .Members 0).Name }}(std::move(v)) {}
-  {{ (index .Members 0).Type.Decl }}&& ResultValue_() { return std::move({{ (index .Members 0).Name }}); }
+  explicit {{ .Name }}({{ (index .Members 0).Type.Decl }} v) : {{ (index .Members 0).Name }}(std::move(v)) {}
+  {{ (index .Members 0).Type.Decl }} ResultValue_() { return std::move({{ (index .Members 0).Name }}); }
   {{- end }}
-  {{ .Name }}({{ .Result.ValueTupleDecl }}&& _value_tuple) {
+  explicit {{ .Name }}({{ .Result.ValueTupleDecl }} _value_tuple) {
     {{- if .Result.ValueArity }}
     std::tie(
       {{- range $index, $member := .Members }}
