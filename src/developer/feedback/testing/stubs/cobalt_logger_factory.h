@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
@@ -20,7 +21,7 @@ namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
-class CobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
+class CobaltLoggerFactoryBase : public ::fuchsia::cobalt::testing::LoggerFactory_TestBase {
  public:
   CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
   virtual ~CobaltLoggerFactoryBase() {}
@@ -62,6 +63,10 @@ class CobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
       uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectIdCallback callback) override {
     FXL_NOTIMPLEMENTED();
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
   std::unique_ptr<CobaltLoggerBase> logger_;
