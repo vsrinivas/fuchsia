@@ -51,11 +51,6 @@ class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory:
     ZX_PANIC("Not Implemented.");
   }
 
-  void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id, ::zx::channel logger,
-                                   CreateLoggerFromProjectSpecCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
-  }
-
   void set_create_logger_handler(fit::function<Status(uint32_t, zx::channel)> handler) {
     create_logger_handler_ = std::move(handler);
   }

@@ -26,8 +26,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   // success or an error status otherwise. |LoggerInterface| should be Logger or LoggerSimple.
   template <typename LoggerInterface, typename Callback>
   void CreateAndBindLoggerFromProjectId(
-      uint32_t customer_id, uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request,
-      Callback callback,
+      uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
       fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
   void CreateLoggerFromProjectId(uint32_t project_id,
@@ -37,10 +36,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLoggerSimpleFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerSimpleFromProjectIdCallback callback);
-
-  void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id,
-                                   fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                                   CreateLoggerFromProjectSpecCallback callback);
 
   fidl::BindingSet<fuchsia::cobalt::Logger, std::unique_ptr<fuchsia::cobalt::Logger>>
       logger_bindings_;
