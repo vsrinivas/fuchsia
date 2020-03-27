@@ -89,6 +89,7 @@ esac
 shift
 done
 
+check-ssh-config
 if [[ "${AUTH_KEYS_FILE}" != "" ]]; then
   auth_keys_file="${AUTH_KEYS_FILE}"
 else
