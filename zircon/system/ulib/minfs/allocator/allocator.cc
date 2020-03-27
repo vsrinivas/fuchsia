@@ -51,7 +51,7 @@ zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
   if (status != ZX_OK) {
     return status;
   }
-  UnownedBuffer buffer(vmoid.TakeId());
+  UnownedBuffer buffer(vmoid.get());
   builder->AddVmoid(std::move(vmoid));
   storage_->Load(builder, &buffer);
   return ZX_OK;
