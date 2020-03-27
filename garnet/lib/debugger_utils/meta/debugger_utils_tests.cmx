@@ -1,19 +1,19 @@
 {
-  "facets": {
-    "fuchsia.test": {
-      "system-services": [
-        "fuchsia.boot.RootJob"
-      ]
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/debugger_utils_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.RootJob",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
     }
-  },
-  "program": {
-    "binary": "test/debugger_utils_tests"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.boot.RootJob",
-      "fuchsia.process.Launcher",
-      "fuchsia.process.Resolver"
-    ]
-  }
 }

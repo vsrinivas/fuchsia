@@ -1,8 +1,11 @@
 {
-   "program": {
-       "binary": "bin/app"
-   },
-   "sandbox": {
-       "services": [ "fuchsia.sys.Launcher", "fidl.examples.echo.Echo" ]
-   }
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fidl.examples.echo.Echo"
+        ]
+    }
 }

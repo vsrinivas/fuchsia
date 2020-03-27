@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.hardware.pty.Device"
+            ]
+        }
+    },
     "program": {
         "binary": "test/cmd_unittests"
     },
@@ -7,12 +14,5 @@
             "fuchsia.hardware.pty.Device",
             "fuchsia.process.Launcher"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.hardware.pty.Device"
-            ]
-        }
     }
 }

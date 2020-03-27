@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-            "fuchsia.scheduler.ProfileProvider"
+                "fuchsia.scheduler.ProfileProvider"
             ]
         }
     },

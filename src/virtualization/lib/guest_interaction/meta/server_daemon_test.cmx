@@ -1,13 +1,13 @@
 {
-    "program": {
-        "binary": "test/server_daemon_test"
-    },
     "facets": {
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.sysinfo.SysInfo"
             ]
         }
+    },
+    "program": {
+        "binary": "test/server_daemon_test"
     },
     "sandbox": {
         "features": [

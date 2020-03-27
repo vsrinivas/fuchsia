@@ -2,11 +2,11 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.tracing.provider.Registry": [
+                "fuchsia.tracing.controller.Controller": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=4"
                 ],
-                "fuchsia.tracing.controller.Controller": [
+                "fuchsia.tracing.provider.Registry": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=4"
                 ]
@@ -17,7 +17,9 @@
         "binary": "test/cpuperf_provider_integration_tests"
     },
     "sandbox": {
-        "dev": [ "sys/cpu-trace" ],
+        "dev": [
+            "sys/cpu-trace"
+        ],
         "features": [
             "deprecated-shell",
             "isolated-temp"

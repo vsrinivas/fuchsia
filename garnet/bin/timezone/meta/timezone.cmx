@@ -3,6 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "isolated-persistent-storage" ]
+        "features": [
+            "isolated-persistent-storage"
+        ]
     }
 }

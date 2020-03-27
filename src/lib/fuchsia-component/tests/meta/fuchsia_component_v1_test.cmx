@@ -1,5 +1,5 @@
 {
-  "program": {
-    "binary": "test/fuchsia_component_v1_test"
-  }
+    "program": {
+        "binary": "test/fuchsia_component_v1_test"
+    }
 }

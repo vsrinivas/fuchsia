@@ -3,6 +3,8 @@
         "binary": "bin/isolated_cache_example"
     },
     "sandbox": {
-        "features": [ "isolated-cache-storage" ]
+        "features": [
+            "isolated-cache-storage"
+        ]
     }
 }

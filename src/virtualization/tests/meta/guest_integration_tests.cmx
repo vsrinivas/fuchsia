@@ -1,13 +1,13 @@
 {
-    "program": {
-        "binary": "test/guest_integration_tests"
-    },
     "facets": {
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.sysinfo.SysInfo"
             ]
         }
+    },
+    "program": {
+        "binary": "test/guest_integration_tests"
     },
     "sandbox": {
         "features": [

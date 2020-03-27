@@ -4,12 +4,12 @@
     },
     "sandbox": {
         "dev": [
-          "misc",
-          "sys/cpu-trace"
+            "misc",
+            "sys/cpu-trace"
         ],
         "features": [
-          "isolated-persistent-storage",
-          "isolated-temp"
+            "isolated-persistent-storage",
+            "isolated-temp"
         ]
     }
 }

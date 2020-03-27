@@ -1,14 +1,14 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.kms.KeyManager": "fuchsia-pkg://fuchsia.com/kms#meta/key_manager.cmx",
+                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/kms_test_client"
-    },
-    "facets": {
-      "fuchsia.test": {
-        "injected-services" : {
-          "fuchsia.kms.KeyManager": "fuchsia-pkg://fuchsia.com/kms#meta/key_manager.cmx",
-          "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
-        }
-      }
     },
     "sandbox": {
         "features": [

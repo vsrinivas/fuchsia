@@ -1,11 +1,11 @@
 {
-  "program": {
-    "binary": "test/setui_client_interface_test"
-  },
-  "sandbox": {
-    "services": [
-        "fuchsia.sys.Environment",
-        "fuchsia.sys.Loader"
-    ]
-  }
+    "program": {
+        "binary": "test/setui_client_interface_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
 }

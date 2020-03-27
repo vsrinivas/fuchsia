@@ -2,11 +2,11 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.tracing.provider.Registry": [
+                "fuchsia.tracing.controller.Controller": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ],
-                "fuchsia.tracing.controller.Controller": [
+                "fuchsia.tracing.provider.Registry": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ]
@@ -18,8 +18,8 @@
     },
     "sandbox": {
         "features": [
-	    "isolated-temp",
-	    "shell-commands"
+            "isolated-temp",
+            "shell-commands"
         ],
         "services": [
             "fuchsia.sys.Launcher",

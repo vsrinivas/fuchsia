@@ -3,11 +3,15 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "misc",
+            "class/thermal",
+            "class/gpu-thermal"
+        ],
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.logger.LogSink"
-        ],
-        "dev": [ "misc", "class/thermal", "class/gpu-thermal" ]
+        ]
     }
 }

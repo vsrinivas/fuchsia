@@ -1,5 +1,5 @@
 {
-  "program": {
-    "binary": "test/containers_cpp_unittests"
-  }
+    "program": {
+        "binary": "test/containers_cpp_unittests"
+    }
 }

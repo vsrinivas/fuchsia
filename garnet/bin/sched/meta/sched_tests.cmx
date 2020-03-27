@@ -1,22 +1,22 @@
 {
-  "program": {
-    "binary": "test/sched_tests"
-  },
-  "sandbox": {
-    "features": [
-      "shell-commands"
-    ],
-    "boot": [
-      "bin",
-      "lib"
-    ],
-    "services": [
-      "fuchsia.scheduler.ProfileProvider",
-      "fuchsia.sys.Environment",
-      "fuchsia.sys.Launcher",
-      "fuchsia.sys.Loader",
-      "fuchsia.process.Launcher",
-      "fuchsia.process.Resolver"
-    ]
-  }
+    "program": {
+        "binary": "test/sched_tests"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "lib"
+        ],
+        "features": [
+            "shell-commands"
+        ],
+        "services": [
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
+    }
 }

@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/dash_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/dash_test"
     },
@@ -8,12 +15,5 @@
             "fuchsia.sys.Launcher",
             "fuchsia.process.Launcher"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/dash_test#meta/mock_pkg_resolver.cmx"
-            }
-        }
     }
 }

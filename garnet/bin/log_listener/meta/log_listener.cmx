@@ -3,7 +3,11 @@
         "binary": "bin/log_listener"
     },
     "sandbox": {
-        "features": [ "isolated-cache-storage" ],
-        "services": [ "fuchsia.logger.Log" ]
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.logger.Log"
+        ]
     }
 }

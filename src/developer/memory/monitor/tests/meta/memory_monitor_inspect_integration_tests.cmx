@@ -11,7 +11,7 @@
     },
     "sandbox": {
         "features": [
-	    "hub"
+            "hub"
         ],
         "services": [
             "fuchsia.kernel.Stats",

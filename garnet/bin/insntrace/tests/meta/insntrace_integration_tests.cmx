@@ -4,13 +4,13 @@
     },
     "sandbox": {
         "dev": [
-          "misc",
-          "sys/cpu-trace"
+            "misc",
+            "sys/cpu-trace"
         ],
         "features": [
-          "isolated-persistent-storage",
-          "shell-commands",
-          "isolated-temp"
+            "isolated-persistent-storage",
+            "shell-commands",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",

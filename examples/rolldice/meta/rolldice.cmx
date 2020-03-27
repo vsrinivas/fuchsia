@@ -3,6 +3,6 @@
         "binary": "bin/rolldice"
     },
     "sandbox": {
-        "services": [ ]
+        "services": []
     }
 }

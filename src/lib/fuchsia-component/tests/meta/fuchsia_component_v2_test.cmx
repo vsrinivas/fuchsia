@@ -3,13 +3,13 @@
         "binary": "test/fuchsia_component_v2_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.logger.LogSink"
-        ],
-        "features": [
-            "hub"
         ]
     }
 }

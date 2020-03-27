@@ -3,6 +3,8 @@
         "binary": "test/odu_bin_test"
     },
     "sandbox": {
-        "features": [ "isolated-temp" ]
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

@@ -3,7 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/qmi-transport" ],
+        "dev": [
+            "class/qmi-transport"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"

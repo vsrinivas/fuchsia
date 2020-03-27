@@ -3,9 +3,9 @@
         "binary": "test/token_manager_lib_test"
     },
     "sandbox": {
-        "services": [],
         "features": [
             "isolated-temp"
-        ]
+        ],
+        "services": []
     }
 }

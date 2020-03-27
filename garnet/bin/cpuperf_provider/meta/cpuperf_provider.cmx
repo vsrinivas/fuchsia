@@ -3,9 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "sys/cpu-trace"
+        ],
         "services": [
             "fuchsia.tracing.provider.Registry"
-        ],
-        "dev": [ "sys/cpu-trace" ]
+        ]
     }
 }

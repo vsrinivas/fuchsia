@@ -1,13 +1,13 @@
 {
-  "program": {
-     "binary": "bin/factory_reset"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.device.manager.Administrator"
-    ],
-    "dev": [
-      "class/block"
-    ]
-  }
+    "program": {
+        "binary": "bin/factory_reset"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block"
+        ],
+        "services": [
+            "fuchsia.device.manager.Administrator"
+        ]
+    }
 }

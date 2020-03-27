@@ -12,15 +12,15 @@
         "features": [
             "isolated-temp"
         ],
+        "pkgfs": [
+            "packages/config-data/0/data"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sys2.Realm"
-        ],
-        "pkgfs": [
-            "packages/config-data/0/data"
         ]
     }
 }

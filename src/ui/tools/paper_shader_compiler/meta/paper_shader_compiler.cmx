@@ -1,6 +1,5 @@
 {
     "program": {
         "binary": "bin/paper_shader_compiler"
-    },
-
+    }
 }

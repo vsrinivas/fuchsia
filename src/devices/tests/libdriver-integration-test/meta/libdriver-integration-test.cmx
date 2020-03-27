@@ -7,8 +7,7 @@
             "deprecated-shell"
         ],
         "services": [
-          "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher"
         ]
     }
 }
-

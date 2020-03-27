@@ -3,11 +3,13 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "misc"
+        ],
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.RootJob",
             "fuchsia.tracing.provider.Registry"
-        ],
-        "dev": [ "misc" ]
+        ]
     }
 }

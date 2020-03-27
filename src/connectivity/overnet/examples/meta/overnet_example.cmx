@@ -1,11 +1,11 @@
 {
-   "program": {
-       "binary": "bin/app"
-   },
-   "sandbox": {
-       "services": [
-           "fuchsia.overnet.ServiceConsumer",
-           "fuchsia.overnet.ServicePublisher"
-       ]
-   }
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.overnet.ServiceConsumer",
+            "fuchsia.overnet.ServicePublisher"
+        ]
+    }
 }

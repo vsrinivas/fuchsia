@@ -3,7 +3,11 @@
         "binary": "bin/cpuperf"
     },
     "sandbox": {
-        "dev": [ "sys/cpu-trace" ],
-        "features": [ "isolated-temp" ]
+        "dev": [
+            "sys/cpu-trace"
+        ],
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

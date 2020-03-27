@@ -1,7 +1,10 @@
 {
     "program": {
-        "binary": "bin/device-name-provider",
-        "args": [ "--ethdir", "/vdev/class/ethernet" ]
+        "args": [
+            "--ethdir",
+            "/vdev/class/ethernet"
+        ],
+        "binary": "bin/device-name-provider"
     },
     "sandbox": {
         "dev": [

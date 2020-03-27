@@ -1,10 +1,10 @@
 {
-  "program": {
-    "binary": "test/perfmon_tests"
-  },
-  "sandbox": {
-    "dev": [
-      "misc"
-    ]
-  }
+    "program": {
+        "binary": "test/perfmon_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "misc"
+        ]
+    }
 }

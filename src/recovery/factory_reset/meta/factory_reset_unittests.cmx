@@ -1,11 +1,16 @@
 {
-  "program": {
-    "binary": "test/factory_reset_unittests"
-  },
-  "sandbox": {
-    "boot": [ "bin", "driver", "lib", "config" ],
-    "services": [
-      "fuchsia.process.Launcher"
-    ]
-  }
+    "program": {
+        "binary": "test/factory_reset_unittests"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib",
+            "config"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
 }

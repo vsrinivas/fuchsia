@@ -1,5 +1,5 @@
 {
     "program": {
-	    "binary": "bin/intl_wisdom_server_rust"
-	}
+        "binary": "bin/intl_wisdom_server_rust"
+    }
 }

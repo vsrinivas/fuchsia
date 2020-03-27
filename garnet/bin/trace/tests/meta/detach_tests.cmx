@@ -18,8 +18,8 @@
     },
     "sandbox": {
         "features": [
-	    "isolated-temp",
-	    "shell-commands"
+            "isolated-temp",
+            "shell-commands"
         ],
         "services": [
             "fuchsia.sys.Launcher",

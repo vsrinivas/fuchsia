@@ -1,12 +1,21 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.hardware.pty.Device"
+            ]
+        }
+    },
     "program": {
         "binary": "test/terminal_tests"
     },
     "sandbox": {
+        "boot": [
+            "bin"
+        ],
         "features": [
             "shell-commands"
         ],
-        "boot": [ "bin" ],
         "services": [
             "fuchsia.hardware.pty.Device",
             "fuchsia.ui.scenic.Scenic",
@@ -15,12 +24,5 @@
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.hardware.pty.Device"
-            ]
-        }
     }
 }

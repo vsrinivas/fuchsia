@@ -3,6 +3,6 @@
         "binary": "bin/odu"
     },
     "sandbox": {
-        "services": [ ]
+        "services": []
     }
 }

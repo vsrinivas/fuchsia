@@ -3,11 +3,11 @@
         "binary": "bin/netstack3"
     },
     "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ],
         "dev": [
             "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
         ]
     }
 }
