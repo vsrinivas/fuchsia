@@ -10,7 +10,6 @@ group("core") {
     "bootsvc",
 
     # TODO(teisenbe): Find a better place to hook these into the dependency graph
-    "console",
     "ptysvc",
 
     # TODO(bwb): depend on these from GN when build systems are unified. These are

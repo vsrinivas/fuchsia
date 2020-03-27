@@ -63,7 +63,6 @@ group("images") {
 aggregate_manifest("legacy-image") {
   deps = [
 #------------------
-    ":bin.console",
 #------------------
 #------------------
     ":bin.device-name-provider",
@@ -474,7 +473,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.console-test-test",
 #------------------
 #------------------
     ":test.sys.crashsvc-test",
@@ -1025,7 +1023,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.console-test-test",
 #------------------
 #------------------
     ":test.sys.crashsvc-test",
@@ -1222,7 +1219,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/clock/bin/clock:clkctl-manifest",
     "//src/devices/clock/bin/clock:clock-manifest",
 #------------------
-    #":bin.console",
+    "//zircon/system/core/console:console-manifest",
 #------------------
     "//src/devices/cpu/bin/cpuctl:cpuctl-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
@@ -2791,7 +2788,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/cobalt-client/test:cobalt-client-unit-manifest",
     "//zircon/system/utest/compiler:compiler-manifest",
 #------------------
-    #":test.sys.console-test-test",
+    "//zircon/system/core/console:console-test-manifest",
 #------------------
     "//zircon/system/utest/core-display:core-display-manifest",
     "//zircon/system/utest/cprng:cprng-manifest",
@@ -3453,7 +3450,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/cobalt-client/test:cobalt-client-unit-manifest",
     "//zircon/system/utest/compiler:compiler-manifest",
 #------------------
-    #":test.sys.console-test-test",
+    "//zircon/system/core/console:console-test-manifest",
 #------------------
     "//zircon/system/utest/core-display:core-display-manifest",
     "//zircon/system/utest/cprng:cprng-manifest",
