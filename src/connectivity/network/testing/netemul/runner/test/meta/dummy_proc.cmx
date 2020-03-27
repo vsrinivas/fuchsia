@@ -8,8 +8,8 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.netemul.sync.SyncManager",
-            "fuchsia.netemul.environment.ManagedEnvironment"
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.sync.SyncManager"
         ]
     }
 }

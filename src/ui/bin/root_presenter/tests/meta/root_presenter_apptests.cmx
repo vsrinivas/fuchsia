@@ -8,10 +8,10 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.vulkan.loader.Loader",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }

@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.sys.Environment",
-            "fuchsia.intl.PropertyProvider"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

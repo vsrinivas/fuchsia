@@ -6,6 +6,34 @@
             "environment": {
                 "children": [
                     {
+                        "devices": [
+                            "server-ep-1"
+                        ],
+                        "name": "server-1",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--server",
+                                    "--endpoint_name=server-ep-1"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "devices": [
+                            "server-ep-2"
+                        ],
+                        "name": "server-2",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--server",
+                                    "--endpoint_name=server-ep-2"
+                                ]
+                            }
+                        ]
+                    },
+                    {
                         "name": "client",
                         "services": {
                             "fuchsia.netstack.Netstack": {
@@ -34,34 +62,6 @@
                                 ]
                             }
                         ]
-                    },
-                    {
-                        "devices": [
-                            "server-ep-1"
-                        ],
-                        "name": "server-1",
-                        "test": [
-                            {
-                                "arguments": [
-                                    "--server",
-                                    "--endpoint_name=server-ep-1"
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "devices": [
-                            "server-ep-2"
-                        ],
-                        "name": "server-2",
-                        "test": [
-                            {
-                                "arguments": [
-                                    "--server",
-                                    "--endpoint_name=server-ep-2"
-                                ]
-                            }
-                        ]
                     }
                 ]
             },
@@ -85,20 +85,20 @@
                 {
                     "endpoints": [
                         {
-                            "mac": "72:00:0a:0b:0c:0d",
-                            "name": "client-ep-1"
-                        }
-                    ],
-                    "name": "mock-guest-1"
-                },
-                {
-                    "endpoints": [
-                        {
                             "mac": "72:00:01:02:03:04",
                             "name": "client-ep-2"
                         }
                     ],
                     "name": "mock-guest-2"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "mac": "72:00:0a:0b:0c:0d",
+                            "name": "client-ep-1"
+                        }
+                    ],
+                    "name": "mock-guest-1"
                 }
             ]
         }

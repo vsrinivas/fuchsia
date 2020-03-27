@@ -12,11 +12,11 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.sync.SyncManager",
-            "fuchsia.netstack.Netstack"
+            "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

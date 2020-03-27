@@ -3,8 +3,8 @@
         "fuchsia.netemul": {
             "environment": {
                 "devices": [
-                    "pcapng_tx",
-                    "pcapng_rx"
+                    "pcapng_rx",
+                    "pcapng_tx"
                 ],
                 "services": {
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
@@ -14,18 +14,18 @@
                     {
                         "arguments": [
                             "-e",
-                            "pcapng_tx",
+                            "pcapng_rx",
                             "-i",
-                            "192.168.0.1/24"
+                            "192.168.0.2/24"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                     },
                     {
                         "arguments": [
                             "-e",
-                            "pcapng_rx",
+                            "pcapng_tx",
                             "-i",
-                            "192.168.0.2/24"
+                            "192.168.0.1/24"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                     }
@@ -38,10 +38,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "pcapng_tx"
+                            "name": "pcapng_rx"
                         },
                         {
-                            "name": "pcapng_rx"
+                            "name": "pcapng_tx"
                         }
                     ],
                     "name": "pcapng_net"

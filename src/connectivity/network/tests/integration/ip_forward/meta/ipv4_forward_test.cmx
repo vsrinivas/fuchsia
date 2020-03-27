@@ -92,24 +92,24 @@
                 {
                     "endpoints": [
                         {
-                            "name": "server-ep"
+                            "name": "client-ep"
                         },
                         {
-                            "name": "router-server-ep"
+                            "name": "router-client-ep"
                         }
                     ],
-                    "name": "net-A"
+                    "name": "net-B"
                 },
                 {
                     "endpoints": [
                         {
-                            "name": "router-client-ep"
+                            "name": "router-server-ep"
                         },
                         {
-                            "name": "client-ep"
+                            "name": "server-ep"
                         }
                     ],
-                    "name": "net-B"
+                    "name": "net-A"
                 }
             ],
             "timeout": 120

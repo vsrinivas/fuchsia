@@ -24,7 +24,6 @@
             "test/test"
         ],
         "services": [
-            "fuchsia.diagnostics.Archive",
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.bluetooth.control.Control",
             "fuchsia.bluetooth.le.Central",
@@ -32,6 +31,7 @@
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.bluetooth.sys.Bootstrap",
             "fuchsia.bluetooth.sys.HostWatcher",
+            "fuchsia.diagnostics.Archive",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

@@ -12,8 +12,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.logger.Log"
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

@@ -11,11 +11,11 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.overnet.Overnet",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.overnet.Overnet"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

@@ -12,8 +12,8 @@
     "sandbox": {
         "services": [
             "fuchsia.pkg.PackageResolver",
-            "fuchsia.sys.Launcher",
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

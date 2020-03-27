@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/wlanphy",
-            "class/wlanif"
+            "class/wlanif",
+            "class/wlanphy"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",

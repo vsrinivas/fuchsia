@@ -96,10 +96,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "server-ep"
+                            "name": "client-ep"
                         },
                         {
-                            "name": "client-ep"
+                            "name": "server-ep"
                         }
                     ],
                     "name": "net"

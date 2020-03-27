@@ -5,9 +5,9 @@
     "sandbox": {
         "boot": [
             "bin",
+            "config",
             "driver",
-            "lib",
-            "config"
+            "lib"
         ],
         "services": [
             "fuchsia.process.Launcher"

@@ -7,9 +7,9 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.process.Launcher",
             "fidl.examples.echo.Echo",
-            "fuchsia.io.Directory"
+            "fuchsia.io.Directory",
+            "fuchsia.process.Launcher"
         ]
     }
 }

@@ -22,9 +22,9 @@
             "shell-commands"
         ],
         "services": [
-            "fuchsia.sys.Launcher",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry"
         ]

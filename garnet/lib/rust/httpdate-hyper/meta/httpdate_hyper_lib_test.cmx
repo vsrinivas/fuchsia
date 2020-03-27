@@ -3,9 +3,9 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.net.Connectivity",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack"
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider"
             ]
         }
     },
@@ -14,8 +14,8 @@
     },
     "sandbox": {
         "features": [
-            "root-ssl-certificates",
-            "build-info"
+            "build-info",
+            "root-ssl-certificates"
         ],
         "services": [
             "fuchsia.net.NameLookup",

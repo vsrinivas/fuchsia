@@ -19,10 +19,10 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.logger.LogSink"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

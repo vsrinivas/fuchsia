@@ -4,16 +4,16 @@
     },
     "sandbox": {
         "dev": [
-            "misc",
-            "class/thermal"
+            "class/thermal",
+            "misc"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.activity.Provider",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.ui.activity.Provider"
         ]
     }
 }

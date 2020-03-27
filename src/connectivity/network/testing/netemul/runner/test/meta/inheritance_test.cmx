@@ -5,23 +5,23 @@
             "environment": {
                 "children": [
                     {
-                        "inherit_services": true,
-                        "name": "child-inherits",
-                        "test": [
-                            {
-                                "arguments": [
-                                    "inherit"
-                                ]
-                            }
-                        ]
-                    },
-                    {
                         "inherit_services": false,
                         "name": "child-no-inherit",
                         "test": [
                             {
                                 "arguments": [
                                     "no-inherit"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "inherit_services": true,
+                        "name": "child-inherits",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "inherit"
                                 ]
                             }
                         ]

@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.identity.account.AccountManager",
             "fuchsia.device.NameProvider",
             "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.identity.account.AccountManager",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

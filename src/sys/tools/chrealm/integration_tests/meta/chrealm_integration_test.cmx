@@ -5,15 +5,15 @@
     "sandbox": {
         "features": [
             "hub",
-            "shell-commands",
-            "isolated-temp"
+            "isolated-temp",
+            "shell-commands"
         ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.sys.Environment"
+            "fuchsia.sys.Loader"
         ]
     }
 }

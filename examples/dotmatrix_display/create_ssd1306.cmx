@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "dev": [
+            "class/display-led",
             "class/serial",
-            "class/serial-impl",
-            "class/display-led"
+            "class/serial-impl"
         ],
         "services": []
     }

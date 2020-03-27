@@ -13,8 +13,8 @@
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.tracing.controller.Controller"
+            "fuchsia.tracing.controller.Controller",
+            "fuchsia.tracing.provider.Registry"
         ],
         "system": [
             "bin"

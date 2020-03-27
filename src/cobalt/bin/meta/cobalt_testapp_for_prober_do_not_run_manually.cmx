@@ -8,9 +8,9 @@
             "system-services": [
                 "fuchsia.net.Connectivity",
                 "fuchsia.net.NameLookup",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack"
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider"
             ]
         }
     },
@@ -26,8 +26,8 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.net.http",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
         ]
     }

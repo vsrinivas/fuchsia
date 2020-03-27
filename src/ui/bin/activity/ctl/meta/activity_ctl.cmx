@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.ui.activity.control.Control",
             "fuchsia.ui.activity.Provider",
-            "fuchsia.ui.activity.Tracker"
+            "fuchsia.ui.activity.Tracker",
+            "fuchsia.ui.activity.control.Control"
         ]
     }
 }

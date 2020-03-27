@@ -10,8 +10,8 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

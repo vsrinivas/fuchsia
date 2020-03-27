@@ -4,10 +4,10 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
-            "fuchsia.sys.Launcher",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
             "fuchsia.sysinfo.SysInfo"
         ]
     }

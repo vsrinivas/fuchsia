@@ -8,8 +8,8 @@
         ],
         "features": [
             "isolated-persistent-storage",
-            "shell-commands",
-            "isolated-temp"
+            "isolated-temp",
+            "shell-commands"
         ],
         "services": [
             "fuchsia.process.Launcher",

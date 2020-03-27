@@ -12,10 +12,10 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.stash.Store",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
             "fuchsia.sys.Launcher",
-            "fuchsia.stash.Store"
+            "fuchsia.sys.Loader"
         ]
     }
 }

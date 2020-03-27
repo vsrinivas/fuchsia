@@ -4,15 +4,15 @@
     },
     "sandbox": {
         "dev": [
-            "misc",
+            "class/gpu-thermal",
             "class/thermal",
-            "class/gpu-thermal"
+            "misc"
         ],
         "services": [
             "fuchsia.boot.RootResource",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.logger.LogSink"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

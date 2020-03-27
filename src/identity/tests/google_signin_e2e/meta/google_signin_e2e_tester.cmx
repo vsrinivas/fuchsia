@@ -7,11 +7,11 @@
             "fuchsia.auth.TokenManagerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.sys.Launcher",
-            "fuchsia.sys.Environment"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

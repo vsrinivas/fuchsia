@@ -7,11 +7,11 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.virtualization.Manager",
-            "fuchsia.virtualization.Realm",
             "fuchsia.logger.LogSink",
             "fuchsia.netemul.guest.GuestInteractionService",
-            "fuchsia.netemul.network.Endpoint"
+            "fuchsia.netemul.network.Endpoint",
+            "fuchsia.virtualization.Manager",
+            "fuchsia.virtualization.Realm"
         ]
     }
 }

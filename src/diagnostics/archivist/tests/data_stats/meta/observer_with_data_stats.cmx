@@ -9,8 +9,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.internal.ComponentEventProvider",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.internal.ComponentEventProvider"
         ]
     }
 }

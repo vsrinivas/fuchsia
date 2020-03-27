@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

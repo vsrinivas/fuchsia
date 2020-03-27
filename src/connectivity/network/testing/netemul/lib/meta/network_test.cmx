@@ -12,8 +12,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.netemul.devmgr.IsolatedDevmgr",
             "fuchsia.net.tun.Control",
+            "fuchsia.netemul.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

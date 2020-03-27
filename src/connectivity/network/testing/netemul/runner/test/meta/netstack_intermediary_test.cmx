@@ -6,6 +6,20 @@
             "environment": {
                 "children": [
                     {
+                        "devices": [
+                            "server-ep"
+                        ],
+                        "name": "server",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--server",
+                                    "--endpoint_name=server-ep"
+                                ]
+                            }
+                        ]
+                    },
+                    {
                         "name": "client",
                         "services": {
                             "fuchsia.netstack.Netstack": {
@@ -22,20 +36,6 @@
                                     "--network_name=mock_guest",
                                     "--endpoint_name=mock-ep",
                                     "--server_name=server-ep"
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "devices": [
-                            "server-ep"
-                        ],
-                        "name": "server",
-                        "test": [
-                            {
-                                "arguments": [
-                                    "--server",
-                                    "--endpoint_name=server-ep"
                                 ]
                             }
                         ]

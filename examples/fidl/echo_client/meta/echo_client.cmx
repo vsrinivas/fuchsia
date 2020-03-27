@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
-            "fuchsia.examples.MyService"
+            "fuchsia.examples.MyService",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

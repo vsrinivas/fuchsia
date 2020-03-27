@@ -15,11 +15,11 @@
         ],
         "services": [
             "fuchsia.exception.Handler",
+            "fuchsia.logging.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.logging.LogSink"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

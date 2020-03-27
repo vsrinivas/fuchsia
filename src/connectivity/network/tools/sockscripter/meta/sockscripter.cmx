@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.SocketProvider",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider"
         ]
     }
 }

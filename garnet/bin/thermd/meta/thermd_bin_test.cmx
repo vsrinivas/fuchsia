@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "dev": [
-            "misc",
+            "class/gpu-thermal",
             "class/thermal",
-            "class/gpu-thermal"
+            "misc"
         ],
         "services": []
     }

@@ -15,9 +15,9 @@
             "class/isp-device-test"
         ],
         "services": [
-            "fuchsia.sys.Launcher",
             "fuchsia.camera.test.IspTester",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo"
         ]
     }

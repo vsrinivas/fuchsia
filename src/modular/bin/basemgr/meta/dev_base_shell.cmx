@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.identity.account.AccountManager",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.identity.account.AccountManager",
             "fuchsia.modular.ComponentContext",
             "fuchsia.sys.Launcher",
             "fuchsia.testing.runner.TestRunner",

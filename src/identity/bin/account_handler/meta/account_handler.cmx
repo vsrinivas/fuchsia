@@ -7,8 +7,8 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.identity.internal.AccountHandlerContext",
+            "fuchsia.logger.LogSink",
             "fuchsia.stash.Store"
         ]
     }

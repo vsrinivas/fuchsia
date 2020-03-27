@@ -10,10 +10,10 @@
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
-            "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.media.SessionAudioConsumerFactory",
-            "fuchsia.media.sessions2.Publisher"
+            "fuchsia.media.sessions2.Publisher",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

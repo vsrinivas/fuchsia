@@ -9,8 +9,8 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.wlan.device.service.DeviceService",
-            "fuchsia.stash.SecureStore"
+            "fuchsia.stash.SecureStore",
+            "fuchsia.wlan.device.service.DeviceService"
         ]
     }
 }

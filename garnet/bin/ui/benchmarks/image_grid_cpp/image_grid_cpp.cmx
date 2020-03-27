@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

@@ -10,8 +10,8 @@
             "packages"
         ],
         "services": [
-            "fuchsia.lowpan.spinel.Device",
             "fuchsia.logger.LogSink",
+            "fuchsia.lowpan.spinel.Device",
             "fuchsia.sys.Launcher"
         ]
     }

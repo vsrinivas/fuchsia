@@ -16,8 +16,8 @@
         ],
         "services": [
             "fuchsia.boot.RootJob",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.tracing.controller.Controller"
+            "fuchsia.tracing.controller.Controller",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

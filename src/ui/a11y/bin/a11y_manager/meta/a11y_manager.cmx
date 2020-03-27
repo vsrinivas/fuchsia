@@ -4,13 +4,13 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.ui.focus.FocusChainListenerRegistry",
-            "fuchsia.ui.views.accessibility.FocuserRegistry",
             "fuchsia.accessibility.tts.EngineRegistry",
             "fuchsia.logger.LogSink",
             "fuchsia.settings.Accessibility",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.input.accessibility.PointerEventRegistry"
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.accessibility.PointerEventRegistry",
+            "fuchsia.ui.views.accessibility.FocuserRegistry"
         ]
     }
 }

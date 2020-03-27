@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "dev": [
+            "class/dotmatrix-display",
             "class/serial",
-            "class/serial-impl",
-            "class/dotmatrix-display"
+            "class/serial-impl"
         ],
         "services": []
     }

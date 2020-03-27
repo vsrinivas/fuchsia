@@ -11,11 +11,11 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.diagnostics.Archive",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.logger.LogSink",
-            "fuchsia.diagnostics.Archive"
+            "fuchsia.sys.Loader"
         ]
     }
 }

@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.exception.ProcessLimbo"
+            "fuchsia.exception.ProcessLimbo",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

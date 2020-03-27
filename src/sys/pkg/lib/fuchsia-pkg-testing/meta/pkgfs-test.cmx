@@ -10,8 +10,8 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.sys.Launcher",
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
+            "fuchsia.modular.ModuleContext",
             "fuchsia.sys.Environment",
-            "fuchsia.modular.ModuleContext"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

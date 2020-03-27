@@ -21,11 +21,11 @@
             "isolated-temp"
         ],
         "services": [
+            "fidl.examples.echo.Echo",
             "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
-            "fuchsia.process.Launcher",
-            "fidl.examples.echo.Echo",
-            "fuchsia.io.Directory"
+            "fuchsia.io.Directory",
+            "fuchsia.process.Launcher"
         ]
     }
 }

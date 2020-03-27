@@ -4,19 +4,19 @@
     },
     "sandbox": {
         "dev": [
-            "class/thermal",
-            "class/cpu-ctrl"
+            "class/cpu-ctrl",
+            "class/thermal"
         ],
         "features": [
             "config-data"
         ],
         "services": [
-            "fuchsia.ui.activity.Provider",
-            "fuchsia.logger.LogSink",
-            "fuchsia.kernel.Stats",
             "fuchsia.device.manager.Administrator",
+            "fuchsia.kernel.Stats",
+            "fuchsia.logger.LogSink",
             "fuchsia.sysinfo.SysInfo",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.activity.Provider"
         ]
     }
 }

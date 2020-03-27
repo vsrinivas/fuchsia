@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.wlan.device.service.DeviceService",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.wlan.device.service.DeviceService"
         ]
     }
 }

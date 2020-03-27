@@ -5,8 +5,8 @@
     "sandbox": {
         "services": [
             "fuchsia.boot.RootJob",
-            "fuchsia.process.Launcher",
-            "fuchsia.exception.ProcessLimbo"
+            "fuchsia.exception.ProcessLimbo",
+            "fuchsia.process.Launcher"
         ]
     }
 }

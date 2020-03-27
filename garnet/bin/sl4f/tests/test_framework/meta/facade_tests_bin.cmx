@@ -15,8 +15,8 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.sys.Launcher",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
             "fuchsia.test.manager.Harness"
         ]
     }

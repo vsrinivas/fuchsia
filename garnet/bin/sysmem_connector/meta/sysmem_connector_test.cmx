@@ -14,9 +14,9 @@
             "class/sysmem"
         ],
         "services": [
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Environment",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

@@ -12,9 +12,9 @@
             "class/ot-radio"
         ],
         "services": [
-            "fuchsia.openthread.devmgr.IsolatedDevmgr",
             "fuchsia.exception.Handler",
             "fuchsia.logger.LogSink",
+            "fuchsia.openthread.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Launcher"
         ]
     }

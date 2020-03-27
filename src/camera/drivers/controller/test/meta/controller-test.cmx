@@ -14,9 +14,9 @@
             "class/sysmem"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

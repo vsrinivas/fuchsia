@@ -6,8 +6,8 @@
         ],
         "binary": "bin/getenv",
         "env_vars": [
-            "FOO=bar",
-            "BAZ=bar"
+            "BAZ=bar",
+            "FOO=bar"
         ]
     }
 }

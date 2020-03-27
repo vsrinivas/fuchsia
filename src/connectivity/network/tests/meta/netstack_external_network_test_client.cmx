@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
             "fuchsia.device.NameProvider",
+            "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider"
         ]
     }

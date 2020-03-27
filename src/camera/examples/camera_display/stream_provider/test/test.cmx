@@ -12,14 +12,14 @@
     },
     "sandbox": {
         "dev": [
-            "class/isp-device-test",
-            "camera-controller"
+            "camera-controller",
+            "class/isp-device-test"
         ],
         "services": [
             "fuchsia.camera2.Manager",
+            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.logger.LogSink"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

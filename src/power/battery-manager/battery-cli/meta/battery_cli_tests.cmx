@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.power.test.BatterySimulator",
             "fuchsia.logger.LogSink",
+            "fuchsia.power.test.BatterySimulator",
             "fuchsia.sys.Launcher"
         ]
     }

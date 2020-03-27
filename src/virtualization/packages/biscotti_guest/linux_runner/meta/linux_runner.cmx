@@ -7,9 +7,9 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.virtualization.Manager",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.virtualization.Manager"
         ]
     }
 }

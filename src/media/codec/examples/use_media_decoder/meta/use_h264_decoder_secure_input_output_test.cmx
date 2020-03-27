@@ -18,12 +18,12 @@
             "class/sysmem"
         ],
         "services": [
-            "fuchsia.tee.Device",
-            "fuchsia.sys.Environment",
             "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tee.Device",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

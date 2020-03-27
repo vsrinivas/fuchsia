@@ -21,12 +21,12 @@
             "shell-commands"
         ],
         "services": [
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.policy.DeviceListenerRegistry",
             "fuchsia.ui.scenic.Scenic"

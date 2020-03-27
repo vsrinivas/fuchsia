@@ -5,8 +5,8 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.netemul.network.NetworkContext",
-            "fuchsia.netemul.network.FakeEndpoint"
+            "fuchsia.netemul.network.FakeEndpoint",
+            "fuchsia.netemul.network.NetworkContext"
         ]
     }
 }

@@ -8,8 +8,8 @@
         ],
         "services": [
             "fuchsia.boot.RootJobForInspect",
-            "fuchsia.kernel.Stats",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"

@@ -7,11 +7,11 @@
             "hub"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
             "fuchsia.sys.Environment",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

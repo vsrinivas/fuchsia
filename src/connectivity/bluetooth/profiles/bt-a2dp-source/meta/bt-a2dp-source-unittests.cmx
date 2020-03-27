@@ -12,9 +12,9 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

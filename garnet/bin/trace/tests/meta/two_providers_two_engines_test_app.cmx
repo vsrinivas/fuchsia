@@ -8,8 +8,8 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.tracing.controller.Controller"
+            "fuchsia.tracing.controller.Controller",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

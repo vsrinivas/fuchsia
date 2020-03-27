@@ -7,9 +7,9 @@
             "class/display-controller"
         ],
         "features": [
-            "vulkan",
             "isolated-cache-storage",
-            "isolated-temp"
+            "isolated-temp",
+            "vulkan"
         ],
         "services": [
             "fuchsia.logger.LogSink",

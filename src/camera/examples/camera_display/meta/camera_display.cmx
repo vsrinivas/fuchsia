@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/isp-device-test",
-            "camera-controller"
+            "camera-controller",
+            "class/isp-device-test"
         ],
         "features": [
             "isolated-persistent-storage"

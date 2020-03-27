@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.netemul.example.Counter",
-            "fuchsia.sys.Environment",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Environment"
         ]
     }
 }

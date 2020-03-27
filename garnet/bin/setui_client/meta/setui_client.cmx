@@ -9,8 +9,6 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity",
             "fuchsia.netstack.Netstack",
-            "fuchsia.sys.Environment",
-            "fuchsia.setui.SetUiService",
             "fuchsia.settings.Accessibility",
             "fuchsia.settings.Audio",
             "fuchsia.settings.Device",
@@ -21,6 +19,8 @@
             "fuchsia.settings.Privacy",
             "fuchsia.settings.Setup",
             "fuchsia.settings.System",
+            "fuchsia.setui.SetUiService",
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"
         ]
     }

@@ -12,11 +12,11 @@
         "services": [
             "fuchsia.boot.RootResource",
             "fuchsia.logger.LogSink",
-            "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.virtualization.vmm.LaunchInfoProvider"
         ]
     }
 }

@@ -7,10 +7,10 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
-            "fuchsia.scheduler.ProfileProvider",
-            "fuchsia.cobalt.LoggerFactory"
+            "fuchsia.scheduler.ProfileProvider"
         ]
     }
 }

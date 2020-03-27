@@ -17,9 +17,9 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.test.LoggerQuerier",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.net.NameLookup",
-            "fuchsia.net.stack.Stack"
+            "fuchsia.net.stack.Stack",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

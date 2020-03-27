@@ -27,9 +27,9 @@
             "test/test"
         ],
         "services": [
-            "fuchsia.openthread.devmgr.IsolatedDevmgr",
-            "fuchsia.lowpan.spinel.Device",
             "fuchsia.logger.LogSink",
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.openthread.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Launcher"
         ],
         "system": [

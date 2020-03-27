@@ -12,8 +12,8 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]
     }

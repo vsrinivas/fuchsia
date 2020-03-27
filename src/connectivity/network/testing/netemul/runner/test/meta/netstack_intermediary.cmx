@@ -5,9 +5,9 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.netstack.Netstack",
             "fuchsia.netemul.network.NetworkContext",
-            "fuchsia.netemul.sync.SyncManager"
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.netstack.Netstack"
         ]
     }
 }

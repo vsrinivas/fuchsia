@@ -7,8 +7,8 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.process.Launcher",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
         ]
     }
 }

@@ -8,11 +8,11 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.stash.Store",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.stash.Store"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

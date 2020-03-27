@@ -13,8 +13,8 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.tracing.controller.Controller",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.input.InputDispatcher"

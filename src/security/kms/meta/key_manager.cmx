@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage",
-            "config-data"
+            "config-data",
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.tee.Device"

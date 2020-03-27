@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
-            "fidl.examples.echo.Echo"
+            "fidl.examples.echo.Echo",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

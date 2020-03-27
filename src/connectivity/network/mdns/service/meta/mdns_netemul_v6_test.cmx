@@ -99,13 +99,13 @@
                 {
                     "endpoints": [
                         {
-                            "name": "remote-ep"
-                        },
-                        {
                             "name": "local-ep"
                         },
                         {
                             "name": "local-ep2"
+                        },
+                        {
+                            "name": "remote-ep"
                         }
                     ],
                     "name": "net"

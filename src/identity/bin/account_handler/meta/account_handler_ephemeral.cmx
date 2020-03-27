@@ -7,8 +7,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.identity.internal.AccountHandlerContext"
+            "fuchsia.identity.internal.AccountHandlerContext",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

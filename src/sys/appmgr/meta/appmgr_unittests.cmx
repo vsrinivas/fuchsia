@@ -4,12 +4,12 @@
     },
     "sandbox": {
         "features": [
-            "shell-commands",
-            "isolated-temp"
+            "isolated-temp",
+            "shell-commands"
         ],
         "services": [
-            "fuchsia.process.Resolver",
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
         ]
     }
 }

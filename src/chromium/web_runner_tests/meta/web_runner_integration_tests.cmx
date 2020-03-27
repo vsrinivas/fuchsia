@@ -5,9 +5,9 @@
                 "fuchsia.web.ContextProvider": "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"
             },
             "system-services": [
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.net.NameLookup",
-                "fuchsia.netstack.Netstack"
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider"
             ]
         }
     },
@@ -16,10 +16,10 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.posix.socket.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",

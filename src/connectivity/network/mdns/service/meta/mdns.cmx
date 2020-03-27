@@ -7,11 +7,11 @@
             "config-data"
         ],
         "services": [
+            "fuchsia.device.NameProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.device.NameProvider",
-            "fuchsia.netstack.Netstack"
+            "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

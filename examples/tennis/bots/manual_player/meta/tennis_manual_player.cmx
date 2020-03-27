@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.game.tennis.TennisService"
+            "fuchsia.game.tennis.TennisService",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

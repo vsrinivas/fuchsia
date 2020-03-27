@@ -24,9 +24,9 @@
         "services": [
             "fuchsia.boot.RootJob",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracing.controller.Controller",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.sys.Launcher"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

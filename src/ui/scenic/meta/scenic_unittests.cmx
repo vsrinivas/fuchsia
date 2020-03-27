@@ -20,11 +20,11 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.vulkan.loader.Loader",
             "fuchsia.process.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.testing.FakeClock",
-            "fuchsia.testing.FakeClockControl"
+            "fuchsia.testing.FakeClockControl",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }

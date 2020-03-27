@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.examples.inspect.FizzBuzz"
+            "fuchsia.examples.inspect.FizzBuzz",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

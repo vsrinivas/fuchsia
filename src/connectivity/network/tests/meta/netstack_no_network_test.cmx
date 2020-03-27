@@ -12,9 +12,9 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.device.NameProvider",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.device.NameProvider"
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

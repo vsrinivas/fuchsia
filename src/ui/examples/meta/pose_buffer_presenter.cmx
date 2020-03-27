@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
             "fuchsia.sys.ComponentController",
+            "fuchsia.sys.Launcher",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

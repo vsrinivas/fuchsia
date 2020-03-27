@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.posix.socket.Provider"
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

@@ -4,15 +4,15 @@
     },
     "sandbox": {
         "dev": [
-            "test/InputReportInject",
-            "input-report"
+            "input-report",
+            "test/InputReportInject"
         ],
         "services": [
             "fuchsia.example.InputInjectDevmgr",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Loader"
         ]
     }
 }

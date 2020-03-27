@@ -3,8 +3,8 @@
         "fuchsia.netemul": {
             "environment": {
                 "devices": [
-                    "helper_udp_tx",
-                    "helper_udp_rx"
+                    "helper_udp_rx",
+                    "helper_udp_tx"
                 ],
                 "services": {
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
@@ -14,18 +14,18 @@
                     {
                         "arguments": [
                             "-e",
-                            "helper_udp_tx",
+                            "helper_udp_rx",
                             "-i",
-                            "192.168.0.1/24"
+                            "192.168.0.2/24"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                     },
                     {
                         "arguments": [
                             "-e",
-                            "helper_udp_rx",
+                            "helper_udp_tx",
                             "-i",
-                            "192.168.0.2/24"
+                            "192.168.0.1/24"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                     }
@@ -38,10 +38,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "helper_udp_tx"
+                            "name": "helper_udp_rx"
                         },
                         {
-                            "name": "helper_udp_rx"
+                            "name": "helper_udp_tx"
                         }
                     ],
                     "name": "helper_udp_net"

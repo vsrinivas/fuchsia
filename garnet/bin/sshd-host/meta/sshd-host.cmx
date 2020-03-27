@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "features": [
-            "config-data",
             "build-info",
+            "config-data",
             "deprecated-shell"
         ],
         "services": [

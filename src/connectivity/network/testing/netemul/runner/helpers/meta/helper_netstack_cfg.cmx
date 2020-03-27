@@ -4,10 +4,10 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.logger.LogSink",
             "fuchsia.net.stack.Stack",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.logger.LogSink"
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netstack.Netstack"
         ]
     }
 }

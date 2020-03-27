@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.stash.Store",
-            "fuchsia.stash.SecureStore"
+            "fuchsia.stash.SecureStore",
+            "fuchsia.stash.Store"
         ]
     }
 }

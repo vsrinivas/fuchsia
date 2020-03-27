@@ -5,10 +5,10 @@
     "sandbox": {
         "services": [
             "fuchsia.camera.MockSensorDevmgr",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Loader"
         ]
     }
 }

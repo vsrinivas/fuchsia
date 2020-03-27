@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.testing.runner.TestRunner",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.testing.runner.TestRunner"
         ]
     }
 }

@@ -5,8 +5,8 @@
     "runner": "fuchsia-pkg://fuchsia.com/appmgr_mock_runner#meta/appmgr_mock_runner.cmx",
     "sandbox": {
         "services": [
-            "fuchsia.sys.Environment",
-            "fidl.examples.echo.Echo"
+            "fidl.examples.echo.Echo",
+            "fuchsia.sys.Environment"
         ]
     }
 }

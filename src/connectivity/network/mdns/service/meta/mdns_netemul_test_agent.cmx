@@ -5,9 +5,9 @@
     "sandbox": {
         "services": [
             "fuchsia.device.NameProvider",
+            "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Resolver",
-            "fuchsia.net.mdns.Subscriber",
-            "fuchsia.net.mdns.Publisher"
+            "fuchsia.net.mdns.Subscriber"
         ]
     }
 }

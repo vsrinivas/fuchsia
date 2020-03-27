@@ -5,9 +5,9 @@
     "sandbox": {
         "services": [
             "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

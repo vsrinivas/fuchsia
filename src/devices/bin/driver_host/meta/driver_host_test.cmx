@@ -10,9 +10,9 @@
         ],
         "features": [],
         "services": [
+            "fuchsia.exception.Handler",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
-            "fuchsia.exception.Handler"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

@@ -98,17 +98,6 @@
                 {
                     "endpoints": [
                         {
-                            "name": "wan_device_ep"
-                        },
-                        {
-                            "name": "router_device_wan_ep"
-                        }
-                    ],
-                    "name": "wan_net"
-                },
-                {
-                    "endpoints": [
-                        {
                             "name": "lan_device_ep"
                         },
                         {
@@ -116,6 +105,17 @@
                         }
                     ],
                     "name": "lan_net"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "router_device_wan_ep"
+                        },
+                        {
+                            "name": "wan_device_ep"
+                        }
+                    ],
+                    "name": "wan_net"
                 }
             ]
         }

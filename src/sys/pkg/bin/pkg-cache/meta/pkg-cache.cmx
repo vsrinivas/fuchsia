@@ -5,8 +5,8 @@
     "sandbox": {
         "pkgfs": [
             "ctl",
-            "versions",
-            "system"
+            "system",
+            "versions"
         ],
         "services": [
             "fuchsia.logger.LogSink",

@@ -4,10 +4,10 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.logger.LogSink"
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

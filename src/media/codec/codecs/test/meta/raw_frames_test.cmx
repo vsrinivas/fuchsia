@@ -7,8 +7,8 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.logging.LogSink"
+            "fuchsia.logging.LogSink",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

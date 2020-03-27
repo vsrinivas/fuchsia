@@ -12,10 +12,10 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.lowpan.device.Register",
-            "fuchsia.sys.Launcher",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

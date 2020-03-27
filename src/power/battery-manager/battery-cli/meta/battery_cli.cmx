@@ -4,11 +4,11 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
-            "fuchsia.logger.LogSink",
-            "fuchsia.sys.Loader",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

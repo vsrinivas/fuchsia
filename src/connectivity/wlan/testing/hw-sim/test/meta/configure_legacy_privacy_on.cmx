@@ -24,9 +24,9 @@
     "sandbox": {
         "services": [
             "fuchsia.stash.SecureStore",
+            "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
-            "fuchsia.wlan.service.Wlan",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.wlan.service.Wlan"
         ]
     }
 }

@@ -8,8 +8,8 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.sys.Launcher",
-            "fuchsia.sys.Environment"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

@@ -11,7 +11,22 @@ on the first error.
 
 import argparse
 import json
+import os
 import sys
+
+
+def sort(data):
+    if isinstance(data, dict):
+        return {
+            key: (
+                sort(value) if key not in [
+                    "args", "arguments", "injected-services"
+                ] else value) for key, value in data.iteritems()
+        }
+    elif isinstance(data, list):
+        return sorted(sort(datum) for datum in data)
+    else:
+        return data
 
 
 def main():
@@ -27,6 +42,9 @@ def main():
             with json_file:
                 original = json_file.read()
                 data = json.loads(original)
+                (root, ext) = os.path.splitext(json_file.name)
+                if ext == '.cmx':
+                    data = sort(data)
                 formatted = json.dumps(
                     data, indent=4, sort_keys=True, separators=(',', ': '))
                 if original != formatted:

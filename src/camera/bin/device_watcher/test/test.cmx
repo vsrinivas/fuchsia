@@ -14,8 +14,8 @@
         "services": [
             "fuchsia.camera.test.DeviceWatcherTester",
             "fuchsia.camera3.DeviceWatcher",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

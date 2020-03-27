@@ -11,10 +11,10 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.diagnostics.Archive",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.diagnostics.Archive"
+            "fuchsia.sys.Loader"
         ]
     }
 }

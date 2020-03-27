@@ -16,10 +16,10 @@
             "class/sysmem"
         ],
         "services": [
-            "fuchsia.sys.Launcher",
             "fuchsia.camera2.Manager",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

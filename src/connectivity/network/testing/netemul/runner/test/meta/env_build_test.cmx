@@ -12,17 +12,17 @@
                                     "-t",
                                     "1",
                                     "-n",
-                                    "child-1-url"
-                                ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build.cmx"
+                                    "child-1-no-url"
+                                ]
                             },
                             {
                                 "arguments": [
                                     "-t",
                                     "1",
                                     "-n",
-                                    "child-1-no-url"
-                                ]
+                                    "child-1-url"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build.cmx"
                             }
                         ]
                     },
@@ -68,13 +68,13 @@
                 {
                     "endpoints": [
                         {
+                            "name": "ep1"
+                        },
+                        {
                             "mac": "70:00:01:02:03:04",
                             "mtu": 1000,
                             "name": "ep0",
                             "up": false
-                        },
-                        {
-                            "name": "ep1"
                         }
                     ],
                     "name": "test-net"
