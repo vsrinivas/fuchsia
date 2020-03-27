@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryInto;
+use std::os::unix::io::AsRawFd;
+
 use anyhow::Context as _;
 use fuchsia_zircon as zx;
-use futures::future::FutureExt as _;
-use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
-use futures::stream::{StreamExt as _, TryStreamExt as _};
-use net2::TcpStreamExt as _;
-use tcp_stream_ext::TcpStreamExt as _;
+use futures::future::FutureExt;
+use futures::io::{AsyncReadExt, AsyncWriteExt};
+use futures::stream::{StreamExt, TryStreamExt};
+use net2::TcpStreamExt;
 
 #[derive(argh::FromArgs)]
 /// Adverse condition `connect` test.
@@ -75,6 +77,30 @@ async fn verify_broken_pipe(
             }
         }
     }
+}
+
+// TODO(tamird): use upstream's setters when
+// https://github.com/rust-lang-nursery/net2-rs/issues/90 is fixed.
+fn set_opt<T: Copy>(
+    sock: &fuchsia_async::net::TcpStream,
+    opt: libc::c_int,
+    val: libc::c_int,
+    payload: T,
+) -> Result<(), anyhow::Error> {
+    // This is safe because `setsockopt` does not retain memory passed to it.
+    if unsafe {
+        libc::setsockopt(
+            sock.std().as_raw_fd(),
+            opt,
+            val,
+            &payload as *const _ as *const libc::c_void,
+            std::mem::size_of::<T>().try_into()?,
+        )
+    } != 0
+    {
+        let () = Err(std::io::Error::last_os_error())?;
+    }
+    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -167,9 +193,14 @@ async fn main() -> Result<(), anyhow::Error> {
                 }
             };
 
-            let usertimeout = std::time::Duration::from_secs(1);
-            for socket in [&keepalive_timeout, &keepalive_usertimeout].iter() {
-                socket.std().set_user_timeout(usertimeout)?;
+            let usertimeout = zx::Duration::from_seconds(1);
+            for socket in [&keepalive_usertimeout, &retransmit_usertimeout].iter() {
+                let () = set_opt(
+                    socket,
+                    libc::IPPROTO_TCP,
+                    libc::TCP_USER_TIMEOUT,
+                    TryInto::<u32>::try_into(usertimeout.into_millis())?,
+                )?;
             }
 
             // Start the keepalive machinery.
@@ -179,10 +210,16 @@ async fn main() -> Result<(), anyhow::Error> {
             for socket in [&keepalive_timeout, &keepalive_usertimeout].iter() {
                 let () = socket.std().set_keepalive(Some(keepalive_idle))?;
             }
-            let keepalive_count: i32 = 1;
-            keepalive_timeout.std().set_keepalive_count(keepalive_count)?;
-            let keepalive_interval = std::time::Duration::from_secs(1);
-            keepalive_timeout.std().set_keepalive_interval(keepalive_interval)?;
+            let keepalive_count: u32 = 1;
+            let () =
+                set_opt(&keepalive_timeout, libc::IPPROTO_TCP, libc::TCP_KEEPCNT, keepalive_count)?;
+            let keepalive_interval = zx::Duration::from_seconds(1);
+            let () = set_opt(
+                &keepalive_timeout,
+                libc::IPPROTO_TCP,
+                libc::TCP_KEEPINTVL,
+                TryInto::<u32>::try_into(keepalive_interval.into_seconds())?,
+            )?;
 
             // Start the retransmit machinery.
             for socket in [&mut retransmit_timeout, &mut retransmit_usertimeout].iter_mut() {
