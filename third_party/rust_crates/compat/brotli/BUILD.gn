@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# C parts of brotli-sys 0.3.2
+
+brotli_crate = "../../vendor/brotli-sys/brotli"
+
+static_library("brotli") {
+  include_dirs = [ "$brotli_crate/include" ]
+  sources = [
+    "$brotli_crate/common/dictionary.c",
+    "$brotli_crate/dec/bit_reader.c",
+    "$brotli_crate/dec/decode.c",
+    "$brotli_crate/dec/huffman.c",
+    "$brotli_crate/dec/state.c",
+    "$brotli_crate/enc/backward_references.c",
+    "$brotli_crate/enc/backward_references_hq.c",
+    "$brotli_crate/enc/bit_cost.c",
+    "$brotli_crate/enc/block_splitter.c",
+    "$brotli_crate/enc/brotli_bit_stream.c",
+    "$brotli_crate/enc/cluster.c",
+    "$brotli_crate/enc/compress_fragment.c",
+    "$brotli_crate/enc/compress_fragment_two_pass.c",
+    "$brotli_crate/enc/dictionary_hash.c",
+    "$brotli_crate/enc/encode.c",
+    "$brotli_crate/enc/entropy_encode.c",
+    "$brotli_crate/enc/histogram.c",
+    "$brotli_crate/enc/literal_cost.c",
+    "$brotli_crate/enc/memory.c",
+    "$brotli_crate/enc/metablock.c",
+    "$brotli_crate/enc/static_dict.c",
+    "$brotli_crate/enc/utf8_util.c",
+  ]
+}

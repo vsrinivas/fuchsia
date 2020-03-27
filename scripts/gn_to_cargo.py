@@ -69,8 +69,6 @@ class Project(object):
     def __init__(self, project_json):
         self.targets = project_json["targets"]
         self.build_settings = project_json["build_settings"]
-        self.third_party = None
-        self.patches = None
 
     def rust_targets(self):
         for target in self.targets.keys():
@@ -146,42 +144,13 @@ def write_toml_file(fout, metadata, project, target, lookup):
         for feature in features:
             fout.write("%s = []\n" % feature)
 
-    fout.write("\n[patch.crates-io]\n")
-    for patch in project.patches:
-        path = project.patches[patch]["path"]
-        fout.write(
-            "%s = { path = \"%s/%s\" }\n" % (patch, rust_crates_path, path))
-    fout.write("\n")
-
     # collect all dependencies
     deps = []
     for dep in metadata["deps"]:
         # handle proc macro shims:
         dep = project.dereference_proc_macro(dep)
-        # this is a rust target built by cargo
-        # TODO remove this when all things use GN. temporary hack
-        if "third_party/rust_crates:" in dep:
-            match = re.search("rust_crates:([\w-]*)", dep)
-            third_party_name = str(match.group(1))
-            dep_data = project.third_party[third_party_name]
-            features = None
-            default_features = None
-            if isinstance(dep_data["cargo_dependency_toml"], dict):
-                features = dep_data["cargo_dependency_toml"].get("features")
-                default_features = dep_data["cargo_dependency_toml"].get(
-                    "default-features")
-                version = dep_data["cargo_dependency_toml"]["version"]
-            else:
-                version = dep_data["cargo_dependency_toml"]
-            fout.write("[dependencies.\"%s\"]\n" % third_party_name)
-            fout.write("version = \"%s\"\n" % version)
-            if features:
-                fout.write("features = %s\n" % json.dumps(features))
-            if default_features is not None:
-                fout.write(
-                    "default-features = %s\n" % json.dumps(default_features))
         # this is a in-tree rust target
-        elif "crate_name" in project.targets[dep]:
+        if "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
             output_name = project.targets[dep]["crate_name"]
             dep_dir = rebase_gn_path(
@@ -215,21 +184,6 @@ def main():
     project = Project(project)
     root_path = project.build_settings["root_path"]
     build_dir = project.build_settings["build_dir"]
-
-    third_party_host_path = rebase_gn_path(
-        root_path,
-        build_dir + "host_x64/rust_third_party_crates/deps_data.json")
-    third_party_path = rebase_gn_path(
-        root_path, build_dir + "rust_third_party_crates/deps_data.json")
-    rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
-
-    # this will be removed eventually
-    with open(third_party_path, "r") as json_file:
-        project.third_party = json.loads(json_file.read())["crates"]
-    with open(third_party_host_path, "r") as json_file:
-        project.third_party.update(json.loads(json_file.read())["crates"])
-    with open(rust_crates_path + "/Cargo.toml", "r") as f:
-        project.patches = toml.load(f)["patch"]["crates-io"]
 
     host_binaries = []
     target_binaries = []

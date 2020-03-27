@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is used for describing targets that the third party Cargo build
+# relies upon but is normally expressed in build.rs files (which we intentionally
+# do not support)
+
+# GN visibility should be constrained to //third_party/rust_crates for all targets
+crate_visibility = [
+  "//third_party/rust_crates/*",
+  "//:additional_universe_packages",
+]
+
+group("ring") {
+  visibility = crate_visibility
+  deps = [ "ring:ring-core" ]
+}
+
+group("brotli") {
+  visibility = crate_visibility
+  deps = [ "brotli" ]
+}

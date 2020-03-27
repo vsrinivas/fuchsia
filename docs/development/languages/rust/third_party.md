@@ -39,24 +39,17 @@ Note: You need to get OSRB approval first before uploading a CL for review.
    places them in the `vendor` directory, and updates `Cargo.toml` and
    `Cargo.lock`.
 
+   You may need to provide additional metadata for the crates in a [[gn.crate.<crate>]] section
+   inside the Cargo.toml file
+
    Note: on Linux, `pkg-config` needs to be installed.
+
 
 1. Do a build test. For example:
 
    ```
    fx set core.x64 && fx build
    ```
-1. Run the following command to update crate-map:
-
-   ```
-   fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json
-   ```
-   This command updates `crate_map.json` with information about the Rust crates
-   available for each target (Fuchsia and host).
-   Note that this step uses information from the build step - make sure that the
-   build for the `third_party` folder has succeeded first before running this
-   command.  This would be part of the `fx build` you are expected to run in the
-   previous step.
 1. Identify all the crates to be brought
    (see the diff in `//third_party/rust_crates/vendor/`).
    Do not submit the CL for code review. Get OSRB approval first.

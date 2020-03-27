@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# C parts of rust-crypto
+
+crypto_crate = "../../../rust-mirrors/rust-crypto"
+
+config("rust-crypto-config") {
+  cflags_c = [
+    # uses 'asm' instead of '__asm__"
+    "-std=gnu99",
+  ]
+}
+
+static_library("rust-crypto") {
+  configs += [ ":rust-crypto-config" ]
+
+  sources = [
+    "$crypto_crate/src/aesni_helpers.c",
+    "$crypto_crate/src/util_helpers.c",
+  ]
+}

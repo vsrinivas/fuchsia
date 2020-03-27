@@ -45,7 +45,7 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
                 start_idx = idx + 2; // skip ", "
             }
         }
-        Ok(accum.join(" || "))
+        Ok(format!("({})", accum.join(" || ")))
     } else if cfg.starts_with("all") {
         let section = &cfg[4..cfg.len()];
         let mut accum = vec![];
@@ -64,7 +64,7 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
                 start_idx = idx + 2; // skip ", "
             }
         }
-        Ok(accum.join(" && "))
+        Ok(format!("({})", accum.join(" && ")))
     } else if cfg == "target_os = \"fuchsia\"" {
         Ok(String::from("is_fuchsia"))
     } else if cfg == "target_os = \"macos\"" {
@@ -110,21 +110,21 @@ fn basic_fuchsia() {
 fn conditonal_any() {
     let cfg_str = r#"cfg(any(target_os = "fuchsia", target_os = "macos"))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "is_fuchsia || is_mac");
+    assert_eq!(output, "(is_fuchsia || is_mac)");
 }
 
 #[test]
 fn conditonal_all() {
     let cfg_str = r#"cfg(all(target_os = "fuchsia", target_os = "macos"))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "is_fuchsia && is_mac");
+    assert_eq!(output, "(is_fuchsia && is_mac)");
 }
 
 #[test]
 fn conditonal_all_not() {
     let cfg_str = r#"cfg(all(target_os = "fuchsia", not(target_os = "macos")))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "is_fuchsia && !is_mac");
+    assert_eq!(output, "(is_fuchsia && !is_mac)");
 }
 
 #[test]
@@ -132,4 +132,15 @@ fn conditonal_fail() {
     let cfg_str = r#"cfg(everything(target_os = "fuchsia"))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap_err();
     assert_eq!(output.to_string(), r#"Unknown cfg option used: everything(target_os = "fuchsia")"#);
+}
+
+#[test]
+fn nested_cfgs() {
+    let cfg_str =
+        r#"cfg(all(any(target_arch = "x86_64", target_arch = "aarch64"), target_os = "hermit"))"#;
+    let output = cfg_to_gn_conditional(cfg_str).unwrap();
+    assert_eq!(
+        output.to_string(),
+        r#"((current_cpu == "x64" || current_cpu == "arm64") && false)"#
+    );
 }

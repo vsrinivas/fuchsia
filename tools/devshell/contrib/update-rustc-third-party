@@ -18,6 +18,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
 
 case "$(uname -s)" in
   Linux*) ;;
@@ -35,12 +36,26 @@ case "$(uname -s)" in
 esac
 
 declare -x PATH=$PREBUILT_CMAKE_DIR/cmake/bin:$PATH
-
 export RUSTC=$PREBUILT_RUST_DIR/bin/rustc
+
+GNAW_BIN="${FUCHSIA_BUILD_DIR}/host-tools/gnaw"
 
 (cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo vendor \
   --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
-  $FUCHSIA_DIR/third_party/rust_crates/vendor)
+  $FUCHSIA_DIR/third_party/rust_crates/vendor \
+  -q)
+
+if [[ ! -f "$GNAW_BIN" ]]; then
+  echo "Please run: fx build tools/cargo-gnaw"
+  exit 1
+fi
+
+(cd $FUCHSIA_DIR; $GNAW_BIN \
+   --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
+   --project-root $FUCHSIA_DIR \
+  -o $FUCHSIA_DIR/third_party/rust_crates/BUILD.gn \
+  --gn-bin $PREBUILT_GN \
+  --skip-root)
 
 python $FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
   --directory $FUCHSIA_DIR/third_party/rust_crates/vendor
