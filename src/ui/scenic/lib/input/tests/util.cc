@@ -21,7 +21,8 @@
 namespace lib_ui_input_tests {
 
 // Used to compare whether two values are nearly equal.
-constexpr float kEpsilon = 0.000001f;
+// 1000 times machine limits to account for scaling from [0,1] to viewing volume [0,1000].
+constexpr float kEpsilon = std::numeric_limits<float>::epsilon() * 1000;
 
 using InputCommand = fuchsia::ui::input::Command;
 using ScenicEvent = fuchsia::ui::scenic::Event;

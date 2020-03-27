@@ -74,6 +74,10 @@ class InputCommandDispatcher : public CommandDispatcher {
   static void ReportToImeService(const fuchsia::ui::input::ImeServicePtr& ime_service,
                                  fuchsia::ui::input::KeyboardEvent keyboard);
 
+  // TODO(48150): Delete when we delete the PointerCapture functionality.
+  void ReportPointerEventToPointerCaptureListener(
+      const fuchsia::ui::input::PointerEvent& pointer_event, GlobalId compositor_id);
+
   // Retrieve focused ViewRef's KOID from the scene graph.
   // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
   zx_koid_t focus() const;

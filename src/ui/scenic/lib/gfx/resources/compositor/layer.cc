@@ -20,7 +20,8 @@ namespace gfx {
 
 namespace {
 
-std::optional<ViewHit> CreateViewHit(const NodeHit& hit, const escher::mat4& layer_transform) {
+std::optional<ViewHit> CreateViewHit(const NodeHit& hit,
+                                     const escher::mat4& screen_to_world_transform) {
   FXL_DCHECK(hit.node);
   ViewPtr view = hit.node->FindOwningView();
 
@@ -30,9 +31,11 @@ std::optional<ViewHit> CreateViewHit(const NodeHit& hit, const escher::mat4& lay
 
   FXL_DCHECK(view->GetViewNode());
 
+  const escher::mat4 world_to_model = glm::inverse(view->GetViewNode()->GetGlobalTransform());
+  const escher::mat4 screen_to_model = world_to_model * screen_to_world_transform;
   return ViewHit{
       .view = view,
-      .transform = glm::inverse(view->GetViewNode()->GetGlobalTransform()) * layer_transform,
+      .screen_to_view_transform = screen_to_model,
       .distance = hit.distance,
   };
 }
@@ -98,26 +101,22 @@ void Layer::HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumu
     return;
   }
 
-  const Camera* const camera = renderer_->camera();
-
-  // Normalize the origin of the ray with respect to the width and height of the
-  // layer before passing it to the camera.
-  const escher::mat4 layer_normalization =
-      glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
-
-  const auto local_ray = layer_normalization * ray;
-
-  // Transform the normalized ray by the camera's transformation.
-  const auto [camera_ray, camera_transform] = camera->ProjectRay(local_ray, GetViewingVolume());
-
-  // CreateViewHit needs this to compose the transform from layer space to view space.
-  const escher::mat4 layer_transform = camera_transform * layer_normalization;
-
+  const escher::mat4 screen_to_world_transform = GetScreenToWorldSpaceTransform();
   MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
-      hit_accumulator,
-      [&layer_transform](const NodeHit& hit) { return CreateViewHit(hit, layer_transform); });
+      hit_accumulator, [transform = screen_to_world_transform](const NodeHit& hit) {
+        return CreateViewHit(hit, transform);
+      });
 
-  gfx::HitTest(camera->scene().get(), camera_ray, &transforming_accumulator);
+  // This operation can be thought of as constructing the ray originating at the
+  // camera's position, that passes through a point on the near plane.
+  //
+  // For more information about world, view, and projection matrices, and how
+  // they can be used for ray picking, see:
+  //
+  // http://www.codinglabs.net/article_world_view_projection_matrix.aspx
+  // https://stackoverflow.com/questions/2093096/implementing-ray-picking
+  const escher::ray4 camera_ray = screen_to_world_transform * ray;
+  gfx::HitTest(renderer_->camera()->scene().get(), camera_ray, &transforming_accumulator);
 }
 
 escher::ViewingVolume Layer::GetViewingVolume() const {
@@ -125,6 +124,24 @@ escher::ViewingVolume Layer::GetViewingVolume() const {
   constexpr float kTop = -1000;
   constexpr float kBottom = 0;
   return escher::ViewingVolume(size_.x, size_.y, kTop, kBottom);
+}
+
+escher::mat4 Layer::GetScreenToWorldSpaceTransform() const {
+  // Transform from pixel space [0, width] x [0, height] to Vulkan normalized device coordinates [0,
+  // 1] x [0, 1].
+  const escher::mat4 pixel_transform = glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
+
+  // Transform from Vulkan normalized device coordinates [0, 1] to the projection space of the
+  // camera [-1, 1].
+  const auto device_transform =
+      glm::translate(glm::vec3(-1.f, -1.f, 0.f)) * glm::scale(glm::vec3(2.f, 2.f, 1.f));
+
+  // Transform from projection space to world space (layer space).
+  const auto vp_transform = renderer_->camera()->GetViewProjectionMatrix(GetViewingVolume());
+  const auto camera_transform = glm::inverse(vp_transform);
+
+  // Return transform from pixel space to world space.
+  return camera_transform * device_transform * pixel_transform;
 }
 
 }  // namespace gfx

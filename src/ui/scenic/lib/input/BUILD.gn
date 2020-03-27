@@ -24,6 +24,7 @@ source_set("input") {
     "//src/lib/fxl",
     "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/gfx:ids",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scheduling:id",
     "//zircon/public/lib/inspect",

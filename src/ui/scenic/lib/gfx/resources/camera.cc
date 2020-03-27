@@ -72,31 +72,9 @@ escher::hmd::PoseBuffer Camera::GetEscherPoseBuffer() const {
                       : escher::hmd::PoseBuffer();  // NOTE: has operator bool
 }
 
-std::pair<escher::ray4, escher::mat4> Camera::ProjectRay(
-    const escher::ray4& ray, const escher::ViewingVolume& viewing_volume) const {
+escher::mat4 Camera::GetViewProjectionMatrix(const escher::ViewingVolume& viewing_volume) const {
   auto camera = GetEscherCamera(viewing_volume);
-
-  // This screen transform shifts the x, y from [-1, 1] to [0, 1]. Therefore,
-  // when we invert it below, it takes the input coords into Vulkan normalized
-  // device coordinates.
-  auto scale = glm::scale(glm::vec3(0.5f, 0.5f, -1.f));
-  auto translate = glm::translate(glm::vec3(1.f, 1.f, 0.f));
-  auto device_transform = scale * translate;
-
-  // This operation can be thought of as constructing the ray originating at the
-  // camera's position, that passes through a point on the near plane.
-  //
-  // First the constructed near/mid points get passed through the inverse of the
-  // device transform. After that the projection gets "undone," and finally the
-  // camera transform is taken into account.
-  //
-  // For more information about world, view, and projection matrices, and how
-  // they can be used for ray picking, see:
-  // http://www.codinglabs.net/article_world_view_projection_matrix.aspx
-  // https://stackoverflow.com/questions/2093096/implementing-ray-picking
-  auto inverse_vp = glm::inverse(device_transform * camera.projection() * camera.transform());
-
-  return {inverse_vp * ray, inverse_vp};
+  return camera.projection() * camera.transform();
 }
 
 }  // namespace gfx

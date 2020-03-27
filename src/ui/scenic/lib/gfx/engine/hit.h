@@ -33,10 +33,10 @@ struct ViewHit {
   // pointer or this hit struct longer than necessary.
   ViewPtr view;
 
-  // The transformation matrix that maps the coordinate system of the hit ray to the coordinate
-  // system of the view. This in conjunction with |distance| defines the hit coordinate in view
-  // coordinates.
-  escher::mat4 transform;
+  // The transformation matrix that maps the raw (pre-rotation) screen space coordinate system of
+  // the hit ray to the coordinate system of the view. This in conjunction with |distance| defines
+  // the hit coordinate in view coordinates.
+  escher::mat4 screen_to_view_transform;
 
   // The distance from the ray's origin to the closest point of intersection in multiples of the
   // ray's direction vector. As the ray may be transformed during hit testing and in accumulator

@@ -216,17 +216,13 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
   }
 
   {
-    // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates.
+    // Hit from (1, 1.5) should be at (1, 1.5, 0) in view coordinates.
     // Depth should be 1.999:
-    // * hit ray originates in device space (clip space with -z)
-    // * geometry is at z = -1 in global space
+    // * hit ray originates in device space (clip space)
+    // * geometry is at z = 0 in global space
     // * orthographic projection maps z [0, 1000] to [0, 1] in clip space (now at z = .999)
-    // * hit ray is at z = 1 (1 length behind the camera) with direction z = -1
-    //   (result: hit z = 1.999)
-    // TODO(38389): See if we can simplify this. At the very least we should be able to get rid of
-    // the -z and 1-offset, but it may also be possible to redefine device-space z in terms of the
-    // view volume depth (though the relative scale isn't used for anything user facing so it
-    // doesn't actually matter).
+    // * hit ray is at z = 0 (1 length behind the camera) with direction z = 1
+    //   (result: hit z = 0.999)
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
     layer_stack()->HitTest(ray, &accumulator);
@@ -234,9 +230,8 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
-    // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
-    EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
-    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {1, 1.5f, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
     static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
@@ -287,9 +282,8 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
   }
 
   {
-    // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates and depth should be 1.999 (z
-    // = -1 in 1000-space, + 1 due to the ray origin). Although the rectangle is scaled, the view is
-    // not.
+    // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates and depth should
+    // be 0.999 (z = -1 in 1000-space). Although the rectangle is scaled, the view is not.
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
     layer_stack()->HitTest(ray, &accumulator);
@@ -297,9 +291,8 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
-    // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
-    EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
-    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {1, 1.5f, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
     static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
@@ -352,8 +345,8 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
   }
 
   {
-    // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should be 1.998 (z
-    // = -2 in 1000-space, + 1 due to the ray origin).
+    // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should
+    // be 0.998 (z = -2 in 1000-space).
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = input::CreateScreenPerpendicularRay(5, 6);
     layer_stack()->HitTest(ray, &accumulator);
@@ -361,9 +354,9 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
-    // TODO(38389): .998f (ray origin is currently 1 length behind the camera)
-    EXPECT_NEAR(hit.distance, 1.998f, std::numeric_limits<float>::epsilon());
-    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    EXPECT_NEAR(hit.distance, 0.998f, std::numeric_limits<float>::epsilon());
+
+    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {2.f / 3, 4.f / 3, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
     static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
@@ -430,9 +423,8 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
-    // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
-    EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
-    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {5, 7.5f / 3, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
     static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;

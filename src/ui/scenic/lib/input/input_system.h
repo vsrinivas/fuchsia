@@ -72,8 +72,8 @@ class InputSystem : public System,
       fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) override;
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
-  void ReportPointerEventToPointerCaptureListener(
-      const fuchsia::ui::input::PointerEvent& pointer) const;
+  void ReportPointerEventToPointerCaptureListener(const fuchsia::ui::input::PointerEvent& pointer,
+                                                  const glm::mat4& layer_transform) const;
 
  private:
   gfx::Engine* const engine_;

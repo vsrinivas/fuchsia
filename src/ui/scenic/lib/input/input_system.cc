@@ -90,21 +90,27 @@ void InputSystem::RegisterListener(
 }
 
 void InputSystem::ReportPointerEventToPointerCaptureListener(
-    const fuchsia::ui::input::PointerEvent& pointer) const {
+    const fuchsia::ui::input::PointerEvent& pointer,
+    const glm::mat4& screen_to_world_transform) const {
   if (!pointer_capture_listener_) {
     return;
   }
 
   const PointerCaptureListener& listener = pointer_capture_listener_.value();
 
-  std::optional<glm::mat4> global_transform = GetGlobalTransformByViewRef(listener.view_ref);
-  if (!global_transform) {
+  std::optional<glm::mat4> view_to_world_transform = GetGlobalTransformByViewRef(listener.view_ref);
+  if (!view_to_world_transform) {
     return;
   }
 
+  const auto world_to_view_transform = glm::inverse(view_to_world_transform.value());
+  const auto screen_to_view_transform = world_to_view_transform * screen_to_world_transform;
+  const auto local_coords =
+      TransformPointerCoords(PointerCoords(pointer), screen_to_view_transform);
+  const auto local_pointer = ClonePointerWithCoords(pointer, local_coords);
+
   // TODO(42145): Implement flow control.
-  listener.listener_ptr->OnPointerEvent(BuildLocalPointerEvent(pointer, global_transform.value()),
-                                        [] {});
+  listener.listener_ptr->OnPointerEvent(std::move(local_pointer), [] {});
 }
 
 }  // namespace input

@@ -23,16 +23,12 @@ fuchsia::ui::input::PointerEvent ClonePointerWithCoords(
 // Extracts the coordinates from |event|.
 escher::vec2 PointerCoords(const fuchsia::ui::input::PointerEvent& event);
 
-// Helper for Dispatch[Touch|Mouse]Command.
+// Applies |transform| to |pointer|.
 escher::vec2 TransformPointerCoords(const escher::vec2& pointer, const glm::mat4 transform);
 
 // Finds (Vulkan) normalized device coordinates with respect to the (single) layer.
 escher::vec2 NormalizePointerCoords(const escher::vec2& pointer,
                                     const gfx::LayerStackPtr& layer_stack);
-
-// Builds a pointer event with local (described by |transform|) view coordinates.
-fuchsia::ui::input::PointerEvent BuildLocalPointerEvent(
-    const fuchsia::ui::input::PointerEvent& pointer_event, const glm::mat4& transform);
 
 }  // namespace input
 }  // namespace scenic_impl

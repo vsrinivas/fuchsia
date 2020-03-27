@@ -311,5 +311,324 @@ TEST_F(CoordinateTransformTest, ScaledInFront) {
   }
 }
 
+// This test verifies that rotation is handled correctly when events are delivered to clients.
+//
+// Below are ASCII diagrams showing the scene setup.
+// Note that the notated X,Y coordinate system is the screen coordinate system. The view's
+// coordinate system has its origin at corner '1'.
+//
+// View pre-transformation (1,2,3,4 denote corners of view):
+// Note that the view's coordinate system is the same as the screen coordinate system.
+//   X ->
+// Y 1 O O O 2 - - - -
+// | O O O O O - - - -
+// v O O O O O - - - -
+//   O O O O O - - - -
+//   4 O O O 3 - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//
+// View post-transformation:
+//   X ->
+// Y 4A O O O 1D- - - -
+// | O  O O O O - - - -
+// V O  O O O O - - - -
+//   O  O O O O - - - -
+//   3U O O O 2M- - - -
+//   -  - - - - - - - -
+//   -  - - - - - - - -
+//   -  - - - - - - - -
+//   -  - - - - - - - -
+//
+// A - Add event
+// D - Down event
+// M - Move event
+// U - Up event
+
+TEST_F(CoordinateTransformTest, Rotated) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+
+    scenic::ViewHolder view_holder(session, std::move(view_holder_token), "view_holder");
+
+    view_holder.SetViewProperties(k5x5x1);
+    scene->AddChild(view_holder);
+
+    // Rotate the view holder 90 degrees counter-clockwise around the z-axis (which points into
+    // screen, so the rotation appears clockwise).
+    view_holder.SetAnchor(2.5, 2.5, 0);
+    const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2, glm::vec3(0, 0, 1));
+    view_holder.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
+                            rotation_quaternion.w);
+
+    RequestToPresent(session);
+  }
+
+  // Client vends a View to the global scene.
+  SessionWrapper client = CreateClient("view_1", std::move(view_token));
+
+  // Scene is now set up, send in the input. One event for where each corner of the view was
+  // pre-transformation. Injected events are in the global coordinate space.
+  {
+    scenic::Session* session = root_session.session();
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    session->Enqueue(pointer.Add(0.5, 0.5));
+    session->Enqueue(pointer.Down(4.5, 0.5));
+    session->Enqueue(pointer.Move(4.5, 4.5));
+    session->Enqueue(pointer.Up(0.5, 4.5));
+  }
+  RunLoopUntilIdle();
+
+  {  // Received events should be in the coordinate space of the view.
+    const std::vector<InputEvent>& events = client.events();
+
+    EXPECT_EQ(events.size(), 5u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.5, 4.5));
+
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
+
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
+
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 4.5, 4.5));
+  }
+}
+
+// In this test we set up a view, apply a ClipSpaceTransform to it, and then send pointer events to
+// confirm that the coordinates received by the session are correctly transformed.
+//
+// Below are ASCII diagrams showing the scene setup.
+// Note that the notated X,Y coordinate system is the screen coordinate system. The view's
+// coordinate system has its origin at corner '1'.
+//
+// Scene pre-transformation (1,2,3,4 denote the corners of the view):
+// Note that the view's coordinate system is the same as the screen coordinate system.
+//   X ->
+// Y 1 O O O 2 - - - -
+// | O O O O O - - - -
+// v O O O O O - - - -
+//   O O O O O - - - -
+//   4 O O O 3 - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//
+// Scene after scale, before offset:
+// 1   O   O   O   2
+//
+// O   O   O   O   O
+//
+// O   O   O - O - O - - - -
+//         - - - - - - - - -
+// O   O   O - O - O - - - -
+//         - - - - - - - - -
+// 4   O   O - O - 3 - - - -
+//         - - - - - - - - -
+//         - - - - - - - - -
+//         - - - - - - - - -
+//         - - - - - - - - -
+//
+// Scene post-scale, post-offset:
+// The X and Y dimensions of the view are now effectively scaled up to 10x10
+// (compared to the 9x9 of the screen), with origin at screen space origin.
+//   X ->
+// Y 1A- O - D - O - 2
+// | - - - - - - - - -
+// V O - O - O - O - O
+//   - - - - - - - - -
+//   U - O - M - O - O
+//   - - - - - - - - -
+//   O - O - O - O - O
+//   - - - - - - - - -
+//   4 - O - O - O - 3
+//
+// A - Add event
+// D - Down event
+// M - Move event
+// U - Up event
+TEST_F(CoordinateTransformTest, ClipSpaceTransformed) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+
+    scenic::ViewHolder view_holder(session, std::move(view_holder_token), "view_holder");
+
+    view_holder.SetViewProperties(k5x5x1);
+    scene->AddChild(view_holder);
+
+    // Set the clip space transform on the camera.
+    // The transform scales everything by 2 around the center of the screen (4.5, 4.5) and then
+    // applies offsets in Vulkan normalized device coordinates to bring the origin back
+    // to where it was originally. (Parameters are in Vulkan Normalized Device Coordinates.)
+    root_resources.camera.SetClipSpaceTransform(/*x offset*/ 1, /*y offset*/ 1, /*scale*/ 2);
+
+    RequestToPresent(session);
+  }
+
+  // Client vends a View to the global scene.
+  SessionWrapper client = CreateClient("view", std::move(view_token));
+
+  // Scene is now set up, send in the input. One event for where each corner of the view was
+  // pre-transformation. Injected events are in the screen coordinate space.
+  {
+    scenic::Session* session = root_session.session();
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    session->Enqueue(pointer.Add(0.5, 0.5));
+    session->Enqueue(pointer.Down(4.5, 0.5));
+    session->Enqueue(pointer.Move(4.5, 4.5));
+    session->Enqueue(pointer.Up(0.5, 4.5));
+  }
+  RunLoopUntilIdle();
+
+  {  // Received events should be in the coordinate space of the view.
+    // Expect received coordinates to be half of the injected coordinates, since the view is now
+    // effectively twice as big on screen.
+    const std::vector<InputEvent>& events = client.events();
+
+    EXPECT_EQ(events.size(), 5u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.25, 0.25));
+
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 2.25, 0.25));
+
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 2.25, 2.25));
+
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 0.25, 2.25));
+  }
+}
+
+// In this test we set up a view, apply a ClipSpaceTransform scale to the camera as well as a
+// translation on the view holder, and confirm that the delivered coordinates are correctly
+// transformed.
+//
+// Below are ASCII diagrams showing the scene setup.
+// Note that the notated X,Y coordinate system is the screen coordinate system. The view's
+// coordinate system has its origin at corner '1'.
+//
+// Scene pre-transformation (1,2,3,4 denote the corners of the view):
+// Note that the view's coordinate system is the same as the screen coordinate system.
+//   X ->
+// Y 1 O O O 2 - - - -
+// | O O O O O - - - -
+// v O O O O O - - - -
+//   O O O O O - - - -
+//   4 O O O 3 - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//   - - - - - - - - -
+//
+// Scene after post-clip space transform, pre-translation:
+// 1   O   O   O   2
+//
+// O   O   O   O   O
+//
+// O   O   O - O - O - - - -
+//         - - - - - - - - -
+// O   O   O - O - O - - - -
+//         - - - - - - - - -
+// 4   O   O - O - 3 - - - -
+//         - - - - - - - - -
+//         - - - - - - - - -
+//         - - - - - - - - -
+//         - - - - - - - - -
+//
+// Scene after post-clip space transform, post-translation:
+// Size of view is effectively 10x10, translated by (1,1).
+//   X ->
+// Y 1   O   O   O   2
+// |
+// V O   A - O - D - O - -
+//       - - - - - - - - -
+//   O   O - O - O - O - -
+//       - - - - - - - - -
+//   O   U - O - M - O - -
+//       - - - - - - - - -
+//   4   O - O - O - 3 - -
+//       - - - - - - - - -
+//       - - - - - - - - -
+// A - Add event
+// D - Down event
+// M - Move event
+// U - Up event
+TEST_F(CoordinateTransformTest, ClipSpaceAndNodeTransformed) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+
+    scenic::ViewHolder view_holder(session, std::move(view_holder_token), "view_holder");
+
+    view_holder.SetViewProperties(k5x5x1);
+    scene->AddChild(view_holder);
+
+    // Set the clip space transform to zoom in on the center of the screen.
+    root_resources.camera.SetClipSpaceTransform(0, 0, /*scale*/ 2);
+    // Translate view holder.
+    view_holder.SetTranslation(1, 1, 0);
+
+    RequestToPresent(session);
+  }
+
+  // Client vends a View to the global scene.
+  SessionWrapper client = CreateClient("view", std::move(view_token));
+
+  // Scene is now set up, send in the input. One event for where each corner of the view was
+  // pre-transformation. Injected events are in the screen coordinate space.
+  {
+    scenic::Session* session = root_session.session();
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    session->Enqueue(pointer.Add(0.5, 0.5));
+    session->Enqueue(pointer.Down(4.5, 0.5));
+    session->Enqueue(pointer.Move(4.5, 4.5));
+    session->Enqueue(pointer.Up(0.5, 4.5));
+  }
+  RunLoopUntilIdle();
+
+  {  // Received events should be in the coordinate space of the view.
+    const std::vector<InputEvent>& events = client.events();
+
+    EXPECT_EQ(events.size(), 5u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 2.5 - 1, 2.5 - 1));
+
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5 - 1, 2.5 - 1));
+
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 4.5 - 1, 4.5 - 1));
+
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 2.5 - 1, 4.5 - 1));
+  }
+}
+
 }  // namespace
 }  // namespace lib_ui_input_tests

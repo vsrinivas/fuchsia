@@ -76,6 +76,10 @@ class Layer : public Resource {
   // when initializing the stage, as well as for hit testing.
   escher::ViewingVolume GetViewingVolume() const;
 
+  // Returns the transform from screen space coordinates to world space.
+  // It maps from pixel to camera space, and then undoes the camera's transformation matrices.
+  escher::mat4 GetScreenToWorldSpaceTransform() const;
+
  private:
   friend class LayerStack;
 

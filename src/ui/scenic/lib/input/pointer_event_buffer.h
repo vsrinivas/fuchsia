@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/input/view_stack.h"
 
 namespace scenic_impl {
@@ -31,6 +32,10 @@ class PointerEventBuffer {
     fuchsia::ui::input::PointerEvent event;
     // Position 0 of the vector holds the top-most view. The vector may be empty.
     std::vector<ViewStack::Entry> parallel_event_receivers;
+
+    // TODO(48150): Delete when we delete the PointerCapture functionality.
+    // Cached to support dynamic query of Compositor, LayerStack, and Layer objects.
+    GlobalId compositor_id;
   };
   // Represents a stream of pointer events. A stream is a sequence of pointer events with phase
   // ADD -> * -> REMOVE.

@@ -16,6 +16,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
+#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/input_system.h"
@@ -106,6 +107,18 @@ InputCommandDispatcher::InputCommandDispatcher(scheduling::SessionId session_id,
   FXL_CHECK(input_system_);
 }
 
+void InputCommandDispatcher::ReportPointerEventToPointerCaptureListener(
+    const PointerEvent& pointer_event, GlobalId compositor_id) {
+  const auto layers = GetLayerStack(engine_, compositor_id)->layers();
+  if (!layers.empty()) {
+    // Assume we only have one layer.
+    const glm::mat4 screen_to_world_space_transform =
+        (*layers.begin())->GetScreenToWorldSpaceTransform();
+    input_system_->ReportPointerEventToPointerCaptureListener(pointer_event,
+                                                              screen_to_world_space_transform);
+  }
+}
+
 void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
                                              scheduling::PresentId present_id) {
   TRACE_DURATION("input", "dispatch_command", "command", "ScenicCmd");
@@ -189,7 +202,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
         hit_views.stack.push_back({
             hit.view->view_ref_koid(),
             hit.view->event_reporter()->GetWeakPtr(),
-            hit.transform,
+            hit.screen_to_view_transform,
         });
         if (/*TODO(SCN-919): view_id may mask input */ false) {
           break;
@@ -253,7 +266,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
     // for "top hit".
     glm::mat4 view_transform(1.f);
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-    GlobalId compositor_id(session_id_, command.compositor_id);
+    const GlobalId compositor_id(session_id_, command.compositor_id);
     gfx::LayerStackPtr layer_stack = GetLayerStack(engine_, compositor_id);
     {
       // Find top-hit target and send it to accessibility.
@@ -265,22 +278,26 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
       if (top_hit.hit()) {
         const gfx::ViewHit& hit = *top_hit.hit();
 
-        view_transform = hit.transform;
+        view_transform = hit.screen_to_view_transform;
         view_ref_koid = hit.view->view_ref_koid();
       }
     }
 
     const auto ndc = NormalizePointerCoords(pointer, layer_stack);
     const auto top_hit_view_local = TransformPointerCoords(pointer, view_transform);
+
     AccessibilityPointerEvent packet = BuildAccessibilityPointerEvent(
         command.pointer_event, ndc, top_hit_view_local, view_ref_koid);
     pointer_event_buffer_->AddEvent(
         pointer_id,
         {.event = std::move(command.pointer_event),
-         .parallel_event_receivers = std::move(deferred_event_receivers)},
+         .parallel_event_receivers = std::move(deferred_event_receivers),
+         .compositor_id = compositor_id},
         std::move(packet));
   } else {
-    input_system_->ReportPointerEventToPointerCaptureListener(command.pointer_event);
+    // TODO(48150): Delete when we delete the PointerCapture functionality.
+    const GlobalId compositor_id(session_id_, command.compositor_id);
+    ReportPointerEventToPointerCaptureListener(command.pointer_event, compositor_id);
   }
 
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
@@ -333,7 +350,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
       hit_view.stack.push_back({
           hit.view->view_ref_koid(),
           hit.view->event_reporter()->GetWeakPtr(),
-          hit.transform,
+          hit.screen_to_view_transform,
       });
     }
     FXL_VLOG(1) << "View hit: " << hit_view;
@@ -379,7 +396,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
 
       ViewStack::Entry view_info;
       view_info.reporter = hit.view->event_reporter()->GetWeakPtr();
-      view_info.transform = hit.transform;
+      view_info.transform = hit.screen_to_view_transform;
       PointerEvent clone;
       fidl::Clone(command.pointer_event, &clone);
       ReportPointerEvent(view_info, std::move(clone));
@@ -460,9 +477,13 @@ void InputCommandDispatcher::DispatchDeferredPointerEvent(
     }
   }
 
-  input_system_->ReportPointerEventToPointerCaptureListener(views_and_event.event);
   for (auto& view : views_and_event.parallel_event_receivers) {
     ReportPointerEvent(view, views_and_event.event);
+  }
+
+  {  // TODO(48150): Delete when we delete the PointerCapture functionality.
+    ReportPointerEventToPointerCaptureListener(views_and_event.event,
+                                               views_and_event.compositor_id);
   }
 }
 
@@ -476,7 +497,9 @@ void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_inf
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
 
   InputEvent event;
-  event.set_pointer(BuildLocalPointerEvent(pointer, view_info.transform));
+  const auto transformed_coords =
+      TransformPointerCoords(PointerCoords(pointer), view_info.transform);
+  event.set_pointer(ClonePointerWithCoords(pointer, transformed_coords));
 
   view_info.reporter->EnqueueEvent(std::move(event));
 }

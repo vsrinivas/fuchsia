@@ -525,6 +525,9 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         capture_point.x *= display_metrics_.x_scale_in_pp_per_px();
         capture_point.y *= display_metrics_.y_scale_in_pp_per_px();
 
+        FXL_VLOG(2) << "Sending PointerCaptureHack event: " << capture_point.x << " "
+                    << capture_point.y;
+
         for (auto& listener : captured_pointerbindings_.ptrs()) {
           fuchsia::ui::input::PointerEvent clone;
           fidl::Clone(pointer, &clone);
