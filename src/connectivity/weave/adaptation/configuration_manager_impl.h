@@ -50,8 +50,6 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _GetProductId(uint16_t& productId);
   WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t bufSize, size_t& outLen);
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
-  WEAVE_ERROR _GetDeviceDescriptor(
-      ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor& deviceDesc);
   ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase* _GetGroupKeyStore(void);
   bool _CanFactoryReset(void);
   void _InitiateFactoryReset(void);
@@ -69,11 +67,6 @@ class ConfigurationManagerImpl final
   friend ConfigurationManagerImpl& ConfigurationMgrImpl(void);
 
   static ConfigurationManagerImpl sInstance;
-
-  WEAVE_ERROR GetWiFiStationSecurityType(
-      ::nl::Weave::Profiles::NetworkProvisioning::WiFiSecurityType& secType);
-  WEAVE_ERROR UpdateWiFiStationSecurityType(
-      ::nl::Weave::Profiles::NetworkProvisioning::WiFiSecurityType secType);
 
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_ptr_;

@@ -213,5 +213,16 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber) {
   EXPECT_STREQ(serial_num, kExpectedSerialNumber);
 }
 
+TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
+  ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
+  RunLoopAsync();
+  EXPECT_EQ(cfg_mgr_->GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
+  WaitOnLoop(true);
+
+  EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
+  EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
+  EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
+}
+
 }  // namespace testing
 }  // namespace adaptation

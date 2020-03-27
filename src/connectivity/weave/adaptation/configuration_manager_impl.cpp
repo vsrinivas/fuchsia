@@ -146,11 +146,6 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetPrimaryWiFiMACAddress(uint8_t* buf) {
   return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
 }
 
-WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceDescriptor(
-    ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor& deviceDesc) {
-  return WEAVE_NO_ERROR;
-}
-
 ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase*
 ConfigurationManagerImpl::_GetGroupKeyStore() {
   return &gGroupKeyStore;
@@ -162,22 +157,16 @@ void ConfigurationManagerImpl::_InitiateFactoryReset() { FuchsiaConfig::FactoryR
 
 WEAVE_ERROR ConfigurationManagerImpl::_ReadPersistedStorageValue(
     ::nl::Weave::Platform::PersistedStorage::Key key, uint32_t& value) {
-  return WEAVE_NO_ERROR;
+  WEAVE_ERROR err = ReadConfigValue(key, value);
+  if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+    err = WEAVE_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
+  }
+  return err;
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_WritePersistedStorageValue(
     ::nl::Weave::Platform::PersistedStorage::Key key, uint32_t value) {
-  return WEAVE_NO_ERROR;
-}
-
-WEAVE_ERROR ConfigurationManagerImpl::GetWiFiStationSecurityType(
-    Profiles::NetworkProvisioning::WiFiSecurityType& secType) {
-  return WEAVE_NO_ERROR;
-}
-
-WEAVE_ERROR ConfigurationManagerImpl::UpdateWiFiStationSecurityType(
-    Profiles::NetworkProvisioning::WiFiSecurityType secType) {
-  return WEAVE_NO_ERROR;
+  return WriteConfigValue(key, value);
 }
 
 }  // namespace DeviceLayer

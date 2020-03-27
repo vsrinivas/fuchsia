@@ -10,6 +10,9 @@
         "binary": "test/weavestack_unittests"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider"
