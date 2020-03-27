@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/paper/paper_renderer.h"
-
 #include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_timestamp_graph.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
-#include "src/ui/lib/escher/scene/viewing_volume.h"
-#include "src/ui/lib/escher/test/common/readback_test.h"
+#include "src/ui/lib/escher/test/common/paper_renderer_test.h"
 #include "src/ui/lib/escher/types/color.h"
 #include "src/ui/lib/escher/types/color_histogram.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -23,47 +21,10 @@
 namespace escher {
 namespace test {
 
-// Extends ReadbackTest by providing a ready-to-use DebugFont instance.
-class PaperRendererTest : public ReadbackTest {
- protected:
-  // |ReadbackTest|
-  void SetUp() override {
-    ReadbackTest::SetUp();
-
-    escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
-        kPaperRendererShaderPaths);
-    PaperRendererConfig config;
-    auto depth_stencil_format = escher()->device()->caps().GetMatchingDepthStencilFormat();
-    if (depth_stencil_format.result == vk::Result::eSuccess) {
-      config.depth_stencil_format = depth_stencil_format.value;
-      FXL_LOG(INFO) << "Depth stencil format set to " << vk::to_string(config.depth_stencil_format);
-    } else {
-      GTEST_SKIP() << "Cannot find a valid depth stencil format, test skipped";
-    }
-    ren = PaperRenderer::New(escher(), config);
-  }
-
-  // |ReadbackTest|
-  void TearDown() override {
-    ren.reset();
-    ReadbackTest::TearDown();
-  }
-
-  // Sets up the environment including the frame, scene, and cameras.
-  void frame_setup() {
-    fd = NewFrame(vk::ImageLayout::eColorAttachmentOptimal);
-
-    scene = fxl::MakeRefCounted<PaperScene>();
-    scene->point_lights.resize(1);
-    scene->bounding_box = BoundingBox(vec3(0), vec3(kFramebufferHeight));
-
-    const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
-    escher::Camera cam = escher::Camera::NewOrtho(volume);
-    cameras = {cam};
-  };
-
+class DebugShapeTest : public PaperRendererTest {
+ public:
   // Used by tests that call DebugRects::Color when drawing.
-  int32_t get_colored_data(DebugRects::Color kColor) {
+  int32_t GetColoredData(DebugRects::Color kColor) {
     auto bytes = ReadbackFromColorAttachment(fd.frame, vk::ImageLayout::eColorAttachmentOptimal,
                                              vk::ImageLayout::eColorAttachmentOptimal);
     const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
@@ -72,20 +33,10 @@ class PaperRendererTest : public ReadbackTest {
     ColorRgba c = DebugRects::colorData[kColor];
     ColorBgra b = ColorBgra(c.r, c.g, c.b, c.a);
     return histogram[b];
-  };
-
- public:
-  TexturePtr depth_buffer() { return ren->depth_buffers_[0]; }
-
-  escher::PaperRendererPtr ren;
-
-  // Frame environment variables.
-  ReadbackTest::FrameData fd;
-  escher::PaperScenePtr scene;
-  std::vector<Camera> cameras;
+  }
 };
 
-VK_TEST_F(PaperRendererTest, Text) {
+VK_TEST_F(DebugShapeTest, Text) {
   constexpr uint32_t kNumPixelsPerGlyph = 7 * 7;
 
   constexpr ColorBgra kWhite(255, 255, 255, 255);
@@ -94,7 +45,7 @@ VK_TEST_F(PaperRendererTest, Text) {
   // Expects PaperRenderer's background color to be transparent.
 
   for (int32_t scale = 1; scale <= 4; ++scale) {
-    frame_setup();
+    SetupFrame();
 
     // |expected_black| is the total number of black pixels *within* the glyphs
     // *before* scaling.  In other words, black background pixels outside of the
@@ -156,9 +107,9 @@ VK_TEST_F(PaperRendererTest, Text) {
 // Tests that vertical and horizontal lines of a specific color are drawn correctly when called.
 // It does this by checking the number of pixels drawn of the specified color against what is
 // expected. Colors are created in debug_rects.h and take the format |kColor|.
-VK_TEST_F(PaperRendererTest, Lines) {
+VK_TEST_F(DebugShapeTest, Lines) {
   for (int32_t thickness = 1; thickness <= 4; ++thickness) {
-    frame_setup();
+    SetupFrame();
 
     // Draws verticle and horizontal lines of |KColor| starting at (0, 0) and going to |endCoord|.
     std::function<void(DebugRects::Color, uint8_t)> draw_and_check_histogram =
@@ -176,7 +127,7 @@ VK_TEST_F(PaperRendererTest, Lines) {
             gpu_uploader->Submit();
             ren->EndFrame(std::move(upload_semaphore));
           }
-          EXPECT_EQ(expected_colored, get_colored_data(kColor))
+          EXPECT_EQ(expected_colored, GetColoredData(kColor))
               << "FAILED WHILE DRAWING VERTICAL LINE OF COLOR \"" << kColor
               << "\" AT THICKNESS: " << thickness;
 
@@ -192,7 +143,7 @@ VK_TEST_F(PaperRendererTest, Lines) {
             gpu_uploader->Submit();
             ren->EndFrame(std::move(upload_semaphore));
           }
-          EXPECT_EQ(expected_colored, get_colored_data(kColor))
+          EXPECT_EQ(expected_colored, GetColoredData(kColor))
               << "FAILED WHILE DRAWING HORIZONTAL LINE OF COLOR \"" << kColor
               << "\" AT THICKNESS: " << thickness;
         };
@@ -208,13 +159,13 @@ VK_TEST_F(PaperRendererTest, Lines) {
 }
 
 // Tests drawing fake data used by the Debug Graph.
-VK_TEST_F(PaperRendererTest, PaperTimestampGraph) {
+VK_TEST_F(DebugShapeTest, PaperTimestampGraph) {
   int16_t expected_colored = 0;
 
   PaperTimestampGraph graph;
 
   for (int32_t i = 1; i <= 10; ++i) {
-    frame_setup();
+    SetupFrame();
 
     // Creates an escher Timestamp where |done_time| > |start_time| so that the values are
     // not negative. All other values are 0 to simplify the test.
@@ -252,7 +203,7 @@ VK_TEST_F(PaperRendererTest, PaperTimestampGraph) {
       const int16_t w_interval = PaperTimestampGraph::kSampleLineThickness;
 
       expected_colored += (render_time * h_interval) * w_interval;
-      auto returned_colored = get_colored_data(escher::DebugRects::kRed);
+      auto returned_colored = GetColoredData(escher::DebugRects::kRed);
       EXPECT_EQ(expected_colored, returned_colored)
           << "FAILED WHILE DRAWING DEBUG DATA FOR RENDER TIME " << render_time;
     };

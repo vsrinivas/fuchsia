@@ -80,6 +80,8 @@ gtest_escher_library("gtest_escher_with_runtime_glsl") {
 
 source_set("readback_fixtures") {
   sources = [
+    "paper_renderer_test.cc",
+    "paper_renderer_test.h",
     "readback_test.cc",
     "readback_test.h",
   ]

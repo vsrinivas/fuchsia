@@ -158,8 +158,8 @@ if (is_mac) {
 
   test("escher_renderer_tests") {
     sources = [
-      "debug/debug_font_unittest.cc",
-      "debug/paper_renderer_test.cc",
+      "integration/debug_font_unittest.cc",
+      "integration/debug_shape_unittest.cc",
       "run_all_unittests.cc",
     ]
 
