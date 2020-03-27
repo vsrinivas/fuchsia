@@ -54,9 +54,9 @@ constexpr size_t default_inline_target_size = sizeof(void*) * 2;
 // EXAMPLES
 //
 // -
-// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/utest/fit/examples/function_example1.cc
+// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fit/test/examples/function_example1.cc
 // -
-// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/utest/fit/examples/function_example2.cc
+// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fit/test/examples/function_example2.cc
 //
 template <typename T, size_t inline_target_size = default_inline_target_size>
 using function = function_impl<inline_target_size,

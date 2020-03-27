@@ -12,6 +12,12 @@
 
 #include <zxtest/zxtest.h>
 
+#if !defined(NDEBUG) && defined(__Fuchsia__)
+#define DEATH_TESTS 1
+#else
+#define DEATH_TESTS 0
+#endif
+
 namespace fit {
 namespace {
 
@@ -151,7 +157,7 @@ TEST(StringViewTest, AtReturnsElementAtIndex) {
   }
 }
 
-#if !defined(NDEBUG)
+#if DEATH_TESTS
 TEST(StringViewTest, AtThrowsExceptionWhenIndexIsOOR) {
   ASSERT_DEATH([] {
     constexpr fit::string_view kFitLiteral("12345");
@@ -381,7 +387,7 @@ TEST(StringViewTest, Copy) {
   EXPECT_STR_EQ(dest_traits, dest);
 }
 
-#if !defined(NDEBUG)
+#if DEATH_TESTS
 TEST(StringViewTest, CopyThrowsExceptionOnOOR) {
   ASSERT_DEATH([]() {
     constexpr fit::string_view v_str = "Base";

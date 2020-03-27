@@ -2856,7 +2856,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
 #------------------
-    "//zircon/system/utest/fit:fit-manifest",
+    "//zircon/system/ulib/fit/test:fit-manifest",
     "//zircon/system/ulib/fit/test:fit-unittest-manifest",
     "//zircon/system/utest/fpu:fpu-manifest",
     "//zircon/system/ulib/framebuffer/test:framebuffer-test-manifest",
@@ -3518,7 +3518,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
 #------------------
-    "//zircon/system/utest/fit:fit-manifest",
+    "//zircon/system/ulib/fit/test:fit-manifest",
     "//zircon/system/ulib/fit/test:fit-unittest-manifest",
     "//zircon/system/utest/fpu:fpu-manifest",
     "//zircon/system/ulib/framebuffer/test:framebuffer-test-manifest",
