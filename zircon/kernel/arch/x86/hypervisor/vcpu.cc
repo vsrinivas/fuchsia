@@ -717,6 +717,44 @@ Vcpu::~Vcpu() {
   DEBUG_ASSERT(status == ZX_OK);
 }
 
+void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
+  DEBUG_ASSERT(arch_ints_disabled());
+  if (!x86_xsave_supported()) {
+    // Save host and restore guest x87/SSE state with fxrstor/fxsave.
+    x86_extended_register_save_state(thread_->arch_.extended_register_state);
+    x86_extended_register_restore_state(guest_extended_registers_.get());
+    return;
+  }
+
+  // Save host state.
+  vmx_state_.host_state.xcr0 = x86_xgetbv(0);
+  x86_extended_register_save_state(thread_->arch_.extended_register_state);
+
+  // Restore guest state.
+  x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
+  x86_extended_register_restore_state(guest_extended_registers_.get());
+  x86_xsetbv(0, vmx_state_.guest_state.xcr0);
+}
+
+void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
+  DEBUG_ASSERT(arch_ints_disabled());
+  if (!x86_xsave_supported()) {
+    // Save host and restore guest x87/SSE state with fxrstor/fxsave.
+    x86_extended_register_save_state(guest_extended_registers_.get());
+    x86_extended_register_restore_state(thread_->arch_.extended_register_state);
+    return;
+  }
+
+  // Save guest state.
+  vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
+  x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
+  x86_extended_register_save_state(guest_extended_registers_.get());
+
+  // Restore host state.
+  x86_xsetbv(0, vmx_state_.host_state.xcr0);
+  x86_extended_register_restore_state(thread_->arch_.extended_register_state);
+}
+
 // Injects an interrupt into the guest, if there is one pending.
 static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
   // Since hardware generated exceptions are delivered to the guest directly, the only exceptions
@@ -776,44 +814,6 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
   local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_VIRT + 1);
 
   return ZX_OK;
-}
-
-void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
-  DEBUG_ASSERT(arch_ints_disabled());
-  if (!x86_xsave_supported()) {
-    // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(thread_->arch_.extended_register_state);
-    x86_extended_register_restore_state(guest_extended_registers_.get());
-    return;
-  }
-
-  // Save host state.
-  vmx_state_.host_state.xcr0 = x86_xgetbv(0);
-  x86_extended_register_save_state(thread_->arch_.extended_register_state);
-
-  // Restore guest state.
-  x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
-  x86_extended_register_restore_state(guest_extended_registers_.get());
-  x86_xsetbv(0, vmx_state_.guest_state.xcr0);
-}
-
-void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
-  DEBUG_ASSERT(arch_ints_disabled());
-  if (!x86_xsave_supported()) {
-    // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(guest_extended_registers_.get());
-    x86_extended_register_restore_state(thread_->arch_.extended_register_state);
-    return;
-  }
-
-  // Save guest state.
-  vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
-  x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
-  x86_extended_register_save_state(guest_extended_registers_.get());
-
-  // Restore host state.
-  x86_xsetbv(0, vmx_state_.host_state.xcr0);
-  x86_extended_register_restore_state(thread_->arch_.extended_register_state);
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
