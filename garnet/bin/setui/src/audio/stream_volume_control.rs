@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
     fidl_fuchsia_media_audio::VolumeControlProxy,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
 };
 
@@ -33,10 +33,14 @@ impl StreamVolumeControl {
 
     pub async fn set_volume(&mut self, stream: AudioStream) {
         assert_eq!(self.stored_stream.stream_type, stream.stream_type);
+        // TODO(fxb/48736): remove temporary logging.
+        fx_log_info!("[stream_volume_control] updating volume for stream: {:?}", stream);
 
         // If |proxy| is set to None, then try to create and bind a new VolumeControl. If it
         // fails, log an error and don't set the volume.
         if self.proxy.is_none() {
+            // TODO(fxb/48736): remove temporary logging.
+            fx_log_info!("[stream_volume_control] binding volume control");
             self.proxy =
                 bind_volume_control(&self.audio_service, stream.stream_type, self.stored_stream);
             if self.proxy.is_none() {
@@ -52,12 +56,24 @@ impl StreamVolumeControl {
         new_stream_value.user_volume_level = (stream.user_volume_level * 100.0).floor() / 100.0;
 
         if self.stored_stream.user_volume_level != new_stream_value.user_volume_level {
+            // TODO(fxb/48736): remove temporary logging.
+            fx_log_info!(
+                "[stream_volume_control] setting stream volume: stream: {:?}, volume: {:?}",
+                stream,
+                new_stream_value.user_volume_level
+            );
             proxy.set_volume(new_stream_value.user_volume_level).unwrap_or_else(move |e| {
                 fx_log_err!("failed to set the volume level, {}", e);
             });
         }
 
         if self.stored_stream.user_volume_muted != new_stream_value.user_volume_muted {
+            // TODO(fxb/48736): remove temporary logging.
+            fx_log_info!(
+                "[stream_volume_control] setting stream muted: stream: {:?}, muted: {:?}",
+                stream,
+                stream.user_volume_muted
+            );
             proxy.set_mute(stream.user_volume_muted).unwrap_or_else(move |e| {
                 fx_log_err!("failed to mute the volume, {}", e);
             });

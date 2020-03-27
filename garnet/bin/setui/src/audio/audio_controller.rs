@@ -94,16 +94,13 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                 }
             }
             if let Some(volume) = event.volume {
-                // TODO(fxb/48736): remove temporary logging.
-                fx_log_info!("[audio_controller] received volume button event");
                 *volume_button_event_clone.lock().await = volume;
                 if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
                     notifier.unbounded_send(SettingType::Audio).unwrap();
                 }
             }
         }
-        // TODO(fxb/48736): remove temporary logging.
-        fx_log_info!("[audio_controller] exited input event loop");
+        fx_log_err!("[audio_controller] exited input event loop");
     });
 
     let priority_stream_playing_clone = priority_stream_playing.clone();
@@ -163,6 +160,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                                     connect_to_sound_player(&service_context_handle).await;
                             }
 
+                            // TODO(fxb/48736): remove temporary logging.
+                            fx_log_info!("[audio_controller] binding volume controls");
                             if check_and_bind_volume_controls(
                                 audio_service_connected.clone(),
                                 service_context_handle.clone(),
@@ -171,8 +170,6 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                             .await
                             .is_err()
                             {
-                                // TODO(fxb/48736): remove temporary logging.
-                                fx_log_info!("[audio_controller] failed to bind volume controls");
                                 continue;
                             };
 
@@ -191,6 +188,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                                 || volume_up_max_pressed)
                                 && stream_is_media
                             {
+                                // TODO(fxb/48736): remove temporary logging.
+                                fx_log_info!("[audio_controller] playing earcon");
                                 fasync::spawn(play_media_volume_sound(
                                     sound_player_connection.clone(),
                                     priority_stream_playing.clone(),
@@ -205,6 +204,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                             let storage_handle_clone = storage.clone();
 
                             fasync::spawn(async move {
+                                // TODO(fxb/48736): remove temporary logging.
+                                fx_log_info!("[audio_controller] storing audio values");
                                 let mut storage_lock = storage_handle_clone.lock().await;
                                 storage_lock.write(&stored_value, false).await.unwrap_or_else(
                                     move |e| {
@@ -220,8 +221,6 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                         }
                         SettingRequest::Get => {
                             {
-                                // TODO(fxb/48736): remove temporary logging.
-                                fx_log_info!("[audio_controller] received SettingRequest::Get");
                                 if !*input_service_connected_clone.read() {
                                     let connected = monitor_mic_mute(
                                         service_context_handle.clone(),
@@ -260,8 +259,7 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                 }
             }
         }
-        // TODO(fxb/48736): remove temporary logging.
-        fx_log_info!("[audio_controller] exited service event loop");
+        fx_log_err!("[audio_controller] exited service event loop");
     });
     audio_handler_tx
 }
