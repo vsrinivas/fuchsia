@@ -1811,8 +1811,9 @@ pub fn encode_in_envelope(
     Ok(())
 }
 
-/// Decodes a reserved field in a table (an empty envelope).
-pub fn decode_reserved_table_field(decoder: &mut Decoder<'_>) -> Result<()> {
+/// Decodes an unknown field in a table. If it is non-empty, also skips over the
+/// unknown out-of-line payload.
+pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>) -> Result<()> {
     let mut num_bytes: u32 = 0;
     num_bytes.decode(decoder)?;
     let mut num_handles: u32 = 0;
@@ -1820,10 +1821,25 @@ pub fn decode_reserved_table_field(decoder: &mut Decoder<'_>) -> Result<()> {
     let mut present: u64 = 0;
     present.decode(decoder)?;
 
-    if num_bytes != 0 || num_handles != 0 || present != ALLOC_ABSENT_U64 {
-        return Err(Error::UnknownTableField);
+    match present {
+        ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder| {
+            decoder.recurse(|decoder| {
+                decoder.next_slice(num_bytes as usize)?;
+                for _ in 0..num_handles {
+                    decoder.take_handle()?;
+                }
+                Ok(())
+            })
+        }),
+        ALLOC_ABSENT_U64 => {
+            if num_bytes != 0 {
+                Err(Error::UnexpectedNullRef)
+            } else {
+                Ok(())
+            }
+        }
+        _ => Err(Error::Invalid),
     }
-    Ok(())
 }
 
 /// A macro which implements the table empty constructor and the FIDL `Encodable` and `Decodable`
@@ -1927,9 +1943,9 @@ macro_rules! fidl_table {
                             // The remaining fields have been omitted, so set them to None
                             self.$member_name = None;
                         } else {
-                            // Decode empty envelopes for gaps in ordinals.
+                            // Decode unknown envelopes for gaps in ordinals.
                             while _next_ordinal_to_read < $ordinal {
-                                $crate::encoding::decode_reserved_table_field(decoder)?;
+                                $crate::encoding::decode_unknown_table_field(decoder)?;
                                 _next_ordinal_to_read += 1;
                             }
                             let mut num_bytes: u32 = 0;
@@ -1970,17 +1986,9 @@ macro_rules! fidl_table {
                         }
                     )*
 
-                    // If there are any remaining non-empty envelopes,
-                    // we error since the ordinal is unknown to these bindings.
-                    //
-                    // NOTE: this is the behavior discussed in previous FIDL
-                    // team meetings and is consistent with the behavior on new
-                    // extensible union variants and new interface methods.
-                    // However, it means that receivers of tables must update
-                    // to new generated bindings before they can receive
-                    // messages containing new table fields.
+                    // Decode the remaining unknown envelopes.
                     while !decoder.is_empty() {
-                        $crate::encoding::decode_reserved_table_field(decoder)?;
+                        $crate::encoding::decode_unknown_table_field(decoder)?;
                     }
 
                     Ok(())
@@ -3173,7 +3181,7 @@ mod test {
     }
 
     #[test]
-    fn table_decode_fails_on_unrecognized_tail() {
+    fn table_decode_ignores_unrecognized_tail() {
         for ctx in CONTEXTS {
             let mut table_in = MyTable {
                 num: Some(5),
@@ -3186,8 +3194,9 @@ mod test {
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
-            let result = Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out);
-            assert_matches!(result, Err(Error::UnknownTableField));
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out).unwrap();
+            assert_eq!(table_prefix_out.num, Some(5));
+            assert_eq!(table_prefix_out.num_none, None);
         }
     }
 
@@ -3324,6 +3333,7 @@ mod test {
         }
     }
 
+    #[derive(Debug)]
     struct TableWithGaps {
         second: Option<i32>,
         fourth: Option<i32>,
@@ -3372,7 +3382,7 @@ mod test {
     }
 
     #[test]
-    fn decode_fails_without_reserved_table_fields() {
+    fn decode_table_missing_gaps() {
         struct TableWithoutGaps {
             first: Option<i32>,
             second: Option<i32>,
@@ -3392,14 +3402,24 @@ mod test {
         }
 
         for ctx in CONTEXTS {
-            // Encode _without_ gaps, then attempt to decode _with_ gaps.
+            // This test shows what would happen when decoding a TableWithGaps
+            // that was incorrectly encoded _without_ gaps.
+            //
+            //     Ordinal:  #1     #2      #3     #4
+            //     Encoded:  first second
+            //     Decoding: _____ second  _____ fourth
+            //
+            // Field #1 is assumed to be a new field in a reserved slot (i.e.
+            // the sender is newer than us), so it is ignored. Fields #3 and #4
+            // are assumed to be None because the tail is omitted.
             let mut table = TableWithoutGaps { first: Some(1), second: Some(2) };
             let buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
 
             let mut out = TableWithGaps::new_empty();
-            let result = Decoder::decode_with_context(ctx, buf, &mut Vec::new(), &mut out);
-            assert_matches!(result, Err(Error::UnknownTableField));
+            Decoder::decode_with_context(ctx, buf, &mut Vec::new(), &mut out).unwrap();
+            assert_eq!(out.second, Some(2));
+            assert_eq!(out.fourth, None);
         }
     }
 

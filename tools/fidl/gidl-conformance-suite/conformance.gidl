@@ -222,6 +222,64 @@ success("ReverseOrdinalTable") {
     ],
 }
 
+decode_success("TableWithUnknownReservedFields") {
+    bytes = [
+        120:raw(
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ),
+    ],
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+decode_success("TableWithUnknownTrailingFields") {
+    bytes = [
+        136:raw(
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ),
+    ],
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
 success("InlineXUnionInStruct") {
     value = TestInlineXUnionInStruct {
         before: "before",
