@@ -140,6 +140,7 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
       component_context->svc()->Connect<fuchsia::sys::Launcher>(), std::move(presenter),
       std::move(device_settings_manager), std::move(wlan), std::move(account_manager),
       std::move(administrator),
+      /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
         cobalt_cleanup.call();
         component_context->outgoing()->debug_dir()->RemoveEntry(modular_config::kBasemgrConfigName);

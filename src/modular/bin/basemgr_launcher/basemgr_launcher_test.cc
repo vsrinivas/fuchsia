@@ -47,18 +47,29 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
                                                       std::move(enclosing_env_services));
   }
 
-  void RunBasemgrLauncher(std::vector<std::string> args) {
+  int64_t RunBasemgrLauncher(std::vector<std::string> args) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/basemgr_launcher#meta/basemgr_launcher.cmx";
     launch_info.arguments = args;
 
     // Launch basemgr_launcher in enclosing environment
-    env_->CreateComponent(std::move(launch_info), basemgr_launcher_controller_.NewRequest());
+    fuchsia::sys::ComponentControllerPtr controller;
+    env_->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+    bool terminated = false;
+    int64_t exit_code;
+    controller.events().OnTerminated =
+        [&](int64_t code, fuchsia::sys::TerminationReason reason) {
+          terminated = true;
+          exit_code = code;
+        };
+
+    RunLoopUntil([&] { return terminated; });
+    return exit_code;
   }
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   sys::testing::ComponentInterceptor interceptor_;
-  fuchsia::sys::ComponentControllerPtr basemgr_launcher_controller_;
 };
 
 // Sets up interception of a base shell and passes if the specified base shell is launched
@@ -78,15 +89,15 @@ TEST_F(BasemgrLauncherTest, BaseShellArg) {
 
   // Create args for basemgr_launcher
   std::vector<std::string> args({std::string("--base_shell=") + std::string(kInterceptUrl)});
-  RunBasemgrLauncher(std::move(args));
+  auto controller = RunBasemgrLauncher(std::move(args));
 
   // Intercepting the component means the right base shell was launched
   RunLoopUntil([&] { return intercepted; });
 }
 
 TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
-  // Launch and intercept basemgr.
-  RunBasemgrLauncher({});
+  // Launch basemgr.
+  EXPECT_EQ(RunBasemgrLauncher({}), 0);
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
   std::string service_path;
@@ -99,7 +110,7 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
     return false;
   });
 
-  RunBasemgrLauncher({});
+  EXPECT_EQ(RunBasemgrLauncher({}), 0);
 
   // Check that the first instance of basemgr no longer exists in the hub and that it has been
   // replaced with another instance.
@@ -122,23 +133,14 @@ TEST_F(BasemgrLauncherTest, BadArgs) {
         intercepted = true;
       }));
 
-  // Create invalid argument for basemgr_launcher and run it
-  std::vector<std::string> args({std::string("--not_supported=") + std::string(kInterceptUrl)});
-
-  bool basemgr_launcher_terminated = false;
-  basemgr_launcher_controller_.events().OnTerminated = [&](int64_t err,
-                                                           fuchsia::sys::TerminationReason reason) {
-    basemgr_launcher_terminated = true;
-  };
-
-  RunBasemgrLauncher(std::move(args));
-  RunLoopUntil([&] { return basemgr_launcher_terminated; });
+  // Run basemgr_launcher with invalid arguments.
+  EXPECT_NE(RunBasemgrLauncher({std::string("--not_supported=") + kInterceptUrl}), 0);
   EXPECT_FALSE(intercepted);
 }
 
+// When shutdown is issued, ensure that basemgr.cmx completely shuts down.
 TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
-  // Launch and intercept basemgr.
-  RunBasemgrLauncher({});
+  EXPECT_EQ(RunBasemgrLauncher({}), 0);
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
   std::string service_path;
@@ -151,16 +153,16 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
     return false;
   });
 
-  RunBasemgrLauncher({"shutdown"});
+  ASSERT_EQ(RunBasemgrLauncher({"shutdown"}), 0);
 
   // Check that the instance of basemgr no longer exists in the hub and it did not restart.
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
   RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
 }
 
+// WHen shutdown is issued, ensure that scenic.cmx is also terminated.
 TEST_F(BasemgrLauncherTest, ShutdownBasemgrShutsdownScenic) {
-  // Launch and intercept basemgr.
-  RunBasemgrLauncher({});
+  EXPECT_EQ(0, RunBasemgrLauncher({}));
 
   // Get the exact service path, which includes a unique id, of the basemgr instance.
   std::string service_path;
@@ -173,7 +175,7 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrShutsdownScenic) {
     return false;
   });
 
-  RunBasemgrLauncher({"shutdown"});
+  ASSERT_EQ(RunBasemgrLauncher({"shutdown"}), 0);
 
   // Check that the instance of basemgr no longer exists in the hub and it did not restart.
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });

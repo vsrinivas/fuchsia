@@ -27,30 +27,51 @@ constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.c
 constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 constexpr char kShutdownBasemgrCommandString[] = "shutdown";
 
-std::string FindBasemgrDebugService() {
+// Returns false if no basemgr debug service can be found, because
+// basemgr is not running.
+bool FindBasemgrDebugService(std::string* service_path) {
   glob_t globbuf;
   glob(kBasemgrHubPath, 0, nullptr, &globbuf);
-  std::string service_path = "";
+  bool found = false;
   if (globbuf.gl_pathc > 0) {
-    service_path = globbuf.gl_pathv[0];
+    *service_path = globbuf.gl_pathv[0];
+    found = true;
   }
   globfree(&globbuf);
-  return service_path;
+  return found;
 }
 
-void ShutdownBasemgr() {
+zx_status_t ShutdownBasemgr(async::Loop* loop) {
   // Get a connection to basemgr in order to shut it down.
-  std::string service_path = FindBasemgrDebugService();
-  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
-  auto request = basemgr.NewRequest().TakeChannel();
-  if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FX_LOGS(FATAL) << "Could not connect to basemgr service in " << service_path;
+  std::string service_path;
+  if (!FindBasemgrDebugService(&service_path)) {
+    // basemgr is not running.
+    std::cerr << "basemgr does not appear to be running.";
+    return ZX_OK;
+  }
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug;
+  auto request = basemgr_debug.NewRequest().TakeChannel();
+  auto service_connect_result = fdio_service_connect(service_path.c_str(), request.get());
+  if (service_connect_result != ZX_OK) {
+    std::cerr << "Could not connect to basemgr service at " << service_path << ": "
+              << zx_status_get_string(service_connect_result);
+    return service_connect_result;
   }
 
-  basemgr->Shutdown();
-  // Make sure this binary will wait for basemgr to shutdown first.
-  basemgr.set_error_handler([](zx_status_t status) { ASSERT_OK(status); });
-  return;
+  basemgr_debug->Shutdown();
+  // Wait for basemgr to shutdown.
+  zx_status_t channel_close_status;
+  basemgr_debug.set_error_handler([&channel_close_status, loop](zx_status_t status) {
+    channel_close_status = status;
+    loop->Quit();
+  });
+  loop->Run();
+  loop->ResetQuit();
+  if (channel_close_status != ZX_OK) {
+    std::cerr << "basemgr did not tear down cleanly. Expected ZX_OK, got "
+              << zx_status_get_string(channel_close_status);
+  }
+  return ZX_OK;
 }
 
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
@@ -113,13 +134,7 @@ fit::result<std::string, std::string> GetConfigFromArgs(fxl::CommandLine command
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"basemgr_launcher"});
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  bool basemgr_is_running = files::Glob(kBasemgrHubPath).size() != 0;
-  if (basemgr_is_running) {
-    ShutdownBasemgr();
-  }
 
   std::string config_str = "";
   if (argc > 1) {
@@ -130,17 +145,26 @@ int main(int argc, const char** argv) {
     if (cmd.empty()) {
       auto config = GetConfigFromArgs(std::move(command_line));
       if (config.is_error()) {
-        std::cout << config.error().c_str() << std::endl;
-        return 1;
+        std::cerr << config.error().c_str() << std::endl;
+        return ZX_ERR_INVALID_ARGS;
       } else {
         config_str = config.value();
       }
     } else if (cmd == kShutdownBasemgrCommandString) {
-      ShutdownBasemgr();
-      return 0;
+      return ShutdownBasemgr(&loop);
     } else {
-      std::cout << GetUsage() << std::endl;
-      return 0;
+      std::cerr << GetUsage() << std::endl;
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  // If basemgr is already running, shut it down first.
+  if (files::Glob(kBasemgrHubPath).size() != 0) {
+    auto result = ShutdownBasemgr(&loop);
+    if (result != ZX_OK) {
+      std::cerr << "Could not shut down running instance of basemgr: "
+                << zx_status_get_string(result);
+      return result;
     }
   }
 
@@ -159,7 +183,7 @@ int main(int argc, const char** argv) {
   launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 
   // Quit the loop when basemgr's out directory has been mounted.
-  fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;
+  fuchsia::sys::ComponentControllerPtr controller;
   controller.events().OnDirectoryReady = [&controller, &loop] {
     controller->Detach();
     loop.Quit();
@@ -172,5 +196,5 @@ int main(int argc, const char** argv) {
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   loop.Run();
-  return 0;
+  return ZX_OK;
 }

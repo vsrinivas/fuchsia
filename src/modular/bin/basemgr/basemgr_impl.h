@@ -167,7 +167,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Manages the session-user mappings.
   std::unique_ptr<SessionUserProviderImpl> session_user_provider_impl_;
 
-  fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_bindings_;
+  fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;

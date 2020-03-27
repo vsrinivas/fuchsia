@@ -19,6 +19,7 @@ protocol BasemgrDebug {
     /// Logs in as a guest user.
     LoginAsGuest();
 
-    /// Kills the running instance of basemgr.
+    /// Kills the running instance of basemgr. Closes the channel with ZX_OK after
+    /// successful shutdown.
     Shutdown();
 };

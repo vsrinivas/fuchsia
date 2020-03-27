@@ -85,7 +85,7 @@ BasemgrImpl::~BasemgrImpl() = default;
 
 void BasemgrImpl::Connect(
     fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
-  basemgr_bindings_.AddBinding(this, std::move(request));
+  basemgr_debug_bindings_.AddBinding(this, std::move(request));
 }
 
 void BasemgrImpl::StartBaseShell() {
@@ -233,6 +233,7 @@ void BasemgrImpl::Shutdown() {
       FX_DLOGS(INFO) << "- fuchsia::modular::UserProvider down";
       StopScenic()->Then([this] {
         FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
+        basemgr_debug_bindings_.CloseAll(ZX_OK);
         on_shutdown_();
       });
     });
