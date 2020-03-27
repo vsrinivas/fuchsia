@@ -828,6 +828,7 @@ group("deprecated_package_underscore") {
     "//src/sys/tools/stash_ctl:stash_ctl_tests",
     "//src/testing/loadbench:loadbench_tests",
     "//src/tests/benchmarks:fuchsia_benchmarks",
+    "//src/tests/benchmarks/fidl/go:go_fidl_benchmarks",
     "//src/tests/fidl_go_conformance:fidl_go_conformance",
     "//src/tests/fidl_transformer:fidl_transformer_conformance",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",

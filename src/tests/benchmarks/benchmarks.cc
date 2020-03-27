@@ -72,6 +72,13 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
                                           out_file);
   }
 
+  {
+    constexpr const char* kLabel = "fuchsia.fidl_microbenchmarks";
+    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
+    benchmarks_runner->AddCustomBenchmark(
+        kLabel, {"/pkgfs/packages/go_fidl_benchmarks/0/bin/app", "--out_file", out_file}, out_file);
+  }
+
   // TODO(PT-181, PT-182): The following input latency benchmarks do not make
   // an effort to close the graphics application being benchmarked at exit
   // (the app will continue to run even after the benchmark driver process has

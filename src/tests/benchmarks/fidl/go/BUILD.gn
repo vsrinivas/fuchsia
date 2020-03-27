@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+
+go_binary("go_fidl_benchmarks_bin") {
+  output_name = "go_fidl_benchmarks"
+  gopackage = "go_fidl_benchmarks"
+
+  deps = [ ":go_fidl_benchmarks_lib" ]
+}
+
+go_library("go_fidl_benchmarks_lib") {
+  name = "go_fidl_benchmarks"
+  deps = [
+    "//garnet/go/src/benchmarking",
+    "//src/tests/benchmarks/fidl/go/benchmark_suite",
+  ]
+}
+
+package("go_fidl_benchmarks") {
+  deps = [ ":go_fidl_benchmarks_bin" ]
+
+  binary = "go_fidl_benchmarks"
+
+  meta = [
+    {
+      path = rebase_path("meta/go_fidl_benchmarks.cmx")
+      dest = "go_fidl_benchmarks.cmx"
+    },
+  ]
+}
