@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/ddk-instance-lifecycle-test"
+    },
+    "sandbox": {
+        "boot": [
+          "bin",
+          "driver",
+          "lib"
+        ],
+        "services": [
+          "fuchsia.process.Launcher"
+        ]
+    }
+}
+

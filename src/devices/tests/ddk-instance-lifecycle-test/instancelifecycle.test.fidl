@@ -1,0 +1,33 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.instancelifecycle.test;
+
+using zx;
+
+protocol TestDevice {
+    /// Creates a new device that will return instance devices on open().
+    /// |lifecycle| will provide a stream of lifecycle events for the device itself.
+    CreateDevice(request<Lifecycle> lifecycle, handle<channel>? client_remote) -> () error zx.status;
+};
+
+protocol InstanceDevice {
+    /// Get a stream of lifecycle events for this instance device
+    SubscribeToLifecycle(request<Lifecycle> lifecycle) -> () error zx.status;
+
+    /// Request the asynchronous removal of the main device, rather than the instance devices.
+    // TODO(fxb/49138): This needs to have a reply to work around this bug.
+    RemoveDevice() -> ();
+};
+
+protocol Lifecycle {
+    /// Sent when the Open hook is called.
+    -> OnOpen();
+    /// Sent when the Close hook is called.
+    -> OnClose();
+    /// Sent when the Unbind hook is called.
+    -> OnUnbind();
+    /// Sent when the Release hook is called.
+    -> OnRelease();
+};

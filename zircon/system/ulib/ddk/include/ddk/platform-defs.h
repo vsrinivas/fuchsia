@@ -236,6 +236,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_TEL_TEST           15
 #define PDEV_PID_LIFECYCLE_TEST     16
 #define PDEV_PID_OT_TEST            17
+#define PDEV_PID_INSTANCE_LIFECYCLE_TEST     18
 
 #define PDEV_DID_TEST_PARENT        1
 #define PDEV_DID_TEST_CHILD_1       2
