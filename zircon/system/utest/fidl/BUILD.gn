@@ -79,10 +79,8 @@ if (is_fuchsia) {
       "abi_tests.cc",
       "cpp_types_tests.cc",
       "fidl_align_tests.cc",
-      "transformer_tests.c",
     ]
     deps = [
-      ":example.c",
       "$zx/system/ulib/fidl:fidl_base",
       "$zx/system/ulib/unittest",
     ]
