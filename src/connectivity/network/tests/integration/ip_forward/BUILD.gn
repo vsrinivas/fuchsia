@@ -39,6 +39,7 @@ test_package("netemul-ip-forward-test") {
 rustc_binary("ip_forward") {
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -48,7 +49,6 @@ rustc_binary("ip_forward") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
-    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

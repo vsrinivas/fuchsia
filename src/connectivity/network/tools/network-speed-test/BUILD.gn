@@ -16,6 +16,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -29,7 +30,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 
