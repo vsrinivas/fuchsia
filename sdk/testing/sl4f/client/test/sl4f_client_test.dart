@@ -159,5 +159,92 @@ void main() {
           }),
           TypeMatcher<Sl4f>());
     });
+
+    test('accepts FUCHSIA_SSH_PORT', () {
+      expect(
+          Sl4f.fromEnvironment(environment: {
+            'FUCHSIA_IPV4_ADDR': '1.2.3.4',
+            'FUCHSIA_SSH_KEY': '/foo',
+            'FUCHSIA_SSH_PORT': '8022'
+          }),
+          TypeMatcher<Sl4f>());
+    });
+
+    test('default HTTP Port', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV4_ADDR': '1.2.3.4',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022'
+      });
+      expect(client.port, equals(80));
+    });
+
+    test('override HTTP Port', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV4_ADDR': '1.2.3.4',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      expect(client.port, equals(8282));
+    });
+
+    test('IPv6 address using FUCHSIA_IPV4_ADDR', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV4_ADDR': '::1',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      expect(client.target, equals('[::1]'));
+      expect(client.port, equals(8282));
+    });
+
+    test('IPv6 address using FUCHSIA_DEVICE_ADDR', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_DEVICE_ADDR': '::1',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      expect(client.target, equals('[::1]'));
+      expect(client.port, equals(8282));
+    });
+
+    test('IPv6 link-local address using FUCHSIA_DEVICE_ADDR', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_DEVICE_ADDR': 'fe80::1234:44f%eth0',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      expect(client.target, equals('[fe80::1234:44f%eth0]'));
+      expect(client.port, equals(8282));
+    });
+
+    test('IPv6 address using both FUCHSIA_IPV4_ADDR and FUCHSIA_DEVICE_ADDR',
+        () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_DEVICE_ADDR': '::1',
+        'FUCHSIA_IPV4_ADDR': '127.0.0.1',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      // FUCHSIA)DEVICE_ADDR has preference over FUCHSIA_IPV4_ADDR:
+      expect(client.target, equals('[::1]'));
+      expect(client.port, equals(8282));
+    });
+  });
+
+  group('Sl4f constructor', () {
+    test('throws exception if target ipv4 address has port', () {
+      expect(() => Sl4f('1.2.3.4:8282', null),
+          throwsA(TypeMatcher<Sl4fException>()));
+    });
+    test('throws exception if target ipv6 address has port', () {
+      expect(() => Sl4f('[::1]:8282', null),
+          throwsA(TypeMatcher<Sl4fException>()));
+    });
   });
 }

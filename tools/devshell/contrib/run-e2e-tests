@@ -20,10 +20,18 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh
 fx-config-read
 
-export FUCHSIA_IPV4_ADDR=$(get-fuchsia-device-addr)
-if [[ -z "$FUCHSIA_IPV4_ADDR" ]]; then
-  fx-error "Can not determine IP address of Fuchsia target"
+export FUCHSIA_DEVICE_ADDR="$(get-fuchsia-device-addr)"
+if [[ -z "$FUCHSIA_DEVICE_ADDR" ]]; then
+  fx-error "Cannot determine IP address of Fuchsia target"
   exit 1
+fi
+
+# For legacy code.
+export FUCHSIA_IPV4_ADDR="${FUCHSIA_DEVICE_ADDR}"
+
+port="$(get-device-ssh-port)"
+if [[ -n "${port}" ]]; then
+  export FUCHSIA_SSH_PORT="${port}"
 fi
 
 export FUCHSIA_SSH_KEY="${FUCHSIA_DIR}/.ssh/pkey"

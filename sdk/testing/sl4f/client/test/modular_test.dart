@@ -14,7 +14,7 @@ void main(List<String> args) {
 
   setUp(() async {
     fakeServer = await HttpServer.bind('127.0.0.1', 18080);
-    sl4f = Sl4f('127.0.0.1:18080', null);
+    sl4f = Sl4f('127.0.0.1', null, 18080);
   });
 
   tearDown(() async {
@@ -31,9 +31,9 @@ void main(List<String> args) {
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       await req.response.close();
     }
+
     fakeServer.listen(handler);
 
     expect(Modular(sl4f).restartSession(), completion(equals('Success')));
   });
 }
-

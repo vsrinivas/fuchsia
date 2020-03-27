@@ -39,36 +39,65 @@ class Sl4f {
   static const _sl4fComponentUrl =
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
   static const _sl4fComponentName = 'sl4f.cmx';
+  static const _sl4fHttpDefaultPort = 80;
+  static final _portSuffixRe = RegExp(r':\d+$');
 
   final _client = http.Client();
 
   /// Authority (IP, hostname, etc.) of the device under test.
   final String target;
+
+  /// TCP port that the SL4F HTTP server is listening on the target device
+  final int port;
   final Ssh ssh;
 
-  Sl4f(this.target, this.ssh) : assert(target != null && target.isNotEmpty) {
+  Sl4f(this.target, this.ssh, [this.port = _sl4fHttpDefaultPort])
+      : assert(target != null && target.isNotEmpty) {
+    if (_portSuffixRe.hasMatch(target)) {
+      throw Sl4fException('Target argument cannot contain a port. '
+          'Use the port argument instead.');
+    }
+
     _log.info('Target device: $target');
   }
 
-  /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
-  /// `FUCHSIA_SSH_KEY` environment variables.
+  /// Constructs an SL4F client from the following environment variables:
+  /// * `FUCHSIA_DEVICE_ADDR` or `FUCHSIA_IPV4_ADDR`: IPV4 or IPV6 address of
+  ///       the target address to be tested (required).
+  /// * `SL4F_HTTP_PORT`: TCP port that the SL4F HTTP server is listening on
+  ///       the target device (optional, defaults to $_sl4fHttpDefaultPort)
+  /// * `FUCHSIA_SSH_PORT`: SSH port of the target device (optional).
+  /// * `FUCHSIA_SSH_KEY`: Path of the SSH private key (required if
+  ///       `SSH_AUTH_SOCK` is not set).
+  ///
+  /// If both `FUCHSIA_DEVICE_ADDR` and `FUCHSIA_IPV4_ADDR` are defined,
+  /// `FUCHSIA_DEVICE_ADDR` is used.
   ///
   /// If `FUCHSIA_SSH_KEY` is not set but `SSH_AUTH_SOCK` is, then it's
   /// assumed that ssh-agent can provide the credentials to connect to the
   /// device. Otherwise an [Sl4fException] is thrown.
   factory Sl4f.fromEnvironment({Map<String, String> environment}) {
     environment ??= Platform.environment;
-    final address = environment['FUCHSIA_IPV4_ADDR'];
+    final address =
+        environment['FUCHSIA_DEVICE_ADDR'] ?? environment['FUCHSIA_IPV4_ADDR'];
     if (_isNullOrEmpty(address)) {
       throw Sl4fException(
-          'No FUCHSIA_IPV4_ADDR provided when starting SL4F from env');
+          'No FUCHSIA_DEVICE_ADDR or FUCHSIA_IPV4_ADDR provided when '
+          'starting SL4F from env');
     }
 
     Ssh ssh;
+    int sshPort;
+    if (!_isNullOrEmpty(environment['FUCHSIA_SSH_PORT'])) {
+      sshPort = int.tryParse(environment['FUCHSIA_SSH_PORT']);
+      if (sshPort == null || sshPort <= 0) {
+        throw Sl4fException('Invalid FUCHSIA_SSH_PORT: $sshPort');
+      }
+    }
     if (!_isNullOrEmpty(environment['FUCHSIA_SSH_KEY'])) {
-      ssh = Ssh(address, environment['FUCHSIA_SSH_KEY']);
+      ssh = Ssh(address, environment['FUCHSIA_SSH_KEY'], sshPort);
     } else if (!_isNullOrEmpty(environment['SSH_AUTH_SOCK'])) {
-      ssh = Ssh.useAgent(address);
+      ssh = Ssh.useAgent(address, sshPort);
     } else {
       throw Sl4fException(
           'No FUCHSIA_SSH_KEY provided and SSH_AUTH_SOCK is not defined. '
@@ -80,7 +109,13 @@ class Sl4f {
     if (host.contains(':')) {
       host = '[$host]';
     }
-    return Sl4f(host, ssh);
+
+    int port = _sl4fHttpDefaultPort;
+    if (!_isNullOrEmpty(environment['SL4F_HTTP_PORT'])) {
+      port = int.parse(environment['SL4F_HTTP_PORT']);
+    }
+
+    return Sl4f(host, ssh, port);
   }
 
   /// Closes the underlying HTTP client.
@@ -99,7 +134,7 @@ class Sl4f {
     // omitted. This is actually required by our SL4F server (although it is
     // not required in JSON RPC:
     // https://www.jsonrpc.org/specification#request_object).
-    final httpRequest = http.Request('GET', Uri.http(target, ''))
+    final httpRequest = http.Request('GET', Uri.http('$target:$port', ''))
       ..body = jsonEncode({'id': '', 'method': method, 'params': params});
 
     final httpResponse =
@@ -287,7 +322,7 @@ class Sl4f {
       }
 
       try {
-        await http.get(Uri.http(target, '/')).timeout(timeout);
+        await http.get(Uri.http('$target:$port', '/')).timeout(timeout);
       } on SocketException {
         continue;
       } on TimeoutException {

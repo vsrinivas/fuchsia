@@ -15,11 +15,56 @@ void main(List<String> args) {
       expect(args, containsAllInOrder(['fuchsia@1.2.3.4', 'foo']));
     });
 
+    test('IPv6 address without ssh port', () async {
+      final ssh = Ssh('::1', '/path/to/p/key');
+
+      final args = ssh.makeArgs('foo');
+      expect(args, containsAllInOrder(['-i', '/path/to/p/key']));
+      expect(args, containsAllInOrder(['fuchsia@::1', 'foo']));
+      expect(args, isNot(contains('-p')));
+    });
+
+    test('IPv6 address with ssh port', () async {
+      final ssh = Ssh('::1', '/path/to/p/key', 8022);
+
+      final args = ssh.makeArgs('foo');
+      expect(args, containsAllInOrder(['-i', '/path/to/p/key']));
+      expect(args, containsAllInOrder(['fuchsia@::1', 'foo']));
+      expect(args, containsAllInOrder(['-p', '8022']));
+    });
+
+    test('IPv6 linklocal address with ssh port', () async {
+      final ssh = Ssh('fe80::1234:44f%eth0', '/path/to/p/key', 8022);
+
+      final args = ssh.makeArgs('foo');
+      expect(args, containsAllInOrder(['-i', '/path/to/p/key']));
+      expect(args, containsAllInOrder(['fuchsia@fe80::1234:44f%eth0', 'foo']));
+      expect(args, containsAllInOrder(['-p', '8022']));
+    });
+
+    test('args includes ssh port and key path', () async {
+      final ssh = Ssh('1.2.3.4', '/path/to/p/key', 8022);
+
+      final args = ssh.makeArgs('foo');
+      expect(args, containsAllInOrder(['-i', '/path/to/p/key']));
+      expect(args, containsAllInOrder(['fuchsia@1.2.3.4', 'foo']));
+      expect(args, containsAllInOrder(['-p', '8022']));
+    });
+
     test('args does not include key path when using agent', () async {
       final ssh = Ssh.useAgent('1.2.3.4');
 
       final args = ssh.makeArgs('foo');
       expect(args, containsAllInOrder(['fuchsia@1.2.3.4', 'foo']));
+      expect(args, isNot(contains('-i')));
+    });
+
+    test('args includes ssh port and does not include key path', () async {
+      final ssh = Ssh.useAgent('1.2.3.4', 8022);
+
+      final args = ssh.makeArgs('foo');
+      expect(args, containsAllInOrder(['fuchsia@1.2.3.4', 'foo']));
+      expect(args, containsAllInOrder(['-p', '8022']));
       expect(args, isNot(contains('-i')));
     });
 

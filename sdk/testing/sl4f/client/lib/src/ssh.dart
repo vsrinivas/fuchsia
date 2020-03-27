@@ -19,19 +19,26 @@ class Ssh {
   /// Authority (IP, hostname, etc.) of the device under test.
   final String target;
 
+  /// SSH port to connect to the device under test, or null for default port
+  final int sshPort;
+
   /// Path to an SSH key file. For in-tree Fuchsia development, this can be
   /// the resolved path of `//.ssh/pkey`.
   final String sshKeyPath;
 
   /// Builds an SSH object that uses the credentials from a file.
-  Ssh(this.target, this.sshKeyPath)
+  Ssh(this.target, this.sshKeyPath, [this.sshPort])
       : assert(target != null && target.isNotEmpty),
-        assert(sshKeyPath != null && sshKeyPath.isNotEmpty) {
+        assert(sshKeyPath != null && sshKeyPath.isNotEmpty),
+        assert(sshPort == null || sshPort > 0) {
     _log.info('SSH key path: $sshKeyPath');
   }
 
   /// Builds an SSH object that uses the credentials from ssh-agent only.
-  Ssh.useAgent(this.target) : sshKeyPath = null;
+  Ssh.useAgent(this.target, [this.sshPort])
+      : assert(target != null && target.isNotEmpty),
+        assert(sshPort == null || sshPort > 0),
+        sshKeyPath = null;
 
   /// Starts an ssh [Process], sending [cmd] to the target using ssh.
   Future<Process> start(String cmd,
@@ -248,7 +255,8 @@ class Ssh {
         '-o', 'ServerAliveCountMax=6',
         '$_sshUser@$target',
       ] +
-      (sshKeyPath != null ? ['-i', sshKeyPath] : []);
+      (sshKeyPath != null ? ['-i', sshKeyPath] : []) +
+      (sshPort != null && sshPort != 0 ? ['-p', sshPort.toString()] : []);
 
   @visibleForTesting
   List<String> makeArgs(String cmd) => _makeBaseArgs() + [cmd];
