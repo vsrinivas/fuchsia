@@ -87,6 +87,8 @@ assemble_system("recovery-eng") {
   metadata = {
     test_runtime_deps = [ "${target_out_dir}/${target_name}.zbi" ]
   }
+
+  ta_uuids = recovery_ta_uuids
 }
 
 assemble_system("recovery-fdr") {
