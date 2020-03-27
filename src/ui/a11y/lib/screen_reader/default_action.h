@@ -23,15 +23,6 @@ class DefaultAction : public ScreenReaderAction {
   // This method implements the actual sequence of events that should
   // happen when an associated gesture is performed on an element.
   void Run(ActionData process_data) override;
-
- private:
-  // ActionContext which is used to make calls to Semantics Manager and TTS.
-  ActionContext* action_context_;
-
-  // ScreenReaderContext is used to get the current state of the screen reader which includes the
-  // currently selected node(via the a11y focus manager) and state(currently selected semantic
-  // level).
-  ScreenReaderContext* screen_reader_context_;
 };
 
 }  // namespace a11y

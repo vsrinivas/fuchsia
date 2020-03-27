@@ -34,21 +34,6 @@ class ExploreAction : public ScreenReaderAction {
   fit::promise<fuchsia::accessibility::semantics::Hit> ExecuteHitTestingPromise(
       const ActionData& process_data);
 
-  // Returns a promise that from a hit testing result, builds an utterance to be spoken based on the
-  // node that was hit. An error is thrown if the semantic tree or the semantic node are missing
-  // data necessary to build an utterance.
-  fit::promise<fuchsia::accessibility::tts::Utterance> BuildUtteranceFromNodeHitPromise(
-      fuchsia::accessibility::semantics::Hit hit, zx_koid_t view_koid);
-
-  // Returns a promise that enqueues an utterance. An error is thrown if the atempt to enqueue the
-  // utterance is rejected by the TTS service.
-  fit::promise<> EnqueueUtterancePromise(fuchsia::accessibility::tts::Utterance utterance);
-
-  // ActionContext which is used to make calls to Semantics Manager and TTS.
-  ActionContext* action_context_;
-
-  // Pointer to the screen reader context, which owns the executor used by this class.
-  ScreenReaderContext* screen_reader_context_;
   fit::scope scope_;
 };
 

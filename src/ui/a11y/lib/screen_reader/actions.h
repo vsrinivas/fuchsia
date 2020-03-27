@@ -8,6 +8,7 @@
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
+#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace a11y {
@@ -35,7 +36,7 @@ class ScreenReaderAction {
     fuchsia::accessibility::tts::EnginePtr tts_engine_ptr;
   };
 
-  ScreenReaderAction();
+  explicit ScreenReaderAction(ActionContext* context, ScreenReaderContext* screen_reader_context);
   virtual ~ScreenReaderAction();
 
   // Action implementations override this method with the necessary method parameters to perform
@@ -50,6 +51,22 @@ class ScreenReaderAction {
   void ExecuteHitTesting(
       ActionContext* context, ActionData process_data,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
+
+  // Returns a promise that from a node_id and view_koid, builds an utterance to be spoken. An error
+  // is thrown if the semantic tree or the semantic node are missing data necessary to build an
+  // utterance.
+  fit::promise<fuchsia::accessibility::tts::Utterance> BuildUtteranceFromNodePromise(
+      zx_koid_t view_koid, uint32_t node_id);
+
+  // Returns a promise that enqueues an utterance. An error is thrown if the atempt to enqueue the
+  // utterance is rejected by the TTS service.
+  fit::promise<> EnqueueUtterancePromise(fuchsia::accessibility::tts::Utterance utterance);
+
+  // ActionContext which is used to make calls to Semantics Manager and TTS.
+  ActionContext* action_context_;
+
+  // Pointer to the screen reader context, which owns the executor used by this class.
+  ScreenReaderContext* screen_reader_context_;
 };
 
 }  // namespace a11y

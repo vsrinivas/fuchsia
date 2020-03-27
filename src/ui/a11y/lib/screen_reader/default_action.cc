@@ -10,10 +10,7 @@ namespace a11y {
 
 DefaultAction::DefaultAction(ActionContext* action_context,
                              ScreenReaderContext* screen_reader_context)
-    : action_context_(action_context), screen_reader_context_(screen_reader_context) {
-  FX_DCHECK(action_context_);
-  FX_DCHECK(screen_reader_context_);
-}
+    : ScreenReaderAction(action_context, screen_reader_context) {}
 DefaultAction::~DefaultAction() = default;
 
 void DefaultAction::Run(ActionData process_data) {
