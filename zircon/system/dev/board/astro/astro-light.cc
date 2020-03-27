@@ -146,6 +146,13 @@ zx_status_t Astro::LightInit() {
     zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d\n", __func__, status);
   }
 
+  // GPIO must be set to default out otherwise could cause light to not work
+  // on certain reboots.
+  status = gpio_impl_.ConfigOut(GPIO_AMBER_LED, 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d\n", __func__, status);
+  }
+
   status =
       pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
   if (status != ZX_OK) {
