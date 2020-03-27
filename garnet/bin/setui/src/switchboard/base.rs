@@ -180,10 +180,11 @@ pub struct AudioInputInfo {
     pub mic_mute: bool,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct AudioInfo {
     pub streams: [AudioStream; 5],
     pub input: AudioInputInfo,
+    pub changed_streams: Option<Vec<AudioStream>>,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

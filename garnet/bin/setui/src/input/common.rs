@@ -16,7 +16,7 @@ use {
 
 /// Method for listening to media button changes. Changes will be reported back
 /// on the supplied sender.
-pub async fn monitor_mic_mute(
+pub async fn monitor_media_buttons(
     service_context_handle: ServiceContextHandle,
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {

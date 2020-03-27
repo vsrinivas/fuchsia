@@ -65,20 +65,20 @@ impl Service for InputDeviceRegistryService {
         fasync::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
-        match req {
-          fidl_fuchsia_ui_policy::DeviceListenerRegistryRequest::RegisterMediaButtonsListener {
-            listener,
-            control_handle: _,
-          } => {
-            if let Ok(proxy) = listener.into_proxy() {
-              if let Some(event) = &*last_event.read() {
-                proxy.on_media_buttons_event(event.clone()).ok();
-              }
-              listeners_handle.write().push(proxy);
-            }
-          }
-          _ => {}
-        }
+                match req {
+                    fidl_fuchsia_ui_policy::DeviceListenerRegistryRequest::RegisterMediaButtonsListener {
+                        listener,
+                        control_handle: _,
+                    } => {
+                        if let Ok(proxy) = listener.into_proxy() {
+                            if let Some(event) = &*last_event.read() {
+                                proxy.on_media_buttons_event(event.clone()).ok();
+                            }
+                            listeners_handle.write().push(proxy);
+                        }
+                    }
+                    _ => {}
+                }
             }
         });
 

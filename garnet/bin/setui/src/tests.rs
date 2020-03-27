@@ -4,6 +4,7 @@ mod audio_tests;
 mod device_tests;
 mod display_tests;
 mod do_not_disturb_tests;
+mod earcons_agent_tests;
 mod fakes;
 mod hanging_get_tests;
 mod input_tests;

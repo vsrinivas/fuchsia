@@ -27,16 +27,7 @@ const DEFAULT_STREAMS: [AudioStream; 5] = [
 const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE };
 
 const DEFAULT_AUDIO_INFO: AudioInfo =
-    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO };
-
-const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
-    AudioStream {
-        stream_type: stream_type,
-        source: AudioSettingSource::User,
-        user_volume_level: DEFAULT_VOLUME_LEVEL,
-        user_volume_muted: DEFAULT_VOLUME_MUTED,
-    }
-}
+    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO, changed_streams: None };
 
 lazy_static! {
     pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo>> =
@@ -44,6 +35,15 @@ lazy_static! {
             DEFAULT_AUDIO_INFO,
             Some("/config/data/audio_config_data.json".to_string()),
         ));
+}
+
+pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
+    AudioStream {
+        stream_type: stream_type,
+        source: AudioSettingSource::User,
+        user_volume_level: DEFAULT_VOLUME_LEVEL,
+        user_volume_muted: DEFAULT_VOLUME_MUTED,
+    }
 }
 
 pub fn default_audio_info() -> AudioInfo {
@@ -96,6 +96,7 @@ mod tests {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
+        changed_streams: None,
     };
 
     #[test]

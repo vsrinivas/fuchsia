@@ -18,11 +18,7 @@ use {
     crate::tests::fakes::sound_player_service::SoundPlayerService,
     crate::tests::fakes::usage_reporter_service::UsageReporterService,
     crate::EnvironmentBuilder,
-    fidl_fuchsia_media::{
-        AudioRenderUsage, Usage,
-        UsageState::{Ducked, Muted, Unadjusted},
-        UsageStateDucked, UsageStateMuted, UsageStateUnadjusted,
-    },
+    fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
@@ -33,10 +29,7 @@ use {
 const ENV_NAME: &str = "settings_service_audio_test_environment";
 
 const CHANGED_VOLUME_LEVEL: f32 = 0.7;
-const CHANGED_VOLUME_LEVEL_2: f32 = 0.8;
-const MAX_VOLUME_LEVEL: f32 = 1.0;
 const CHANGED_VOLUME_MUTED: bool = true;
-const CHANGED_VOLUME_UNMUTED: bool = false;
 
 const CHANGED_MEDIA_STREAM: AudioStream = AudioStream {
     stream_type: AudioStreamType::Media,
@@ -54,50 +47,12 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     }),
 };
 
-const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings {
-    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
-    source: Some(AudioStreamSettingSource::User),
-    user_volume: Some(Volume {
-        level: Some(CHANGED_VOLUME_LEVEL_2),
-        muted: Some(CHANGED_VOLUME_MUTED),
-    }),
-};
-
-const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
-    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
-    source: Some(AudioStreamSettingSource::User),
-    user_volume: Some(Volume {
-        level: Some(MAX_VOLUME_LEVEL),
-        muted: Some(CHANGED_VOLUME_UNMUTED),
-    }),
-};
-
-const CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
-    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Communication),
-    source: Some(AudioStreamSettingSource::User),
-    user_volume: Some(Volume {
-        level: Some(MAX_VOLUME_LEVEL),
-        muted: Some(CHANGED_VOLUME_UNMUTED),
-    }),
-};
-
-const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
-    stream: Some(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
-    source: Some(AudioStreamSettingSource::User),
-    user_volume: Some(Volume {
-        level: Some(MAX_VOLUME_LEVEL),
-        muted: Some(CHANGED_VOLUME_UNMUTED),
-    }),
-};
-
 // Used to store fake services for mocking dependencies and checking input/outputs.
 // To add a new fake to these tests, add here, in create_services, and then use
 // in your test.
 struct FakeServices {
     audio_core: Arc<Mutex<AudioCoreService>>,
     input_device_registry: Arc<Mutex<InputDeviceRegistryService>>,
-    sound_player: Arc<Mutex<SoundPlayerService>>,
-    usage_reporter: Arc<Mutex<UsageReporterService>>,
 }
 
 fn get_default_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -163,8 +118,6 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
         FakeServices {
             audio_core: audio_core_service_handle,
             input_device_registry: input_device_registry_service_handle,
-            sound_player: sound_player_service_handle,
-            usage_reporter: usage_reporter_service_handle,
         },
     )
 }
@@ -279,167 +232,6 @@ async fn test_audio_input() {
     assert!(mic_mute);
 }
 
-// Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
-// with the correct ids.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_sounds() {
-    let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    // Test that the volume-changed sound gets played on the soundplayer.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    assert!(fake_services.sound_player.lock().await.id_exists(1));
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(1),
-        Some(AudioRenderUsage::Media)
-    );
-
-    // Test that the volume-max sound gets played on the soundplayer.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
-        Some(AudioRenderUsage::Media)
-    );
-}
-
-// Test to ensure that when the volume is increased while already at max volume, the earcon for
-// max volume plays.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_max_volume_sound_on_press() {
-    let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    // Set volume to max.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
-
-    // Try to increase volume. Only serves to set the "last volume button press" event
-    // to 1 (volume up).
-    let buttons_event =
-        MediaButtonsEvent { volume: Some(1), mic_mute: Some(false), pause: Some(false) };
-    fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
-
-    // Sets volume max again.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-
-    // Check that the sound played more than once.
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert!(fake_services.sound_player.lock().await.get_play_count(0).unwrap() > 1);
-}
-
-// Test to ensure that when the volume is changed on multiple channels, the sound only plays once.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_earcons_on_multiple_channel_change() {
-    let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    // Set volume to max on multiple channels.
-    set_volume(&audio_proxy, vec![CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX]).await;
-    set_volume(&audio_proxy, vec![CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX]).await;
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
-}
-
-// Test to ensure that when another higher priority stream is playing,
-// the earcons sounds don't play.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_earcons_with_active_stream() {
-    let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    assert!(fake_services.sound_player.lock().await.id_exists(1));
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(1),
-        Some(AudioRenderUsage::Media)
-    );
-
-    fake_services
-        .usage_reporter
-        .lock()
-        .await
-        .set_usage_state(
-            Usage::RenderUsage(AudioRenderUsage::Background {}),
-            Muted(UsageStateMuted {}),
-        )
-        .await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
-
-    // With the background stream muted, the sound should not have played.
-    assert!(!fake_services.sound_player.lock().await.id_exists(0));
-    assert_ne!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
-        Some(AudioRenderUsage::Media)
-    );
-
-    fake_services
-        .usage_reporter
-        .lock()
-        .await
-        .set_usage_state(
-            Usage::RenderUsage(AudioRenderUsage::Background {}),
-            Ducked(UsageStateDucked {}),
-        )
-        .await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-
-    // With the background stream ducked, the sound should not have played.
-    assert!(!fake_services.sound_player.lock().await.id_exists(0));
-    assert_ne!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
-        Some(AudioRenderUsage::Media)
-    );
-
-    fake_services
-        .usage_reporter
-        .lock()
-        .await
-        .set_usage_state(
-            Usage::RenderUsage(AudioRenderUsage::Background {}),
-            Unadjusted(UsageStateUnadjusted {}),
-        )
-        .await;
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-
-    // With the background stream unadjusted, the sound should have played.
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
-        Some(AudioRenderUsage::Media)
-    );
-}
-
 /// Test that the audio settings are restored correctly.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_volume_restore() {
@@ -511,7 +303,7 @@ async fn test_bringup_without_audio_core() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_info_copy() {
     let audio_info = default_audio_info();
-    let copy_audio_info = audio_info;
+    let copy_audio_info = audio_info.clone();
     assert_eq!(audio_info, copy_audio_info);
 }
 
@@ -555,6 +347,7 @@ async fn test_persisted_values_applied_at_start() {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
+        changed_streams: None,
     };
 
     // Write values in the store.

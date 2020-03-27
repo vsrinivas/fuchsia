@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::fidl_clone::FIDLClone, crate::input::monitor_mic_mute,
+    crate::fidl_clone::FIDLClone, crate::input::monitor_media_buttons,
     crate::service_context::ServiceContext,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -27,7 +27,7 @@ async fn test_input() {
         ServiceContext::create(Some(ServiceRegistry::serve(service_registry.clone())));
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-    assert!(monitor_mic_mute(service_context.clone(), input_tx).await.is_ok());
+    assert!(monitor_media_buttons(service_context.clone(), input_tx).await.is_ok());
 
     if let Some(event) = input_rx.next().await {
         assert_eq!(initial_event, event);
@@ -58,5 +58,5 @@ async fn test_device_listener_failure() {
         ServiceContext::create(Some(ServiceRegistry::serve(service_registry.clone())));
 
     let (input_tx, _input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-    assert!(!monitor_mic_mute(service_context.clone(), input_tx).await.is_ok());
+    assert!(!monitor_media_buttons(service_context.clone(), input_tx).await.is_ok());
 }
