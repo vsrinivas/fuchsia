@@ -31,6 +31,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"github.com/google/subcommands"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -134,18 +135,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var bootMode bootserver.Mode
-	if r.netboot {
-		bootMode = bootserver.ModeNetboot
-	} else {
-		bootMode = bootserver.ModePave
-	}
-	imgs, closeFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootMode)
-	if err != nil {
-		return err
-	}
-	defer closeFunc()
-
 	opts := target.Options{
 		Netboot: r.netboot,
 		SSHKey:  r.sshKey,
@@ -176,8 +165,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// logs will be streamed from.
 	t0 := targets[0]
 
-	errs := make(chan error)
-
 	// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
 	// arm64 devices should already be enabling kernel.serial at compile time.
 	// We need to pass this in to all devices (even those without a serial line)
@@ -185,6 +172,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// TODO (fxb/10480): Move this back to being invoked in the if clause.
 	r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
 
+	eg, ctx := errgroup.WithContext(ctx)
 	var socketPath string
 	if t0.Serial() != nil {
 		defer t0.Serial().Close()
@@ -209,57 +197,77 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return err
 		}
 		defer l.Close()
-		go func() {
+		eg.Go(func() error {
 			if err := s.Run(ctx, l); err != nil && ctx.Err() == nil {
-				errs <- err
-				return
+				return err
 			}
-		}()
+			return nil
+		})
 	}
 
-	// Defer asynchronously restarts of each target.
-	defer func() {
-		var wg sync.WaitGroup
-		for _, t := range targets {
-			wg.Add(1)
-			go func(t Target) {
-				defer wg.Done()
-				logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
-				if err := t.Stop(ctx); err == target.ErrUnimplemented {
-					t.Restart(ctx)
-				}
-			}(t)
+	defer r.stopTargets(ctx, targets)
+
+	for _, t := range targets {
+		t := t
+		eg.Go(func() error {
+			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented && ctx.Err() == nil {
+				return err
+			}
+			return nil
+		})
+	}
+	eg.Go(func() error {
+		if err := r.startTargets(ctx, targets); err != nil {
+			return err
 		}
-		wg.Wait()
-	}()
+		// Cancel context and stop targets to finish other goroutines in group so that if err = nil,
+		// we can return a nil error without waiting for other goroutines.
+		defer r.stopTargets(ctx, targets)
+		defer cancel()
+		return r.runAgainstTarget(ctx, t0, args, socketPath)
+	})
+
+	return eg.Wait()
+}
+
+func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
+	bootMode := bootserver.ModePave
+	if r.netboot {
+		bootMode = bootserver.ModeNetboot
+	}
 
 	// We wait until targets have started before running the subcommand against the zeroth one.
+	eg, ctx := errgroup.WithContext(ctx)
+	for _, t := range targets {
+		t := t
+		eg.Go(func() error {
+			// TODO(fxb/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
+			imgs, closeFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootMode)
+			if err != nil {
+				return err
+			}
+			defer closeFunc()
+
+			return t.Start(ctx, imgs, r.zirconArgs)
+		})
+	}
+	return eg.Wait()
+}
+
+func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
+	// Restart the targets in parallel.
 	var wg sync.WaitGroup
 	for _, t := range targets {
 		wg.Add(1)
 		go func(t Target) {
-			if err := t.Start(ctx, imgs, r.zirconArgs); err != nil {
-				wg.Done()
-				errs <- err
-				return
-			}
-			wg.Done()
-			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented {
-				errs <- err
+			defer wg.Done()
+			logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
+			if err := t.Stop(ctx); err == target.ErrUnimplemented {
+				t.Restart(ctx)
 			}
 		}(t)
 	}
-	go func() {
-		wg.Wait()
-		errs <- r.runAgainstTarget(ctx, t0, args, socketPath)
-	}()
-
-	select {
-	case err := <-errs:
-		return err
-	case <-ctx.Done():
-	}
-	return nil
+	wg.Wait()
 }
 
 func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string, socketPath string) error {
