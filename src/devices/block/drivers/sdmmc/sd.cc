@@ -48,7 +48,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
   }
 
   int attempt = 0;
-  const int max_attempts = 10;
+  const int max_attempts = 200;
   bool card_supports_18v_signalling = false;
   while (true) {
     const uint32_t flags = kAcmd41FlagSdhcSdxcSupport | kAcmd41FlagVoltageWindowAll;
