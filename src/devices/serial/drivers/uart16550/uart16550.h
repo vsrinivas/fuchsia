@@ -6,6 +6,7 @@
 
 #include <mutex>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include <ddktl/device.h>
@@ -13,6 +14,8 @@
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/function.h>
 #include <hwreg/bitfields.h>
+#include <hwreg/mock.h>
+#include <hwreg/pio.h>
 
 namespace uart16550 {
 
@@ -36,8 +39,7 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
   zx_status_t Init();
 
   // test-use only
-  zx_status_t Init(zx::interrupt interrupt, fbl::Function<uint8_t(uint16_t)> port_read,
-                   fbl::Function<void(uint8_t, uint16_t)> port_write);
+  zx_status_t Init(zx::interrupt interrupt, hwreg::Mock::RegisterIo port_mock);
 
   // test-use only
   zx::unowned_interrupt InterruptHandle();
@@ -67,36 +69,6 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
   void DdkUnbindNew(ddk::UnbindTxn txn);
 
  private:
-  class PortIo {
-   public:
-    using PortReadFn = fbl::Function<uint8_t(uint16_t)>;
-    using PortWriteFn = fbl::Function<void(uint8_t, uint16_t)>;
-
-    PortIo() = default;
-
-    PortIo(PortReadFn read, PortWriteFn write, uint16_t base)
-        : port_read_(std::move(read)), port_write_(std::move(write)), port_base_(base) {}
-
-    template <typename IntType>
-    void Write(IntType val, uint32_t offset) {
-      static_assert(std::is_same_v<IntType, uint8_t>, "unsupported register access width");
-      port_write_(val, static_cast<uint16_t>(port_base_ + offset));
-    }
-
-    template <typename IntType>
-    IntType Read(uint32_t offset) {
-      static_assert(std::is_same_v<IntType, uint8_t>, "unsupported register access width");
-      return port_read_(static_cast<uint16_t>(port_base_ + offset));
-    }
-
-    uintptr_t base() const { return port_base_; }
-
-   private:
-    PortReadFn port_read_ = [](uint16_t /*unused*/) -> uint8_t { return 0x00; };
-    PortWriteFn port_write_ = [](uint8_t /*unused*/, uint16_t /*unused*/) {};
-    uint16_t port_base_ = 0;
-  };
-
   bool SupportsAutomaticFlowControl() const;
 
   void ResetFifosLocked() __TA_REQUIRES(device_mutex_);
@@ -114,7 +86,10 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
   zx::interrupt interrupt_;
 
   serial_notify_t notify_cb_ __TA_GUARDED(device_mutex_) = {};
-  PortIo port_io_ __TA_GUARDED(device_mutex_);
+
+  // This should never be used before Init, but must be default-constructible.
+  // The Mock is the default (first) variant so it's default-constructible.
+  std::variant<hwreg::Mock::RegisterIo, hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_);
 
   size_t uart_fifo_len_ = 1;
 

@@ -257,12 +257,11 @@ zx_status_t Uart16550::Init() {
 
   {
     std::lock_guard<std::mutex> lock(device_mutex_);
-    auto port_read = [](uint16_t port) -> uint8_t { return inp(port); };
-
-    auto port_write = [](uint8_t data, uint16_t port) { outp(port, data); };
-
-    port_io_ = PortIo(port_read, port_write, port_base);
-
+#ifdef __x86_64__
+    port_io_.emplace<hwreg::RegisterPio>(port_base);
+#else
+    ZX_PANIC("uart16550 driver supports only direct PIO, which is x86-only");
+#endif
     InitFifosLocked();
   }
 
@@ -277,12 +276,11 @@ zx_status_t Uart16550::Init() {
   return ZX_OK;
 }
 
-zx_status_t Uart16550::Init(zx::interrupt interrupt, fbl::Function<uint8_t(uint16_t)> port_read,
-                            fbl::Function<void(uint8_t, uint16_t)> port_write) {
+zx_status_t Uart16550::Init(zx::interrupt interrupt, hwreg::Mock::RegisterIo port_mock) {
   interrupt_ = std::move(interrupt);
   {
     std::lock_guard<std::mutex> lock(device_mutex_);
-    port_io_ = PortIo(std::move(port_read), std::move(port_write), 0);
+    port_io_.emplace<hwreg::Mock::RegisterIo>(port_mock);
     InitFifosLocked();
   }
 
