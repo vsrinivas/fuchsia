@@ -13,18 +13,23 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 FSERVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
+FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
 
-# Sets up an ssh mock binary on the $PATH of any subshells and creates a stub
-# authorized_keys.
+# Sets up an ssh mock binary on the $PATH of any subshell.
 set_up_ssh() {
   export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
 
   SSH_MOCK_PATH="${BT_TEMP_DIR}/isolated_path_for"
 
-  # This authorized_keys file must not be empty, but its contents aren't used.
-  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"
-  echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
-    >"${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
+  cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    if [[ "$*" =~ SSH_CONNECTION ]]; then
+      echo "172.20.100.10 38618 100.90.250.100 22"
+    elif [[ "$*" =~ "amber_ctl add_src" ]]; then
+      return 0
+    else
+      echo "$@"
+    fi
+EOF
 }
 
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
@@ -108,41 +113,6 @@ set_up_sdk_stubs() {
   echo "${hash}  ${tarball}" >"${FUCHSIA_WORK_DIR}/image/image.md5"
 }
 
-# Helpers.
-
-# Verifies that the given arguments appear in the command line invocation of the
-# most previously sourced mock state. Any arguments passed to this function will
-# be searched for in the actual arguments. This succeeds if the arguments are
-# found in adjacent positions in the correct order.
-#
-# This function only checks for presence. As a result, it will NOT verify any of
-# the following:
-#
-# * The arguments only appear once.
-# * The arguments don't appear with conflicting arguments.
-# * Any given argument --foo isn't overridden, say with a --no-foo flag later.
-#
-# Args: any number of arguments to check.
-# Returns: 0 if found; 1 if not found.
-check_mock_has_args() {
-  local expected=("$@")
-  for j in "${!BT_MOCK_ARGS[@]}"; do
-    local window=("${BT_MOCK_ARGS[@]:$j:${#expected}}")
-    local found=true
-    for k in "${!expected[@]}"; do
-      if [[ "${expected[$k]}" != "${window[$k]}" ]]; then
-        found=false
-        break
-      fi
-    done
-    if [[ "${found}" == "true" ]]; then
-      return 0
-    fi
-  done
-  BT_EXPECT false "Could not find ${expected[*]} in ${BT_MOCK_ARGS[*]}"
-  return 1
-}
-
 # Verify that pm serve was run correctly.
 TEST_fserve_starts_package_server() {
   set_up_ssh
@@ -151,15 +121,13 @@ TEST_fserve_starts_package_server() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT "${FSERVE_CMD}" --image generic-x64 > /dev/null 2>&1
+  BT_EXPECT "${FSERVE_CMD}" --image generic-x64 > "${BT_TEMP_DIR}/fserve_starts_package_server.txt" 2>&1
 
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
 
-  BT_EXPECT_EQ 6 ${#BT_MOCK_ARGS[@]}
-  check_mock_has_args serve
-  check_mock_has_args -repo "${FUCHSIA_WORK_DIR}/packages/amber-files"
-  check_mock_has_args -l :8083
+  expected=("${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm" serve -repo "${FUCHSIA_WORK_DIR}/packages/amber-files" -l ":8083" )
+  gn-test-check-mock-args "${expected[@]}"
 
   # Verify that pm was only run once.
   BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state.1"
@@ -174,18 +142,19 @@ TEST_fserve_registers_package_server() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT "${FSERVE_CMD}" --image generic-x64 > /dev/null 2>&1
+  BT_EXPECT "${FSERVE_CMD}" --image generic-x64 > "${BT_TEMP_DIR}/fserve_registers_package_server.txt" 2>&1
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state"
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected=(_ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" "echo" "\$SSH_CONNECTION")
+  gn-test-check-mock-args "${expected[@]}"
 
-  BT_EXPECT_EQ 8 "${#BT_MOCK_ARGS[@]}"
-  check_mock_has_args -F "${FUCHSIA_WORK_DIR}/sshconfig"
-  check_mock_has_args fe80::c0ff:eec0:ffee%coffee
-  check_mock_has_args amber_ctl add_src -f "http://[fe80::c0ff:eec0:ffee]:8083/config.json"
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
 
-  # Verify that ssh was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  # The host address matches the mock in ssh
+  expected=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" amber_ctl add_src -f "http://172.20.100.10:8083/config.json" )
+  gn-test-check-mock-args "${expected[@]}"
 }
 
 # Verify image names are listed if the image is not found.
@@ -206,8 +175,14 @@ TEST_fserve_device_name(){
 
   BT_EXPECT "${FSERVE_CMD}" --device-name coffee-coffee-coffee-coffee > /dev/null 2>&1
 
+
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state"
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected=(_ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" "echo" "\$SSH_CONNECTION")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
   expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
 }
@@ -218,8 +193,6 @@ TEST_fserve_device_addr(){
   set_up_device_finder
   set_up_gsutil
 
-  echo "172.24.105.10 38618 100.96.250.110 22" > "${SSH_MOCK_PATH}/ssh.mock_stdout"
-  # First by name
   BT_EXPECT "${FSERVE_CMD}" --device-ip 192.1.1.1 > "${BT_TEMP_DIR}/fserve_device_addr_log.txt" 2>&1
 
   # shellcheck disable=SC1090
@@ -231,14 +204,33 @@ TEST_fserve_device_addr(){
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
   expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.1  amber_ctl _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
-
   }
 
+TEST_fserve_with_props() {
+   set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+  
+  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+
+  BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2 "echo" _ANY_ )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2  amber_ctl _ANY_ _ANY_ _ANY_)
+  gn-test-check-mock-args "${expected_args[@]}"
+}
 
 # Test initialization.
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fserve.sh
+  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )

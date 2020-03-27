@@ -247,7 +247,7 @@ TEST_get-fuchsia-property-names() {
 
 
 TEST_is-valid-fuchsia-property()  {
-  BT_ASSERT is-valid-fuchsia-property "device-port"
+  BT_ASSERT is-valid-fuchsia-property "device-ip"
   BT_ASSERT_FAIL  is-valid-fuchsia-property "random-value"
 }
 
@@ -255,12 +255,12 @@ TEST_set_and_get-fuchsia-property() {
   BT_ASSERT_FUNCTION_EXISTS get-fuchsia-property
   BT_ASSERT_FUNCTION_EXISTS set-fuchsia-property
 
-  BT_EXPECT set-fuchsia-property "device-port" 100
-  value="$(get-fuchsia-property "device-port")"
+  BT_EXPECT set-fuchsia-property "device-ip" 100
+  value="$(get-fuchsia-property "device-ip")"
   BT_EXPECT_EQ "$value" "100"
 
-  BT_EXPECT set-fuchsia-property "device-port" ""
-  value="$(get-fuchsia-property "device-port")"
+  BT_EXPECT set-fuchsia-property "device-ip" ""
+  value="$(get-fuchsia-property "device-ip")"
   BT_EXPECT_EQ "$value" ""
 }
 

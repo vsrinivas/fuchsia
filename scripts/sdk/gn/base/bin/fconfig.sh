@@ -99,4 +99,7 @@ elif [[ "${CMD}" == "list" ]]; then
         exit 1
     fi
     _do_list
+else
+    usage
+    exit 1
 fi

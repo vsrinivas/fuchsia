@@ -9,7 +9,13 @@
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
-FUCHSIA_PROPERTY_NAMES=("device-addr" "device-port" "device-name")
+FUCHSIA_PROPERTY_NAMES=(
+  "bucket" # Used as the default for --bucket
+  "device-ip" # Used as the default for --device-ip
+  "device-name" # Used as the default for --device-name
+  "image" # Used as the default for image
+)
+
 function is-mac {
   [[ "$(uname -s)" == "Darwin" ]] && return 0
   return 1
@@ -95,12 +101,31 @@ function get-device-ip {
   # $1 is the SDK_PATH (optional. defaults to get-fuchsia-sdk-dir)
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
-  "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -ipv4=false
+  local device_addr
+  device_addr="$(get-fuchsia-property device-addr)"
+  if [[ "${device_addr}" != "" ]]; then
+    echo "${device_addr}"
+    return 0
+  else
+    "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -ipv4=false
+  fi
 }
 
 function get-device-name {
   # $1 is the SDK_PATH (optional. defaults to get-fuchsia-sdk-dir)
-  "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -full | cut -d\  -f2
+  # Check for a device name being configured.
+  local device_name
+  if ! device_name="$(get-fuchsia-property device-name)"; then
+    return $?
+  fi
+  if [[ "${device_name}" != "" ]]; then
+    echo "${device_name}"
+    return 0
+  else
+    if device_name="$("${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -full)"; then
+      echo "${device_name}"  | cut -d' '  -f2
+    fi
+  fi
 }
 
 function get-device-ip-by-name {
@@ -270,11 +295,10 @@ function check-ssh-config {
   #
   # The second part of is the sshconfig file used by the SDK when using SSH.
   # This is stored in the Fuchsia SDK data directory named sshconfig.
-  # This script checks for the private key file being referenced in the sshconfig, if it
-  # is not present, the sshconfig file is regenerated.
-  # You can customize the sshconfig and it will not be overwritten unless the full path to the
-  # private key is not present. If you want to remove it as part of customization, you can comment out
-  # the IdentityFile line with the `#` character.
+  # This script checks for the private key file being referenced in the sshconfig and
+  # the matching version tag. If they are not present, the sshconfig file is regenerated.
+  # The ssh configuration should not be modified.
+  local SSHCONFIG_TAG="Fuchsia SDK config version 2 tag"
 
   local ssh_dir
   ssh_dir="$(get-fuchsia-sdk-data-dir)/.ssh"
@@ -284,9 +308,11 @@ function check-ssh-config {
   sshconfig_file="$(get-fuchsia-sshconfig-file)"
 
   if [[ -e "${authfile}" && -e "${keyfile}" ]]; then
-   if grep "${keyfile}" "${sshconfig_file}" > /dev/null 2>&1; then
-    return 0
-   fi
+    if grep "${keyfile}" "${sshconfig_file}" > /dev/null 2>&1; then
+      if grep "${SSHCONFIG_TAG}" "${sshconfig_file}" > /dev/null 2>&1; then
+        return 0
+      fi
+    fi
   fi
 
   mkdir -p "${ssh_dir}"
@@ -304,8 +330,16 @@ function check-ssh-config {
   fi
 
   cat >"${sshconfig_file}" <<EOF
-Host *
+# ${SSHCONFIG_TAG}
+# Configure port 8022 for connecting to a device with the local address.
+# This makes it possible to forward 8022 to a device connected remotely.
+Host 127.0.0.1
+  Port 8022
 
+Host ::1
+  Port 8022
+
+Host *
 # Turn off refusing to connect to hosts whose key has changed
 StrictHostKeyChecking no
 CheckHostIP no
@@ -331,7 +365,10 @@ ControlPath=/tmp/fuchsia--%r@%h:%p
 
 # Connect with user, use the identity specified.
 User fuchsia
+IdentitiesOnly yes
 IdentityFile "${keyfile}"
+GSSAPIDelegateCredentials no
+
 EOF
 
   return 0

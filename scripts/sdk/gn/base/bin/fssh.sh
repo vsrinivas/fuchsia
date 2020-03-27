@@ -26,8 +26,8 @@ function usage {
 }
 
 PRIVATE_KEY_FILE=""
-DEVICE_NAME_FILTER=""
-DEVICE_IP=""
+DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+DEVICE_IP="$(get-fuchsia-property device-ip)"
 POSITIONAL=()
 
 

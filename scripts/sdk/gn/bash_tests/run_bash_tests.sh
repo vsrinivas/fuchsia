@@ -19,3 +19,4 @@ declare -r SCRIPT_SRC_DIR
 "${SCRIPT_SRC_DIR}/script_runner.sh" femu-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" femu-exec-wrapper-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" fdevtools-test.sh
+"${SCRIPT_SRC_DIR}/script_runner.sh" fserve-remote-test.sh

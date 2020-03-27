@@ -15,9 +15,10 @@ BT_SET_UP() {
 
 TEST_config_list() {
 
-    expected_list="device-addr=
-device-port=
-device-name="
+    expected_list="bucket=
+device-ip=
+device-name=
+image="
 
     BT_EXPECT "${FCONFIG_CMD}" list > "${BT_TEMP_DIR}/list_stdout.txt"
     BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/list_stdout.txt" "${expected_list}"
@@ -29,9 +30,9 @@ TEST_config_invalid_property() {
 }
 
 TEST_config_set() {
-    BT_EXPECT "${FCONFIG_CMD}" set device-port 8080
+    BT_EXPECT "${FCONFIG_CMD}" set device-ip 8080
 
-    value="$("${FCONFIG_CMD}" get device-port)"
+    value="$("${FCONFIG_CMD}" get device-ip)"
 
     BT_EXPECT_EQ "8080"  "${value}"
 }

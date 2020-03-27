@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-set -u
+set -eu
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 
@@ -13,9 +13,17 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
-FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
+FUCHSIA_BUCKET="$(get-fuchsia-property bucket)"
+if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
+  FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
+fi
+
 FUCHSIA_SERVER_PORT="8083"
-IMAGE_NAME="generic-x64"
+
+IMAGE_NAME="$(get-fuchsia-property image)"
+if [[ "${IMAGE_NAME}" == "" ]]; then
+  IMAGE_NAME="generic-x64"
+fi
 
 usage () {
   echo "Usage: $0"
@@ -42,8 +50,8 @@ usage () {
 
 PRIVATE_KEY_FILE=""
 PREPARE_ONLY=""
-DEVICE_NAME_FILTER=""
-DEVICE_IP_ADDR=""
+DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+DEVICE_IP_ADDR="$(get-fuchsia-property device-ip)"
 
 # Parse command line
 while (( "$#" )); do
@@ -182,25 +190,33 @@ fi
 
 if [[ "${DEVICE_IP_ADDR}" != "" ]]; then
   DEVICE_IP="${DEVICE_IP_ADDR}"
-  # get the host address as seen by the device.
-  ssh_args=("${DEVICE_IP}" echo "\$SSH_CONNECTION")
-  if ! connection_str="$(ssh-cmd "${ssh_args[@]}")"; then
-    fx-error "unable to determine host address as seen from the target.  Is the target up?"
-    exit 1
-  fi
-  HOST_IP="$(echo "$connection_str" | cut -d ' ' -f 1)"
 else
-  # Explicitly pass the sdk path for these methods.
-  HOST_IP=$(get-host-ip "${FUCHSIA_SDK_PATH}" "$DEVICE_NAME_FILTER")
   DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
 fi
+
+if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
+  fx-error "Could not get device IP address"
+  exit 2
+fi
+
+# get the host address as seen by the device.
+ssh_args=("${DEVICE_IP}" echo "\$SSH_CONNECTION")
+if ! connection_str="$(ssh-cmd "${ssh_args[@]}")"; then
+  fx-error "unable to determine host address as seen from the target.  Is the target up?"
+  exit 1
+fi
+HOST_IP="$(echo "$connection_str" | cut -d ' ' -f 1)"
+
 if [[ ! "$?" || -z "$HOST_IP" ]]; then
   fx-error "Could not get Host IP address"
   exit 2
 fi
-if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
-  fx-error "Could not get device IP address"
-  exit 2
+
+# A simple heuristic for "is an ipv6 address", URL encase escape
+# the address.
+if [[ "${HOST_IP}" =~ : ]]; then
+  HOST_IP="${HOST_IP//%/%25}"
+  HOST_IP="[${HOST_IP}]"
 fi
 
 # kill existing pm if present
@@ -217,12 +233,13 @@ SSH_ARGS=()
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
   SSH_ARGS+=( "-i" "${PRIVATE_KEY_FILE}")
 fi
-SSH_ARGS+=( "${DEVICE_IP}" amber_ctl add_src -f "http://[${HOST_IP}]:${FUCHSIA_SERVER_PORT}/config.json" )
+SSH_ARGS+=( "${DEVICE_IP}" amber_ctl add_src -f "http://${HOST_IP}:${FUCHSIA_SERVER_PORT}/config.json" )
 
 # Update the device to point to the server.
 # Because the URL to config.json contains an IPv6 address, the address needs
 # to be escaped in square brackets. This is not necessary for the ssh target,
 # since that's just an address and not a full URL.
 if ! ssh-cmd "${SSH_ARGS[@]}" ; then
-  echo "Error: could not update device"
+  fx-error "Error: could not update device"
+  exit 1
 fi
