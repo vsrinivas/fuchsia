@@ -23,8 +23,6 @@ openweave_adaptation_layer("adaptation") {
     "platform_manager_impl.cpp",
     "platform_manager_impl.h",
     "profile_support.cpp",
-    "software_update_manager_impl.cpp",
-    "software_update_manager_impl.h",
     "warm_platform_config.h",
     "warm_support.cpp",
     "weave_config_manager.cpp",
@@ -54,7 +52,6 @@ config("adaptation_config") {
     "EXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=\"connectivity_manager_impl.h\"",
     "EXTERNAL_NETWORKPROVISIONINGSERVERIMPL_HEADER=\"network_provisioning_server_impl.h\"",
     "EXTERNAL_PLATFORMMANAGERIMPL_HEADER=\"platform_manager_impl.h\"",
-    "EXTERNAL_SOFTWAREUPDATEMANAGERIMPL_HEADER=\"software_update_manager_impl.h\"",
     "EXTERNAL_WEAVEDEVICEPLATFORMEVENT_HEADER=\"weave_device_platform_event.h\"",
     "WEAVE_DEVICE_PLATFORM_CONFIG_INCLUDE=\"weave_device_platform_config.h\"",
   ]
