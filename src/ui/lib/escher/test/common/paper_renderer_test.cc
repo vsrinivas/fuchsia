@@ -46,8 +46,10 @@ void PaperRendererTest::SetupFrame() {
   fd = NewFrame(vk::ImageLayout::eColorAttachmentOptimal);
 
   scene = fxl::MakeRefCounted<PaperScene>();
-  scene->point_lights.resize(1);
-  scene->bounding_box = BoundingBox(vec3(0), vec3(kFramebufferHeight));
+  scene->point_lights.resize(0);
+  scene->ambient_light.color = vec3(1, 1, 1);
+  scene->bounding_box =
+      BoundingBox(vec3(0, 0, -200), vec3(kFramebufferWidth, kFramebufferHeight, 1));
 
   const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
   escher::Camera cam = escher::Camera::NewOrtho(volume);
