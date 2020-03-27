@@ -201,6 +201,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->interruptable_ = false;
   t->curr_cpu_ = INVALID_CPU;
   t->last_cpu_ = INVALID_CPU;
+  t->next_cpu_ = INVALID_CPU;
 
   t->retcode_ = 0;
   wait_queue_init(&t->retcode_wait_queue_);
@@ -1116,6 +1117,7 @@ void thread_construct_first(Thread* t, const char* name) {
   t->signals_ = 0;
   t->curr_cpu_ = cpu;
   t->last_cpu_ = cpu;
+  t->next_cpu_ = INVALID_CPU;
   t->hard_affinity_ = cpu_num_to_mask(cpu);
   sched_init_thread(t, HIGHEST_PRIORITY);
 

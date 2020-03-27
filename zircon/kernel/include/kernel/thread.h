@@ -436,6 +436,7 @@ struct Thread {
   // current cpu the thread is either running on or in the ready queue, undefined otherwise
   cpu_num_t curr_cpu_;
   cpu_num_t last_cpu_;        // last cpu the thread ran on, INVALID_CPU if it's never run
+  cpu_num_t next_cpu_;        // next cpu the thread should run on after |migrate_fn_| is called
   cpu_mask_t hard_affinity_;  // mask of CPUs this thread _must_ run on
   cpu_mask_t soft_affinity_;  // mask of CPUs this thread should run on if possible
 

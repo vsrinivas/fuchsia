@@ -338,6 +338,16 @@ void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_
   thread->scheduler_state_.expected_runtime_ns_ = SchedDuration{params.capacity};
 }
 
+Thread* Scheduler::DequeueThread(SchedTime now) {
+  if (IsDeadlineThreadEligible(now)) {
+    return DequeueDeadlineThread(now);
+  } else if (likely(!fair_run_queue_.is_empty())) {
+    return DequeueFairThread();
+  } else {
+    return &percpu::Get(this_cpu()).idle_thread;
+  }
+}
+
 // Dequeues the eligible thread with the earliest virtual finish time. The
 // caller must ensure that there is at least one thread in the queue.
 Thread* Scheduler::DequeueFairThread() {
@@ -443,19 +453,20 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   const bool needs_migration =
       (GetEffectiveCpuMask(active_mask, current_thread) & current_cpu_mask) == 0;
 
+  Thread* next_thread = nullptr;
   if (is_active && unlikely(needs_migration)) {
     // The current CPU is not in the thread's affinity mask, find a new CPU
     // and move it to that queue.
-    DEBUG_ASSERT(current_thread->curr_cpu_ == current_cpu);
     Remove(current_thread);
-    current_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
 
     const cpu_num_t target_cpu = FindTargetCpu(current_thread);
     Scheduler* const target = Get(target_cpu);
-    DEBUG_ASSERT(target != this);
+    DEBUG_ASSERT(target != this || current_thread->next_cpu_ != INVALID_CPU);
 
     target->Insert(now, current_thread);
-    mp_reschedule(cpu_num_to_mask(target_cpu), 0);
+    if (target != this) {
+      mp_reschedule(cpu_num_to_mask(target_cpu), 0);
+    }
   } else if (is_active && likely(!is_idle)) {
     if (timeslice_expired) {
       // If the timeslice expired insert the current thread into the run queue.
@@ -468,18 +479,18 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
       if (Thread* const earlier_thread = DequeueEarlierDeadlineThread(now, deadline_ns);
           earlier_thread != nullptr) {
         QueueThread(current_thread, Placement::Preemption, now, total_runtime_ns);
-        return earlier_thread;
+        next_thread = earlier_thread;
+      } else {
+        // The current thread still has the earliest deadline.
+        next_thread = current_thread;
       }
-
-      // The current thread still has the earliest deadline.
-      return current_thread;
     } else if (is_new_deadline_eligible && !is_deadline) {
       // The current thread is fair scheduled and there is at least one eligible
       // deadline thread in the run queue: return this thread to the run queue.
       QueueThread(current_thread, Placement::Preemption, now, total_runtime_ns);
     } else {
       // The current thread has remaining time and no eligible contender.
-      return current_thread;
+      next_thread = current_thread;
     }
   } else if (!is_active && likely(!is_idle)) {
     // The current thread is no longer ready, remove its accounting.
@@ -487,26 +498,40 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   }
 
   // The current thread is no longer running or has returned to the run queue,
-  // select another thread to run. If there is an eligible deadline thread, it
-  // takes precedence over available fair threads.
-  //
-  // Note the that predicates in this block must be evaluated here, since the
-  // operations above may change the queues and invalidate the predicates
-  // evaluated at the start of this method.
-  if (IsDeadlineThreadEligible(now)) {
-    return DequeueDeadlineThread(now);
-  } else if (likely(!fair_run_queue_.is_empty())) {
-    return DequeueFairThread();
-  } else {
-    return &percpu::Get(this_cpu()).idle_thread;
+  // select another thread to run.
+  if (next_thread == nullptr) {
+    next_thread = DequeueThread(now);
   }
+
+  // If the next thread is scheduled for migration, call the migration function,
+  // migrate the thread, and select another thread to run.
+  cpu_mask_t cpus_to_reschedule_mask = 0;
+  for (; next_thread->next_cpu_ != INVALID_CPU; next_thread = DequeueThread(now)) {
+    DEBUG_ASSERT(next_thread->last_cpu_ == this_cpu());
+    next_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
+    Remove(next_thread);
+
+    Scheduler* const target = Get(next_thread->next_cpu_);
+    target->Insert(now, next_thread);
+
+    cpus_to_reschedule_mask |= cpu_num_to_mask(next_thread->next_cpu_);
+    next_thread->next_cpu_ = INVALID_CPU;
+  }
+
+  // Issue reschedule IPIs to CPUs with migrated threads.
+  if (cpus_to_reschedule_mask) {
+    mp_reschedule(cpus_to_reschedule_mask, 0);
+  }
+
+  return next_thread;
 }
 
 cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"find_target: cpu,avail"_stringref};
 
+  const cpu_num_t last_cpu = thread->last_cpu_;
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  const cpu_mask_t last_cpu_mask = cpu_num_to_mask(thread->last_cpu_);
+  const cpu_mask_t last_cpu_mask = cpu_num_to_mask(last_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
   const cpu_mask_t idle_mask = mp_get_idle_mask();
 
@@ -529,7 +554,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
 
   // Select an initial target.
   if (last_cpu_mask & available_mask && (!idle_mask || last_cpu_mask & idle_mask)) {
-    target_cpu = thread->last_cpu_;
+    target_cpu = last_cpu;
   } else if (current_cpu_mask & available_mask) {
     target_cpu = arch_curr_cpu_num();
   } else {
@@ -585,7 +610,15 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
 
   SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name_, target_cpu);
   trace.End(target_cpu, remaining_mask);
-  return target_cpu;
+
+  bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU && thread->migrate_fn_ &&
+                         mp_is_cpu_active(last_cpu);
+  if (unlikely(delay_migration)) {
+    thread->next_cpu_ = target_cpu;
+    return last_cpu;
+  } else {
+    return target_cpu;
+  }
 }
 
 void Scheduler::UpdateTimeline(SchedTime now) {
