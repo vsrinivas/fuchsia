@@ -390,7 +390,7 @@ impl ViewAssistant for TerminalViewAssistant {
         // setup method causes us to receive write events before the view is
         // prepared to draw.
         self.spawn_pty_loop()?;
-        self.resize_if_needed(&context.logical_size)?;
+        self.resize_if_needed(&context.size)?;
 
         // Tell the termnial scene to render the values
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();

@@ -31,9 +31,9 @@ pub enum PointerEventResponse {
 }
 
 impl TerminalScene {
-    pub fn new(backgrond_color: Color) -> TerminalScene {
+    pub fn new(background_color: Color) -> TerminalScene {
         TerminalScene {
-            background_view: BackgroundView::new(backgrond_color),
+            background_view: BackgroundView::new(background_color),
             ..TerminalScene::default()
         }
     }
