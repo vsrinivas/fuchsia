@@ -453,7 +453,6 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
   edit_msr_list(host_msr_page, 3, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
   edit_msr_list(host_msr_page, 4, X86_MSR_IA32_TSC_ADJUST, read_msr(X86_MSR_IA32_TSC_ADJUST));
   edit_msr_list(host_msr_page, 5, X86_MSR_IA32_TSC_AUX, read_msr(X86_MSR_IA32_TSC_AUX));
-
   vmcs.Write(VmcsField64::EXIT_MSR_LOAD_ADDRESS, host_msr_page->PhysicalAddress());
   vmcs.Write(VmcsField32::EXIT_MSR_LOAD_COUNT, 6);
 
@@ -631,20 +630,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (status != ZX_OK) {
     return status;
   }
-
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
-  // When we create a VCPU, we bind it to the current thread and a CPU based
-  // on the VPID. The VCPU must always be run on the current thread and the
-  // given CPU, unless an explicit migration is performed.
-  //
-  // The reason we do this is that:
-  // 1. The state of the current thread is stored within the VMCS, to be
-  //    restored upon a guest-to-host transition.
-  // 2. The state of the VMCS associated with the VCPU is cached within the
-  //    CPU. To move to a different CPU, we must perform an explicit migration
-  //    which will cost us performance.
-  Thread* thread = hypervisor::pin_thread(vpid);
+  Thread* thread = Thread::Current::Get();
+  thread->flags_ |= THREAD_FLAG_VCPU;
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -697,11 +686,13 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (status != ZX_OK) {
     return status;
   }
+
+  thread->SetMigrateFn([vcpu = vcpu.get()](auto stage) { vcpu->MigrateCpu(stage); });
   *out = ktl::move(vcpu);
   return ZX_OK;
 }
 
-Vcpu::Vcpu(Guest* guest, uint16_t vpid, const Thread* thread)
+Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
     : guest_(guest), vpid_(vpid), thread_(thread), running_(false), vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
@@ -709,12 +700,67 @@ Vcpu::~Vcpu() {
     return;
   }
   timer_cancel(&local_apic_state_.timer);
+  thread_->SetMigrateFn(Thread::MigrateFn());
+
   // The destructor may be called from a different thread, therefore we must
-  // pin the current thread to the same CPU as the VCPU.
+  // pin the current thread to the same CPU as the VCPU thread.
   AutoPin pin(vpid_);
-  vmclear(vmcs_page_.PhysicalAddress());
-  __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
+  __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
   DEBUG_ASSERT(status == ZX_OK);
+  status = guest_->FreeVpid(vpid_);
+  DEBUG_ASSERT(status == ZX_OK);
+}
+
+void Vcpu::MigrateCpu(Thread::MigrateStage stage) {
+  // Volume 3, Section 31.8.2: An MP-aware VMM is free to assign any logical
+  // processor to a VM. But for performance considerations, moving a guest VMCS
+  // to another logical processor is slower than resuming that guest VMCS on the
+  // same logical processor. Certain VMX performance features (such as caching
+  // of portions of the VMCS in the processor) are optimized for a guest VMCS
+  // that runs on the same logical processor.
+  //
+  // If the VMCS regions are identical (same revision ID) the following sequence
+  // can be used to move or copy the VMCS from one logical processor to another:
+  switch (stage) {
+    // * Perform a VMCLEAR operation on the source logical processor. This
+    //   ensures that all VMCS data that may be cached by the processor are
+    //   flushed to memory.
+    case Thread::MigrateStage::Before: {
+      __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
+      DEBUG_ASSERT(status == ZX_OK);
+      break;
+    }
+    // * Copy the VMCS region from one memory location to another location. This
+    //   is an optional step assuming the VMM wishes to relocate the VMCS or
+    //   move the VMCS to another system.
+    // * Perform a VMPTRLD of the physical address of VMCS region on the
+    //   destination processor to establish its current VMCS pointer.
+    case Thread::MigrateStage::After: {
+      // Volume 3, Section 31.8.2: To migrate a VMCS to another logical
+      // processor, a VMM must use the sequence of VMCLEAR, VMPTRLD and
+      // VMLAUNCH.
+      //
+      // We set |resume| to false so that |vmx_enter| will call VMLAUNCH when
+      // entering the the guest, instead of VMRESUME.
+      vmx_state_.resume = false;
+
+      // Update the host MSR list entries with the per-CPU variables of the
+      // destination processor.
+      edit_msr_list(&host_msr_page_, 5, X86_MSR_IA32_TSC_AUX, read_msr(X86_MSR_IA32_TSC_AUX));
+
+      // In addition to calling VMPTRLD, we also update the VMCS with the
+      // per-CPU variables of the destination processor.
+      x86_percpu* percpu = x86_get_percpu();
+      __UNUSED zx_status_t status = vmptrld(vmcs_page_.PhysicalAddress());
+      DEBUG_ASSERT(status == ZX_OK);
+      vmwrite(static_cast<uint64_t>(VmcsField16::HOST_TR_SELECTOR), TSS_SELECTOR(percpu->cpu_num));
+      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_FS_BASE), thread_->arch_.fs_base);
+      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_GS_BASE), read_msr(X86_MSR_IA32_GS_BASE));
+      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_TR_BASE),
+              reinterpret_cast<uint64_t>(&percpu->default_tss));
+      break;
+    }
+  }
 }
 
 void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
@@ -817,10 +863,6 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
   zx_status_t status;
   do {
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
@@ -925,10 +967,6 @@ static void register_copy(Out* out, const In& in) {
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) const {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
   register_copy(vcpu_state, vmx_state_.guest_state);
   AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
   vcpu_state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
@@ -937,10 +975,6 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) const {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
   register_copy(&vmx_state_.guest_state, vcpu_state);
   AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
   vmcs.Write(VmcsFieldXX::GUEST_RSP, vcpu_state.rsp);
@@ -953,9 +987,6 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
   if ((io_state.access_size != 1) && (io_state.access_size != 2) && (io_state.access_size != 4)) {
     return ZX_ERR_INVALID_ARGS;
   }

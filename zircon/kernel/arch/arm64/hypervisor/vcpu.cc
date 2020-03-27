@@ -194,8 +194,8 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
-  // For efficiency, we pin the thread to the CPU.
-  Thread* thread = hypervisor::pin_thread(vpid);
+  Thread* thread = Thread::Current::Get();
+  thread->flags_ |= THREAD_FLAG_VCPU;
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -239,9 +239,6 @@ Vcpu::~Vcpu() {
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
   const ArchVmAspace& aspace = *guest_->AddressSpace()->arch_aspace();
   zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
   GuestState* guest_state = &el2_state_->guest_state;
@@ -296,10 +293,6 @@ void Vcpu::VirtualInterrupt(uint32_t vector) {
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
   ASSERT(sizeof(state->x) >= sizeof(el2_state_->guest_state.x));
   memcpy(state->x, el2_state_->guest_state.x, sizeof(el2_state_->guest_state.x));
   state->sp = el2_state_->guest_state.system_state.sp_el1;
@@ -308,10 +301,6 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& state) {
-  if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
   ASSERT(sizeof(el2_state_->guest_state.x) >= sizeof(state.x));
   memcpy(el2_state_->guest_state.x, state.x, sizeof(state.x));
   el2_state_->guest_state.system_state.sp_el1 = state.sp;

@@ -101,9 +101,9 @@ class Vcpu {
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
 
  private:
-  Guest* guest_;
+  Guest* const guest_;
   const uint16_t vpid_;
-  const Thread* thread_;
+  Thread* const thread_;
   ktl::atomic<bool> running_;
   LocalApicState local_apic_state_;
   PvClockState pvclock_state_;
@@ -113,8 +113,9 @@ class Vcpu {
   VmxPage vmcs_page_;
   ktl::unique_ptr<uint8_t[]> guest_extended_registers_;
 
-  Vcpu(Guest* guest, uint16_t vpid, const Thread* thread);
+  Vcpu(Guest* guest, uint16_t vpid, Thread* thread);
 
+  void MigrateCpu(Thread::MigrateStage stage);
   void SaveGuestExtendedRegisters(uint64_t cr4);
   void RestoreGuestExtendedRegisters(uint64_t cr4);
 };

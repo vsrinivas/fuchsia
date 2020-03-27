@@ -18,16 +18,6 @@ typedef zx_status_t (*percpu_task_t)(void* context, cpu_num_t cpu_num);
 // CPU the task was successfully run on.
 cpu_mask_t percpu_exec(percpu_task_t task, void* context);
 
-// CPU corresponding to the given VPID.
-cpu_num_t cpu_of(uint16_t vpid);
-
-// Pin the current thread to a CPU, based on the given VPID, and reschedule it
-// to execute on that CPU.
-Thread* pin_thread(uint16_t vpid);
-
-// Check that the current thread is correctly pinned, based on the given VPID.
-bool check_pinned_cpu_invariant(uint16_t vpid, const Thread* thread);
-
 }  // namespace hypervisor
 
 #endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
