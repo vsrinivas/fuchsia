@@ -4,23 +4,23 @@
 
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ClientEnd;
-use fuchsia_async as fasync;
-use fuchsia_inspect as inspect;
-
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
-use std::sync::Arc;
-
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerMarker, LogMessage, LogRequest, LogRequestStream, LogSinkRequest,
     LogSinkRequestStream,
 };
+use fuchsia_async as fasync;
+use fuchsia_inspect as inspect;
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use parking_lot::Mutex;
+use std::sync::Arc;
 
 mod buffer;
 mod klogger;
 mod listener;
 mod logger;
 mod stats;
+
+use listener::Listener;
 
 /// Store 4 MB of log messages and delete on FIFO basis.
 const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
@@ -32,7 +32,7 @@ pub struct LogManager {
 }
 
 struct ManagerInner {
-    listeners: Vec<listener::ListenerWrapper>,
+    listeners: Vec<Listener>,
     log_msg_buffer: buffer::MemoryBoundedBuffer<LogMessage>,
     stats: stats::LogManagerStats,
 }
@@ -76,13 +76,6 @@ impl LogManager {
                 .unwrap_or_else(|e| eprintln!("failed to read kernel logs: {:?}", e)),
         );
         Ok(())
-    }
-
-    fn ingest_message(&self, mut log_msg: LogMessage, size: usize, source: stats::LogSource) {
-        let mut inner = self.inner.lock();
-        inner.listeners.retain(|l| l.send_log(&mut log_msg) == listener::ListenerStatus::Fine);
-        inner.stats.record_log(&log_msg, source);
-        inner.log_msg_buffer.push(log_msg, size);
     }
 
     /// Spawn a task to handle requests from components with logs.
@@ -130,6 +123,7 @@ impl LogManager {
         }
     }
 
+    /// Spawn a task to handle requests from components reading the shared log.
     pub fn spawn_log_handler(&self, stream: LogRequestStream) {
         let state = Arc::new(self.clone());
         fasync::spawn(
@@ -138,10 +132,10 @@ impl LogManager {
                     let state = state.clone();
                     match req {
                         LogRequest::Listen { log_listener, options, .. } => {
-                            state.pump_messages(log_listener, options, false)
+                            state.handle_listener(log_listener, options, false)
                         }
                         LogRequest::DumpLogs { log_listener, options, .. } => {
-                            state.pump_messages(log_listener, options, true)
+                            state.handle_listener(log_listener, options, true)
                         }
                     }
                 })
@@ -150,61 +144,46 @@ impl LogManager {
         )
     }
 
-    fn pump_messages(
+    /// Handle a new listener, sending it all cached messages and either calling `Done` if
+    /// `dump_logs` is true or adding it to the pool of ongoing listeners if not.
+    fn handle_listener(
         &self,
         log_listener: ClientEnd<LogListenerMarker>,
         options: Option<Box<LogFilterOptions>>,
         dump_logs: bool,
     ) {
-        let listener = match log_listener.into_proxy() {
-            Ok(ll) => ll,
+        let mut listener = match listener::Listener::new(log_listener, options) {
+            Ok(w) => w,
             Err(e) => {
-                eprintln!("Logger: Error getting listener proxy: {:?}", e);
+                eprintln!("couldn't init listener: {:?}", e);
                 return;
             }
         };
-
-        let filter = match listener::MessageFilter::new(options) {
-            Ok(f) => f,
-            Err(e) => {
-                eprintln!("Error creating message filter from provided listener options: {:?}", e);
-                return;
-            }
-        };
-
-        let lw = listener::ListenerWrapper { listener, filter };
 
         let mut shared_members = self.inner.lock();
-        {
-            let mut log_length = 0;
-            let mut v = vec![];
-            for (msg, s) in shared_members.log_msg_buffer.iter() {
-                // TODO(fxbug.dev/7989) remove clone for mutable reference when FTP-057 impl'd
-                let mut msg = msg.clone();
-                if lw.filter(&mut msg) {
-                    if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
-                        if listener::ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
-                            return;
-                        }
-                        v.clear();
-                        log_length = 0;
-                    }
-                    log_length = log_length + s;
-                    v.push(msg);
-                }
-            }
-            if v.len() > 0 {
-                if listener::ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
-                    return;
-                }
-            }
+        listener.backfill(shared_members.log_msg_buffer.iter());
+        if !listener.is_healthy() {
+            eprintln!("listener dropped before we finished");
+            return;
         }
 
-        if !dump_logs {
-            shared_members.listeners.push(lw);
+        if dump_logs {
+            listener.done();
         } else {
-            let _ = lw.listener.done();
+            shared_members.listeners.push(listener);
         }
+    }
+
+    /// Ingest an individual log message.
+    fn ingest_message(&self, mut log_msg: LogMessage, size: usize, source: stats::LogSource) {
+        let mut inner = self.inner.lock();
+
+        for listener in &mut inner.listeners {
+            listener.send_log(&mut log_msg);
+        }
+        inner.listeners.retain(Listener::is_healthy);
+        inner.stats.record_log(&log_msg, source);
+        inner.log_msg_buffer.push(log_msg, size);
     }
 }
 
