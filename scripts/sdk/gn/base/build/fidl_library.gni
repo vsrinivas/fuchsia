@@ -188,6 +188,11 @@ template("fidl_library") {
       _tables_file,
     ]
 
+    # Metadata to allow us to query all FIDL IR files.
+    metadata = {
+      fidl_json = [ rebase_path(_json_representation, root_build_dir) ]
+    }
+
     if (!defined(deps)) {
       deps = []
     }
