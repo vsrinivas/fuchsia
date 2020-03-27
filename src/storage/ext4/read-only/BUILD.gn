@@ -50,3 +50,8 @@ test_package("ext4-read-only-tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":ext4-read-only-tests" ]
+}

@@ -78,7 +78,7 @@ static_library("debugger_utils") {
   }
 }
 
-executable("tests") {
+executable("debugger_utils_tests_executable") {
   testonly = true
   output_name = "debugger_utils_tests"
 
@@ -105,12 +105,8 @@ executable("tests") {
   libs = [ "zircon" ]
 }
 
-executable("test_helper") {
+executable("debugger_utils_test_helper") {
   testonly = true
-
-  # US-142: This binary has a long name because it has to be unique within
-  # the entire system.
-  output_name = "debugger_utils_test_helper"
 
   sources = [ "test_helper.cc" ]
 
@@ -126,8 +122,8 @@ test_package("debugger_utils_tests") {
   rootjob_svc = "//build"
 
   deps = [
-    ":test_helper",
-    ":tests",
+    ":debugger_utils_test_helper",
+    ":debugger_utils_tests_executable",
   ]
 
   binaries = [
@@ -143,4 +139,9 @@ test_package("debugger_utils_tests") {
       environments = basic_envs
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":debugger_utils_tests" ]
 }

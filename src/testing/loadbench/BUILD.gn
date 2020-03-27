@@ -106,3 +106,8 @@ test_package("loadbench_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":loadbench_tests" ]
+}

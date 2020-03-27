@@ -104,3 +104,8 @@ test_package("perfmon_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":perfmon_tests" ]
+}

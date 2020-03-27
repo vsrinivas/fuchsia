@@ -14,5 +14,8 @@ group("testing") {
 group("tests") {
   testonly = true
 
-  deps = [ "fuzzing:tests" ]
+  deps = [
+    "fuzzing:tests",
+    "loadbench:tests",
+  ]
 }
