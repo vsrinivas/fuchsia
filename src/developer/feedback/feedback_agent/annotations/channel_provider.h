@@ -7,7 +7,6 @@
 
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
@@ -15,8 +14,8 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
+#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -53,17 +52,14 @@ class ChannelProviderPtr {
   fit::promise<AnnotationValue> GetCurrent(zx::duration timeout);
 
  private:
-  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   Cobalt* cobalt_;
+
   // Enforces the one-shot nature of GetChannel().
   bool has_called_get_current_ = false;
 
   fuchsia::update::channel::ProviderPtr update_info_;
-  fit::bridge<AnnotationValue> done_;
-  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
-  // cancel it if we are done another way.
-  fxl::CancelableClosure done_after_timeout_;
+  Bridge<AnnotationValue> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProviderPtr);
 };

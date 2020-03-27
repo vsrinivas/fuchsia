@@ -129,52 +129,31 @@ namespace internal {
 
 ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
                                std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
+    : services_(services),
+      cobalt_(cobalt),
+      bridge_(dispatcher, "Hardware product info retrieval") {}
 
 fit::promise<Annotations> ProductInfoPtr::GetProductInfo(zx::duration timeout) {
   FXL_CHECK(!has_called_get_product_info_) << "GetProductInfo() is not intended to be called twice";
   has_called_get_product_info_ = true;
 
-  // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
-  // the completer after the timeout and return an error.
-  //
-  // We wrap the delayed task in a CancelableClosure so we can cancel it when the fit::bridge is
-  // completed another way.
-  //
-  // It is safe to pass "this" to the fit::function as the callback won't be callable when the
-  // CancelableClosure goes out of scope, which is before "this".
-  done_after_timeout_.Reset([this] {
-    if (!done_.completer) {
-      return;
-    }
-
-    FX_LOGS(ERROR) << "Hardware product info retrieval timed out";
-    cobalt_->LogOccurrence(TimedOutData::kProductInfo);
-    done_.completer.complete_error();
-  });
-
   product_ptr_ = services_->Connect<fuchsia::hwinfo::Product>();
 
-  const zx_status_t post_status = async::PostDelayedTask(
-      dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
-  if (post_status != ZX_OK) {
-    FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
-    FX_LOGS(ERROR)
-        << "Skipping hardware product info retrieval as it is not safe without a timeout";
-    return fit::make_result_promise<Annotations>(fit::error());
-  }
-
   product_ptr_.set_error_handler([this](zx_status_t status) {
-    if (!done_.completer) {
+    if (bridge_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.hwinfo.Product";
 
-    done_.completer.complete_error();
+    bridge_.CompleteError();
   });
 
   product_ptr_->GetInfo([this](ProductInfo info) {
+    if (bridge_.IsAlreadyDone()) {
+      return;
+    }
+
     Annotations product_info;
 
     if (info.has_sku()) {
@@ -211,13 +190,11 @@ fit::promise<Annotations> ProductInfoPtr::GetProductInfo(zx::duration timeout) {
       product_info[kAnnotationHardwareProductManufacturer] = info.manufacturer();
     }
 
-    done_.completer.complete_ok(std::move(product_info));
+    bridge_.CompleteOk(std::move(product_info));
   });
 
-  return done_.consumer.promise_or(fit::error()).then([this](fit::result<Annotations>& result) {
-    done_after_timeout_.Cancel();
-    return std::move(result);
-  });
+  return bridge_.WaitForDone(
+      timeout, /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kProductInfo); });
 }
 
 }  // namespace internal

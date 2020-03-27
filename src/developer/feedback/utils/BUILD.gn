@@ -108,18 +108,17 @@ source_set("logs") {
 }
 
 source_set("libfit") {
-  public = [
-    "promise.h",
-    "weak_bridge.h",
-  ]
-
   sources = [
+    "bridge.h",
     "promise.h",
     "weak_bridge.h",
   ]
 
   public_deps = [
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
   ]
 

@@ -8,7 +8,6 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
@@ -17,8 +16,8 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
+#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/lib/fxl/functional/cancelable_callback.h"
 
 namespace feedback {
 
@@ -50,10 +49,10 @@ class LogListener : public fuchsia::logger::LogListener {
   void Log(fuchsia::logger::LogMessage log) override;
   void Done() override;
 
-  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
+  Cobalt* cobalt_;
+
   // Enforces the one-shot nature of CollectLogs().
   bool has_called_collect_logs_ = false;
 
@@ -65,10 +64,7 @@ class LogListener : public fuchsia::logger::LogListener {
 
   std::string logs_;
 
-  fit::bridge<void, void> done_;
-  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
-  // cancel it if we are done another way.
-  fxl::CancelableClosure done_after_timeout_;
+  Bridge<> bridge_;
 };
 
 }  // namespace feedback

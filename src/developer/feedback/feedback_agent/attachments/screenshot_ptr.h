@@ -7,15 +7,14 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
 #include <memory>
 
+#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -39,17 +38,14 @@ class Scenic {
   fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(zx::duration timeout);
 
  private:
-  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   Cobalt* cobalt_;
+
   // Enforces the one-shot nature of TakeScreenshot().
   bool has_called_take_screenshot_ = false;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  fit::bridge<fuchsia::ui::scenic::ScreenshotData> done_;
-  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
-  // cancel it if we are done another way.
-  fxl::CancelableClosure done_after_timeout_;
+  Bridge<fuchsia::ui::scenic::ScreenshotData> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);
 };

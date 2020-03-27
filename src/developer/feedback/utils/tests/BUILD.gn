@@ -22,6 +22,9 @@ test_package("feedback_utils_tests") {
       name = "archive_unittest"
     },
     {
+      name = "bridge_unittest"
+    },
+    {
       name = "cobalt_unittest"
     },
     {
@@ -57,6 +60,7 @@ test_package("feedback_utils_tests") {
 
   deps = [
     ":archive_unittest",
+    ":bridge_unittest",
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
     ":log_format_unittest",
@@ -87,6 +91,20 @@ executable("archive_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("bridge_unittest") {
+  testonly = true
+
+  sources = [ "bridge_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/utils:libfit",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

@@ -49,7 +49,10 @@ fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt), binding_(this) {}
+    : services_(services),
+      binding_(this),
+      cobalt_(cobalt),
+      bridge_(dispatcher, "System log collection") {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";
@@ -58,55 +61,34 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
-    if (!done_.completer) {
+    if (bridge_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "LogListener error";
-    done_.completer.complete_error();
+    bridge_.CompleteError();
   });
 
   logger_ = services_->Connect<fuchsia::logger::Log>();
   logger_.set_error_handler([this](zx_status_t status) {
-    if (!done_.completer) {
+    if (bridge_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to Log service";
-    done_.completer.complete_error();
+    bridge_.CompleteError();
   });
   // Resets |log_many_called_| for the new call to DumpLogs().
   log_many_called_ = false;
   logger_->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
 
-  // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
-  // the completer after the timeout and return an error.
-  //
-  // We wrap the delayed task in a CancelableClosure so we can cancel it when the fit::bridge is
-  // completed by Done() or another error.
-  //
-  // It is safe to pass "this" to the fit::function as the callback won't be callable when the
-  // CancelableClosure goes out of scope, which is before "this".
-  done_after_timeout_.Reset([this] {
-    if (!done_.completer) {
-      return;
-    }
-
-    FX_LOGS(ERROR) << "System log collection timed out";
-    cobalt_->LogOccurrence(TimedOutData::kSystemLog);
-    done_.completer.complete_error();
-  });
-  const zx_status_t post_status = async::PostDelayedTask(
-      dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
-  if (post_status != ZX_OK) {
-    FX_PLOGS(ERROR, post_status) << "Failed to post delayed task, no timeout for log collection";
-  }
-
-  return done_.consumer.promise_or(fit::error()).then([this](fit::result<void>& result) {
-    done_after_timeout_.Cancel();
-    binding_.Close(ZX_OK);
-    return std::move(result);
-  });
+  return bridge_
+      .WaitForDone(timeout,
+                   /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kSystemLog); })
+      .then([this](fit::result<void>& result) {
+        binding_.Close(ZX_OK);
+        return std::move(result);
+      });
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
@@ -125,7 +107,7 @@ void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
 void LogListener::Log(fuchsia::logger::LogMessage message) { logs_ += Format(message); }
 
 void LogListener::Done() {
-  if (!done_.completer) {
+  if (bridge_.IsAlreadyDone()) {
     return;
   }
 
@@ -137,7 +119,7 @@ void LogListener::Done() {
     FX_LOGS(WARNING) << "Done() was called, but no logs have been collected yet";
   }
 
-  done_.completer.complete_ok();
+  bridge_.CompleteOk();
 }
 
 }  // namespace feedback

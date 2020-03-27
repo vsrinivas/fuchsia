@@ -37,7 +37,7 @@ fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
 
 Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                  Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
+    : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Inspect data collection") {}
 
 fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_) << "Collect() is not intended to be called twice";
@@ -46,23 +46,14 @@ fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
   // We set up the connection and all the error handlers.
   SetUp();
 
-  // We kick off the timeout clock.
-  if (const zx_status_t status = async::PostDelayedTask(
-          dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
-      status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to post delayed task";
-    FX_LOGS(ERROR) << "Skipping Inspect data collection as it is not safe without a timeout";
-    return fit::make_result_promise<AttachmentValue>(fit::error());
-  }
-
   // We start the Inspect data collection.
   StreamInspectSnapshot();
 
   // We wait on one way to finish the flow, joining whichever data has been collected.
-  return done_.consumer.promise_or(fit::error())
+  return bridge_
+      .WaitForDone(timeout,
+                   /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kInspect); })
       .then([this](fit::result<>& result) -> fit::result<AttachmentValue> {
-        done_after_timeout_.Cancel();
-
         if (!result.is_ok()) {
           FX_LOGS(WARNING)
               << "Inspect data collection was interrupted - Inspect data may be partial or missing";
@@ -82,41 +73,23 @@ fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
 }
 
 void Inspect::SetUp() {
-  // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
-  // the completer after the timeout and return an error.
-  //
-  // We wrap the delayed task in a CancelableClosure so we can cancel it when the fit::bridge is
-  // completed another way.
-  //
-  // It is safe to pass "this" to the fit::function as the callback won't be callable when the
-  // CancelableClosure goes out of scope, which is before "this".
-  done_after_timeout_.Reset([this] {
-    if (!done_.completer) {
-      return;
-    }
-
-    FX_LOGS(ERROR) << "Inspect data collection timed out";
-    cobalt_->LogOccurrence(TimedOutData::kInspect);
-    done_.completer.complete_error();
-  });
-
   archive_ = services_->Connect<fuchsia::diagnostics::Archive>();
   archive_.set_error_handler([this](zx_status_t status) {
-    if (!done_.completer) {
+    if (bridge_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.Archive";
-    done_.completer.complete_error();
+    bridge_.CompleteError();
   });
 
   snapshot_iterator_.set_error_handler([this](zx_status_t status) {
-    if (!done_.completer) {
+    if (bridge_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.BatchIterator";
-    done_.completer.complete_error();
+    bridge_.CompleteError();
   });
 }
 
@@ -131,19 +104,19 @@ void Inspect::StreamInspectSnapshot() {
 
 void Inspect::AppendNextInspectBatch() {
   snapshot_iterator_->GetNext([this](auto result) {
-    if (!done_.completer) {
+    if (bridge_.IsAlreadyDone()) {
       return;
     }
 
     if (result.is_err()) {
       FX_LOGS(ERROR) << "Failed to retrieve next Inspect batch: " << result.err();
-      done_.completer.complete_error();
+      bridge_.CompleteError();
       return;
     }
 
     std::vector<fuchsia::diagnostics::FormattedContent> batch = std::move(result.response().batch);
     if (batch.empty()) {  // We have gotten all the Inspect data.
-      done_.completer.complete_ok();
+      bridge_.CompleteOk();
       return;
     }
 

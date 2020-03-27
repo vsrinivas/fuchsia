@@ -7,7 +7,6 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
@@ -18,8 +17,8 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
+#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -48,9 +47,9 @@ class Inspect {
   void StreamInspectSnapshot();
   void AppendNextInspectBatch();
 
-  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   Cobalt* cobalt_;
+
   // Enforces the one-shot nature of Collect().
   bool has_called_collect_ = false;
 
@@ -61,10 +60,7 @@ class Inspect {
   // A block would typically be the Inspect data for one component.
   std::vector<std::string> inspect_data_;
 
-  fit::bridge<> done_;
-  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
-  // cancel it if we are done another way.
-  fxl::CancelableClosure done_after_timeout_;
+  Bridge<> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Inspect);
 };
