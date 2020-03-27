@@ -614,6 +614,12 @@ void Dwc2::HandleTransferComplete(uint8_t ep_num) {
   usb_request_t* req = ep->current_req;
   if (req) {
     Request request(req, sizeof(usb_request_t));
+    // It is necessary to set current_req = nullptr
+    // in order to make this re-entrant safe and thread-safe.
+    // When we call request.Complete the callee may immediately re-queue this request.
+    // if it is already in current_req it could be completed twice (since QueueNextRequest
+    // would attempt to re-queue it, or CancelAll could take the lock on a separate thread and
+    // forcefully complete it after we've already completed it).
     ep->current_req = nullptr;
     ep->lock.Release();
     request.Complete(ZX_OK, ep->req_offset);
