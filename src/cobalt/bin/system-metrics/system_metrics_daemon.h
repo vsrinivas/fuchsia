@@ -50,7 +50,7 @@ class SystemMetricsDaemon {
   void StartLogging();
 
   // Reader side must use the exact name to read from Inspect.
-  // TODO(fxb/48884): Add a link to a config file after created.
+  // Details are in b/152076901#comment6.
   // Design doc in go/fuchsia-metrics-to-inspect-design.
   static constexpr const char* kInspectNodeName = "metrics_temperature";
   static constexpr const char* kReadingPropertyName = "readings";
