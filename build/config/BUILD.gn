@@ -359,6 +359,10 @@ config("default_warnings") {
     # TODO(43681): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-range-loop-analysis",
+
+    # TODO(49143): Temporarily disable this warning until we disable it
+    # individually for affected third_party libraries.
+    "-Wno-deprecated-declarations",
   ]
   cflags_cc = [
     # TODO(38640): Keep this flag here while it is enabled in ZN to keep the
