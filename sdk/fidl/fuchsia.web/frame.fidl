@@ -54,6 +54,13 @@ bits InputTypes : uint64 {
     ALL = 0x8000000000000000;
 };
 
+/// Controls whether ConfigureInputTypes() should allow or deny processing of
+/// the specified [`fuchsia.web.InputTypes`].
+enum AllowInputState : int32 {
+    ALLOW = 1;
+    DENY = 2;
+};
+
 /// Represents the return status of a [`fuchsia.web.Frame`] method.
 enum FrameError : int32 {
     /// An internal error occured.
@@ -221,12 +228,11 @@ protocol Frame {
     [Transitional, Deprecated]
     SetEnableInput(bool enable_input);
 
-    /// Used at runtime to enable or disable user processing for specific types of input on
-    /// a [`fuchsia.web.Frame`].
-    ///
+    /// Enables or disables the processing of the specified `types` of user inputs.
+    /// `enable` specifies whether to enable or disable the specified `types`.
     /// All input types are enabled by default.
     [Transitional]
-    ConfigureInputTypes(InputTypes enable, InputTypes disable);
+    ConfigureInputTypes(InputTypes types, AllowInputState allow);
 
     /// Sets the listener for handling popup frame opened by web content. If no listener is
     /// present, then any new popup frame will be blocked.
