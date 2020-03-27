@@ -46,17 +46,14 @@ if [[ $# -gt 1 ]]; then
   exit 1
 fi
 
-timeout_flag="--nowait"
-
 device="$(get-device-name)" || exit $?
-if [[ -z ${device} ]] &&
-   [[ $("${ZIRCON_TOOLS_DIR}/netls" "${timeout_flag}" | grep -i -c "device ") > "1" ]] ; then
-  echo "Rebooting some device... Consider using \`fx set-device\` if you have multiple devices."
-else
-  echo "Rebooting ${device}..."
+
+if [[ -z "$(get-fuchsia-device-addr)" ]]; then
+  echo >&2 "Could not find ${device} in Fuchsia, attempting to reboot using netboot (Zedboot)"
+  exec "${ZIRCON_TOOLS_DIR}/netruncmd" "--nowait" "${device}" "dm ${reboot_type}"
 fi
 
-"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${device}" "dm ${reboot_type}"
+echo "Rebooting ${device}..."
 
 # Check that the device is reachable over SSH, otherwise let the user know.
 # This establishes a ControlMaster.
