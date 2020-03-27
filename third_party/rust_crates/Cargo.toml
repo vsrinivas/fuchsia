@@ -181,6 +181,7 @@ webpki = "0.21"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
+async-std = "1.5.0"
 flate2 = "1.0.7"
 handlebars = "2.0.0-beta.2"
 indoc = "0.3.3"
@@ -200,6 +201,7 @@ tokio = "0.1.22"
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
+memchr = { path = "tiny_mirrors/memchr" }
 nom_locate = { path = "tiny_mirrors/nom_locate" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }

@@ -1,3 +1,33 @@
+## v1.12.0
+
+#### Fixes
+
+- fix `get` on OpenBSD to ignore offline CPUs
+- implement `get_physical` on OpenBSD
+
+## v1.11.1
+
+#### Fixes
+
+- Use `mem::zeroed` instead of `mem::uninitialized`.
+
+## v1.11.0
+
+#### Features
+
+- add `hermit` target OS support
+- removes `bitrig` support
+
+#### Fixes
+
+- fix `get_physical` count with AMD hyperthreading.
+
+## v1.10.1
+
+#### Fixes
+
+- improve `haiku` CPU detection
+
 ## v1.10.0
 
 #### Features
