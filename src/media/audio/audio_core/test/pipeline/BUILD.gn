@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//src/media/audio/hardware.gni")
+
+test_package("audio_pipeline_tests") {
+  deps = [ ":audio_pipeline_tests_bin" ]
+
+  tests = [
+    {
+      name = "audio_pipeline_tests"
+
+      # This (effectively real-time) test must be run on a true hardware-based target.
+      # By specifying 'extended_hardware_envs' instead of 'hardware_envs', we allow these tests to
+      # run on the VIM2 platform, where our audio driver for the HDMI-based audio output does not
+      # yet generate position notifications.
+      environments = extended_hardware_envs
+    },
+  ]
+}
+
+executable("audio_pipeline_tests_bin") {
+  testonly = true
+  output_name = "audio_pipeline_tests"
+
+  sources = [
+    "audio_pipeline_test.cc",
+    "audio_pipeline_test.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/media/cpp:no_converters",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/syslog/cpp",
+    "//src/media/audio/lib/logging",
+    "//src/media/audio/lib/test:hermetic_audio_test",
+    "//zircon/public/lib/fzl",
+  ]
+}

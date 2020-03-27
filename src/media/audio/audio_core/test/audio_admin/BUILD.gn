@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//src/media/audio/hardware.gni")
+
+executable("audio_admin_test_bin") {
+  testonly = true
+  output_name = "audio_admin_tests"
+
+  sources = [ "audio_admin_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ultrasound",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/syslog/cpp",
+    "//src/media/audio/lib/test",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+test_package("audio_admin_tests") {
+  deps = [ ":audio_admin_test_bin" ]
+
+  tests = [
+    {
+      name = "audio_admin_tests"
+
+      # This (effectively real-time) test must be run on real hardware.
+      environments = extended_hardware_envs
+    },
+  ]
+}

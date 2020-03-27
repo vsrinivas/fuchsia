@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+test_package("audio_fidl_tests") {
+  deps = [ ":audio_fidl_tests_bin" ]
+
+  tests = [
+    {
+      name = "audio_fidl_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("audio_fidl_tests_bin") {
+  testonly = true
+  output_name = "audio_fidl_tests"
+
+  sources = [
+    "audio_capturer_test.cc",
+    "audio_renderer_sync_test.cc",
+    "audio_renderer_test.cc",
+    "audio_sync_test.cc",
+    "audio_test.cc",
+    "gain_control_test.cc",
+    "gain_control_test.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/clock/testing",
+    "//src/media/audio/lib/logging",
+    "//src/media/audio/lib/test:hermetic_audio_test",
+  ]
+}
