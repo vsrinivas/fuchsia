@@ -15,6 +15,15 @@
 #include "tests/common/svg/svg_utils.h"
 #include "tests/common/utils.h"
 
+#define DEBUG 0
+
+#if DEBUG
+#include <stdio.h>
+#define LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define LOG(...) ((void)0)
+#endif
+
 using FrameTransformFunc = SvgSceneDemoImage::FrameTransformFunc;
 
 //
@@ -248,10 +257,17 @@ SvgSceneDemoImage::setup(uint32_t frame_counter)
     cmds[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
   }
 
+  LOG("------\n");
   for (const auto & l : scene_layers)
     {
       // Spinel renders front to back.
       spn_layer_id layer_id = layer_count - 1 - l.layer_id;
+
+      LOG("layer_id:%u l.layer_id:%u fill_color=%08x fill_opacity=%g\n",
+          layer_id,
+          l.layer_id,
+          l.fill_color,
+          l.fill_opacity);
 
       {
         float rgba[4];
@@ -277,6 +293,7 @@ SvgSceneDemoImage::setup(uint32_t frame_counter)
             .ty = print.ty,
           };
           spn(composition_place(composition_, &rasters_[print.raster_index], &layer_id, &txty, 1));
+          LOG("  %u raster_id:%u\n", layer_id, print.raster_index);
         }
     }
 

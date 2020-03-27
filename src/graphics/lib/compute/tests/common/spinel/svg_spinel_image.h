@@ -62,9 +62,11 @@ struct SvgSpinelImage : public SpinelImage
   }
 
  protected:
-  const svg *    svg_     = nullptr;
-  spn_path_t *   paths_   = nullptr;
-  spn_raster_t * rasters_ = nullptr;
+  const svg *    svg_           = nullptr;
+  uint32_t       paths_count_   = 0;
+  uint32_t       rasters_count_ = 0;
+  spn_path_t *   paths_         = nullptr;
+  spn_raster_t * rasters_       = nullptr;
 };
 
 #endif  // SRC_GRAPHICS_LIB_COMPUTE_TESTS_COMMON_SPINEL_SVG_SPINEL_IMAGE_H_

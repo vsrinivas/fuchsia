@@ -11,10 +11,19 @@
 #include "tests/common/svg/svg_path_sink.h"
 #include "tests/common/svg/svg_utils.h"
 
+#define DEBUG 0
+
+#if DEBUG
+#include <stdio.h>
+#define LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define LOG(...) ((void)0)
+#endif
+
 namespace {
 
 // Implements a vector of items of type T that cannot contain duplicates.
-// Uses an std::set<> to achieve this, using KEY_COMPARE as the comparison
+// Uses an std::map<> to achieve this, using KEY_COMPARE as the comparison
 // function.
 template <typename T, typename KEY_COMPARE = std::less<T>>
 class UniqueVector {
@@ -105,11 +114,12 @@ class SvgScene::Impl {
  public:
   explicit Impl(const std::vector<SvgScene::Item> & items)
   {
-    // Maps item index -> raster_id -> raster_index.
-    std::map<uint32_t, std::map<uint32_t, uint32_t>> raster_id_to_index;
+    // Maps (item index, raster_id) -> raster_index.
+    std::map<std::tuple<uint32_t, uint32_t>, uint32_t> raster_id_to_index;
 
     // First, decode all paths and rasters into unique sets.
     uint32_t item_index = 0;
+    LOG("---- svgscene: decode paths and rasters\n");
     for (const auto & item : items)
       {
         uint32_t svg_index = svgs_.findOrCreate(item.svg);
@@ -123,7 +133,7 @@ class SvgScene::Impl {
           uint32_t path_index = paths_.findOrCreate(path_key);
 
           // NOTE: Due to RasterCompare, raster_id will be ignored except when
-          // insert new items in |rasters_|. A way to map that ID to the relevant
+          // inserting new items in |rasters_|. A way to map that ID to the relevant
           // |rasters_| index later is needed, hence the use of |raster_ids_to_index|.
           SvgScene::Raster raster_key = {
             .svg_index  = svg_index,
@@ -131,8 +141,18 @@ class SvgScene::Impl {
             .path_index = path_index,
             .transform  = r.transform,
           };
-          uint32_t raster_index                       = rasters_.findOrCreate(raster_key);
-          raster_id_to_index[item_index][r.raster_id] = raster_index;
+          uint32_t raster_index = rasters_.findOrCreate(raster_key);
+          raster_id_to_index.try_emplace(std::make_pair(item_index, r.raster_id), raster_index);
+
+          LOG("item_index:%u svg_index:%u r.path_id:%u path_index:%u r.raster_id:%u "
+              "raster_index:%u\n",
+              item_index,
+              svg_index,
+              r.path_id,
+              path_index,
+              r.raster_id,
+              raster_index);
+
           return true;
         });
         item_index++;
@@ -140,6 +160,7 @@ class SvgScene::Impl {
 
     // Second, decode layers.
     {
+      LOG("---- svgscene: decode layers\n");
       uint32_t layer_base = 0;
       uint32_t item_index = 0;
       for (const auto & item : items)
@@ -147,6 +168,16 @@ class SvgScene::Impl {
           uint32_t svg_index = svgs_.find(item.svg);
 
           svg_decode_layers(item.svg, [&](const SvgDecodedLayer & l) -> bool {
+            LOG("item_index:%u svg_index:%u l.layer_id:%u l.fill_color:%08x l.fill_opacity:%g "
+                "l.opacity:%g l.fill_even_odd:%s\n",
+                item_index,
+                svg_index,
+                l.layer_id,
+                l.fill_color,
+                l.fill_opacity,
+                l.opacity,
+                l.fill_even_odd ? "true" : "false");
+
             Layer layer = {
               .svg_index     = svg_index,
               .layer_id      = layer_base + l.layer_id,
@@ -157,8 +188,22 @@ class SvgScene::Impl {
 
             for (const SvgDecodedLayer::Print & print : l.prints)
               {
+                // IMPORTANT: print.raster_id might reference a raster that was never
+                // decoded, because it corresponds to SVG PathStroke commands that are
+                // not implemented, ignore these.
+                auto it = raster_id_to_index.find(std::make_pair(item_index, print.raster_id));
+                if (it == raster_id_to_index.end())
+                  continue;
+
+                uint32_t raster_index = it->second;
+                LOG("  raster_id:%u raster_index:%u tx:%d tx:%d\n",
+                    print.raster_id,
+                    raster_index,
+                    print.tx,
+                    print.ty);
+
                 layer.prints.push_back(Print{
-                  .raster_index = raster_id_to_index[item_index][print.raster_id],
+                  .raster_index = raster_index,
                   .tx           = print.tx,
                   .ty           = print.ty,
                 });
