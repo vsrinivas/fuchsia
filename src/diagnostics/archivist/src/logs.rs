@@ -20,7 +20,7 @@ mod listener;
 mod logger;
 mod stats;
 
-use listener::Listener;
+use listener::{pool::Pool, Listener};
 
 /// Store 4 MB of log messages and delete on FIFO basis.
 const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
@@ -32,7 +32,7 @@ pub struct LogManager {
 }
 
 struct ManagerInner {
-    listeners: Vec<Listener>,
+    listeners: Pool,
     log_msg_buffer: buffer::MemoryBoundedBuffer<LogMessage>,
     stats: stats::LogManagerStats,
 }
@@ -41,7 +41,7 @@ impl LogManager {
     pub fn new(node: inspect::Node) -> Self {
         Self {
             inner: Arc::new(Mutex::new(ManagerInner {
-                listeners: Vec::new(),
+                listeners: Pool::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(
                     OLD_MSGS_BUF_SIZE,
                     node.create_child("buffer_stats"),
@@ -149,7 +149,7 @@ impl LogManager {
         options: Option<Box<LogFilterOptions>>,
         dump_logs: bool,
     ) {
-        let mut listener = match listener::Listener::new(log_listener, options) {
+        let mut listener = match Listener::new(log_listener, options) {
             Ok(w) => w,
             Err(e) => {
                 eprintln!("couldn't init listener: {:?}", e);
@@ -167,7 +167,7 @@ impl LogManager {
         if dump_logs {
             listener.done();
         } else {
-            shared_members.listeners.push(listener);
+            shared_members.listeners.add(listener);
         }
     }
 
@@ -175,10 +175,7 @@ impl LogManager {
     fn ingest_message(&self, mut log_msg: LogMessage, size: usize, source: stats::LogSource) {
         let mut inner = self.inner.lock();
 
-        for listener in &mut inner.listeners {
-            listener.send_log(&mut log_msg);
-        }
-        inner.listeners.retain(Listener::is_healthy);
+        inner.listeners.send(&mut log_msg);
         inner.stats.record_log(&log_msg, source);
         inner.log_msg_buffer.push(log_msg, size);
     }
@@ -431,7 +428,7 @@ mod tests {
             let node = inspector.root().create_child("log_stats");
             let buffer_node = node.create_child("buffer_stats");
             let inner = Arc::new(Mutex::new(ManagerInner {
-                listeners: Vec::new(),
+                listeners: Pool::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE, buffer_node),
                 stats: stats::LogManagerStats::new(node),
             }));

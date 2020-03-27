@@ -6,12 +6,13 @@ use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerProxy,
 use thiserror::Error;
 
 mod filter;
+pub mod pool;
 
 use filter::MessageFilter;
 
 /// An individual log listener. Wraps the FIDL type `LogListenerProxy` in filtering options provided
 /// when connecting.
-pub(super) struct Listener {
+pub struct Listener {
     listener: LogListenerProxy,
     filter: MessageFilter,
     status: Status,
