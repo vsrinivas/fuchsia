@@ -15,7 +15,13 @@
 
 namespace magma {
 
-bool PlatformLogger::IsInitialized() { return fx_log_get_logger() != nullptr; }
+namespace {
+
+bool g_is_logging_initialized = false;
+
+}  // namespace
+
+bool PlatformLogger::IsInitialized() { return g_is_logging_initialized; }
 
 bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) {
   zx::socket local_socket, remote_socket;
@@ -40,6 +46,7 @@ bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) {
   if (status != ZX_OK)
     return false;
 
+  g_is_logging_initialized = true;
   return true;
 }
 

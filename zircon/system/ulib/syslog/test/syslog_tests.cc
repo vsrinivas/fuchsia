@@ -31,13 +31,7 @@ static bool ends_with(const char* str, const char* suffix) {
 bool test_log_init(void) {
   BEGIN_TEST;
   fx_log_reset_global_for_testing();
-#ifdef SYSLOG_STATIC
-  // Init without config does not work with syslog-static
-  zx_status_t expected = ZX_ERR_INVALID_ARGS;
-#else
-  zx_status_t expected = ZX_OK;
-#endif
-  EXPECT_EQ(expected, fx_log_init(), "");
+  EXPECT_EQ(ZX_OK, fx_log_init(), "");
   END_TEST;
 }
 
@@ -281,6 +275,35 @@ bool test_vlog_write(void) {
   END_TEST;
 }
 
+bool test_log_reconfiguration(void) {
+  BEGIN_TEST;
+  fx_log_reset_global_for_testing();
+
+  // Initialize with no tags.
+  int pipefd[2];
+  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  FX_LOG(INFO, NULL, "Hi");
+  char buf[256];
+  size_t n = read(pipefd[1], buf, sizeof(buf));
+  EXPECT_GT(n, 0u, "");
+  buf[n] = 0;
+  EXPECT_TRUE(ends_with(buf, "INFO: Hi\n"), buf);
+
+  // Now reconfigure the logger and add tags.
+  const char* tags[] = {"tag1", "tag2"};
+  EXPECT_EQ(ZX_OK, init_helper(-1, tags, 2), "");
+  FX_LOG(INFO, NULL, "Hi");
+  n = read(pipefd[1], buf, sizeof(buf));
+  EXPECT_GT(n, 0u, "");
+  buf[n] = 0;
+  EXPECT_TRUE(ends_with(buf, "[tag1, tag2] INFO: Hi\n"), buf);
+
+  close(pipefd[1]);
+  fx_log_reset_global_for_testing();
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(syslog_tests)
 RUN_TEST(test_log_init)
 RUN_TEST(test_log_init_with_socket)
@@ -294,6 +317,7 @@ RUN_TEST(test_log_write_with_multi_global_tag)
 RUN_TEST(test_log_enabled_macro)
 RUN_TEST(test_vlog_simple_write)
 RUN_TEST(test_vlog_write)
+RUN_TEST(test_log_reconfiguration)
 END_TEST_CASE(syslog_tests)
 
 BEGIN_TEST_CASE(syslog_tests_edge_cases)

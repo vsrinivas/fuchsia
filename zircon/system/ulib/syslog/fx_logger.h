@@ -6,16 +6,16 @@
 #define ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_
 
 #include <lib/syslog/logger.h>
-
-#include <fbl/mutex.h>
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/thread.h>
 
 #include <atomic>
+
+#include <fbl/mutex.h>
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 
 namespace {
 
@@ -41,13 +41,8 @@ struct fx_logger {
   // So they should be validated before calling this constructor.
   fx_logger(const fx_logger_config_t* config) {
     pid_ = GetCurrentProcessKoid();
-    socket_.reset(config->log_service_channel);
-    fd_to_close_.reset(config->console_fd);
-    logger_fd_.store(config->console_fd, std::memory_order_relaxed);
-    SetSeverity(config->min_severity);
-    ZX_DEBUG_ASSERT(fd_to_close_ != socket_.is_valid());
-    AddTags(config->tags, config->num_tags);
     dropped_logs_.store(0, std::memory_order_relaxed);
+    Reconfigure(config);
   }
 
   ~fx_logger() = default;
@@ -70,6 +65,8 @@ struct fx_logger {
 
   void ActivateFallback(int fallback_fd);
 
+  zx_status_t Reconfigure(const fx_logger_config_t* config);
+
  private:
   zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* format,
                         va_list args, bool perform_format);
@@ -80,7 +77,7 @@ struct fx_logger {
   zx_status_t VLogWriteToFd(int fd, fx_log_severity_t severity, const char* tag, const char* msg,
                             va_list args, bool perform_format);
 
-  zx_status_t AddTags(const char** tags, size_t ntags);
+  zx_status_t SetTags(const char** tags, size_t ntags);
 
   zx_koid_t pid_;
   std::atomic<fx_log_severity_t> severity_;

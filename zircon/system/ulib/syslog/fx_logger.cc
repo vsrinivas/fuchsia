@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <fbl/string_buffer.h>
-#include <zircon/assert.h>
+#include "fx_logger.h"
 
 #include <lib/syslog/logger.h>
 #include <lib/syslog/wire_format.h>
+#include <stdio.h>
+#include <zircon/assert.h>
 
 #include <atomic>
-#include <stdio.h>
 
-#include "fx_logger.h"
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/string_buffer.h>
 
 namespace {
 
@@ -52,6 +52,20 @@ void fx_logger::ActivateFallback(int fallback_fd) {
   // Do not change fd_to_close_ as we don't want to close fallback_fd.
   // We will still close original console_fd_
   logger_fd_.store(fallback_fd, std::memory_order_relaxed);
+}
+
+zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
+  if (!config)
+    return ZX_ERR_INVALID_ARGS;
+  if (config->log_service_channel != ZX_HANDLE_INVALID || config->console_fd != -1) {
+    socket_.reset(config->log_service_channel);
+    fd_to_close_.reset(config->console_fd);
+    logger_fd_.store(config->console_fd, std::memory_order_relaxed);
+    // We don't expect to have a console fd and a socket at the same time.
+    ZX_DEBUG_ASSERT(fd_to_close_ != socket_.is_valid());
+  }
+  SetSeverity(config->min_severity);
+  return SetTags(config->tags, config->num_tags);
 }
 
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
@@ -211,10 +225,13 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, co
 }
 
 // This function is not thread safe
-zx_status_t fx_logger::AddTags(const char** tags, size_t ntags) {
+zx_status_t fx_logger::SetTags(const char** tags, size_t ntags) {
   if (ntags > FX_LOG_MAX_TAGS) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  tags_.reset();
+  tagstr_ = "";
 
   auto fd_mode = logger_fd_.load(std::memory_order_relaxed) != -1;
   for (size_t i = 0; i < ntags; i++) {

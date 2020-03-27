@@ -13,8 +13,7 @@
 __BEGIN_CDECLS
 
 // Gets the global logger for the process to which log messages emitted
-// using the FX_LOG macros will be written.  Returns NULL if logging is
-// not configured.
+// using the FX_LOG macros will be written. This function is thread-safe.
 fx_logger_t* fx_log_get_logger(void);
 
 // Returns true if writing messages with the given severity is enabled in the
@@ -24,20 +23,24 @@ static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
   return logger && severity >= fx_logger_get_min_severity(logger);
 }
 
-// Initializes the logging infrastructure with the specified configuration.
-// Returns |ZX_ERR_BAD_STATE| if logging has already been initialized.
+// Reconfigures the global logger for this process with the specified
+// configuration.
 // If |console_fd| and |log_service_channel| are invalid in |config|,
-// this function chooses a default destination for the log.
+// this function doesn't change the currently used file descriptor or channel.
 // |config| can be safely deallocated after this function returns.
-//
-// global logger would be deallocated once program ends.
+// This function is NOT thread-safe and must be called early in the program
+// before other threads are spawned.
+// Returns:
+// - ZX_INTERNAL_ERR if the global logger had failed to instantiate,
+// - ZX_ERR_INVALID_ARGS if config is invalid (i.e. is null or has more than
+//   FX_LOG_MAX_TAGS tags),
+// - ZX_OK if the reconfiguration succeeds.
+// TODO(samans): Rename this function. https://fxbug.dev/49001
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
 
-// Initializes the logging infrastructure for this process using default
-// parameters. Returns |ZX_ERR_BAD_STATE| if logging has already been
-// initialized.
-//
-// global logger would be deallocated once program ends.
+// Deprecated. Doesn't do anything. Returns ZX_INTERNAL_ERR if the global logger
+// had failed to instantiate, and ZX_OK otherwise.
+// TODO(samans): Remove this function. https://fxbug.dev/49001
 zx_status_t fx_log_init(void);
 
 // Returns true if writing messages with the given severity is enabled in the

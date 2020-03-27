@@ -12,15 +12,7 @@
 
 namespace {
 
-std::unique_ptr<fx_logger> g_logger_ptr;
-
-}  // namespace
-
-SYSLOG_EXPORT
-fx_logger_t* fx_log_get_logger() { return g_logger_ptr.get(); }
-
-SYSLOG_EXPORT
-zx_status_t fx_log_init(void) {
+fx_logger_t* MakeDefaultLogger() {
   char process_name[ZX_MAX_NAME_LEN] = "";
   const char* tag = process_name;
 
@@ -34,25 +26,32 @@ zx_status_t fx_log_init(void) {
                                .log_service_channel = ZX_HANDLE_INVALID,
                                .tags = &tag,
                                .num_tags = 1};
+  fx_logger_t* logger = NULL;
+  fx_logger_create(&config, &logger);
+  return logger;
+}
 
-  return fx_log_init_with_config(&config);
+}  // namespace
+
+SYSLOG_EXPORT
+fx_logger_t* fx_log_get_logger() {
+  static std::unique_ptr<fx_logger_t> logger(MakeDefaultLogger());
+  return logger.get();
+}
+
+SYSLOG_EXPORT
+zx_status_t fx_log_init(void) {
+  if (!fx_log_get_logger())
+    return ZX_ERR_INTERNAL;
+  return ZX_OK;
 }
 
 SYSLOG_EXPORT
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config) {
-  if (config == nullptr) {
-    return ZX_ERR_BAD_STATE;
-  }
-  if (g_logger_ptr.get()) {
-    return ZX_ERR_BAD_STATE;
-  }
-  fx_logger_t* logger = NULL;
-  auto status = fx_logger_create(config, &logger);
-  if (status != ZX_OK) {
-    return status;
-  }
-  g_logger_ptr.reset(logger);
-  return ZX_OK;
+  fx_logger_t* logger = fx_log_get_logger();
+  if (!logger)
+    return ZX_ERR_INTERNAL;
+  return logger->Reconfigure(config);
 }
 
 // This is here to force a definition to be included here for C99.
@@ -62,6 +61,9 @@ __BEGIN_CDECLS
 
 SYSLOG_EXPORT
 // This clears out global logger. This is used from tests
-void fx_log_reset_global_for_testing() { g_logger_ptr.reset(nullptr); }
+void fx_log_reset_global_for_testing() {
+  // TODO(samans): Remove this function since it is no longer necessary to destroy the
+  // global logger in order to reconfigure logging. https://fxbug.dev/49001
+}
 
 __END_CDECLS
