@@ -45,6 +45,10 @@ typedef uint32_t fidl_transformation_t;
 // |dst_bytes| buffer. Both |src_bytes| and |dst_bytes| should be aligned to
 // FIDL_ALIGNMENT.
 //
+// The provided |src_type| must describe the |src_bytes| buffer format, and the
+// alternate types (accessed via the various `alt_type` fields) must describe
+// the target buffer format.
+//
 // Upon success, this function returns `ZX_OK` and records the total size
 // of bytes written to the |dst_bytes| buffer into |out_dst_num_bytes|.
 //
@@ -53,7 +57,7 @@ typedef uint32_t fidl_transformation_t;
 // error message.
 //
 // See also `fidl_transformation_t` and `FIDL_TRANSFORMATION_...` constants.
-zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
+zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* src_type,
                            const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
                            uint32_t dst_num_bytes_capacity,  uint32_t* out_dst_num_bytes,
                            const char** out_error_msg);

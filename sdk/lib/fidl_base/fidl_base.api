@@ -8,7 +8,7 @@
   "pkg/fidl_base/include/lib/fidl/envelope_frames.h": "d494a230043a6dcdb54fcfd631b52076",
   "pkg/fidl_base/include/lib/fidl/internal.h": "209f1b5782ec236b21b0c92e3dce0d2b",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "a18e97bafa2f7e388422a7e721d6421d",
-  "pkg/fidl_base/include/lib/fidl/transformer.h": "f9abda97bc79ffc2b786df566847598f",
+  "pkg/fidl_base/include/lib/fidl/transformer.h": "fc00c1ab551df1f16092bc825b072317",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "7c1edfe5a4599f63358c3375668224c4",
   "pkg/fidl_base/include/lib/fidl/visitor.h": "f66c2e1f55c91443b38f95de6d2f3da0",
   "pkg/fidl_base/include/lib/fidl/walker.h": "a2a5abf1e4acf6efbbeba679eba7ed8a"

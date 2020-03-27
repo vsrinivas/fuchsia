@@ -407,8 +407,8 @@ class DebugInfo final {
 
 class TransformerBase {
  public:
-  TransformerBase(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
-      : src_dst(src_dst), debug_info_(debug_info), top_level_type_(top_level_type) {}
+  TransformerBase(SrcDst* src_dst, const fidl_type_t* top_level_src_type, DebugInfo* debug_info)
+      : src_dst(src_dst), debug_info_(debug_info), top_level_src_type_(top_level_src_type) {}
   virtual ~TransformerBase() = default;
 
   uint32_t InlineSize(const fidl_type_t* type, WireFormat wire_format, const Position& position) {
@@ -469,12 +469,12 @@ class TransformerBase {
   }
 
   zx_status_t TransformTopLevelStruct() {
-    if (top_level_type_->type_tag != kFidlTypeStruct) {
+    if (top_level_src_type_->type_tag != kFidlTypeStruct) {
       return TRANSFORMER_FAIL(ZX_ERR_INVALID_ARGS, (Position{0, 0, 0, 0}),
                               "only top-level structs supported");
     }
 
-    const auto& src_coded_struct = top_level_type_->coded_struct;
+    const auto& src_coded_struct = top_level_src_type_->coded_struct;
     const auto& dst_coded_struct = src_coded_struct.alt_type->coded_struct;
     // Since this is the top-level struct, the first secondary object (i.e.
     // out-of-line offset) is exactly placed after this struct, i.e. the
@@ -1325,7 +1325,7 @@ class TransformerBase {
   DebugInfo* const debug_info_;
 
  private:
-  const fidl_type_t* top_level_type_;
+  const fidl_type_t* top_level_src_type_;
 };
 
 // TODO(apang): Mark everything override
@@ -1333,8 +1333,8 @@ class TransformerBase {
 // methods now, which can be passed into the constructor of TransformerBase.
 class V1ToOld final : public TransformerBase {
  public:
-  V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
-      : TransformerBase(src_dst, top_level_type, debug_info) {}
+  V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_src_type, DebugInfo* debug_info)
+      : TransformerBase(src_dst, top_level_src_type, debug_info) {}
 
   WireFormat From() const { return WireFormat::kV1; }
   WireFormat To() const { return WireFormat::kOld; }
@@ -1342,8 +1342,8 @@ class V1ToOld final : public TransformerBase {
 
 class OldToV1 final : public TransformerBase {
  public:
-  OldToV1(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
-      : TransformerBase(src_dst, top_level_type, debug_info) {}
+  OldToV1(SrcDst* src_dst, const fidl_type_t* top_level_src_type, DebugInfo* debug_info)
+      : TransformerBase(src_dst, top_level_src_type, debug_info) {}
 
  private:
   // TODO(apang): Could CRTP this.
@@ -1353,17 +1353,17 @@ class OldToV1 final : public TransformerBase {
 
 }  // namespace
 
-zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
+zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* src_type,
                            const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
                            uint32_t dst_num_bytes_capacity, uint32_t* out_dst_num_bytes,
                            const char** out_error_msg) {
-  if (!type || !src_bytes || !dst_bytes || !out_dst_num_bytes || !FidlIsAligned(src_bytes) ||
+  if (!src_type || !src_bytes || !dst_bytes || !out_dst_num_bytes || !FidlIsAligned(src_bytes) ||
       !FidlIsAligned(dst_bytes)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, dst_num_bytes_capacity);
-  DebugInfo debug_info(transformation, type, src_dst, out_error_msg);
+  DebugInfo debug_info(transformation, src_type, src_dst, out_error_msg);
 
   const zx_status_t status = [&] {
     switch (transformation) {
@@ -1375,9 +1375,9 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
         return src_dst.Copy(start, src_num_bytes);
       }
       case FIDL_TRANSFORMATION_V1_TO_OLD:
-        return V1ToOld(&src_dst, type, &debug_info).TransformTopLevelStruct();
+        return V1ToOld(&src_dst, src_type, &debug_info).TransformTopLevelStruct();
       case FIDL_TRANSFORMATION_OLD_TO_V1:
-        return OldToV1(&src_dst, type, &debug_info).TransformTopLevelStruct();
+        return OldToV1(&src_dst, src_type, &debug_info).TransformTopLevelStruct();
       default:
         debug_info.RecordFailure(__LINE__, "unsupported transformation");
         return ZX_ERR_INVALID_ARGS;
