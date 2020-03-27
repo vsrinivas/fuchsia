@@ -138,6 +138,17 @@ class TestDevice(unittest.TestCase):
         self.assertIn(
             ' '.join(mock.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
             mock.host.history)
+        mock.delay = 2
+        with self.assertRaises(subprocess.CalledProcessError):
+            mock.fetch('delayed', '/tmp')
+        mock.delay = 2
+        with self.assertRaises(subprocess.CalledProcessError):
+            mock.fetch('delayed', '/tmp', retries=1)
+        mock.delay = 2
+        mock.fetch('delayed', '/tmp', retries=2)
+        self.assertIn(
+            ' '.join(mock.get_ssh_cmd(['scp', '[::1]:delayed', '/tmp'])),
+            mock.host.history)
 
     def test_store(self):
         mock = MockDevice()

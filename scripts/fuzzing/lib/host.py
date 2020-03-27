@@ -66,7 +66,7 @@ class Host(object):
             return Host.join(f.read().strip())
 
     def get_host_out_dir(self):
-      return Host.join(Host.find_build_dir(), 'host_x64')
+        return Host.join(Host.find_build_dir(), 'host_x64')
 
     def add_build_ids(self, build_ids):
         """Sets the build IDs used to symbolize logs."""
@@ -107,8 +107,7 @@ class Host(object):
         clang_dir = os.path.join(
             'prebuilt', 'third_party', 'clang', self._platform)
         self.set_symbolizer(
-            Host.join(
-                self.get_host_out_dir(), 'symbolize'),
+            Host.join(self.get_host_out_dir(), 'symbolize'),
             Host.join(clang_dir, 'bin', 'llvm-symbolizer'))
         self.add_build_ids(Host.join('prebuilt_build_ids'))
         self.add_build_ids(Host.join(clang_dir, 'lib', 'debug', '.build-id'))

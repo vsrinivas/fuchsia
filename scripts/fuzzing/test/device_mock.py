@@ -18,9 +18,10 @@ class MockDevice(Device):
     def __init__(self, port=22):
         super(MockDevice, self).__init__(MockHost(), '::1', port)
         self.toggle = False
+        self.delay = 0
 
     def ssh(self, cmdline):
-        """ Overrides Device._ssh to provide canned responses."""
+        """ Overrides Device.ssh to provide canned responses."""
         p = super(MockDevice, self).ssh(cmdline)
         if cmdline[0] == 'cs' and self.toggle:
             p.response = r"""
@@ -58,3 +59,11 @@ drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
 [0:0] {{{yet another line to symbolize}}}
 """
         return p
+
+    def _scp(self, srcs, dst):
+        """ Overrides Device._scp to simulate delayed file creation."""
+        if len(srcs) == 1 and srcs[0].endswith('delayed') and self.delay != 0:
+            self.delay -= 1
+            raise subprocess.CalledProcessError(1, 'scp', 'mock failure')
+        else:
+            super(MockDevice, self)._scp(srcs, dst)

@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+
 def show_menu(choices):
     """Displays a simple interactive menu, looping until a valid selection is made."""
 
@@ -14,7 +15,7 @@ def show_menu(choices):
     choice = None
     while not choice:
         try:
-            choice = choices[int(raw_input(prompt))-1]
+            choice = choices[int(raw_input(prompt)) - 1]
         except ValueError, IndexError:
             print("Invalid selection.")
 

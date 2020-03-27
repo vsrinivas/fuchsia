@@ -92,8 +92,11 @@ class TestFuzzer(unittest.TestCase):
             ' '.join(
                 mock_device.get_ssh_cmd(
                     [
-                        'ssh', '::1', 'run',
-                        fuzzer.url(), '-artifact_prefix=data/',
+                        'ssh',
+                        '::1',
+                        'run',
+                        fuzzer.url(),
+                        '-artifact_prefix=data/',
                         '-some-lf-arg=value',
                         '-jobs=1',
                         'data/corpus/',
@@ -294,7 +297,11 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         base_dir = tempfile.mkdtemp()
         try:
             fuzzer = Fuzzer(
-                mock_device, u'mock-package1', u'mock-target2', output=base_dir, debug=True)
+                mock_device,
+                u'mock-package1',
+                u'mock-target2',
+                output=base_dir,
+                debug=True)
             fuzzer.start(['-some-lf-arg=value'])
         finally:
             shutil.rmtree(base_dir)
@@ -303,8 +310,11 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
             ' '.join(
                 mock_device.get_ssh_cmd(
                     [
-                        'ssh', '::1', 'run',
-                        fuzzer.url(), '-artifact_prefix=data/',
+                        'ssh',
+                        '::1',
+                        'run',
+                        fuzzer.url(),
+                        '-artifact_prefix=data/',
                         '-some-lf-arg=value',
                         '-jobs=1',
                         'data/corpus/',
@@ -314,6 +324,7 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         '-handle_fpe=0',
                         '-handle_abrt=0',
                     ])), mock_device.host.history)
+
 
 if __name__ == '__main__':
     unittest.main()

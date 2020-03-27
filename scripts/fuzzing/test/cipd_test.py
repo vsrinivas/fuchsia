@@ -62,9 +62,9 @@ class TestCipd(unittest.TestCase):
 
         mock_cipd.create()
         self.assertIn(
-            mock_cipd._bin + ' create --pkg-def ' + os.path.join(
-                corpus.root, 'cipd.yaml') + ' --ref latest --tag integration:' +
-            host.snapshot(), host.history)
+            mock_cipd._bin + ' create --pkg-def ' +
+            os.path.join(corpus.root, 'cipd.yaml') +
+            ' --ref latest --tag integration:' + host.snapshot(), host.history)
 
 
 if __name__ == '__main__':

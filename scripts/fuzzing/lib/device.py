@@ -9,6 +9,7 @@ import os
 import re
 import shlex
 import subprocess
+import time
 
 from host import Host
 
@@ -212,10 +213,17 @@ class Device(object):
         p = self.host.create_process(args)
         p.check_call()
 
-    def fetch(self, data_src, host_dst):
+    def fetch(self, data_src, host_dst, retries=0):
         """Copies `data_src` on the target to `host_dst` on the host."""
         if not os.path.isdir(host_dst):
             raise ValueError(host_dst + ' is not a directory')
+        while retries != 0:
+            try:
+                self._scp(['[{}]:{}'.format(self._addr, data_src)], host_dst)
+                return
+            except subprocess.CalledProcessError:
+                time.sleep(1)
+                retries -= 1
         self._scp(['[{}]:{}'.format(self._addr, data_src)], host_dst)
 
     def store(self, host_src, data_dst):

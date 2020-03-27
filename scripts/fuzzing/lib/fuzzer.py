@@ -97,10 +97,12 @@ class Fuzzer(object):
         else:
             fuzzer_name = matches[0]
 
-        return cls(device, fuzzer_name[0], fuzzer_name[1], args.output,
-                   args.foreground, args.debug)
+        return cls(
+            device, fuzzer_name[0], fuzzer_name[1], args.output,
+            args.foreground, args.debug)
 
-    def __init__(self, device, pkg, tgt, output=None, foreground=False, debug=False):
+    def __init__(
+            self, device, pkg, tgt, output=None, foreground=False, debug=False):
         self.device = device
         self.host = device.host
         self.pkg = pkg
@@ -282,7 +284,8 @@ class Fuzzer(object):
         """
         while self.is_running():
             time.sleep(2)
-        self.device.fetch(self.data_path('fuzz-*.log'), self.results())
+        self.device.fetch(
+            self.data_path('fuzz-*.log'), self.results(), retries=2)
         logs = glob.glob(self.results('fuzz-*.log'))
         artifacts = []
         for log in logs:

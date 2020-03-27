@@ -36,10 +36,10 @@ class Process(object):
         """Analogous to subprocess.call."""
         p = self.popen()
         try:
-          return p.wait()
+            return p.wait()
         except:
-          p.kill()
-          raise
+            p.kill()
+            raise
 
     def check_call(self):
         """Analogous to subprocess.check_call."""

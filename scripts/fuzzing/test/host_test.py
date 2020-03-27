@@ -73,8 +73,7 @@ class TestHost(unittest.TestCase):
         if not os.getenv('FUCHSIA_DIR'):
             return
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        executable = Host.join(
-            host.get_host_out_dir(), 'symbolize')
+        executable = Host.join(host.get_host_out_dir(), 'symbolize')
         symbolizer = Host.join(
             'prebuilt', 'third_party', 'clang', platform, 'bin',
             'llvm-symbolizer')
@@ -128,8 +127,7 @@ class TestHost(unittest.TestCase):
         ssh_config = Host.join(build_dir, 'ssh-keys', 'ssh_config')
         zxtools = Host.join(build_dir + '.zircon', 'tools')
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        executable = Host.join(
-            host.get_host_out_dir(), 'symbolize')
+        executable = Host.join(host.get_host_out_dir(), 'symbolize')
         symbolizer = Host.join(
             'prebuilt', 'third_party', 'clang', platform, 'bin',
             'llvm-symbolizer')

@@ -101,8 +101,8 @@ class Cipd(object):
         with open(pkg_def, 'w') as f:
             f.write('package: ' + self._pkg + '\n')
             f.write(
-                'description: Auto-generated fuzzing corpus for %s\n' % str(
-                    self.corpus.fuzzer))
+                'description: Auto-generated fuzzing corpus for %s\n' %
+                str(self.corpus.fuzzer))
             f.write('install_mode: copy\n')
             f.write('data:\n')
             for elem in os.listdir(self.corpus.root):
