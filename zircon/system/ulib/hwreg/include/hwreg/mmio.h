@@ -4,24 +4,33 @@
 
 #pragma once
 
-#include <hwreg/internal.h>
-
 #include <stdint.h>
+
+#include <type_traits>
+
+#include <hwreg/internal.h>
 
 namespace hwreg {
 
-// Wrap MMIO for easier testing of device drivers
+// This can be passed to ReadFrom and WriteTo methods.  The RegisterAddr
+// object holds an offset from an MMIO base address stored in this object.
+//
+// The template parameter gives a factor applied to the offset before it's
+// added to the base address.  This is used when mapping pio to mmio.
+// For normal mmio, the unscaled RegisterMmio specialization is normally used.
 
-class RegisterIo {
+template <uint32_t Scale>
+class RegisterMmioScaled {
  public:
-  RegisterIo(volatile void* mmio) : mmio_(reinterpret_cast<uintptr_t>(mmio)) {}
+  RegisterMmioScaled(volatile void* mmio) : mmio_(reinterpret_cast<uintptr_t>(mmio)) {}
+  RegisterMmioScaled(const RegisterMmioScaled& other) : mmio_(other.mmio_) {}
 
   // Write |val| to the |sizeof(IntType)| byte field located |offset| bytes from
   // |base()|.
   template <class IntType>
   void Write(IntType val, uint32_t offset) {
     static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
-    auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
+    auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + (offset * Scale));
     *ptr = val;
   }
 
@@ -30,7 +39,7 @@ class RegisterIo {
   template <class IntType>
   IntType Read(uint32_t offset) {
     static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
-    auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
+    auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + (offset * Scale));
     return *ptr;
   }
 
@@ -39,5 +48,8 @@ class RegisterIo {
  private:
   const uintptr_t mmio_;
 };
+
+using RegisterMmio = RegisterMmioScaled<1>;
+static_assert(std::is_copy_constructible_v<RegisterMmio>);
 
 }  // namespace hwreg

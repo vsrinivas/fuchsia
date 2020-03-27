@@ -10,6 +10,7 @@ zx_library("hwreg") {
     "hwreg/indirect.h",
     "hwreg/internal.h",
     "hwreg/mmio.h",
+    "hwreg/pio.h",
   ]
   kernel = true
   static = true
@@ -22,6 +23,21 @@ zx_library("hwreg") {
   public_deps = [
     # <hwreg/internal.h> has #include <fbl/algorithm.h>.
     "$zx/system/ulib/fbl:headers",
+  ]
+}
+
+zx_library("hwreg-mock") {
+  testonly = true
+  sdk = "source"
+  sdk_headers = [ "hwreg/mock.h" ]
+  kernel = true
+  static = true
+  host = true
+  sources = []
+  deps = [ "$zx/system/ulib/mock-function" ]
+  public_deps = [
+    # <hwreg/mock.h> has #include <lib/mock-function/mock-function.h>.
+    "$zx/system/ulib/mock-function:headers",
   ]
 }
 

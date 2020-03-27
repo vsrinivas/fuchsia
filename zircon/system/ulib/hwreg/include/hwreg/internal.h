@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 
 #include <type_traits>
+#include <variant>
 
 #include <fbl/algorithm.h>
 
@@ -159,6 +160,12 @@ void PrintRegister(F print_fn, FieldPrinter fields[], size_t num_fields, uint64_
 // Utility for the common print function of [](const char* arg) { printf("%s\n", arg); }
 void PrintRegisterPrintf(FieldPrinter fields[], size_t num_fields, uint64_t reg_value,
                          uint64_t fields_mask, int register_width_bytes);
+
+template <typename T>
+constexpr bool IsVariant = false;
+
+template <typename... Variants>
+constexpr bool IsVariant<std::variant<Variants...>> = true;
 
 }  // namespace internal
 

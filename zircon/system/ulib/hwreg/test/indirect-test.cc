@@ -48,7 +48,7 @@ void basic_access_test() {
   fake_regs.index = 1;
   fake_regs.reserved = 3;
   fake_regs.data = 2;
-  Io io(hwreg::RegisterIo(static_cast<volatile void*>(&fake_regs)));
+  Io io(hwreg::RegisterMmio(static_cast<volatile void*>(&fake_regs)));
 
   class Reg : public hwreg::RegisterBase<Reg, IntType> {
    public:
@@ -95,7 +95,7 @@ TEST(AlignedAccessTest, Uint32) {
   fake_regs.index = 0xaaaa;
   fake_regs.reserved = 0xffff;
   fake_regs.data = 0x12345678;
-  Io io(hwreg::RegisterIo(static_cast<volatile void*>(&fake_regs)));
+  Io io(hwreg::RegisterMmio(static_cast<volatile void*>(&fake_regs)));
 
   class MatchingReg : public hwreg::RegisterBase<MatchingReg, uint32_t> {
    public:

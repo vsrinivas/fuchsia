@@ -135,13 +135,13 @@ class Control : public hwreg::RegisterBase<Control, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<Control>(0x0); }
 
   void ToTrb(TRB* trb) {
-    hwreg::RegisterIo io(&trb->control);
+    hwreg::RegisterMmio io(&trb->control);
     WriteTo(&io);
     hw_mb();
   }
 
   static auto FromTRB(TRB* trb) {
-    hwreg::RegisterIo io(&trb->control);
+    hwreg::RegisterMmio io(&trb->control);
     return Control::Get().ReadFrom(&io);
   }
 };

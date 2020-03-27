@@ -129,7 +129,7 @@ class IommuImpl final : public Iommu {
   size_t desc_len_;
 
   // Location of the memory-mapped hardware register bank.
-  hwreg::RegisterIo mmio_ TA_GUARDED(lock_);
+  hwreg::RegisterMmio mmio_ TA_GUARDED(lock_);
 
   // Interrupt allocation
   msi_block_t irq_block_ TA_GUARDED(lock_);

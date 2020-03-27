@@ -9,7 +9,8 @@
 #include <limits>
 
 #include <hwreg/bitfields.h>
-#include <hwreg/mmio.h>
+#include <hwreg/mock.h>
+#include <hwreg/pio.h>
 #include <zxtest/zxtest.h>
 
 // This function exists so that the resulting code can be inspected easily in the
@@ -29,7 +30,7 @@ void compilation_test() {
   };
 
   volatile uint32_t fake_reg = 1ul << 31;
-  hwreg::RegisterIo mmio(&fake_reg);
+  hwreg::RegisterMmio mmio(&fake_reg);
 
   auto reg = TestReg32::Get().ReadFrom(&mmio);
   reg.set_field1(0x31234);
@@ -301,17 +302,18 @@ TEST(RegisterTestCase, Rsvdz) {
   };
 
   volatile uint64_t fake_reg;
-  hwreg::RegisterIo mmio(&fake_reg);
+  hwreg::RegisterPio mmio(&fake_reg);
 
   // Ensure we mask off the RsvdZ bits when we write them back, regardless of
   // what we read them as.
   {
-    fake_reg = std::numeric_limits<uint8_t>::max();
-    auto reg = TestReg8::Get().ReadFrom(&mmio);
-    EXPECT_EQ(std::numeric_limits<uint8_t>::max(), reg.reg_value());
-    reg.WriteTo(&mmio);
-    uint64_t reg_value = fake_reg;
-    EXPECT_EQ(0x7u, reg_value);
+    constexpr auto allones = std::numeric_limits<uint8_t>::max();
+    hwreg::Mock mock;
+    mock.ExpectRead(allones, 0).ExpectWrite(uint8_t{0x7}, 0);
+    auto reg = TestReg8::Get().ReadFrom(mock.io());
+    EXPECT_EQ(allones, reg.reg_value());
+    reg.WriteTo(mock.io());
+    mock.VerifyAndClear();
   }
   {
     fake_reg = std::numeric_limits<uint16_t>::max();
@@ -366,7 +368,7 @@ TEST(RegisterTestCase, RsvdzFull) {
   };
 
   volatile uint64_t fake_reg;
-  hwreg::RegisterIo mmio(&fake_reg);
+  hwreg::RegisterPio mmio(&fake_reg);
 
   // Ensure we mask off the RsvdZ bits when we write them back, regardless of
   // what we read them as.
@@ -437,7 +439,7 @@ TEST(RegisterTestCase, Field) {
   };
 
   volatile uint64_t fake_reg;
-  hwreg::RegisterIo mmio(&fake_reg);
+  hwreg::RegisterPio mmio(&fake_reg);
 
   // Ensure modified fields go to the right place, and unspecified bits are
   // preserved.
@@ -657,7 +659,7 @@ TEST(RegisterTestCase, Print) {
   };
 
   volatile uint64_t fake_reg;
-  hwreg::RegisterIo mmio(&fake_reg);
+  hwreg::RegisterPio mmio(&fake_reg);
 
   constexpr uint32_t kInitVal = 0xe987'2fffu;
   fake_reg = kInitVal;
@@ -715,7 +717,7 @@ TEST(RegisterTestCase, SetChaining) {
   };
 
   volatile uint32_t fake_reg;
-  hwreg::RegisterIo mmio(&fake_reg);
+  hwreg::RegisterPio mmio(&fake_reg);
 
   // With ReadFrom from a RegAddr
   fake_reg = ~0u;
@@ -833,6 +835,60 @@ TEST(RegisterTestCase, SetChaining) {
   static_assert(sizeof(TestReg32) == 52);
   static_assert(sizeof(TestReg64) == 72);
 #endif
+}
+
+struct FakeIo {
+  template <typename IntType>
+  void Write(IntType value, uint32_t) const {
+    ZX_ASSERT(value == 17);
+  }
+
+  template <typename IntType>
+  IntType Read(uint32_t offset) const {
+    return 23;
+  }
+};
+
+TEST(RegisterTestCase, Variant) {
+  class TestReg64 : public hwreg::RegisterBase<TestReg64, uint64_t> {
+   public:
+    DEF_FIELD(63, 0, value);
+
+    static auto Get() { return hwreg::RegisterAddr<TestReg64>(0); }
+  };
+
+  using MyIo = std::variant<std::variant<FakeIo, hwreg::RegisterMmio>, hwreg::Mock::RegisterIo>;
+
+  MyIo io;
+
+  {
+    auto reg = TestReg64::Get().ReadFrom(&io);
+    EXPECT_EQ(23, reg.value());
+    reg.set_value(17);
+    reg.WriteTo(&io);
+  }
+
+  {
+    volatile uint64_t fake_reg = 17;
+    io.emplace<0>(&fake_reg);
+    auto reg = TestReg64::Get().ReadFrom(&io);
+    EXPECT_EQ(17, reg.value());
+    reg.set_value(23);
+    reg.WriteTo(&io);
+    EXPECT_EQ(23, fake_reg);
+  }
+
+  {
+    hwreg::Mock mock;
+    io.emplace<1>(*mock.io());
+    mock.ExpectRead(uint64_t{17}, 0).ExpectWrite(uint64_t{23}, 1);
+    auto reg = TestReg64::Get().ReadFrom(&io);
+    EXPECT_EQ(17, reg.value());
+    reg.set_reg_addr(1);
+    reg.set_value(23);
+    reg.WriteTo(&io);
+    mock.VerifyAndClear();
+  }
 }
 
 }  // namespace

@@ -116,11 +116,11 @@ class GlobalControl : public hwreg::RegisterBase<GlobalControl, uint32_t> {
 
   // This redefines functions from RegisterBase which are not virtual.
   // This is safe, since no callers operate on this type as its base class.
-  GlobalControl& ReadFrom(hwreg::RegisterIo* reg_io) {
+  GlobalControl& ReadFrom(hwreg::RegisterMmio* reg_io) {
     hwreg::RegisterBase<GlobalControl, uint32_t>::set_reg_addr(kReadAddr);
     return hwreg::RegisterBase<GlobalControl, uint32_t>::ReadFrom(reg_io);
   }
-  GlobalControl& WriteTo(hwreg::RegisterIo* reg_io) {
+  GlobalControl& WriteTo(hwreg::RegisterMmio* reg_io) {
     hwreg::RegisterBase<GlobalControl, uint32_t>::set_reg_addr(kWriteAddr);
     return hwreg::RegisterBase<GlobalControl, uint32_t>::WriteTo(reg_io);
   }
