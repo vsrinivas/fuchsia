@@ -66,7 +66,14 @@ class vmo final : public object<vmo> {
     return zx_vmo_set_cache_policy(get(), cache_policy);
   }
 
+  // Deprecated.  Use the version of this function that takes a const resource&
+  // instead of the one that takes a const handle&.  We keep this function
+  // around to allow out-of-tree usages to soft-transition.
   zx_status_t replace_as_executable(const handle& vmex, vmo* result) {
+    return replace_as_executable(*zx::unowned_resource(vmex.get()), result);
+  }
+
+  zx_status_t replace_as_executable(const resource& vmex, vmo* result) {
     zx_handle_t h = ZX_HANDLE_INVALID;
     zx_status_t status = zx_vmo_replace_as_executable(value_, vmex.get(), &h);
     // We store ZX_HANDLE_INVALID to value_ before calling reset on result

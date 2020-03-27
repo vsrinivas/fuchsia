@@ -203,7 +203,7 @@ void create_context_vmo(size_t size, zx::vmo* out_vmo) {
   // TODO(fxb/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently this
   // mimics what most filesystems do.
   ASSERT_OK(vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY, &vmo));
-  ASSERT_OK(vmo.replace_as_executable(zx::handle(), out_vmo));
+  ASSERT_OK(vmo.replace_as_executable(zx::resource(), out_vmo));
 }
 
 TEST(GetVMOTest, Remote) {

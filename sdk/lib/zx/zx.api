@@ -29,5 +29,5 @@
   "pkg/zx/include/lib/zx/timer.h": "8f82d3859534e3eea20e8cc3abca049b",
   "pkg/zx/include/lib/zx/vcpu.h": "e5aa76d99865c1574caafa8d2e5adadd",
   "pkg/zx/include/lib/zx/vmar.h": "61039234e052eff3647d4a9267ca22a2",
-  "pkg/zx/include/lib/zx/vmo.h": "b9ed0f018e1d019046d8158471589234"
+  "pkg/zx/include/lib/zx/vmo.h": "4cf4280480b61cc21ef8f53ba6ff17d8"
 }

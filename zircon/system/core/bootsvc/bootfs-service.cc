@@ -174,9 +174,7 @@ zx_status_t BootfsService::DuplicateAsExecutable(const zx::vmo& vmo, zx::vmo* ou
     return status;
   }
 
-  // TODO(fxb/45994): Update zx::vmo::replace_as_executable to take a zx::resource& instead of a
-  // zx::handle&
-  status = out.replace_as_executable(*zx::unowned_handle(vmex_rsrc_.get()), &out);
+  status = out.replace_as_executable(vmex_rsrc_, &out);
   if (status != ZX_OK) {
     return status;
   }

@@ -37,7 +37,7 @@ const zx::vmo& HermeticComputeProcess::GetVdso(const char* variant) {
     if (fd) {
       zx_status_t status = fdio_get_vmo_exact(fd.get(), vmo.reset_and_get_address());
       if (status == ZX_OK) {
-        status = vmo.replace_as_executable({}, &vmo);
+        status = vmo.replace_as_executable(zx::resource(), &vmo);
       }
       if (status != ZX_OK) {
         vmo.reset();

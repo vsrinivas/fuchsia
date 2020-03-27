@@ -198,7 +198,7 @@ static zx_status_t load_executable_vmo(const char* path, zx::vmo* result) {
   close(fd);
   tu_check("load vmo from fd", status);
 
-  status = vmo.replace_as_executable(zx::handle(), result);
+  status = vmo.replace_as_executable(zx::resource(), result);
   tu_check("replace vmo as executable", status);
 
   if (strlen(path) >= ZX_MAX_NAME_LEN) {

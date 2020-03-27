@@ -110,7 +110,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         return ZX_ERR_INVALID_ARGS;
     }
 
-    status = vmo.replace_as_executable(zx::handle(), &vmo);
+    status = vmo.replace_as_executable(zx::resource(), &vmo);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to make VMO executable " << status;
       return status;

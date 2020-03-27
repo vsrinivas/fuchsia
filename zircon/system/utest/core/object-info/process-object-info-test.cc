@@ -126,7 +126,7 @@ class ProcessFixture : public zxtest::Test {
 
     // TODO(mdempsky): Restructure test to satisfy W^X.
     zx::vmo replace;
-    vmo.replace_as_executable(zx::handle(), &replace);
+    vmo.replace_as_executable(zx::resource(), &replace);
     vmo = std::move(replace);
 
     // Record the VMOs now that we have both of them.

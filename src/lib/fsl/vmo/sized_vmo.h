@@ -6,7 +6,7 @@
 #define SRC_LIB_FSL_VMO_SIZED_VMO_H_
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/zx/handle.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
 #include <cstddef>
@@ -46,7 +46,7 @@ class SizedVmo {
 
   zx_status_t Duplicate(zx_rights_t rights, SizedVmo* output) const;
 
-  zx_status_t ReplaceAsExecutable(const zx::handle& vmex);
+  zx_status_t ReplaceAsExecutable(const zx::resource& vmex);
 
  private:
   zx::vmo vmo_;

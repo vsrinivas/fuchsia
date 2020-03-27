@@ -34,7 +34,7 @@ void GetElfVmo(std::filesystem::path module_path, zx::vmo* out_vmo) {
   ASSERT_TRUE(module_fd.is_valid(), "cannot open %s: %s", module_path.c_str(), strerror(errno));
 
   ASSERT_OK(fdio_get_vmo_copy(module_fd.get(), out_vmo->reset_and_get_address()));
-  ASSERT_OK(out_vmo->replace_as_executable({}, out_vmo));
+  ASSERT_OK(out_vmo->replace_as_executable(zx::resource(), out_vmo));
 }
 
 TEST(HermeticComputeTests, BasicModuleTest) {

@@ -153,7 +153,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
             ZX_OK);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
-  ASSERT_EQ(test->vmo.replace_as_executable(zx::handle(), &test->vmo), ZX_OK);
+  ASSERT_EQ(test->vmo.replace_as_executable(zx::resource(), &test->vmo), ZX_OK);
 
   zx::resource resource;
   zx_status_t status = get_hypervisor_resource(&resource);

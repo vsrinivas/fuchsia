@@ -515,7 +515,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   // Only add exec right to VMO if explictly requested.  (Saves a syscall if
   // we're just going to drop the right back again in replace() call below.)
   if (rights & ZX_RIGHT_EXECUTE) {
-    if ((status = clone.replace_as_executable(zx::handle(), &clone)) != ZX_OK) {
+    if ((status = clone.replace_as_executable(zx::resource(), &clone)) != ZX_OK) {
       return status;
     }
   }

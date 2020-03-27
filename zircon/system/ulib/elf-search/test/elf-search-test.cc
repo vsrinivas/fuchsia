@@ -87,7 +87,7 @@ void MakeELF(Module* mod) {
   }
   ASSERT_OK(zx::vmo::create(size, 0, &mod->vmo));
   EXPECT_OK(mod->vmo.set_property(ZX_PROP_NAME, mod->name.data(), mod->name.size()));
-  EXPECT_OK(mod->vmo.replace_as_executable(zx::handle(), &mod->vmo));
+  EXPECT_OK(mod->vmo.replace_as_executable(zx::resource(), &mod->vmo));
   ASSERT_NO_FATAL_FAILURES(WriteHeaders(mod->phdrs, mod->vmo));
   for (const auto& phdr : mod->phdrs) {
     if (phdr.p_type == PT_NOTE) {

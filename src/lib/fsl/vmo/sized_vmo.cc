@@ -67,7 +67,7 @@ zx_status_t SizedVmo::Duplicate(zx_rights_t rights, SizedVmo* output) const {
   return status;
 }
 
-zx_status_t SizedVmo::ReplaceAsExecutable(const zx::handle& vmex) {
+zx_status_t SizedVmo::ReplaceAsExecutable(const zx::resource& vmex) {
   return vmo_.replace_as_executable(vmex, &vmo_);
 }
 

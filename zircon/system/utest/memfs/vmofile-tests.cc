@@ -147,7 +147,7 @@ bool test_vmofile_exec() {
   ASSERT_EQ(read_exec_vmo.write("hello, world!", 0, 13), ZX_OK);
   // TODO: Update this test to a VMEX resource from fuchsia.security.resource.Vmex instead of
   // relying on the VMEX job policy
-  ASSERT_EQ(read_exec_vmo.replace_as_executable(zx::handle(), &read_exec_vmo), ZX_OK);
+  ASSERT_EQ(read_exec_vmo.replace_as_executable(zx::resource(), &read_exec_vmo), ZX_OK);
   ASSERT_EQ(vfs->CreateFromVmo(root.get(), "read_exec", read_exec_vmo.get(), 0, 13), ZX_OK);
   ASSERT_EQ(vfs->ServeDirectory(std::move(root), std::move(server)), ZX_OK);
 
