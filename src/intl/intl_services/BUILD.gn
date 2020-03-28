@@ -7,7 +7,6 @@ import("//build/package.gni")
 group("intl_services") {
   testonly = true
   public_deps = [
-    ":config",
     ":pkg",
     ":tests",
   ]
