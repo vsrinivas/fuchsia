@@ -12,7 +12,7 @@ import os
 ZIRCON_NOTE_DRIVER = 0x31565244  # DRV1
 ZIRCON_DRIVER_IDENT = ('Zircon\0', ZIRCON_NOTE_DRIVER)
 
-LIBCXX_SONAMES = ['libc++.so', 'libc++abi.so', 'libunwind.so']
+LIBCXX_SONAMES = ['libc++.so.2', 'libc++abi.so.1', 'libunwind.so.1']
 
 FUZZER_VARIANT_SUFFIX = '-fuzzer'
 RUST_VARIANT_PREFIX = 'rust-'
@@ -39,8 +39,7 @@ class variant(namedtuple(
     def matches(self, info, assume=False):
         if self.libprefix and info.interp:
             return info.interp.startswith(self.libprefix)
-        if not self.has_libcxx and any(
-                info.soname.startswith(f) for f in LIBCXX_SONAMES):
+        if not self.has_libcxx and info.soname in LIBCXX_SONAMES:
             # Variants without their own toolchain libraries wind up placing
             # vanilla toolchain libraries in the variant target lib directory
             # so they should be accepted even though they don't really match.
