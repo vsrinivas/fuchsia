@@ -45,13 +45,13 @@ impl Listener {
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
-    pub fn backfill<'a>(&mut self, messages: impl Iterator<Item = &'a (LogMessage, usize)>) {
+    pub async fn backfill<'a>(&mut self, messages: impl Iterator<Item = &'a (LogMessage, usize)>) {
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
         for (msg, size) in messages {
             if self.filter.should_send(msg) {
                 if batch_size + size > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
-                    self.send_filtered_logs(&mut filtered_batch);
+                    self.send_filtered_logs(&mut filtered_batch).await;
                     if !self.is_healthy() {
                         return;
                     }
@@ -64,19 +64,19 @@ impl Listener {
         }
 
         if !filtered_batch.is_empty() {
-            self.send_filtered_logs(&mut filtered_batch);
+            self.send_filtered_logs(&mut filtered_batch).await;
         }
     }
 
     /// Send a batch of pre-filtered log messages to this listener.
-    pub fn send_filtered_logs(&mut self, log_messages: &mut Vec<LogMessage>) {
+    pub async fn send_filtered_logs(&mut self, log_messages: &mut Vec<LogMessage>) {
         self.check_result(self.listener.log_many(&mut log_messages.iter_mut()));
     }
 
     /// Send a single log message if it should be sent according to this listener's filter settings.
-    pub fn send_log(&mut self, log_message: &mut LogMessage) {
-        if self.filter.should_send(log_message) {
-            self.check_result(self.listener.log(log_message));
+    pub async fn send_log(&mut self, mut log_message: LogMessage) {
+        if self.filter.should_send(&log_message) {
+            self.check_result(self.listener.log(&mut log_message));
         }
     }
 

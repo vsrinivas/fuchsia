@@ -52,17 +52,20 @@ fn main() -> Result<(), Error> {
 
     let opt: Args = argh::from_env();
     let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
-    if !opt.disable_klog {
-        log_manager.spawn_klog_drainer()?;
-    }
 
     let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
         Ok(config) => config,
         Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
     };
+    let num_threads = archivist_configuration.num_threads;
 
     let mut fs = ServiceFs::new();
     diagnostics::serve(&mut fs)?;
+
+    if !opt.disable_klog {
+        let log_manager = log_manager.clone();
+        executor.run(async move { log_manager.spawn_klog_drainer().await }, num_threads)?;
+    }
 
     let writer = if let Some(archive_path) = &archivist_configuration.archive_path {
         let writer = archive::ArchiveWriter::open(archive_path)?;
@@ -98,7 +101,6 @@ fn main() -> Result<(), Error> {
         data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
     }
 
-    let num_threads = archivist_configuration.num_threads;
     let archivist_state = archive::ArchivistState::new(
         archivist_configuration,
         all_inspect_repository.clone(),

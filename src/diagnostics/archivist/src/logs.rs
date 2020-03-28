@@ -10,8 +10,7 @@ use fidl_fuchsia_logger::{
 };
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
+use futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt};
 use std::sync::Arc;
 
 mod buffer;
@@ -21,6 +20,7 @@ mod logger;
 mod stats;
 
 use listener::{pool::Pool, Listener};
+use stats::LogSource;
 
 /// Store 4 MB of log messages and delete on FIFO basis.
 const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
@@ -51,27 +51,33 @@ impl LogManager {
         }
     }
 
-    /// Spawn a task to read from the kernel's debuglog.
-    pub fn spawn_klog_drainer(&self) -> Result<(), Error> {
+    /// Spawn a task to read from the kernel's debuglog. The returned future completes once existing
+    /// messages have been ingested.
+    pub async fn spawn_klog_drainer(&self) -> Result<(), Error> {
         let mut kernel_logger =
             klogger::KernelLogger::create().context("creating kernel debuglog bridge")?;
 
         for (log_msg, size) in
             kernel_logger.existing_logs().context("reading from kernel log iterator")?
         {
-            self.ingest_message(log_msg, size, stats::LogSource::Kernel);
+            self.ingest_message(log_msg, size, LogSource::Kernel).await;
         }
 
         let manager = self.clone();
-        fasync::spawn(
-            kernel_logger
-                .listen()
-                .map_ok(move |(log_msg, size)| {
-                    manager.ingest_message(log_msg, size, stats::LogSource::Kernel);
-                })
-                .try_collect::<()>()
-                .unwrap_or_else(|e| eprintln!("failed to read kernel logs: {:?}", e)),
-        );
+        fasync::spawn(async move {
+            let drain_result = kernel_logger.listen().try_for_each(|(log_msg, size)| {
+                manager.ingest_message(log_msg, size, LogSource::Kernel).map(Ok)
+            });
+
+            if let Err(e) = drain_result.await {
+                eprintln!(
+                    "ERROR: important logs may be missing from system log.\
+                           failed to drain kernel log: {:?}",
+                    e
+                );
+            }
+        });
+
         Ok(())
     }
 
@@ -110,7 +116,7 @@ impl LogManager {
         while let Some(next) = log_stream.next().await {
             match next {
                 Ok((log_msg, size)) => {
-                    self.ingest_message(log_msg, size, stats::LogSource::LogSink)
+                    self.ingest_message(log_msg, size, stats::LogSource::LogSink).await;
                 }
                 Err(e) => {
                     eprintln!("log stream errored: {:?}", e);
@@ -122,61 +128,59 @@ impl LogManager {
 
     /// Spawn a task to handle requests from components reading the shared log.
     pub fn spawn_log_handler(&self, stream: LogRequestStream) {
-        let state = Arc::new(self.clone());
-        fasync::spawn(
-            stream
-                .map_ok(move |req| {
-                    let state = state.clone();
-                    match req {
-                        LogRequest::Listen { log_listener, options, .. } => {
-                            state.handle_listener(log_listener, options, false)
-                        }
-                        LogRequest::DumpLogs { log_listener, options, .. } => {
-                            state.handle_listener(log_listener, options, true)
-                        }
-                    }
-                })
-                .try_collect::<()>()
-                .unwrap_or_else(|e| eprintln!("Log manager failed: {:?}", e)),
-        )
+        let handler = self.clone();
+        fasync::spawn(async move {
+            if let Err(e) = handler.handle_log_requests(stream).await {
+                eprintln!("error handling Log requests: {:?}", e);
+            }
+        });
+    }
+
+    /// Async request handler for a `fuchsia.logger.Log` client.
+    async fn handle_log_requests(self, mut stream: LogRequestStream) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            let (listener, options, should_dump) = match request {
+                LogRequest::Listen { log_listener, options, .. } => (log_listener, options, false),
+                LogRequest::DumpLogs { log_listener, options, .. } => (log_listener, options, true),
+            };
+
+            self.handle_listener(listener, options, should_dump).await?;
+        }
+        Ok(())
     }
 
     /// Handle a new listener, sending it all cached messages and either calling `Done` if
     /// `dump_logs` is true or adding it to the pool of ongoing listeners if not.
-    fn handle_listener(
+    async fn handle_listener(
         &self,
         log_listener: ClientEnd<LogListenerMarker>,
         options: Option<Box<LogFilterOptions>>,
         dump_logs: bool,
-    ) {
-        let mut listener = match Listener::new(log_listener, options) {
-            Ok(w) => w,
-            Err(e) => {
-                eprintln!("couldn't init listener: {:?}", e);
-                return;
-            }
-        };
+    ) -> Result<(), Error> {
+        let mut listener = Listener::new(log_listener, options)?;
 
-        let mut shared_members = self.inner.lock();
-        listener.backfill(shared_members.log_msg_buffer.iter());
+        let mut inner = self.inner.lock().await;
+        listener.backfill(inner.log_msg_buffer.iter()).await;
+
         if !listener.is_healthy() {
             eprintln!("listener dropped before we finished");
-            return;
+            return Ok(());
         }
 
         if dump_logs {
             listener.done();
         } else {
-            shared_members.listeners.add(listener);
+            inner.listeners.add(listener);
         }
+        Ok(())
     }
 
     /// Ingest an individual log message.
-    fn ingest_message(&self, mut log_msg: LogMessage, size: usize, source: stats::LogSource) {
-        let mut inner = self.inner.lock();
+    async fn ingest_message(&self, log_msg: LogMessage, size: usize, source: stats::LogSource) {
+        let mut inner = self.inner.lock().await;
 
-        inner.listeners.send(&mut log_msg);
         inner.stats.record_log(&log_msg, source);
+        inner.listeners.send(&log_msg).await;
         inner.log_msg_buffer.push(log_msg, size);
     }
 }

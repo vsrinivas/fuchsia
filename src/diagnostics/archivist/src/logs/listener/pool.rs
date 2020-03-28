@@ -3,6 +3,7 @@
 
 use super::*;
 use fidl_fuchsia_logger::LogMessage;
+use futures::future::join_all;
 
 /// A pool of log listeners, each of which recieves a stream of log messages from the diagnostics
 /// service. Listeners are dropped from the pool when they are no longer connected.
@@ -14,10 +15,12 @@ pub struct Pool {
 impl Pool {
     /// Sends the provided log message to all listeners in the pool. Removes listeners that become
     /// stale.
-    pub fn send(&mut self, log_msg: &mut LogMessage) {
-        for listener in &mut self.listeners {
-            listener.send_log(log_msg);
-        }
+    ///
+    /// Each message is sent concurrently to all listeners, and the function returns when all
+    /// listeners have acknowledged receipt of the message.
+    pub async fn send(&mut self, log_msg: &LogMessage) {
+        join_all(self.listeners.iter_mut().map(|listener| listener.send_log(log_msg.clone())))
+            .await;
         self.listeners.retain(Listener::is_healthy);
     }
 
