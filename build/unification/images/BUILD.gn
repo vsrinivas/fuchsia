@@ -76,7 +76,6 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
-    ":bin.kilo",
 #------------------
 #------------------
 #------------------
@@ -1251,7 +1250,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/psutils:killall-manifest",
     "//zircon/system/uapp/psutils:handles-manifest",
 #------------------
-    #":bin.kilo",
+    "//zircon/third_party/uapp/kilo:kilo-manifest",
 #------------------
     "//zircon/system/uapp/psutils:kstats-manifest",
 #------------------
