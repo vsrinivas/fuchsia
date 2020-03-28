@@ -490,7 +490,14 @@ impl Associated {
         }
     }
 
-    /// Processes inbound data frames.
+    /// Extracts aggregated and non-aggregated MSDUs from the data frame.
+    /// Handles all data subtypes.
+    /// EAPoL MSDUs are forwarded to SME via an MLME-EAPOL.indication message independent of the
+    /// STA's current controlled port status.
+    /// All other MSDUs are converted into Ethernet II frames and forwarded via the device to
+    /// Fuchsia's Netstack if the STA's controlled port is open.
+    /// NULL-Data frames are interpreted as "Keep Alive" requests and responded with NULL data
+    /// frames if the STA's controlled port is open.
     fn on_data_frame<B: ByteSlice>(
         &self,
         sta: &mut BoundClient<'_>,
@@ -505,13 +512,38 @@ impl Associated {
             mac::data_dst_addr(&fixed_data_fields),
         );
 
-        sta.handle_data_frame(
-            fixed_data_fields,
-            addr4,
-            qos_ctrl,
-            body,
-            self.0.controlled_port_open,
-        );
+        let msdus =
+            mac::MsduIterator::from_data_frame_parts(*fixed_data_fields, addr4, qos_ctrl, body);
+
+        // Handle NULL data frames independent of the controlled port's status.
+        if let mac::MsduIterator::Null = msdus {
+            if let Err(e) = sta.send_keep_alive_resp_frame() {
+                error!("error sending keep alive frame: {}", e);
+            }
+        }
+        // Handle aggregated and non-aggregated MSDUs.
+        for msdu in msdus {
+            let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
+            match llc_frame.hdr.protocol_id.to_native() {
+                // Forward EAPoL frames to SME independent of the controlled port's
+                // status.
+                mac::ETHER_TYPE_EAPOL => {
+                    if let Err(e) =
+                        sta.send_eapol_indication(*src_addr, *dst_addr, &llc_frame.body[..])
+                    {
+                        error!("error sending MLME-EAPOL.indication: {}", e);
+                    }
+                }
+                // Deliver non-EAPoL MSDUs only if the controlled port is open.
+                _ if self.0.controlled_port_open => {
+                    if let Err(e) = sta.deliver_msdu(msdu) {
+                        error!("error while handling data frame: {}", e);
+                    }
+                }
+                // Drop all non-EAPoL MSDUs if the controlled port is closed.
+                _ => (),
+            }
+        }
     }
 
     fn on_eth_frame<B: ByteSlice>(&self, sta: &mut BoundClient<'_>, frame: B) -> Result<(), Error> {

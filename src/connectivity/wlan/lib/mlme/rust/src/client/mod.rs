@@ -447,63 +447,6 @@ pub struct BoundClient<'a> {
 }
 
 impl<'a> BoundClient<'a> {
-    /// Extracts aggregated and non-aggregated MSDUs from the data frame.
-    /// Handles all data subtypes.
-    /// EAPoL MSDUs are forwarded to SME via an MLME-EAPOL.indication message independent of the
-    /// STA's current controlled port status.
-    /// All other MSDUs are converted into Ethernet II frames and forwarded via the device to
-    /// Fuchsia's Netstack if the STA's controlled port is open.
-    /// NULL-Data frames are interpreted as "Keep Alive" requests and responded with NULL data
-    /// frames if the STA's controlled port is open.
-    // TODO(42080): Move entire logic into Associated state once C++ version no longer depends on
-    // this function.
-    pub fn handle_data_frame<B: ByteSlice>(
-        &mut self,
-        fixed_data_fields: &mac::FixedDataHdrFields,
-        addr4: Option<mac::Addr4>,
-        qos_ctrl: Option<mac::QosControl>,
-        body: B,
-        is_controlled_port_open: bool,
-    ) {
-        let msdus =
-            mac::MsduIterator::from_data_frame_parts(*fixed_data_fields, addr4, qos_ctrl, body);
-        match msdus {
-            // Handle NULL data frames independent of the controlled port's status.
-            mac::MsduIterator::Null => {
-                if let Err(e) = self.send_keep_alive_resp_frame() {
-                    error!("error sending keep alive frame: {}", e);
-                }
-            }
-            // Handle aggregated and non-aggregated MSDUs.
-            _ => {
-                for msdu in msdus {
-                    let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
-                    match llc_frame.hdr.protocol_id.to_native() {
-                        // Forward EAPoL frames to SME independent of the controlled port's
-                        // status.
-                        mac::ETHER_TYPE_EAPOL => {
-                            if let Err(e) = self.send_eapol_indication(
-                                *src_addr,
-                                *dst_addr,
-                                &llc_frame.body[..],
-                            ) {
-                                error!("error sending MLME-EAPOL.indication: {}", e);
-                            }
-                        }
-                        // Deliver non-EAPoL MSDUs only if the controlled port is open.
-                        _ if is_controlled_port_open => {
-                            if let Err(e) = self.deliver_msdu(msdu) {
-                                error!("error while handling data frame: {}", e);
-                            }
-                        }
-                        // Drop all non-EAPoL MSDUs if the controlled port is closed.
-                        _ => (),
-                    }
-                }
-            }
-        }
-    }
-
     /// Delivers a single MSDU to the STA's underlying device. The MSDU is delivered as an
     /// Ethernet II frame.
     /// Returns Err(_) if writing or delivering the Ethernet II frame failed.
@@ -1162,6 +1105,17 @@ mod tests {
                 })));
             self.sta.state.replace(state);
         }
+
+        #[allow(deprecated)] // MlmeRequestMessage is deprecated
+        fn close_controlled_port(&mut self) {
+            self.sta.is_rsn = true;
+            self.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort {
+                req: fidl_mlme::SetControlledPortRequest {
+                    peer_sta_address: BSSID.0,
+                    state: fidl_mlme::ControlledPortState::Closed,
+                },
+            });
+        }
     }
 
     #[test]
@@ -1703,16 +1657,20 @@ mod tests {
             // Data header:
             0b0100_10_00, 0b000000_1_0, // FC
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // addr1
-            7, 7, 7, 7, 7, 7, // addr2
-            7, 7, 7, 7, 7, 7, // addr3
+            7, 7, 7, 7, 7, 7, // addr1
+            6, 6, 6, 6, 6, 6, // addr2
+            42, 42, 42, 42, 42, 42, // addr3
             0x10, 0, // Sequence Control
         ];
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, data_frame, true);
+        client.move_to_associated_state();
+
+        client.on_mac_frame(&data_frame[..], None);
+
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
             // Data header:
@@ -1732,16 +1690,24 @@ mod tests {
 
     #[test]
     fn data_frame_to_ethernet_single_llc() {
-        let data_frame = make_data_frame_single_llc(None, None);
+        let mut data_frame = make_data_frame_single_llc(None, None);
+        data_frame[1] = 0b00000010; // from_ds = 1, to_ds = 0 when AP sends to client (us)
+        data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
+        data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
+
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, data_frame, true);
+        client.move_to_associated_state();
+
+        client.on_mac_frame(&data_frame[..], None);
+
+        assert_eq!(m.fake_device.eth_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(m.fake_device.eth_queue[0], [
-            3, 3, 3, 3, 3, 3, // dst_addr
-            4, 4, 4, 4, 4, 4, // src_addr
+            7, 7, 7, 7, 7, 7, // dst_addr
+            5, 5, 5, 5, 5, 5, // src_addr
             9, 10, // ether_type
             11, 11, 11, // payload
         ]);
@@ -1749,12 +1715,19 @@ mod tests {
 
     #[test]
     fn data_frame_to_ethernet_amsdu() {
-        let data_frame = make_data_frame_amsdu();
+        let mut data_frame = make_data_frame_amsdu();
+        data_frame[1] = 0b00000010; // from_ds = 1, to_ds = 0 when AP sends to client (us)
+        data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
+        data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
+
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, data_frame, true);
+        client.move_to_associated_state();
+
+        client.on_mac_frame(&data_frame[..], None);
+
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
         #[rustfmt::skip]
@@ -1777,12 +1750,19 @@ mod tests {
 
     #[test]
     fn data_frame_to_ethernet_amsdu_padding_too_short() {
-        let data_frame = make_data_frame_amsdu_padding_too_short();
+        let mut data_frame = make_data_frame_amsdu_padding_too_short();
+        data_frame[1] = 0b00000010; // from_ds = 1, to_ds = 0 when AP sends to client (us)
+        data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
+        data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
+
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, data_frame, true);
+        client.move_to_associated_state();
+
+        client.on_mac_frame(&data_frame[..], None);
+
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
         #[rustfmt::skip]
@@ -1797,12 +1777,19 @@ mod tests {
 
     #[test]
     fn data_frame_controlled_port_closed() {
-        let data_frame = make_data_frame_single_llc(None, None);
+        let mut data_frame = make_data_frame_single_llc(None, None);
+        data_frame[1] = 0b00000010; // from_ds = 1, to_ds = 0 when AP sends to client (us)
+        data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
+        data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
+
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, data_frame, false);
+        client.move_to_associated_state();
+        client.close_controlled_port();
+
+        client.on_mac_frame(&data_frame[..], None);
 
         // Verify frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -1810,12 +1797,19 @@ mod tests {
 
     #[test]
     fn eapol_frame_controlled_port_closed() {
-        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
+        let (src_addr, dst_addr, mut eapol_frame) = make_eapol_frame(IFACE_MAC);
+        eapol_frame[1] = 0b00000010; // from_ds = 1, to_ds = 0 when AP sends to client (us)
+        eapol_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
+        eapol_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
+
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, eapol_frame, false);
+        client.move_to_associated_state();
+        client.close_controlled_port();
+
+        client.on_mac_frame(&eapol_frame[..], None);
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -1833,12 +1827,18 @@ mod tests {
 
     #[test]
     fn eapol_frame_is_controlled_port_open() {
-        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
+        let (src_addr, dst_addr, mut eapol_frame) = make_eapol_frame(IFACE_MAC);
+        eapol_frame[1] = 0b00000010; // from_ds = 1, to_ds = 0 when AP sends to client (us)
+        eapol_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
+        eapol_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
+
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        send_data_frame(&mut client, eapol_frame, true);
+        client.move_to_associated_state();
+
+        client.on_mac_frame(&eapol_frame[..], None);
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -2259,20 +2259,5 @@ mod tests {
         ];
         let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
         assert_eq!(true, make_client_station().should_handle_frame(&frame));
-    }
-
-    fn send_data_frame(
-        client: &mut BoundClient<'_>,
-        data_frame: Vec<u8>,
-        open_controlled_port: bool,
-    ) {
-        let parsed_frame = mac::MacFrame::parse(&data_frame[..], false).expect("invalid frame");
-        let (fixed, addr4, qos, body) = match parsed_frame {
-            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
-            }
-            _ => panic!("error parsing data frame"),
-        };
-        client.handle_data_frame(&fixed, addr4, qos, body, open_controlled_port);
     }
 }
