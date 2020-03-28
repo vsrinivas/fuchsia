@@ -17,6 +17,7 @@ FeedbackDeviceIdProvider::FeedbackDeviceIdProvider(async_dispatcher_t* dispatche
                                                    std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher),
       services_(services),
+      pending_get_id_(dispatcher_),
       cache_id_backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u,
                         /*max_delay=*/zx::hour(1)) {
   CacheId();
@@ -41,11 +42,7 @@ void FeedbackDeviceIdProvider::CacheId() {
     }
 
     // Complete all of the bridges, indicating a value is now cached.
-    for (auto& [_, weak_bridge] : pending_get_id_) {
-      if (auto done = weak_bridge.GetWeakPtr(); done && done->completer) {
-        done->completer.complete_ok();
-      }
-    }
+    pending_get_id_.CompleteAllOk();
 
     device_id_provider_.Unbind();
 
@@ -60,29 +57,10 @@ fit::promise<std::string> FeedbackDeviceIdProvider::GetId(const zx::duration tim
     return fit::make_result_promise(DeviceIdToResult());
   }
 
-  const uint64_t id = next_get_id_++;
-  auto done = pending_get_id_[id].GetWeakPtr();
+  const uint64_t id = pending_get_id_.NewBridgeForTask("Getting Feedback device id");
 
-  if (const zx_status_t status = async::PostDelayedTask(
-          dispatcher_,
-          [=] {
-            if (!done || !done->completer) {
-              return;
-            }
-
-            FX_LOGS(ERROR) << "Getting DeviceId timed out";
-            done->completer.complete_error();
-          },
-          timeout);
-      status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error posting timeout task";
-    FX_LOGS(ERROR) << "Skipping getting Feedback DeviceId as it is not safe without a timeout";
-    pending_get_id_.erase(id);
-    return fit::make_result_promise<std::string>(fit::error());
-  }
-
-  return done->consumer.promise().then([=](const fit::result<>& result) {
-    pending_get_id_.erase(id);
+  return pending_get_id_.WaitForDone(id, timeout).then([id, this](const fit::result<>& result) {
+    pending_get_id_.Delete(id);
     return DeviceIdToResult();
   });
 }

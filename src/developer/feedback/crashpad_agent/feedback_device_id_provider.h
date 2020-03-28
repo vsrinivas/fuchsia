@@ -15,7 +15,7 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/utils/weak_bridge.h"
+#include "src/developer/feedback/utils/bridge_map.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
@@ -46,10 +46,7 @@ class FeedbackDeviceIdProvider {
   // whether the cached value is an actual id.
   std::unique_ptr<std::optional<std::string>> device_id_;
 
-  // We use a WeakBridge because the fit::bridge can be invalidated through
-  // several flows, including a delayed task on the dispatcher, which outlives this class.
-  std::map<uint64_t, WeakBridge<>> pending_get_id_;
-  uint64_t next_get_id_ = 1;
+  BridgeMap<> pending_get_id_;
 
   // We need to be able to cancel a posted retry task when |this| is destroyed.
   fxl::CancelableClosure cache_id_task_;

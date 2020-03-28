@@ -110,8 +110,8 @@ source_set("logs") {
 source_set("libfit") {
   sources = [
     "bridge.h",
+    "bridge_map.h",
     "promise.h",
-    "weak_bridge.h",
   ]
 
   public_deps = [

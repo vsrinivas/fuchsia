@@ -7,16 +7,14 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
 #include <memory>
 
-#include "src/developer/feedback/utils/weak_bridge.h"
+#include "src/developer/feedback/utils/bridge_map.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace feedback {
 
@@ -36,10 +34,7 @@ class FeedbackDataProvider {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::feedback::DataProviderPtr data_provider_;
 
-  // We wrap each fit::bridge in a weak pointer because the fit::bridge can be invalidated through
-  // several flows, including a delayed task on the dispatcher, which outlives this class.
-  std::map<uint64_t, WeakBridge<fuchsia::feedback::Data>> pending_get_data_;
-  uint64_t next_get_data_id_ = 1;
+  BridgeMap<fuchsia::feedback::Data> pending_get_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackDataProvider);
 };
