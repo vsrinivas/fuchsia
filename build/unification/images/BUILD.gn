@@ -71,7 +71,6 @@ aggregate_manifest("legacy-image") {
     ":bin.fsck-msdosfs",
 #------------------
 #------------------
-    ":bin.fshost",
 #------------------
 #------------------
 #------------------
@@ -435,13 +434,10 @@ aggregate_manifest("legacy-aux") {
     ":test.core.vmo-test",
 #------------------
 #------------------
-    ":test.ddk.block-watcher-test-test",
 #------------------
 #------------------
-    ":test.ddk.fshost-metrics-test-test",
 #------------------
 #------------------
-    ":test.ddk.fshost-test-test",
 #------------------
 #------------------
 #------------------
@@ -983,13 +979,10 @@ aggregate_manifest("legacy-tests") {
     ":test.core.vmo-test",
 #------------------
 #------------------
-    ":test.ddk.block-watcher-test-test",
 #------------------
 #------------------
-    ":test.ddk.fshost-metrics-test-test",
 #------------------
 #------------------
-    ":test.ddk.fshost-test-test",
 #------------------
 #------------------
 #------------------
@@ -1228,7 +1221,7 @@ aggregate_manifest("migrated-image") {
     #":bin.fsck-msdosfs",
 #------------------
 #------------------
-    #":bin.fshost",
+    "//zircon/system/core/devmgr/fshost:fshost-manifest",
 #------------------
     "//src/devices/block/bin/fvm-check:fvm-check-manifest",
     "//src/devices/block/bin/gpt:gpt-manifest",
@@ -2693,17 +2686,17 @@ aggregate_manifest("migrated-aux") {
     #":test.core.vmo-test",
 #------------------
 #------------------
-    #":test.ddk.block-watcher-test-test",
+    "//zircon/system/core/devmgr/fshost:block-watcher-test-manifest",
 #------------------
     "//zircon/system/ulib/devmgr-integration-test/test:devmgr-integration-manifest",
     "//zircon/system/ulib/driver-integration-test/test:driver-integration-manifest",
     "//zircon/system/utest/driver-test:driver-test-manifest",
     "//zircon/system/utest/fallback-rtc:fallback-rtc-manifest",
 #------------------
-    #":test.ddk.fshost-metrics-test-test",
+    "//zircon/system/core/devmgr/fshost:fshost-metrics-test-manifest",
 #------------------
 #------------------
-    #":test.ddk.fshost-test-test",
+    "//zircon/system/core/devmgr/fshost:fshost-test-manifest",
 #------------------
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-integration-manifest",
@@ -3355,17 +3348,17 @@ aggregate_manifest("migrated-tests") {
     #":test.core.vmo-test",
 #------------------
 #------------------
-    #":test.ddk.block-watcher-test-test",
+    "//zircon/system/core/devmgr/fshost:block-watcher-test-manifest",
 #------------------
     "//zircon/system/ulib/devmgr-integration-test/test:devmgr-integration-manifest",
     "//zircon/system/ulib/driver-integration-test/test:driver-integration-manifest",
     "//zircon/system/utest/driver-test:driver-test-manifest",
     "//zircon/system/utest/fallback-rtc:fallback-rtc-manifest",
 #------------------
-    #":test.ddk.fshost-metrics-test-test",
+    "//zircon/system/core/devmgr/fshost:fshost-metrics-test-manifest",
 #------------------
 #------------------
-    #":test.ddk.fshost-test-test",
+    "//zircon/system/core/devmgr/fshost:fshost-test-manifest",
 #------------------
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-integration-manifest",

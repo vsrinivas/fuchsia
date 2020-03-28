@@ -379,6 +379,10 @@ config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
 }
 
+config("Wno-unused-function") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
 config("symbol_visibility_hidden") {
   # Disable libc++ visibility annotations to make sure that the compiler option
   # has effect on symbols defined in libc++ headers. Note that we don't want to

@@ -5,11 +5,14 @@
 import("$zx/system/ulib/hermetic-compute/hermetic_module.gni")
 
 zx_library("hermetic-decompressor") {
+  sdk = "source"
+  sdk_headers = [ "lib/hermetic-decompressor/hermetic-decompressor.h" ]
   sources = [ "get-engine.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-ldsvc:c",
-    "$zx/system/ulib/hermetic-compute",
+    "$zx/system/ulib/hermetic-compute:headers",
   ]
+  deps = [ "$zx/system/ulib/hermetic-compute" ]
   data_deps = [
     ":decompress-lz4f",
     ":decompress-zstd",
