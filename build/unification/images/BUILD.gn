@@ -222,7 +222,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.fidl-handle-policy-test-app",
 #------------------
 #------------------
     ":bin.fsck-msdosfs",
@@ -501,7 +500,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fidl-test",
 #------------------
 #------------------
 #------------------
@@ -1050,7 +1048,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fidl-test",
 #------------------
 #------------------
 #------------------
@@ -1713,7 +1710,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/evil:evil-manifest",
 #------------------
-    #":bin.fidl-handle-policy-test-app",
+    "//zircon/system/utest/fidl:fidl-handle-policy-test-app-manifest",
 #------------------
 #------------------
     #":bin.fsck-msdosfs",
@@ -2850,7 +2847,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
 #------------------
 #------------------
-    #":test.sys.fidl-test",
+    "//zircon/system/utest/fidl:fidl-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
@@ -3512,7 +3509,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
 #------------------
-    #":test.sys.fidl-test",
+    "//zircon/system/utest/fidl:fidl-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/fidl-utils:fidl-utils-manifest",

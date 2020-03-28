@@ -33,7 +33,6 @@ listed_tests = [
 #------------------
 #------------------
 #------------------
-  "fidl",
 #------------------
 #------------------
   "fidl-compiler",
@@ -114,7 +113,7 @@ group("migrated-tests") {
     "//zircon/system/ulib/blobfs/test:blobfs-host",
   #------------------
   #------------------
-    #"fidl",
+    "//zircon/system/utest/fidl",
   #------------------
   #------------------
     #"fidl-compiler",

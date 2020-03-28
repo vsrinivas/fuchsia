@@ -2,11 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
 
 if (is_fuchsia) {
   source_set("common") {
-    testonly = true
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): switch back to true.
+    testonly = false
     visibility = [ ":*" ]
     sources = [
       "fidl_align_tests.cc",
@@ -20,32 +34,55 @@ if (is_fuchsia) {
     ]
     include_dirs = [ "generated" ]
     public_deps = [
-      ":example.c",
-      ":fidl.test.coding.llcpp",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/fidl:fidl-llcpp",
-      "$zx/system/ulib/fit",
-      "$zx/system/ulib/unittest",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxtest",
+      ":example_c",
+      ":fidl.test.coding_llcpp",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fidl-llcpp",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/unittest",
+      "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxtest",
     ]
   }
 
   # Run the common tests under a strict invalid handle policy
-  zx_executable("fidl-handle-policy-test-app") {
-    testonly = true
+  executable("fidl-handle-policy-test-app") {
+    if (is_fuchsia) {
+      configs += [ "//build/unification/config:zircon-migrated" ]
+    }
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): switch back to true.
+    testonly = false
     sources = []
     deps = [ ":common" ]
 
     # TODO(46873): Fix the leaks and remove this.
-    deps +=
-        [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 
-  zx_test("fidl") {
+  test("fidl") {
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): Remove when converting this file to proper GN build idioms.
+    if (is_fuchsia) {
+      testonly = false
+    }
+    if (is_fuchsia) {
+      configs += [ "//build/unification/config:zircon-migrated" ]
+    }
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
     sources = [
       "abi_tests.cc",
       "cpp_types_tests.cc",
@@ -59,43 +96,63 @@ if (is_fuchsia) {
     ]
     deps = [
       ":common",
-      ":example.c",
+      ":example_c",
       ":fidl-handle-policy-test-app",
     ]
 
     # TODO(41897): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    configs +=
-        [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+    configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 
     # TODO(46873): Fix the leaks and remove this.
-    deps +=
-        [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  }
+
+  migrated_manifest("fidl-handle-policy-test-app-manifest") {
+    deps = [ ":fidl-handle-policy-test-app" ]
+  }
+
+  migrated_manifest("fidl-manifest") {
+    deps = [ ":fidl" ]
   }
 } else if (current_os == host_os && current_cpu == host_cpu) {
   # Some of the tests can run on host.
-  zx_test("fidl") {
+  test("fidl") {
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): Remove when converting this file to proper GN build idioms.
+    if (is_fuchsia) {
+      testonly = false
+    }
+    if (is_fuchsia) {
+      configs += [ "//build/unification/config:zircon-migrated" ]
+    }
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
     sources = [
       "abi_tests.cc",
       "cpp_types_tests.cc",
       "fidl_align_tests.cc",
     ]
     deps = [
-      "$zx/system/ulib/fidl:fidl_base",
-      "$zx/system/ulib/unittest",
+      "//zircon/public/lib/fidl_base",
+      "//zircon/public/lib/unittest-static",
     ]
   }
 }
 
-fidl_library("example") {
+fidl("example") {
   visibility = [
     ":*",
-    "$zx/system/utest/fidl-simple:*",
+    "//zircon/system/utest/fidl-simple:*",
   ]
   sources = [ "transformer.test.fidl" ]
 }
 
-fidl_library("fidl.test.coding") {
+fidl("fidl.test.coding") {
   visibility = [ ":*" ]
   sources = [
     "extra_messages.test.fidl",
