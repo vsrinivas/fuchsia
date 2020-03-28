@@ -28,11 +28,8 @@ rustc_library("pkgfs") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
-  # FIXME(42452) this is a test-only dependency, but it must be listed here or
-  # the non-test library fails to link.
-  deps += [ "//src/lib/storage/ramdevice_client" ]
-
   test_deps = [
+    "//src/lib/storage/ramdevice_client",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
