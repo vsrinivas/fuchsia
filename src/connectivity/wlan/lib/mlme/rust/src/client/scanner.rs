@@ -97,6 +97,10 @@ impl Scanner {
         BoundScanner { scanner: self, ctx }
     }
 
+    pub fn is_scanning(&self) -> bool {
+        self.ongoing_scan.is_some()
+    }
+
     #[cfg(test)]
     pub fn probe_delay_timeout_id(&self) -> Option<EventId> {
         match self.ongoing_scan {
@@ -1118,6 +1122,24 @@ mod tests {
                 secondary80: 0,
             }
         );
+    }
+
+    #[test]
+    fn not_scanning_vs_scanning() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut scanner = Scanner::new(IFACE_MAC);
+        assert_eq!(false, scanner.is_scanning());
+
+        scanner
+            .bind(&mut ctx)
+            .on_sme_scan(
+                scan_req(),
+                m.listener_state.create_channel_listener_fn(),
+                &mut m.chan_sched,
+            )
+            .expect("expect scan req accepted");
+        assert_eq!(true, scanner.is_scanning());
     }
 
     fn handle_beacon(scanner: &mut Scanner, ctx: &mut Context, timestamp: u64, ies: &[u8]) {

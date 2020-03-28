@@ -739,6 +739,9 @@ impl States {
     /// Frames are dropped if:
     /// - frames are corrupted (too short)
     /// - frames' frame class is not yet permitted
+    /// - frames are from a foreign BSS
+    /// - frames are unicast but destined for a MAC address that is different from this STA.
+    // TODO(43456): Implement a packet counter and add tests to verify frames are dropped correctly.
     pub fn on_mac_frame<B: ByteSlice>(
         mut self,
         sta: &mut BoundClient<'_>,
@@ -761,7 +764,11 @@ impl States {
         };
 
         if !sta.sta.should_handle_frame(&mac_frame) {
-            warn!("Mac frame is either from a foreign BSS or not destined for us. Dropped.");
+            // While scanning, it is normal to receive mac frames from other BSS. Off-channel frames
+            // are already dropped at this point. No need to print error messages in this case.
+            if !sta.scanner.is_scanning() {
+                warn!("Mac frame is either from a foreign BSS or not destined for us. Dropped.");
+            }
             return self;
         }
 
