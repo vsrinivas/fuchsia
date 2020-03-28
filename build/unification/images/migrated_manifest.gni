@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/unification/zbi/migrated_zbi_content.gni")
+
 # Generates a manifest for a given target recently migrated from the ZN build.
 #
 # The output of this action is a manifest file that replaces the one supplied
@@ -26,40 +28,51 @@ template("migrated_manifest") {
 
   if (is_fuchsia) {
     main_target = target_name
+    generate_target = "${target_name}_generate"
+    intermediate_file = "$target_out_dir/$target_name.intermediate.manifest"
+
+    # Use the same naming scheme as for other unification manifest templates,
+    # this makes them interoperable.
     manifest_file = "$target_out_dir/$target_name.unification.manifest"
 
-    generated_file(main_target) {
+    # Gather metadata about runtime objects.
+    generated_file(generate_target) {
       forward_variables_from(invoker,
                              [
                                "deps",
                                "testonly",
                              ])
 
-      deps += [
-        # Add sysroot-provided elements by default.
-        "//build/config/fuchsia:sysroot_metadata",
+      data_keys = [
+        "migrated_manifest_files",
+        "migrated_manifest_lines",
       ]
-
-      data_keys = [ "migrated_manifest_lines" ]
       walk_keys = [ "migrated_manifest_barrier" ]
 
-      # Use the same naming scheme as for other unification manifest templates,
-      # this makes them interoperable.
+      outputs = [ intermediate_file ]
+    }
+
+    # Resolve file references in the gathered metadata.
+    action(main_target) {
+      script = "//build/unification/images/unroll_manifest.py"
+
+      inputs = [ intermediate_file ]
       outputs = [ manifest_file ]
+
+      args = [
+        "--input",
+        rebase_path(intermediate_file, root_build_dir),
+        "--output",
+        rebase_path(manifest_file, root_build_dir),
+      ]
+
+      deps = [ ":$generate_target" ]
     }
 
     if (defined(invoker.zbi) && invoker.zbi) {
-      group("$target_name-zbi") {
+      migrated_zbi_content("$target_name-zbi") {
         deps = [ ":$main_target" ]
-
-        metadata = {
-          migrated_zbi_barrier = []
-          migrated_zbi_input_args = [
-            "--prefix=",
-            "--files",
-            rebase_path(manifest_file, root_build_dir),
-          ]
-        }
+        manifest = manifest_file
       }
     }
   } else {

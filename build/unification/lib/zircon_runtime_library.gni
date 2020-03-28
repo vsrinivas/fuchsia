@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia, "Zircon libraries only available for Fuchsia targets")
+
+# Exposes a library provided by the ZN build to the manifest metadata collection
+# scheme.
+#
+# This template allows such libraries and their various variants to be included
+# in manifests generated from metadata.
+#
+# Parameters
+#
+#   library (required)
+#     [string] Name of the library to expose.
+template("zircon_runtime_library") {
+  assert(defined(invoker.library), "Must provide a library")
+
+  label = "//build/unification/images:lib.${invoker.library}"
+  if (toolchain_variant.instrumented && toolchain_variant.name != "") {
+    label += ".${toolchain_variant.name}"
+  }
+
+  out_dir = get_label_info(label, "target_out_dir")
+  name = get_label_info(label, "name")
+  manifest = "$out_dir/$name.unification.manifest"
+
+  group(target_name) {
+    deps = [ label ]
+
+    metadata = {
+      migrated_manifest_barrier = []
+      migrated_manifest_files = [ rebase_path(manifest, root_build_dir) ]
+    }
+  }
+}

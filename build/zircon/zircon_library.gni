@@ -112,7 +112,11 @@ template("zircon_library") {
   }
 
   # Update references to boringssl.
-  foreach(prefix, ["", "u"]) {
+  foreach(prefix,
+          [
+            "",
+            "u",
+          ]) {
     if (library_deps + [ "//zircon/public/lib/${prefix}boringssl" ] -
         [ "//zircon/public/lib/${prefix}boringssl" ] != library_deps) {
       library_deps -= [ "//zircon/public/lib/${prefix}boringssl" ]
@@ -127,7 +131,11 @@ template("zircon_library") {
 
   # Update reference to zstd libraries, for which there exist targets under
   # //third_party/zstd.
-  foreach(library, ["zstd", "zstdseek"]) {
+  foreach(library,
+          [
+            "zstd",
+            "zstdseek",
+          ]) {
     if (library_deps + [ "//zircon/public/lib/$library" ] -
         [ "//zircon/public/lib/$library" ] != library_deps) {
       library_deps -= [ "//zircon/public/lib/$library" ]
@@ -204,14 +212,21 @@ template("zircon_library") {
     }
   }
 
-  migrated_manifest_lines = []
+  has_runtime_dep = false
   if (is_prebuilt) {
     foreach(file, invoker.install) {
       if (get_path_info(file.dest, "dir") == "dist") {
-        file_name = get_path_info(file.dest, "file")
-        location =
-            rebase_path(file.source, root_build_dir, zircon_root_build_dir)
-        migrated_manifest_lines += [ "lib/$file_name=$location" ]
+        has_runtime_dep = true
+      }
+    }
+
+    if (has_runtime_dep) {
+      import("//build/unification/lib/zircon_runtime_library.gni")
+
+      runtime_target = "${library}_runtime"
+
+      zircon_runtime_library(runtime_target) {
+        library = library
       }
     }
   }
@@ -256,8 +271,11 @@ template("zircon_library") {
     if (zx_lib_dirs != []) {
       metadata.zircon_lib_dirs = zx_lib_dirs
     }
-    if (migrated_manifest_lines != []) {
-      metadata.migrated_manifest_lines = migrated_manifest_lines
+    if (has_runtime_dep) {
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+      data_deps += [ ":$runtime_target" ]
     }
 
     # TODO(fxb/41298): This is a temporary change to activate writing the

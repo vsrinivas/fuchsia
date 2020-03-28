@@ -36,32 +36,23 @@ template("zircon_artifact") {
   action(rebase_target_name) {
     script = "//build/images/manifest.py"
 
-    inputs = [
-      manifest,
-    ]
+    inputs = [ manifest ]
 
-    outputs = [
-      "$target_out_dir/$target_name.unification.manifest",
-    ]
+    outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
     args = [
       "--output",
       rebase_path(outputs[0]),
       "--unique",
       "--cwd",
-      rebase_path(zircon_root_build_dir, root_out_dir),
-
-      # "--output-cwd",
-      # rebase_path(target_out_dir, root_out_dir),
+      rebase_path(zircon_root_build_dir, root_build_dir),
       "--manifest",
       rebase_path(inputs[0]),
     ]
   }
 
   aggregate_manifest(main_target_name) {
-    deps = [
-      ":$rebase_target_name",
-    ]
+    deps = [ ":$rebase_target_name" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/lib/zircon_runtime_library.gni")
+
+# The sysroot currently only provides a single library, libc.
+zircon_runtime_library("sysroot") {
+  library = "c"
+}
+
+compiler_libs = [
+  "libcpp.so.2",
+  "libcppabi.so.1",
+  "libunwind.so.1",
+]
+
+toolchain_deps = []
+
+foreach(lib, compiler_libs) {
+  label = "//build/unification/images:$lib"
+  out_dir = get_label_info(label, "target_out_dir")
+  name = get_label_info(label, "name")
+
+  zircon_runtime_library(lib) {
+    library = lib
+  }
+
+  toolchain_deps += [ ":$lib" ]
+}
+
+if (toolchain_variant.instrumented) {
+  # libclang_rt only exists in a subset of the configurations.
+  variant = toolchain_variant.name
+  lib = false
+  if (variant == "asan" || variant == "asan-ubsan") {
+    lib = "libclang_rt.asan.so"
+  } else if (variant == "ubsan" || variant == "sancov" ||
+             variant == "ubsan-sancov" || variant == "ubsan-sancov-full") {
+    lib = "libclang_rt.ubsan_standalone"
+  }
+  if (lib != false) {
+    name = "libclang_rt"
+    zircon_runtime_library(name) {
+      library = lib
+    }
+    toolchain_deps += [ ":$name" ]
+  }
+}
+
+group("toolchain") {
+  deps = toolchain_deps
+}
