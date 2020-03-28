@@ -86,24 +86,35 @@ enum Payload {
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
-    Link { content: u32, disposition: LinkNodeDisposition, parsed_data: Data },
+    Link { disposition: LinkNodeDisposition, parsed_data: Data },
 }
 
 impl Property {
     fn to_string(&self, prefix: &str) -> String {
-        format!("{} {}: {:?}", prefix, self.name, &self.payload)
+        match &self.payload {
+            Payload::Link { disposition, parsed_data } => match disposition {
+                LinkNodeDisposition::Child => {
+                    format!("{} {}: {}", prefix, self.name, parsed_data.to_string_internal(true))
+                }
+                LinkNodeDisposition::Inline => format!("{}", parsed_data.to_string_internal(true)),
+            },
+            _ => format!("{} {}: {:?}", prefix, self.name, &self.payload),
+        }
     }
 }
 
 impl Node {
-    fn to_string(&self, prefix: &str, tree: &Data) -> String {
+    /// If `hide_root` is true and the node is the root,
+    /// then the name and and prefix of the generated string is omitted.
+    /// This is used for lazy nodes wherein we don't what to show the label "root" for lazy nodes.
+    fn to_string(&self, prefix: &str, tree: &Data, hide_root: bool) -> String {
         let sub_prefix = format!("{}> ", prefix);
         let mut nodes = vec![];
         for node_id in self.children.iter() {
             nodes.push(
                 tree.nodes
                     .get(node_id)
-                    .map_or("Missing child".into(), |n| n.to_string(&sub_prefix, tree)),
+                    .map_or("Missing child".into(), |n| n.to_string(&sub_prefix, tree, hide_root)),
             );
         }
         let mut properties = vec![];
@@ -116,7 +127,17 @@ impl Node {
         }
         nodes.sort_unstable();
         properties.sort_unstable();
-        format!("{} {} ->\n{}\n{}\n", prefix, self.name, properties.join("\n"), nodes.join("\n"))
+        if self.name == ROOT_NAME && hide_root {
+            format!("{}\n{}\n", properties.join("\n"), nodes.join("\n"))
+        } else {
+            format!(
+                "{} {} ->\n{}\n{}\n",
+                prefix,
+                self.name,
+                properties.join("\n"),
+                nodes.join("\n")
+            )
+        }
     }
 }
 
@@ -512,6 +533,26 @@ impl Data {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn apply_lazy(&mut self, lazy_action: &validate::LazyAction) -> Result<(), Error> {
+        match lazy_action {
+            validate::LazyAction::CreateLazyNode(validate::CreateLazyNode {
+                parent,
+                id,
+                name,
+                disposition,
+                actions,
+            }) => self.add_lazy_node(*parent, *id, name, disposition, actions),
+            validate::LazyAction::ModifyLazyNode(validate::ModifyLazyNode { id, actions }) => {
+                self.modify_lazy_node(*id, actions)
+            }
+            validate::LazyAction::DeleteLazyNode(validate::DeleteLazyNode { id }) => {
+                self.delete_property(*id)
+            }
+            _ => Err(format_err!("Unknown lazy action {:?}", lazy_action)),
+        }
+    }
+
     fn create_node(&mut self, parent: u32, id: u32, name: &str) -> Result<(), Error> {
         let node = Node {
             name: name.to_owned(),
@@ -779,6 +820,54 @@ impl Data {
         Ok(())
     }
 
+    fn add_lazy_node(
+        &mut self,
+        parent: u32,
+        id: u32,
+        name: &str,
+        disposition: &validate::LinkDisposition,
+        actions: &Vec<validate::Action>,
+    ) -> Result<(), Error> {
+        let mut parsed_data = Data::new();
+        parsed_data.apply_multiple(&actions)?;
+        self.add_property(
+            parent,
+            id,
+            name,
+            Payload::Link {
+                disposition: match disposition {
+                    validate::LinkDisposition::Child => LinkNodeDisposition::Child,
+                    validate::LinkDisposition::Inline => LinkNodeDisposition::Inline,
+                },
+                parsed_data,
+            },
+        )?;
+        Ok(())
+    }
+
+    fn modify_lazy_node(&mut self, id: u32, actions: &Vec<validate::Action>) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match &property {
+                Property { payload: Payload::Link { disposition, .. }, .. } => {
+                    property.payload = Payload::Link {
+                        disposition: disposition.clone(),
+                        parsed_data: {
+                            let mut parsed_data = Data::new();
+                            parsed_data.apply_multiple(actions)?;
+                            parsed_data
+                        },
+                    }
+                }
+                unexpected => {
+                    return Err(format_err!("Bad type {:?} trying to update lazy node", unexpected))
+                }
+            }
+        } else {
+            return Err(format_err!("Tried to update non-existent lazy node {}.", id));
+        }
+        Ok(())
+    }
+
     // ***** Here are the functions to compare two Data (by converting to a
     // ***** fully informative string).
 
@@ -827,11 +916,7 @@ impl Data {
 
     /// Generates a string fully representing the Inspect data.
     pub fn to_string(&self) -> String {
-        if let Some(node) = self.nodes.get(&ROOT_ID) {
-            node.to_string(&"".to_owned(), self)
-        } else {
-            "No root node; internal error\n".to_owned()
-        }
+        self.to_string_internal(false)
     }
 
     /// This creates a new Data. Note that the standard "root" node of the VMO API
@@ -862,6 +947,21 @@ impl Data {
             tombstone_nodes: HashSet::new(),
             tombstone_properties: HashSet::new(),
         }
+    }
+
+    fn to_string_internal(&self, hide_root: bool) -> String {
+        if let Some(node) = self.nodes.get(&ROOT_ID) {
+            node.to_string(&"".to_owned(), self, hide_root)
+        } else {
+            "No root node; internal error\n".to_owned()
+        }
+    }
+
+    fn apply_multiple(&mut self, actions: &Vec<validate::Action>) -> Result<(), Error> {
+        for action in actions {
+            self.apply(&action)?;
+        }
+        Ok(())
     }
 }
 
@@ -1454,6 +1554,29 @@ mod tests {
         assert!(info.to_string().contains("bvalue: Bytes([3, 4])"));
         assert!(info.apply(&set_string!(id: 4, value: "baz")).is_err());
         assert!(info.to_string().contains("bvalue: Bytes([3, 4])"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_lazy_node_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply_lazy(&create_lazy_node!(parent: ROOT_ID, id: 1, name: "child", disposition: validate::LinkDisposition::Child, actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "child_bytes",value: vec!(3u8, 4u8))]))?;
+        info.apply_lazy(&create_lazy_node!(parent: ROOT_ID, id: 2, name: "inline", disposition: validate::LinkDisposition::Inline, actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "inline_bytes",value: vec!(3u8, 4u8))]))?;
+
+        // Outputs 'Inline' and 'Child' dispositions differently.
+        assert_eq!(
+            info.to_string(),
+            " root ->\n>  child: >  child_bytes: Bytes([3, 4])\n\n\n>  inline_bytes: Bytes([3, 4])\n\n\n\n"
+        );
+
+        info.apply_lazy(&delete_lazy_node!(id: 1))?;
+        // Outputs only 'Inline' lazy node since 'Child' lazy node was deleted
+        assert_eq!(info.to_string(), " root ->\n>  inline_bytes: Bytes([3, 4])\n\n\n\n");
+
+        info.apply_lazy(&modify_lazy_node!(id: 2, actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "inline_bytes_modified",value: vec!(4u8, 2u8))]))?;
+        // Outputs modfied lazy node.
+        assert_eq!(info.to_string(), " root ->\n>  inline_bytes_modified: Bytes([4, 2])\n\n\n\n");
+
         Ok(())
     }
 

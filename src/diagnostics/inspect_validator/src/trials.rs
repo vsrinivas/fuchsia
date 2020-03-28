@@ -236,6 +236,36 @@ macro_rules! insert_multiple {
     };
 }
 
+#[macro_export]
+macro_rules! create_lazy_node {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, disposition: $disposition:expr, actions: $actions:expr) => {
+        validate::LazyAction::CreateLazyNode(validate::CreateLazyNode {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            disposition: $disposition,
+            actions: $actions,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! modify_lazy_node {
+    (id: $id:expr, actions: $actions:expr) => {
+        validate::LazyAction::ModifyLazyNode(validate::ModifyLazyNode {
+            id: $id,
+            actions: $actions,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! delete_lazy_node {
+    (id: $id:expr) => {
+        validate::LazyAction::DeleteLazyNode(validate::DeleteLazyNode { id: $id })
+    };
+}
+
 fn basic_node() -> Trial {
     Trial {
         name: "Basic Node".into(),

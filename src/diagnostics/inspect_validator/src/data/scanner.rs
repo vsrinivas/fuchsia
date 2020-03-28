@@ -470,7 +470,6 @@ impl Scanner {
                     child_name
                 ))?;
                 ScannedPayload::Link {
-                    content: block.link_content_index()?,
                     disposition: block.link_node_disposition()?,
                     scanned_tree: Scanner::try_from(child_tree)?,
                 }
@@ -554,8 +553,8 @@ impl Scanner {
             ScannedPayload::String { length, link } => Payload::String(
                 std::str::from_utf8(&self.make_valid_vector(length, link)?)?.to_owned(),
             ),
-            ScannedPayload::Link { content, disposition, scanned_tree } => {
-                Payload::Link { content, disposition, parsed_data: scanned_tree.data() }
+            ScannedPayload::Link { disposition, scanned_tree } => {
+                Payload::Link { disposition, parsed_data: scanned_tree.data() }
             }
         })
     }
@@ -627,7 +626,7 @@ enum ScannedPayload {
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
-    Link { content: u32, disposition: LinkNodeDisposition, scanned_tree: Scanner },
+    Link { disposition: LinkNodeDisposition, scanned_tree: Scanner },
 }
 
 #[cfg(test)]
