@@ -1,5 +1,11 @@
 {
     "program": {
+        "args": [
+            "--nocapture",
+            "--test-threads=1",
+            "-Zunstable-options",
+            "--ensure-time"
+        ],
         "binary": "test/scoped_task_test"
     },
     "sandbox": {
