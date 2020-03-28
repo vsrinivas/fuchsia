@@ -4,35 +4,27 @@
 
 use {
     crate::errors::*,
-    async_trait::async_trait,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
+        self as fio, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_runtime::job_default,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
-    fuchsia_zircon::{self as zx, HandleBased, Task},
+    fuchsia_zircon as zx,
     futures::future::abortable,
     futures::future::AbortHandle,
-    futures::{future::BoxFuture, prelude::*},
-    rand::rngs::ThreadRng,
-    rand::Rng,
-    runner::component::ComponentNamespace,
+    futures::prelude::*,
     serde::{Deserialize, Serialize},
     std::{
-        convert::TryFrom,
-        fs,
-        ops::Deref,
-        ops::Drop,
         path::Path,
         str::from_utf8,
-        sync::{Arc, Mutex, Weak},
+        sync::{Arc, Weak},
+    },
+    test_runners_lib::{
+        elf_component::{Component, SuiteServer},
+        LogStreamReader, LogWriter,
     },
     thiserror::Error,
 };
@@ -67,202 +59,6 @@ pub enum KernelError {
 
     #[error("cannot convert zircon socket to async socket: {:?}", _0)]
     SocketToAsync(zx::Status),
-}
-
-/// All information about this test component.
-pub struct Component {
-    /// Component URL
-    url: String,
-
-    /// Component name
-    name: String,
-
-    /// Binary path for this component relative to /pkg in 'ns'
-    binary: String,
-
-    /// Arguments for this test.
-    args: Vec<String>,
-
-    /// Namespace to pass to test process.
-    ns: ComponentNamespace,
-
-    /// Parent job in which all test processes should be executed.
-    job: zx::Job,
-}
-
-impl Component {
-    fn new(
-        start_info: fcrunner::ComponentStartInfo,
-    ) -> Result<(Self, ServerEnd<DirectoryMarker>), ComponentError> {
-        let url =
-            runner::get_resolved_url(&start_info).map_err(ComponentError::InvalidStartInfo)?;
-        let name = Path::new(&url)
-            .file_name()
-            .ok_or_else(|| ComponentError::InvalidUrl)?
-            .to_str()
-            .ok_or_else(|| ComponentError::InvalidUrl)?
-            .to_string();
-
-        let args = runner::get_program_args(&start_info)
-            .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
-        // TODO validate args
-
-        let binary = runner::get_program_binary(&start_info)
-            .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
-
-        let ns = start_info.ns.ok_or_else(|| ComponentError::MissingNamespace(url.clone()))?;
-        let ns = ComponentNamespace::try_from(ns)
-            .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
-
-        let outgoing_dir =
-            start_info.outgoing_dir.ok_or_else(|| ComponentError::MissingOutDir(url.clone()))?;
-
-        Ok((
-            Self {
-                url: url,
-                name: name,
-                binary: binary,
-                args: args,
-                ns: ns,
-                job: job_default().create_child_job().map_err(ComponentError::CreateJob)?,
-            },
-            outgoing_dir,
-        ))
-    }
-}
-
-#[async_trait]
-impl runner::component::Controllable for ComponentRuntime {
-    async fn kill(mut self) {
-        self.kill_self();
-    }
-
-    fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
-        self.kill_self();
-        async move {}.boxed()
-    }
-}
-
-impl Drop for ComponentRuntime {
-    fn drop(&mut self) {
-        self.kill_self();
-    }
-}
-
-/// Setup and run test component in background.
-pub fn start_component(
-    start_info: fcrunner::ComponentStartInfo,
-    server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
-) -> Result<(), ComponentError> {
-    let (component, outgoing_dir) = Component::new(start_info)?;
-    let component = Arc::new(component);
-
-    let job_dup = component
-        .job
-        .duplicate_handle(zx::Rights::SAME_RIGHTS)
-        .map_err(ComponentError::DuplicateJob)?;
-    let mut fs = ServiceFs::new_local();
-    let mut rng = rand::thread_rng();
-
-    let suite_server_abortable_handles = Arc::new(Mutex::new(vec![]));
-    let weak_test_suite_abortable_handles = Arc::downgrade(&suite_server_abortable_handles);
-
-    let weak_component = Arc::downgrade(&component);
-
-    let url = component.url.clone();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        launch_fidl_service(
-            weak_test_suite_abortable_handles.clone(),
-            weak_component.clone(),
-            &mut rng,
-            &url,
-            stream,
-        );
-    });
-
-    fs.serve_connection(outgoing_dir.into_channel()).map_err(ComponentError::ServeSuite)?;
-    let (fut, abortable_handle) = abortable(fs.collect::<()>());
-
-    let url = component.url.clone();
-    let component_runtime =
-        ComponentRuntime::new(abortable_handle, suite_server_abortable_handles, job_dup, component);
-
-    let resolved_url = url.clone();
-    fasync::spawn_local(async move {
-        if let Err(e) = fut.await {
-            fx_log_err!("Test {} ended with error {:?}", url, e);
-        }
-    });
-
-    let controller_stream = server_end.into_stream().map_err(|e| {
-        ComponentError::Fidl("failed to convert server end to controller".to_owned(), e)
-    })?;
-    let controller = runner::component::Controller::new(component_runtime, controller_stream);
-    fasync::spawn_local(async move {
-        if let Err(e) = controller.serve().await {
-            fx_log_err!("test '{}' controller ended with error: {:?}", resolved_url, e);
-        }
-    });
-
-    Ok(())
-}
-
-/// Launches suite fidl service on `stream`.
-fn launch_fidl_service(
-    weak_test_suite_abortable_handles: Weak<Mutex<Vec<AbortHandle>>>,
-    weak_component: Weak<Component>,
-    rng: &mut ThreadRng,
-    url: &str,
-    stream: fidl_fuchsia_test::SuiteRequestStream,
-) {
-    let handles = weak_test_suite_abortable_handles.upgrade();
-    if handles.is_none() {
-        return;
-    }
-    let handles = handles.unwrap();
-
-    let mut handles = handles.lock().unwrap();
-
-    let test_data_name = format!("{}", rng.gen::<u64>());
-    let test_data_path = format!("/data/test_data/{}", test_data_name);
-
-    // TODO(45856): use async lib.
-    fs::create_dir(&test_data_path).expect("cannot create test output directory.");
-    let test_data_dir = io_util::open_directory_in_namespace(
-        &test_data_path,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-    )
-    .expect("Cannot open data directory");
-
-    let server = TestServer::new(test_data_dir);
-    let url = url.clone().to_owned();
-    let (fut, test_suite_abortable_handle) =
-        abortable(server.serve_test_suite(stream, weak_component.clone()));
-
-    handles.push(test_suite_abortable_handle);
-
-    fasync::spawn_local(async move {
-        match fut.await {
-            Ok(result) => {
-                if let Err(e) = result {
-                    fx_log_err!("server failed for test {}: {:?}", url, e);
-                }
-            }
-            Err(e) => fx_log_err!("server aborted for test {}: {:?}", url, e),
-        }
-        fx_vlog!(1, "Done running server for {}.", url);
-
-        // Even if `serve_test_suite` failed, clean local data directory as these files are no
-        // longer needed and they are consuming space.
-        let test_data_dir = io_util::open_directory_in_namespace(
-            "/data/test_data",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Cannot open data directory");
-        if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await {
-            fx_log_err!("error deleting temp data dir '{}': {:?}", test_data_name, e);
-        }
-    });
 }
 
 /// Provides info about individual test cases.
@@ -355,51 +151,6 @@ struct TestOutput {
     pub testsuites: Vec<TestSuiteOutput>,
 }
 
-/// Implements `fuchsia.test.Suite` and runs provided test.
-pub struct TestServer {
-    /// Cache to store enumerated test names.
-    test_list: Option<Vec<String>>,
-
-    /// Directory where test data(json) is written by gtest.
-    output_dir_proxy: fio::DirectoryProxy,
-}
-
-// Structure to guard job and kill it when going out of scope.
-struct ScopedJob {
-    internal: zx::Job,
-}
-
-impl ScopedJob {
-    fn new(job: zx::Job) -> Self {
-        Self { internal: job }
-    }
-}
-
-impl Drop for ScopedJob {
-    fn drop(&mut self) {
-        let _ = self.internal.kill();
-    }
-}
-
-/// Collects std out/err in background and gives a way to collect those logs.
-struct StdStreamReader {
-    fut: future::RemoteHandle<Result<Vec<u8>, std::io::Error>>,
-}
-
-impl StdStreamReader {
-    fn new(logger: test_runners_lib::LoggerStream) -> Self {
-        let (logger_handle, logger_fut) = logger.try_concat().remote_handle();
-        fasync::spawn_local(async move {
-            logger_handle.await;
-        });
-        Self { fut: logger_fut }
-    }
-
-    async fn get_logs(self) -> Result<Vec<u8>, LogError> {
-        self.fut.await.map_err(LogError::Read)
-    }
-}
-
 /// Opens and reads file defined by `path` in `dir`.
 async fn read_file(dir: &DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
     // Open the file in read-only mode.
@@ -407,25 +158,80 @@ async fn read_file(dir: &DirectoryProxy, path: &Path) -> Result<String, anyhow::
     return io_util::read_file(&result_file_proxy).await;
 }
 
-struct LogWriter {
-    logger: fasync::Socket,
+/// Implements `fuchsia.test.Suite` and runs provided test.
+pub struct TestServer {
+    /// Cache to store enumerated test names.
+    test_list: Option<Vec<String>>,
+
+    /// Directory where test data(json) is written by gtest.
+    output_dir_proxy: fio::DirectoryProxy,
+
+    /// Output directory name.
+    output_dir_name: String,
+
+    /// Output directory's parent path.
+    output_dir_parent_path: String,
 }
 
-impl LogWriter {
-    fn new(logger: fasync::Socket) -> Self {
-        Self { logger }
-    }
+impl SuiteServer for TestServer {
+    /// Run this server.
+    fn run(
+        self,
+        weak_component: Weak<Component>,
+        test_url: &str,
+        stream: fidl_fuchsia_test::SuiteRequestStream,
+    ) -> AbortHandle {
+        let test_data_name = self.output_dir_name.clone();
+        let test_data_parent = self.output_dir_parent_path.clone();
+        let test_url = test_url.clone().to_owned();
+        let (fut, test_suite_abortable_handle) =
+            abortable(self.serve_test_suite(stream, weak_component.clone()));
 
-    async fn write_str(&mut self, s: String) -> Result<usize, LogError> {
-        self.logger.write(s.as_bytes()).await.map_err(LogError::Write)
+        fasync::spawn_local(async move {
+            match fut.await {
+                Ok(result) => {
+                    if let Err(e) = result {
+                        fx_log_err!("server failed for test {}: {:?}", test_url, e);
+                    }
+                }
+                Err(e) => fx_log_err!("server aborted for test {}: {:?}", test_url, e),
+            }
+            fx_vlog!(1, "Done running server for {}.", test_url);
+
+            // Even if `serve_test_suite` failed, clean local data directory as these files are no
+            // longer needed and they are consuming space.
+            let test_data_dir = io_util::open_directory_in_namespace(
+                &test_data_parent,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )
+            .expect("Cannot open data directory");
+            if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await
+            {
+                fx_log_err!(
+                    "error deleting temp data dir '{}/{}': {:?}",
+                    test_data_parent,
+                    test_data_name,
+                    e
+                );
+            }
+        });
+        test_suite_abortable_handle
     }
 }
 
 impl TestServer {
     /// Creates new test server.
-    /// Clients should call this function to create new object and then call `serve_test_suite`.
-    pub fn new(output_dir_proxy: fio::DirectoryProxy) -> Self {
-        Self { test_list: None, output_dir_proxy: output_dir_proxy }
+    pub fn new(
+        output_dir_proxy: fio::DirectoryProxy,
+        output_dir_name: String,
+        output_dir_parent_path: String,
+    ) -> Self {
+        Self {
+            test_list: None,
+            output_dir_proxy: output_dir_proxy,
+            output_dir_name: output_dir_name,
+            output_dir_parent_path: output_dir_parent_path,
+        }
     }
 
     fn test_data_namespace(&self) -> Result<fproc::NameInfo, IoError> {
@@ -462,7 +268,8 @@ impl TestServer {
         args.extend(component.args.clone());
 
         // run test.
-        let (process, job, stdlogger) = test_runners_lib::launch_process(
+        // Load bearing to hold job guard.
+        let (process, _job, stdlogger) = test_runners_lib::launch_process(
             &component.binary,
             &component.name,
             Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
@@ -472,9 +279,6 @@ impl TestServer {
             None,
         )
         .await?;
-
-        // Load bearing to hold job guard.
-        let _job = ScopedJob::new(job);
 
         let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
             .map_err(KernelError::CreateSocket)
@@ -493,7 +297,7 @@ impl TestServer {
         let mut test_logger = LogWriter::new(test_logger);
 
         // collect stdout in background before waiting for process termination.
-        let std_reader = StdStreamReader::new(stdlogger);
+        let std_reader = LogStreamReader::new(stdlogger);
 
         fx_log_info!("Waiting for test to finish: {}", test);
 
@@ -613,7 +417,8 @@ impl TestServer {
         ];
         args.extend(component.args.clone());
 
-        let (process, job, stdlogger) = test_runners_lib::launch_process(
+        // Load bearing to hold job guard.
+        let (process, _job, stdlogger) = test_runners_lib::launch_process(
             &component.binary,
             &component.name,
             Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
@@ -625,10 +430,7 @@ impl TestServer {
         .await?;
 
         // collect stdout in background before waiting for process termination.
-        let std_reader = StdStreamReader::new(stdlogger);
-
-        // Load bearing to hold job guard.
-        let _job = ScopedJob::new(job);
+        let std_reader = LogStreamReader::new(stdlogger);
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await
@@ -677,7 +479,7 @@ impl TestServer {
     }
 
     /// Implements `fuchsia.test.Suite` service and runs test.
-    pub async fn serve_test_suite(
+    async fn serve_test_suite(
         mut self,
         mut stream: ftest::SuiteRequestStream,
         component: Weak<Component>,
@@ -731,61 +533,6 @@ impl TestServer {
     }
 }
 
-/// Information about all the test instances running for this component.
-struct ComponentRuntime {
-    /// handle to abort component's outgoing services.
-    outgoing_abortable_handle: Option<futures::future::AbortHandle>,
-
-    /// handle to abort running test suite servers.
-    suite_service_abortable_handles: Option<Arc<Mutex<Vec<futures::future::AbortHandle>>>>,
-
-    /// job containing all processes in this component.
-    job: Option<zx::Job>,
-
-    /// component object which is stored here for safe keeping. It would be dropped when test is
-    /// stopped/killed.
-    component: Option<Arc<Component>>,
-}
-
-impl ComponentRuntime {
-    fn new(
-        outgoing_abortable_handle: futures::future::AbortHandle,
-        suite_service_abortable_handles: Arc<Mutex<Vec<futures::future::AbortHandle>>>,
-        job: zx::Job,
-        component: Arc<Component>,
-    ) -> Self {
-        Self {
-            outgoing_abortable_handle: Some(outgoing_abortable_handle),
-            suite_service_abortable_handles: Some(suite_service_abortable_handles),
-            job: Some(job),
-            component: Some(component),
-        }
-    }
-
-    fn kill_self(&mut self) {
-        // drop component.
-        self.component.take();
-
-        // kill outgoing server.
-        if let Some(h) = self.outgoing_abortable_handle.take() {
-            h.abort();
-        }
-
-        // kill all suite servers.
-        if let Some(handles) = self.suite_service_abortable_handles.take() {
-            let handles = handles.lock().unwrap();
-            for h in handles.deref() {
-                h.abort();
-            }
-        }
-
-        // kill all test processes if running.
-        if let Some(job) = self.job.take() {
-            let _ = job.kill();
-        }
-    }
-}
-
 // TODO(45854): Add integration tests once changes are made to component_manager_for_test to
 // support runners. Currently test has to create a root cml file to offer runner to the test.
 #[cfg(test)]
@@ -794,6 +541,7 @@ mod tests {
         super::*,
         anyhow::{Context as _, Error},
         fidl::endpoints::ClientEnd,
+        fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_test::{
             CaseListenerRequest::Finished,
             RunListenerMarker,
@@ -802,6 +550,7 @@ mod tests {
         },
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
+        runner::component::ComponentNamespace,
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
         std::fs,
@@ -879,7 +628,8 @@ mod tests {
 
         let component = sample_test_component()?;
 
-        let mut server = TestServer::new(test_data.proxy()?);
+        let mut server =
+            TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         assert_eq!(
             server.enumerate_tests(component.clone()).await?,
@@ -917,7 +667,8 @@ mod tests {
             ns: ns,
             job: current_job!(),
         });
-        let mut server = TestServer::new(test_data.proxy()?);
+        let mut server =
+            TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         assert_eq!(server.enumerate_tests(component.clone()).await?, Vec::<String>::new());
 
@@ -970,7 +721,11 @@ mod tests {
         let test_data = TestDataDir::new().context("Cannot create test data")?;
         let component = sample_test_component().context("Cannot create test component")?;
         let weak_component = Arc::downgrade(&component);
-        let server = TestServer::new(test_data.proxy().context("Cannot create test server")?);
+        let server = TestServer::new(
+            test_data.proxy().context("Cannot create test server")?,
+            "some_name".to_owned(),
+            "some_path".to_owned(),
+        );
 
         let (run_listener_client, run_listener) =
             fidl::endpoints::create_request_stream::<RunListenerMarker>()

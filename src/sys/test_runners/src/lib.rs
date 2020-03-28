@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Launches a process and return process and logger stream(which is hooked to
-/// stdout and stderr of the process).
-///
+pub mod elf_component;
+
 use {
     anyhow::Error,
     fdio::fdio_sys,
@@ -21,7 +20,7 @@ use {
     runtime::{HandleInfo, HandleType},
     std::{cell::RefCell, pin::Pin},
     thiserror::Error,
-    zx::{AsHandleRef, HandleBased, Process},
+    zx::{AsHandleRef, HandleBased, Process, Task},
 };
 
 /// Error encountered while calling fdio operations.
@@ -164,7 +163,7 @@ pub enum LaunchError {
 /// * `process_name` - Name of the binary to add to process.
 /// * `job` - Job used launch process, if None, a new child of default_job() is used.
 /// * `ns` - Namespace for binary process to be launched.
-/// * `args` - Arguments to binary.
+/// * `args` - Arguments to binary. Binary name is automatically appended as first argument.
 /// * `names_info` - Extra names to add to namespace. by default only names from `ns` are added.
 /// * `environs` - Process environment variables.
 pub async fn launch_process(
@@ -173,12 +172,9 @@ pub async fn launch_process(
     job: Option<zx::Job>,
     ns: ComponentNamespace,
     args: Option<Vec<String>>,
-    names_infos: Option<Vec<fproc::NameInfo>>,
+    name_infos: Option<Vec<fproc::NameInfo>>,
     environs: Option<Vec<String>>,
-) -> Result<(Process, zx::Job, LoggerStream), LaunchError> {
-    let mut arguments = vec![process_name.to_string()];
-    arguments.extend(args.unwrap_or(vec![]));
-
+) -> Result<(Process, ScopedJob, LoggerStream), LaunchError> {
     let launcher = connect_to_service::<fproc::LauncherMarker>().map_err(LaunchError::Launcher)?;
 
     const STDOUT: u16 = 1;
@@ -202,14 +198,14 @@ pub async fn launch_process(
     // Load the component
     let mut launch_info =
         runner::component::configure_launcher(runner::component::LauncherConfigArgs {
-            bin_path: bin_path,
+            bin_path,
             name: process_name,
-            args: Some(arguments),
-            ns: ns,
-            job: job,
+            args,
+            ns,
+            job,
             handle_infos: Some(handle_infos),
-            name_infos: names_infos,
-            environs: environs,
+            name_infos,
+            environs,
             launcher: &launcher,
         })
         .await
@@ -231,5 +227,129 @@ pub async fn launch_process(
 
     let process = process.ok_or_else(|| LaunchError::UnExpectedError)?;
 
-    Ok((process, zx::Job::from_handle(component_job), logger))
+    Ok((process, ScopedJob::new(zx::Job::from_handle(component_job)), logger))
+}
+
+// Structure to guard job and kill it when going out of scope.
+pub struct ScopedJob {
+    pub object: Option<zx::Job>,
+}
+
+impl ScopedJob {
+    pub fn new(job: zx::Job) -> Self {
+        Self { object: Some(job) }
+    }
+
+    /// Return the job back from this scoped object
+    pub fn take(mut self) -> zx::Job {
+        self.object.take().unwrap()
+    }
+}
+
+impl Drop for ScopedJob {
+    fn drop(&mut self) {
+        if let Some(job) = self.object.take() {
+            job.kill().ok();
+        }
+    }
+}
+
+/// Error while reading/writing log using socket
+#[derive(Debug, Error)]
+pub enum LogError {
+    #[error("can't get logs: {:?}", _0)]
+    Read(std::io::Error),
+
+    #[error("can't write logs: {:?}", _0)]
+    Write(std::io::Error),
+}
+
+/// Collects logs in background and gives a way to collect those logs.
+pub struct LogStreamReader {
+    fut: future::RemoteHandle<Result<Vec<u8>, std::io::Error>>,
+}
+
+impl LogStreamReader {
+    pub fn new(logger: LoggerStream) -> Self {
+        let (logger_handle, logger_fut) = logger.try_concat().remote_handle();
+        fasync::spawn_local(async move {
+            logger_handle.await;
+        });
+        Self { fut: logger_fut }
+    }
+
+    /// Retrive all logs.
+    pub async fn get_logs(self) -> Result<Vec<u8>, LogError> {
+        self.fut.await.map_err(LogError::Read)
+    }
+}
+
+/// Utility struct to write to socket asynchrously.
+pub struct LogWriter {
+    logger: fasync::Socket,
+}
+
+impl LogWriter {
+    pub fn new(logger: fasync::Socket) -> Self {
+        Self { logger }
+    }
+
+    pub async fn write_str(&mut self, s: String) -> Result<usize, LogError> {
+        self.logger.write(s.as_bytes()).await.map_err(LogError::Write)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, fuchsia_runtime::job_default, fuchsia_zircon as zx, std::mem::drop};
+
+    #[test]
+    fn scoped_job_works() {
+        let new_job = job_default().create_child_job().unwrap();
+        let job_dup = new_job.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
+
+        // create new child job, else killing a job has no effect.
+        let _child_job = new_job.create_child_job().unwrap();
+
+        // check that job is alive
+        let info = job_dup.info().unwrap();
+        assert!(!info.exited);
+        {
+            let _job_about_to_die = ScopedJob::new(new_job);
+        }
+
+        // check that job was killed
+        let info = job_dup.info().unwrap();
+        assert!(info.exited);
+    }
+
+    #[test]
+    fn scoped_job_take_works() {
+        let new_job = job_default().create_child_job().unwrap();
+        let raw_handle = new_job.raw_handle();
+
+        let scoped = ScopedJob::new(new_job);
+
+        let ret_job = scoped.take();
+
+        // make sure we got back same job handle.
+        assert_eq!(ret_job.raw_handle(), raw_handle);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn log_writer_reader_work() {
+        let (sock1, sock2) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let mut log_writer = LogWriter::new(fasync::Socket::from_socket(sock1).unwrap());
+
+        let reader = LoggerStream::new(sock2).unwrap();
+        let reader = LogStreamReader::new(reader);
+
+        log_writer.write_str("this is string one.".to_owned()).await.unwrap();
+        log_writer.write_str("this is string two.".to_owned()).await.unwrap();
+        drop(log_writer);
+
+        let actual = reader.get_logs().await.unwrap();
+        let actual = std::str::from_utf8(&actual).unwrap();
+        assert_eq!(actual, "this is string one.this is string two.".to_owned());
+    }
 }

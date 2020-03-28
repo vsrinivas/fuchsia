@@ -45,7 +45,6 @@ package("gtest_runner") {
   deps = [
     ":bin",
     ":bin_test",
-    "//src/sys/component_manager/tests/memfs",
   ]
 
   binaries = [

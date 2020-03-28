@@ -3,40 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_zircon as zx, runner::component::ComponentNamespaceError, std::convert::From,
+    runner::component::ComponentNamespaceError, std::convert::From, test_runners_lib::LogError,
     thiserror::Error,
 };
-
-/// Error encountered running test component
-#[derive(Debug, Error)]
-pub enum ComponentError {
-    #[error("invalid start info: {:?}", _0)]
-    InvalidStartInfo(runner::StartInfoError),
-
-    #[error("error for test {}: {:?}", _0, _1)]
-    InvalidArgs(String, anyhow::Error),
-
-    #[error("Cannot run test {}, no namespace was supplied.", _0)]
-    MissingNamespace(String),
-
-    #[error("Cannot run test {}, as no outgoing directory was supplied.", _0)]
-    MissingOutDir(String),
-
-    #[error("Cannot run suite server: {:?}", _0)]
-    ServeSuite(anyhow::Error),
-
-    #[error("{}: {:?}", _0, _1)]
-    Fidl(String, fidl::Error),
-
-    #[error("cannot create job: {:?}", _0)]
-    CreateJob(zx::Status),
-
-    #[error("cannot duplicate job: {:?}", _0)]
-    DuplicateJob(zx::Status),
-
-    #[error("invalid url")]
-    InvalidUrl,
-}
 
 /// Error encountered while running suite server
 #[derive(Debug, Error)]
@@ -128,16 +97,6 @@ pub enum RunTestError {
 
     #[error("Name in invocation cannot be null")]
     TestCaseName,
-}
-
-/// Error while reading/writing log using socket
-#[derive(Debug, Error)]
-pub enum LogError {
-    #[error("can't get logs: {:?}", _0)]
-    Read(std::io::Error),
-
-    #[error("can't write logs: {:?}", _0)]
-    Write(std::io::Error),
 }
 
 impl From<EnumerationError> for SuiteServerError {
