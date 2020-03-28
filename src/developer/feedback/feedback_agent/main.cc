@@ -37,8 +37,7 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  //  TODO(fxb/47000): re-enable once OOM issues are resolved.
-  //  agent->SpawnSystemLogRecorder();
+  agent->SpawnSystemLogRecorder();
 
   // fuchsia.feedback.ComponentDataRegister
   context->outgoing()->AddPublicService(
