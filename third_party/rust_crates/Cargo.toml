@@ -30,6 +30,7 @@ async-trait = "0.1.11"
 base64 = "0.9"
 bitfield = "0.13"
 bitflags = "1"
+bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
 cargo_metadata = "0.9.1"
 chrono = "0.4.2"
@@ -101,6 +102,7 @@ unicase = "2.2.0"
 url = "2.1"
 uuid = { version = "0.7.2", features = ["serde", "v4"] } # move ?
 valico = "2.4.2"
+wasm-bindgen = "0.2.59"
 xml-rs = "0.8"
 # move once target-side tests of host-side code have been removed
 # in wayland/scanner:lib and unicode_block_generator :
