@@ -2577,7 +2577,7 @@ From //BUILD.gn:96
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:225
+From //build/config/fuchsia/BUILD.gn:209
 
 ### zircon_b_partition
 
