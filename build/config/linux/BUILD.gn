@@ -39,6 +39,8 @@ config("compiler") {
 
   rustflags = [
     "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
+    "-Clink-arg=--target=$clang_target",
+    "-Clink-arg=--sysroot=$sysroot",
     "-Cdefault-linker-libraries",
   ]
 
