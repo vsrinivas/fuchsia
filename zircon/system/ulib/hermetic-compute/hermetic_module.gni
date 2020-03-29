@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/toolchain/environment_redirect.gni")
-import("$zx/public/gn/unification/zx_manifest.gni")
 
 # True iff the current toolchain builds hermetic modules.
 is_hermetic = toolchain.tags + [ "hermetic" ] - [ "hermetic" ] != toolchain.tags
@@ -32,10 +31,9 @@ is_hermetic = toolchain.tags + [ "hermetic" ] - [ "hermetic" ] != toolchain.tags
 # See loadable_module() for other parameters and details.
 #
 template("hermetic_module") {
-  main_target = target_name
   if (is_hermetic) {
     # This toolchain builds things in hermetic mode.
-    loadable_module(main_target) {
+    loadable_module(target_name) {
       forward_variables_from(invoker, "*")
       if (defined(visibility)) {
         visibility += [ ":$target_name" ]
@@ -55,43 +53,14 @@ template("hermetic_module") {
   } else {
     # Piggy-back on the userboot toolchain to build hermetic code for us.
     not_needed(invoker, "*")
-    module_target = "$target_name.module"
-    environment_redirect(module_target) {
+    environment_redirect(target_name) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                              ])
       environment_label = "$zx/kernel/lib/userabi/userboot"
-      direct = true
-      deps = [ ":$main_target" ]
-    }
-    group_deps = [ ":$module_target" ]
-
-    # Declare the manifest in the non-hermetic, non-fuzzer, non-shared,
-    # non-instrumented toolchain: this ensures it only gets picked up once.
-    is_shlib = defined(toolchain.shlib) && toolchain.shlib == current_toolchain
-    is_fuzzer = string_replace(current_toolchain, "fuzzer", "") != current_toolchain
-    not_needed([ "is_fuzzer" ]) # Might go unused if is_shlib == false...
-    if (!is_shlib && !is_fuzzer && !is_kernel) {
-      manifest_target = "$target_name.manifest"
-      zx_manifest(manifest_target) {
-        forward_variables_from(invoker, [ "testonly" ])
-
-        target = ":$module_target"
-
-        name = "hermetic.$main_target"
-        if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
-            toolchain.tags) {
-          name += toolchain.variant_suffix
-        }
-      }
-      group_deps += [ ":$manifest_target" ]
-    }
-
-    group(main_target) {
-      forward_variables_from(invoker, [ "testonly" ])
-      deps = group_deps
+      deps = [ ":$target_name" ]
     }
   }
 }

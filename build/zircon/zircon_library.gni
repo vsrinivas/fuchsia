@@ -241,7 +241,6 @@ template("zircon_library") {
                              "deps",
                              "dir",
                              "disable_ubsan",
-                             "disable_unused_function",
                              "headers",
                              "include_dirs",
                              "install",
@@ -257,10 +256,6 @@ template("zircon_library") {
       configs += [ "//build/unification/config:zircon-library" ]
       if (defined(invoker.disable_ubsan) && invoker.disable_ubsan) {
         configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
-      }
-      if (defined(invoker.disable_unused_function) &&
-          invoker.disable_unused_function) {
-        configs += [ "//build/config:Wno-unused-function" ]
       }
       defines = invoker.compilation_defines
     } else {
@@ -299,27 +294,6 @@ template("zircon_library") {
         defines = []
       }
       defines += [ "_ALL_SOURCE" ]
-    }
-
-    # Manually add data dependencies.
-    # That information is not available in the metadata provided by the ZN
-    # build, so we manually replicate it here.
-    if (!defined(data_deps)) {
-      data_deps = []
-    }
-    if (library == "hermetic-decompressor") {
-      data_deps += [
-        "//build/unification/data:hermetic.decompress-lz4f",
-        "//build/unification/data:hermetic.decompress-zstd",
-      ]
-    }
-    if (library == "fs-management") {
-      data_deps += [
-        "//build/unification/data:bin.fsck-msdosfs",
-        "//build/unification/data:bin.mkfs-msdosfs",
-        "//zircon/system/uapp/blobfs",
-        "//zircon/system/uapp/minfs",
-      ]
     }
 
     # Tests migrated from the Zircon build depend on libraries exposed in

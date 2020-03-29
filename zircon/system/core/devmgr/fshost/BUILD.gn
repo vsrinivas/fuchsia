@@ -2,21 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
-import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
-
 source_set("fshost-registry") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "admin-server.cc",
     "fs-manager.cc",
@@ -25,46 +11,45 @@ source_set("fshost-registry") {
   ]
   public_deps = [
     ":metrics",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
     "../shared",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/memfs",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-fshost:llcpp",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/loader-service",
-    "//zircon/public/lib/memfs-cpp",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/memfs:memfs-cpp",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }
 
 source_set("metrics") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "metrics.cc",
     "metrics.h",
   ]
   public_deps = [
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/cobalt-client",
-    "//zircon/public/lib/metrics-cobalt",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/cobalt-client:headers",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
   ]
   deps = [
-    "//zircon/public/lib/cobalt-client",
-    "//zircon/public/lib/metrics-cobalt",
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
   ]
 }
 
 source_set("block-watcher") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "block-device.cc",
     "block-watcher.cc",
@@ -75,87 +60,65 @@ source_set("block-watcher") {
   ]
   public_deps = [
     ":metrics",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fdio-caller",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
     "../shared",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fdio-caller",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/memfs",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-fshost:llcpp",
   ]
   deps = [
     ":fshost-registry",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/gpt",
-    "//zircon/public/lib/loader-service",
-    "//zircon/public/lib/minfs",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxcrypt-fdio",
-    "//zircon/system/fidl/fuchsia-boot:c",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
-    "//zircon/system/fidl/fuchsia-device:c",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-encrypted:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
+    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block-encrypted:c",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/trace",
+    "$zx/system/ulib/trace-engine",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
 
-executable("fshost") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+zx_executable("fshost") {
   sources = [ "main.cc" ]
   deps = [
     ":block-watcher",
     ":fshost-registry",
     ":metrics",
-    "//zircon/public/lib/cobalt-client",
-    "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/hermetic-decompressor",
-    "//zircon/public/lib/loader-service",
-    "//zircon/public/lib/ramdevice-client",
-    "//zircon/system/fidl/fuchsia-boot:c",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
-    "//zircon/system/fidl/fuchsia-fshost:c",
-    "//zircon/system/fidl/fuchsia-fshost:llcpp",
-    "//zircon/system/fidl/fuchsia-ldsvc:c",
+    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-fshost:c",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
+    "$zx/system/fidl/fuchsia-ldsvc:c",
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/hermetic-decompressor",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/ramdevice-client",
   ]
 }
 
-test("fshost-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+zx_test("fshost-test") {
   test_group = "ddk"
   sources = [
     "delayed-outdir-test.cc",
@@ -166,63 +129,36 @@ test("fshost-test") {
     ":block-watcher",
     ":fshost-registry",
     ":metrics",
-    "//zircon/public/lib/cobalt-client",
-    "//zircon/public/lib/fidl-async",
-    "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/loader-service",
-    "//zircon/public/lib/mock-boot-arguments",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
-    "//zircon/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/mock-boot-arguments",
+    "$zx/system/ulib/zxtest",
   ]
 
   # TODO(46432): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps +=
+      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test("fshost-metrics-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+zx_test("fshost-metrics-test") {
   test_group = "ddk"
   sources = [ "metrics-test.cc" ]
   deps = [
     ":metrics",
-    "//zircon/public/lib/async-testing",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/metrics-cobalt",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/ulib/async-testing",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/zxtest",
   ]
 }
 
-test("block-watcher-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+zx_test("block-watcher-test") {
   test_group = "ddk"
   sources = [
     "block-device-test.cc",
@@ -231,30 +167,14 @@ test("block-watcher-test") {
   ]
   deps = [
     ":block-watcher",
-    "//zircon/public/lib/fidl-async",
-    "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/loader-service",
-    "//zircon/public/lib/metrics-cobalt",
-    "//zircon/public/lib/minfs",
-    "//zircon/public/lib/ramdevice-client",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/zxtest",
   ]
-}
-
-migrated_manifest("fshost-manifest") {
-  deps = [ ":fshost" ]
-}
-
-migrated_manifest("fshost-test-manifest") {
-  deps = [ ":fshost-test" ]
-}
-
-migrated_manifest("fshost-metrics-test-manifest") {
-  deps = [ ":fshost-metrics-test" ]
-}
-
-migrated_manifest("block-watcher-test-manifest") {
-  deps = [ ":block-watcher-test" ]
 }
