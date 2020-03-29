@@ -100,16 +100,15 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
   const WaitInstruction wi(iss);
   if (wi.is_wfe) {
     ktrace_vcpu_exit(VCPU_WFE_INSTRUCTION, guest_state->system_state.elr_el2);
-    Thread::Current::Reschedule();
     return ZX_OK;
   }
+  ktrace_vcpu_exit(VCPU_WFI_INSTRUCTION, guest_state->system_state.elr_el2);
 
   // If there is already an active interrupt in the list registers, return and handle it.
   if (gich_state->HasPendingInterrupt()) {
     return ZX_OK;
   }
 
-  ktrace_vcpu_exit(VCPU_WFI_INSTRUCTION, guest_state->system_state.elr_el2);
   zx_time_t deadline = ZX_TIME_INFINITE;
   if (timer_enabled(guest_state)) {
     if (static_cast<uint64_t>(current_ticks()) >= guest_state->cntv_cval_el0) {

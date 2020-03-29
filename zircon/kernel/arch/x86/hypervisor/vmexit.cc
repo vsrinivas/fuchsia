@@ -1038,8 +1038,6 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
   next_rip(exit_info, vmcs);
-  vmcs->Invalidate();
-  Thread::Current::Reschedule();
   return ZX_OK;
 }
 
