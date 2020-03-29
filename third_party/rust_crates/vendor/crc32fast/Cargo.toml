@@ -12,7 +12,7 @@
 
 [package]
 name = "crc32fast"
-version = "1.1.2"
+version = "1.2.0"
 authors = ["Sam Rijs <srijs@airpost.net>", "Alex Crichton <alex@alexcrichton.com>"]
 description = "Fast, SIMD-accelerated CRC32 (IEEE) checksum computation"
 readme = "README.md"
@@ -34,3 +34,8 @@ default-features = false
 
 [dev-dependencies.rand]
 version = "0.4"
+
+[features]
+default = ["std"]
+nightly = []
+std = []

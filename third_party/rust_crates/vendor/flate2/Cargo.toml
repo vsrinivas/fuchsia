@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -11,8 +11,9 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "flate2"
-version = "1.0.7"
+version = "1.0.14"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "Bindings to miniz.c for DEFLATE compression and decompression exposed as\nReader/Writer streams. Contains bindings for zlib, deflate, and gzip-based\nstreams.\n"
 homepage = "https://github.com/alexcrichton/flate2-rs"
@@ -22,27 +23,33 @@ keywords = ["gzip", "flate", "zlib", "encoding"]
 categories = ["compression", "api-bindings"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/alexcrichton/flate2-rs"
+[dependencies.cfg-if]
+version = "0.1.6"
+
+[dependencies.cloudflare-zlib-sys]
+version = "0.2.0"
+optional = true
+
 [dependencies.crc32fast]
-version = "1.1"
+version = "1.2.0"
 
 [dependencies.futures]
 version = "0.1.25"
 optional = true
 
 [dependencies.libc]
-version = "0.2"
+version = "0.2.65"
 
 [dependencies.libz-sys]
-version = "1.0"
+version = "1.0.25"
 optional = true
 
 [dependencies.miniz-sys]
 version = "0.1.11"
 optional = true
 
-[dependencies.miniz_oxide_c_api]
-version = "0.2"
-features = ["no_c_export"]
+[dependencies.miniz_oxide]
+version = "0.3.5"
 optional = true
 
 [dependencies.tokio-io]
@@ -52,11 +59,11 @@ optional = true
 version = "0.1"
 
 [dev-dependencies.quickcheck]
-version = "0.7"
+version = "0.9"
 default-features = false
 
 [dev-dependencies.rand]
-version = "0.6"
+version = "0.7"
 
 [dev-dependencies.tokio-io]
 version = "0.1.11"
@@ -68,13 +75,14 @@ version = "0.1.3"
 version = "0.1.10"
 
 [features]
-default = ["miniz-sys"]
-rust_backend = ["miniz_oxide_c_api"]
+any_zlib = []
+cloudflare_zlib = ["any_zlib", "cloudflare-zlib-sys"]
+default = ["rust_backend"]
+rust_backend = ["miniz_oxide"]
 tokio = ["tokio-io", "futures"]
-zlib = ["libz-sys"]
-[target."cfg(all(target_arch = \"wasm32\", not(target_os = \"emscripten\")))".dependencies.miniz_oxide_c_api]
-version = "0.2"
-features = ["no_c_export"]
+zlib = ["any_zlib", "libz-sys"]
+[target."cfg(all(target_arch = \"wasm32\", not(target_os = \"emscripten\")))".dependencies.miniz_oxide]
+version = "0.3.5"
 [badges.appveyor]
 repository = "alexcrichton/flate2-rs"
 

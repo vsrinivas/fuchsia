@@ -40,6 +40,10 @@ group("bitflags") {
   deps = [ ":bitflags-1-2-1" ]
 }
 
+group("bumpalo") {
+  deps = [ ":bumpalo-3-2-1" ]
+}
+
 group("byteorder") {
   deps = [ ":byteorder-1-3-1" ]
 }
@@ -105,7 +109,7 @@ group("eui48") {
 }
 
 group("flate2") {
-  deps = [ ":flate2-1-0-7" ]
+  deps = [ ":flate2-1-0-14" ]
 }
 
 group("freetype") {
@@ -608,6 +612,10 @@ group("walkdir") {
   deps = [ ":walkdir-2-3-1" ]
 }
 
+group("wasm-bindgen") {
+  deps = [ ":wasm-bindgen-0-2-59" ]
+}
+
 group("webpki") {
   deps = [ ":webpki-0-21-0" ]
 }
@@ -616,10 +624,10 @@ group("xml-rs") {
   deps = [ ":xml-rs-0-8-0" ]
 }
 
-rust_library("adler32-1-0-3") {
+rust_library("adler32-1-0-4") {
   crate_name = "adler32"
   crate_root = "//third_party/rust_crates/vendor/adler32/src/lib.rs"
-  output_name = "adler32-943a40852e25ffa3"
+  output_name = "adler32-c9ef1b6b05a1db44"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -632,8 +640,8 @@ rust_library("adler32-1-0-3") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=943a40852e25ffa3",
-    "-Cextra-filename=943a40852e25ffa3",
+    "-Cmetadata=c9ef1b6b05a1db44",
+    "-Cextra-filename=c9ef1b6b05a1db44",
   ]
 }
 
@@ -1362,6 +1370,28 @@ rust_library("buf_redux-0-8-1") {
   ]
 }
 
+rust_library("bumpalo-3-2-1") {
+  crate_name = "bumpalo"
+  crate_root = "//third_party/rust_crates/vendor/bumpalo/src/lib.rs"
+  output_name = "bumpalo-4d40e59552851188"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=4d40e59552851188",
+    "-Cextra-filename=4d40e59552851188",
+    "--cfg=feature=\"default\"",
+  ]
+}
+
 rust_library("bytecount-0-6-0") {
   crate_name = "bytecount"
   crate_root = "//third_party/rust_crates/vendor/bytecount/src/lib.rs"
@@ -1680,10 +1710,10 @@ rust_library("crc-1-8-1") {
   ]
 }
 
-rust_library("crc32fast-1-1-2") {
+rust_library("crc32fast-1-2-0") {
   crate_name = "crc32fast"
   crate_root = "//third_party/rust_crates/vendor/crc32fast/src/lib.rs"
-  output_name = "crc32fast-88ffa6700f5cd034"
+  output_name = "crc32fast-b6843fe6a0c78ef4"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -1697,8 +1727,10 @@ rust_library("crc32fast-1-1-2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=88ffa6700f5cd034",
-    "-Cextra-filename=88ffa6700f5cd034",
+    "-Cmetadata=b6843fe6a0c78ef4",
+    "-Cextra-filename=b6843fe6a0c78ef4",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
     "--cfg=crc32fast_stdarchx86",
   ]
 }
@@ -2053,7 +2085,7 @@ rust_library("deflate-0-7-19") {
   ]
 
   deps = []
-  deps += [ ":adler32-1-0-3" ]
+  deps += [ ":adler32-1-0-4" ]
   deps += [ ":byteorder-1-3-1" ]
   deps += [ ":gzip-header-0-2-0" ]
 
@@ -2337,32 +2369,33 @@ rust_library("filetime-0-2-4") {
   }
 }
 
-rust_library("flate2-1-0-7") {
+rust_library("flate2-1-0-14") {
   crate_name = "flate2"
   crate_root = "//third_party/rust_crates/vendor/flate2/src/lib.rs"
-  output_name = "flate2-d93dfeab091de5c9"
+  output_name = "flate2-b355232cbf12e89b"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":crc32fast-1-1-2" ]
+  deps += [ ":cfg-if-0-1-10" ]
+  deps += [ ":crc32fast-1-2-0" ]
   deps += [ ":libc-0-2-66" ]
-  deps += [ ":miniz-sys-0-1-11" ]
+  deps += [ ":miniz_oxide-0-3-6" ]
   if (false && !false) {
-    deps += [ ":miniz_oxide_c_api-0-2-1" ]
+    deps += [ ":miniz_oxide-0-3-6" ]
   }
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=d93dfeab091de5c9",
-    "-Cextra-filename=d93dfeab091de5c9",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"miniz-sys\"",
+    "--edition=2018",
+    "-Cmetadata=b355232cbf12e89b",
+    "-Cextra-filename=b355232cbf12e89b",
+    "--cfg=feature=\"miniz_oxide\"",
+    "--cfg=feature=\"rust_backend\"",
   ]
 }
 
@@ -3330,7 +3363,7 @@ rust_library("inflate-0-4-5") {
   ]
 
   deps = []
-  deps += [ ":adler32-1-0-3" ]
+  deps += [ ":adler32-1-0-4" ]
 
   rustenv = []
 
@@ -3904,73 +3937,25 @@ rust_library("mime_guess-1-8-6") {
   ]
 }
 
-rust_library("miniz-sys-0-1-11") {
-  crate_name = "miniz_sys"
-  crate_root = "//third_party/rust_crates/vendor/miniz-sys/lib.rs"
-  output_name = "miniz_sys-444c6c5e8f6b03f2"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":libc-0-2-66" ]
-  deps += [ "//third_party/rust_crates/compat/miniz-sys:miniz" ]
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=444c6c5e8f6b03f2",
-    "-Cextra-filename=444c6c5e8f6b03f2",
-  ]
-}
-
-rust_library("miniz_oxide-0-2-1") {
+rust_library("miniz_oxide-0-3-6") {
   crate_name = "miniz_oxide"
   crate_root = "//third_party/rust_crates/vendor/miniz_oxide/src/lib.rs"
-  output_name = "miniz_oxide-e59543f84ed8cbaa"
+  output_name = "miniz_oxide-f0f792fd2419215a"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":adler32-1-0-3" ]
+  deps += [ ":adler32-1-0-4" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=e59543f84ed8cbaa",
-    "-Cextra-filename=e59543f84ed8cbaa",
-  ]
-}
-
-rust_library("miniz_oxide_c_api-0-2-1") {
-  crate_name = "miniz_oxide_c_api"
-  crate_root = "//third_party/rust_crates/vendor/miniz_oxide_c_api/src/lib.rs"
-  output_name = "miniz_oxide_c_api-91bd6f9b959a6d34"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":crc-1-8-1" ]
-  deps += [ ":libc-0-2-66" ]
-  deps += [ ":miniz_oxide-0-2-1" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=91bd6f9b959a6d34",
-    "-Cextra-filename=91bd6f9b959a6d34",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"no_c_export\"",
+    "--edition=2018",
+    "-Cmetadata=f0f792fd2419215a",
+    "-Cextra-filename=f0f792fd2419215a",
   ]
 }
 
@@ -9344,6 +9329,135 @@ rust_library("wasi-0-7-0") {
     "-Cextra-filename=310fb449b2f0cdab",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("wasm-bindgen-0-2-59") {
+  crate_name = "wasm_bindgen"
+  crate_root = "//third_party/rust_crates/vendor/wasm-bindgen/src/lib.rs"
+  output_name = "wasm_bindgen-f48fea3d1424dd60"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-0-1-10" ]
+  deps += [ ":wasm-bindgen-macro-0-2-59($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f48fea3d1424dd60",
+    "-Cextra-filename=f48fea3d1424dd60",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"spans\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("wasm-bindgen-backend-0-2-59") {
+  crate_name = "wasm_bindgen_backend"
+  crate_root =
+      "//third_party/rust_crates/vendor/wasm-bindgen-backend/src/lib.rs"
+  output_name = "wasm_bindgen_backend-2e64e4a6ead1284c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bumpalo-3-2-1" ]
+  deps += [ ":lazy_static-1-4-0" ]
+  deps += [ ":log-0-4-8" ]
+  deps += [ ":proc-macro2-1-0-9" ]
+  deps += [ ":quote-1-0-2" ]
+  deps += [ ":syn-1-0-11" ]
+  deps += [ ":wasm-bindgen-shared-0-2-59" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2e64e4a6ead1284c",
+    "-Cextra-filename=2e64e4a6ead1284c",
+    "--cfg=feature=\"spans\"",
+  ]
+}
+
+rust_proc_macro("wasm-bindgen-macro-0-2-59") {
+  crate_name = "wasm_bindgen_macro"
+  crate_root = "//third_party/rust_crates/vendor/wasm-bindgen-macro/src/lib.rs"
+  output_name = "wasm_bindgen_macro-f82c8e2f9c54796f"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":quote-1-0-2" ]
+  deps += [ ":wasm-bindgen-macro-support-0-2-59" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f82c8e2f9c54796f",
+    "-Cextra-filename=f82c8e2f9c54796f",
+    "--cfg=feature=\"spans\"",
+  ]
+}
+
+rust_library("wasm-bindgen-macro-support-0-2-59") {
+  crate_name = "wasm_bindgen_macro_support"
+  crate_root =
+      "//third_party/rust_crates/vendor/wasm-bindgen-macro-support/src/lib.rs"
+  output_name = "wasm_bindgen_macro_support-65db3ecc4319c4dd"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-1-0-9" ]
+  deps += [ ":quote-1-0-2" ]
+  deps += [ ":syn-1-0-11" ]
+  deps += [ ":wasm-bindgen-backend-0-2-59" ]
+  deps += [ ":wasm-bindgen-shared-0-2-59" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=65db3ecc4319c4dd",
+    "-Cextra-filename=65db3ecc4319c4dd",
+    "--cfg=feature=\"spans\"",
+  ]
+}
+
+rust_library("wasm-bindgen-shared-0-2-59") {
+  crate_name = "wasm_bindgen_shared"
+  crate_root = "//third_party/rust_crates/vendor/wasm-bindgen-shared/src/lib.rs"
+  output_name = "wasm_bindgen_shared-f78c690f1d004a09"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f78c690f1d004a09",
+    "-Cextra-filename=f78c690f1d004a09",
   ]
 }
 

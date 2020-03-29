@@ -27,6 +27,7 @@ This crate contains multiple CRC32 implementations:
 
 - A fast baseline implementation which processes up to 16 bytes per iteration
 - An optimized implementation for modern `x86` using `sse` and `pclmulqdq` instructions
+- An optimized implementation for `aarch64` using `crc32` instructions
 
 Calling the `Hasher::new` constructor at runtime will perform a feature detection to select the most
 optimal implementation for the current CPU feature set.
@@ -46,6 +47,21 @@ In order to ensure memory safety, the relevant code has been fuzz tested using [
 On top of that, every commit is tested using an address sanitizer in CI to catch any out of bounds memory accesses.
 
 Even though neither fuzzing not sanitization has revealed any safety bugs yet, please don't hesitate to file an issue if you run into any crashes or other unexpected behaviour.
+
+## Available feature flags
+
+### `std` (default: enabled)
+
+This library supports being built without the Rust `std` library, which is useful for low-level use-cases such as embedded where no operating system is available. To build the crate in a `no_std` context, disable the default `std` feature.
+
+Note: Because runtime CPU feature detection requires OS support, the specialized SIMD implementations will be unavailable when the `std` feature is disabled.
+
+### `nightly` (default: disabled)
+
+This feature flag enables unstable features that are only available on the `nightly` channel. Keep in mind that when enabling this feature flag, you
+might experience breaking changes when updating compiler versions.
+
+Currently, enabling this feature flag will make the optimized `aarch64` implementation available.
 
 ## License
 

@@ -18,6 +18,12 @@
 //! Calling the `Hasher::new` constructor at runtime will perform a feature detection to select the most
 //! optimal implementation for the current CPU feature set.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(
+    all(feature = "nightly", target_arch = "aarch64"),
+    feature(stdsimd, aarch64_target_feature)
+)]
+
 #[deny(missing_docs)]
 #[cfg(test)]
 #[macro_use]
@@ -26,8 +32,11 @@ extern crate quickcheck;
 #[macro_use]
 extern crate cfg_if;
 
-use std::fmt;
-use std::hash;
+#[cfg(feature = "std")]
+use std as core;
+
+use core::fmt;
+use core::hash;
 
 mod baseline;
 mod combine;
@@ -47,29 +56,39 @@ pub struct Hasher {
     state: State,
 }
 
+const DEFAULT_INIT_STATE: u32 = 0;
+
 impl Hasher {
     /// Create a new `Hasher`.
     ///
     /// This will perform a CPU feature detection at runtime to select the most
     /// optimal implementation for the current processor architecture.
     pub fn new() -> Self {
-        Self::internal_new_specialized().unwrap_or_else(|| Self::internal_new_baseline())
+        Self::new_with_initial(DEFAULT_INIT_STATE)
+    }
+
+    /// Create a new `Hasher` with an initial CRC32 state.
+    ///
+    /// This works just like `Hasher::new`, except that it allows for an initial
+    /// CRC32 state to be passed in.
+    pub fn new_with_initial(init: u32) -> Self {
+        Self::internal_new_specialized(init).unwrap_or_else(|| Self::internal_new_baseline(init))
     }
 
     #[doc(hidden)]
     // Internal-only API. Don't use.
-    pub fn internal_new_baseline() -> Self {
+    pub fn internal_new_baseline(init: u32) -> Self {
         Hasher {
             amount: 0,
-            state: State::Baseline(baseline::State::new()),
+            state: State::Baseline(baseline::State::new(init)),
         }
     }
 
     #[doc(hidden)]
     // Internal-only API. Don't use.
-    pub fn internal_new_specialized() -> Option<Self> {
+    pub fn internal_new_specialized(init: u32) -> Option<Self> {
         {
-            if let Some(state) = specialized::State::new() {
+            if let Some(state) = specialized::State::new(init) {
                 return Some(Hasher {
                     amount: 0,
                     state: State::Specialized(state),
@@ -134,7 +153,7 @@ impl hash::Hasher for Hasher {
     }
 
     fn finish(&self) -> u64 {
-        self.clone().finalize() as u64
+        u64::from(self.clone().finalize())
     }
 }
 

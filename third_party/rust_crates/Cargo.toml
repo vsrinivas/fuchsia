@@ -181,7 +181,7 @@ webpki = "0.21"
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
 async-std = "1.5.0"
-flate2 = "1.0.7"
+flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 handlebars = "2.0.0-beta.2"
 indoc = "0.3.3"
 pulldown-cmark = "0.6.0"
@@ -308,7 +308,7 @@ rustflags = ["--cfg=has_i128"]
 [[gn.crate.num-rational."0.2.1"]]
 rustflags = ["--cfg=has_i128"]
 
-[[gn.crate.crc32fast."1.1.2"]]
+[[gn.crate.crc32fast."1.2.0"]]
 rustflags = ["--cfg=crc32fast_stdarchx86"]
 
 [[gn.crate.memchr."2.3.3"]]
@@ -328,9 +328,6 @@ rustflags = ["--cfg=rust_1_26"]
 
 [[gn.crate.ring."0.16.9"]]
 deps = [ "//third_party/rust_crates/compat/ring:ring-core" ]
-
-[[gn.crate.miniz_sys."0.1.11"]]
-deps = [ "//third_party/rust_crates/compat/miniz-sys:miniz" ]
 
 [[gn.crate.unicase."1.4.2"]]
 rustflags = ["--cfg=__unicase__default_hasher", "--cfg=__unicase__iter_cmp"]
@@ -368,7 +365,6 @@ env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars
 # These dependencies have build.rs scripts, but dummy invokations indicating they
 # do not need to be run are sufficient for our build
 [[gn.crate.crossbeam-utils."0.7.2"]]
-[[gn.crate.miniz_oxide_c_api."0.2.1"]]
 [[gn.crate.crossbeam-epoch."0.8.2"]]
 [[gn.crate.parking_lot_core."0.6.2"]]
 [[gn.crate.parking_lot_core."0.4.0"]]
@@ -385,5 +381,7 @@ env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars
 [[gn.crate.rayon-core."1.7.0"]]
 [[gn.crate.syn."1.0.11"]]
 [[gn.crate.pulldown-cmark."0.6.0"]]
+[[gn.crate.wasm-bindgen."0.2.59"]]
+[[gn.crate.wasm-bindgen-shared."0.2.59"]]
 
 [[gn.crate.freetype_sys."4.0.5"]]

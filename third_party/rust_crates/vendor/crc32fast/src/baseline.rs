@@ -6,8 +6,8 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> Self {
-        State { state: 0 }
+    pub fn new(state: u32) -> Self {
+        State { state }
     }
 
     pub fn update(&mut self, buf: &[u8]) {
