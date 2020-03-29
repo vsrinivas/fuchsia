@@ -93,6 +93,10 @@ class VnodeMinfs : public fs::Vnode,
 
   void AddLink() { inode_.link_count++; }
 
+  void MarkPurged() {
+    inode_.magic = kMinfsMagicPurged;
+  }
+
   static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
 
   // fs::Vnode interface (invoked publicly).

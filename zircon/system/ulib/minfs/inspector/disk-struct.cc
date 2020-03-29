@@ -13,7 +13,7 @@
 namespace minfs {
 
 std::unique_ptr<disk_inspector::DiskStruct> GetSuperblockStruct() {
-  static_assert(offsetof(Superblock, reserved) == 116);
+  static_assert(offsetof(Superblock, reserved) == 120);
   std::unique_ptr<disk_inspector::DiskStruct> object =
       disk_inspector::DiskStruct::Create("Superblock", sizeof(Superblock));
   ADD_FIELD(object, Superblock, magic0);
@@ -43,7 +43,8 @@ std::unique_ptr<disk_inspector::DiskStruct> GetSuperblockStruct() {
   ADD_FIELD(object, Superblock, dat_slices);
   ADD_FIELD(object, Superblock, unlinked_head);
   ADD_FIELD(object, Superblock, unlinked_tail);
-  ADD_ARRAY_FIELD(object, Superblock, reserved, 2019);
+  ADD_FIELD(object, Superblock, oldest_revision);
+  ADD_ARRAY_FIELD(object, Superblock, reserved, 2018);
   return object;
 }
 

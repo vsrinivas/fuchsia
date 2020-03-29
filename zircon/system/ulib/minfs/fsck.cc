@@ -107,7 +107,10 @@ class MinfsChecker {
   DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
 
   MinfsChecker();
-  zx_status_t GetInode(Inode* inode, ino_t ino);
+
+  // Reads the inode and optionally checks the magic value to ensure it is either a file or
+  // directory.
+  zx_status_t GetInode(Inode* inode, ino_t ino, bool check_magic = true) const;
 
   // Returns the nth block within an inode, relative to the start of the
   // file. Returns the "next_n" which might contain a bno. This "next_n"
@@ -122,6 +125,7 @@ class MinfsChecker {
   std::unique_ptr<Minfs> fs_;
   RawBitmap checked_inodes_;
   RawBitmap checked_blocks_;
+  ino_t max_inode_ = 0;
 
   // blk_info_ provides reverse lookup capability - a block number is mapped to
   // a set of BlockInfo. The filesystem is inconsistent if a block has more than
@@ -138,14 +142,14 @@ class MinfsChecker {
   uint8_t indirect_cache_[kMinfsBlockSize];
 };
 
-zx_status_t MinfsChecker::GetInode(Inode* inode, ino_t ino) {
+zx_status_t MinfsChecker::GetInode(Inode* inode, ino_t ino, bool check_magic) const {
   if (ino >= fs_->Info().inode_count) {
     FS_TRACE_ERROR("check: ino %u out of range (>=%u)\n", ino, fs_->Info().inode_count);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   fs_->GetInodeManager()->Load(ino, inode);
-  if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
+  if (check_magic && (inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
     FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -293,25 +297,28 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       if ((de->namelen == 1) && (de->name[0] == '.')) {
         if (dot) {
           FS_TRACE_ERROR("check: ino#%u: multiple '.' entries\n", ino);
+          conforming_ = false;
         }
         dot_or_dotdot = true;
         dot = true;
         if (de->ino != ino) {
           FS_TRACE_ERROR("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
+          conforming_ = false;
         }
       }
       if ((de->namelen == 2) && (de->name[0] == '.') && (de->name[1] == '.')) {
         if (dotdot) {
           FS_TRACE_ERROR("check: ino#%u: multiple '..' entries\n", ino);
+          conforming_ = false;
         }
         dot_or_dotdot = true;
         dotdot = true;
         if (de->ino != parent) {
           FS_TRACE_ERROR("check: ino#%u: de[%u]: '..' ino=%u (not parent (ino#%u)!)\n", ino, eno,
                          de->ino, parent);
+          conforming_ = false;
         }
       }
-      // TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
       if (flags & CD_DUMP) {
         FS_TRACE_DEBUG("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n", ino, eno, de->ino, de->type,
                        de->namelen, de->name, is_last ? "[last]" : "");
@@ -484,6 +491,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
 void MinfsChecker::CheckReserved() {
   // Check reserved inode '0'.
   if (fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(0)) {
+    ZX_ASSERT(!checked_inodes_.Get(0, 1));
     checked_inodes_.Set(0, 1);
     alloc_inodes_++;
   } else {
@@ -527,6 +535,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
 
   links_[ino - 1] -= inode.link_count;
   checked_inodes_.Set(ino, ino + 1);
+  max_inode_ = std::max(ino, max_inode_);
   alloc_inodes_++;
 
   if (!fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(ino)) {
@@ -546,6 +555,10 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
       return status;
     }
   } else {
+    if (ino == kMinfsRootIno) {
+      FS_TRACE_ERROR("Root inode must be a directory\n");
+      return ZX_ERR_BAD_STATE;
+    }
     FS_TRACE_DEBUG("ino#%u: FILE blks=%u links=%u size=%u\n", ino, inode.block_count,
                    inode.link_count, inode.size);
     if ((status = CheckFile(&inode, ino)) < 0) {
@@ -621,17 +634,44 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
 }
 
 zx_status_t MinfsChecker::CheckForUnusedInodes() const {
-  unsigned missing = 0;
+  unsigned missing = 0, bad_magic = 0;
+  Inode inode;
+  // It can slow things down considerably to read and check every unused inode, so only check 1 to 2
+  // blocks worth beyond the maximum.
+  const size_t check_magic_up_to =
+      fbl::round_up(max_inode_ + kMinfsInodesPerBlock, kMinfsInodesPerBlock);
   for (unsigned n = 0; n < fs_->Info().inode_count; n++) {
     if (fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(n)) {
       if (!checked_inodes_.Get(n, n + 1)) {
         missing++;
       }
+    } else if (n < check_magic_up_to) {
+      zx_status_t status = GetInode(&inode, n, /*check_magic=*/false);
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("check: ino#%u: not readable: %d\n", n, status);
+        return status;
+      }
+      // Format creates inodes with magic == 0.
+      if (inode.magic != kMinfsMagicPurged && inode.magic != 0) {
+        bad_magic++;
+      }
     }
   }
-  if (missing) {
-    FS_TRACE_ERROR("check: %u allocated inode%s not in use\n", missing, missing > 1 ? "s" : "");
+  // Minfs behaviour was changed in revision 1 so that purged inodes have their magic field changed
+  // to kMinfsMagicPurged. Prior to this, the inodes were left intact.
+  if (missing > 0 || (bad_magic > 0 && fs_->Info().oldest_revision >= 1)) {
+    if (bad_magic > 0) {
+      FS_TRACE_ERROR("check: %u free inode%s with bad magic values\n",
+                     bad_magic, bad_magic > 1 ? "s" : "");
+    }
+    if (missing > 0) {
+      FS_TRACE_ERROR("check: %u allocated inode%s not in use\n", missing, missing > 1 ? "s" : "");
+    }
     return ZX_ERR_BAD_STATE;
+  }
+  if (bad_magic > 0) {
+    FS_TRACE_WARN("check: %u free inode%s with bad magic values\n",
+                  bad_magic, bad_magic > 1 ? "s" : "");
   }
   return ZX_OK;
 }
@@ -1055,8 +1095,7 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr
 
   chk->CheckReserved();
 
-  // TODO: check root not a directory
-  status = chk->CheckInode(1, 1, 0);
+  status = chk->CheckInode(kMinfsRootIno, kMinfsRootIno, 0);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck: CheckInode failure: %d\n", status);
     return status;
@@ -1079,9 +1118,6 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr
   r = chk->CheckSuperblockIntegrity();
   status |= (status != ZX_OK) ? 0 : r;
 
-  // TODO: check allocated inodes that were abandoned
-  // TODO: check allocated blocks that were not accounted for
-  // TODO: check unallocated inodes where magic != 0
   status |= (status != ZX_OK) ? 0 : (chk->conforming_ ? ZX_OK : ZX_ERR_BAD_STATE);
   if (status != ZX_OK) {
     return status;

@@ -217,7 +217,7 @@ using JournalUnlinkTest = JournalIntegrationFixture<UnlinkEntryOperation>;
 // By cutting the operation in two (without replay), the consistency checker
 // should be able to identify inconsistent link counts between the multiple
 // data structures.
-constexpr uint64_t kUnlinkCutoff = 8 * kDiskBlocksPerFsBlock;
+constexpr uint64_t kUnlinkCutoff = 9 * kDiskBlocksPerFsBlock;
 
 TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
   auto bcache = CutOffDevice(TotalWrites() - kUnlinkCutoff);

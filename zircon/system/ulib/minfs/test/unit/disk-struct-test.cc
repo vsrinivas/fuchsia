@@ -50,7 +50,8 @@ TEST(InspectorDiskStruct, GetSuperblockString) {
 	dat_slices: 0
 	unlinked_head: 0
 	unlinked_tail: 0
-	reserved: uint32_t[2019] = { ... }
+	oldest_revision: 0
+	reserved: uint32_t[2018] = { ... }
 )""";
 
   EXPECT_STR_EQ(disk_struct->ToString(&sb, options).c_str(), output.c_str());

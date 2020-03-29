@@ -407,8 +407,8 @@ class Minfs :
                                        std::unique_ptr<SuperblockManager> sb,
                                        std::unique_ptr<Minfs>* out_minfs);
 
-  // Writes a bit to the superblock identifying that the filesystem is "clean" or not.
-  zx_status_t WriteCleanBit(bool is_clean);
+  // Updates the clean bit and oldest revision in the super block.
+  zx_status_t UpdateCleanBitAndOldestRevision(bool is_clean);
 
 #ifdef __Fuchsia__
   // Terminates all writeback queues, and flushes pending operations to the underlying device.

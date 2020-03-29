@@ -35,6 +35,7 @@ constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
 constexpr uint32_t kMinfsMajorVersion      = 0x00000009;
 constexpr uint32_t kMinfsMinorVersion      = 0x00000000;
+constexpr uint32_t kMinfsRevision       = 0x00000001;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
@@ -69,6 +70,7 @@ constexpr uint32_t MinfsMagic(uint32_t T) { return 0xAA6f6e00 | T; }
 constexpr uint32_t kMinfsMagicDir  = MinfsMagic(kMinfsTypeDir);
 constexpr uint32_t kMinfsMagicFile = MinfsMagic(kMinfsTypeFile);
 constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
+constexpr uint32_t kMinfsMagicPurged = 0xdeaddead;
 
 // Number of blocks allocated to the superblock.
 constexpr blk_t kSuperblockBlocks = 1;
@@ -123,7 +125,12 @@ struct Superblock {
     uint32_t unlinked_head;    // Index to the first unlinked (but open) inode.
     uint32_t unlinked_tail;    // Index to the last unlinked (but open) inode.
 
-    uint32_t reserved[2019];
+    // Records the oldest revision of Minfs code that has touched this volume. It can be used by
+    // fsck to determine what checks should be strict and what should be warnings. This should be
+    // incremented any time there's a change in behaviour that fsck might care about.
+    uint32_t oldest_revision;
+
+    uint32_t reserved[2018];
 };
 
 static_assert(sizeof(Superblock) == kMinfsBlockSize,

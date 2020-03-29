@@ -361,6 +361,7 @@ void DumpInfo(const Superblock* info) {
   FS_TRACE_DEBUG("minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
   FS_TRACE_DEBUG("minfs: checksum:  %10u\n", info->checksum);
   FS_TRACE_DEBUG("minfs: generation count:  %10u\n", info->generation_count);
+  FS_TRACE_DEBUG("minfs: oldest_revision:  %10u\n", info->oldest_revision);
 }
 
 void DumpInode(const Inode* inode, ino_t ino) {
@@ -686,6 +687,8 @@ zx_status_t Minfs::InoFree(PendingWork* transaction, VnodeMinfs* vn) {
     block_count--;
     block_allocator_->Free(transaction, vn->GetInode()->dinum[n]);
   }
+  vn->MarkPurged();
+  InodeUpdate(transaction, vn->GetIno(), vn->GetInode());
 
   ZX_DEBUG_ASSERT(block_count == 0);
   ZX_DEBUG_ASSERT(vn->IsUnlinked());
@@ -814,12 +817,15 @@ zx_status_t Minfs::CreateFsId(uint64_t* out) {
   return ZX_OK;
 }
 
-zx_status_t Minfs::WriteCleanBit(bool is_clean) {
+zx_status_t Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
   std::unique_ptr<Transaction> transaction;
   zx_status_t status = BeginTransaction(0, 0, &transaction);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: failed to %s clean flag: %d\n", is_clean ? "set" : "unset", status);
     return status;
+  }
+  if (kMinfsRevision < Info().oldest_revision) {
+    sb_->MutableInfo()->oldest_revision = kMinfsRevision;
   }
   UpdateFlags(transaction.get(), kMinfsFlagClean, is_clean);
   CommitTransaction(std::move(transaction));
@@ -838,8 +844,7 @@ void Minfs::StopWriteback() {
   }
 
   if (IsReadonly() == false) {
-    bool is_clean = true;
-    WriteCleanBit(is_clean);
+    UpdateCleanBitAndOldestRevision(/*is_clean=*/true);
   }
 
   journal_ = nullptr;
@@ -1185,8 +1190,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
     // may begin receiving modifications.
     //
     // The kMinfsFlagClean flag is reset on orderly shutdown.
-    bool is_clean = false;
-    status = fs->WriteCleanBit(is_clean);
+    status = fs->UpdateCleanBitAndOldestRevision(/*is_clean=*/false);
     if (status != ZX_OK) {
       return status;
     }
@@ -1578,7 +1582,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     info.integrity_start_block = kFvmSuperblockBackup;
     info.dat_block = kFVMBlockDataStart;
   }
-
+  info.oldest_revision = kMinfsRevision;
   DumpInfo(&info);
 
   RawBitmap abm;

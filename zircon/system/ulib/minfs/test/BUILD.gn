@@ -51,6 +51,7 @@ test("minfs-unit") {
     "unit/loader-test.cc",
     "unit/minfs-inspector-test.cc",
     "unit/mkfs-test.cc",
+    "unit/mount-test.cc",
     "unit/parser-test.cc",
     "unit/superblock-test.cc",
     "unit/transaction-test.cc",
