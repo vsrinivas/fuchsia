@@ -14,6 +14,7 @@
 #define X86_CR0_MP 0x00000002               /* monitor coprocessor */
 #define X86_CR0_EM 0x00000004               /* emulation */
 #define X86_CR0_TS 0x00000008               /* task switched */
+#define X86_CR0_ET 0x00000010               /* extension type */
 #define X86_CR0_NE 0x00000020               /* enable x87 exception */
 #define X86_CR0_WP 0x00010000               /* supervisor write protect */
 #define X86_CR0_NW 0x20000000               /* not write-through */

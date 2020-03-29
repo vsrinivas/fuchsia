@@ -220,15 +220,37 @@ FUNCTION vcpu_write_cr0_start
     // Read cr0.
     mov %cr0, %rax
 
-    // Write cr0 and negate the NE bit.
-    and $~X86_CR0_NE, %rax
+    // Copy the initial value into rbx to be checked after exiting to the host.
+    mov %rax, %rbx
+
+    // Toggle NE and CD. These bits are in the guest/host mask.
+    // Note: NW should already be clear, but CD=0 NW=1 is an invalid state.
+    and $~(X86_CR0_CD | X86_CR0_NW), %rax
+    or $X86_CR0_NE, %rax
     mov %rax, %cr0
 
-    // Test cr0 masking. NE bit should be set.
+    // Load cr0 to test masking and shadowing. NE, NW, and CD should be shadowed
+    // and will be checked after exiting back to the host.
     mov %cr0, %rax
 
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_write_cr0_end
+
+// Test writing an invalid value to CR0.
+FUNCTION vcpu_write_invalid_cr0_start
+    init_interrupt_handling vcpu_write_invalid_cr0_start
+
+    // Read cr0.
+    mov %cr0, %rax
+
+    // CD=0 NW=1 is an invalid state.
+    and $~X86_CR0_CD, %rax
+    or $X86_CR0_NW, %rax
+    mov %rax, %cr0
+
+    // The previous instruction should generate a GP.
+    jmp .
+FUNCTION vcpu_write_invalid_cr0_end
 
 // Test 32 bit compatibility mode (long mode disabled).
 FUNCTION vcpu_compat_mode_start

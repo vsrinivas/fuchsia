@@ -507,9 +507,25 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
   }
   vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
 
-  // Ensure that CR0.NE remains set by masking and manually handling writes to CR0 that unset it.
-  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_NE);
-  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_NE);
+  // From Volume 3, Section 27.5.1: The following bits are not modified: For
+  // CR0, ET, CD, NW; [the reserved bits], and any bits that are fixed in VMX
+  // operation.
+  //
+  // Any bit that is not restored must be masked, or the guest will be able to
+  // affect the host's cr0. However, we do not need to mask:
+  //   * The reserved bits, which will generate GP faults;
+  //   * ET, which is fixed to 1 (Volume 3 Section 2.5);
+  //   * The bits that are fixed in VMX operation aside from PE and PG for
+  //     unrestricted guests, which will generate GP faults (Volume 3 Section
+  //     25.3);
+  //
+  // Additionally, NE is fixed in VMX operation but some guests will attempt to
+  // clear it without handling the GP fault. So it should also be masked.
+  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_NE | X86_CR0_NW | X86_CR0_CD);
+
+  // From Volume 3, Section 9.1.1: Following power-up, The state of control register CR0 is
+  // 60000010H (CD and ET are set.)
+  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_CD | X86_CR0_ET);
 
   uint64_t cr4 = X86_CR4_VMXE;  // Enable VMX
   if (vpid == kBaseProcessorVpid) {

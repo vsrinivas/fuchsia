@@ -338,15 +338,48 @@ static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
   return local_apic_state->interrupt_tracker.Wait(ZX_TIME_INFINITE, vmcs);
 }
 
-static zx_status_t handle_cr0_write(AutoVmcs* vmcs, GuestState* guest_state, uint64_t val) {
-  // Ensure that CR0.NE is set since it is set in X86_MSR_IA32_VMX_CR0_FIXED1.
+static zx_status_t handle_cr0_write(AutoVmcs* vmcs, GuestState* guest_state, uint64_t val,
+                                    LocalApicState* local_apic_state) {
+  // X86_CR0_NE is masked so that guests may write to it, but depending on
+  // IA32_VMX_CR0_FIXED0 it might be unsupported in VMX operation to set it to
+  // zero. Allow the guest to control its value in CR0_READ_SHADOW but not in
+  // GUEST_CR0 so that GUEST_CR0 stays valid.
   uint64_t cr0 = val | X86_CR0_NE;
   if (cr0_is_invalid(vmcs, cr0)) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // From Volume 3, Table 11-5: CD=0 and NW=1 is an invalid setting and should
+  // generate a GP fault.
+  if (!(val & X86_CR0_CD) && (val & X86_CR0_NW)) {
+    local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+    return ZX_OK;
+  }
+
+  // From Volume 3, Section 26.3.2.1: CR0 is loaded from the CR0 field with the
+  // exception of the following bits, which are never modified on VM entry: ET
+  // (bit 4); reserved bits ...; NW (bit 29) and CD (bit 30). The values of
+  // these bits in the CR0 field are ignored.
+  //
+  // Even though these bits will be ignored on VM entry, to ensure that
+  // GUEST_CR0 matches the actual value of CR0 while the guest is running set
+  // those bits to match the host values. This is done only to make debugging
+  // simpler.
+  cr0 &= ~(X86_CR0_NW | X86_CR0_CD);
+  cr0 |= X86_CR0_ET;
   vmcs->Write(VmcsFieldXX::GUEST_CR0, cr0);
-  // From Volume 3, Section 26.3.1.1: If CR0.PG and EFER.LME are set then EFER.LMA and the IA-32e
-  // mode guest entry control must also be set.
+
+  // From Volume 3, Section 25.3: For each position corresponding to a bit clear
+  // in the CR0 guest/host mask, the destination operand is loaded with the
+  // value of the corresponding bit in CR0. For each position corresponding to a
+  // bit set in the CR0 guest/host mask, the destination operand is loaded with
+  // the value of the corresponding bit in the CR0 read shadow.
+  //
+  // Allow the guest to control the shadow.
+  vmcs->Write(VmcsFieldXX::CR0_READ_SHADOW, val);
+
+  // From Volume 3, Section 26.3.1.1: If CR0.PG and EFER.LME are set then
+  // EFER.LMA and the IA-32e mode guest entry control must also be set.
   uint64_t efer = vmcs->Read(VmcsField64::GUEST_IA32_EFER);
   if (!(efer & X86_EFER_LME && cr0 & X86_CR0_PG)) {
     return ZX_OK;
@@ -414,7 +447,8 @@ static zx_status_t register_value(AutoVmcs* vmcs, GuestState* guest_state, uint8
 }
 
 static zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                                  GuestState* guest_state) {
+                                                  GuestState* guest_state,
+                                                  LocalApicState* local_apic_state) {
   CrAccessInfo cr_access_info(exit_info.exit_qualification);
   switch (cr_access_info.access_type) {
     case CrAccessType::MOV_TO_CR: {
@@ -427,7 +461,7 @@ static zx_status_t handle_control_register_access(const ExitInfo& exit_info, Aut
       if (status != ZX_OK) {
         return status;
       }
-      status = handle_cr0_write(vmcs, guest_state, val);
+      status = handle_cr0_write(vmcs, guest_state, val, local_apic_state);
       if (status != ZX_OK) {
         return status;
       }
@@ -1077,7 +1111,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       LTRACEF("handling control-register access\n\n");
       ktrace_vcpu_exit(VCPU_CONTROL_REGISTER_ACCESS, exit_info.guest_rip);
       GUEST_STATS_INC(control_register_accesses);
-      status = handle_control_register_access(exit_info, vmcs, guest_state);
+      status = handle_control_register_access(exit_info, vmcs, guest_state, local_apic_state);
       break;
     case ExitReason::IO_INSTRUCTION:
       ktrace_vcpu_exit(VCPU_IO_INSTRUCTION, exit_info.guest_rip);

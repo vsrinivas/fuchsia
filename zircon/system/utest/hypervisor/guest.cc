@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <threads.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -17,13 +13,17 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vcpu.h>
 #include <lib/zx/vmar.h>
-#include <unittest/unittest.h>
+#include <threads.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
 #include <string>
+
+#include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
 
 #include "constants_priv.h"
 
@@ -37,6 +37,7 @@ static const std::string kSysInfoPath = "/svc/" + std::string(fuchsia_sysinfo_Sy
 
 #ifdef __x86_64__
 static constexpr uint32_t kNmiVector = 2u;
+static constexpr uint32_t kGpFaultVector = 13u;
 static constexpr uint32_t kExceptionVector = 16u;
 #endif
 
@@ -59,6 +60,7 @@ DECLARE_TEST_FUNCTION(vcpu_aarch32_fp)
 DECLARE_TEST_FUNCTION(vcpu_hlt)
 DECLARE_TEST_FUNCTION(vcpu_pause)
 DECLARE_TEST_FUNCTION(vcpu_write_cr0)
+DECLARE_TEST_FUNCTION(vcpu_write_invalid_cr0)
 DECLARE_TEST_FUNCTION(vcpu_compat_mode)
 DECLARE_TEST_FUNCTION(vcpu_syscall)
 DECLARE_TEST_FUNCTION(vcpu_sysenter)
@@ -860,8 +862,35 @@ static bool vcpu_write_cr0() {
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
-  // Check that cr0 has the NE bit set when read.
-  EXPECT_TRUE(vcpu_state.rax & X86_CR0_NE);
+
+  // Check that the initial value of cr0, which was read into rbx, has the
+  // correct initial values for the bits in the guest/host mask.
+  EXPECT_EQ(vcpu_state.rbx & (X86_CR0_NE | X86_CR0_NW | X86_CR0_CD), X86_CR0_CD);
+
+  // Check that the updated value of cr0, which was read into rax, correctly shadows the values in
+  // the guest/host mask.
+  EXPECT_EQ(vcpu_state.rax & (X86_CR0_NE | X86_CR0_CD), X86_CR0_NE);
+
+  END_TEST;
+}
+
+static bool vcpu_write_invalid_cr0() {
+  BEGIN_TEST;
+
+  test_t test;
+  ASSERT_TRUE(setup(&test, vcpu_write_invalid_cr0_start, vcpu_write_invalid_cr0_end));
+  if (!test.supported) {
+    // The hypervisor isn't supported, so don't run the test.
+    return true;
+  }
+
+  test.interrupts_enabled = true;
+
+  ASSERT_TRUE(resume_and_clean_exit(&test));
+
+  zx_vcpu_state_t vcpu_state;
+  ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+  EXPECT_EQ(vcpu_state.rax, kGpFaultVector);
 
   END_TEST;
 }
@@ -1079,6 +1108,7 @@ RUN_TEST(vcpu_exception)
 RUN_TEST(vcpu_hlt)
 RUN_TEST(vcpu_pause)
 RUN_TEST(vcpu_write_cr0)
+RUN_TEST(vcpu_write_invalid_cr0)
 RUN_TEST(vcpu_compat_mode)
 RUN_TEST(vcpu_syscall)
 RUN_TEST(vcpu_sysenter)
