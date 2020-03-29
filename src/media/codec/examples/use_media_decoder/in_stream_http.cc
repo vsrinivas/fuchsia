@@ -6,6 +6,7 @@
 
 #include <lib/media/test/one_shot_event.h>
 #include <lib/zx/time.h>
+#include <stdio.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -14,8 +15,6 @@
 
 #include "src/lib/fxl/logging.h"
 #include "util.h"
-
-#include <stdio.h>
 
 InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
                            sys::ComponentContext* component_context, std::string url)
@@ -31,12 +30,12 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
 
   fuchsia::net::http::Request http_request{};
   // url_ is already UTF-8
-  http_request.set_url(std::vector<uint8_t>(url_.begin(), url_.end()));
+  http_request.set_url(url_);
 
   fuchsia::net::http::Response http_response{};
   OneShotEvent have_response_event;
   http_loader_->Fetch(std::move(http_request), [&http_response, &have_response_event](
-      fuchsia::net::http::Response response_param){
+                                                   fuchsia::net::http::Response response_param) {
     http_response = std::move(response_param);
     have_response_event.Signal();
   });
@@ -55,7 +54,7 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
       // client impl that deals with de-chunking before we see the data. For now
       // we rely on the http server to not generate chunked encoding.
       ZX_ASSERT(!(std::string(header.name.begin(), header.name.end()) == "transfer-encoding" &&
-                std::string(header.value.begin(), header.value.end()) == "chunked"));
+                  std::string(header.value.begin(), header.value.end()) == "chunked"));
     }
   }
 

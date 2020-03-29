@@ -95,14 +95,14 @@ async fn to_success_response(
     let response = net_http::Response {
         error: None,
         body: Some(rx),
-        final_url: Some(current_url.to_string().as_bytes().to_vec()),
+        final_url: Some(current_url.to_string()),
         status_code: Some(hyper_response.status().as_u16() as u32),
         status_line: Some(to_status_line(hyper_response.version(), hyper_response.status())),
         headers: Some(headers),
         redirect: redirect_info.map(|info| net_http::RedirectTarget {
             method: Some(info.method.to_string()),
-            url: info.url.map(|u| u.to_string().as_bytes().to_vec()),
-            referrer: info.referrer.map(|r| r.to_string().as_bytes().to_vec()),
+            url: info.url.map(|u| u.to_string()),
+            referrer: info.referrer.map(|r| r.to_string()),
         }),
     };
 
@@ -186,8 +186,12 @@ impl Loader {
     async fn new(req: net_http::Request) -> Result<Self, Error> {
         let method =
             hyper::Method::from_bytes(req.method.unwrap_or_else(|| "GET".to_string()).as_bytes())?;
-        if let Some(url) = req.url.or(req.url_as_bytes) {
-            let url = hyper::Uri::try_from(String::from_utf8(url)?)?;
+        let mut request_url = req.url;
+        if let Some(url_as_bytes) = req.url_as_bytes {
+            request_url = Some(String::from_utf8(url_as_bytes)?)
+        }
+        if let Some(url) = request_url {
+            let url = hyper::Uri::try_from(url)?;
             let mut headers = hyper::HeaderMap::new();
             if let Some(h) = req.headers {
                 for header in &h {
@@ -362,8 +366,8 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
                                 request
                                     .url
                                     .as_ref()
-                                    .and_then(|url| String::from_utf8(url.to_vec()).ok())
-                                    .unwrap_or_else(|| String::new()),
+                                    .and_then(|url| Some(url.as_str()))
+                                    .unwrap_or_default(),
                                 request
                             );
                             let result = Loader::new(request).await?.fetch(MAX_REDIRECTS).await?;
@@ -381,8 +385,8 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
                                 request
                                     .url
                                     .as_ref()
-                                    .and_then(|url| String::from_utf8(url.to_vec()).ok())
-                                    .unwrap_or_else(|| String::new()),
+                                    .and_then(|url| Some(url.as_str()))
+                                    .unwrap_or_default(),
                                 request
                             );
                             Loader::new(request).await?.start(client.into_proxy()?).await?;
