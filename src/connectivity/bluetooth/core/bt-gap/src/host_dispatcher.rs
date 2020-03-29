@@ -806,7 +806,8 @@ impl HostDispatcher {
         self.state.write().add_host(id.clone(), host_device.clone());
 
         // Forward host inspect VMO to channel.
-        let inspect_buf = host_device.read().get_inspect_vmo().await;
+        let fut = host_device.read().get_inspect_vmo();
+        let inspect_buf = fut.await;
         match inspect_buf {
             Ok(buffer) => {
                 self.state
