@@ -5,7 +5,6 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_FOCUS_A11Y_FOCUS_MANAGER_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_FOCUS_A11Y_FOCUS_MANAGER_H_
 
-//#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
 #include <unordered_map>

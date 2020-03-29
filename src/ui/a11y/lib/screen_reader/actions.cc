@@ -41,6 +41,20 @@ void ScreenReaderAction::ExecuteHitTesting(
   tree_weak_ptr->PerformHitTesting(process_data.local_point, std::move(callback));
 }
 
+fit::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
+                                                       zx_koid_t view_koid) {
+  fit::bridge<> bridge;
+  auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
+  a11y_focus_manager->SetA11yFocus(view_koid, node_id,
+                                   [completer = std::move(bridge.completer)](bool success) mutable {
+                                     if (!success) {
+                                       return completer.complete_error();
+                                     }
+                                     completer.complete_ok();
+                                   });
+  return bridge.consumer.promise_or(fit::error());
+}
+
 fit::promise<> ScreenReaderAction::EnqueueUtterancePromise(Utterance utterance) {
   fit::bridge<> bridge;
   action_context_->tts_engine_ptr->Enqueue(

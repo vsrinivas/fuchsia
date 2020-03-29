@@ -52,6 +52,10 @@ class ScreenReaderAction {
       ActionContext* context, ActionData process_data,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
+  // Returns a promise that sets a new A11y Focus. If the operation is not successful, throws an
+  // error.
+  fit::promise<> SetA11yFocusPromise(const uint32_t node_id, zx_koid_t view_koid);
+
   // Returns a promise that from a node_id and view_koid, builds an utterance to be spoken. An error
   // is thrown if the semantic tree or the semantic node are missing data necessary to build an
   // utterance.

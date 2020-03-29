@@ -16,10 +16,10 @@
 namespace a11y {
 namespace {
 using fuchsia::accessibility::semantics::Hit;
-using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::tts::Utterance;
 
 }  // namespace
+
 ExploreAction::ExploreAction(ActionContext* context, ScreenReaderContext* screen_reader_context)
     : ScreenReaderAction(context, screen_reader_context) {}
 ExploreAction::~ExploreAction() = default;
@@ -29,7 +29,7 @@ fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const ActionData& proc
   ExecuteHitTesting(action_context_, process_data,
                     [completer = std::move(bridge.completer)](Hit hit) mutable {
                       if (!hit.has_node_id()) {
-                        completer.complete_error();
+                        return completer.complete_error();
                       }
                       completer.complete_ok(std::move(hit));
                     });
@@ -41,7 +41,18 @@ void ExploreAction::Run(ActionData process_data) {
   auto promise =
       ExecuteHitTestingPromise(process_data)
           .and_then([this, view_koid = process_data.current_view_koid](Hit& hit) mutable {
-            return BuildUtteranceFromNodePromise(view_koid, hit.node_id());
+            return SetA11yFocusPromise(hit.node_id(), view_koid);
+          })
+          .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
+            auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
+            auto focus = a11y_focus_manager->GetA11yFocus();
+            if (!focus) {
+              return fit::error();
+            }
+            return fit::ok(std::move(*focus));
+          })
+          .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
+            return BuildUtteranceFromNodePromise(focus.view_ref_koid, focus.node_id);
           })
           .and_then([this](Utterance& utterance) mutable {
             return EnqueueUtterancePromise(std::move(utterance));

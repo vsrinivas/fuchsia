@@ -13,7 +13,9 @@ void MockSemanticListener::Bind(
   semantic_listener_bindings_.AddBinding(this, listener->NewRequest());
 }
 
-void MockSemanticListener::SetHitTestResult(int node_id) { hit_test_node_id_ = node_id; }
+void MockSemanticListener::SetHitTestResult(std::optional<uint32_t> node_id) {
+  hit_test_node_id_ = node_id;
+}
 
 void MockSemanticListener::OnAccessibilityActionRequested(
     uint32_t node_id, fuchsia::accessibility::semantics::Action action,
@@ -27,8 +29,10 @@ void MockSemanticListener::OnAccessibilityActionRequested(
 
 void MockSemanticListener::HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) {
   fuchsia::accessibility::semantics::Hit hit;
-  hit.set_node_id(hit_test_node_id_);
-  hit.mutable_path_from_root()->push_back(hit_test_node_id_);
+  if (hit_test_node_id_) {
+    hit.set_node_id(*hit_test_node_id_);
+    hit.mutable_path_from_root()->push_back(*hit_test_node_id_);
+  }
   callback(std::move(hit));
 }
 

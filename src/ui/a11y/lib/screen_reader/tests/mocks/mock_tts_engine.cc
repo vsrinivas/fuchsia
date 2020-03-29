@@ -6,20 +6,28 @@
 
 namespace accessibility_test {
 
-MockTtsEngine::MockTtsEngine() {}
+MockTtsEngine::MockTtsEngine() = default;
 
 void MockTtsEngine::Enqueue(fuchsia::accessibility::tts::Utterance utterance,
                             EnqueueCallback callback) {
-  utterances_.push_back(std::move(utterance));
   fuchsia::accessibility::tts::Engine_Enqueue_Result result;
-  result.set_response(fuchsia::accessibility::tts::Engine_Enqueue_Response{});
+  if (should_fail_enqueue_) {
+    result.set_err(fuchsia::accessibility::tts::Error::BAD_STATE);
+  } else {
+    result.set_response(fuchsia::accessibility::tts::Engine_Enqueue_Response{});
+    utterances_.push_back(std::move(utterance));
+  }
   callback(std::move(result));
 }
 
 void MockTtsEngine::Speak(SpeakCallback callback) {
-  received_speak_ = true;
   fuchsia::accessibility::tts::Engine_Speak_Result result;
-  result.set_response(fuchsia::accessibility::tts::Engine_Speak_Response{});
+  if (should_fail_speak_) {
+    result.set_err(fuchsia::accessibility::tts::Error::BAD_STATE);
+  } else {
+    result.set_response(fuchsia::accessibility::tts::Engine_Speak_Response{});
+    received_speak_ = true;
+  }
   callback(std::move(result));
 }
 

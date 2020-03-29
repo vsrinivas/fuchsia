@@ -27,14 +27,22 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   // Returns true if IsSetA11yFocusCalled was called.
   bool IsSetA11yFocusCalled() const;
 
+  void set_should_get_a11y_focus_fail(bool value);
+  void set_should_set_a11y_focus_fail(bool value);
+
  private:
   // Tracks if GetA11yFocus() is called.
   bool get_a11y_focus_called_ = false;
 
   // Tracks if SetA11yFocus() is called.
-  bool set_a11y_focus_called_ = true;
+  bool set_a11y_focus_called_ = false;
 
-  // Stores the A11yFocusInfo which was sent in SetA11yFocusInfo.
+  // Whether GetA11yFocus() call should fail.
+  bool should_get_a11y_focus_fail_ = false;
+
+  // Whether SetA11yFocus() call should fail.
+  bool should_set_a11y_focus_fail_ = false;
+
   a11y::A11yFocusManager::A11yFocusInfo a11y_focus_info_;
 };
 }  // namespace accessibility_test

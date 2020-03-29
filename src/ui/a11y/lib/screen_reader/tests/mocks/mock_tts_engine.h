@@ -33,6 +33,9 @@ class MockTtsEngine : public fuchsia::accessibility::tts::Engine {
   // Returns true if a call to Speak() was made to this object. False otherwise.
   bool ReceivedSpeak() const { return received_speak_; }
 
+  void set_should_fail_speak(bool value) { should_fail_speak_ = value; }
+  void set_should_fail_enqueue(bool value) { should_fail_enqueue_ = value; }
+
  private:
   // |fuchsia.accessibility.tts.Engine|
   void Enqueue(fuchsia::accessibility::tts::Utterance utterance, EnqueueCallback callback) override;
@@ -51,6 +54,11 @@ class MockTtsEngine : public fuchsia::accessibility::tts::Engine {
   bool received_cancel_ = false;
   // Whether a Speak() call was made.
   bool received_speak_ = false;
+
+  // Whether calls to Enqueue() will fail.
+  bool should_fail_enqueue_ = false;
+  // Whether calls to Speak() will fail.
+  bool should_fail_speak_ = false;
 };
 
 }  // namespace accessibility_test

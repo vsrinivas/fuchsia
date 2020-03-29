@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <cstdint>
+#include <optional>
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
@@ -40,8 +41,9 @@ class MockSemanticProvider {
   // Calls Commit() Updates.
   void CommitUpdates();
 
-  // Sets hit_test_result in MockSemanticListener.
-  void SetHitTestResult(uint32_t hit_test_result);
+  // Sets hit_test_result in MockSemanticListener. If no value is passed, the hit test will return
+  // an empty hit test. Used to simulate errors.
+  void SetHitTestResult(std::optional<uint32_t> hit_test_result);
 
   // Returns Commit Failed status.
   bool CommitFailedStatus() const { return commit_failed_; };

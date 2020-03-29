@@ -49,9 +49,10 @@ void MockSemanticProvider::CommitUpdates() {
   tree_ptr_->CommitUpdates([this]() { commit_failed_ = true; });
 }
 
-void MockSemanticProvider::SetHitTestResult(uint32_t hit_test_result) {
+void MockSemanticProvider::SetHitTestResult(std::optional<uint32_t> hit_test_result) {
   semantic_listener_.SetHitTestResult(hit_test_result);
 }
+
 bool MockSemanticProvider::GetSemanticsEnabled() {
   return semantic_listener_.GetSemanticsEnabled();
 }
