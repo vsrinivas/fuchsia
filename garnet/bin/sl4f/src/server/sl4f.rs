@@ -37,6 +37,9 @@ use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
 use crate::common_utils::error::Sl4fError;
 
+// Device related includes
+use crate::device::facade::DeviceFacade;
+
 // Factory related includes
 use crate::factory_store::facade::FactoryStoreFacade;
 
@@ -128,6 +131,7 @@ impl Sl4f {
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),
+                "device_facade" => DeviceFacade::new(),
                 "factory_store_facade" => FactoryStoreFacade::new(),
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),

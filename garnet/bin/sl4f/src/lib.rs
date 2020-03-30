@@ -12,6 +12,7 @@ pub mod basemgr;
 pub mod bluetooth;
 pub mod camera_factory;
 pub mod common_utils;
+pub mod device;
 pub mod factory_store;
 pub mod file;
 pub mod hardware_power_statecontrol;
