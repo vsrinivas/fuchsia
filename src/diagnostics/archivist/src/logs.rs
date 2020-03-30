@@ -14,11 +14,12 @@ use futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt};
 use std::sync::Arc;
 
 mod buffer;
-mod klogger;
+mod debuglog;
 mod listener;
 mod logger;
 mod stats;
 
+pub use debuglog::KernelDebugLog;
 use listener::{pool::Pool, Listener};
 use stats::LogSource;
 
@@ -53,10 +54,11 @@ impl LogManager {
 
     /// Spawn a task to read from the kernel's debuglog. The returned future completes once existing
     /// messages have been ingested.
-    pub async fn spawn_klog_drainer(&self) -> Result<(), Error> {
-        let mut kernel_logger =
-            klogger::KernelLogger::create().context("creating kernel debuglog bridge")?;
-
+    pub async fn spawn_debuglog_drainer<K>(&self, klog_reader: K) -> Result<(), Error>
+    where
+        K: debuglog::DebugLog + Send + Sync + 'static,
+    {
+        let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
         for (log_msg, size) in
             kernel_logger.existing_logs().context("reading from kernel log iterator")?
         {
@@ -189,6 +191,7 @@ impl LogManager {
 mod tests {
     use {
         super::*,
+        crate::logs::debuglog::tests::{TestDebugEntry, TestDebugLog},
         crate::logs::logger::fx_log_packet_t,
         fidl_fuchsia_logger::{
             LogFilterOptions, LogLevelFilter, LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
@@ -418,6 +421,67 @@ mod tests {
             .await;
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_debuglog_drainer() {
+        let log1 = TestDebugEntry::new("log1".as_bytes());
+        let log2 = TestDebugEntry::new("log2".as_bytes());
+        let log3 = TestDebugEntry::new("log3".as_bytes());
+
+        let klog_reader = TestDebugLog::new();
+        klog_reader.enqueue_read_entry(&log1);
+        klog_reader.enqueue_read_entry(&log2);
+        // logs recieved after kernel indicates no logs should be read
+        klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT);
+        klog_reader.enqueue_read_entry(&log3);
+        klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT);
+
+        let expected_logs = vec![
+            LogMessage {
+                pid: log1.pid,
+                tid: log1.tid,
+                time: log1.timestamp,
+                dropped_logs: 0,
+                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                msg: String::from("log1"),
+                tags: vec![String::from("klog")],
+            },
+            LogMessage {
+                pid: log2.pid,
+                tid: log2.tid,
+                time: log2.timestamp,
+                dropped_logs: 0,
+                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                msg: String::from("log2"),
+                tags: vec![String::from("klog")],
+            },
+            LogMessage {
+                pid: log3.pid,
+                tid: log3.tid,
+                time: log3.timestamp,
+                dropped_logs: 0,
+                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                msg: String::from("log3"),
+                tags: vec![String::from("klog")],
+            },
+        ]
+        .into_iter()
+        .collect();
+        assert_inspect_tree!(
+        debuglog_test(expected_logs, klog_reader).await,
+        root: {
+            log_stats: contains {
+                total_logs: 3u64,
+                kernel_logs: 3u64,
+                logsink_logs: 0u64,
+                verbose_logs: 0u64,
+                info_logs: 3u64,
+                warning_logs: 0u64,
+                error_logs: 0u64,
+                fatal_logs: 0u64,
+            }
+        });
+    }
+
     struct TestHarness {
         log_proxy: LogProxy,
         sin: zx::Socket,
@@ -497,6 +561,30 @@ mod tests {
                 validate_log_stream(vec![lm1, lm2, lm3], self.log_proxy, None).await;
             }
         }
+    }
+
+    /// Run a test on logs from klog, returning the inspector object.
+    async fn debuglog_test(
+        expected: HashSet<LogMessage>,
+        debug_log: TestDebugLog,
+    ) -> inspect::Inspector {
+        let inspector = inspect::Inspector::new();
+        let node = inspector.root().create_child("log_stats");
+        let buffer_node = node.create_child("buffer_stats");
+        let inner = Arc::new(Mutex::new(ManagerInner {
+            listeners: Pool::default(),
+            log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE, buffer_node),
+            stats: stats::LogManagerStats::new(node),
+        }));
+
+        let lm = LogManager { inner };
+        let (log_proxy, log_stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
+        lm.spawn_log_handler(log_stream);
+        lm.spawn_debuglog_drainer(debug_log).await.unwrap();
+
+        validate_log_stream(expected, log_proxy, None).await;
+        inspector
     }
 
     fn setup_default_packet() -> fx_log_packet_t {

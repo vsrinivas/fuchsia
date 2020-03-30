@@ -64,7 +64,9 @@ fn main() -> Result<(), Error> {
 
     if !opt.disable_klog {
         let log_manager = log_manager.clone();
-        executor.run(async move { log_manager.spawn_klog_drainer().await }, num_threads)?;
+        let debug_log = logs::KernelDebugLog::new().context("Failed to read kernel logs")?;
+        executor
+            .run(async move { log_manager.spawn_debuglog_drainer(debug_log).await }, num_threads)?;
     }
 
     let writer = if let Some(archive_path) = &archivist_configuration.archive_path {
