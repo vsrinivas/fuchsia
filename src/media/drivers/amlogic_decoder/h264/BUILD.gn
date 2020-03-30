@@ -28,7 +28,7 @@ source_set("h264_parser") {
     "media/video/h264_poc.cc",
     "media/video/h264_poc.h",
   ]
-  deps = [
+  public_deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",

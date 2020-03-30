@@ -125,7 +125,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void GateParserClock();
 
   [[nodiscard]] zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
-                                                 uint32_t* written_out = nullptr);
+                                                 uint32_t* written_out = nullptr) override;
 
   [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset);
 

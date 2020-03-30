@@ -182,6 +182,7 @@ if (target_cpu == "arm64") {
       "//third_party/googletest:gtest",
     ]
     sources = [
+      "tests/integration/h264_utils.cc",
       "tests/integration/test_h264.cc",
       "tests/integration/test_h264_multi.cc",
       "tests/integration/test_mpeg2.cc",

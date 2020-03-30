@@ -8,14 +8,105 @@
 
 #include <cmath>
 
+#include "media/base/decoder_buffer.h"
+#include "media/gpu/h264_decoder.h"
 #include "registers.h"
 #include "util.h"
+
+namespace {
+// See VLD_PADDING_SIZE.
+constexpr uint32_t kPaddingSize = 1024;
+const uint8_t kPadding[kPaddingSize] = {};
+}  // namespace
+
+class AmlogicH264Picture : public media::H264Picture {
+ public:
+  explicit AmlogicH264Picture(std::shared_ptr<H264MultiDecoder::ReferenceFrame> pic)
+      : internal_picture(pic) {}
+  std::weak_ptr<H264MultiDecoder::ReferenceFrame> internal_picture;
+};
+class MultiAccelerator : public media::H264Decoder::H264Accelerator {
+ public:
+  explicit MultiAccelerator(H264MultiDecoder* owner) : owner_(owner) {}
+
+  scoped_refptr<media::H264Picture> CreateH264Picture() override {
+    DLOG("Got MultiAccelerator::CreateH264Picture");
+    auto pic = owner_->GetUnusedReferenceFrame();
+    if (!pic)
+      return nullptr;
+    return std::make_shared<AmlogicH264Picture>(pic);
+  }
+
+  Status SubmitFrameMetadata(const media::H264SPS* sps, const media::H264PPS* pps,
+                             const media::H264DPB& dpb,
+                             const media::H264Picture::Vector& ref_pic_listp0,
+                             const media::H264Picture::Vector& ref_pic_listb0,
+                             const media::H264Picture::Vector& ref_pic_listb1,
+                             scoped_refptr<media::H264Picture> pic) override {
+    DLOG("Got MultiAccelerator::SubmitFrameMetadata");
+    // Only allow decoding one frame at a time. The received picture interrupt will set this to
+    // false and trigger PumpDecoder again.
+    if (owner_->currently_decoding())
+      return Status::kTryAgain;
+    auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
+    if (!ref_pic)
+      return Status::kFail;
+    owner_->SubmitFrameMetadata(ref_pic.get(), sps, pps, dpb);
+    return Status::kOk;
+  }
+
+  Status SubmitSlice(const media::H264PPS* pps, const media::H264SliceHeader* slice_hdr,
+                     const media::H264Picture::Vector& ref_pic_list0,
+                     const media::H264Picture::Vector& ref_pic_list1,
+                     scoped_refptr<media::H264Picture> pic, const uint8_t* data, size_t size,
+                     const std::vector<media::SubsampleEntry>& subsamples) override {
+    if (owner_->currently_decoding())
+      return Status::kTryAgain;
+    DLOG("Got MultiAccelerator::SubmitSlice");
+    // The slice data was already submitted to the hardware in PumpDecoder, because the hardware
+    // needs the SPS and PPS as well and they're not available elsewhere. So this code doesn't need
+    // to do anything.
+    return Status::kOk;
+  }
+
+  Status SubmitDecode(scoped_refptr<media::H264Picture> pic) override {
+    if (owner_->currently_decoding())
+      return Status::kTryAgain;
+    auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
+    if (!ref_pic)
+      return Status::kFail;
+    DLOG("Got MultiAccelerator::SubmitDecode picture %d", ref_pic->index);
+    owner_->SubmitDataToHardware(kPadding, kPaddingSize);
+    owner_->StartFrameDecode();
+    return Status::kOk;
+  }
+
+  bool OutputPicture(scoped_refptr<media::H264Picture> pic) override {
+    auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
+    if (!ref_pic)
+      return false;
+    DLOG("Got MultiAccelerator::OutputPicture picture %d", ref_pic->index);
+    owner_->OutputFrame(ref_pic.get());
+    return true;
+  }
+
+  void Reset() override {}
+
+  Status SetStream(base::span<const uint8_t> stream,
+                   const media::DecryptConfig* decrypt_config) override {
+    return Status::kOk;
+  }
+
+ private:
+  H264MultiDecoder* owner_;
+};
 
 using InitFlagReg = AvScratch2;
 using HeadPaddingReg = AvScratch3;
 using H264DecodeModeReg = AvScratch4;
 using H264DecodeSeqInfo = AvScratch5;
 using NalSearchCtl = AvScratch9;
+using ErrorStatusReg = AvScratch9;
 using H264AuxAddr = AvScratchC;
 using H264DecodeSizeReg = AvScratchE;
 using H264AuxDataSize = AvScratchH;
@@ -112,7 +203,10 @@ enum H264Status {
 };
 
 H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client)
-    : VideoDecoder(owner, client, /*is_secure=*/false) {}
+    : VideoDecoder(owner, client, /*is_secure=*/false) {
+  media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
+                                                        media::H264PROFILE_HIGH);
+}
 
 H264MultiDecoder::~H264MultiDecoder() {
   if (owner_->IsDecoderCurrent(this)) {
@@ -238,6 +332,7 @@ void H264MultiDecoder::ResetHardware() {
 }
 
 zx_status_t H264MultiDecoder::InitializeHardware() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   if (is_secure()) {
     DECODE_ERROR("is_secure() == true not yet supported by H264MultiDecoder");
     return ZX_ERR_NOT_SUPPORTED;
@@ -310,7 +405,7 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
   DebugReg2::Get().FromValue(0).WriteTo(owner_->dosbus());
   H264DecodeInfo::Get().FromValue(1 << 13).WriteTo(owner_->dosbus());
   // TODO(fxb/13483): Use real values.
-  constexpr uint32_t kBytesToDecode = 2000;
+  constexpr uint32_t kBytesToDecode = 20000;
   H264DecodeSizeReg::Get().FromValue(kBytesToDecode).WriteTo(owner_->dosbus());
   ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
 
@@ -326,63 +421,34 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
 
   // TODO(fxb/13483): Set to 1 when SEI is supported.
   NalSearchCtl::Get().FromValue(0).WriteTo(owner_->dosbus());
+  state_ = DecoderState::kInitialWaitingForInput;
   return ZX_OK;
 }
 
-void H264MultiDecoder::UpdateDecodeSize() {
+void H264MultiDecoder::StartFrameDecode() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kInitialWaitingForInput ||
+                  state_ == DecoderState::kStoppedWaitingForInput);
+  currently_decoding_ = true;
+
   // For now, just use the decode size from InitializeHardware.
-  owner_->core()->StartDecoding();
+  if (state_ == DecoderState::kInitialWaitingForInput) {
+    owner_->core()->StartDecoding();
+  }
   DpbStatusReg::Get().FromValue(kH264ActionSearchHead).WriteTo(owner_->dosbus());
+  state_ = DecoderState::kRunning;
 }
 
 void H264MultiDecoder::ConfigureDpb() {
-  // StreamInfo AKA AvScratch1.
-  auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
-  // SequenceInfo AKA AvScratch2.
-  auto sequence_info = SequenceInfo::Get().ReadFrom(owner_->dosbus());
-  uint32_t mb_width = stream_info.width_in_mbs();
-  if (!mb_width && stream_info.total_mbs())
-    mb_width = 256;
-  if (!mb_width) {
-    // Not returning ZX_ERR_IO_DATA_INTEGRITY, because this isn't an explicit
-    // integrity check.
-    return;
+  for (auto& frame : video_frames_) {
+    AncNCanvasAddr::Get(frame->index)
+        .FromValue((frame->uv_canvas->index() << 16) | (frame->uv_canvas->index() << 8) |
+                   (frame->y_canvas->index()))
+        .WriteTo(owner_->dosbus());
   }
-  uint32_t mb_height = stream_info.total_mbs() / mb_width;
-  DLOG("Got width: %d height: %d, mbs_only %d info: %x\n", mb_width, mb_height,
-       sequence_info.frame_mbs_only_flag(), stream_info.reg_value());
-  auto info2 = StreamInfo2::Get().ReadFrom(owner_->dosbus());
-  DLOG("Size: %d bits: %d\n", H264DecodeSizeReg::Get().ReadFrom(owner_->dosbus()).reg_value(),
-       ViffBitCnt::Get().ReadFrom(owner_->dosbus()).reg_value());
-
-  constexpr uint32_t kReferenceBufMargin = 4;
-  next_max_reference_size_ = info2.max_reference_size() + kReferenceBufMargin;
-  zx::bti bti;
-  zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
-  if (status != ZX_OK) {
-    DECODE_ERROR("bti duplicate failed, status: %d\n", status);
-    return;
-  }
-  constexpr uint32_t kMacroblockSize = 16;
-  // TODO(fxb/13483): Calculate real values, taking into account more sequence
-  // info.
-  NalSearchCtl::Get().FromValue(0).WriteTo(owner_->dosbus());
-  display_width_ = mb_width * kMacroblockSize;
-  display_height_ = mb_width * kMacroblockSize;
-  uint32_t min_frame_count = 22;
-  uint32_t max_frame_count = 24;
-  uint32_t coded_width = mb_width * kMacroblockSize;
-  uint32_t coded_height = mb_height * kMacroblockSize;
-  uint32_t stride = coded_width;
-  bool has_sar = false;
-  uint32_t sar_width = 0;
-  uint32_t sar_height = 0;
-  client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
-                            coded_height, stride, display_width_, display_height_, has_sar,
-                            sar_width, sar_height);
-
-  mb_width_ = mb_width;
-  mb_height_ = mb_height;
+  AvScratch0::Get()
+      .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
+                                       (video_frames_.size() << 16) | (video_frames_.size() << 8)))
+      .WriteTo(owner_->dosbus());
 }
 
 // This struct contains parameters for the current frame that are dumped from
@@ -436,7 +502,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   DLOG("log2_max_pic_order_cnt: %d\n", params.data[HardwareRenderParams::kLog2MaxPicOrderCntLsb]);
   DLOG("entropy coding mode flag: %d\n", params.data[HardwareRenderParams::kEntropyCodingModeFlag]);
   DLOG("profile idc mmc0: %d\n", params.data[HardwareRenderParams::kProfileIdcMmco]);
-  current_frame_ = &video_frames_[0];
+  current_frame_ = current_metadata_frame_;
 
   // Calculate the pic order count. This currently is good enough for the first
   // frame of bear.h264.
@@ -469,7 +535,6 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   H264CurrentPoc::Get().FromValue(FramePicOrderCnt).WriteTo(owner_->dosbus());
   H264CurrentPoc::Get().FromValue(TopFieldOrderCnt).WriteTo(owner_->dosbus());
   H264CurrentPoc::Get().FromValue(BottomFieldOrderCnt).WriteTo(owner_->dosbus());
-
   CurrCanvasCtrl::Get()
       .FromValue(0)
       .set_canvas_index(current_frame_->index)
@@ -496,14 +561,34 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   DpbStatusReg::Get().FromValue(kH264ActionDecodeNewpic).WriteTo(owner_->dosbus());
 }
 
+void H264MultiDecoder::FlushFrames() {
+  auto res = media_decoder_->Flush();
+  DLOG("Got media decoder res %d", res);
+}
+
+void H264MultiDecoder::DumpStatus() {
+  DLOG("ViffBitCnt: %d", ViffBitCnt::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("input offset: %d read offset: %d", owner_->core()->GetStreamInputOffset(),
+       owner_->core()->GetReadOffset());
+  DLOG("Error status reg %d mbymbx reg %d",
+       ErrorStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value(),
+       MbyMbx::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("DpbStatusReg 0x%x", DpbStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value());
+}
+
 void H264MultiDecoder::HandlePicDataDone() {
   ZX_DEBUG_ASSERT(current_frame_);
   // TODO(fxb/13483): Get PTS
-  // TODO(fxb/13483): Output frame only when past max_num_reorder_frames (or equivalent).
-  client_->OnFrameReady(current_frame_->frame);
-  // TODO(fxb/13483): store in DPB
   current_frame_ = nullptr;
-  DpbStatusReg::Get().FromValue(kH264ActionSearchHead).WriteTo(owner_->dosbus());
+
+  while (!frames_to_output_.empty()) {
+    uint32_t index = frames_to_output_.front();
+    frames_to_output_.pop_front();
+    client_->OnFrameReady(video_frames_[index]->frame);
+  }
+  state_ = DecoderState::kStoppedWaitingForInput;
+  currently_decoding_ = false;
+  PumpDecoder();
 }
 
 void H264MultiDecoder::HandleInterrupt() {
@@ -532,13 +617,15 @@ void H264MultiDecoder::HandleInterrupt() {
 }
 
 void H264MultiDecoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
-  DLOG("Not implemented: %s\n", __func__);
+  DLOG("H264MultiDecoder::ReturnFrame %d", frame->index);
+  video_frames_[frame->index]->in_use = false;
 }
 
 void H264MultiDecoder::CallErrorHandler() { DLOG("Not implemented: %s\n", __func__); }
 
 void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                          uint32_t coded_height, uint32_t stride) {
+  DLOG("H264MultiDecoder::InitializeFrame");
   uint32_t frame_count = frames.size();
   video_frames_.clear();
   for (uint32_t i = 0; i < frame_count; ++i) {
@@ -590,10 +677,6 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
       OnFatalError();
       return;
     }
-
-    AncNCanvasAddr::Get(i)
-        .FromValue((uv_canvas->index() << 16) | (uv_canvas->index() << 8) | (y_canvas->index()))
-        .WriteTo(owner_->dosbus());
     constexpr uint32_t kMvRefDataSizePerMb = 96;
     uint32_t colocated_buffer_size =
         fbl::round_up(mb_width_ * mb_height_ * kMvRefDataSizePerMb, ZX_PAGE_SIZE);
@@ -608,14 +691,32 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
       return;
     }
 
-    video_frames_.push_back({i, std::move(frame), std::move(y_canvas), std::move(uv_canvas),
-                             create_result.take_value()});
+    video_frames_.push_back(std::shared_ptr<ReferenceFrame>(
+        new ReferenceFrame{false, i, std::move(frame), std::move(y_canvas), std::move(uv_canvas),
+                           create_result.take_value()}));
   }
-  AvScratch0::Get()
-      .FromValue((next_max_reference_size_ << 24) | (frame_count << 16) | (frame_count << 8))
-      .WriteTo(owner_->dosbus());
+  waiting_for_surfaces_ = false;
+  PumpDecoder();
 }
 
+void H264MultiDecoder::SubmitFrameMetadata(ReferenceFrame* reference_frame,
+                                           const media::H264SPS* sps, const media::H264PPS* pps,
+                                           const media::H264DPB& dpb) {
+  current_metadata_frame_ = reference_frame;
+  // Unclear why this is, but matches the linux decoder.
+  constexpr uint32_t kReferenceBufMargin = 4;
+  next_max_reference_size_ = sps->max_num_ref_frames + kReferenceBufMargin;
+}
+
+void H264MultiDecoder::SubmitSliceData(const SliceData& data) {}
+
+void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame) {
+  frames_to_output_.push_back(reference_frame->index);
+}
+
+void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) {
+  (void)owner_->ProcessVideoNoParser(data, length);
+}
 bool H264MultiDecoder::CanBeSwappedIn() {
   DLOG("Not implemented: %s\n", __func__);
   return true;
@@ -635,4 +736,76 @@ void H264MultiDecoder::OnFatalError() {
     fatal_error_ = true;
     client_->OnError();
   }
+}
+
+void H264MultiDecoder::ProcessNalUnit(std::vector<uint8_t> data) {
+  DLOG("H264MultiDecoder::ProcessNalUnit input data %p size %zu", data.data(), data.size());
+  decoder_buffer_list_.push_back(std::make_unique<media::DecoderBuffer>(std::move(data)));
+  PumpDecoder();
+}
+
+void H264MultiDecoder::PumpDecoder() {
+  if (waiting_for_surfaces_ || currently_decoding_)
+    return;
+  while (true) {
+    auto res = media_decoder_->Decode();
+    // Normally flushing here would be bad, because that would prevent later frames depending on
+    // earlier frames from decoding correctly, but they currently decode incorrectly anyway
+    // because setting up the reference frames isn't supported.
+    (void)media_decoder_->Flush();
+    DLOG("H264MultiDecoder::PumpDecoder Got result of %d\n", static_cast<int>(res));
+    if (res == media::AcceleratedVideoDecoder::kConfigChange) {
+      zx::bti bti;
+      zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
+      if (status != ZX_OK) {
+        DECODE_ERROR("bti duplicate failed, status: %d\n", status);
+        return;
+      }
+      // TODO(fxb/13483): keep display_width and coded_width separate; keep display_height and
+      // coded_height separate
+      display_width_ = media_decoder_->GetPicSize().width();
+      display_height_ = media_decoder_->GetPicSize().height();
+      mb_width_ = media_decoder_->GetPicSize().width() / 16;
+      mb_height_ = media_decoder_->GetPicSize().height() / 16;
+      uint32_t min_frame_count = media_decoder_->GetRequiredNumOfPictures();
+      uint32_t max_frame_count = 24;
+      uint32_t coded_width = media_decoder_->GetPicSize().width();
+      uint32_t coded_height = media_decoder_->GetPicSize().height();
+      uint32_t stride = fbl::round_up(coded_width, 32u);
+      // TODO(fxb/13483): Plumb SAR through somehow.
+      bool has_sar = false;
+      uint32_t sar_width = 1;
+      uint32_t sar_height = 1;
+      client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
+                                coded_height, stride, display_width_, display_height_, has_sar,
+                                sar_width, sar_height);
+      video_frames_.clear();
+    } else if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
+      current_decoder_buffer_.reset();
+      if (decoder_buffer_list_.size() == 0)
+        return;
+      current_decoder_buffer_ = std::move(decoder_buffer_list_.front());
+      decoder_buffer_list_.pop_front();
+      media_decoder_->SetStream(0, *current_decoder_buffer_);
+      SubmitDataToHardware(current_decoder_buffer_->data(), current_decoder_buffer_->data_size());
+    } else if (res == media::AcceleratedVideoDecoder::kRanOutOfSurfaces) {
+      waiting_for_surfaces_ = true;
+      return;
+    } else if (res == media::AcceleratedVideoDecoder::kDecodeError) {
+      client_->OnError();
+      return;
+    } else if (res == media::AcceleratedVideoDecoder::kTryAgain) {
+      return;
+    }
+  }
+}
+
+std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedReferenceFrame() {
+  for (auto& frame : video_frames_) {
+    if (!frame->in_use) {
+      frame->in_use = true;
+      return frame;
+    }
+  }
+  return nullptr;
 }

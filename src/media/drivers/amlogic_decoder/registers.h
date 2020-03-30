@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_REGISTERS_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_REGISTERS_H_
 
 #include <lib/mmio/mmio.h>
 
@@ -141,6 +141,7 @@ REGISTER_NAME(DosSwReset3, DosRegisterIo, 0x3f34)
 DEFINE_REGISTER(DosGclkEn3, DosRegisterIo, 0x3f35);
 DEFINE_REGISTER(DosVdecMcrccStallCtrl, DosRegisterIo, 0x3f40);
 
+DEFINE_REGISTER(MbyMbx, DosRegisterIo, 0x0c07)
 DEFINE_REGISTER(H264BufferInfoData, DosRegisterIo, 0x0c22)
 DEFINE_REGISTER(H264BufferInfoIndex, DosRegisterIo, 0x0c24)
 DEFINE_REGISTER(H264CurrentPocIdxReset, DosRegisterIo, 0x0c30)
@@ -608,4 +609,4 @@ REGISTER_NAME(ParserFetchCmd, ParserRegisterIo, 0x2962)
 #undef REGISTER_NAME
 #undef DEFINE_REGISTER
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_REGISTERS_H_

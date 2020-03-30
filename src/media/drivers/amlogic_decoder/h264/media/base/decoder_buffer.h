@@ -5,14 +5,20 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_DECODER_BUFFER_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_DECODER_BUFFER_H_
 
+#include <vector>
+
 #include "media/base/decrypt_config.h"
 
 namespace media {
 class DecoderBuffer {
  public:
-  const uint8_t* data() const { return nullptr; }
-  size_t data_size() const { return 0; }
+  explicit DecoderBuffer(std::vector<uint8_t> data) : data_(std::move(data)) {}
+  const uint8_t* data() const { return data_.data(); }
+  size_t data_size() const { return data_.size(); }
   const DecryptConfig* decrypt_config() const { return 0; }
+
+ private:
+  std::vector<uint8_t> data_;
 };
 
 }  // namespace media

@@ -27,8 +27,9 @@
 #define DCHECK_NE(a, b) FXL_DCHECK((a) != (b))
 
 #define CHECK FXL_CHECK
-
+#ifndef DLOG
 #define DLOG FXL_DLOG
+#endif
 #define DVLOG FXL_DVLOG
 #define DVLOG_IF(verbose_level, condition)        \
   FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level), \
@@ -74,7 +75,8 @@ namespace media {
 
 namespace limits {
 enum {
-  kMaxVideoFrames = 24,
+  // Clients take care of their own frame requirements
+  kMaxVideoFrames = 0,
 };
 
 }  // namespace limits

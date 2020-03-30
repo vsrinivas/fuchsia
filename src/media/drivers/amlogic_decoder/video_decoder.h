@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -105,6 +105,10 @@ class VideoDecoder {
     // decoder lock held.
     virtual void TryToReschedule() = 0;
     [[nodiscard]] virtual Watchdog* watchdog() = 0;
+    [[nodiscard]] virtual zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
+                                                           uint32_t* written_out = nullptr) {
+      return ZX_OK;
+    }
   };
 
   // The client of a video decoder is the component that receives (and allocates) output buffers.
@@ -160,4 +164,4 @@ class VideoDecoder {
   Client* client_ = nullptr;
   bool is_secure_ = false;
 };
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_
