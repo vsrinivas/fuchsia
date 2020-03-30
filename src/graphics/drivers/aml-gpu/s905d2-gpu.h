@@ -5,8 +5,9 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_S905D2_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_S905D2_GPU_H_
 
-#include <soc/aml-common/aml-gpu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+
+#include "aml-gpu.h"
 
 enum {
   S905D2_XTAL = 0,  // 24MHz

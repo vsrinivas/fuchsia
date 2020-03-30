@@ -12,7 +12,6 @@ zx_library("amlogic") {
     "soc/aml-a113/a113-tdm.h",
     "soc/aml-common/aml-audio-regs.h",
     "soc/aml-common/aml-g12-reset.h",
-    "soc/aml-common/aml-gpu.h",
     "soc/aml-common/aml-guid.h",
     "soc/aml-common/aml-pdm-audio.h",
     "soc/aml-common/aml-pdm-regs.h",

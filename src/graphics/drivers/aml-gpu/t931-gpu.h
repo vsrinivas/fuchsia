@@ -5,8 +5,9 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_T931_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_T931_GPU_H_
 
-#include <soc/aml-common/aml-gpu.h>
 #include <soc/aml-t931/t931-hw.h>
+
+#include "aml-gpu.h"
 
 enum {
   T931_XTAL = 0,  // 24MHz

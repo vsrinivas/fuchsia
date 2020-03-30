@@ -3,36 +3,61 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("aml-gpu") {
+source_set("sources") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [
-    "aml-gpu.c",
-    "aml-s905d2g.c",
-  ]
-  deps = [
+  sources = [ "aml-gpu.cc" ]
+  public_deps = [
     "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.iommu",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
 
+driver_module("aml-gpu") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  deps = [ ":sources" ]
+}
+
 migrated_manifest("aml-gpu-manifest") {
   deps = [ ":aml-gpu" ]
+}
+
+executable("aml-gpu-test-bin") {
+  testonly = true
+  output_name = "aml-gpu-test"
+  sources = [ "aml-gpu-test.cc" ]
+  deps = [
+    ":sources",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test_package("aml-gpu-test") {
+  deps = [ ":aml-gpu-test-bin" ]
+  tests = [
+    {
+      name = "aml-gpu-test"
+    },
+  ]
 }

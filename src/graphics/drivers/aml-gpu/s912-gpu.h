@@ -7,6 +7,8 @@
 
 #include <soc/aml-s912/s912-hw.h>
 
+#include "aml-gpu.h"
+
 enum {
   S912_XTAL = 0,  // 25MHz
   S912_GP0 = 1,
@@ -19,10 +21,10 @@ enum {
 };
 
 static aml_gpu_block_t s912_gpu_blocks = {
-    .reset0_level_offset = S912_RESET0_LEVEL,
-    .reset0_mask_offset = S912_RESET0_MASK,
-    .reset2_level_offset = S912_RESET2_LEVEL,
-    .reset2_mask_offset = S912_RESET2_MASK,
+    .reset0_level_offset = 4 * S912_RESET0_LEVEL,
+    .reset0_mask_offset = 4 * S912_RESET0_MASK,
+    .reset2_level_offset = 4 * S912_RESET2_LEVEL,
+    .reset2_mask_offset = 4 * S912_RESET2_MASK,
     .hhi_clock_cntl_offset = 0x6C,
     .gpu_clk_freq =
         {

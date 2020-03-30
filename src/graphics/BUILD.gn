@@ -13,6 +13,7 @@ group("tests") {
   testonly = true
   deps = [
     "display:tests",
+    "drivers/aml-gpu:aml-gpu-test",
     "lib/compute:tests",
     "lib/magma/tests",
     "tests",
