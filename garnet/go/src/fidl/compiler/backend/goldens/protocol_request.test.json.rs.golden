@@ -7,140 +7,128 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ChildMarker;
 
 impl fidl::endpoints::ServiceMarker for ChildMarker {
-	type Proxy = ChildProxy;
-	type RequestStream = ChildRequestStream;
-	const DEBUG_NAME: &'static str = "(anonymous) Child";
+    type Proxy = ChildProxy;
+    type RequestStream = ChildRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Child";
 }
 
-pub trait ChildProxyInterface: Send + Sync {
-}
+pub trait ChildProxyInterface: Send + Sync {}
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub struct ChildSynchronousProxy {
-	client: fidl::client::sync::Client,
+    client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
 impl ChildSynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
-	}
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
 
-	pub fn into_channel(self) -> ::fidl::Channel {
-		self.client.into_channel()
-	}
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ChildProxy {
-	client: fidl::client::Client,
+    client: fidl::client::Client,
 }
 
 impl fidl::endpoints::Proxy for ChildProxy {
-	type Service = ChildMarker;
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
-		Self::new(inner)
-	}
+    type Service = ChildMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
 }
 
 impl ::std::ops::Deref for ChildProxy {
-	type Target = fidl::client::Client;
+    type Target = fidl::client::Client;
 
-	fn deref(&self) -> &Self::Target {
-		&self.client
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
 }
 
 impl ChildProxy {
-	/// Create a new Proxy for Child
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-		Self { client: fidl::client::Client::new(channel) }
-	}
+    /// Create a new Proxy for Child
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
 
-	/// Attempt to convert the Proxy back into a channel.
-	///
-	/// This will only succeed if there are no active clones of this Proxy
-	/// and no currently-alive EventStream or response futures that came from
-	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		self.client.into_channel().map_err(|client| Self { client })
-	}
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-	/// Get a Stream of events from the remote end of the Child interface
-	pub fn take_event_stream(&self) -> ChildEventStream {
-		ChildEventStream {
-			event_receiver: self.client.take_event_receiver(),
-		}
-	}
+    /// Get a Stream of events from the remote end of the Child interface
+    pub fn take_event_stream(&self) -> ChildEventStream {
+        ChildEventStream { event_receiver: self.client.take_event_receiver() }
+    }
 }
 
 impl ChildProxyInterface for ChildProxy {}
 
 pub struct ChildEventStream {
-	event_receiver: fidl::client::EventReceiver,
+    event_receiver: fidl::client::EventReceiver,
 }
 
 impl ::std::marker::Unpin for ChildEventStream {}
 
 impl futures::stream::FusedStream for ChildEventStream {
-	fn is_terminated(&self) -> bool {
-		self.event_receiver.is_terminated()
-	}
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
 }
 
 impl futures::Stream for ChildEventStream {
-	type Item = Result<ChildEvent, fidl::Error>;
+    type Item = Result<ChildEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
-		) {
-			Some(buf) => buf,
-			None => return std::task::Poll::Ready(None),
-		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
-	}
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
 }
 
 #[derive(Debug)]
-pub enum ChildEvent {
-	}
+pub enum ChildEvent {}
 
-impl ChildEvent {
-}
+impl ChildEvent {}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///
@@ -150,101 +138,101 @@ impl ChildEvent {
 /// RequestStream or Responder type.
 #[deprecated(note = "Use ChildRequestStream / Responder instead")]
 pub struct ChildServerSender<'a> {
-	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ChildServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
-		Self { channel }
-	}
+impl<'a> ChildServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
 }
 
 /// A Stream of incoming requests for Child
 pub struct ChildRequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	is_terminated: bool,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for ChildRequestStream {}
 
 impl futures::stream::FusedStream for ChildRequestStream {
-	fn is_terminated(&self) -> bool {
-		self.is_terminated
-	}
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
 }
 
 impl fidl::endpoints::RequestStream for ChildRequestStream {
-	type Service = ChildMarker;
+    type Service = ChildMarker;
 
-	/// Consume a channel to make a ChildRequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			is_terminated: false,
-		}
-	}
+    /// Consume a channel to make a ChildRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = ChildControlHandle;
+    /// ControlHandle for the remote connection
+    type ControlHandle = ChildControlHandle;
 
-	/// ControlHandle for the remote connection
-	fn control_handle(&self) -> Self::ControlHandle {
-		ChildControlHandle { inner: self.inner.clone() }
-	}
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        ChildControlHandle { inner: self.inner.clone() }
+    }
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-		(self.inner, self.is_terminated)
-	}
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
-		-> Self
-	{
-		Self { inner, is_terminated }
-	}
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
 }
 
 impl futures::Stream for ChildRequestStream {
-	type Item = Result<ChildRequest, fidl::Error>;
+    type Item = Result<ChildRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
-			this.is_terminated = true;
-			return std::task::Poll::Ready(None);
-		}
-		if this.is_terminated {
-			panic!("polled ChildRequestStream after completion");
-		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
-				std::task::Poll::Ready(Ok(())) => {},
-				std::task::Poll::Pending => return std::task::Poll::Pending,
-				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-					this.is_terminated = true;
-					return std::task::Poll::Ready(None);
-				}
-				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
-			}
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ChildRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
 
-			// A message has been received from the channel
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
-			}
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal() {
-				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal(),
-					service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-				}),
-			}))
-		})
-	}
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
 }
 
 /// Represents a single request.
@@ -253,35 +241,32 @@ impl futures::Stream for ChildRequestStream {
 /// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
 #[derive(Debug)]
 #[deprecated(note = "Use ChildRequest instead")]
-pub enum ChildRequestMessage {
-}
+pub enum ChildRequestMessage {}
 
 impl ChildRequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ChildRequestMessage, fidl::Error> {
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<ChildRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal() {
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal(),
-				service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			}),
-		}
-	}
-
-
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
 }
 #[derive(Debug)]
-pub enum ChildRequest {
-}
+pub enum ChildRequest {}
 
 impl ChildRequest {
-
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-          }
-        }
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {}
+    }
 }
 
 pub struct ChildEncoder;
@@ -290,222 +275,224 @@ impl ChildEncoder {}
 
 #[derive(Debug, Clone)]
 pub struct ChildControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ::std::ops::Deref for ChildControlHandle {
-	type Target = ::std::sync::Arc<fidl::ServeInner>;
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl ChildControlHandle {
-	pub fn shutdown(&self) {
-		self.inner.shutdown()
-	}
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-		self.inner.shutdown_with_epitaph(status)
-	}}
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
 
 /* beginning of response types */
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ParentMarker;
 
 impl fidl::endpoints::ServiceMarker for ParentMarker {
-	type Proxy = ParentProxy;
-	type RequestStream = ParentRequestStream;
-	const DEBUG_NAME: &'static str = "(anonymous) Parent";
+    type Proxy = ParentProxy;
+    type RequestStream = ParentRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Parent";
 }
 
 pub trait ParentProxyInterface: Send + Sync {
-	type GetChildResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error>> + Send;
-	fn get_child(&self,
-	)-> Self::GetChildResponseFut;
-	type GetChildRequestResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error>> + Send;
-	fn get_child_request(&self,
-	)-> Self::GetChildRequestResponseFut;
-	fn take_child(&self,
-		c: fidl::endpoints::ClientEnd<ChildMarker>,
-	)-> Result<(), fidl::Error>;
-	fn take_child_request(&self,
-		r: fidl::endpoints::ServerEnd<ChildMarker>,
-	)-> Result<(), fidl::Error>;
+    type GetChildResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error>>
+        + Send;
+    fn get_child(&self) -> Self::GetChildResponseFut;
+    type GetChildRequestResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error>>
+        + Send;
+    fn get_child_request(&self) -> Self::GetChildRequestResponseFut;
+    fn take_child(&self, c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error>;
+    fn take_child_request(
+        &self,
+        r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub struct ParentSynchronousProxy {
-	client: fidl::client::sync::Client,
+    client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
 impl ParentSynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
-	}
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
 
-	pub fn into_channel(self) -> ::fidl::Channel {
-		self.client.into_channel()
-	}
-	pub fn get_child(&mut self,___deadline: zx::Time,) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {self.client.send_query(&mut (),
-				0x57e26ed694158086,
-				___deadline,
-			)}
-	pub fn get_child_request(&mut self,___deadline: zx::Time,) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {self.client.send_query(&mut (),
-				0x5ea0990a698a80,
-				___deadline,
-			)}
-	pub fn take_child(&mut self,
-		mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {self.client.send(&mut (c),
-				0x6a9827d18871f87d,
-			)}
-	pub fn take_child_request(&mut self,
-		mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {self.client.send(&mut (r),
-				0x6c4a70e2a2126637,
-			)}
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
+    pub fn get_child(
+        &mut self,
+        ___deadline: zx::Time,
+    ) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {
+        self.client.send_query(&mut (), 0x57e26ed694158086, ___deadline)
+    }
+    pub fn get_child_request(
+        &mut self,
+        ___deadline: zx::Time,
+    ) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {
+        self.client.send_query(&mut (), 0x5ea0990a698a80, ___deadline)
+    }
+    pub fn take_child(
+        &mut self,
+        mut c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.client.send(&mut (c), 0x6a9827d18871f87d)
+    }
+    pub fn take_child_request(
+        &mut self,
+        mut r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.client.send(&mut (r), 0x6c4a70e2a2126637)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ParentProxy {
-	client: fidl::client::Client,
+    client: fidl::client::Client,
 }
 
 impl fidl::endpoints::Proxy for ParentProxy {
-	type Service = ParentMarker;
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
-		Self::new(inner)
-	}
+    type Service = ParentMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
 }
 
 impl ::std::ops::Deref for ParentProxy {
-	type Target = fidl::client::Client;
+    type Target = fidl::client::Client;
 
-	fn deref(&self) -> &Self::Target {
-		&self.client
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
 }
 
 impl ParentProxy {
-	/// Create a new Proxy for Parent
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-		Self { client: fidl::client::Client::new(channel) }
-	}
+    /// Create a new Proxy for Parent
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
 
-	/// Attempt to convert the Proxy back into a channel.
-	///
-	/// This will only succeed if there are no active clones of this Proxy
-	/// and no currently-alive EventStream or response futures that came from
-	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		self.client.into_channel().map_err(|client| Self { client })
-	}
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-	/// Get a Stream of events from the remote end of the Parent interface
-	pub fn take_event_stream(&self) -> ParentEventStream {
-		ParentEventStream {
-			event_receiver: self.client.take_event_receiver(),
-		}
-	}
-	pub fn get_child(&self,
-	)-> fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)> {
-		ParentProxyInterface::get_child(self,
-		)
-	}
-	pub fn get_child_request(&self,
-	)-> fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)> {
-		ParentProxyInterface::get_child_request(self,
-		)
-	}
-	pub fn take_child(&self,
-		mut c: fidl::endpoints::ClientEnd<ChildMarker>,
-	)-> Result<(), fidl::Error> {
-		ParentProxyInterface::take_child(self,
-		c,
-		)
-	}
-	pub fn take_child_request(&self,
-		mut r: fidl::endpoints::ServerEnd<ChildMarker>,
-	)-> Result<(), fidl::Error> {
-		ParentProxyInterface::take_child_request(self,
-		r,
-		)
-	}
+    /// Get a Stream of events from the remote end of the Parent interface
+    pub fn take_event_stream(&self) -> ParentEventStream {
+        ParentEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn get_child(
+        &self,
+    ) -> fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)> {
+        ParentProxyInterface::get_child(self)
+    }
+    pub fn get_child_request(
+        &self,
+    ) -> fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)> {
+        ParentProxyInterface::get_child_request(self)
+    }
+    pub fn take_child(
+        &self,
+        mut c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        ParentProxyInterface::take_child(self, c)
+    }
+    pub fn take_child_request(
+        &self,
+        mut r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        ParentProxyInterface::take_child_request(self, r)
+    }
 }
 
 impl ParentProxyInterface for ParentProxy {
-	type GetChildResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
-	fn get_child(&self,
-	)-> Self::GetChildResponseFut {
-		self.client.send_query(&mut (), 0x57e26ed694158086)
-	}
-	type GetChildRequestResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)>;
-	fn get_child_request(&self,
-	)-> Self::GetChildRequestResponseFut {
-		self.client.send_query(&mut (), 0x5ea0990a698a80)
-	}
-	fn take_child(&self,
-		mut c: fidl::endpoints::ClientEnd<ChildMarker>,
-	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (c), 0x6a9827d18871f87d)
-	}
-	fn take_child_request(&self,
-		mut r: fidl::endpoints::ServerEnd<ChildMarker>,
-	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (r), 0x6c4a70e2a2126637)
-	}}
+    type GetChildResponseFut =
+        fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
+    fn get_child(&self) -> Self::GetChildResponseFut {
+        self.client.send_query(&mut (), 0x57e26ed694158086)
+    }
+    type GetChildRequestResponseFut =
+        fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)>;
+    fn get_child_request(&self) -> Self::GetChildRequestResponseFut {
+        self.client.send_query(&mut (), 0x5ea0990a698a80)
+    }
+    fn take_child(
+        &self,
+        mut c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.client.send(&mut (c), 0x6a9827d18871f87d)
+    }
+    fn take_child_request(
+        &self,
+        mut r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.client.send(&mut (r), 0x6c4a70e2a2126637)
+    }
+}
 
 pub struct ParentEventStream {
-	event_receiver: fidl::client::EventReceiver,
+    event_receiver: fidl::client::EventReceiver,
 }
 
 impl ::std::marker::Unpin for ParentEventStream {}
 
 impl futures::stream::FusedStream for ParentEventStream {
-	fn is_terminated(&self) -> bool {
-		self.event_receiver.is_terminated()
-	}
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
 }
 
 impl futures::Stream for ParentEventStream {
-	type Item = Result<ParentEvent, fidl::Error>;
+    type Item = Result<ParentEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
-		) {
-			Some(buf) => buf,
-			None => return std::task::Poll::Ready(None),
-		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
-	}
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
 }
 
 #[derive(Debug)]
-pub enum ParentEvent {
-	
-	
-	
-	
-	}
+pub enum ParentEvent {}
 
-impl ParentEvent {
-}
+impl ParentEvent {}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///
@@ -515,167 +502,165 @@ impl ParentEvent {
 /// RequestStream or Responder type.
 #[deprecated(note = "Use ParentRequestStream / Responder instead")]
 pub struct ParentServerSender<'a> {
-	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ParentServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
-		Self { channel }
-	}
-	pub fn send_get_child_response(&self,
-		txid: fidl::client::Txid,
-		mut c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			ParentEncoder::encode_get_child_response(
-				bytes, handles,
-				txid.as_raw_id(),c,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
-	pub fn send_get_child_request_response(&self,
-		txid: fidl::client::Txid,
-		mut r: fidl::endpoints::ServerEnd<ChildMarker>) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			ParentEncoder::encode_get_child_request_response(
-				bytes, handles,
-				txid.as_raw_id(),r,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+impl<'a> ParentServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
+    pub fn send_get_child_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ParentEncoder::encode_get_child_response(bytes, handles, txid.as_raw_id(), c)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+    pub fn send_get_child_request_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ParentEncoder::encode_get_child_request_response(bytes, handles, txid.as_raw_id(), r)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 
 /// A Stream of incoming requests for Parent
 pub struct ParentRequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	is_terminated: bool,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for ParentRequestStream {}
 
 impl futures::stream::FusedStream for ParentRequestStream {
-	fn is_terminated(&self) -> bool {
-		self.is_terminated
-	}
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
 }
 
 impl fidl::endpoints::RequestStream for ParentRequestStream {
-	type Service = ParentMarker;
+    type Service = ParentMarker;
 
-	/// Consume a channel to make a ParentRequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			is_terminated: false,
-		}
-	}
+    /// Consume a channel to make a ParentRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = ParentControlHandle;
+    /// ControlHandle for the remote connection
+    type ControlHandle = ParentControlHandle;
 
-	/// ControlHandle for the remote connection
-	fn control_handle(&self) -> Self::ControlHandle {
-		ParentControlHandle { inner: self.inner.clone() }
-	}
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        ParentControlHandle { inner: self.inner.clone() }
+    }
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-		(self.inner, self.is_terminated)
-	}
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
-		-> Self
-	{
-		Self { inner, is_terminated }
-	}
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
 }
 
 impl futures::Stream for ParentRequestStream {
-	type Item = Result<ParentRequest, fidl::Error>;
+    type Item = Result<ParentRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
-			this.is_terminated = true;
-			return std::task::Poll::Ready(None);
-		}
-		if this.is_terminated {
-			panic!("polled ParentRequestStream after completion");
-		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
-				std::task::Poll::Ready(Ok(())) => {},
-				std::task::Poll::Pending => return std::task::Poll::Pending,
-				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-					this.is_terminated = true;
-					return std::task::Poll::Ready(None);
-				}
-				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
-			}
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ParentRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
 
-			// A message has been received from the channel
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
-			}
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal() {
-				0x3692bc6900000000 | 0x57e26ed694158086 => {
-					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ParentControlHandle {
-						inner: this.inner.clone(),
-					};
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x3692bc6900000000 | 0x57e26ed694158086 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ParentControlHandle { inner: this.inner.clone() };
 
-					Ok(ParentRequest::GetChild {responder:ParentGetChildResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id(),
-								ordinal: header.ordinal(),
-							},})
-				}
-				0x3faacc7e00000000 | 0x5ea0990a698a80 => {
-					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ParentControlHandle {
-						inner: this.inner.clone(),
-					};
+                    Ok(ParentRequest::GetChild {
+                        responder: ParentGetChildResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x3faacc7e00000000 | 0x5ea0990a698a80 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ParentControlHandle { inner: this.inner.clone() };
 
-					Ok(ParentRequest::GetChildRequest {responder:ParentGetChildRequestResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id(),
-								ordinal: header.ordinal(),
-							},})
-				}
-				0x4c0642f900000000 | 0x6a9827d18871f87d => {
-					let mut req: (fidl::endpoints::ClientEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ParentControlHandle {
-						inner: this.inner.clone(),
-					};
+                    Ok(ParentRequest::GetChildRequest {
+                        responder: ParentGetChildRequestResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x4c0642f900000000 | 0x6a9827d18871f87d => {
+                    let mut req: (fidl::endpoints::ClientEnd<ChildMarker>) =
+                        fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ParentControlHandle { inner: this.inner.clone() };
 
-					Ok(ParentRequest::TakeChild {c: req,control_handle,})
-				}
-				0x5ec3867a00000000 | 0x6c4a70e2a2126637 => {
-					let mut req: (fidl::endpoints::ServerEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ParentControlHandle {
-						inner: this.inner.clone(),
-					};
+                    Ok(ParentRequest::TakeChild { c: req, control_handle })
+                }
+                0x5ec3867a00000000 | 0x6c4a70e2a2126637 => {
+                    let mut req: (fidl::endpoints::ServerEnd<ChildMarker>) =
+                        fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ParentControlHandle { inner: this.inner.clone() };
 
-					Ok(ParentRequest::TakeChildRequest {r: req,control_handle,})
-				}
-				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal(),
-					service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-				}),
-			}))
-		})
-	}
+                    Ok(ParentRequest::TakeChildRequest { r: req, control_handle })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
 }
 
 /// Represents a single request.
@@ -685,372 +670,390 @@ impl futures::Stream for ParentRequestStream {
 #[derive(Debug)]
 #[deprecated(note = "Use ParentRequest instead")]
 pub enum ParentRequestMessage {
-	GetChild {
-		tx_id: fidl::client::Txid,},
-	GetChildRequest {
-		tx_id: fidl::client::Txid,},
-	TakeChild {
-		
-		c: fidl::endpoints::ClientEnd<ChildMarker>,
-		},
-	TakeChildRequest {
-		
-		r: fidl::endpoints::ServerEnd<ChildMarker>,
-		},
+    GetChild { tx_id: fidl::client::Txid },
+    GetChildRequest { tx_id: fidl::client::Txid },
+    TakeChild { c: fidl::endpoints::ClientEnd<ChildMarker> },
+    TakeChildRequest { r: fidl::endpoints::ServerEnd<ChildMarker> },
 }
 
 impl ParentRequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ParentRequestMessage, fidl::Error> {
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<ParentRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal() {
-			0x3692bc6900000000 | 0x57e26ed694158086 => {
-				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            0x3692bc6900000000 | 0x57e26ed694158086 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ParentRequestMessage::GetChild {tx_id: header.tx_id().into(),})
-			}
-			0x3faacc7e00000000 | 0x5ea0990a698a80 => {
-				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+                Ok(ParentRequestMessage::GetChild { tx_id: header.tx_id().into() })
+            }
+            0x3faacc7e00000000 | 0x5ea0990a698a80 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ParentRequestMessage::GetChildRequest {tx_id: header.tx_id().into(),})
-			}
-			0x4c0642f900000000 | 0x6a9827d18871f87d => {
-				let mut out_tuple: (fidl::endpoints::ClientEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+                Ok(ParentRequestMessage::GetChildRequest { tx_id: header.tx_id().into() })
+            }
+            0x4c0642f900000000 | 0x6a9827d18871f87d => {
+                let mut out_tuple: (fidl::endpoints::ClientEnd<ChildMarker>) =
+                    fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ParentRequestMessage::TakeChild {c: out_tuple,})
-			}
-			0x5ec3867a00000000 | 0x6c4a70e2a2126637 => {
-				let mut out_tuple: (fidl::endpoints::ServerEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+                Ok(ParentRequestMessage::TakeChild { c: out_tuple })
+            }
+            0x5ec3867a00000000 | 0x6c4a70e2a2126637 => {
+                let mut out_tuple: (fidl::endpoints::ServerEnd<ChildMarker>) =
+                    fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ParentRequestMessage::TakeChildRequest {r: out_tuple,})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal(),
-				service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			}),
-		}
-	}
-
-
+                Ok(ParentRequestMessage::TakeChildRequest { r: out_tuple })
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
 }
 #[derive(Debug)]
 pub enum ParentRequest {
-	GetChild {
-		responder: ParentGetChildResponder,},
-	GetChildRequest {
-		responder: ParentGetChildRequestResponder,},
-	TakeChild {
-		
-		c: fidl::endpoints::ClientEnd<ChildMarker>,
-		control_handle: ParentControlHandle,},
-	TakeChildRequest {
-		
-		r: fidl::endpoints::ServerEnd<ChildMarker>,
-		control_handle: ParentControlHandle,},
+    GetChild {
+        responder: ParentGetChildResponder,
+    },
+    GetChildRequest {
+        responder: ParentGetChildRequestResponder,
+    },
+    TakeChild {
+        c: fidl::endpoints::ClientEnd<ChildMarker>,
+        control_handle: ParentControlHandle,
+    },
+    TakeChildRequest {
+        r: fidl::endpoints::ServerEnd<ChildMarker>,
+        control_handle: ParentControlHandle,
+    },
 }
 
 impl ParentRequest {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_get_child(self) -> Option<(ParentGetChildResponder
-	)> {
-		if let ParentRequest::GetChild {responder,
-		} = self {
-			Some((responder))
-		} else {
-			None
-		}
-	}
-	
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_get_child_request(self) -> Option<(ParentGetChildRequestResponder
-	)> {
-		if let ParentRequest::GetChildRequest {responder,
-		} = self {
-			Some((responder))
-		} else {
-			None
-		}
-	}
-	
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_take_child(self) -> Option<(
-		fidl::endpoints::ClientEnd<ChildMarker>,
-		ParentControlHandle
-	)> {
-		if let ParentRequest::TakeChild {
-			c,
-			control_handle,
-		} = self {
-			Some((c,control_handle))
-		} else {
-			None
-		}
-	}
-	
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_take_child_request(self) -> Option<(
-		fidl::endpoints::ServerEnd<ChildMarker>,
-		ParentControlHandle
-	)> {
-		if let ParentRequest::TakeChildRequest {
-			r,
-			control_handle,
-		} = self {
-			Some((r,control_handle))
-		} else {
-			None
-		}
-	}
-	
-
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-                ParentRequest::GetChild{..} => "get_child",
-                ParentRequest::GetChildRequest{..} => "get_child_request",
-                ParentRequest::TakeChild{..} => "take_child",
-                ParentRequest::TakeChildRequest{..} => "take_child_request",
-          }
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_get_child(self) -> Option<(ParentGetChildResponder)> {
+        if let ParentRequest::GetChild { responder } = self {
+            Some((responder))
+        } else {
+            None
         }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_get_child_request(self) -> Option<(ParentGetChildRequestResponder)> {
+        if let ParentRequest::GetChildRequest { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_take_child(
+        self,
+    ) -> Option<(fidl::endpoints::ClientEnd<ChildMarker>, ParentControlHandle)> {
+        if let ParentRequest::TakeChild { c, control_handle } = self {
+            Some((c, control_handle))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_take_child_request(
+        self,
+    ) -> Option<(fidl::endpoints::ServerEnd<ChildMarker>, ParentControlHandle)> {
+        if let ParentRequest::TakeChildRequest { r, control_handle } = self {
+            Some((r, control_handle))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            ParentRequest::GetChild { .. } => "get_child",
+            ParentRequest::GetChildRequest { .. } => "get_child_request",
+            ParentRequest::TakeChild { .. } => "take_child",
+            ParentRequest::TakeChildRequest { .. } => "take_child_request",
+        }
+    }
 }
 
 pub struct ParentEncoder;
 
 impl ParentEncoder {
-	pub fn encode_get_child_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x57e26ed694158086);
-		let mut body = ();
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_get_child_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x57e26ed694158086);
-		let mut body = (in_c,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_get_child_request_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x5ea0990a698a80);
-		let mut body = ();
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_get_child_request_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x5ea0990a698a80);
-		let mut body = (in_r,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_take_child_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x6a9827d18871f87d);
-		let mut body = (in_c,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_take_child_request_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x6c4a70e2a2126637);
-		let mut body = (in_r,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}}
+    pub fn encode_get_child_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x57e26ed694158086);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_get_child_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x57e26ed694158086);
+        let mut body = (in_c,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_get_child_request_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x5ea0990a698a80);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_get_child_request_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x5ea0990a698a80);
+        let mut body = (in_r,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_take_child_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x6a9827d18871f87d);
+        let mut body = (in_c,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_take_child_request_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x6c4a70e2a2126637);
+        let mut body = (in_r,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ParentControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ::std::ops::Deref for ParentControlHandle {
-	type Target = ::std::sync::Arc<fidl::ServeInner>;
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl ParentControlHandle {
-	pub fn shutdown(&self) {
-		self.inner.shutdown()
-	}
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-		self.inner.shutdown_with_epitaph(status)
-	}}
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ParentGetChildResponder {
-	control_handle: ::std::mem::ManuallyDrop<ParentControlHandle>,
-	tx_id: u32,
-	ordinal: u64,
+    control_handle: ::std::mem::ManuallyDrop<ParentControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
 }
 
 impl ::std::ops::Drop for ParentGetChildResponder {
-	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
-		self.control_handle.shutdown();
-		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-	}
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
 }
 
 impl ParentGetChildResponder {
-	pub fn control_handle(&self) -> &ParentControlHandle {
-		&self.control_handle
-	}
+    pub fn control_handle(&self) -> &ParentControlHandle {
+        &self.control_handle
+    }
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
-		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
-	}
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
 
-	/// Sends a response to the FIDL transaction.
-	///
-	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(c,);
-		if r.is_err() {
-			self.control_handle.shutdown();
-		}
-		self.drop_without_shutdown();
-		r
-	}
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error> {
+        let r = self.send_raw(c);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
 
-	/// Similar to "send" but does not shutdown the channel if
-	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(c,);
-		self.drop_without_shutdown();
-		r
-	}
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut c: fidl::endpoints::ClientEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(c);
+        self.drop_without_shutdown();
+        r
+    }
 
-	fn send_raw(&self,mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+    fn send_raw(&self, mut c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
-		let mut response = (c);
+        let mut response = (c);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-				.map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ParentGetChildRequestResponder {
-	control_handle: ::std::mem::ManuallyDrop<ParentControlHandle>,
-	tx_id: u32,
-	ordinal: u64,
+    control_handle: ::std::mem::ManuallyDrop<ParentControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
 }
 
 impl ::std::ops::Drop for ParentGetChildRequestResponder {
-	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
-		self.control_handle.shutdown();
-		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-	}
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
 }
 
 impl ParentGetChildRequestResponder {
-	pub fn control_handle(&self) -> &ParentControlHandle {
-		&self.control_handle
-	}
+    pub fn control_handle(&self) -> &ParentControlHandle {
+        &self.control_handle
+    }
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
-		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
-	}
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
 
-	/// Sends a response to the FIDL transaction.
-	///
-	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(r,);
-		if r.is_err() {
-			self.control_handle.shutdown();
-		}
-		self.drop_without_shutdown();
-		r
-	}
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut r: fidl::endpoints::ServerEnd<ChildMarker>) -> Result<(), fidl::Error> {
+        let r = self.send_raw(r);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
 
-	/// Similar to "send" but does not shutdown the channel if
-	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(r,);
-		self.drop_without_shutdown();
-		r
-	}
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut r: fidl::endpoints::ServerEnd<ChildMarker>,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(r);
+        self.drop_without_shutdown();
+        r
+    }
 
-	fn send_raw(&self,mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+    fn send_raw(&self, mut r: fidl::endpoints::ServerEnd<ChildMarker>) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
-		let mut response = (r);
+        let mut response = (r);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-				.map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }

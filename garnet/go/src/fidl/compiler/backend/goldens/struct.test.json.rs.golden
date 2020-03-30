@@ -7,26 +7,18 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Simple {
-  pub f1: u8,
-  pub f2: bool,
+    pub f1: u8,
+    pub f2: bool,
 }
 
 fidl_struct! {
@@ -47,8 +39,8 @@ fidl_struct! {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BasicStruct {
-  pub x: u32,
-  pub y: String,
+    pub x: u32,
+    pub y: String,
 }
 
 fidl_struct! {

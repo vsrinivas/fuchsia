@@ -7,215 +7,181 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
 
-
-
-fidl_empty_struct!(
-	Empty
-);
-
+fidl_empty_struct!(Empty);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct EmptyProtocolMarker;
 
 impl fidl::endpoints::ServiceMarker for EmptyProtocolMarker {
-	type Proxy = EmptyProtocolProxy;
-	type RequestStream = EmptyProtocolRequestStream;
-	const DEBUG_NAME: &'static str = "(anonymous) EmptyProtocol";
+    type Proxy = EmptyProtocolProxy;
+    type RequestStream = EmptyProtocolRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) EmptyProtocol";
 }
 
 pub trait EmptyProtocolProxyInterface: Send + Sync {
-	fn send_(&self,
-		e: &mut Empty,
-	)-> Result<(), fidl::Error>;
-	type ReceiveResponseFut: std::future::Future<Output = Result<(Empty), fidl::Error>> + Send;
-	type SendAndReceiveResponseFut: std::future::Future<Output = Result<(Empty), fidl::Error>> + Send;
-	fn send_and_receive(&self,
-		e: &mut Empty,
-	)-> Self::SendAndReceiveResponseFut;
+    fn send_(&self, e: &mut Empty) -> Result<(), fidl::Error>;
+    type ReceiveResponseFut: std::future::Future<Output = Result<(Empty), fidl::Error>> + Send;
+    type SendAndReceiveResponseFut: std::future::Future<Output = Result<(Empty), fidl::Error>>
+        + Send;
+    fn send_and_receive(&self, e: &mut Empty) -> Self::SendAndReceiveResponseFut;
 }
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub struct EmptyProtocolSynchronousProxy {
-	client: fidl::client::sync::Client,
+    client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
 impl EmptyProtocolSynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
-	}
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
 
-	pub fn into_channel(self) -> ::fidl::Channel {
-		self.client.into_channel()
-	}
-	pub fn send_(&mut self,
-		mut e: &mut Empty,) -> Result<(), fidl::Error> {self.client.send(&mut (e),
-				0x7a2963cbd88da03,
-			)}
-	pub fn send_and_receive(&mut self,
-		mut e: &mut Empty,___deadline: zx::Time,) -> Result<(Empty), fidl::Error> {self.client.send_query(&mut (e),
-				0x1e59efe8b1bbd615,
-				___deadline,
-			)}
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
+    pub fn send_(&mut self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        self.client.send(&mut (e), 0x7a2963cbd88da03)
+    }
+    pub fn send_and_receive(
+        &mut self,
+        mut e: &mut Empty,
+        ___deadline: zx::Time,
+    ) -> Result<(Empty), fidl::Error> {
+        self.client.send_query(&mut (e), 0x1e59efe8b1bbd615, ___deadline)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct EmptyProtocolProxy {
-	client: fidl::client::Client,
+    client: fidl::client::Client,
 }
 
 impl fidl::endpoints::Proxy for EmptyProtocolProxy {
-	type Service = EmptyProtocolMarker;
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
-		Self::new(inner)
-	}
+    type Service = EmptyProtocolMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
 }
 
 impl ::std::ops::Deref for EmptyProtocolProxy {
-	type Target = fidl::client::Client;
+    type Target = fidl::client::Client;
 
-	fn deref(&self) -> &Self::Target {
-		&self.client
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
 }
 
 impl EmptyProtocolProxy {
-	/// Create a new Proxy for EmptyProtocol
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-		Self { client: fidl::client::Client::new(channel) }
-	}
+    /// Create a new Proxy for EmptyProtocol
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
 
-	/// Attempt to convert the Proxy back into a channel.
-	///
-	/// This will only succeed if there are no active clones of this Proxy
-	/// and no currently-alive EventStream or response futures that came from
-	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		self.client.into_channel().map_err(|client| Self { client })
-	}
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-	/// Get a Stream of events from the remote end of the EmptyProtocol interface
-	pub fn take_event_stream(&self) -> EmptyProtocolEventStream {
-		EmptyProtocolEventStream {
-			event_receiver: self.client.take_event_receiver(),
-		}
-	}
-	pub fn send_(&self,
-		mut e: &mut Empty,
-	)-> Result<(), fidl::Error> {
-		EmptyProtocolProxyInterface::send_(self,
-		e,
-		)
-	}
-	pub fn send_and_receive(&self,
-		mut e: &mut Empty,
-	)-> fidl::client::QueryResponseFut<(Empty)> {
-		EmptyProtocolProxyInterface::send_and_receive(self,
-		e,
-		)
-	}
+    /// Get a Stream of events from the remote end of the EmptyProtocol interface
+    pub fn take_event_stream(&self) -> EmptyProtocolEventStream {
+        EmptyProtocolEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn send_(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        EmptyProtocolProxyInterface::send_(self, e)
+    }
+    pub fn send_and_receive(&self, mut e: &mut Empty) -> fidl::client::QueryResponseFut<(Empty)> {
+        EmptyProtocolProxyInterface::send_and_receive(self, e)
+    }
 }
 
 impl EmptyProtocolProxyInterface for EmptyProtocolProxy {
-	fn send_(&self,
-		mut e: &mut Empty,
-	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (e), 0x7a2963cbd88da03)
-	}
-	type ReceiveResponseFut = fidl::client::QueryResponseFut<(Empty)>;
-	type SendAndReceiveResponseFut = fidl::client::QueryResponseFut<(Empty)>;
-	fn send_and_receive(&self,
-		mut e: &mut Empty,
-	)-> Self::SendAndReceiveResponseFut {
-		self.client.send_query(&mut (e), 0x1e59efe8b1bbd615)
-	}}
+    fn send_(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        self.client.send(&mut (e), 0x7a2963cbd88da03)
+    }
+    type ReceiveResponseFut = fidl::client::QueryResponseFut<(Empty)>;
+    type SendAndReceiveResponseFut = fidl::client::QueryResponseFut<(Empty)>;
+    fn send_and_receive(&self, mut e: &mut Empty) -> Self::SendAndReceiveResponseFut {
+        self.client.send_query(&mut (e), 0x1e59efe8b1bbd615)
+    }
+}
 
 pub struct EmptyProtocolEventStream {
-	event_receiver: fidl::client::EventReceiver,
+    event_receiver: fidl::client::EventReceiver,
 }
 
 impl ::std::marker::Unpin for EmptyProtocolEventStream {}
 
 impl futures::stream::FusedStream for EmptyProtocolEventStream {
-	fn is_terminated(&self) -> bool {
-		self.event_receiver.is_terminated()
-	}
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
 }
 
 impl futures::Stream for EmptyProtocolEventStream {
-	type Item = Result<EmptyProtocolEvent, fidl::Error>;
+    type Item = Result<EmptyProtocolEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
-		) {
-			Some(buf) => buf,
-			None => return std::task::Poll::Ready(None),
-		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			0x172c2b6f00000000 | 0x63ba2e5c5fdb4895 => {
-				let mut out_tuple: (Empty) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
-				Ok((
-					EmptyProtocolEvent::Receive {e: out_tuple,}
-				))
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
-	}
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            0x172c2b6f00000000 | 0x63ba2e5c5fdb4895 => {
+                let mut out_tuple: (Empty) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &tx_header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+                Ok((EmptyProtocolEvent::Receive { e: out_tuple }))
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
 }
 
 #[derive(Debug)]
 pub enum EmptyProtocolEvent {
-	
-	
-	
-	Receive {
-		
-		e: Empty,
-		
-	},
-	}
+    Receive { e: Empty },
+}
 
 impl EmptyProtocolEvent {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_receive(self) -> Option<(Empty
-	)> {
-		if let EmptyProtocolEvent::Receive {
-			e,
-			
-		} = self {
-			Some((e))
-		} else {
-			None
-		}
-	}
-	
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_receive(self) -> Option<(Empty)> {
+        if let EmptyProtocolEvent::Receive { e } = self {
+            Some((e))
+        } else {
+            None
+        }
+    }
 }
 
 /// A type which can be used to send responses and events into a borrowed channel.
@@ -226,143 +192,146 @@ impl EmptyProtocolEvent {
 /// RequestStream or Responder type.
 #[deprecated(note = "Use EmptyProtocolRequestStream / Responder instead")]
 pub struct EmptyProtocolServerSender<'a> {
-	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
 }
 
-impl <'a> EmptyProtocolServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
-		Self { channel }
-	}
-	pub fn send_receive(&self,
-		mut e: &mut Empty) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			EmptyProtocolEncoder::encode_receive_response(
-				bytes, handles,e,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
-	pub fn send_send_and_receive_response(&self,
-		txid: fidl::client::Txid,
-		mut e: &mut Empty) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			EmptyProtocolEncoder::encode_send_and_receive_response(
-				bytes, handles,
-				txid.as_raw_id(),e,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+impl<'a> EmptyProtocolServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
+    pub fn send_receive(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            EmptyProtocolEncoder::encode_receive_response(bytes, handles, e)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+    pub fn send_send_and_receive_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut e: &mut Empty,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            EmptyProtocolEncoder::encode_send_and_receive_response(
+                bytes,
+                handles,
+                txid.as_raw_id(),
+                e,
+            )?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 
 /// A Stream of incoming requests for EmptyProtocol
 pub struct EmptyProtocolRequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	is_terminated: bool,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for EmptyProtocolRequestStream {}
 
 impl futures::stream::FusedStream for EmptyProtocolRequestStream {
-	fn is_terminated(&self) -> bool {
-		self.is_terminated
-	}
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
 }
 
 impl fidl::endpoints::RequestStream for EmptyProtocolRequestStream {
-	type Service = EmptyProtocolMarker;
+    type Service = EmptyProtocolMarker;
 
-	/// Consume a channel to make a EmptyProtocolRequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			is_terminated: false,
-		}
-	}
+    /// Consume a channel to make a EmptyProtocolRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = EmptyProtocolControlHandle;
+    /// ControlHandle for the remote connection
+    type ControlHandle = EmptyProtocolControlHandle;
 
-	/// ControlHandle for the remote connection
-	fn control_handle(&self) -> Self::ControlHandle {
-		EmptyProtocolControlHandle { inner: self.inner.clone() }
-	}
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        EmptyProtocolControlHandle { inner: self.inner.clone() }
+    }
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-		(self.inner, self.is_terminated)
-	}
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
-		-> Self
-	{
-		Self { inner, is_terminated }
-	}
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
 }
 
 impl futures::Stream for EmptyProtocolRequestStream {
-	type Item = Result<EmptyProtocolRequest, fidl::Error>;
+    type Item = Result<EmptyProtocolRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
-			this.is_terminated = true;
-			return std::task::Poll::Ready(None);
-		}
-		if this.is_terminated {
-			panic!("polled EmptyProtocolRequestStream after completion");
-		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
-				std::task::Poll::Ready(Ok(())) => {},
-				std::task::Poll::Pending => return std::task::Poll::Pending,
-				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-					this.is_terminated = true;
-					return std::task::Poll::Ready(None);
-				}
-				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
-			}
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled EmptyProtocolRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
 
-			// A message has been received from the channel
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
-			}
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal() {
-				0x1109a64200000000 | 0x7a2963cbd88da03 => {
-					let mut req: (Empty) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = EmptyProtocolControlHandle {
-						inner: this.inner.clone(),
-					};
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x1109a64200000000 | 0x7a2963cbd88da03 => {
+                    let mut req: (Empty) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = EmptyProtocolControlHandle { inner: this.inner.clone() };
 
-					Ok(EmptyProtocolRequest::Send_ {e: req,control_handle,})
-				}
-				0x7b7cca3c00000000 | 0x1e59efe8b1bbd615 => {
-					let mut req: (Empty) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = EmptyProtocolControlHandle {
-						inner: this.inner.clone(),
-					};
+                    Ok(EmptyProtocolRequest::Send_ { e: req, control_handle })
+                }
+                0x7b7cca3c00000000 | 0x1e59efe8b1bbd615 => {
+                    let mut req: (Empty) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = EmptyProtocolControlHandle { inner: this.inner.clone() };
 
-					Ok(EmptyProtocolRequest::SendAndReceive {e: req,responder:EmptyProtocolSendAndReceiveResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id(),
-								ordinal: header.ordinal(),
-							},})
-				}
-				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal(),
-					service_name: <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-				}),
-			}))
-		})
-	}
+                    Ok(EmptyProtocolRequest::SendAndReceive {
+                        e: req,
+                        responder: EmptyProtocolSendAndReceiveResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name:
+                        <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
 }
 
 /// Represents a single request.
@@ -372,252 +341,246 @@ impl futures::Stream for EmptyProtocolRequestStream {
 #[derive(Debug)]
 #[deprecated(note = "Use EmptyProtocolRequest instead")]
 pub enum EmptyProtocolRequestMessage {
-	Send_ {
-		
-		e: Empty,
-		},
-	SendAndReceive {
-		
-		e: Empty,
-		tx_id: fidl::client::Txid,},
+    Send_ { e: Empty },
+    SendAndReceive { e: Empty, tx_id: fidl::client::Txid },
 }
 
 impl EmptyProtocolRequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<EmptyProtocolRequestMessage, fidl::Error> {
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<EmptyProtocolRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal() {
-			0x1109a64200000000 | 0x7a2963cbd88da03 => {
-				let mut out_tuple: (Empty) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            0x1109a64200000000 | 0x7a2963cbd88da03 => {
+                let mut out_tuple: (Empty) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(EmptyProtocolRequestMessage::Send_ {e: out_tuple,})
-			}
-			0x7b7cca3c00000000 | 0x1e59efe8b1bbd615 => {
-				let mut out_tuple: (Empty) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+                Ok(EmptyProtocolRequestMessage::Send_ { e: out_tuple })
+            }
+            0x7b7cca3c00000000 | 0x1e59efe8b1bbd615 => {
+                let mut out_tuple: (Empty) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(EmptyProtocolRequestMessage::SendAndReceive {e: out_tuple,tx_id: header.tx_id().into(),})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal(),
-				service_name: <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			}),
-		}
-	}
-
-
+                Ok(EmptyProtocolRequestMessage::SendAndReceive {
+                    e: out_tuple,
+                    tx_id: header.tx_id().into(),
+                })
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
 }
 #[derive(Debug)]
 pub enum EmptyProtocolRequest {
-	Send_ {
-		
-		e: Empty,
-		control_handle: EmptyProtocolControlHandle,},
-	SendAndReceive {
-		
-		e: Empty,
-		responder: EmptyProtocolSendAndReceiveResponder,},
+    Send_ { e: Empty, control_handle: EmptyProtocolControlHandle },
+    SendAndReceive { e: Empty, responder: EmptyProtocolSendAndReceiveResponder },
 }
 
 impl EmptyProtocolRequest {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_send_(self) -> Option<(
-		Empty,
-		EmptyProtocolControlHandle
-	)> {
-		if let EmptyProtocolRequest::Send_ {
-			e,
-			control_handle,
-		} = self {
-			Some((e,control_handle))
-		} else {
-			None
-		}
-	}
-	
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_send_and_receive(self) -> Option<(
-		Empty,
-		EmptyProtocolSendAndReceiveResponder
-	)> {
-		if let EmptyProtocolRequest::SendAndReceive {
-			e,
-			responder,
-		} = self {
-			Some((e,responder))
-		} else {
-			None
-		}
-	}
-	
-
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-                EmptyProtocolRequest::Send_{..} => "send_",
-                EmptyProtocolRequest::SendAndReceive{..} => "send_and_receive",
-          }
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_send_(self) -> Option<(Empty, EmptyProtocolControlHandle)> {
+        if let EmptyProtocolRequest::Send_ { e, control_handle } = self {
+            Some((e, control_handle))
+        } else {
+            None
         }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_send_and_receive(self) -> Option<(Empty, EmptyProtocolSendAndReceiveResponder)> {
+        if let EmptyProtocolRequest::SendAndReceive { e, responder } = self {
+            Some((e, responder))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            EmptyProtocolRequest::Send_ { .. } => "send_",
+            EmptyProtocolRequest::SendAndReceive { .. } => "send_and_receive",
+        }
+    }
 }
 
 pub struct EmptyProtocolEncoder;
 
 impl EmptyProtocolEncoder {
-	pub fn encode_send__request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,mut in_e: &mut Empty,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x7a2963cbd88da03);
-		let mut body = (in_e,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_receive_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,mut in_e: &mut Empty,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x63ba2e5c5fdb4895);
-		let mut body = (in_e,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_send_and_receive_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_e: &mut Empty,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x1e59efe8b1bbd615);
-		let mut body = (in_e,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_send_and_receive_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_e: &mut Empty,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x1e59efe8b1bbd615);
-		let mut body = (in_e,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}}
+    pub fn encode_send__request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        mut in_e: &mut Empty,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x7a2963cbd88da03);
+        let mut body = (in_e,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_receive_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        mut in_e: &mut Empty,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x63ba2e5c5fdb4895);
+        let mut body = (in_e,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_send_and_receive_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_e: &mut Empty,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x1e59efe8b1bbd615);
+        let mut body = (in_e,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_send_and_receive_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_e: &mut Empty,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x1e59efe8b1bbd615);
+        let mut body = (in_e,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct EmptyProtocolControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ::std::ops::Deref for EmptyProtocolControlHandle {
-	type Target = ::std::sync::Arc<fidl::ServeInner>;
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl EmptyProtocolControlHandle {
-	pub fn shutdown(&self) {
-		self.inner.shutdown()
-	}
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-		self.inner.shutdown_with_epitaph(status)
-	}
-	pub fn send_receive(&self,
-		mut e: &mut Empty) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x63ba2e5c5fdb4895);
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+    pub fn send_receive(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x63ba2e5c5fdb4895);
 
-		let mut response = (e);
+        let mut response = (e);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
-			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
-		})?;
+        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
 
-		Ok(())
-	}
-	}
+        Ok(())
+    }
+}
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct EmptyProtocolSendAndReceiveResponder {
-	control_handle: ::std::mem::ManuallyDrop<EmptyProtocolControlHandle>,
-	tx_id: u32,
-	ordinal: u64,
+    control_handle: ::std::mem::ManuallyDrop<EmptyProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
 }
 
 impl ::std::ops::Drop for EmptyProtocolSendAndReceiveResponder {
-	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
-		self.control_handle.shutdown();
-		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-	}
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
 }
 
 impl EmptyProtocolSendAndReceiveResponder {
-	pub fn control_handle(&self) -> &EmptyProtocolControlHandle {
-		&self.control_handle
-	}
+    pub fn control_handle(&self) -> &EmptyProtocolControlHandle {
+        &self.control_handle
+    }
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
-		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
-	}
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
 
-	/// Sends a response to the FIDL transaction.
-	///
-	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut e: &mut Empty,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(e,);
-		if r.is_err() {
-			self.control_handle.shutdown();
-		}
-		self.drop_without_shutdown();
-		r
-	}
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        let r = self.send_raw(e);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
 
-	/// Similar to "send" but does not shutdown the channel if
-	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut e: &mut Empty,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(e,);
-		self.drop_without_shutdown();
-		r
-	}
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        let r = self.send_raw(e);
+        self.drop_without_shutdown();
+        r
+    }
 
-	fn send_raw(&self,mut e: &mut Empty,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+    fn send_raw(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
-		let mut response = (e);
+        let mut response = (e);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-				.map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }

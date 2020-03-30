@@ -7,217 +7,213 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 fidl_xunion! {
-	#[derive(Debug, PartialEq)]
-	name: FlexibleFoo,
-	members: [
-		S {
-			ty: String,
-			ordinal: 1,
-		},
-		I {
-			ty: i32,
-			ordinal: 2,
-		},
-	],
-	unknown_member: __UnknownVariant,
+    #[derive(Debug, PartialEq)]
+    name: FlexibleFoo,
+    members: [
+        S {
+            ty: String,
+            ordinal: 1,
+        },
+        I {
+            ty: i32,
+            ordinal: 2,
+        },
+    ],
+    unknown_member: __UnknownVariant,
 }
 
 fidl_xunion! {
-	#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: StrictFoo,
-	members: [
-		S {
-			ty: String,
-			ordinal: 1,
-		},
-		I {
-			ty: i32,
-			ordinal: 2,
-		},
-	],
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+    name: StrictFoo,
+    members: [
+        S {
+            ty: String,
+            ordinal: 1,
+        },
+        I {
+            ty: i32,
+            ordinal: 2,
+        },
+    ],
 }
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ProtocolMarker;
 
 impl fidl::endpoints::ServiceMarker for ProtocolMarker {
-	type Proxy = ProtocolProxy;
-	type RequestStream = ProtocolRequestStream;
-	const DEBUG_NAME: &'static str = "(anonymous) Protocol";
+    type Proxy = ProtocolProxy;
+    type RequestStream = ProtocolRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Protocol";
 }
 
 pub trait ProtocolProxyInterface: Send + Sync {
-	type RequestStrictResponseFlexibleResponseFut: std::future::Future<Output = Result<(FlexibleFoo), fidl::Error>> + Send;
-	fn request_strict_response_flexible(&self,
-		s: &mut StrictFoo,
-	)-> Self::RequestStrictResponseFlexibleResponseFut;
-	type RequestFlexibleResponseStrictResponseFut: std::future::Future<Output = Result<(StrictFoo), fidl::Error>> + Send;
-	fn request_flexible_response_strict(&self,
-		s: &mut FlexibleFoo,
-	)-> Self::RequestFlexibleResponseStrictResponseFut;
+    type RequestStrictResponseFlexibleResponseFut: std::future::Future<Output = Result<(FlexibleFoo), fidl::Error>>
+        + Send;
+    fn request_strict_response_flexible(
+        &self,
+        s: &mut StrictFoo,
+    ) -> Self::RequestStrictResponseFlexibleResponseFut;
+    type RequestFlexibleResponseStrictResponseFut: std::future::Future<Output = Result<(StrictFoo), fidl::Error>>
+        + Send;
+    fn request_flexible_response_strict(
+        &self,
+        s: &mut FlexibleFoo,
+    ) -> Self::RequestFlexibleResponseStrictResponseFut;
 }
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub struct ProtocolSynchronousProxy {
-	client: fidl::client::sync::Client,
+    client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
 impl ProtocolSynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
-	}
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
 
-	pub fn into_channel(self) -> ::fidl::Channel {
-		self.client.into_channel()
-	}
-	pub fn request_strict_response_flexible(&mut self,
-		mut s: &mut StrictFoo,___deadline: zx::Time,) -> Result<(FlexibleFoo), fidl::Error> {self.client.send_query(&mut (s),
-				0x72b1a46e5e2af282,
-				___deadline,
-			)}
-	pub fn request_flexible_response_strict(&mut self,
-		mut s: &mut FlexibleFoo,___deadline: zx::Time,) -> Result<(StrictFoo), fidl::Error> {self.client.send_query(&mut (s),
-				0x42a34ad5c4a1d952,
-				___deadline,
-			)}
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
+    pub fn request_strict_response_flexible(
+        &mut self,
+        mut s: &mut StrictFoo,
+        ___deadline: zx::Time,
+    ) -> Result<(FlexibleFoo), fidl::Error> {
+        self.client.send_query(&mut (s), 0x72b1a46e5e2af282, ___deadline)
+    }
+    pub fn request_flexible_response_strict(
+        &mut self,
+        mut s: &mut FlexibleFoo,
+        ___deadline: zx::Time,
+    ) -> Result<(StrictFoo), fidl::Error> {
+        self.client.send_query(&mut (s), 0x42a34ad5c4a1d952, ___deadline)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ProtocolProxy {
-	client: fidl::client::Client,
+    client: fidl::client::Client,
 }
 
 impl fidl::endpoints::Proxy for ProtocolProxy {
-	type Service = ProtocolMarker;
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
-		Self::new(inner)
-	}
+    type Service = ProtocolMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
 }
 
 impl ::std::ops::Deref for ProtocolProxy {
-	type Target = fidl::client::Client;
+    type Target = fidl::client::Client;
 
-	fn deref(&self) -> &Self::Target {
-		&self.client
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
 }
 
 impl ProtocolProxy {
-	/// Create a new Proxy for Protocol
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-		Self { client: fidl::client::Client::new(channel) }
-	}
+    /// Create a new Proxy for Protocol
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
 
-	/// Attempt to convert the Proxy back into a channel.
-	///
-	/// This will only succeed if there are no active clones of this Proxy
-	/// and no currently-alive EventStream or response futures that came from
-	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		self.client.into_channel().map_err(|client| Self { client })
-	}
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-	/// Get a Stream of events from the remote end of the Protocol interface
-	pub fn take_event_stream(&self) -> ProtocolEventStream {
-		ProtocolEventStream {
-			event_receiver: self.client.take_event_receiver(),
-		}
-	}
-	pub fn request_strict_response_flexible(&self,
-		mut s: &mut StrictFoo,
-	)-> fidl::client::QueryResponseFut<(FlexibleFoo)> {
-		ProtocolProxyInterface::request_strict_response_flexible(self,
-		s,
-		)
-	}
-	pub fn request_flexible_response_strict(&self,
-		mut s: &mut FlexibleFoo,
-	)-> fidl::client::QueryResponseFut<(StrictFoo)> {
-		ProtocolProxyInterface::request_flexible_response_strict(self,
-		s,
-		)
-	}
+    /// Get a Stream of events from the remote end of the Protocol interface
+    pub fn take_event_stream(&self) -> ProtocolEventStream {
+        ProtocolEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn request_strict_response_flexible(
+        &self,
+        mut s: &mut StrictFoo,
+    ) -> fidl::client::QueryResponseFut<(FlexibleFoo)> {
+        ProtocolProxyInterface::request_strict_response_flexible(self, s)
+    }
+    pub fn request_flexible_response_strict(
+        &self,
+        mut s: &mut FlexibleFoo,
+    ) -> fidl::client::QueryResponseFut<(StrictFoo)> {
+        ProtocolProxyInterface::request_flexible_response_strict(self, s)
+    }
 }
 
 impl ProtocolProxyInterface for ProtocolProxy {
-	type RequestStrictResponseFlexibleResponseFut = fidl::client::QueryResponseFut<(FlexibleFoo)>;
-	fn request_strict_response_flexible(&self,
-		mut s: &mut StrictFoo,
-	)-> Self::RequestStrictResponseFlexibleResponseFut {
-		self.client.send_query(&mut (s), 0x72b1a46e5e2af282)
-	}
-	type RequestFlexibleResponseStrictResponseFut = fidl::client::QueryResponseFut<(StrictFoo)>;
-	fn request_flexible_response_strict(&self,
-		mut s: &mut FlexibleFoo,
-	)-> Self::RequestFlexibleResponseStrictResponseFut {
-		self.client.send_query(&mut (s), 0x42a34ad5c4a1d952)
-	}}
+    type RequestStrictResponseFlexibleResponseFut = fidl::client::QueryResponseFut<(FlexibleFoo)>;
+    fn request_strict_response_flexible(
+        &self,
+        mut s: &mut StrictFoo,
+    ) -> Self::RequestStrictResponseFlexibleResponseFut {
+        self.client.send_query(&mut (s), 0x72b1a46e5e2af282)
+    }
+    type RequestFlexibleResponseStrictResponseFut = fidl::client::QueryResponseFut<(StrictFoo)>;
+    fn request_flexible_response_strict(
+        &self,
+        mut s: &mut FlexibleFoo,
+    ) -> Self::RequestFlexibleResponseStrictResponseFut {
+        self.client.send_query(&mut (s), 0x42a34ad5c4a1d952)
+    }
+}
 
 pub struct ProtocolEventStream {
-	event_receiver: fidl::client::EventReceiver,
+    event_receiver: fidl::client::EventReceiver,
 }
 
 impl ::std::marker::Unpin for ProtocolEventStream {}
 
 impl futures::stream::FusedStream for ProtocolEventStream {
-	fn is_terminated(&self) -> bool {
-		self.event_receiver.is_terminated()
-	}
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
 }
 
 impl futures::Stream for ProtocolEventStream {
-	type Item = Result<ProtocolEvent, fidl::Error>;
+    type Item = Result<ProtocolEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
-		) {
-			Some(buf) => buf,
-			None => return std::task::Poll::Ready(None),
-		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
-	}
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
 }
 
 #[derive(Debug)]
-pub enum ProtocolEvent {
-	
-	
-	}
+pub enum ProtocolEvent {}
 
-impl ProtocolEvent {
-}
+impl ProtocolEvent {}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///
@@ -227,149 +223,161 @@ impl ProtocolEvent {
 /// RequestStream or Responder type.
 #[deprecated(note = "Use ProtocolRequestStream / Responder instead")]
 pub struct ProtocolServerSender<'a> {
-	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ProtocolServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
-		Self { channel }
-	}
-	pub fn send_request_strict_response_flexible_response(&self,
-		txid: fidl::client::Txid,
-		mut f: &mut FlexibleFoo) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			ProtocolEncoder::encode_request_strict_response_flexible_response(
-				bytes, handles,
-				txid.as_raw_id(),f,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
-	pub fn send_request_flexible_response_strict_response(&self,
-		txid: fidl::client::Txid,
-		mut f: &mut StrictFoo) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			ProtocolEncoder::encode_request_flexible_response_strict_response(
-				bytes, handles,
-				txid.as_raw_id(),f,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+impl<'a> ProtocolServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
+    pub fn send_request_strict_response_flexible_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut f: &mut FlexibleFoo,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ProtocolEncoder::encode_request_strict_response_flexible_response(
+                bytes,
+                handles,
+                txid.as_raw_id(),
+                f,
+            )?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+    pub fn send_request_flexible_response_strict_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut f: &mut StrictFoo,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ProtocolEncoder::encode_request_flexible_response_strict_response(
+                bytes,
+                handles,
+                txid.as_raw_id(),
+                f,
+            )?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 
 /// A Stream of incoming requests for Protocol
 pub struct ProtocolRequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	is_terminated: bool,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for ProtocolRequestStream {}
 
 impl futures::stream::FusedStream for ProtocolRequestStream {
-	fn is_terminated(&self) -> bool {
-		self.is_terminated
-	}
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
 }
 
 impl fidl::endpoints::RequestStream for ProtocolRequestStream {
-	type Service = ProtocolMarker;
+    type Service = ProtocolMarker;
 
-	/// Consume a channel to make a ProtocolRequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			is_terminated: false,
-		}
-	}
+    /// Consume a channel to make a ProtocolRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = ProtocolControlHandle;
+    /// ControlHandle for the remote connection
+    type ControlHandle = ProtocolControlHandle;
 
-	/// ControlHandle for the remote connection
-	fn control_handle(&self) -> Self::ControlHandle {
-		ProtocolControlHandle { inner: self.inner.clone() }
-	}
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        ProtocolControlHandle { inner: self.inner.clone() }
+    }
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-		(self.inner, self.is_terminated)
-	}
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
-		-> Self
-	{
-		Self { inner, is_terminated }
-	}
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
 }
 
 impl futures::Stream for ProtocolRequestStream {
-	type Item = Result<ProtocolRequest, fidl::Error>;
+    type Item = Result<ProtocolRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
-			this.is_terminated = true;
-			return std::task::Poll::Ready(None);
-		}
-		if this.is_terminated {
-			panic!("polled ProtocolRequestStream after completion");
-		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
-				std::task::Poll::Ready(Ok(())) => {},
-				std::task::Poll::Pending => return std::task::Poll::Pending,
-				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-					this.is_terminated = true;
-					return std::task::Poll::Ready(None);
-				}
-				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
-			}
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ProtocolRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
 
-			// A message has been received from the channel
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
-			}
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal() {
-				0x1143e3c200000000 | 0x72b1a46e5e2af282 => {
-					let mut req: (StrictFoo) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ProtocolControlHandle {
-						inner: this.inner.clone(),
-					};
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x1143e3c200000000 | 0x72b1a46e5e2af282 => {
+                    let mut req: (StrictFoo) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ProtocolControlHandle { inner: this.inner.clone() };
 
-					Ok(ProtocolRequest::RequestStrictResponseFlexible {s: req,responder:ProtocolRequestStrictResponseFlexibleResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id(),
-								ordinal: header.ordinal(),
-							},})
-				}
-				0x3136aeff00000000 | 0x42a34ad5c4a1d952 => {
-					let mut req: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ProtocolControlHandle {
-						inner: this.inner.clone(),
-					};
+                    Ok(ProtocolRequest::RequestStrictResponseFlexible {
+                        s: req,
+                        responder: ProtocolRequestStrictResponseFlexibleResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x3136aeff00000000 | 0x42a34ad5c4a1d952 => {
+                    let mut req: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ProtocolControlHandle { inner: this.inner.clone() };
 
-					Ok(ProtocolRequest::RequestFlexibleResponseStrict {s: req,responder:ProtocolRequestFlexibleResponseStrictResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id(),
-								ordinal: header.ordinal(),
-							},})
-				}
-				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal(),
-					service_name: <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-				}),
-			}))
-		})
-	}
+                    Ok(ProtocolRequest::RequestFlexibleResponseStrict {
+                        s: req,
+                        responder: ProtocolRequestFlexibleResponseStrictResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name: <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
 }
 
 /// Represents a single request.
@@ -379,310 +387,322 @@ impl futures::Stream for ProtocolRequestStream {
 #[derive(Debug)]
 #[deprecated(note = "Use ProtocolRequest instead")]
 pub enum ProtocolRequestMessage {
-	RequestStrictResponseFlexible {
-		
-		s: StrictFoo,
-		tx_id: fidl::client::Txid,},
-	RequestFlexibleResponseStrict {
-		
-		s: FlexibleFoo,
-		tx_id: fidl::client::Txid,},
+    RequestStrictResponseFlexible { s: StrictFoo, tx_id: fidl::client::Txid },
+    RequestFlexibleResponseStrict { s: FlexibleFoo, tx_id: fidl::client::Txid },
 }
 
 impl ProtocolRequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ProtocolRequestMessage, fidl::Error> {
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<ProtocolRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal() {
-			0x1143e3c200000000 | 0x72b1a46e5e2af282 => {
-				let mut out_tuple: (StrictFoo) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            0x1143e3c200000000 | 0x72b1a46e5e2af282 => {
+                let mut out_tuple: (StrictFoo) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ProtocolRequestMessage::RequestStrictResponseFlexible {s: out_tuple,tx_id: header.tx_id().into(),})
-			}
-			0x3136aeff00000000 | 0x42a34ad5c4a1d952 => {
-				let mut out_tuple: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+                Ok(ProtocolRequestMessage::RequestStrictResponseFlexible {
+                    s: out_tuple,
+                    tx_id: header.tx_id().into(),
+                })
+            }
+            0x3136aeff00000000 | 0x42a34ad5c4a1d952 => {
+                let mut out_tuple: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ProtocolRequestMessage::RequestFlexibleResponseStrict {s: out_tuple,tx_id: header.tx_id().into(),})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal(),
-				service_name: <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			}),
-		}
-	}
-
-
+                Ok(ProtocolRequestMessage::RequestFlexibleResponseStrict {
+                    s: out_tuple,
+                    tx_id: header.tx_id().into(),
+                })
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
 }
 #[derive(Debug)]
 pub enum ProtocolRequest {
-	RequestStrictResponseFlexible {
-		
-		s: StrictFoo,
-		responder: ProtocolRequestStrictResponseFlexibleResponder,},
-	RequestFlexibleResponseStrict {
-		
-		s: FlexibleFoo,
-		responder: ProtocolRequestFlexibleResponseStrictResponder,},
+    RequestStrictResponseFlexible {
+        s: StrictFoo,
+        responder: ProtocolRequestStrictResponseFlexibleResponder,
+    },
+    RequestFlexibleResponseStrict {
+        s: FlexibleFoo,
+        responder: ProtocolRequestFlexibleResponseStrictResponder,
+    },
 }
 
 impl ProtocolRequest {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_request_strict_response_flexible(self) -> Option<(
-		StrictFoo,
-		ProtocolRequestStrictResponseFlexibleResponder
-	)> {
-		if let ProtocolRequest::RequestStrictResponseFlexible {
-			s,
-			responder,
-		} = self {
-			Some((s,responder))
-		} else {
-			None
-		}
-	}
-	
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_request_flexible_response_strict(self) -> Option<(
-		FlexibleFoo,
-		ProtocolRequestFlexibleResponseStrictResponder
-	)> {
-		if let ProtocolRequest::RequestFlexibleResponseStrict {
-			s,
-			responder,
-		} = self {
-			Some((s,responder))
-		} else {
-			None
-		}
-	}
-	
-
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-                ProtocolRequest::RequestStrictResponseFlexible{..} => "request_strict_response_flexible",
-                ProtocolRequest::RequestFlexibleResponseStrict{..} => "request_flexible_response_strict",
-          }
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_request_strict_response_flexible(
+        self,
+    ) -> Option<(StrictFoo, ProtocolRequestStrictResponseFlexibleResponder)> {
+        if let ProtocolRequest::RequestStrictResponseFlexible { s, responder } = self {
+            Some((s, responder))
+        } else {
+            None
         }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_request_flexible_response_strict(
+        self,
+    ) -> Option<(FlexibleFoo, ProtocolRequestFlexibleResponseStrictResponder)> {
+        if let ProtocolRequest::RequestFlexibleResponseStrict { s, responder } = self {
+            Some((s, responder))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            ProtocolRequest::RequestStrictResponseFlexible { .. } => {
+                "request_strict_response_flexible"
+            }
+            ProtocolRequest::RequestFlexibleResponseStrict { .. } => {
+                "request_flexible_response_strict"
+            }
+        }
+    }
 }
 
 pub struct ProtocolEncoder;
 
 impl ProtocolEncoder {
-	pub fn encode_request_strict_response_flexible_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_s: &mut StrictFoo,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x72b1a46e5e2af282);
-		let mut body = (in_s,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_request_strict_response_flexible_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_f: &mut FlexibleFoo,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x72b1a46e5e2af282);
-		let mut body = (in_f,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_request_flexible_response_strict_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_s: &mut FlexibleFoo,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x42a34ad5c4a1d952);
-		let mut body = (in_s,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_request_flexible_response_strict_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_f: &mut StrictFoo,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x42a34ad5c4a1d952);
-		let mut body = (in_f,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}}
+    pub fn encode_request_strict_response_flexible_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_s: &mut StrictFoo,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x72b1a46e5e2af282);
+        let mut body = (in_s,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_request_strict_response_flexible_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_f: &mut FlexibleFoo,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x72b1a46e5e2af282);
+        let mut body = (in_f,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_request_flexible_response_strict_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_s: &mut FlexibleFoo,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x42a34ad5c4a1d952);
+        let mut body = (in_s,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_request_flexible_response_strict_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_f: &mut StrictFoo,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x42a34ad5c4a1d952);
+        let mut body = (in_f,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ProtocolControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ::std::ops::Deref for ProtocolControlHandle {
-	type Target = ::std::sync::Arc<fidl::ServeInner>;
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl ProtocolControlHandle {
-	pub fn shutdown(&self) {
-		self.inner.shutdown()
-	}
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-		self.inner.shutdown_with_epitaph(status)
-	}}
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ProtocolRequestStrictResponseFlexibleResponder {
-	control_handle: ::std::mem::ManuallyDrop<ProtocolControlHandle>,
-	tx_id: u32,
-	ordinal: u64,
+    control_handle: ::std::mem::ManuallyDrop<ProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
 }
 
 impl ::std::ops::Drop for ProtocolRequestStrictResponseFlexibleResponder {
-	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
-		self.control_handle.shutdown();
-		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-	}
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
 }
 
 impl ProtocolRequestStrictResponseFlexibleResponder {
-	pub fn control_handle(&self) -> &ProtocolControlHandle {
-		&self.control_handle
-	}
+    pub fn control_handle(&self) -> &ProtocolControlHandle {
+        &self.control_handle
+    }
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
-		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
-	}
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
 
-	/// Sends a response to the FIDL transaction.
-	///
-	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut f: &mut FlexibleFoo,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(f,);
-		if r.is_err() {
-			self.control_handle.shutdown();
-		}
-		self.drop_without_shutdown();
-		r
-	}
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut f: &mut FlexibleFoo) -> Result<(), fidl::Error> {
+        let r = self.send_raw(f);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
 
-	/// Similar to "send" but does not shutdown the channel if
-	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut f: &mut FlexibleFoo,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(f,);
-		self.drop_without_shutdown();
-		r
-	}
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self, mut f: &mut FlexibleFoo) -> Result<(), fidl::Error> {
+        let r = self.send_raw(f);
+        self.drop_without_shutdown();
+        r
+    }
 
-	fn send_raw(&self,mut f: &mut FlexibleFoo,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+    fn send_raw(&self, mut f: &mut FlexibleFoo) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
-		let mut response = (f);
+        let mut response = (f);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-				.map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ProtocolRequestFlexibleResponseStrictResponder {
-	control_handle: ::std::mem::ManuallyDrop<ProtocolControlHandle>,
-	tx_id: u32,
-	ordinal: u64,
+    control_handle: ::std::mem::ManuallyDrop<ProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
 }
 
 impl ::std::ops::Drop for ProtocolRequestFlexibleResponseStrictResponder {
-	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
-		self.control_handle.shutdown();
-		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-	}
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
 }
 
 impl ProtocolRequestFlexibleResponseStrictResponder {
-	pub fn control_handle(&self) -> &ProtocolControlHandle {
-		&self.control_handle
-	}
+    pub fn control_handle(&self) -> &ProtocolControlHandle {
+        &self.control_handle
+    }
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
-		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
-	}
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
 
-	/// Sends a response to the FIDL transaction.
-	///
-	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut f: &mut StrictFoo,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(f,);
-		if r.is_err() {
-			self.control_handle.shutdown();
-		}
-		self.drop_without_shutdown();
-		r
-	}
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut f: &mut StrictFoo) -> Result<(), fidl::Error> {
+        let r = self.send_raw(f);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
 
-	/// Similar to "send" but does not shutdown the channel if
-	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut f: &mut StrictFoo,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(f,);
-		self.drop_without_shutdown();
-		r
-	}
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self, mut f: &mut StrictFoo) -> Result<(), fidl::Error> {
+        let r = self.send_raw(f);
+        self.drop_without_shutdown();
+        r
+    }
 
-	fn send_raw(&self,mut f: &mut StrictFoo,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+    fn send_raw(&self, mut f: &mut StrictFoo) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
-		let mut response = (f);
+        let mut response = (f);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-				.map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }

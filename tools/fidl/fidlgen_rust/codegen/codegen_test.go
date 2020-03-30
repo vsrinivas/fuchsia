@@ -10,20 +10,25 @@ import (
 	"path/filepath"
 	"testing"
 
+	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/typestest"
 
 	"fidlgen_rust/ir"
 )
 
-// basePath holds the base path to the directory containing goldens.
-var basePath = func() string {
+var testPath = func() string {
 	testPath, err := filepath.Abs(os.Args[0])
 	if err != nil {
 		panic(err)
 	}
-	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
-	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
+	return filepath.Dir(testPath)
 }()
+
+var (
+	basePath          = filepath.Join(testPath, "test_data", "fidlgen") + string(filepath.Separator)
+	rustfmtPath       = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt")
+	rustfmtConfigPath = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt.toml")
+)
 
 func TestCodegen(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
@@ -33,8 +38,16 @@ func TestCodegen(t *testing.T) {
 			implDotRs := typestest.GetGolden(basePath, fmt.Sprintf("%s.rs.golden", filename))
 
 			actualImplDotRs := new(bytes.Buffer)
-			if err := NewGenerator().GenerateImpl(actualImplDotRs, tree); err != nil {
+			formatter := common.NewFormatter(rustfmtPath, "--config-path", rustfmtConfigPath)
+			actualFormattedImplDotRs, err := formatter.FormatPipe(actualImplDotRs)
+			if err != nil {
+				t.Fatalf("unable to create format pipe: %s", err)
+			}
+			if err := NewGenerator().GenerateImpl(actualFormattedImplDotRs, tree); err != nil {
 				t.Fatalf("unexpected error while generating impl.go: %s", err)
+			}
+			if err := actualFormattedImplDotRs.Close(); err != nil {
+				t.Fatalf("unexpected error while closing formatter: %s", err)
 			}
 
 			typestest.AssertCodegenCmp(t, implDotRs, actualImplDotRs.Bytes())

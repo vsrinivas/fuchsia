@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
+
 if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     echo "error: did you fx exec? missing \$FUCHSIA_BUILD_DIR" 1>&2
     exit 1
@@ -140,7 +142,8 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
     echo "  rust: ${json_name} > ${rust_name}"
     ${FIDLGEN_RUST} \
         -json "${GOLDENS_DIR}/${json_name}" \
-        -output-filename "${GOLDENS_DIR}/${rust_name}.golden"
+        -output-filename "${GOLDENS_DIR}/${rust_name}.golden" \
+        -rustfmt "${PREBUILT_RUST_DIR}/bin/rustfmt"
 
     # TODO(fxb/45007): Syzkaller does not support enum member references in struct
     # defaults.
@@ -160,6 +163,6 @@ done
 printf "%s\n" "${GOLDENS[@]//,}" | sort >> "${GOLDENS_DIR}/goldens.txt"
 
 > "${GOLDENS_DIR}/OWNERS"
-find "${EXAMPLE_DIR}/../.."  -name 'OWNERS' -exec cat {} \; | grep -v -e "^#" | awk 'NF' | sort -u > "${GOLDENS_DIR}/OWNERS"
+find "${EXAMPLE_DIR}/../.." "tools/fidl/fidlgen_rust"  -name 'OWNERS' -exec cat {} \; | grep -v -e "^#" | awk 'NF' | sort -u > "${GOLDENS_DIR}/OWNERS"
 echo "" >> "${GOLDENS_DIR}/OWNERS"
 echo "# COMPONENT: FIDL>Testing" >> "${GOLDENS_DIR}/OWNERS"

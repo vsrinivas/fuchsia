@@ -28,4 +28,28 @@ go_test("fidlgen_rust_test") {
     ":lib",
     "//garnet/go/src/fidl:fidlgen_test_lib",
   ]
+  non_go_deps = [ ":copies" ]
+}
+
+group("copies") {
+  deps = [
+    ":copy_rustfmt",
+    ":copy_rustfmt_toml",
+  ]
+  metadata = {
+    test_runtime_deps = [
+      "$root_out_dir/test_data/fidlgen_rust/rustfmt",
+      "$root_out_dir/test_data/fidlgen_rust/rustfmt.toml",
+    ]
+  }
+}
+
+copy("copy_rustfmt") {
+  sources = [ "//prebuilt/third_party/rust/$host_platform/bin/rustfmt" ]
+  outputs = [ "$root_out_dir/test_data/fidlgen_rust/rustfmt" ]
+}
+
+copy("copy_rustfmt_toml") {
+  sources = [ "//rustfmt.toml" ]
+  outputs = [ "$root_out_dir/test_data/fidlgen_rust/rustfmt.toml" ]
 }

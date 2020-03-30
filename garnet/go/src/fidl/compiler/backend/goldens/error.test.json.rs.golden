@@ -7,29 +7,19 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
 
-
-pub type ExampleFooResult = std::result::Result< (
-      i64
-), u32 >;
+pub type ExampleFooResult = std::result::Result<(i64), u32>;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ExampleFooResponse {
-  pub y: i64,
+    pub y: i64,
 }
 
 fidl_struct! {
@@ -44,147 +34,139 @@ fidl_struct! {
   align_v1: 8,
 }
 
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ExampleMarker;
 
 impl fidl::endpoints::ServiceMarker for ExampleMarker {
-	type Proxy = ExampleProxy;
-	type RequestStream = ExampleRequestStream;
-	const DEBUG_NAME: &'static str = "(anonymous) Example";
+    type Proxy = ExampleProxy;
+    type RequestStream = ExampleRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Example";
 }
 
 pub trait ExampleProxyInterface: Send + Sync {
-	type FooResponseFut: std::future::Future<Output = Result<(ExampleFooResult), fidl::Error>> + Send;
-	fn foo(&self,
-		s: &str,
-	)-> Self::FooResponseFut;
+    type FooResponseFut: std::future::Future<Output = Result<(ExampleFooResult), fidl::Error>>
+        + Send;
+    fn foo(&self, s: &str) -> Self::FooResponseFut;
 }
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub struct ExampleSynchronousProxy {
-	client: fidl::client::sync::Client,
+    client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
 impl ExampleSynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
-	}
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
 
-	pub fn into_channel(self) -> ::fidl::Channel {
-		self.client.into_channel()
-	}
-	pub fn foo(&mut self,
-		mut s: &str,___deadline: zx::Time,) -> Result<(ExampleFooResult), fidl::Error> {self.client.send_query(&mut (s),
-				0xbaf4e613e45f29b,
-				___deadline,
-			)}
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
+    pub fn foo(
+        &mut self,
+        mut s: &str,
+        ___deadline: zx::Time,
+    ) -> Result<(ExampleFooResult), fidl::Error> {
+        self.client.send_query(&mut (s), 0xbaf4e613e45f29b, ___deadline)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ExampleProxy {
-	client: fidl::client::Client,
+    client: fidl::client::Client,
 }
 
 impl fidl::endpoints::Proxy for ExampleProxy {
-	type Service = ExampleMarker;
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
-		Self::new(inner)
-	}
+    type Service = ExampleMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
 }
 
 impl ::std::ops::Deref for ExampleProxy {
-	type Target = fidl::client::Client;
+    type Target = fidl::client::Client;
 
-	fn deref(&self) -> &Self::Target {
-		&self.client
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
 }
 
 impl ExampleProxy {
-	/// Create a new Proxy for Example
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-		Self { client: fidl::client::Client::new(channel) }
-	}
+    /// Create a new Proxy for Example
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
 
-	/// Attempt to convert the Proxy back into a channel.
-	///
-	/// This will only succeed if there are no active clones of this Proxy
-	/// and no currently-alive EventStream or response futures that came from
-	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		self.client.into_channel().map_err(|client| Self { client })
-	}
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-	/// Get a Stream of events from the remote end of the Example interface
-	pub fn take_event_stream(&self) -> ExampleEventStream {
-		ExampleEventStream {
-			event_receiver: self.client.take_event_receiver(),
-		}
-	}
-	pub fn foo(&self,
-		mut s: &str,
-	)-> fidl::client::QueryResponseFut<(ExampleFooResult)> {
-		ExampleProxyInterface::foo(self,
-		s,
-		)
-	}
+    /// Get a Stream of events from the remote end of the Example interface
+    pub fn take_event_stream(&self) -> ExampleEventStream {
+        ExampleEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn foo(&self, mut s: &str) -> fidl::client::QueryResponseFut<(ExampleFooResult)> {
+        ExampleProxyInterface::foo(self, s)
+    }
 }
 
 impl ExampleProxyInterface for ExampleProxy {
-	type FooResponseFut = fidl::client::QueryResponseFut<(ExampleFooResult)>;
-	fn foo(&self,
-		mut s: &str,
-	)-> Self::FooResponseFut {
-		self.client.send_query(&mut (s), 0xbaf4e613e45f29b)
-	}}
+    type FooResponseFut = fidl::client::QueryResponseFut<(ExampleFooResult)>;
+    fn foo(&self, mut s: &str) -> Self::FooResponseFut {
+        self.client.send_query(&mut (s), 0xbaf4e613e45f29b)
+    }
+}
 
 pub struct ExampleEventStream {
-	event_receiver: fidl::client::EventReceiver,
+    event_receiver: fidl::client::EventReceiver,
 }
 
 impl ::std::marker::Unpin for ExampleEventStream {}
 
 impl futures::stream::FusedStream for ExampleEventStream {
-	fn is_terminated(&self) -> bool {
-		self.event_receiver.is_terminated()
-	}
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
 }
 
 impl futures::Stream for ExampleEventStream {
-	type Item = Result<ExampleEvent, fidl::Error>;
+    type Item = Result<ExampleEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
-		) {
-			Some(buf) => buf,
-			None => return std::task::Poll::Ready(None),
-		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
-	}
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
 }
 
 #[derive(Debug)]
-pub enum ExampleEvent {
-	
-	}
+pub enum ExampleEvent {}
 
-impl ExampleEvent {
-}
+impl ExampleEvent {}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///
@@ -194,125 +176,126 @@ impl ExampleEvent {
 /// RequestStream or Responder type.
 #[deprecated(note = "Use ExampleRequestStream / Responder instead")]
 pub struct ExampleServerSender<'a> {
-	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ExampleServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
-		Self { channel }
-	}
-	pub fn send_foo_response(&self,
-		txid: fidl::client::Txid,
-		mut result: &mut ExampleFooResult) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			ExampleEncoder::encode_foo_response(
-				bytes, handles,
-				txid.as_raw_id(),result,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+impl<'a> ExampleServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
+    pub fn send_foo_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut result: &mut ExampleFooResult,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ExampleEncoder::encode_foo_response(bytes, handles, txid.as_raw_id(), result)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 
 /// A Stream of incoming requests for Example
 pub struct ExampleRequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	is_terminated: bool,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for ExampleRequestStream {}
 
 impl futures::stream::FusedStream for ExampleRequestStream {
-	fn is_terminated(&self) -> bool {
-		self.is_terminated
-	}
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
 }
 
 impl fidl::endpoints::RequestStream for ExampleRequestStream {
-	type Service = ExampleMarker;
+    type Service = ExampleMarker;
 
-	/// Consume a channel to make a ExampleRequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			is_terminated: false,
-		}
-	}
+    /// Consume a channel to make a ExampleRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = ExampleControlHandle;
+    /// ControlHandle for the remote connection
+    type ControlHandle = ExampleControlHandle;
 
-	/// ControlHandle for the remote connection
-	fn control_handle(&self) -> Self::ControlHandle {
-		ExampleControlHandle { inner: self.inner.clone() }
-	}
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        ExampleControlHandle { inner: self.inner.clone() }
+    }
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-		(self.inner, self.is_terminated)
-	}
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
-		-> Self
-	{
-		Self { inner, is_terminated }
-	}
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
 }
 
 impl futures::Stream for ExampleRequestStream {
-	type Item = Result<ExampleRequest, fidl::Error>;
+    type Item = Result<ExampleRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
-			this.is_terminated = true;
-			return std::task::Poll::Ready(None);
-		}
-		if this.is_terminated {
-			panic!("polled ExampleRequestStream after completion");
-		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
-				std::task::Poll::Ready(Ok(())) => {},
-				std::task::Poll::Pending => return std::task::Poll::Pending,
-				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-					this.is_terminated = true;
-					return std::task::Poll::Ready(None);
-				}
-				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
-			}
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ExampleRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
 
-			// A message has been received from the channel
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
-			}
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal() {
-				0x51a3dcd800000000 | 0xbaf4e613e45f29b => {
-					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = ExampleControlHandle {
-						inner: this.inner.clone(),
-					};
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x51a3dcd800000000 | 0xbaf4e613e45f29b => {
+                    let mut req: (String) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
 
-					Ok(ExampleRequest::Foo {s: req,responder:ExampleFooResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id(),
-								ordinal: header.ordinal(),
-							},})
-				}
-				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal(),
-					service_name: <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-				}),
-			}))
-		})
-	}
+                    Ok(ExampleRequest::Foo {
+                        s: req,
+                        responder: ExampleFooResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name: <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
 }
 
 /// Represents a single request.
@@ -322,185 +305,185 @@ impl futures::Stream for ExampleRequestStream {
 #[derive(Debug)]
 #[deprecated(note = "Use ExampleRequest instead")]
 pub enum ExampleRequestMessage {
-	Foo {
-		
-		s: String,
-		tx_id: fidl::client::Txid,},
+    Foo { s: String, tx_id: fidl::client::Txid },
 }
 
 impl ExampleRequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ExampleRequestMessage, fidl::Error> {
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<ExampleRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal() {
-			0x51a3dcd800000000 | 0xbaf4e613e45f29b => {
-				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            0x51a3dcd800000000 | 0xbaf4e613e45f29b => {
+                let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(ExampleRequestMessage::Foo {s: out_tuple,tx_id: header.tx_id().into(),})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal(),
-				service_name: <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			}),
-		}
-	}
-
-
+                Ok(ExampleRequestMessage::Foo { s: out_tuple, tx_id: header.tx_id().into() })
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <ExampleMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
 }
 #[derive(Debug)]
 pub enum ExampleRequest {
-	Foo {
-		
-		s: String,
-		responder: ExampleFooResponder,},
+    Foo { s: String, responder: ExampleFooResponder },
 }
 
 impl ExampleRequest {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_foo(self) -> Option<(
-		String,
-		ExampleFooResponder
-	)> {
-		if let ExampleRequest::Foo {
-			s,
-			responder,
-		} = self {
-			Some((s,responder))
-		} else {
-			None
-		}
-	}
-	
-
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-                ExampleRequest::Foo{..} => "foo",
-          }
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_foo(self) -> Option<(String, ExampleFooResponder)> {
+        if let ExampleRequest::Foo { s, responder } = self {
+            Some((s, responder))
+        } else {
+            None
         }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            ExampleRequest::Foo { .. } => "foo",
+        }
+    }
 }
 
 pub struct ExampleEncoder;
 
 impl ExampleEncoder {
-	pub fn encode_foo_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_s: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0xbaf4e613e45f29b);
-		let mut body = (in_s,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_foo_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
-		tx_id: u32,mut in_result: &mut ExampleFooResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0xbaf4e613e45f29b);
-		let mut body = (in_result,);
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}}
+    pub fn encode_foo_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_s: &str,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0xbaf4e613e45f29b);
+        let mut body = (in_s,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_foo_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_result: &mut ExampleFooResult,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0xbaf4e613e45f29b);
+        let mut body = (in_result,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ExampleControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ::std::ops::Deref for ExampleControlHandle {
-	type Target = ::std::sync::Arc<fidl::ServeInner>;
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl ExampleControlHandle {
-	pub fn shutdown(&self) {
-		self.inner.shutdown()
-	}
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-		self.inner.shutdown_with_epitaph(status)
-	}}
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ExampleFooResponder {
-	control_handle: ::std::mem::ManuallyDrop<ExampleControlHandle>,
-	tx_id: u32,
-	ordinal: u64,
+    control_handle: ::std::mem::ManuallyDrop<ExampleControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
 }
 
 impl ::std::ops::Drop for ExampleFooResponder {
-	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
-		self.control_handle.shutdown();
-		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-	}
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
 }
 
 impl ExampleFooResponder {
-	pub fn control_handle(&self) -> &ExampleControlHandle {
-		&self.control_handle
-	}
+    pub fn control_handle(&self) -> &ExampleControlHandle {
+        &self.control_handle
+    }
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
-		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
-		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
-	}
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
 
-	/// Sends a response to the FIDL transaction.
-	///
-	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut result: &mut ExampleFooResult,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(result,);
-		if r.is_err() {
-			self.control_handle.shutdown();
-		}
-		self.drop_without_shutdown();
-		r
-	}
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut result: &mut ExampleFooResult) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
 
-	/// Similar to "send" but does not shutdown the channel if
-	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut result: &mut ExampleFooResult,) -> Result<(), fidl::Error> {
-		let r = self.send_raw(result,);
-		self.drop_without_shutdown();
-		r
-	}
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut ExampleFooResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
 
-	fn send_raw(&self,mut result: &mut ExampleFooResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+    fn send_raw(&self, mut result: &mut ExampleFooResult) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
-		let mut response = (result);
+        let mut response = (result);
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-				.map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }

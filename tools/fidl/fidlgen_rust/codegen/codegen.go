@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
 
 	"fidlgen_rust/ir"
@@ -42,15 +43,26 @@ func (gen *Generator) GenerateImpl(wr io.Writer, tree ir.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
 }
 
-func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename string) error {
+func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename string, rustfmtPath string) error {
 	tree := ir.Compile(fidl)
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}
-	f, err := os.Create(outputFilename)
+
+	generated, err := os.Create(outputFilename)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	return gen.GenerateImpl(f, tree)
+	defer generated.Close()
+
+	generatedPipe, err := common.NewFormatter(rustfmtPath).FormatPipe(generated)
+	if err != nil {
+		return err
+	}
+
+	if err := gen.GenerateImpl(generatedPipe, tree); err != nil {
+		return err
+	}
+
+	return generatedPipe.Close()
 }

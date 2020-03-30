@@ -7,28 +7,20 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ByteAndBytes {
-  pub single_byte: u8,
-  pub many_bytes: Vec<u8>,
-  pub only_one_k_bytes: Vec<u8>,
-  pub opt_only_one_k_bytes: Option<Vec<u8>>,
+    pub single_byte: u8,
+    pub many_bytes: Vec<u8>,
+    pub only_one_k_bytes: Vec<u8>,
+    pub opt_only_one_k_bytes: Option<Vec<u8>>,
 }
 
 fidl_struct! {

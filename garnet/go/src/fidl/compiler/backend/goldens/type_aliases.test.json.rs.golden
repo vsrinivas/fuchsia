@@ -7,34 +7,26 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 #[derive(Debug, PartialEq)]
 pub struct ExampleOfUseOfAliases {
-  pub field_of_u32: u32,
-  pub field_of_vec_at_most_five_of_string: Vec<String>,
-  pub field_of_vec_at_most_five_of_uint32: Vec<u32>,
-  pub field_of_vec_of_strings: Vec<String>,
-  pub field_of_vec_of_strings_at_most_nine: Vec<String>,
-  pub field_of_vec_of_strings_at_most_5: Vec<String>,
-  pub field_of_vec_at_most_5_of_reference_me: Vec<fidl_someotherlibrary::ReferenceMe>,
-  pub field_of_channel: fidl::Handle,
-  pub field_of_client_end: fidl::Handle,
-  pub field_of_nullable_client_end: Option<fidl::Handle>,
+    pub field_of_u32: u32,
+    pub field_of_vec_at_most_five_of_string: Vec<String>,
+    pub field_of_vec_at_most_five_of_uint32: Vec<u32>,
+    pub field_of_vec_of_strings: Vec<String>,
+    pub field_of_vec_of_strings_at_most_nine: Vec<String>,
+    pub field_of_vec_of_strings_at_most_5: Vec<String>,
+    pub field_of_vec_at_most_5_of_reference_me: Vec<fidl_someotherlibrary::ReferenceMe>,
+    pub field_of_channel: fidl::Handle,
+    pub field_of_client_end: fidl::Handle,
+    pub field_of_nullable_client_end: Option<fidl::Handle>,
 }
 
 fidl_struct! {

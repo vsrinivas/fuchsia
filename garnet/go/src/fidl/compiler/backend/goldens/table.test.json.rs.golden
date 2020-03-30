@@ -7,25 +7,16 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 #[derive(Debug, PartialEq)]
-pub struct EmptyTable {
-}
+pub struct EmptyTable {}
 
 fidl_table! {
   name: EmptyTable,
@@ -35,8 +26,8 @@ fidl_table! {
 
 #[derive(Debug, PartialEq)]
 pub struct SimpleTable {
-  pub x: Option<i64>,
-  pub y: Option<i64>,
+    pub x: Option<i64>,
+    pub y: Option<i64>,
 }
 
 fidl_table! {
@@ -55,7 +46,7 @@ fidl_table! {
 
 #[derive(Debug, PartialEq)]
 pub struct OlderSimpleTable {
-  pub x: Option<i64>,
+    pub x: Option<i64>,
 }
 
 fidl_table! {
@@ -70,9 +61,9 @@ fidl_table! {
 
 #[derive(Debug, PartialEq)]
 pub struct NewerSimpleTable {
-  pub x: Option<i64>,
-  pub y: Option<i64>,
-  pub z: Option<i64>,
+    pub x: Option<i64>,
+    pub y: Option<i64>,
+    pub z: Option<i64>,
 }
 
 fidl_table! {
@@ -95,9 +86,9 @@ fidl_table! {
 
 #[derive(Debug, PartialEq)]
 pub struct ReverseOrdinalTable {
-  pub z: Option<i64>,
-  pub y: Option<i64>,
-  pub x: Option<i64>,
+    pub z: Option<i64>,
+    pub y: Option<i64>,
+    pub x: Option<i64>,
 }
 
 fidl_table! {

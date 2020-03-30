@@ -7,21 +7,13 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 fidl_bits! {
   MyBits(u32) {
@@ -29,7 +21,6 @@ fidl_bits! {
     MyOtherBit = 2,
   }
 }
-
 
 /// const comment #1
 ///
@@ -43,22 +34,21 @@ fidl_enum! {
   }
 }
 
-
 fidl_xunion! {
-	/// union comment #1
-	///
-	/// union comment #3
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: Union,
-	members: [
-		/// union member comment #1
-		///
-		/// union member comment #3
-		Field {
-			ty: i32,
-			ordinal: 1,
-		},
-	],
+    /// union comment #1
+    ///
+    /// union comment #3
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+    name: Union,
+    members: [
+        /// union member comment #1
+        ///
+        /// union member comment #3
+        Field {
+            ty: i32,
+            ordinal: 1,
+        },
+    ],
 }
 
 /// struct comment #1
@@ -66,10 +56,10 @@ fidl_xunion! {
 /// struct comment #3
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Struct {
-  /// struct member comment #1
-  ///
-  /// struct member comment #3
-  pub field: i32,
+    /// struct member comment #1
+    ///
+    /// struct member comment #3
+    pub field: i32,
 }
 
 fidl_struct! {
@@ -89,10 +79,10 @@ fidl_struct! {
 /// table comment #3
 #[derive(Debug, PartialEq)]
 pub struct Table {
-  /// table field comment #1
-  ///
-  /// table field comment #3
-  pub field: Option<i32>,
+    /// table field comment #1
+    ///
+    /// table field comment #3
+    pub field: Option<i32>,
 }
 
 fidl_table! {
@@ -105,168 +95,160 @@ fidl_table! {
   },
 }
 
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct InterfaceMarker;
 
 impl fidl::endpoints::ServiceMarker for InterfaceMarker {
-	type Proxy = InterfaceProxy;
-	type RequestStream = InterfaceRequestStream;
-	const DEBUG_NAME: &'static str = "(anonymous) Interface";
+    type Proxy = InterfaceProxy;
+    type RequestStream = InterfaceRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Interface";
 }
 
 pub trait InterfaceProxyInterface: Send + Sync {
-	fn method(&self,
-	)-> Result<(), fidl::Error>;
-	type OnEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    fn method(&self) -> Result<(), fidl::Error>;
+    type OnEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
 }
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub struct InterfaceSynchronousProxy {
-	client: fidl::client::sync::Client,
+    client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
 impl InterfaceSynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
-		Self { client: fidl::client::sync::Client::new(channel) }
-	}
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
 
-	pub fn into_channel(self) -> ::fidl::Channel {
-		self.client.into_channel()
-	}
-	/// method comment #1
-	///
-	/// method comment #3
-	pub fn method(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0x60e700e002995ef8,
-			)}
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
+    /// method comment #1
+    ///
+    /// method comment #3
+    pub fn method(&mut self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x60e700e002995ef8)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct InterfaceProxy {
-	client: fidl::client::Client,
+    client: fidl::client::Client,
 }
 
 impl fidl::endpoints::Proxy for InterfaceProxy {
-	type Service = InterfaceMarker;
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
-		Self::new(inner)
-	}
+    type Service = InterfaceMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
 }
 
 impl ::std::ops::Deref for InterfaceProxy {
-	type Target = fidl::client::Client;
+    type Target = fidl::client::Client;
 
-	fn deref(&self) -> &Self::Target {
-		&self.client
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
 }
 
 impl InterfaceProxy {
-	/// Create a new Proxy for Interface
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
-		Self { client: fidl::client::Client::new(channel) }
-	}
+    /// Create a new Proxy for Interface
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
 
-	/// Attempt to convert the Proxy back into a channel.
-	///
-	/// This will only succeed if there are no active clones of this Proxy
-	/// and no currently-alive EventStream or response futures that came from
-	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		self.client.into_channel().map_err(|client| Self { client })
-	}
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
 
-	/// Get a Stream of events from the remote end of the Interface interface
-	pub fn take_event_stream(&self) -> InterfaceEventStream {
-		InterfaceEventStream {
-			event_receiver: self.client.take_event_receiver(),
-		}
-	}
-	/// method comment #1
-	///
-	/// method comment #3
-	pub fn method(&self,
-	)-> Result<(), fidl::Error> {
-		InterfaceProxyInterface::method(self,
-		)
-	}
+    /// Get a Stream of events from the remote end of the Interface interface
+    pub fn take_event_stream(&self) -> InterfaceEventStream {
+        InterfaceEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    /// method comment #1
+    ///
+    /// method comment #3
+    pub fn method(&self) -> Result<(), fidl::Error> {
+        InterfaceProxyInterface::method(self)
+    }
 }
 
 impl InterfaceProxyInterface for InterfaceProxy {
-	fn method(&self,
-	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0x60e700e002995ef8)
-	}
-	type OnEventResponseFut = fidl::client::QueryResponseFut<()>;}
+    fn method(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x60e700e002995ef8)
+    }
+    type OnEventResponseFut = fidl::client::QueryResponseFut<()>;
+}
 
 pub struct InterfaceEventStream {
-	event_receiver: fidl::client::EventReceiver,
+    event_receiver: fidl::client::EventReceiver,
 }
 
 impl ::std::marker::Unpin for InterfaceEventStream {}
 
 impl futures::stream::FusedStream for InterfaceEventStream {
-	fn is_terminated(&self) -> bool {
-		self.event_receiver.is_terminated()
-	}
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
 }
 
 impl futures::Stream for InterfaceEventStream {
-	type Item = Result<InterfaceEvent, fidl::Error>;
+    type Item = Result<InterfaceEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
-		) {
-			Some(buf) => buf,
-			None => return std::task::Poll::Ready(None),
-		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			0x136d200d00000000 | 0x914c226136244ed => {
-				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
-				Ok((
-					InterfaceEvent::OnEvent {}
-				))
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
-	}
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            0x136d200d00000000 | 0x914c226136244ed => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &tx_header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+                Ok((InterfaceEvent::OnEvent {}))
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
 }
 
 #[derive(Debug)]
 pub enum InterfaceEvent {
-	
-	
-	
-	OnEvent {
-		
-	},}
+    OnEvent {},
+}
 
 impl InterfaceEvent {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_on_event(self) -> Option<(
-	)> {
-		if let InterfaceEvent::OnEvent {
-		} = self {
-			Some(())
-		} else {
-			None
-		}
-	}
-	
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_on_event(self) -> Option<()> {
+        if let InterfaceEvent::OnEvent {} = self {
+            Some(())
+        } else {
+            None
+        }
+    }
 }
 
 /// A type which can be used to send responses and events into a borrowed channel.
@@ -277,118 +259,115 @@ impl InterfaceEvent {
 /// RequestStream or Responder type.
 #[deprecated(note = "Use InterfaceRequestStream / Responder instead")]
 pub struct InterfaceServerSender<'a> {
-	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
 }
 
-impl <'a> InterfaceServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
-		Self { channel }
-	}
-	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			InterfaceEncoder::encode_on_event_response(
-				bytes, handles,)?;
-			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-			Ok(())
-		})
-	}
+impl<'a> InterfaceServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
+    pub fn send_on_event(&self) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            InterfaceEncoder::encode_on_event_response(bytes, handles)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
 }
 
 /// A Stream of incoming requests for Interface
 pub struct InterfaceRequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	is_terminated: bool,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for InterfaceRequestStream {}
 
 impl futures::stream::FusedStream for InterfaceRequestStream {
-	fn is_terminated(&self) -> bool {
-		self.is_terminated
-	}
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
 }
 
 impl fidl::endpoints::RequestStream for InterfaceRequestStream {
-	type Service = InterfaceMarker;
+    type Service = InterfaceMarker;
 
-	/// Consume a channel to make a InterfaceRequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			is_terminated: false,
-		}
-	}
+    /// Consume a channel to make a InterfaceRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = InterfaceControlHandle;
+    /// ControlHandle for the remote connection
+    type ControlHandle = InterfaceControlHandle;
 
-	/// ControlHandle for the remote connection
-	fn control_handle(&self) -> Self::ControlHandle {
-		InterfaceControlHandle { inner: self.inner.clone() }
-	}
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        InterfaceControlHandle { inner: self.inner.clone() }
+    }
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
-		(self.inner, self.is_terminated)
-	}
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
-		-> Self
-	{
-		Self { inner, is_terminated }
-	}
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
 }
 
 impl futures::Stream for InterfaceRequestStream {
-	type Item = Result<InterfaceRequest, fidl::Error>;
+    type Item = Result<InterfaceRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> std::task::Poll<Option<Self::Item>>
-	{
-		let this = &mut *self;
-		if this.inner.poll_shutdown(cx) {
-			this.is_terminated = true;
-			return std::task::Poll::Ready(None);
-		}
-		if this.is_terminated {
-			panic!("polled InterfaceRequestStream after completion");
-		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
-				std::task::Poll::Ready(Ok(())) => {},
-				std::task::Poll::Pending => return std::task::Poll::Pending,
-				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-					this.is_terminated = true;
-					return std::task::Poll::Ready(None);
-				}
-				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
-			}
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled InterfaceRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
 
-			// A message has been received from the channel
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
-			}
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal() {
-				0x3f43684c00000000 | 0x60e700e002995ef8 => {
-					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-					let control_handle = InterfaceControlHandle {
-						inner: this.inner.clone(),
-					};
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x3f43684c00000000 | 0x60e700e002995ef8 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = InterfaceControlHandle { inner: this.inner.clone() };
 
-					Ok(InterfaceRequest::Method {control_handle,})
-				}
-				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal(),
-					service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-				}),
-			}))
-		})
-	}
+                    Ok(InterfaceRequest::Method { control_handle })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
 }
 
 /// Represents a single request.
@@ -398,128 +377,131 @@ impl futures::Stream for InterfaceRequestStream {
 #[derive(Debug)]
 #[deprecated(note = "Use InterfaceRequest instead")]
 pub enum InterfaceRequestMessage {
-	/// method comment #1
-	///
-	/// method comment #3
-	Method {
-		},
+    /// method comment #1
+    ///
+    /// method comment #3
+    Method {},
 }
 
 impl InterfaceRequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<InterfaceRequestMessage, fidl::Error> {
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<InterfaceRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal() {
-			0x3f43684c00000000 | 0x60e700e002995ef8 => {
-				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            0x3f43684c00000000 | 0x60e700e002995ef8 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
 
-				Ok(InterfaceRequestMessage::Method {})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal(),
-				service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			}),
-		}
-	}
-
-
+                Ok(InterfaceRequestMessage::Method {})
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
 }
 /// interface comment #1
 ///
 /// interface comment #3
 #[derive(Debug)]
 pub enum InterfaceRequest {
-	/// method comment #1
-	///
-	/// method comment #3
-	Method {
-		control_handle: InterfaceControlHandle,},
+    /// method comment #1
+    ///
+    /// method comment #3
+    Method { control_handle: InterfaceControlHandle },
 }
 
 impl InterfaceRequest {
-	#[allow(irrefutable_let_patterns)]
-	pub fn into_method(self) -> Option<(InterfaceControlHandle
-	)> {
-		if let InterfaceRequest::Method {control_handle,
-		} = self {
-			Some((control_handle))
-		} else {
-			None
-		}
-	}
-	
-
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-                InterfaceRequest::Method{..} => "method",
-          }
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_method(self) -> Option<(InterfaceControlHandle)> {
+        if let InterfaceRequest::Method { control_handle } = self {
+            Some((control_handle))
+        } else {
+            None
         }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            InterfaceRequest::Method { .. } => "method",
+        }
+    }
 }
 
 pub struct InterfaceEncoder;
 
 impl InterfaceEncoder {
-	pub fn encode_method_request<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x60e700e002995ef8);
-		let mut body = ();
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}
-	pub fn encode_on_event_response<'a>(
-		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x914c226136244ed);
-		let mut body = ();
-		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-		Ok(())
-	}}
+    pub fn encode_method_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x60e700e002995ef8);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_on_event_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x914c226136244ed);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct InterfaceControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ::std::ops::Deref for InterfaceControlHandle {
-	type Target = ::std::sync::Arc<fidl::ServeInner>;
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl InterfaceControlHandle {
-	pub fn shutdown(&self) {
-		self.inner.shutdown()
-	}
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
-		self.inner.shutdown_with_epitaph(status)
-	}
-	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x914c226136244ed);
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+    pub fn send_on_event(&self) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x914c226136244ed);
 
-		let mut response = ();
+        let mut response = ();
 
-		let mut msg = fidl::encoding::TransactionMessage {
-			header,
-			body: &mut response,
-		};
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
 
-		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
-			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
-		})?;
+        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
 
-		Ok(())
-	}
-	}
+        Ok(())
+    }
+}
 
 /* beginning of response types */
 
@@ -560,9 +542,7 @@ impl fidl::endpoints::UnifiedServiceRequest for ServiceRequest {
     }
 
     fn member_names() -> &'static [&'static str] {
-        &[
-            "interface",
-        ]
+        &["interface"]
     }
 }
 /// service comment #1
@@ -588,7 +568,8 @@ impl ServiceProxy {
     pub fn interface(&self) -> Result<InterfaceProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("interface", server)?;
-        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        let proxy =
+            ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
         Ok(InterfaceProxy::new(proxy))
     }
 }

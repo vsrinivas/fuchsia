@@ -7,71 +7,63 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[allow(unused_imports)]
+use fidl::{fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_table, fidl_xunion};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
-#[allow(unused_imports)]
-use fidl::{
-	fidl_bits,
-	fidl_enum,
-	fidl_empty_struct,
-	fidl_struct,
-	fidl_table,
-	fidl_xunion,
-};
-
 
 fidl_xunion! {
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: UnionSize8Alignment4,
-	members: [
-		Variant {
-			ty: u32,
-			ordinal: 1,
-		},
-	],
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+    name: UnionSize8Alignment4,
+    members: [
+        Variant {
+            ty: u32,
+            ordinal: 1,
+        },
+    ],
 }
 
 fidl_xunion! {
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: UnionSize12Alignment4,
-	members: [
-		Variant {
-			ty: [u8; 6],
-			ordinal: 1,
-		},
-	],
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+    name: UnionSize12Alignment4,
+    members: [
+        Variant {
+            ty: [u8; 6],
+            ordinal: 1,
+        },
+    ],
 }
 
 fidl_xunion! {
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: UnionSize24Alignment8,
-	members: [
-		Variant {
-			ty: StructSize16Alignment8,
-			ordinal: 1,
-		},
-	],
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+    name: UnionSize24Alignment8,
+    members: [
+        Variant {
+            ty: StructSize16Alignment8,
+            ordinal: 1,
+        },
+    ],
 }
 
 fidl_xunion! {
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: UnionSize36Alignment4,
-	members: [
-		Variant {
-			ty: [u8; 32],
-			ordinal: 1,
-		},
-	],
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+    name: UnionSize36Alignment4,
+    members: [
+        Variant {
+            ty: [u8; 32],
+            ordinal: 1,
+        },
+    ],
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SandwichUnionSize8Alignment4 {
-  pub before: u32,
-  pub union: UnionSize8Alignment4,
-  pub after: u32,
+    pub before: u32,
+    pub union: UnionSize8Alignment4,
+    pub after: u32,
 }
 
 fidl_struct! {
@@ -96,9 +88,9 @@ fidl_struct! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SandwichUnionSize12Alignment4 {
-  pub before: u32,
-  pub union: UnionSize12Alignment4,
-  pub after: i32,
+    pub before: u32,
+    pub union: UnionSize12Alignment4,
+    pub after: i32,
 }
 
 fidl_struct! {
@@ -123,8 +115,8 @@ fidl_struct! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct StructSize16Alignment8 {
-  pub f1: u64,
-  pub f2: u64,
+    pub f1: u64,
+    pub f2: u64,
 }
 
 fidl_struct! {
@@ -145,9 +137,9 @@ fidl_struct! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SandwichUnionSize24Alignment8 {
-  pub before: u32,
-  pub union: UnionSize24Alignment8,
-  pub after: u32,
+    pub before: u32,
+    pub union: UnionSize24Alignment8,
+    pub after: u32,
 }
 
 fidl_struct! {
@@ -172,9 +164,9 @@ fidl_struct! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SandwichUnionSize36Alignment4 {
-  pub before: u32,
-  pub union: UnionSize36Alignment4,
-  pub after: u32,
+    pub before: u32,
+    pub union: UnionSize36Alignment4,
+    pub after: u32,
 }
 
 fidl_struct! {
