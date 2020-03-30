@@ -50,6 +50,7 @@
 
 use core::fmt::{self, Debug, Display, Formatter};
 use core::hash::Hash;
+use core::ops::Deref;
 
 #[cfg(std)]
 use std::net;
@@ -595,10 +596,14 @@ impl LinkLocalAddress for Ipv6Addr {
     /// Is this address in the link-local subnet?
     ///
     /// `is_linklocal` returns true if `self` is in
-    /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`] or `self` is a multicast address
-    /// whose scope is link-local.
+    /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`], is a multicast address whose scope
+    /// is link-local, or is the address [`Ipv6::LOOPBACK_ADDRESS`] (per [RFC
+    /// 4291 Section 2.5.3], the loopback address is considered to have
+    /// link-local scope).
     ///
     /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`]: crate::ip::Ip::LINK_LOCAL_UNICAST_SUBNET
+    /// [`Ipv6::LOOPBACK_ADDRESS`]: crate::ip::Ip::LOOPBACK_ADDRESS
+    /// [RFC 4291 Section 2.5.3]: https://tools.ietf.org/html/rfc4291#section-2.5.3
     #[inline]
     fn is_linklocal(&self) -> bool {
         const LINK_LOCAL_SCOPE: u8 = 0x02;
@@ -606,6 +611,7 @@ impl LinkLocalAddress for Ipv6Addr {
         // mechanism for extracting the scope from a multicast address.
         Ipv6::LINK_LOCAL_UNICAST_SUBNET.contains(self)
             || (self.is_multicast() && self.0[1] & 0x0F == LINK_LOCAL_SCOPE)
+            || self == Ipv6::LOOPBACK_ADDRESS.deref()
     }
 }
 
@@ -1407,6 +1413,7 @@ mod tests {
         link_local.0[1] = 0x02;
         assert!(link_local.is_linklocal());
         assert!(link_local.is_specified());
+        assert!(Ipv6::LOOPBACK_ADDRESS.is_linklocal());
     }
 
     #[test]
