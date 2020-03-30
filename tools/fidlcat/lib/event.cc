@@ -111,24 +111,24 @@ void FidlcatPrinter::DisplayOutline(
 }
 
 void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) {
-  printer << syscall_->name();
-  printer.DisplayInline(syscall_->input_inline_members(), inline_fields_);
+  printer << syscall()->name();
+  printer.DisplayInline(syscall()->input_inline_members(), inline_fields());
   printer << '\n';
-  printer.DisplayOutline(syscall_->input_outline_members(), outline_fields_);
+  printer.DisplayOutline(syscall()->input_outline_members(), outline_fields());
 }
 
 void OutputEvent::PrettyPrint(FidlcatPrinter& printer) {
   fidl_codec::Indent indent(printer);
-  if (!printer.DisplayReturnedValue(syscall_->return_type(), returned_value_)) {
+  if (!printer.DisplayReturnedValue(syscall()->return_type(), returned_value_)) {
     return;
   }
   // Adds the inline output arguments (if any).
-  if (!inline_fields_.empty()) {
+  if (!inline_fields().empty()) {
     printer << ' ';
-    printer.DisplayInline(syscall_->output_inline_members(), inline_fields_);
+    printer.DisplayInline(syscall()->output_inline_members(), inline_fields());
   }
   printer << '\n';
-  printer.DisplayOutline(syscall_->output_outline_members(), outline_fields_);
+  printer.DisplayOutline(syscall()->output_outline_members(), outline_fields());
 }
 
 }  // namespace fidlcat

@@ -73,20 +73,11 @@ class Thread {
 
 class Event {
  public:
-  explicit Event(int64_t timestamp) : timestamp_(timestamp) {}
+  explicit Event(int64_t timestamp, const Thread* thread, const Syscall* syscall)
+      : timestamp_(timestamp), thread_(thread), syscall_(syscall) {}
 
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
-
- private:
-  int64_t timestamp_;
-};
-
-// Event which represent the arguments of a syscall (When the syscall is called).
-class InvokedEvent : public Event {
- public:
-  InvokedEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
-      : Event(timestamp), thread_(thread), syscall_(syscall) {}
 
   const Thread* thread() const { return thread_; }
   const Syscall* syscall() const { return syscall_; }
@@ -109,13 +100,21 @@ class InvokedEvent : public Event {
     outline_fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
-  void PrettyPrint(FidlcatPrinter& printer);
-
  private:
+  int64_t timestamp_;
   const Thread* const thread_;
   const Syscall* const syscall_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> inline_fields_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> outline_fields_;
+};
+
+// Event which represent the arguments of a syscall (When the syscall is called).
+class InvokedEvent : public Event {
+ public:
+  InvokedEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
+      : Event(timestamp, thread, syscall) {}
+
+  void PrettyPrint(FidlcatPrinter& printer);
 };
 
 // Event that represents the return value and out parameters when a syscall returns.
@@ -123,37 +122,12 @@ class OutputEvent : public Event {
  public:
   OutputEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall,
               int64_t returned_value)
-      : Event(timestamp), thread_(thread), syscall_(syscall), returned_value_(returned_value) {}
-
-  const Thread* thread() const { return thread_; }
-  const Syscall* syscall() const { return syscall_; }
-  const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>&
-  inline_fields() const {
-    return inline_fields_;
-  }
-  const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>&
-  outline_fields() const {
-    return outline_fields_;
-  }
-
-  void AddInlineField(const fidl_codec::StructMember* member,
-                      std::unique_ptr<fidl_codec::Value> value) {
-    inline_fields_.emplace(std::make_pair(member, std::move(value)));
-  }
-
-  void AddOutlineField(const fidl_codec::StructMember* member,
-                       std::unique_ptr<fidl_codec::Value> value) {
-    outline_fields_.emplace(std::make_pair(member, std::move(value)));
-  }
+      : Event(timestamp, thread, syscall), returned_value_(returned_value) {}
 
   void PrettyPrint(FidlcatPrinter& printer);
 
  private:
-  const Thread* const thread_;
-  const Syscall* const syscall_;
   int64_t returned_value_;
-  std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> inline_fields_;
-  std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> outline_fields_;
 };
 
 }  // namespace fidlcat
