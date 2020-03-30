@@ -9,6 +9,7 @@ import("//build/go/go_test.gni")
 go_library("botanist_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/botanist/lib"
   deps = [
+    "//src/sys/pkg/lib/repo",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/build",
     "//tools/lib/logger",
@@ -45,7 +46,6 @@ go_library("main") {
   deps = [
     ":botanist_lib",
     ":target",
-    "//src/sys/pkg/lib/repo",
     "//tools/lib/color",
     "//tools/lib/command",
     "//tools/lib/flagmisc",
