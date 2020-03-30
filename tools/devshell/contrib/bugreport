@@ -67,13 +67,6 @@ if [[ "${is_output_dir_provided}" == "true" ]]; then
   fi
 fi
 
-# Verify that we can obtain the target (ssh only).
-target=$(get-fuchsia-device-addr)
-if [[ -z "${target}" ]]; then
-  fx-error "Could not obtain target name."
-  exit 1
-fi
-
 # If no output directory is supplied, generate a unique one according to time.
 if [[ -z "${output_dir}" ]]; then
   # Generate an output directory.
@@ -95,7 +88,7 @@ error_bringing_report=
 tempfile="/tmp/__bugreport_temp"
 output_file="${output_dir}/bugreport.zip"
 # Obtain the bug report and store it in a temporary location.
-fx-command-run "ssh" "${target}" "bugreport ${@}" > "${output_file}"
+fx-command-run shell bugreport "${@}" > "${output_file}"
 if [ "$?" -ne 0 ]; then
   fx-error "Could not obtain bugreport from target."
   error_bringing_report=true
