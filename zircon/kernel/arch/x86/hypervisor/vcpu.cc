@@ -903,7 +903,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
     ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
     GUEST_STATS_INC(vm_entries);
+    running_.store(true);
     status = vmx_enter(&vmx_state_);
+    running_.store(false);
     GUEST_STATS_INC(vm_exits);
 
     SaveGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
@@ -948,6 +950,9 @@ void vmx_exit(VmxState* vmx_state) {
 
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   local_apic_state_.interrupt_tracker.Interrupt(vector, type);
+  if (running_.load()) {
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(thread_->LastCpu()));
+  }
 }
 
 template <typename Out, typename In>

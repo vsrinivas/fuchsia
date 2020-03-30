@@ -103,6 +103,7 @@ class Vcpu {
   Guest* const guest_;
   const uint16_t vpid_;
   Thread* const thread_;
+  ktl::atomic<bool> running_;
   LocalApicState local_apic_state_;
   PvClockState pvclock_state_;
   VmxState vmx_state_;

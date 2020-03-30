@@ -253,7 +253,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
       ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
       GUEST_STATS_INC(vm_entries);
+      running_.store(true);
       status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), hcr_);
+      running_.store(false);
       GUEST_STATS_INC(vm_exits);
     }
     gich_state_.SetAllInterruptStates(ich_state);
@@ -278,6 +280,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   gich_state_.Interrupt(vector, type);
+  if (running_.load()) {
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(thread_->LastCpu()));
+  }
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
