@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::basemgr::types::{RestartSessionResult, StartBasemgrResult};
+use crate::basemgr::types::{KillBasemgrResult, RestartSessionResult, StartBasemgrResult};
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl::endpoints::ServerEnd;
@@ -62,6 +62,17 @@ impl BaseManagerFacade {
                 Ok(Some(BasemgrDebugSynchronousProxy::new(client)))
             }
             None => Ok(None),
+        }
+    }
+
+    /// Facade to kill basemgr from Sl4f
+    pub async fn kill_basemgr(&self) -> Result<KillBasemgrResult, Error> {
+        match self.discover_basemgr_service()? {
+            Some(mut proxy) => {
+                proxy.shutdown()?;
+                Ok(KillBasemgrResult::Success)
+            }
+            None => Ok(KillBasemgrResult::NoBasemgrToKill),
         }
     }
 

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub enum BaseManagerMethod {
     RestartSession,
     StartBasemgr,
+    KillBasemgr,
 }
 
 impl std::str::FromStr for BaseManagerMethod {
@@ -16,6 +17,7 @@ impl std::str::FromStr for BaseManagerMethod {
         match method {
             "RestartSession" => Ok(BaseManagerMethod::RestartSession),
             "StartBasemgr" => Ok(BaseManagerMethod::StartBasemgr),
+            "KillBasemgr" => Ok(BaseManagerMethod::KillBasemgr),
             _ => return Err(format_err!("invalid BaseManager Facade method: {}", method)),
         }
     }
@@ -31,4 +33,10 @@ pub enum RestartSessionResult {
 pub enum StartBasemgrResult {
     Success,
     Fail,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum KillBasemgrResult {
+    Success,
+    NoBasemgrToKill,
 }

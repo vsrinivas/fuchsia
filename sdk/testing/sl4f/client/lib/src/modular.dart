@@ -16,6 +16,12 @@ class Modular {
   Future<String> restartSession() async =>
       await _sl4f.request('basemgr_facade.RestartSession');
 
+  /// Kill Basemgr.
+  ///
+  /// This is equivalent to sessionctl shutdown_basemgr.
+  Future<String> killBasemgr() async =>
+      await _sl4f.request('basemgr_facade.KillBasemgr');
+
   /// Launches Basemgr.
   ///
   /// Take custom config (in json) if there's one,

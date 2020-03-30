@@ -20,6 +20,10 @@ impl Facade for BaseManagerFacade {
                 let result = self.start_basemgr(args).await?;
                 Ok(to_value(result)?)
             }
+            BaseManagerMethod::KillBasemgr => {
+                let result = self.kill_basemgr().await?;
+                Ok(to_value(result)?)
+            }
         }
     }
 }

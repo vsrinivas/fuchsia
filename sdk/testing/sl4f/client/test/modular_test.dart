@@ -36,4 +36,20 @@ void main(List<String> args) {
 
     expect(Modular(sl4f).restartSession(), completion(equals('Success')));
   });
+
+  test('call KillBasemgr facade with no params', () {
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'basemgr_facade.KillBasemgr');
+      expect(body['params'], null);
+      req.response.write(
+          jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    expect(Modular(sl4f).killBasemgr(), completion(equals('Success')));
+  });
 }
