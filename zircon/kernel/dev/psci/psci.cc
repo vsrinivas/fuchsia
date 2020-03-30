@@ -19,6 +19,7 @@ static uint64_t shutdown_args[3] = {0, 0, 0};
 static uint64_t reboot_args[3] = {0, 0, 0};
 static uint64_t reboot_bootloader_args[3] = {0, 0, 0};
 static uint64_t reboot_recovery_args[3] = {0, 0, 0};
+static uint32_t reset_command = PSCI64_SYSTEM_RESET;
 
 static uint64_t psci_smc_call(uint32_t function, uint64_t arg0, uint64_t arg1, uint64_t arg2) {
   return arm_smccc_smc(function, arg0, arg1, arg2, 0, 0, 0, 0).x0;
@@ -63,7 +64,9 @@ void psci_system_reset(enum reboot_flags flags) {
     args = reboot_recovery_args;
   }
 
-  do_psci_call(PSCI64_SYSTEM_RESET, args[0], args[1], args[2]);
+  dprintf(INFO, "PSCI reboot: %#" PRIx32 " %#" PRIx64 " %#" PRIx64 " %#" PRIx64 "\n",
+    reset_command, args[0], args[1], args[2]);
+  do_psci_call(reset_command, args[0], args[1], args[2]);
 }
 
 static void arm_psci_init(const void* driver_data, uint32_t length) {
@@ -99,6 +102,13 @@ static void arm_psci_init(const void* driver_data, uint32_t length) {
     dprintf(INFO, "\tPSCI64_SYSTEM_OFF %#x\n", result);
     result = psci_get_feature(PSCI64_SYSTEM_RESET);
     dprintf(INFO, "\tPSCI64_SYSTEM_RESET %#x\n", result);
+    result = psci_get_feature(PSCI64_SYSTEM_RESET2);
+    dprintf(INFO, "\tPSCI64_SYSTEM_RESET2 %#x\n", result);
+    if (result == 0) {
+      // Prefer RESET2 if present. It explicitly supports arguments, but some vendors have
+      // extended RESET to behave the same way.
+      reset_command = PSCI64_SYSTEM_RESET2;
+    }
     result = psci_get_feature(PSCI64_CPU_ON);
     dprintf(INFO, "\tPSCI64_CPU_ON %#x\n", result);
     result = psci_get_feature(PSCI64_CPU_OFF);
