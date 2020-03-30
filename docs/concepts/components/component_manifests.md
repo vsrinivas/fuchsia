@@ -244,7 +244,7 @@ Storage capabilities are identified by types. Valid storage types are `data`,
 For an example of how these keywords interact, consider the following component
 instance tree:
 
-![Capability routing example](capability_routing_example.png)
+<br>![Capability routing example](capability_routing_example.png)<br>
 
 In this example, the `echo` component instance provides an `/svc/echo` protocol
 in its outgoing directory. This protocol is routed to the `echo_tool` component

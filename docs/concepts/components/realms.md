@@ -38,7 +38,7 @@ This section contains definitions for basic terminology about realms.
 
 Here is an example of a realm with a capability routed through it:
 
-![Realm example](realm_example.png)
+<br>![Realm example](realm_example.png)<br>
 
 In this example, the `shell` component has two children: `tools` and `services`.
 `services` has two children, `logger` and `echo`, while `tools` has one child
@@ -153,10 +153,10 @@ TODO: service directories as an example
 
 The following diagram illustrates a realm with a collection:
 
-![Collection example](collection_example.png)
+<br>![Collection example](collection_example.png)<br>
 
 In this example, the `shell` component declares a static child `console` and a
-collection `(tools)`, highlighted by the dashed blue rectangle (the `()`
+collection `(tools)`, highlighted by the grey background (the `()`
 notation denotes a collection). `(tools)` contains two dynamic instances, `ls`
 and `grep`. These instances are dynamic children of `shell`, scoped to
 `(tools)`. The use of a collection implies that the existence of `ls` and `grep`
