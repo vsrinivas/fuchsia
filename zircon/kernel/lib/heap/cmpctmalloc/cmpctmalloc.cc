@@ -538,12 +538,12 @@ static void WasteFreeMemory(void) TA_EXCL(TheHeapLock::Get()) {
 // want to use a reasonably accurate amount of memory for test purposes, we
 // have to do many small allocations.
 static void* TestTrimHelper(ssize_t target) TA_EXCL(TheHeapLock::Get()) {
-  char* answer = NULL;
+  void* answer = NULL;
   size_t remaining = cmpct_heap_remaining();
   while (cmpct_heap_remaining() - target > 512) {
-    char* next_block =
+    void* next_block =
         static_cast<char*>(cmpct_alloc(8 + ((cmpct_heap_remaining() - target) >> 2)));
-    *(static_cast<char**>(next_block)) = answer;
+    *(static_cast<void**>(next_block)) = answer;
     answer = next_block;
     if (cmpct_heap_remaining() > remaining) {
       return answer;
@@ -571,7 +571,7 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
   size_t test_sizes[200];
   int sizes = 0;
 
-  for (size_t s = 1; s < PAGE_SIZE * 4; s = static_cast<size_t>((s + 1) * 1.1)) {
+  for (size_t s = 1; s < PAGE_SIZE * 4; s = static_cast<size_t>(static_cast<double>(s + 1) * 1.1)) {
     test_sizes[sizes++] = s;
     ASSERT(sizes < 200);
   }
@@ -589,13 +589,14 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
       a = static_cast<char*>(cmpct_alloc(s));
       if (with_second_alloc) {
         a2 = static_cast<char*>(cmpct_alloc(1));
-        if (s<PAGE_SIZE> > 1) {
+        if (s < (PAGE_SIZE >> 1)) {
           // It is the intention of the test that a is at the start
           // of an OS allocation and that a2 is "right after" it.
           // Otherwise we are not testing what I thought. OS
           // allocations are certainly not smaller than a page, so
           // check in that case.
-          ASSERT((uintptr_t)(a2 - a) < s * 1.13 + 48);
+          uintptr_t limit = static_cast<uintptr_t>(static_cast<double>(s) * 1.13 + 48);
+          ASSERT((uintptr_t)(a2 - a) < limit);
         }
       }
       cmpct_trim();
@@ -649,7 +650,7 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
 
       // If the remaining is big we started a new OS allocation and the
       // test makes no sense.
-      if (remaining > 128 + s * 1.13 + wobble) {
+      if (remaining > 128 + static_cast<size_t>(static_cast<double>(s) * 1.13) + wobble) {
         cmpct_free(start_of_os_alloc);
         TestTrimFreeHelper(big_bit_in_the_middle);
         continue;
