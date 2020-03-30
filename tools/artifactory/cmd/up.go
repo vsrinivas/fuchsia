@@ -123,8 +123,6 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	} else if cmd.uuid == "" {
 		return fmt.Errorf("-uuid is required")
 	}
-	// TODO(fxb/47901): Remove this line once clients stop passing the builds/ prefix.
-	cmd.uuid = strings.TrimPrefix(cmd.uuid, "builds/")
 
 	m, err := build.NewModules(buildDir)
 	if err != nil {
