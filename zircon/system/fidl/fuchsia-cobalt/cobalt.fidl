@@ -111,7 +111,8 @@ protocol MetricEventLoggerFactory {
 // LoggerFactory creates Loggers.
 protocol LoggerFactory {
     // Creates a Logger for the project with the given ID, using the state of
-    // the metrics registry that is bundled with Cobalt.
+    // the metrics registry that is bundled with Cobalt. The project must be in
+    // the "fuchsia" customer.
     //
     // `project_id` The ID of the client's Cobalt project.
     //
@@ -123,7 +124,8 @@ protocol LoggerFactory {
         -> (Status status);
 
     // Creates a LoggerSimple for the project with the given ID, using the
-    // state of the metrics registry that is bundled with Cobalt.
+    // state of the metrics registry that is bundled with Cobalt. The project
+    // must be in the "fuchsia" customer.
     //
     // `project_id` The ID of the client's Cobalt project.
     //
@@ -132,6 +134,20 @@ protocol LoggerFactory {
     // is bundled with Cobalt.
     CreateLoggerSimpleFromProjectId(uint32 project_id,
                                     request<LoggerSimple> logger)
+        -> (Status status);
+
+    // Creates a Logger for the project specified, using the state of the
+    // metrics registry that is bundled with Cobalt.
+    //
+    // `customer_id` The ID of the client's Cobalt customer.
+    //
+    // `project_id` The ID of the client's Cobalt project.
+    //
+    // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
+    // project with the given IDs in the version of the metrics registry that
+    // is bundled with Cobalt.
+    CreateLoggerFromProjectSpec(uint32 customer_id, uint32 project_id,
+                                request<Logger> logger)
         -> (Status status);
 };
 

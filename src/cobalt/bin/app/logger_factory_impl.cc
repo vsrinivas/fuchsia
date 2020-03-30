@@ -21,13 +21,14 @@ LoggerFactoryImpl::LoggerFactoryImpl(TimerManager* timer_manager,
 
 template <typename LoggerInterface, typename Callback>
 void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+    uint32_t customer_id, uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request,
+    Callback callback,
     fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
-  auto logger = cobalt_service_->NewLogger(kFuchsiaCustomerId, project_id);
+  auto logger = cobalt_service_->NewLogger(customer_id, project_id);
   if (!logger) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a Fuchsia project with ID "
-                   << project_id;
+                   << project_id << " for customer with ID " << customer_id;
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
@@ -39,15 +40,23 @@ void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
 void LoggerFactoryImpl::CreateLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerFromProjectIdCallback callback) {
-  CreateAndBindLoggerFromProjectId(project_id, std::move(request), std::move(callback),
-                                   &logger_bindings_);
+  CreateAndBindLoggerFromProjectId(kFuchsiaCustomerId, project_id, std::move(request),
+                                   std::move(callback), &logger_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleFromProjectIdCallback callback) {
-  CreateAndBindLoggerFromProjectId(project_id, std::move(request), std::move(callback),
-                                   &logger_simple_bindings_);
+  CreateAndBindLoggerFromProjectId(kFuchsiaCustomerId, project_id, std::move(request),
+                                   std::move(callback), &logger_simple_bindings_);
+}
+
+void LoggerFactoryImpl::CreateLoggerFromProjectSpec(
+    uint32_t customer_id, uint32_t project_id,
+    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+    CreateLoggerFromProjectSpecCallback callback) {
+  CreateAndBindLoggerFromProjectId(customer_id, project_id, std::move(request), std::move(callback),
+                                   &logger_bindings_);
 }
 
 }  // namespace cobalt

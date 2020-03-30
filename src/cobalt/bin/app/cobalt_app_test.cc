@@ -180,6 +180,18 @@ TEST_F(CobaltAppTest, CreateLoggerNoValidLogger) {
   EXPECT_EQ(status, fuchsia::cobalt::Status::INVALID_ARGUMENTS);
 }
 
+TEST_F(CobaltAppTest, CreateLoggerForNonFuchsiaCustomer) {
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  fuchsia::cobalt::LoggerPtr logger;
+  // Use the customer and project ID for the cobalt_internal metrics project.
+  factory_->CreateLoggerFromProjectSpec(/*customer_id=*/2147483647, /*project_id=*/205836624,
+                                        logger.NewRequest(),
+                                        [&](fuchsia::cobalt::Status status_) { status = status_; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(status, fuchsia::cobalt::Status::OK);
+  EXPECT_NE(logger.get(), nullptr);
+}
+
 TEST_F(CobaltAppTest, SystemClockIsAccurate) {
   // Give the fake_timekeeper/clock time to become accurate.
   RunLoopUntilIdle();
