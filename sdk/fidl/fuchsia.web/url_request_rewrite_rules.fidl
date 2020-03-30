@@ -31,6 +31,9 @@ flexible union UrlRequestRewrite {
 
     /// Replaces a URL if the original URL ends with a pattern.
     4: UrlRequestRewriteReplaceUrl replace_url;
+
+    /// Adds to the URL query.
+    5: UrlRequestRewriteAddQuery add_query;
 };
 
 /// Adds `headers` to the URL request. If a header is already present in the original URL request,
@@ -69,4 +72,12 @@ table UrlRequestRewriteSubstituteQueryPattern {
 table UrlRequestRewriteReplaceUrl {
     1: Url url_ends_with;
     2: Url new_url;
+};
+
+/// Adds the specified `query` parameters to the query section of the URL, creating a query section
+/// if none exists.
+/// - `query` must be set.
+/// - `query` must be a valid [URL-query string](https://url.spec.whatwg.org/#url-query-string).
+table UrlRequestRewriteAddQuery {
+    1: Url query;
 };
