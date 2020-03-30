@@ -778,7 +778,6 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   }
 
   RuntimeMetadata runtime;
-  std::string runtime_parse_error;
   // If meta/*.cmx has runtime data, get it.
   if (!cmx.runtime_meta().IsNull()) {
     runtime = cmx.runtime_meta();
@@ -815,8 +814,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "component '" << package->resolved_url << "' has neither runner (error: '"
-                     << runtime_parse_error << "') nor elf binary: '" << bin_path << "'";
+      FXL_LOG(ERROR) << "Failed to open '" << package->resolved_url << "' program.binary path: '"
+                     << bin_path << "', with status: " << status;
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);
       return;
