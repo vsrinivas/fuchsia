@@ -34,7 +34,38 @@ class TestAmlGpu {
     EXPECT_TRUE(enabled);
     EXPECT_EQ(1, divisor);
   }
+
+  static void TestInitialClkFreq() {
+    aml_gpu::AmlGpu aml_gpu(nullptr);
+    aml_gpu.gpu_block_ = &s905d2_gpu_blocks;
+    zx::vmo vmo;
+    constexpr uint32_t kHiuRegisterSize = 1024 * 16;
+    constexpr uint32_t kPresetRegisterSize = 0x100;
+    ASSERT_OK(zx::vmo::create(kHiuRegisterSize, 0, &vmo));
+    ASSERT_OK(ddk::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
+                                      &aml_gpu.hiu_buffer_));
+    ASSERT_OK(zx::vmo::create(kHiuRegisterSize, 0, &vmo));
+    ASSERT_OK(ddk::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
+                                      &aml_gpu.gpu_buffer_));
+    ASSERT_OK(zx::vmo::create(kPresetRegisterSize, 0, &vmo));
+    ASSERT_OK(ddk::MmioBuffer::Create(0, kPresetRegisterSize, std::move(vmo),
+                                      ZX_CACHE_POLICY_CACHED, &aml_gpu.preset_buffer_));
+    aml_gpu.InitClock();
+    uint32_t value = aml_gpu.hiu_buffer_->Read32(0x6c << 2);
+    // Glitch-free mux should stay unchanged.
+    EXPECT_EQ(0, value >> kFinalMuxBitShift);
+    uint32_t parent_mux_value = value & 0xfff;
+    uint32_t source = parent_mux_value >> 9;
+    bool enabled = (parent_mux_value >> kClkEnabledBitShift) & 1;
+    uint32_t divisor = (parent_mux_value & 0xff) + 1;
+    // S905D2 starts at the highest frequency by default.
+    EXPECT_EQ(S905D2_GP0, source);
+    EXPECT_TRUE(enabled);
+    EXPECT_EQ(1, divisor);
+  }
 };
 }  // namespace aml_gpu
 
 TEST(AmlGpu, SetClkFreq) { aml_gpu::TestAmlGpu::TestSetClkFreq(); }
+
+TEST(AmlGpu, InitialClkFreq) { aml_gpu::TestAmlGpu::TestInitialClkFreq(); }

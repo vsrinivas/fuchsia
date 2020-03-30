@@ -45,6 +45,8 @@ typedef struct {
   uint32_t reset2_mask_offset;
   // Offset of the Mali control register in the hiubus, in units of dwords.
   uint32_t hhi_clock_cntl_offset;
+  // THe index into gpu_clk_freq that will be used upon booting.
+  uint32_t initial_clock_index;
   uint32_t gpu_clk_freq[kMaxGpuClkFreq];
 } aml_gpu_block_t;
 

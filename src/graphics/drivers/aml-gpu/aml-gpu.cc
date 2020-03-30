@@ -138,11 +138,7 @@ void AmlGpu::InitClock() {
   temp &= ~(1 << 14);
   preset_buffer_->Write32(temp, gpu_block_->reset2_level_offset);
 
-  // Currently the index 2 corresponds to the default
-  // value of GPU clock freq which is 500Mhz.
-  // In future, the GPU driver in garnet
-  // can make an IOCTL to set the default freq
-  SetInitialClkFreqSource(2);
+  SetInitialClkFreqSource(gpu_block_->initial_clock_index);
 
   temp = preset_buffer_->Read32(gpu_block_->reset0_level_offset);
   temp |= 1 << 20;

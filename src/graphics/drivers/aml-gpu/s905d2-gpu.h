@@ -26,6 +26,7 @@ static aml_gpu_block_t s905d2_gpu_blocks = {
     .reset2_level_offset = S905D2_RESET2_LEVEL,
     .reset2_mask_offset = S905D2_RESET2_MASK,
     .hhi_clock_cntl_offset = 0x6C,
+    .initial_clock_index = 5,
     .gpu_clk_freq =
         {
             S905D2_FCLK_DIV7,
