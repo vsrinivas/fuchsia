@@ -26,7 +26,6 @@ executable("sig_gen_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/wav_writer:wav_writer",

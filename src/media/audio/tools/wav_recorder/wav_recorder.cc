@@ -3,17 +3,12 @@
 
 #include "src/media/audio/tools/wav_recorder/wav_recorder.h"
 
-#include <lib/async-loop/default.h>
-#include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <poll.h>
-#include <unistd.h>
 
 #include "lib/media/audio/cpp/types.h"
-#include "src/lib/syslog/cpp/logger.h"
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 namespace media::tools {
 
