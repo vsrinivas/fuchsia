@@ -2698,28 +2698,28 @@ static bool pq_add_remove() {
   // Put the page in each queue and make sure it shows up
   pq.SetWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
 
   pq.SetUnswappable(&test_page);
   EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 1, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0}));
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
 
   // Pretend we have some kind of pointer to a VmObjectPaged (this will never get dereferenced)
   pq.SetPagerBacked(&test_page, vmop, 0);
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){1, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0}));
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
 
   END_TEST;
 }
@@ -2743,25 +2743,25 @@ static bool pq_move_queues() {
   // Move the page between queues.
   pq.SetWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
 
   pq.MoveToUnswappable(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
   EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 1, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0}));
 
   pq.MoveToPagerBacked(&test_page, vmop, 0);
   EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){1, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0}));
 
   pq.MoveToWired(&test_page);
   EXPECT_FALSE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
 
   pq.Remove(&test_page);
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
 
   END_TEST;
 }
@@ -2778,14 +2778,75 @@ static bool pq_move_self_queue() {
   // Move the page into the queue it is already in.
   pq.SetWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
 
   pq.MoveToWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
 
   pq.Remove(&test_page);
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){0, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
+
+  END_TEST;
+}
+
+static bool pq_rotate_queue() {
+  BEGIN_TEST;
+
+  PageQueues pq;
+
+  // Pretend we have a couple of allocated pages.
+  vm_page_t wired_page = {};
+  vm_page_t pager_page = {};
+  wired_page.set_state(VM_PAGE_STATE_OBJECT);
+  pager_page.set_state(VM_PAGE_STATE_OBJECT);
+
+  // Need a VMO to claim our pager backed page is in.
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(0, 0, PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  VmObjectPaged* vmop = VmObjectPaged::AsVmObjectPaged(vmo);
+  ASSERT_NONNULL(vmop);
+
+  // Put the pages in and validate initial state.
+  pq.SetWired(&wired_page);
+  pq.SetPagerBacked(&pager_page, vmop, 0);
+  EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
+  size_t queue;
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1}));
+  EXPECT_EQ(queue, 0u);
+
+  // Gradually rotate the queue.
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 1}));
+  EXPECT_EQ(queue, 1u);
+
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0}, 0, 1}));
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1}));
+
+  // Further rotations should not move the page.
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1}));
+
+  // Moving the page should bring it back to the first queue.
+  pq.MoveToPagerBacked(&pager_page, vmop, 0);
+  EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1}));
+
+  // Just double check one rotation.
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 1}));
+
+  pq.Remove(&wired_page);
+  pq.Remove(&pager_page);
 
   END_TEST;
 }
@@ -2985,6 +3046,7 @@ UNITTEST_START_TESTCASE(page_queues_tests)
 VM_UNITTEST(pq_add_remove)
 VM_UNITTEST(pq_move_queues)
 VM_UNITTEST(pq_move_self_queue)
+VM_UNITTEST(pq_rotate_queue)
 UNITTEST_END_TESTCASE(page_queues_tests, "pq", "PageQueues tests")
 
 UNITTEST_START_TESTCASE(physmap_tests)

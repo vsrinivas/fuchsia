@@ -12,6 +12,7 @@
 #include <fbl/macros.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
+#include <ktl/array.h>
 #include <vm/page.h>
 
 class VmObjectPaged;
@@ -26,6 +27,16 @@ class VmObjectPaged;
 // the PageQueues::lock_.
 class PageQueues {
  public:
+  // The number of pager backed queues is slightly arbitrary, but to be useful you want at least 3
+  // representing
+  //  * Very new pages that you probably don't want to evict as doing so probably implies you are in
+  //    swap death
+  //  * Slightly old pages that could be evicted if needed
+  //  * Very old pages that you'd be happy to evict
+  // For now 4 queues are chosen to stretch out that middle group such that the distinction between
+  // slightly old and very old is more pronounced.
+  static constexpr size_t kNumPagerBacked = 4;
+
   PageQueues();
   ~PageQueues();
 
@@ -54,7 +65,7 @@ class PageQueues {
 
   // Helper struct to group queue length counts returned by DebugQueueCounts.
   struct Counts {
-    size_t pager_backed = 0;
+    ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
     size_t unswappable = 0;
     size_t wired = 0;
 
@@ -65,11 +76,22 @@ class PageQueues {
     bool operator!=(const Counts& other) const { return !(*this == other); }
   };
 
+  // Rotates the pager backed queues such that all the pages in queue J get moved to queue J+1.
+  // This leaves queue 0 empty and the last queue (kNumPagerBacked - 1) has both its old contents
+  // and gains the contents of the queue before it.
+  // That is given 4 queues each with one page:
+  // {[a], [b], [c], [d]}
+  // After rotation they will be
+  // {[], [a], [b], [d,c]}
+  void RotatePagerBackedQueues();
+
   // These functions are marked debug as they perform O(n) traversals of the queues and will hold
   // the lock for the entire time. As such they should only be used for tests or instrumented
   // debugging.
   Counts DebugQueueCounts() const;
-  bool DebugPageIsPagerBacked(const vm_page_t* page) const;
+  // This takes an optional output parameter that, if the function returns true, will contain the
+  // index of the queue that the page was in.
+  bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
   bool DebugPageIsUnswappable(const vm_page_t* page) const;
   bool DebugPageIsWired(const vm_page_t* page) const;
 
@@ -77,7 +99,7 @@ class PageQueues {
   DECLARE_SPINLOCK(PageQueues) mutable lock_;
   // pager_backed_ denotes pages that both have a user level pager associated with them, and could
   // be evicted such that the pager could re-create the page.
-  list_node_t pager_backed_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
+  list_node_t pager_backed_[kNumPagerBacked] TA_GUARDED(lock_) = {LIST_INITIAL_CLEARED_VALUE};
   // unswappable_ pages have no user level mechanism to swap/evict them, but are modifiable by the
   // kernel and could have compression etc applied to them.
   list_node_t unswappable_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
@@ -88,6 +110,7 @@ class PageQueues {
   void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
 
   bool DebugPageInList(const list_node_t* list, const vm_page_t* page) const;
+  bool DebugPageInListLocked(const list_node_t* list, const vm_page_t* page) const TA_REQ(lock_);
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_

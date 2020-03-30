@@ -6,6 +6,8 @@
 
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <platform.h>
+#include <zircon/time.h>
 
 #include <kernel/event.h>
 #include <kernel/thread.h>
@@ -22,6 +24,10 @@ static constexpr uint32_t kScannerOpDisable = 1u << 1;
 static constexpr uint32_t kScannerOpEnable = 1u << 2;
 static constexpr uint32_t kScannerOpDump = 1u << 3;
 static constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
+static constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
+
+// Amount of time between pager queue rotations.
+static constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
@@ -35,11 +41,15 @@ Event scanner_disabled_event{0};
 DECLARE_SINGLETON_MUTEX(scanner_disabled_lock);
 uint32_t scanner_disable_count TA_GUARDED(scanner_disabled_lock::Get()) = 0;
 
-void scanner_print_stats() {
+void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
   printf("[SCAN]: Found %lu zero pages that could be de-duped\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->DebugQueueCounts();
-  printf("[SCAN]: Found %lu user-paged backed pages\n", queue_counts.pager_backed);
+  for (size_t i = 0; i < PageQueues::kNumPagerBacked; i++) {
+    printf("[SCAN]: Found %lu user-paged backed pages in queue %zu\n", queue_counts.pager_backed[i],
+           i);
+  }
+  printf("[SCAN]: Next queue rotation in %ld ms\n", time_till_queue_rotate / ZX_MSEC(1));
 }
 
 void scanner_do_reclaim(bool print) {
@@ -51,9 +61,14 @@ void scanner_do_reclaim(bool print) {
 
 int scanner_request_thread(void *) {
   bool disabled = false;
+  zx_time_t next_rotate_deadline = zx_time_add_duration(current_time(), kQueueRotateTime);
   while (1) {
-    scanner_request_event.Wait(Deadline::infinite());
-    uint32_t op = scanner_operation.exchange(0);
+    if (disabled) {
+      scanner_request_event.Wait(Deadline::infinite());
+    } else {
+      scanner_request_event.Wait(Deadline::no_slack(next_rotate_deadline));
+    }
+    int32_t op = scanner_operation.exchange(0);
     // It is possible for enable and disable to happen at the same time. This indicates the disabled
     // count went from 1->0->1 and so we want to remain disabled. We do this by performing the
     // enable step first. We know that the scenario of 0->1->0 is not possible as the 0->1 part of
@@ -72,6 +87,15 @@ int scanner_request_thread(void *) {
       scanner_operation.fetch_or(op);
       continue;
     }
+
+    zx_time_t current = current_time();
+
+    if (current >= next_rotate_deadline || (op & kScannerOpRotateQueues)) {
+      op &= ~kScannerOpRotateQueues;
+      pmm_page_queues()->RotatePagerBackedQueues();
+      next_rotate_deadline = zx_time_add_duration(current, kQueueRotateTime);
+    }
+
     bool print = false;
     if (op & kScannerFlagPrint) {
       op &= ~kScannerFlagPrint;
@@ -83,7 +107,7 @@ int scanner_request_thread(void *) {
     }
     if (op & kScannerOpDump) {
       op &= ~kScannerOpDump;
-      scanner_print_stats();
+      scanner_print_stats(zx_time_sub_time(next_rotate_deadline, current));
     }
     DEBUG_ASSERT(op == 0);
   }
@@ -148,6 +172,7 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     printf("%s push_disable : increase scanner disable count\n", argv[0].str);
     printf("%s pop_disable  : decrease scanner disable count\n", argv[0].str);
     printf("%s reclaim_all  : attempt to reclaim all possible memory\n", argv[0].str);
+    printf("%s rotate_queue : immediately rotate the page queues\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
   if (!strcmp(argv[1].str, "dump")) {
@@ -158,6 +183,9 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     scanner_pop_disable_count();
   } else if (!strcmp(argv[1].str, "reclaim_all")) {
     scanner_operation.fetch_or(kScannerOpReclaimAll | kScannerFlagPrint);
+    scanner_request_event.Signal();
+  } else if (!strcmp(argv[1].str, "rotate_queue")) {
+    scanner_operation.fetch_or(kScannerOpRotateQueues);
     scanner_request_event.Signal();
   } else {
     printf("unknown command\n");
