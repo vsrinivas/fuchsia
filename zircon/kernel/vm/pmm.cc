@@ -162,19 +162,31 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     printf("not enough arguments\n");
   usage:
     printf("usage:\n");
-    printf("%s dump                 : dump pmm info \n", argv[0].str);
+    printf("%s dump                              : dump pmm info \n", argv[0].str);
     if (!is_panic) {
-      printf("%s free                 : periodically dump free mem count\n", argv[0].str);
+      printf("%s free                              : periodically dump free mem count\n",
+             argv[0].str);
       printf(
-          "%s oom [<rate>]         : leak memory until oom is triggered, optionally "
-          "specify the rate at which to leak (in MB per second)\n",
+          "%s oom [<rate>]                      : leak memory until oom is triggered,\n"
+          "                                        optionally specify the rate at which to leak "
+          "(in MB per second)\n",
           argv[0].str);
-      printf("%s mem_avail_state info : dump memstate info\n", argv[0].str);
-      printf("%s drop_user_pt         : drop all user hardware page tables\n", argv[0].str);
-      printf("%s checker status       : prints the status of the pmm checker\n", argv[0].str);
-      printf("%s checker enable       : enables the pmm checker\n", argv[0].str);
-      printf("%s checker disable      : disables the pmm checker\n", argv[0].str);
-      printf("%s checker check        : forces a check of all free pages in the pmm\n",
+      printf("%s mem_avail_state info              : dump memory availability state info\n",
+             argv[0].str);
+      printf(
+          "%s mem_avail_state <state> [<nsecs>] : allocate memory to go to memstate <state>, hold "
+          "the state for <nsecs> (default 10s) \n"
+          "                                        only works if going to <state> from current "
+          "state requires allocating memory,\n"
+          "                                        can't free up pre-allocated memory\n",
+          argv[0].str);
+      printf("%s drop_user_pt                      : drop all user hardware page tables\n",
+             argv[0].str);
+      printf("%s checker status                    : prints the status of the pmm checker\n",
+             argv[0].str);
+      printf("%s checker enable                    : enables the pmm checker\n", argv[0].str);
+      printf("%s checker disable                   : disables the pmm checker\n", argv[0].str);
+      printf("%s checker check                     : forces a check of all free pages in the pmm\n",
              argv[0].str);
     }
     return ZX_ERR_INTERNAL;
@@ -211,7 +223,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     uint64_t pages_till_oom;
     // In case we are racing with someone freeing pages we will leak in a loop until we are sure
     // we have hit the oom state.
-    while ((pages_till_oom = pmm_node.DebugNumPagesTillOomState()) > 0) {
+    while ((pages_till_oom = pmm_node.DebugNumPagesTillMemState(0)) > 0) {
       list_node list = LIST_INITIAL_VALUE(list);
       if (rate > 0) {
         uint64_t pages_leaked = 0;
@@ -238,7 +250,32 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     if (!strcmp(argv[2].str, "info")) {
       pmm_node.DumpMemAvailState();
     } else {
-      goto usage;
+      uint8_t state = static_cast<uint8_t>(argv[2].u);
+      if (state > pmm_node.DebugMaxMemAvailState()) {
+        printf("Invalid memstate %u. Specify a value between 0 and %u.\n", state,
+               pmm_node.DebugMaxMemAvailState());
+        goto usage;
+      }
+      uint64_t pages_to_alloc, pages_to_free = 0;
+      list_node list = LIST_INITIAL_VALUE(list);
+      // In case we are racing with someone freeing pages we will leak in a loop until we are sure
+      // we have hit the required memory availability state.
+      while ((pages_to_alloc = pmm_node.DebugNumPagesTillMemState(state)) > 0) {
+        if (pmm_node.AllocPages(pages_to_alloc, 0, &list) == ZX_OK) {
+          printf("Leaked %lu pages\n", pages_to_alloc);
+          pages_to_free += pages_to_alloc;
+        }
+      }
+      if (pages_to_free > 0) {
+        uint64_t nsecs = 10;
+        if (argc > 3) {
+          nsecs = argv[3].u;
+        }
+        printf("Sleeping for %lu seconds...\n", nsecs);
+        Thread::Current::SleepRelative(ZX_SEC(nsecs));
+        pmm_node.FreeList(&list);
+        printf("Freed %lu pages\n", pages_to_free);
+      }
     }
   } else if (!strcmp(argv[1].str, "drop_user_pt")) {
     VmAspace::DropAllUserPageTables();

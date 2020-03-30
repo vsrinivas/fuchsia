@@ -57,7 +57,8 @@ class PmmNode {
   void Dump(bool is_panic) const TA_NO_THREAD_SAFETY_ANALYSIS;
 
   void DumpMemAvailState() const;
-  uint64_t DebugNumPagesTillOomState() const;
+  uint64_t DebugNumPagesTillMemState(uint8_t mem_state_idx) const;
+  uint8_t DebugMaxMemAvailState() const;
 
   zx_status_t AddArena(const pmm_arena_info_t* info);
 
