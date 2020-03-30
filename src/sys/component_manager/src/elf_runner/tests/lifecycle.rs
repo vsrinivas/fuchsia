@@ -18,6 +18,8 @@ async fn test_normal_behavior() {
     event_source.start_component_tree().await.unwrap();
     let mut event_stream = event_source.subscribe(vec![EventType::Stopped]).await.unwrap();
     let collection_name = String::from("test-collection");
+    // What is going on here? A scoped dynamic instance is created and then
+    // dropped. When a the instance is dropped it stops the instance.
     let child_name = {
         create_scoped_dynamic_instance(
             collection_name.clone(),

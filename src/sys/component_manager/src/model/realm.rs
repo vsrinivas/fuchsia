@@ -33,7 +33,7 @@ use {
         boxed::Box,
         clone::Clone,
         collections::{HashMap, HashSet},
-        fmt, i64,
+        fmt,
         path::PathBuf,
         sync::{Arc, Weak},
     },
@@ -382,12 +382,9 @@ impl Realm {
             let was_running = execution.runtime.is_some();
 
             if let Some(runtime) = &mut execution.runtime {
-                let timer = Box::pin(fasync::Timer::new(fasync::Time::after(
-                    // TODO(jmatt) the plan is to read this from somewhere
-                    // in the component manifest, likely a field in the
-                    // environment section.
-                    zx::Duration::from_nanos(i64::MAX),
-                )));
+                let timer = Box::pin(fasync::Timer::new(fasync::Time::after(zx::Duration::from(
+                    self.environment.stop_timeout(),
+                ))));
                 runtime.stop_component(timer).await.map_err(|e| {
                     ModelError::RunnerCommunicationError {
                         moniker: self.abs_moniker.clone(),
@@ -718,7 +715,11 @@ impl RealmState {
                 .ok_or_else(|| {
                     ModelError::environment_not_found(environment_name, realm.abs_moniker.clone())
                 })?;
-            Ok(Environment::from_decl(realm, decl))
+            Environment::from_decl(realm, decl).map_err(|e| ModelError::EnvironmentInvalid {
+                name: environment_name.to_string(),
+                moniker: realm.abs_moniker.clone(),
+                err: e,
+            })
         } else {
             // Auto-inherit the environment from this realm.
             Ok(Environment::new_inheriting(realm))

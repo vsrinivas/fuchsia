@@ -4,6 +4,7 @@
 
 use {
     crate::model::{
+        environment::EnvironmentError,
         moniker::{AbsoluteMoniker, PartialMoniker},
         resolver::ResolverError,
         runner::RunnerError,
@@ -30,6 +31,13 @@ pub enum ModelError {
     CollectionNotFound { name: String },
     #[error("environment {} not found in realm {}", name, moniker)]
     EnvironmentNotFound { name: String, moniker: AbsoluteMoniker },
+    #[error("environment {} in realm {} is not valid: {}", name, moniker, err)]
+    EnvironmentInvalid {
+        name: String,
+        moniker: AbsoluteMoniker,
+        #[source]
+        err: EnvironmentError,
+    },
     #[error("{} is not supported", feature)]
     Unsupported { feature: String },
     #[error("component declaration invalid")]
@@ -61,9 +69,7 @@ pub enum ModelError {
     },
     // TODO: Spin this off into RoutingError and define concrete subtypes.
     #[error("{}", detail)]
-    CapabilityDiscoveryError {
-        detail: String,
-    },
+    CapabilityDiscoveryError { detail: String },
     #[error("storage error: {}", err)]
     StorageError {
         #[source]

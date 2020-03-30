@@ -1,0 +1,55 @@
+{
+    "use": [
+        {
+            "protocol": [
+                "/svc/fuchsia.process.Launcher",
+            ]
+        },
+        {
+            "protocol": [
+                "/svc/fuchsia.sys2.Realm",
+            ],
+            "from": "framework",
+        }
+    ],
+    "offer": [
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#custom-timeout-child",
+                "#inherited-timeout-child"
+            ],
+        },
+        {
+            "protocol": [
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            "from": "realm",
+            "to": [
+                "#custom-timeout-child",
+                "#inherited-timeout-child"
+            ],
+        },
+    ],
+    "environments": [
+        {
+            "name": "custom-timeout",
+            "extends": "realm",
+            "__stop_timeout_ms": 1000,
+        },
+    ],
+    "children": [
+        {
+            "name": "custom-timeout-child",
+            "environment": "#custom-timeout",
+            "url": "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle_timeout_unresponsive_node.cm",
+            "startup": "eager",
+        },
+        {
+            "name": "inherited-timeout-child",
+            "url": "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle_timeout_unresponsive_node.cm",
+            "startup": "eager",
+        },
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/lifecycle_full",
+        "lifecycle": {
+            "stop_event": "notify",
+        }
+    },
+    "use": [
+        { "runner": "elf" },
+        {
+            "protocol": "/svc/fuchsia.logger.LogSink",
+        },
+    ],
+}

@@ -9,7 +9,11 @@ use {
     },
     cm_rust::EnvironmentDecl,
     fidl_fuchsia_sys2 as fsys,
-    std::sync::{Arc, Weak},
+    std::{
+        sync::{Arc, Weak},
+        time::Duration,
+    },
+    thiserror::Error,
 };
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].
@@ -20,33 +24,68 @@ use {
 pub struct Environment {
     parent: Weak<Realm>,
     resolver_registry: ResolverRegistry,
+    stop_timeout: Duration,
+}
+
+pub const DEFAULT_STOP_TIMEOUT: Duration = Duration::from_secs(5);
+
+#[derive(Debug, Error, Clone)]
+pub enum EnvironmentError {
+    #[error(
+        "stop timeout could not be set, environment has no parent and does not specify a value"
+    )]
+    StopTimeoutUnknown,
 }
 
 impl Environment {
     /// Creates a new empty environment without a parent.
     pub fn empty() -> Environment {
-        Environment { parent: Weak::new(), resolver_registry: ResolverRegistry::new() }
+        Environment {
+            parent: Weak::new(),
+            resolver_registry: ResolverRegistry::new(),
+            stop_timeout: DEFAULT_STOP_TIMEOUT,
+        }
     }
 
     /// Creates a new root environment with a resolver registry and no parent.
     pub fn new_root(resolver_registry: ResolverRegistry) -> Environment {
-        Environment { parent: Weak::new(), resolver_registry }
+        Environment { parent: Weak::new(), resolver_registry, stop_timeout: DEFAULT_STOP_TIMEOUT }
     }
 
     /// Creates an environment from `env_decl`, using `realm` as the parent if necessary.
-    pub fn from_decl(realm: &Arc<Realm>, env_decl: &EnvironmentDecl) -> Environment {
-        Environment {
+    pub fn from_decl(
+        realm: &Arc<Realm>,
+        env_decl: &EnvironmentDecl,
+    ) -> Result<Environment, EnvironmentError> {
+        Ok(Environment {
             parent: match env_decl.extends {
                 fsys::EnvironmentExtends::Realm => Arc::downgrade(realm),
                 fsys::EnvironmentExtends::None => Weak::new(),
             },
             resolver_registry: ResolverRegistry::new(),
-        }
+            stop_timeout: match env_decl.stop_timeout_ms {
+                Some(timeout) => Duration::from_millis(timeout.into()),
+                None => match env_decl.extends {
+                    fsys::EnvironmentExtends::Realm => realm.environment.stop_timeout(),
+                    fsys::EnvironmentExtends::None => {
+                        return Err(EnvironmentError::StopTimeoutUnknown);
+                    }
+                },
+            },
+        })
     }
 
     /// Creates a new environment with `realm` as the parent.
     pub fn new_inheriting(realm: &Arc<Realm>) -> Environment {
-        Environment { parent: Arc::downgrade(realm), resolver_registry: ResolverRegistry::new() }
+        Environment {
+            parent: Arc::downgrade(realm),
+            resolver_registry: ResolverRegistry::new(),
+            stop_timeout: realm.environment.stop_timeout(),
+        }
+    }
+
+    pub fn stop_timeout(&self) -> Duration {
+        self.stop_timeout
     }
 }
 
@@ -93,8 +132,10 @@ mod tests {
             &EnvironmentDeclBuilder::new()
                 .name("env")
                 .extends(fsys::EnvironmentExtends::None)
+                .stop_timeout(1234)
                 .build(),
-        );
+        )
+        .expect("environment construction failed");
         assert_matches!(environment.parent.upgrade(), None);
 
         let environment = Environment::from_decl(
@@ -103,7 +144,8 @@ mod tests {
                 .name("env")
                 .extends(fsys::EnvironmentExtends::Realm)
                 .build(),
-        );
+        )
+        .expect("environment constuction failed");
         assert_matches!(environment.parent.upgrade(), Some(_));
     }
 
