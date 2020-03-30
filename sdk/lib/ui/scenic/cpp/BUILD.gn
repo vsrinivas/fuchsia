@@ -16,6 +16,8 @@ sdk_source_set("cpp") {
   sources = [
     "commands.cc",
     "commands.h",
+    "commands_sizing.cc",
+    "commands_sizing.h",
     "id.h",
     "resources.cc",
     "resources.h",

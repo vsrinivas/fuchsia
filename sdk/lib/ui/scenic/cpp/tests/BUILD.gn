@@ -7,11 +7,13 @@ import("//build/test/test_package.gni")
 
 test("scenic_cpp_unittests") {
   sources = [
+    "session_test.cc",
     "view_ref_pair_test.cc",
     "view_token_pair_test.cc",
   ]
 
   deps = [
+    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",

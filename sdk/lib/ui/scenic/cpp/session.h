@@ -19,6 +19,14 @@
 
 namespace scenic {
 
+// Records the number of bytes occupied by enqueue requests without any commands.
+//
+// As commands are accumulated, they are measured the number of bytes and handles
+// added to this base. See |Flush|, |commands_num_bytes_|, and
+// |commands_num_handles_|.
+constexpr int64_t kEnqueueRequestBaseNumBytes =
+    sizeof(fidl_message_header_t) + sizeof(fidl_vector_t);
+
 // Connect to Scenic and establish a new Session, as well as an InterfaceRequest
 // for a SessionListener that can be hooked up as desired.
 //
@@ -126,7 +134,8 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   void EnqueueReleaseFence(zx::event fence);
 
   // Flushes queued operations to the session.
-  void Flush();
+  // Virtual for testing.
+  virtual void Flush();
 
   // Presents all previously enqueued operations.
   // Implicitly flushes all queued operations to the session.
@@ -155,7 +164,12 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   void SetDebugName(const std::string& debug_name);
 
- private:
+protected:
+  std::vector<fuchsia::ui::scenic::Command> commands_;
+  int64_t commands_num_bytes_ = kEnqueueRequestBaseNumBytes;
+  int64_t commands_num_handles_ = 0;
+
+private:
   // |fuchsia::ui::scenic::SessionListener|
   void OnScenicError(std::string error) override;
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override;
@@ -166,7 +180,6 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 
-  std::vector<fuchsia::ui::scenic::Command> commands_;
   std::vector<zx::event> acquire_fences_;
   std::vector<zx::event> release_fences_;
 

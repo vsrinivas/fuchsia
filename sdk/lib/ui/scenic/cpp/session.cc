@@ -4,17 +4,11 @@
 
 #include <lib/syslog/global.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/commands_sizing.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <zircon/assert.h>
 
 namespace scenic {
-
-// Don't batch commands - enqueue every command as its own message. This is a workaround
-// for FL-258, where commands were getting corrupted. The commands are still batched
-// and processed per-Present() on the Scenic side.
-// TODO(SCN-1522) Once FL-258 is fixed, either batch commands or move away from
-// command-union pattern.
-constexpr size_t kCommandsPerMessage = 1u;
 
 SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
     fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispatcher) {
@@ -85,9 +79,22 @@ void Session::Enqueue(fuchsia::ui::input::Command command) {
 }
 
 void Session::Enqueue(fuchsia::ui::scenic::Command command) {
+  auto size = MeasureCommand(command);
+
+  // If we would go over caps by adding this command, flush the commands we have
+  // accumulated so far.
+  if (commands_.size() > 0 &&
+      (static_cast<int64_t>(ZX_CHANNEL_MAX_MSG_BYTES) < commands_num_bytes_ + size.num_bytes ||
+       static_cast<int64_t>(ZX_CHANNEL_MAX_MSG_HANDLES) < commands_num_handles_ + size.num_handles)) {
+    Flush();
+  }
+
   commands_.push_back(std::move(command));
-  if (commands_.size() >= kCommandsPerMessage ||
-      commands_.back().Which() == fuchsia::ui::scenic::Command::Tag::kInput) {
+  commands_num_bytes_ += size.num_bytes;
+  commands_num_handles_ += size.num_handles;
+
+  // Eagerly flush all input commands.
+  if (commands_.back().Which() == fuchsia::ui::scenic::Command::Tag::kInput) {
     Flush();
   }
 }
@@ -107,9 +114,11 @@ void Session::Flush() {
     session_->Enqueue(std::move(commands_));
 
     // After being moved, |commands_| is in a "valid but unspecified state";
-    // see http://en.cppreference.com/w/cpp/utility/move.  Calling reset() makes
+    // see http://en.cppreference.com/w/cpp/utility/move.  Calling clear() makes
     // it safe to continue using.
     commands_.clear();
+    commands_num_bytes_ = kEnqueueRequestBaseNumBytes;
+    commands_num_handles_ = 0;
   }
 }
 
@@ -128,6 +137,9 @@ void Session::Present(zx::time presentation_time, PresentCallback callback) {
 void Session::Present2(zx_duration_t requested_presentation_time,
                        zx_duration_t requested_prediction_span,
                        Present2Callback immediate_callback) {
+  ZX_DEBUG_ASSERT(session_);
+  Flush();
+
   fuchsia::ui::scenic::Present2Args args;
   args.set_requested_presentation_time(requested_presentation_time);
   args.set_release_fences(std::move(release_fences_));
