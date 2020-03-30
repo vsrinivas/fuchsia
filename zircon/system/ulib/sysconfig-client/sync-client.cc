@@ -163,6 +163,7 @@ zx_status_t SyncClient::WritePartition(PartitionType partition, const zx::vmo& v
       .offset = GetPartitionOffset(partition),
       .size = GetPartitionSize(partition),
   };
+  printf("sysconfig: ADDING ERASE CYCLE TO SYSCONFIG\n");
   auto result = skip_block_.WriteBytes(std::move(operation));
   return result.ok() ? result.value().status : result.status();
 }
