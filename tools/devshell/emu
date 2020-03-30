@@ -12,7 +12,7 @@
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
-##   -u <path> execute emu if-up script, default: linux: no script, macos: tap ifup script.
+##   -u <path> execute emu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
 ##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
 ##   -r <fps> webrtc frame rate when using gRPC service, default is 30
@@ -44,7 +44,7 @@ AUDIO=0
 HEADLESS=0
 AEMU="emulator"
 AEMU_DIR=""
-UPSCRIPT=
+UPSCRIPT=no
 WINDOW_SIZE="1280x800"
 GRPC=
 RTCFPS="30"
@@ -322,10 +322,6 @@ if (( NET )); then
       echo "  sudo chown $USER /dev/$IFNAME"
       exit 1
     fi
-    if [[ -z "${UPSCRIPT}" ]]; then
-      echo "sudo follows to configure the tap interface:"
-      UPSCRIPT="${FUCHSIA_DIR}/zircon/scripts/qemu-ifup-macos"
-    fi
   else
     if [[ -z "$IFNAME" ]]; then
       IFNAME="qemu"
@@ -344,11 +340,8 @@ if (( NET )); then
     if (command -v ufw && grep -q "^ENABLED=yes" /etc/ufw/ufw.conf) >/dev/null 2>&1; then
       fx-warn "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
     fi
-    if [[ -z "${UPSCRIPT}" ]]; then
-      UPSCRIPT=no
-    fi
   fi
-  ARGS+=("-netdev" "type=tap,ifname=$IFNAME,id=net0${UPSCRIPT:+,script=${UPSCRIPT}}")
+  ARGS+=("-netdev" "type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0")
   HASH=$(echo $IFNAME | shasum)
   SUFFIX=$(for i in {0..2}; do echo -n ":${HASH:$(( 2 * i )):2}"; done)
   MAC=",mac=52:54:00$SUFFIX"
