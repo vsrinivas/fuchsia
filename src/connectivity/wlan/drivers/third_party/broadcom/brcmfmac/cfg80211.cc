@@ -511,7 +511,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
   cfg->scan_request = NULL;
 
   // Canceling if it's inactive is OK. Checking if it's active just invites race conditions.
-  brcmf_timer_stop(&cfg->escan_timer);
+  cfg->escan_timer->Stop();
 
   if (fw_abort) {
     /* Do a scan abort to stop the driver's scan engine */
@@ -908,7 +908,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   }
 
   /* Arm scan timeout timer */
-  brcmf_timer_set(&cfg->escan_timer, ZX_MSEC(BRCMF_ESCAN_TIMER_INTERVAL_MS));
+  cfg->escan_timer->Start(ZX_MSEC(BRCMF_ESCAN_TIMER_INTERVAL_MS));
 
   return ZX_OK;
 
@@ -1516,14 +1516,14 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   BRCMF_DBG(TRACE, "Enter\n");
 
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
-    brcmf_timer_stop(&cfg->disconnect_timer);
+    cfg->disconnect_timer->Stop();
     if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
       brcmf_notify_deauth(ndev, profile->bssid);
     } else {
       brcmf_notify_disassoc(ndev, ZX_OK);
     }
   }
-  brcmf_timer_stop(&cfg->signal_report_timer);
+  cfg->signal_report_timer->Stop();
 
   BRCMF_DBG(TRACE, "Exit\n");
 }
@@ -1569,7 +1569,7 @@ static void cfg80211_signal_ind(net_device* ndev) {
   } else {
     // If client is not connected, stop the timer
     brcmf_cfg80211_info* cfg = ifp->drvr->config;
-    brcmf_timer_stop(&cfg->signal_report_timer);
+    cfg->signal_report_timer->Stop();
   }
 }
 
@@ -1580,8 +1580,7 @@ static void brcmf_signal_report_worker(WorkItem* work) {
   cfg80211_signal_ind(ndev);
 }
 
-static void brcmf_signal_report_timeout(void* data) {
-  struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
+static void brcmf_signal_report_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter\n");
   WorkQueue::ScheduleDefault(&cfg->signal_report_work);
@@ -1594,8 +1593,7 @@ static void brcmf_disconnect_timeout_worker(WorkItem* work) {
   brcmf_disconnect_done(cfg);
 }
 
-static void brcmf_disconnect_timeout(void* data) {
-  struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
+static void brcmf_disconnect_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter\n");
   WorkQueue::ScheduleDefault(&cfg->disconnect_timeout_work);
@@ -1638,7 +1636,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   // Set the timer before notifying firmware as this thread might get preempted to
   // handle the response event back from firmware. Timer can be stopped if the command
   // fails.
-  brcmf_timer_set(&cfg->disconnect_timer, BRCMF_DISCONNECT_TIMER_DUR_MS);
+  cfg->disconnect_timer->Start(BRCMF_DISCONNECT_TIMER_DUR_MS);
 
   memcpy(&scbval.ea, peer_sta_address, ETH_ALEN);
   scbval.val = reason_code;
@@ -1648,7 +1646,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to disassociate: %s, fw err %s\n", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    brcmf_timer_stop(&cfg->disconnect_timer);
+    cfg->disconnect_timer->Stop();
   }
 
 done:
@@ -1990,8 +1988,7 @@ static void brcmf_cfg80211_escan_timeout_worker(WorkItem* work) {
   brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true, true);
 }
 
-static void brcmf_escan_timeout(void* data) {
-  struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
+static void brcmf_escan_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
 
   if (cfg->int_escan_map || cfg->scan_request) {
@@ -2089,8 +2086,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_ESCAN_RESULT, brcmf_cfg80211_escan_handler);
   cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
   /* Init scan_timeout timer */
-  cfg->escan_timer.data = cfg;
-  brcmf_timer_init(&cfg->escan_timer, cfg->pub->dispatcher, brcmf_escan_timeout, cfg);
+  cfg->escan_timer = new Timer(cfg->pub->dispatcher, std::bind(brcmf_escan_timeout, cfg), false);
   cfg->escan_timeout_work = WorkItem(brcmf_cfg80211_escan_timeout_worker);
 }
 
@@ -3710,9 +3706,8 @@ static bool brcmf_is_linkdown(const net_device* ndev, const struct brcmf_event_m
     BRCMF_DBG(CONN, "Processing link down\n");
     // Adding this log for debugging disconnect issues.
     // TODO(karthikrish) : Move this to CONN level for production code
-    BRCMF_INFO("Link Down Event: %d flg: 0x%x reas: %d sts: %d rssi: %d snr: %d\n",
-               event, flags, e->reason, e->status, ndev->last_known_rssi_dbm,
-               ndev->last_known_snr_db);
+    BRCMF_INFO("Link Down Event: %d flg: 0x%x reas: %d sts: %d rssi: %d snr: %d\n", event, flags,
+               e->reason, e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
     return true;
   }
   return false;
@@ -3817,7 +3812,7 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
       brcmf_get_assoc_ies(cfg, ifp);
       brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
       // Start the signal report timer
-      brcmf_timer_set(&cfg->signal_report_timer, BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
+      cfg->signal_report_timer->Start(BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
       // Indicate the rssi soon after connection
       cfg80211_signal_ind(ndev);
     }
@@ -4115,6 +4110,9 @@ static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
   cfg->wowl.nd = NULL;
   free(cfg->wowl.nd_info);
   cfg->wowl.nd_info = NULL;
+  delete cfg->disconnect_timer;
+  delete cfg->escan_timer;
+  delete cfg->signal_report_timer;
 }
 
 static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
@@ -4159,11 +4157,12 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   brcmf_init_escan(cfg);
   brcmf_init_conf(cfg->conf);
   // Initialize the disconnect timer
-  brcmf_timer_init(&cfg->disconnect_timer, cfg->pub->dispatcher, brcmf_disconnect_timeout, cfg);
+  cfg->disconnect_timer =
+      new Timer(cfg->pub->dispatcher, std::bind(brcmf_disconnect_timeout, cfg), false);
   cfg->disconnect_timeout_work = WorkItem(brcmf_disconnect_timeout_worker);
   // Initialize the signal report timer
-  brcmf_timer_init(&cfg->signal_report_timer, cfg->pub->dispatcher, brcmf_signal_report_timeout,
-                   cfg, true);
+  cfg->signal_report_timer =
+      new Timer(cfg->pub->dispatcher, std::bind(brcmf_signal_report_timeout, cfg), true);
   cfg->signal_report_work = WorkItem(brcmf_signal_report_worker);
   cfg->vif_disabled = {};
   return err;

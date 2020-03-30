@@ -385,10 +385,10 @@ struct brcmf_cfg80211_info {
   uint8_t* extra_buf;
   zx_handle_t debugfsdir;
   struct escan_info escan_info;
-  brcmf_timer_info_t escan_timer;
+  Timer* escan_timer;
   WorkItem escan_timeout_work;
   uint8_t disconnect_mode;
-  brcmf_timer_info_t disconnect_timer;
+  Timer* disconnect_timer;
   WorkItem disconnect_timeout_work;
   struct list_node vif_list;
   struct brcmf_cfg80211_vif_event vif_event;
@@ -399,7 +399,7 @@ struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_wowl wowl;
   struct brcmf_pno_info* pno;
   bool ap_started;
-  brcmf_timer_info_t signal_report_timer;
+  Timer* signal_report_timer;
   WorkItem signal_report_work;
 };
 

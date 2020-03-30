@@ -19,89 +19,86 @@
 
 #include "debug.h"
 
-static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* task,
-                                zx_status_t status) {
-  brcmf_timer_info_t* timer = containerof(task, brcmf_timer_info_t, task);
+Timer::Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, bool periodic)
+    : dispatcher_(dispatcher),
+      task_({}),
+      callback_(callback),
+      interval_(0),
+      scheduled_(false),
+      finished_({}) {
+  task_.handler = TimerHandler;
+  if (periodic) {
+    type_ = BRCMF_TIMER_PERIODIC;
+  } else {
+    type_ = BRCMF_TIMER_SINGLE_SHOT;
+  }
+}
 
-  // Mark scheduled as false to avoid a race condition if timer_stop() or timer_set()
+// Set timer with timeout @interval. If interval is 0, return without setting
+// the timer (can be used to stop a periodic timer)
+void Timer::Start(zx_duration_t interval) {
+  lock_.lock();
+
+  interval_ = interval;
+
+  if (!interval_) {
+    // One way to stop periodic timer
+    lock_.unlock();
+    return;
+  }
+  async_cancel_task(dispatcher_, &task_);  // Make sure it's not scheduled
+  task_.deadline = interval_ + async_now(dispatcher_);
+  scheduled_ = true;
+  sync_completion_reset(&finished_);
+  async_post_task(dispatcher_, &task_);
+
+  lock_.unlock();
+}
+
+void Timer::Stop() {
+  lock_.lock();
+  interval_ = 0;
+  if (!scheduled_) {
+    lock_.unlock();
+    return;
+  }
+  zx_status_t result = async_cancel_task(dispatcher_, &task_);
+  lock_.unlock();
+  if (result != ZX_OK) {
+    // In case the handler task could not be cancelled, wait for up to the
+    // timeout interval for the handler task to finish.
+    sync_completion_wait(&finished_, interval_);
+  }
+}
+
+void Timer::TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
+  Timer* timer = containerof(task, Timer, task_);
+
+  // Mark scheduled as false to avoid a race condition if Stop() or Start()
   // gets called in the handler.
-  timer->lock.lock();
-  timer->scheduled = false;
+  timer->lock_.lock();
+  timer->scheduled_ = false;
   if (status != ZX_OK) {
     // If the handler is called in with an error status, ensure the timer ends up in a
     // good state.
-    timer->delay = 0;
-    timer->lock.unlock();
+    timer->interval_ = 0;
+    timer->lock_.unlock();
     return;
   }
-  timer->lock.unlock();
+  timer->lock_.unlock();
 
   // Execute the handler
-  timer->callback_function(timer->data);
+  timer->callback_();
 
-  // Indicate done (to release timer_stop())
-  timer->lock.lock();
-  sync_completion_signal(&timer->finished);
-  timer->lock.unlock();
+  // Indicate done (to release Stop())
+  timer->lock_.lock();
+  sync_completion_signal(&timer->finished_);
+  timer->lock_.unlock();
 
   // Check and reset timer in case it is periodic
-  if (timer->type == BRCMF_TIMER_SINGLE_SHOT) {
+  if (timer->type_ == BRCMF_TIMER_SINGLE_SHOT) {
     return;
-  } else {
-    brcmf_timer_set(timer, timer->delay);
   }
-}
 
-void brcmf_timer_init(brcmf_timer_info_t* timer, async_dispatcher_t* dispatcher,
-                      brcmf_timer_callback_t* callback, void* data, bool periodic) {
-  if (timer->scheduled) {
-    BRCMF_ERR("Timer init called when scheduled\n");
-    return;
-  }
-  memset(&timer->task.state, 0, sizeof(timer->task.state));
-  timer->task.handler = brcmf_timer_handler;
-  timer->dispatcher = dispatcher;
-  timer->data = data;
-  timer->callback_function = callback;
-  timer->finished = {};
-  timer->scheduled = false;
-  timer->delay = 0;
-  if (periodic)
-    timer->type = BRCMF_TIMER_PERIODIC;
-  else
-    timer->type = BRCMF_TIMER_SINGLE_SHOT;
-}
-
-// Set timer with the input delay. If delay is 0, return without setting
-// the timer (can be used to stop a periodic timer)
-void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay) {
-  timer->lock.lock();
-  timer->delay = delay;
-  if (!delay) {
-    // One way to stop periodic timer
-    timer->lock.unlock();
-    return;
-  }
-  async_cancel_task(timer->dispatcher, &timer->task);  // Make sure it's not scheduled
-  timer->task.deadline = delay + async_now(timer->dispatcher);
-  timer->scheduled = true;
-  sync_completion_reset(&timer->finished);
-  async_post_task(timer->dispatcher, &timer->task);
-  timer->lock.unlock();
-}
-
-void brcmf_timer_stop(brcmf_timer_info_t* timer) {
-  timer->lock.lock();
-  timer->delay = 0;
-  if (!timer->scheduled) {
-    timer->lock.unlock();
-    return;
-  }
-  zx_status_t result = async_cancel_task(timer->dispatcher, &timer->task);
-  timer->lock.unlock();
-  if (result != ZX_OK) {
-    // In case the handler task could not be cancelled, wait for up to the
-    // delay set in the timer.
-    sync_completion_wait(&timer->finished, timer->delay);
-  }
+  timer->Start(timer->interval_);
 }

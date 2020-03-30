@@ -84,7 +84,7 @@ enum brcmf_btcoex_state {
  */
 struct brcmf_btcoex_info {
   struct brcmf_cfg80211_vif* vif;
-  brcmf_timer_info_t timer;
+  Timer* timer;
   uint16_t timeout;
   bool timer_on;
   bool dhcp_done;
@@ -261,14 +261,13 @@ static void brcmf_btcoex_restore_part1(struct brcmf_btcoex_info* btci) {
 /**
  * brcmf_btcoex_timerfunc() - BT coex timer callback
  */
-static void brcmf_btcoex_timerfunc(void* data) {
-  struct brcmf_btcoex_info* bt_local = static_cast<decltype(bt_local)>(data);
-  bt_local->cfg->pub->irq_callback_lock.lock();
+static void brcmf_btcoex_timerfunc(struct brcmf_btcoex_info* bt) {
+  bt->cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "enter\n");
 
-  bt_local->timer_on = false;
-  WorkQueue::ScheduleDefault(&bt_local->work);
-  bt_local->cfg->pub->irq_callback_lock.unlock();
+  bt->timer_on = false;
+  WorkQueue::ScheduleDefault(&bt->work);
+  bt->cfg->pub->irq_callback_lock.unlock();
 }
 
 /**
@@ -280,7 +279,7 @@ static void brcmf_btcoex_handler(WorkItem* work) {
   btci = containerof(work, struct brcmf_btcoex_info, work);
   if (btci->timer_on) {
     btci->timer_on = false;
-    brcmf_timer_stop(&btci->timer);
+    btci->timer->Stop();
   }
 
   switch (btci->bt_state) {
@@ -292,10 +291,10 @@ static void brcmf_btcoex_handler(WorkItem* work) {
       btci->bt_state = BRCMF_BT_DHCP_OPPR_WIN;
       if (btci->timeout < BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC) {
         // TODO(cphoenix): Was btci->timer.expires which wasn't set anywhere
-        brcmf_timer_set(&btci->timer, btci->timeout);
+        btci->timer->Start(btci->timeout);
       } else {
         btci->timeout -= BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
-        brcmf_timer_set(&btci->timer, ZX_MSEC(BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC));
+        btci->timer->Start(ZX_MSEC(BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC));
       }
       btci->timer_on = true;
       break;
@@ -311,7 +310,7 @@ static void brcmf_btcoex_handler(WorkItem* work) {
       brcmf_btcoex_boost_wifi(btci, true);
 
       btci->bt_state = BRCMF_BT_DHCP_FLAG_FORCE_TIMEOUT;
-      brcmf_timer_set(&btci->timer, ZX_MSEC(btci->timeout));
+      btci->timer->Start(ZX_MSEC(btci->timeout));
       btci->timer_on = true;
       break;
 
@@ -360,7 +359,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
   /* Set up timer for BT  */
   btci->timer_on = false;
   btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
-  brcmf_timer_init(&btci->timer, cfg->pub->dispatcher, brcmf_btcoex_timerfunc, btci);
+  btci->timer = new Timer(cfg->pub->dispatcher, std::bind(brcmf_btcoex_timerfunc, btci), false);
   btci->cfg = cfg;
   btci->saved_regs_part1 = false;
   btci->saved_regs_part2 = false;
@@ -384,7 +383,7 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg) {
 
   if (cfg->btcoex->timer_on) {
     cfg->btcoex->timer_on = false;
-    brcmf_timer_stop(&cfg->btcoex->timer);
+    cfg->btcoex->timer->Stop();
   }
 
   cfg->btcoex->work.Cancel();
@@ -392,6 +391,7 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg) {
   brcmf_btcoex_boost_wifi(cfg->btcoex, false);
   brcmf_btcoex_restore_part1(cfg->btcoex);
 
+  delete cfg->btcoex->timer;
   free(cfg->btcoex);
   cfg->btcoex = NULL;
 }
@@ -416,7 +416,7 @@ static void brcmf_btcoex_dhcp_end(struct brcmf_btcoex_info* btci) {
   if (btci->timer_on) {
     BRCMF_DBG(INFO, "disable BT DHCP Timer\n");
     btci->timer_on = false;
-    brcmf_timer_stop(&btci->timer);
+    btci->timer->Stop();
 
     /* schedule worker if transition to IDLE is needed */
     if (btci->bt_state != BRCMF_BT_DHCP_IDLE) {

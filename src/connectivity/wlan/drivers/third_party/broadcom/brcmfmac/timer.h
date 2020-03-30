@@ -18,35 +18,41 @@
 #include <lib/sync/completion.h>
 #include <zircon/time.h>
 
+#include <functional>
 #include <mutex>
 
 // This is the function that timer users write to receive callbacks.
 typedef void(brcmf_timer_callback_t)(void* data);
 
 typedef enum brcmf_timer_type {
-  BRCMF_TIMER_SINGLE_SHOT = 0,
-  BRCMF_TIMER_PERIODIC,
+  BRCMF_TIMER_SINGLE_SHOT = 1,
+  BRCMF_TIMER_PERIODIC = 2,
 } brcmf_timer_type_t;
 
-typedef struct brcmf_timer_info {
-  async_task_t task;
-  async_dispatcher_t* dispatcher;
-  void* data;
-  brcmf_timer_callback_t* callback_function;
-  bool scheduled = false;
-  sync_completion_t finished;
-  std::mutex lock;
-  zx_duration_t delay;
-  brcmf_timer_type_t type;
-} brcmf_timer_info_t;
+class Timer {
+ public:
+  Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, bool periodic);
+  // If timer is active it will call the callback function, must wait/cancel timer
+  ~Timer() { Stop(); }
+  // To avoid accidentally creating multiple timers using the same callback/data
+  Timer(const Timer&) = delete;
+  Timer(Timer&& t) = delete;
+  // @interval: Interval of time before timer triggers. Same interval used for periodic timers.
+  void Start(zx_duration_t interval);
+  void Stop();
 
-// Calling timer_set() and timer_stop() from within the timer handler is ok. But,
-// calling timer_init() leaves the timer in an unknown state and might result in a
-// crash
-void brcmf_timer_init(brcmf_timer_info_t* timer, async_dispatcher_t* dispatcher,
-                      brcmf_timer_callback_t* callback, void* data, bool periodic = false);
+ private:
+  static void TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
 
-void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay);
+  async_dispatcher_t* dispatcher_;
+  async_task_t task_;
+  std::function<void()> callback_;
+  brcmf_timer_type_t type_;
 
-void brcmf_timer_stop(brcmf_timer_info_t* timer);
+  std::mutex lock_;
+  zx_duration_t interval_;
+  bool scheduled_;
+  sync_completion_t finished_;
+};
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TIMER_H_

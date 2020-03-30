@@ -28,9 +28,10 @@ namespace wlan::brcmfmac {
 
 struct TestTimerCfg {
   sync_completion_t wait_for_timer;
-  brcmf_timer_info_t timer;
+  Timer timer;
   WorkItem timeout_work;
   WorkQueue* queue;
+  uint32_t delay;
   uint32_t target_cnt = 0;
   uint32_t timer_cnt = 0;
   bool call_timerset = false;
@@ -61,6 +62,8 @@ void TimerTest::SetUp() {
   dispatcher_loop_ = std::move(dispatcher_loop);
   auto queue = std::make_unique<WorkQueue>("TimerTest Work");
   queue_ = std::move(queue);
+  // The timer must be standard layout in order to use containerof
+  ASSERT_TRUE(std::is_standard_layout<Timer>::value);
 }
 
 static void test_timer_handler(void* data) {
@@ -69,12 +72,16 @@ static void test_timer_handler(void* data) {
 }
 
 static void test_timer_process(TestTimerCfg* cfg) {
+  // There shouldn't be a race between the running tests and the async tasks lapping over
+  if (cfg->timer_cnt > cfg->target_cnt)
+    return;
+
   cfg->timer_cnt++;
   if (cfg->call_timerset) {
-    brcmf_timer_set(&cfg->timer, cfg->timer.delay);
+    cfg->timer.Start(cfg->delay);
   }
   if (cfg->call_timerstop) {
-    brcmf_timer_stop(&cfg->timer);
+    cfg->timer.Stop();
     sync_completion_signal(&cfg->wait_for_timer);
   }
   if (cfg->timer_cnt == cfg->target_cnt)
@@ -87,15 +94,16 @@ static void test_timeout_worker(WorkItem* work) {
 }
 
 TestTimerCfg::TestTimerCfg(async_dispatcher_t* dispatcher, WorkQueue* q, uint32_t delay,
-                           uint32_t exp_count, bool periodic) {
-  timeout_work = WorkItem(test_timeout_worker);
-  queue = q;
-  target_cnt = exp_count;
-  brcmf_timer_init(&timer, dispatcher, test_timer_handler, this, periodic);
-  brcmf_timer_set(&timer, delay);
+                           uint32_t exp_count, bool periodic)
+    : timer(Timer(dispatcher, std::bind(test_timer_handler, this), periodic)),
+      timeout_work(WorkItem(test_timeout_worker)),
+      queue(q),
+      delay(delay),
+      target_cnt(exp_count) {
+  timer.Start(delay);
 }
 
-TestTimerCfg::~TestTimerCfg() { brcmf_timer_stop(&timer); }
+TestTimerCfg::~TestTimerCfg() { timer.Stop(); }
 
 // This test creates a one-shot timer and checks if the handler fired
 TEST_F(TimerTest, one_shot) {
@@ -137,7 +145,10 @@ TEST_F(TimerTest, timerset_in_handler) {
 
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
-  // Check to make sure the first timer fired twice and the second once
+  status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Check to make sure the first timer fired exactly twice and the second once
   EXPECT_EQ(timer.timer_cnt, 2U);
   EXPECT_EQ(timer2.timer_cnt, 1U);
 }
@@ -147,7 +158,7 @@ TEST_F(TimerTest, timerset_in_handler) {
 // calling timer_stop() from within the handler does not have any side-effects
 TEST_F(TimerTest, timerstop_in_handler) {
   // Setup a periodic timer meant to fire twice
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, true);
+  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 5, true);
   // but stop the timer after it fires once
   timer.call_timerstop = true;
 

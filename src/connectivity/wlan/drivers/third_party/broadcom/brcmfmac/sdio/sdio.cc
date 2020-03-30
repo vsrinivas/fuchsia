@@ -512,7 +512,7 @@ struct brcmf_sdio {
   sync_completion_t ctrl_wait;
   sync_completion_t dcmd_resp_wait;
 
-  brcmf_timer_info_t timer;
+  Timer* timer;
   sync_completion_t watchdog_wait;
   std::atomic<bool> watchdog_should_stop;
   thrd_t watchdog_tsk;
@@ -3582,8 +3582,7 @@ static int brcmf_sdio_watchdog_thread(void* data) {
   return 0;
 }
 
-static void brcmf_sdio_watchdog(void* data) {
-  struct brcmf_sdio* bus = static_cast<decltype(bus)>(data);
+static void brcmf_sdio_watchdog(struct brcmf_sdio* bus) {
   bus->sdiodev->drvr->irq_callback_lock.lock();
 
   if (bus->watchdog_tsk) {
@@ -3591,7 +3590,7 @@ static void brcmf_sdio_watchdog(void* data) {
     sync_completion_signal(&bus->watchdog_wait);
     /* Reschedule the watchdog */
     if (bus->wd_active.load()) {
-      brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
+      bus->timer->Start(ZX_MSEC(BRCMF_WD_POLL_MSEC));
     }
   }
   bus->sdiodev->drvr->irq_callback_lock.unlock();
@@ -3793,7 +3792,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   std::string_view firmware_name;
 
   BRCMF_DBG(TRACE, "Enter\n");
-
   /* Allocate private bus interface state */
   bus = static_cast<decltype(bus)>(calloc(1, sizeof(struct brcmf_sdio)));
   if (!bus) {
@@ -3834,7 +3832,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->dcmd_resp_wait = {};
 
   /* Set up the watchdog timer */
-  brcmf_timer_init(&bus->timer, sdiodev->drvr->dispatcher, brcmf_sdio_watchdog, bus);
+  bus->timer = new Timer(sdiodev->drvr->dispatcher, std::bind(brcmf_sdio_watchdog, bus), false);
   /* Initialize watchdog thread */
   bus->watchdog_wait = {};
   bus->watchdog_should_stop.store(false);
@@ -3963,6 +3961,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
       free(bus->sdiodev->settings);
     }
 
+    delete bus->timer;
     free(bus->rxbuf);
     free(bus->hdrbuf);
     free(bus);
@@ -3974,7 +3973,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
   /* Totally stop the timer */
   if (!active && bus->wd_active.load()) {
-    brcmf_timer_stop(&bus->timer);
+    bus->timer->Stop();
     bus->wd_active.store(false);
     return;
   }
@@ -3986,7 +3985,7 @@ void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
 
   if (active) {
     bus->wd_active.store(true);
-    brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
+    bus->timer->Start(ZX_MSEC(BRCMF_WD_POLL_MSEC));
   }
 }
 
