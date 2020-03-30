@@ -26,6 +26,6 @@ go_test("fidlgen_rust_test") {
 
   deps = [
     ":lib",
-    "//garnet/go/src/fidl:fidl_lib",
+    "//garnet/go/src/fidl:fidlgen_test_lib",
   ]
 }
