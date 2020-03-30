@@ -317,6 +317,10 @@ zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     op = std::move(op_context.op);
     if (op_context.status == ZX_OK) {
+      if (copy != 0) {
+        zxlogf(INFO, "skipblock: Successfully read block %d, copy %d\n", op_context.current_block,
+               copy);
+      }
       return ZX_OK;
     }
     zxlogf(WARN, "skipblock: Failed to read block %d, copy %d, with status %s\n",
