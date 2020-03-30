@@ -158,10 +158,10 @@ pub async fn cache_package<'a>(
     // variant exist in the TUF repo.  Note that this doesn't guarantee that the merkle pinned
     // package ever actually existed in the repo or that the merkle pin refers to the named
     // package.
-    let merkle = if let Some(merkle_pin) = url.package_hash() {
-        merkle_pin.parse().expect("package_hash() to always return a valid merkleroot")
+    let (merkle, size) = if let Some(merkle_pin) = url.package_hash() {
+        (merkle_pin.parse().expect("package_hash() to always return a valid merkleroot"), None)
     } else {
-        merkle
+        (merkle, Some(size))
     };
 
     // If the package already exists, we are done.
@@ -181,7 +181,7 @@ pub async fn cache_package<'a>(
             FetchBlobContext {
                 blob_kind: BlobKind::Package,
                 mirrors: Arc::clone(&mirrors),
-                expected_len: Some(size),
+                expected_len: size,
             },
         )
         .await

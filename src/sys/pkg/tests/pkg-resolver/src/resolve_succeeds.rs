@@ -829,3 +829,51 @@ async fn verify_concurrent_resolve() {
     // test environment is created which could cause an OOM.
     env.stop().await;
 }
+
+// Merkle-pinned resolves verify that there is a package of that name in TUF, but then
+// download the meta.far directly from the blob url. This test verifies that the resolver
+// does not use the size of the meta.far found in TUF, since the pinned meta.far could
+// differ in size.
+#[fasync::run_singlethreaded(test)]
+async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
+    let env = TestEnvBuilder::new().build();
+    // Content chunks in FARs are 4k aligned, so a meta.far for an empty package will be 8k
+    // because of meta/package (meta/contents is empty).
+    let pkg_8k_tuf = PackageBuilder::new("merkle-pin-size").build().await.unwrap();
+    assert_eq!(pkg_8k_tuf.meta_far().unwrap().metadata().unwrap().len(), 2 * 4096);
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg_8k_tuf)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = Arc::clone(&repo).server().start().unwrap();
+
+    // Put the larger, merkle-pinned package in /blobs.
+    let pkg_12k_pinned = PackageBuilder::new("merkle-pin-size")
+        .add_resource_at("meta/zero", &[0u8][..])
+        .build()
+        .await
+        .unwrap();
+    assert_eq!(pkg_12k_pinned.meta_far().unwrap().metadata().unwrap().len(), 3 * 4096);
+    std::fs::copy(
+        pkg_12k_pinned.artifacts().join("meta.far"),
+        repo.path().join("blobs").join(pkg_12k_pinned.meta_far_merkle_root().to_string()),
+    )
+    .unwrap();
+
+    let repo_url = "fuchsia-pkg://test".parse().unwrap();
+    let repo_config = served_repository.make_repo_config(repo_url);
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+
+    let pinned_url = format!(
+        "fuchsia-pkg://test/merkle-pin-size?hash={}",
+        pkg_12k_pinned.meta_far_merkle_root()
+    );
+    let resolved_pkg =
+        env.resolve_package(&pinned_url).await.expect("package to resolve without error");
+    pkg_12k_pinned.verify_contents(&resolved_pkg).await.unwrap();
+
+    env.stop().await;
+}
