@@ -279,10 +279,6 @@ test_package("guest_integration_tests") {
     {
       name = "guest_integration_tests"
 
-      # TODO(47504): The tests are temporarily disable for all environments due to a flake that's
-      # causing the devices to lock up.
-      disabled = true
-
       # TODO(37320): The tests are temporarily disabled for vim2_env due to an unresolved bug.
       environments = [ nuc_env ]
     },
