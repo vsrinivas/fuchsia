@@ -538,7 +538,6 @@ group("magma-arm-mali") {
 
 if (target_cpu == "x64") {
   group("magma-intel-gen") {
-    testonly = true
     public_deps = [
       "//garnet/packages/prod:sysmem_connector",
       "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
@@ -547,13 +546,11 @@ if (target_cpu == "x64") {
 }
 
 group("magma-img-rgx-mt8167") {
-  testonly = true
   public_deps =
       [ "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan" ]
 }
 
 group("magma-qcom-adreno") {
-  testonly = true
   public_deps = [
     "//garnet/packages/prod:sysmem_connector",
     "//src/graphics/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
@@ -561,7 +558,6 @@ group("magma-qcom-adreno") {
 }
 
 group("magma-vsl-gc") {
-  testonly = true
   public_deps = [ "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan" ]
 }
 

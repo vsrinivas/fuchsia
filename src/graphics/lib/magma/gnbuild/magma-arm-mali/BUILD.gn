@@ -12,13 +12,22 @@ have_libvulkan_mali =
     build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm
 
 group("magma-vulkan") {
-  if (magma_enable_developer_build) {
-    testonly = true
-    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+  if (!magma_enable_developer_build) {
+    public_deps = [ ":magma-arm-mali" ]
+    if (have_libvulkan_mali) {
+      public_deps += [ ":magma-arm-mali-config" ]
+    }
   }
-  public_deps = [ ":magma-arm-mali" ]
-  if (have_libvulkan_mali) {
-    public_deps += [ ":magma-arm-mali-config" ]
+}
+
+if (magma_enable_developer_build) {
+  group("magma-dev") {
+    testonly = true
+    public_deps = [ ":magma-arm-mali" ]
+    if (have_libvulkan_mali) {
+      public_deps += [ ":magma-arm-mali-config" ]
+    }
+    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
   }
 }
 

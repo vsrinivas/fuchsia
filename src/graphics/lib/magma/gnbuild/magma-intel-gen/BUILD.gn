@@ -10,15 +10,24 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {
   group("magma-vulkan") {
-    if (magma_enable_developer_build) {
+    if (!magma_enable_developer_build) {
+      public_deps = [
+        ":magma-intel-gen",
+        ":magma-intel-gen-config",
+      ]
+    }
+  }
+
+  if (magma_enable_developer_build) {
+    group("magma-dev") {
       testonly = true
+      public_deps = [
+        ":magma-intel-gen",
+        ":magma-intel-gen-config",
+      ]
       deps =
           [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
     }
-    public_deps = [
-      ":magma-intel-gen",
-      ":magma-intel-gen-config",
-    ]
   }
 
   driver_package("magma-intel-gen") {

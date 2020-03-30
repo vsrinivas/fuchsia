@@ -44,32 +44,36 @@ There are multiple levels for magma TPS.  Each level includes all previous level
 When submitting a change, indicate the TPS level tested, prefaced by the hardware
 on which the testing was performed:
 
-TEST:  
-nuc,vim2:go/magma-tps#L2  
-nuc,vim2:go/magma-tps#S1  
-nuc,vim2:go/magma-tps#C0  
-nuc,vim2:go/magma-tps#P0  
+TEST:
+nuc,vim2:go/magma-tps#L2
+nuc,vim2:go/magma-tps#S1
+nuc,vim2:go/magma-tps#C0
+nuc,vim2:go/magma-tps#P0
 
 #### L0
 
 Includes all unit tests and integration tests.  There are 2 steps at this tps level:
 
-1. Build with --args magma_enable_developer_build=true; this will run unit tests that require hardware when
-the system driver starts, then exposes the device as usual.  Inspect the syslog for test results.
+1. Build with magma_enable_developer_build and include the magma-dev package; this will run unit tests that require hardware
+when the system driver starts, then exposes the device as usual.  Inspect the syslog for test results.
+
+Example:
+
+fx set core.x64 --with-base=//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-dev --args magma_enable_developer_build=true
 
 2. Build with `--with src/graphics/lib/magma/tests:l0` and run the test script [src/graphics/lib/magma/scripts/test.sh](/src/graphics/lib/magma/scripts/test.sh).
 
 #### L1
 
 If you have an attached display, execute the spinning [vkcube](/src/graphics/examples/vkcube).
-This test uses an imagepipe swapchain to pass frames to the system compositor.  
+This test uses an imagepipe swapchain to pass frames to the system compositor.
 Build with `--with src/graphics/lib/magma/tests:l1`.
 Test with present direct to display: `run vkcube-on-fb --c 500`
 Test with present via Scenic: `run present_view fuchsia-pkg://fuchsia.com/vkcube-on-scenic#meta/vkcube-on-scenic.cmx`.
 
 #### L2
 
-A full UI 'smoke' test. Build the entire product including your change.  
+A full UI 'smoke' test. Build the entire product including your change.
 
 Login as Guest on the device and run both of these commands:
 ./scripts/fx shell sessionctl  --story_name=spinning_cube --mod_name=spinning_cube --mod_url=spinning_cube add_mod spinning_cube

@@ -12,16 +12,28 @@ have_libvulkan_img =
     build_libvulkan_img_rgx != [] || have_prebuilt_libvulkan_img
 
 group("magma-vulkan") {
-  if (magma_enable_developer_build) {
-    testonly = true
-    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+  if (!magma_enable_developer_build) {
+    public_deps = [
+      ":magma-img-rgx-mt8167",
+      ":magma-img-rgx-mt8167-firmware",
+    ]
+    if (have_libvulkan_img) {
+      public_deps += [ ":magma-img-rgx-mt8167-config" ]
+    }
   }
-  public_deps = [
-    ":magma-img-rgx-mt8167",
-    ":magma-img-rgx-mt8167-firmware",
-  ]
-  if (have_libvulkan_img) {
-    public_deps += [ ":magma-img-rgx-mt8167-config" ]
+}
+
+if (magma_enable_developer_build) {
+  group("magma-dev") {
+    testonly = true
+    public_deps = [
+      ":magma-img-rgx-mt8167",
+      ":magma-img-rgx-mt8167-firmware",
+    ]
+    if (have_libvulkan_img) {
+      public_deps += [ ":magma-img-rgx-mt8167-config" ]
+    }
+    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
   }
 }
 
