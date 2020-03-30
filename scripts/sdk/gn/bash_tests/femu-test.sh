@@ -171,7 +171,7 @@ INPUT
   # is named qemu. We test the generated mac address here since our scripts use the mac for a
   # hard coded address to SSH into the device.
   check_mock_has_args -fuchsia
-  check_mock_has_args -netdev type=tap,ifname=qemu,script=no,downscript=no,id=net0
+  check_mock_has_args -netdev type=tap,ifname=qemu,id=net0,script=no
   check_mock_has_args -device e1000,netdev=net0,mac=52:54:00:63:5e:7a
   check_mock_has_args --unknown-arg1-to-qemu
   check_mock_has_args --unknown-arg2-to-qemu
