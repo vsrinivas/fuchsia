@@ -24,12 +24,15 @@ executable("test_bin") {
   output_name = "vmo-store-test"
   sources = [
     "growable_slab_test.cc",
+    "map_pin_test.cc",
     "typed_store_test.cc",
   ]
   deps = [
     ":vmo_store",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fake-bti",
   ]
 }
 

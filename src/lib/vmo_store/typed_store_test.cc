@@ -108,7 +108,7 @@ class TypedStorageTest : public ::testing::Test {
   using VmoStore = ::vmo_store::VmoStore<T>;
   static constexpr size_t kStorageCapacity = 16;
 
-  TypedStorageTest() : store_(0u) {}
+  TypedStorageTest() : store_(Options()) {}
 
   void SetUp() override { ASSERT_OK(store_.Reserve(kStorageCapacity)); }
 

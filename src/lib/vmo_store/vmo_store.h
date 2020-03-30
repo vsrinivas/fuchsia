@@ -16,10 +16,32 @@
 
 namespace vmo_store {
 
-// Automatically maps every registered VMO to virtual memory.
-constexpr uint32_t kOptionMapVmo = (1u << 0u);
-// Automatically pins every registered VMO using the provided BTI.
-constexpr uint32_t kOptionPinVmo = (1u << 1u);
+// `VmoStore` pinning options.
+struct PinOptions {
+  // The BTI used for pinning.
+  // Note that `VmoStore` does *not* take ownership of the BTI handle. It is the caller's
+  // responsibility to ensure the BTI handle is valid.
+  zx::unowned_bti bti;
+  // Options passed to zx_bti_pin. See `StoredVmo::Map` for more details.
+  uint32_t bti_pin_options;
+  // Index pinned pages for fast lookup. See `StoredVmo::Map` for more details.
+  bool index;
+};
+
+struct MapOptions {
+  // Options passed to `zx_vmar_map`.
+  zx_vm_option_t vm_option;
+  // Pointer to `VmarManager`. If null, the root `vmar` will be used.
+  fbl::RefPtr<fzl::VmarManager> vmar;
+};
+
+// `VmoStore` options controlling mapping and pinning behavior.
+struct Options {
+  // If provided, `VmoStore` will attempt to map stored VMOs.
+  fit::optional<MapOptions> map;
+  // If provided, `VmoStore` will attempt to pin stored VMOs.
+  fit::optional<PinOptions> pin;
+};
 
 // A data structure that keeps track of registered VMOs using a `BackingStore`.
 // `VmoStore` keeps track of registered VMOs and performs common mapping and pinning operations,
@@ -36,9 +58,9 @@ class VmoStore {
   using StoredVmo = ::vmo_store::StoredVmo<Meta>;
 
   template <typename... StoreArgs>
-  explicit VmoStore(uint32_t options, StoreArgs... store_args)
+  explicit VmoStore(Options options, StoreArgs... store_args)
       : store_(store_args...),
-        options_(options){
+        options_(std::move(options)){
 
         };
 
@@ -61,7 +83,10 @@ class VmoStore {
   }
 
   fit::result<Key, zx_status_t> Register(StoredVmo vmo) {
-    // TODO map and pin the VMO.
+    zx_status_t status = PrepareStore(&vmo);
+    if (status != ZX_OK) {
+      return fit::error(status);
+    }
     auto key = store_.Push(std::move(vmo));
     if (!key.has_value()) {
       return fit::error(ZX_ERR_NO_RESOURCES);
@@ -76,7 +101,10 @@ class VmoStore {
   }
 
   zx_status_t RegisterWithKey(Key key, StoredVmo vmo) {
-    // TODO map and pin the VMO.
+    zx_status_t status = PrepareStore(&vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
     return store_.Insert(std::move(key), std::move(vmo));
   }
 
@@ -97,8 +125,27 @@ class VmoStore {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VmoStore);
 
  private:
+  zx_status_t PrepareStore(StoredVmo* vmo) {
+    zx_status_t status;
+    if (options_.map) {
+      const auto& map_options = *options_.map;
+      status = vmo->Map(map_options.vm_option, map_options.vmar);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    if (options_.pin) {
+      const auto& pin_options = *options_.pin;
+      status = vmo->Pin(*pin_options.bti, pin_options.bti_pin_options, pin_options.index);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    return ZX_OK;
+  }
+
   BackingStore store_;
-  uint32_t options_;
+  Options options_;
 };
 
 }  // namespace vmo_store
