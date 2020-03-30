@@ -273,6 +273,10 @@ template("fuzzers_package") {
     ]
   }
   if (defined(invoker.go_fuzzers)) {
+    not_needed([
+                 "invoker_fuzz_host",
+                 "invoker_host_only",
+               ])
     by_language += [
       {
         fuzzers = invoker.go_fuzzers
@@ -285,6 +289,10 @@ template("fuzzers_package") {
     ]
   }
   if (defined(invoker.rust_fuzzers)) {
+    not_needed([
+                 "invoker_fuzz_host",
+                 "invoker_host_only",
+               ])
     by_language += [
       {
         fuzzers = invoker.rust_fuzzers
