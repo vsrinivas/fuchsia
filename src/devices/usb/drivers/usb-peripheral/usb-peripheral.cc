@@ -665,7 +665,7 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
         // USB_RECIP_DEVICE should only be used when there is a single active interface.
         // But just to be conservative, try all the available interfaces.
         for (size_t i = 0; i < countof(interface_map_); i++) {
-          auto function = interface_map_[index];
+          auto function = interface_map_[i];
           if (function != nullptr) {
             auto status = function->Control(setup, write_buffer, write_size, read_buffer, read_size,
                                             out_read_actual);

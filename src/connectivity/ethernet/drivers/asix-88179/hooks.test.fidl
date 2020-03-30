@@ -1,0 +1,9 @@
+library fuchsia.hardware.ax88179;
+
+using zx;
+
+/// Test helper for asix-88179-function to explicitly control online.
+[Layout = "Simple"]
+protocol Hooks {
+    SetOnline(bool online) -> (zx.status status);
+};

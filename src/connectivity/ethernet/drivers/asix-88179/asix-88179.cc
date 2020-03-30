@@ -543,6 +543,9 @@ zx_status_t Asix88179Ethernet::EthernetImplStart(const ethernet_ifc_protocol_t* 
   ifc_ = ddk::EthernetIfcProtocolClient(ifc);
   zxlogf(INFO, "ax88179: Started\n");
 
+  // Set status in case the link came up before start.
+  ifc_.Status(online_ ? ETHERNET_STATUS_ONLINE : 0);
+
   return ZX_OK;
 }
 

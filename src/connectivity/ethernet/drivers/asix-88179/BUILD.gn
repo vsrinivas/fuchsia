@@ -3,7 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":usb-virtual-bus-asix-88179" ]
+}
 
 driver_module("asix-88179") {
   defines = [ "_ALL_SOURCE" ]
@@ -25,11 +32,73 @@ driver_module("asix-88179") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+  ]
+}
+
+fidl("asix-88179-test-helper") {
+  name = "fuchsia.hardware.ax88179"
+  sources = [ "hooks.test.fidl" ]
+}
+
+driver_module("fake-asix-88179") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "asix-88179-function.cc" ]
+  deps = [
+    ":asix-88179-test-helper",
+    ":asix-88179-test-helper_llcpp",
+    "//sdk/banjo/ddk.protocol.usb.function",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/inet6",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+  ]
+}
+
+test("usb-virtual-bus-asix-88179") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "asix-88179-test.cc" ]
+  deps = [
+    ":asix-88179-test-helper_llcpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
 }
 
 migrated_manifest("asix-88179-manifest") {
   deps = [ ":asix-88179" ]
+}
+
+migrated_manifest("fake-asix-88179-manifest") {
+  deps = [ ":fake-asix-88179" ]
+}
+
+migrated_manifest("usb-virtual-bus-asix-88179-manifest") {
+  deps = [ ":usb-virtual-bus-asix-88179" ]
 }
