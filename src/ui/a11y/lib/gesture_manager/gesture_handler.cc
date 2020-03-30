@@ -69,6 +69,7 @@ bool GestureHandler::BindOneFingerDragAction(OnGestureCallback callback) {
   gesture_callback_map_[kOneFingerDrag] = std::move(callback);
 
   gesture_recognizers_[kOneFingerDrag] = std::make_unique<OneFingerDragRecognizer>(
+      [](GestureContext context) {}, /* drag start callback */
       [this](GestureContext context) {
         OnGesture(kOneFingerDrag,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});

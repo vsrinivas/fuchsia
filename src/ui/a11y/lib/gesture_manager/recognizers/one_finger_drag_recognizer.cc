@@ -23,10 +23,12 @@ struct OneFingerDragRecognizer::Contest {
   async::TaskClosureMethod<ContestMember, &ContestMember::Accept> claim_win_task;
 };
 
-OneFingerDragRecognizer::OneFingerDragRecognizer(DragGestureCallback on_drag_update,
+OneFingerDragRecognizer::OneFingerDragRecognizer(DragGestureCallback on_drag_started,
+                                                 DragGestureCallback on_drag_update,
                                                  DragGestureCallback on_drag_complete,
                                                  zx::duration drag_gesture_delay)
-    : on_drag_update_(std::move(on_drag_update)),
+    : on_drag_started_(std::move(on_drag_started)),
+      on_drag_update_(std::move(on_drag_update)),
       on_drag_complete_(std::move(on_drag_complete)),
       drag_gesture_delay_(drag_gesture_delay) {}
 
@@ -118,6 +120,8 @@ void OneFingerDragRecognizer::HandleEvent(
 void OneFingerDragRecognizer::OnWin() {
   if (contest_) {
     contest_->won = true;
+    // The gesture has been recognized and we inform about its start.
+    on_drag_started_(gesture_context_);
     // We need to call on_drag_update_ immediately after successfully claiming a win, because it's
     // possible that no update will ever occur if no further MOVE events are ingested, OR if the
     // locations of these events are close to the location of the last event ingested before the win
@@ -125,7 +129,8 @@ void OneFingerDragRecognizer::OnWin() {
     on_drag_update_(gesture_context_);
   } else {
     // It's possible that we don't get awarded the win until after the gesture has completed, in
-    // which case just call the complete handler.
+    // which case just call the start and complete handler.
+    on_drag_started_(gesture_context_);
     on_drag_complete_(gesture_context_);
   }
 }

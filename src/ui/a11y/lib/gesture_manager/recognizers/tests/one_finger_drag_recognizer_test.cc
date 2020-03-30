@@ -24,6 +24,7 @@ class OneFingerDragRecognizerTest : public gtest::TestLoopFixture {
  public:
   OneFingerDragRecognizerTest()
       : recognizer_(
+            [this](a11y::GestureContext context) { gesture_start_callback_called_ = true; },
             [this](a11y::GestureContext context) { gesture_updates_.push_back(context); },
             [this](a11y::GestureContext context) { gesture_complete_callback_called_ = true; },
             a11y::OneFingerDragRecognizer::kDefaultMinDragDuration) {}
@@ -44,6 +45,7 @@ class OneFingerDragRecognizerTest : public gtest::TestLoopFixture {
   MockContestMember member_;
   a11y::OneFingerDragRecognizer recognizer_;
   std::vector<a11y::GestureContext> gesture_updates_;
+  bool gesture_start_callback_called_ = false;
   bool gesture_complete_callback_called_ = false;
 };
 
@@ -66,6 +68,7 @@ TEST_F(OneFingerDragRecognizerTest, WonAfterGestureDetected) {
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_.OnWin();
 
+  EXPECT_TRUE(gesture_start_callback_called_);
   EXPECT_FALSE(gesture_complete_callback_called_);
 
   // We should see an update at location of the last event ingested prior to the delay elapsing.
@@ -106,6 +109,8 @@ TEST_F(OneFingerDragRecognizerTest, SuppressMultitouch) {
 
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_.OnWin();
+
+  EXPECT_TRUE(gesture_start_callback_called_);
 
   SendPointerEvents(DownEvents(2, {}) + MoveEvents(1, {0, .7f}, {0, .85f}));
 
@@ -182,6 +187,7 @@ TEST_F(OneFingerDragRecognizerTest, Defeat) {
   // gesture.
   recognizer_.OnDefeat();
 
+  EXPECT_FALSE(gesture_start_callback_called_);
   EXPECT_TRUE(gesture_updates_.empty());
   EXPECT_FALSE(gesture_complete_callback_called_);
 }

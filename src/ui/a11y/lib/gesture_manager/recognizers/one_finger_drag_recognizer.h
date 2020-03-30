@@ -34,6 +34,9 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // Signature for various drag recognizer callback functions.
   using DragGestureCallback = fit::function<void(GestureContext)>;
 
+  // on_drag_started: Callback invoked at most once when the recognizer has won the arena. Callback
+  // only occurs if at least one pointer is on the screen.
+  //
   // on_drag_update: Callback invoked as new MOVE events are handled AFTER the drag gesture is
   // recognized and has won the arena. Callbacks only occur while exactly one pointer is on the
   // screen.
@@ -45,7 +48,8 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // drag_gesture_delay: Minimum time a finger can be in contact with the screen to be considered a
   // drag. Once this delay elapses, the recognizer tries to aggressively accept the gesture in the
   // arena.
-  OneFingerDragRecognizer(DragGestureCallback on_drag_update, DragGestureCallback on_drag_complete,
+  OneFingerDragRecognizer(DragGestureCallback on_drag_started, DragGestureCallback on_drag_update,
+                          DragGestureCallback on_drag_complete,
                           zx::duration drag_gesture_delay = kDefaultMinDragDuration);
   ~OneFingerDragRecognizer() override;
 
@@ -69,6 +73,9 @@ class OneFingerDragRecognizer : public GestureRecognizer {
 
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;
+
+  // Callback invoked once the drag gesture has been recognized.
+  DragGestureCallback on_drag_started_;
 
   // Callback invoked as new MOVE events are handled AFTER the drag gesture is recognized.
   DragGestureCallback on_drag_update_;
