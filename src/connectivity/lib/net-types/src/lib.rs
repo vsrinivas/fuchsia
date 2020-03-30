@@ -32,11 +32,18 @@ mod sealed {
 /// [`SpecifiedAddr`], [`UnicastAddr`], [`MulticastAddr`], and
 /// [`LinkLocalAddr`].
 pub trait Witness<A>: Deref<Target = A> + sealed::Sealed + Sized {
-    /// Constructs a new witness type..
+    /// Constructs a new witness type.
     ///
     /// `new` returns `None` if `addr` does not satisfy the property guaranteed
     /// by `Self`.
     fn new(addr: A) -> Option<Self>;
+
+    /// Constructs a new witness type from an existing witness type.
+    ///
+    /// `from_witness(witness)` is equivalent to `new(witness.into_addr())`.
+    fn from_witness<W: Witness<A>>(addr: W) -> Option<Self> {
+        Self::new(addr.into_addr())
+    }
 
     /// Get a clone of the address.
     #[inline]
