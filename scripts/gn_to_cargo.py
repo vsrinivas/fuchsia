@@ -75,20 +75,19 @@ class Project(object):
             if "crate_root" in self.targets[target]:
                 yield target
 
-    def dereference_proc_macro(self, target):
-        """Dereference proc macro shims.
+    def dereference_group(self, target):
+        """Dereference proc macro and third-party shims.
 
         If the target happens to be a group which just redirects you to a
-        proc_macro target with the host toolchain, returns the real target
-        label. Otherwise, returns target.
+        different rust target, returns the real target label. Otherwise,
+        returns target.
         """
         meta = self.targets[target]
         if meta["type"] == "group":
             if len(meta["deps"]) == 1:
                 dep = meta["deps"][0]
                 dep_meta = self.targets[dep]
-                if dep_meta["type"] == "rust_proc_macro":
-                    return dep
+                return dep
         return target
 
 
@@ -150,7 +149,7 @@ def write_toml_file(fout, metadata, project, target, lookup):
     deps = []
     for dep in metadata["deps"]:
         # handle proc macro shims:
-        dep = project.dereference_proc_macro(dep)
+        dep = project.dereference_group(dep)
         # this is a in-tree rust target
         if "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
