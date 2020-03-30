@@ -25,7 +25,7 @@ use {
 ///
 /// Less duplication than v1 schema. Intended for generation using a Rust tool, not for writing by
 /// hand.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct FontsManifest {
     /// List of families in the manifest.
     pub families: Vec<Family>,
@@ -33,6 +33,17 @@ pub struct FontsManifest {
     /// Sequence in which to consider typefaces when selecting a fallback, whether within a
     /// requested generic family or as a last resort.
     pub fallback_chain: Vec<TypefaceId>,
+
+    /// Settings for the font provider service.
+    #[serde(default, skip_serializing_if = "Settings::is_empty")]
+    pub settings: Settings,
+}
+
+impl FontsManifest {
+    /// Creates an empty fonts manifest
+    pub fn empty() -> Self {
+        Self::default()
+    }
 }
 
 /// Represents a font family, its metadata, and its font files.
@@ -300,6 +311,21 @@ impl Typeface {
 
     fn default_languages() -> Vec<String> {
         vec![]
+    }
+}
+
+/// Font provider service settings.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash)]
+pub struct Settings {
+    /// Maximum size of the in-memory font asset cache, in bytes.
+    #[serde(default)]
+    pub cache_size_bytes: Option<u64>,
+}
+
+impl Settings {
+    /// Returns `true` if all of the settings are unset.
+    fn is_empty(&self) -> bool {
+        self == &Settings::default()
     }
 }
 

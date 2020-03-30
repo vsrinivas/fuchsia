@@ -47,7 +47,7 @@ impl TryFrom<FontsManifestV1> for v2::FontsManifest {
             })
             .collect();
         let families = families_and_fallbacks.into_iter().map(|(family, _)| family).collect();
-        Ok(v2::FontsManifest { families, fallback_chain })
+        Ok(v2::FontsManifest { families, fallback_chain, settings: v2::Settings::default() })
     }
 }
 
@@ -289,6 +289,7 @@ mod tests {
                 },
                 v2::TypefaceId { file_name: "FamilyA-ExtraLight.ttf".to_string(), index: 0 },
             ],
+            settings: v2::Settings::default(),
         };
 
         assert_eq!(v2::FontsManifest::try_from(old)?, expected);

@@ -23,6 +23,9 @@ enum ProductConfigWrapper {
 struct ProductConfigInternal {
     /// A sequence of typeface identifiers representing a fallback chain.
     pub fallback_chain: Vec<TypefaceIdOrFileName>,
+    /// Runtime settings for the font provider service.
+    #[serde(default)]
+    pub settings: Settings,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
@@ -54,6 +57,7 @@ pub struct TypefaceId {
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Default)]
 pub struct ProductConfig {
     pub fallback_chain: Vec<TypefaceId>,
+    pub settings: Settings,
 }
 
 impl ProductConfig {
@@ -61,13 +65,12 @@ impl ProductConfig {
     pub fn load_from_path<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let wrapper: ProductConfigWrapper = serde_ext::load_from_path(path)?;
         match wrapper {
-            ProductConfigWrapper::Version1(config) => {
-                let fallback_chain = config
-                    .fallback_chain
+            ProductConfigWrapper::Version1(ProductConfigInternal { fallback_chain, settings }) => {
+                let fallback_chain = fallback_chain
                     .into_iter()
                     .map(|id_or_filename| id_or_filename.into())
                     .collect();
-                Ok(ProductConfig { fallback_chain })
+                Ok(ProductConfig { fallback_chain, settings })
             }
         }
     }
@@ -76,6 +79,13 @@ impl ProductConfig {
     pub fn iter_fallback_chain(&self) -> impl Iterator<Item = &TypefaceId> {
         self.fallback_chain.iter()
     }
+}
+
+/// Runtime settings for the font provider service.
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Default, Deserialize)]
+pub struct Settings {
+    /// Maximum size of the font service's in-memory asset cache, in bytes.
+    pub cache_size_bytes: Option<u64>,
 }
 
 #[cfg(test)]
@@ -97,7 +107,10 @@ mod tests {
                 { "file_name": "c.ttf", "index": 1 },
                 { "file_name": "d.ttf" },
                 { "file_name": "e.ttf", "index": 0 }
-            ]
+            ],
+            "settings": {
+                "cache_size_bytes": 5000123
+            }
         })
         .to_string();
         let mut file = NamedTempFile::new()?;
@@ -112,6 +125,7 @@ mod tests {
                 TypefaceId { file_name: "d.ttf".to_string(), index: None },
                 TypefaceId { file_name: "e.ttf".to_string(), index: Some(TypefaceInAssetIndex(0)) },
             ],
+            settings: Settings { cache_size_bytes: Some(5_000_123) },
         };
 
         assert_eq!(actual, expected);

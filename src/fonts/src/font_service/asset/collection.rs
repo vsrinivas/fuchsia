@@ -131,6 +131,11 @@ where
         self.file_name_to_id_map.get(file_name).map(|asset_id| *asset_id)
     }
 
+    /// Updates the capacity of the in-memory cache.
+    pub fn set_cache_capacity(&mut self, cache_capacity_bytes: u64) {
+        self.cache_capacity_bytes = cache_capacity_bytes;
+    }
+
     /// Consumes the builder and creates an [`AssetCollection`].
     pub fn build(self) -> AssetCollection<L> {
         let inspect_data =
@@ -230,6 +235,12 @@ impl<L: AssetLoader> AssetCollection<L> {
     #[cfg(test)]
     pub fn len(&self) -> usize {
         self.id_to_location_map.len()
+    }
+
+    /// Returns the capacity of the in-memory cache in bytes.
+    #[cfg(test)]
+    pub async fn cache_capacity_bytes(&self) -> u64 {
+        self.cache.lock().await.capacity_bytes()
     }
 
     /// Gets a `Buffer` for the [`Asset`] corresponding to `id` from a Fuchsia package, using the

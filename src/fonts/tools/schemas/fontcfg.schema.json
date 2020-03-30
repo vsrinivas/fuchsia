@@ -35,6 +35,16 @@
         "Roboto-Regular.ttf",
         "NotoSans-CJK.ttc"
       ]
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "cache_size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum size of the in-memory font asset cache, in bytes"
+        }
+      }
     }
   },
   "required": [

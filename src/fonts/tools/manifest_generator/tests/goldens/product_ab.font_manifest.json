@@ -374,5 +374,8 @@
       "file_name": "BetaSans-Condensed.ttf",
       "index": 1
     }
-  ]
+  ],
+  "settings": {
+    "cache_size_bytes": 5000000
+  }
 }

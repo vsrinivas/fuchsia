@@ -110,6 +110,12 @@ impl Cache {
         }
         (asset, is_cached, evicted)
     }
+
+    /// Returns the capacity of the cache in bytes.
+    #[cfg(test)]
+    pub fn capacity_bytes(&self) -> u64 {
+        self.capacity
+    }
 }
 
 /// Inspect data for [AssetCache].

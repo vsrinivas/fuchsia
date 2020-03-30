@@ -27,6 +27,8 @@ pub fn generate_manifest(
     font_dir: impl AsRef<Path>,
     verbose: bool,
 ) -> Result<FontManifestWrapper, Error> {
+    let service_settings = product_config.settings.clone();
+
     let db = FontDb::new(
         font_catalog,
         font_pkgs,
@@ -73,6 +75,7 @@ pub fn generate_manifest(
             })
             .collect(),
         fallback_chain: db.iter_fallback_chain().collect(),
+        settings: v2::Settings { cache_size_bytes: service_settings.cache_size_bytes },
     };
 
     if verbose {

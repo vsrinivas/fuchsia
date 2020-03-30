@@ -140,7 +140,7 @@ fn main() -> Result<(), Error> {
     let args: Args = Args::from_args();
 
     let manifest = if args.empty {
-        FontManifestWrapper::Version2(FontsManifest { families: vec![], fallback_chain: vec![] })
+        FontManifestWrapper::Version2(FontsManifest::empty())
     } else {
         let font_sets = FontSets::load_from_all_and_local_paths(
             args.all_fonts.unwrap(),

@@ -9,5 +9,8 @@
       "index": 1
     },
     "GammaCJK-Regular.ttc"
-  ]
+  ],
+  "settings": {
+    "cache_size_bytes": 5000000
+  }
 }

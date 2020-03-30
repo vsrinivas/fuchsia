@@ -67,12 +67,12 @@ where
     /// Creates a new, empty builder.
     pub fn new(
         asset_loader: L,
-        cache_capacity_bytes: u64,
+        default_cache_capacity_bytes: u64,
         inspect_root: &'a finspect::Node,
     ) -> FontServiceBuilder<'a, L> {
         FontServiceBuilder {
             manifests: vec![],
-            assets: AssetCollectionBuilder::new(asset_loader, cache_capacity_bytes, inspect_root),
+            assets: AssetCollectionBuilder::new(asset_loader, default_cache_capacity_bytes, inspect_root),
             families: BTreeMap::new(),
             fallback_collection: TypefaceCollectionBuilder::new(),
             inspect_root,
@@ -109,15 +109,26 @@ where
             })
             .collect();
 
+        let mut cache_size_bytes: Option<u64> = None;
+
         for (wrapper, path) in manifests? {
             match wrapper {
                 FontManifestWrapper::Version1(v1) => {
                     self.add_fonts_from_manifest_v1(v1, path).await?
                 }
                 FontManifestWrapper::Version2(v2) => {
+                    // Update the cache size from the first manifest that has it. (In production use
+                    // cases, there will only be one manifest.)
+                    if v2.settings.cache_size_bytes.is_some() && cache_size_bytes.is_none() {
+                        cache_size_bytes = v2.settings.cache_size_bytes.clone();
+                    }
                     self.add_fonts_from_manifest_v2(v2, path).await?
                 }
             }
+        }
+
+        if let Some(cache_size_bytes) = cache_size_bytes {
+            self.assets.set_cache_capacity(cache_size_bytes);
         }
 
         // It's fine to have no fallback collection IFF we loaded an empty manifest.
@@ -460,6 +471,7 @@ mod tests {
                     v2::TypefaceId { file_name: "Alpha-Bold.ttf".to_string(), index: 0 },
                     v2::TypefaceId { file_name: "Alpha-Regular.ttf".to_string(), index: 0 },
                 ],
+                settings: v2::Settings { cache_size_bytes: Some(12345) },
             }))
             .add_manifest(FontManifestWrapper::Version2(v2::FontsManifest {
                 families: vec![v2::Family {
@@ -499,6 +511,7 @@ mod tests {
                     file_name: "Alpha-Regular.ttf".to_string(),
                     index: 0,
                 }],
+                settings: v2::Settings { cache_size_bytes: Some(99999) },
             }));
 
         let service = builder.build().await?;
@@ -561,16 +574,15 @@ mod tests {
             }
         );
 
+        assert_eq!(service.assets.cache_capacity_bytes().await, 12345);
+
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_manifest() -> Result<(), Error> {
         let inspector = finspect::Inspector::new();
-        let manifest = FontManifestWrapper::Version2(v2::FontsManifest {
-            families: vec![],
-            fallback_chain: vec![],
-        });
+        let manifest = FontManifestWrapper::Version2(v2::FontsManifest::empty());
         let mut builder = FontServiceBuilder::with_default_asset_loader(5000, inspector.root());
         builder.add_manifest(manifest);
         builder.build().await?; // Should succeed

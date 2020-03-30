@@ -25,13 +25,12 @@ const FONT_MANIFEST_PATH: &str = "/config/data/all.font_manifest.json";
 const TEST_COMPATIBILITY_FONT_MANIFEST_PATH: &str =
     "/config/data/downstream_test_fonts.font_manifest.json";
 
-/// Capacity of the in-memory font cache.
+/// Default capacity of the in-memory font cache when not specified in manifest.
 ///
 /// 4 MB is enough to fit several smaller fonts; large fonts will never be cached.
 ///
-/// * TODO(fxb/48655): Make this configurable per product target.
-/// * TODO(fxb/48654): Listen for memory pressure events and trim cache.
-const CACHE_CAPACITY_BYTES: u64 = 4_000_000;
+/// TODO(fxb/48654): Listen for memory pressure events and trim cache.
+const DEFAULT_CACHE_CAPACITY_BYTES: u64 = 4_000_000;
 
 #[derive(FromArgs)]
 /// Font Server
@@ -67,8 +66,10 @@ async fn main() -> Result<(), Error> {
 
     let font_manifest_paths = select_manifests(&args)?;
 
-    let mut service_builder =
-        FontServiceBuilder::with_default_asset_loader(CACHE_CAPACITY_BYTES, inspector().root());
+    let mut service_builder = FontServiceBuilder::with_default_asset_loader(
+        DEFAULT_CACHE_CAPACITY_BYTES,
+        inspector().root(),
+    );
     fx_vlog!(1, "Building service with manifest(s) {:?}", &font_manifest_paths);
     for path in &font_manifest_paths {
         service_builder.add_manifest_from_file(path);
