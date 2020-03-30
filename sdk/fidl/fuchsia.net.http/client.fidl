@@ -70,9 +70,6 @@ table Request {
     /// Determines when to give up on waiting for a response from the server. If no deadline is
     /// provided, the implementation will provide a reasonable default.
     5: zx.time deadline;
-
-    // Legacy duplicate of |url|, to allow soft-transition to fuchsia.url.Url.
-    6: bytes url_as_bytes;
 };
 
 /// A description of the redirect the server requested.
