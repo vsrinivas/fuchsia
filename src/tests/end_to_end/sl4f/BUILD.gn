@@ -11,7 +11,6 @@ dart_test("sl4f_test") {
     "device_log_test.dart",
     "dump_test.dart",
     "performance_test.dart",
-    "scenic_test.dart",
     "setui_test.dart",
     "storage_test.dart",
   ]
