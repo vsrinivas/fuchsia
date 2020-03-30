@@ -33,6 +33,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
+
+  # TODO(49207): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("appmgr_out_dir_integration_test") {
