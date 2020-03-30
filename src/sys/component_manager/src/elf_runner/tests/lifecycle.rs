@@ -14,7 +14,7 @@ use {
 async fn test_normal_behavior() {
     fxlog::init().unwrap();
 
-    let event_source = EventSource::new().unwrap();
+    let event_source = EventSource::new_sync().unwrap();
     event_source.start_component_tree().await.unwrap();
     let mut event_stream = event_source.subscribe(vec![EventType::Stopped]).await.unwrap();
     let collection_name = String::from("test-collection");

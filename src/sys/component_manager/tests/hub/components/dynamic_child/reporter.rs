@@ -15,7 +15,7 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let event_source = EventSource::new()?;
+    let event_source = EventSource::new_sync()?;
     // Creating children will not complete until `start_component_tree` is called.
     event_source.start_component_tree().await?;
 

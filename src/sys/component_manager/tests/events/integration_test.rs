@@ -12,6 +12,35 @@ use {
 };
 
 #[fasync::run_singlethreaded(test)]
+async fn async_event_source_test() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/async_reporter.cm",
+    )
+    .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+
+    let (capability, mut echo_rx) = EchoCapability::new();
+    let injector = event_source.install_injector(capability).await?;
+
+    event_source.start_component_tree().await?;
+
+    let mut events = vec![];
+    for _ in 1..=6 {
+        let event = echo_rx.next().await.unwrap();
+        events.push(event.message.clone());
+        event.resume();
+    }
+    assert_eq!(
+        vec!["Started", "Started", "Started", "Destroyed", "Destroyed", "Destroyed"],
+        events
+    );
+    injector.abort();
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn echo_interposer_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/interpose_echo_realm.cm",

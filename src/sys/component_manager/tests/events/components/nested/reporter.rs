@@ -12,7 +12,7 @@ use {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Track all the starting child components.
-    let event_source = EventSource::new()?;
+    let event_source = EventSource::new_sync()?;
     let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
     event_source.start_component_tree().await?;

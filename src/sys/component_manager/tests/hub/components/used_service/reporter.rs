@@ -15,7 +15,7 @@ async fn main() -> Result<(), Error> {
     // Accessing the hub triggers a CapabilityRouted event.
     // Hence, code is placed in blocks so that event_streams are dropped.
 
-    let event_source = EventSource::new()?;
+    let event_source = EventSource::new_sync()?;
     event_source.start_component_tree().await?;
 
     let hub_report = {

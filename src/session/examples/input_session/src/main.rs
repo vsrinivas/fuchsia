@@ -71,7 +71,7 @@ mod tests {
     /// Verifies that the session is routed the expected capabilities.
     #[fasync::run_singlethreaded(test)]
     async fn test_capability_routing() {
-        let event_source = EventSource::new().unwrap();
+        let event_source = EventSource::new_sync().unwrap();
 
         event_source.start_component_tree().await.unwrap();
 
@@ -107,7 +107,7 @@ mod tests {
     /// Verifies that the session is correctly resolved and launched with out errors.
     #[fasync::run_singlethreaded(test)]
     async fn test_session_lifecycle() {
-        let event_source = EventSource::new().unwrap();
+        let event_source = EventSource::new_sync().unwrap();
         event_source.start_component_tree().await.unwrap();
 
         let expected_events = vec![

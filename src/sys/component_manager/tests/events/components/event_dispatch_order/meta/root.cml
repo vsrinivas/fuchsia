@@ -17,7 +17,7 @@
     "children": [
         {
             "name": "child",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/event_dispatch_order_child.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
             "startup": "eager",
         },
     ],

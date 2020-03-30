@@ -61,20 +61,24 @@ rustc_test("events_integration_test_bin") {
 test_package("events_integration_test") {
   deps = [
     ":events_integration_test_bin",
+    "components:async_reporter_bin",
     "components:chained_interpose_echo_client_bin",
     "components:chained_interpose_echo_factory_bin",
     "components:echo_client_for_events_bin",
     "components:echo_reporter_bin",
-    "components:event_dispatch_order_stub_component_bin",
     "components:interpose_echo_looper_bin",
-    "components:nested_child_bin",
     "components:nested_reporter_bin",
     "components:realm_offered_bin",
     "components:realm_offered_nested",
+    "components:stub_component_bin",
     "//examples/components/routing/echo_server",
   ]
 
   meta = [
+    {
+      path = rebase_path("components/async/meta/reporter.cml")
+      dest = "async_reporter.cm"
+    },
     {
       path = rebase_path("//examples/components/routing/meta/echo_server.cml")
       dest = "echo_server.cm"
@@ -86,10 +90,6 @@ test_package("events_integration_test") {
     {
       path = rebase_path("components/interpose/meta/echo_realm.cml")
       dest = "interpose_echo_realm.cm"
-    },
-    {
-      path = rebase_path("components/nested/meta/child.cml")
-      dest = "child.cm"
     },
     {
       path = rebase_path("components/nested/meta/reporter.cml")
@@ -124,10 +124,6 @@ test_package("events_integration_test") {
       dest = "event_dispatch_order_root.cm"
     },
     {
-      path = rebase_path("components/event_dispatch_order/meta/child.cml")
-      dest = "event_dispatch_order_child.cm"
-    },
-    {
       path = rebase_path("components/realm_offered/meta/root.cml")
       dest = "realm_offered_root.cm"
     },
@@ -139,9 +135,16 @@ test_package("events_integration_test") {
       path = rebase_path("components/realm_offered/meta/reporter.cml")
       dest = "realm_offered_reporter.cm"
     },
+    {
+      path = rebase_path("components/stub/meta/component.cml")
+      dest = "stub_component.cm"
+    },
   ]
 
   binaries = [
+    {
+      name = "async_reporter"
+    },
     {
       name = "interpose_echo_looper"
     },
@@ -158,9 +161,6 @@ test_package("events_integration_test") {
       name = "echo_server"
     },
     {
-      name = "nested_child"
-    },
-    {
       name = "nested_reporter"
     },
     {
@@ -170,13 +170,13 @@ test_package("events_integration_test") {
       name = "scoped_echo_reporter"
     },
     {
-      name = "event_dispatch_order_stub_component"
-    },
-    {
       name = "realm_offered_reporter"
     },
     {
       name = "realm_offered_nested"
+    },
+    {
+      name = "stub_component"
     },
   ]
 

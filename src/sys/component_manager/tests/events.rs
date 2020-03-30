@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::{connect_channel_to_service, connect_to_service},
     futures::{
         channel::oneshot,
         future::{AbortHandle, Abortable, BoxFuture, TryFutureExt},
@@ -35,9 +35,17 @@ pub struct EventSource {
 impl EventSource {
     /// Connects to the EventSourceSync service at its default location
     /// The default location is presumably "/svc/fuchsia.test.events.EventSourceSync"
-    pub fn new() -> Result<Self, Error> {
+    pub fn new_sync() -> Result<Self, Error> {
         let proxy = connect_to_service::<fevents::EventSourceSyncMarker>()
             .context("could not connect to EventSourceSync service")?;
+        Ok(EventSource::from_proxy(proxy))
+    }
+
+    pub fn new_async() -> Result<Self, Error> {
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<fevents::EventSourceSyncMarker>()?;
+        connect_channel_to_service::<fevents::EventSourceMarker>(server_end.into_channel())
+            .context("could not connect to EventSource service")?;
         Ok(EventSource::from_proxy(proxy))
     }
 
@@ -347,23 +355,29 @@ pub trait Event: Handler {
 
 /// Basic handler that resumes/unblocks from an Event
 #[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
-pub trait Handler: Sized {
-    fn handler_proxy(self) -> fevents::HandlerProxy;
+#[async_trait]
+pub trait Handler: Sized + Send {
+    /// Returns a proxy to unblock the associated component manager task.
+    /// If this is an asynchronous event, then this will return none.
+    fn handler_proxy(self) -> Option<fevents::HandlerProxy>;
 
     #[must_use = "futures do nothing unless you await on them!"]
-    fn resume<'a>(self) -> BoxFuture<'a, Result<(), fidl::Error>> {
-        let proxy = self.handler_proxy();
-        Box::pin(async move { proxy.resume().await })
+    async fn resume<'a>(self) -> Result<(), fidl::Error> {
+        if let Some(proxy) = self.handler_proxy() {
+            return proxy.resume().await;
+        }
+        Ok(())
     }
 }
 
 /// Implemented on fevents::Event for resuming a generic event
 impl Handler for fevents::Event {
-    fn handler_proxy(self) -> fevents::HandlerProxy {
-        self.handler
-            .expect("Could not find handler in Event object")
-            .into_proxy()
-            .expect("Could not convert into proxy")
+    fn handler_proxy(self) -> Option<fevents::HandlerProxy> {
+        if let Some(handler) = self.handler {
+            handler.into_proxy().ok()
+        } else {
+            None
+        }
     }
 }
 
@@ -675,7 +689,7 @@ macro_rules! create_event {
     ) => {
         pub struct $event_type {
             target_moniker: String,
-            handler: fevents::HandlerProxy,
+            handler: Option<fevents::HandlerProxy>,
             $($protocol_name: $protocol_ty,)*
             $(pub $data_name: $data_ty,)*
         }
@@ -692,15 +706,16 @@ macro_rules! create_event {
                 let event_type = event.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
                 )?;
+
                 if event_type != Self::TYPE {
                     return Err(format_err!("Incorrect event type"));
                 }
+
                 let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")
                 )?;
-                let handler = event.handler.ok_or(
-                    format_err!("Missing handler from Event object")
-                )?.into_proxy()?;
+
+                let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
 
                 // Extract the payload from the Event object.
                 let event_payload = event.event_payload.ok_or(
@@ -729,7 +744,7 @@ macro_rules! create_event {
         }
 
         impl Handler for $event_type {
-            fn handler_proxy(self) -> fevents::HandlerProxy {
+            fn handler_proxy(self) -> Option<fevents::HandlerProxy> {
                 self.handler
             }
         }
@@ -745,7 +760,7 @@ macro_rules! create_event {
     ($event_type:ident) => {
         pub struct $event_type {
             target_moniker: String,
-            handler: fevents::HandlerProxy,
+            handler: Option<fevents::HandlerProxy>,
         }
 
         impl Event for $event_type {
@@ -760,15 +775,16 @@ macro_rules! create_event {
                 let event_type = event.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
                 )?;
+
                 if event_type != Self::TYPE {
                     return Err(format_err!("Incorrect event type. Expected: {:?}. Got: {:?}", Self::TYPE, event_type));
                 }
+
                 let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")
                 )?;
-                let handler = event.handler.ok_or(
-                    format_err!("Missing handler from Event object")
-                )?.into_proxy()?;
+
+                let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
 
                 // There should be no payload for this event
                 if event.event_payload.is_some() {
@@ -780,7 +796,7 @@ macro_rules! create_event {
         }
 
         impl Handler for $event_type {
-            fn handler_proxy(self) -> fevents::HandlerProxy {
+            fn handler_proxy(self) -> Option<fevents::HandlerProxy> {
                 self.handler
             }
         }

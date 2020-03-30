@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             events::{
-                registry::{EventRegistry, EventStream},
+                registry::{EventRegistry, EventStream, SyncMode},
                 serve::serve_event_source_sync,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -19,7 +19,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, CapabilityPath, UseDecl, UseEventDecl},
+    cm_rust::{CapabilityName, CapabilityPath, ComponentDecl, UseDecl, UseEventDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -36,6 +36,8 @@ use {
 };
 
 lazy_static! {
+    pub static ref EVENT_SOURCE_SERVICE_PATH: CapabilityPath =
+        "/svc/fuchsia.test.events.EventSource".try_into().unwrap();
     pub static ref EVENT_SOURCE_SYNC_SERVICE_PATH: CapabilityPath =
         "/svc/fuchsia.test.events.EventSourceSync".try_into().unwrap();
 }
@@ -92,8 +94,12 @@ impl EventSourceFactory {
     }
 
     /// Creates a `EventSource` for the given `target_moniker`.
-    pub async fn create(&self, target_moniker: AbsoluteMoniker) -> Result<EventSource, ModelError> {
-        EventSource::new(self.model.clone(), target_moniker, &self.event_registry).await
+    pub async fn create(
+        &self,
+        target_moniker: AbsoluteMoniker,
+        sync_mode: SyncMode,
+    ) -> Result<EventSource, ModelError> {
+        EventSource::new(self.model.clone(), target_moniker, &self.event_registry, sync_mode).await
     }
 
     /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
@@ -107,11 +113,12 @@ impl EventSourceFactory {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
             (None, FrameworkCapability::Protocol(source_path))
-                if *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
+                if *source_path == *EVENT_SOURCE_SERVICE_PATH
+                    || *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
             {
                 let event_source_registry = self.event_source_registry.lock().await;
                 if let Some(event_source) = event_source_registry.get(&target_moniker) {
-                    return Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>));
+                    Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
                 } else {
                     return Err(ModelError::capability_discovery_error(format!(
                         "Unable to find EventSource in registry for {}",
@@ -121,6 +128,31 @@ impl EventSourceFactory {
             }
             (c, _) => return Ok(c),
         }
+    }
+
+    async fn on_resolved_async(
+        self: &Arc<Self>,
+        target_moniker: &AbsoluteMoniker,
+        decl: &ComponentDecl,
+    ) -> Result<(), ModelError> {
+        let sync_mode = if decl.uses_protocol_from_framework(&EVENT_SOURCE_SERVICE_PATH) {
+            SyncMode::Async
+        } else if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE_PATH) {
+            SyncMode::Sync
+        } else {
+            return Ok(());
+        };
+        let key = target_moniker.clone();
+        let mut event_source_registry = self.event_source_registry.lock().await;
+        // It is currently assumed that a component instance's declaration
+        // is resolved only once. Someday, this may no longer be true if individual
+        // components can be updated.
+        assert!(!event_source_registry.contains_key(&key));
+        // An EventSource is created on resolution in order to ensure that discovery
+        // and resolution of children is not missed.
+        let event_source = self.create(key.clone(), sync_mode).await?;
+        event_source_registry.insert(key, event_source);
+        Ok(())
     }
 }
 
@@ -144,18 +176,7 @@ impl Hook for EventSourceFactory {
                     .await?;
             }
             EventPayload::Resolved { decl } => {
-                if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE_PATH) {
-                    let key = event.target_moniker.clone();
-                    let mut event_source_registry = self.event_source_registry.lock().await;
-                    // It is currently assumed that a component instance's declaration
-                    // is resolved only once. Someday, this may no longer be true if individual
-                    // components can be updated.
-                    assert!(!event_source_registry.contains_key(&key));
-                    // An EventSource is created on resolution in order to ensure that discovery
-                    // and resolution of children is not missed.
-                    let event_source = self.create(key.clone()).await?;
-                    event_source_registry.insert(key, event_source);
-                }
+                self.on_resolved_async(&event.target_moniker, decl).await?;
             }
             _ => {}
         }
@@ -181,6 +202,9 @@ pub struct EventSource {
 
     /// Whether or not this is a debug instance.
     debug: bool,
+
+    /// Whether or not this EventSource dispatches events asynchronously.
+    sync_mode: SyncMode,
 }
 
 #[derive(Debug, Error)]
@@ -203,17 +227,28 @@ impl EventSource {
         model: Weak<Model>,
         target_moniker: AbsoluteMoniker,
         registry: &Arc<EventRegistry>,
+        sync_mode: SyncMode,
     ) -> Result<Self, ModelError> {
         // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
-        let resolve_instance_event_stream = Arc::new(Mutex::new(Some(
-            registry.subscribe(vec![(EventType::Resolved, hashset!(target_moniker.clone()))]).await,
-        )));
+        let resolve_instance_event_stream = Arc::new(Mutex::new(if sync_mode == SyncMode::Async {
+            None
+        } else {
+            Some(
+                registry
+                    .subscribe(
+                        &sync_mode,
+                        vec![(EventType::Resolved, hashset!(target_moniker.clone()))],
+                    )
+                    .await,
+            )
+        }));
         Ok(Self {
             registry: Arc::downgrade(&registry),
             model,
             target_moniker,
             resolve_instance_event_stream,
             debug: false,
+            sync_mode,
         })
     }
 
@@ -222,7 +257,7 @@ impl EventSource {
         target_moniker: AbsoluteMoniker,
         registry: &Arc<EventRegistry>,
     ) -> Result<Self, ModelError> {
-        let mut event_source = Self::new(model, target_moniker, registry).await?;
+        let mut event_source = Self::new(model, target_moniker, registry, SyncMode::Sync).await?;
         event_source.debug = true;
         Ok(event_source)
     }
@@ -264,13 +299,13 @@ impl EventSource {
         // Create an event stream for the given events
         if let Some(registry) = self.registry.upgrade() {
             // TODO(fxb/48721): we should also pass the target name
-            return Ok(registry.subscribe(events).await);
+            return Ok(registry.subscribe(&self.sync_mode, events).await);
         }
         Err(EventsError::RegistryNotFound)
     }
 
-    /// Serves a `EventSourceSync` FIDL protocol.
-    pub fn serve_async(self, stream: fevents::EventSourceSyncRequestStream) {
+    /// Serves a `EventSource` FIDL protocol.
+    pub fn serve(self, stream: fevents::EventSourceSyncRequestStream) {
         fasync::spawn(async move {
             serve_event_source_sync(self, stream).await;
         });
@@ -301,10 +336,7 @@ impl EventSource {
                     let (source_name, scope_moniker) = self.route_event(event_decl, &realm).await?;
                     result
                         .entry(source_name.to_string().try_into().map_err(|e| {
-                            ModelError::capability_discovery_error(format!(
-                                "Unknown event: {}",
-                                e
-                            ))
+                            ModelError::capability_discovery_error(format!("Unknown event: {}", e))
                         })?)
                         .or_insert(HashSet::new())
                         .insert(scope_moniker);
@@ -346,7 +378,7 @@ impl CapabilityProvider for EventSource {
         let stream = ServerEnd::<fevents::EventSourceSyncMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        self.serve_async(stream);
+        self.serve(stream);
         Ok(())
     }
 }

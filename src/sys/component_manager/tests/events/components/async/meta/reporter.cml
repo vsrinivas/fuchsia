@@ -1,0 +1,34 @@
+{
+    "program": {
+        "binary": "bin/async_reporter"
+    },
+    "use": [
+      { "runner": "elf" },
+      {
+          "protocol": [
+              "/svc/fuchsia.sys2.Realm",
+              "/svc/fuchsia.test.events.EventSource",
+              "/svc/fidl.examples.routing.echo.Echo"
+          ],
+          "from": "framework"
+      },
+      {"event": "started", "from": "framework" },
+      {"event": "destroyed", "from": "framework" }
+    ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#coll",
+            ]
+        },
+    ],
+    "collections": [
+      {
+        "name": "coll",
+        "durability": "transient",
+      }
+    ]
+}

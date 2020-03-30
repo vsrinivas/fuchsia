@@ -18,6 +18,12 @@ use {
     },
 };
 
+#[derive(PartialEq, Clone)]
+pub enum SyncMode {
+    Sync,
+    Async,
+}
+
 /// Created for a particular component event.
 /// Contains the Event that occurred along with a means to resume/unblock the component manager.
 #[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
@@ -30,15 +36,27 @@ pub struct Event {
     /// ancestor realm.
     pub scope_moniker: AbsoluteMoniker,
 
-    /// This Sender is used to unblock the component manager.
-    responder: oneshot::Sender<()>,
+    /// This Sender is used to unblock the component manager if available.
+    /// If a Sender is unspecified then that indicates that this event is asynchronous and
+    /// non-blocking.
+    responder: Option<oneshot::Sender<()>>,
 }
 
 impl Event {
+    pub fn sync_mode(&self) -> SyncMode {
+        if self.responder.is_none() {
+            SyncMode::Async
+        } else {
+            SyncMode::Sync
+        }
+    }
+
     pub fn resume(self) {
         trace::duration!("component_manager", "events:resume");
         trace::flow_step!("component_manager", "event", self.event.id);
-        self.responder.send(()).unwrap()
+        if let Some(responder) = self.responder {
+            responder.send(()).unwrap()
+        }
     }
 }
 
@@ -52,6 +70,8 @@ impl Event {
 /// to the client.
 #[derive(Clone)]
 pub struct EventDispatcher {
+    /// Whether or not this EventDispatcher dispatches events asynchronously.
+    sync_mode: SyncMode,
     /// Specifies the realms that this EventDispatcher can dispatch events from.
     scope_monikers: HashSet<AbsoluteMoniker>,
     /// An `mpsc::Sender` used to dispatch an event. Note that this
@@ -61,10 +81,14 @@ pub struct EventDispatcher {
 }
 
 impl EventDispatcher {
-    fn new(scope_monikers: HashSet<AbsoluteMoniker>, tx: mpsc::Sender<Event>) -> Self {
+    fn new(
+        sync_mode: SyncMode,
+        scope_monikers: HashSet<AbsoluteMoniker>,
+        tx: mpsc::Sender<Event>,
+    ) -> Self {
         // TODO(fxb/48360): flatten scope_monikers. There might be monikers that are
         // contained within another moniker in the list.
-        Self { scope_monikers, tx: Arc::new(Mutex::new(tx)) }
+        Self { sync_mode, scope_monikers, tx: Arc::new(Mutex::new(tx)) }
     }
 
     /// Sends the event to an event stream, if fired in the scope of `scope_moniker`. Returns
@@ -94,13 +118,17 @@ impl EventDispatcher {
             "event_type" => event_type.as_str(),
             "target_moniker" => target_moniker.as_str()
         );
-        //  TODO(fxb/48245): when adding support for EventSource async, this channel is not needed.
-        let (responder_tx, responder_rx) = oneshot::channel();
+        let (maybe_responder_tx, maybe_responder_rx) = if self.sync_mode == SyncMode::Async {
+            (None, None)
+        } else {
+            let (responder_tx, responder_rx) = oneshot::channel();
+            (Some(responder_tx), Some(responder_rx))
+        };
         {
             let mut tx = self.tx.lock().await;
-            tx.send(Event { event, scope_moniker, responder: responder_tx }).await?;
+            tx.send(Event { event, scope_moniker, responder: maybe_responder_tx }).await?;
         }
-        Ok(Some(responder_rx))
+        Ok(maybe_responder_rx)
     }
 }
 
@@ -172,6 +200,7 @@ impl EventRegistry {
     /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe(
         &self,
+        sync_mode: &SyncMode,
         event_types: Vec<(EventType, HashSet<AbsoluteMoniker>)>,
     ) -> EventStream {
         // TODO(fxb/48510): get rid of this channel and use FIDL directly.
@@ -181,7 +210,7 @@ impl EventRegistry {
         let mut dispatcher_map = self.dispatcher_map.lock().await;
         for (event_type, scope_monikers) in event_types {
             let dispatchers = dispatcher_map.entry(event_type).or_insert(vec![]);
-            let dispatcher = EventDispatcher::new(scope_monikers, tx.clone());
+            let dispatcher = EventDispatcher::new(sync_mode.clone(), scope_monikers, tx.clone());
             dispatchers.push(dispatcher);
         }
 

@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             events::core::EventSource,
-            events::registry::{Event, EventStream},
+            events::registry::{Event, EventStream, SyncMode},
             hooks::{EventPayload, EventType},
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },
@@ -67,7 +67,7 @@ pub async fn serve_event_source_sync(
         })
         .await;
     if let Err(e) = result {
-        error!("Error serving EventSource: {}", e);
+        error!("Error serving EventSourceSync: {}", e);
     }
 }
 
@@ -96,11 +96,11 @@ async fn serve_event_stream(
 
 fn maybe_create_event_payload(
     scope: &AbsoluteMoniker,
-    event_payload: EventPayload,
+    event_payload: &EventPayload,
 ) -> Option<fevents::EventPayload> {
     match event_payload {
         EventPayload::CapabilityRouted { source, capability_provider, .. } => {
-            let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
+            let routing_protocol = Some(serve_routing_protocol_async(capability_provider.clone()));
 
             // Runners are special. They do not have a path, so their name is the capability ID.
             let capability_id = Some(
@@ -120,7 +120,7 @@ fn maybe_create_event_payload(
             let source = Some(match source {
                 CapabilitySource::Framework { scope_moniker, .. } => {
                     let scope_moniker =
-                        scope_moniker.map(|a| RelativeMoniker::from_absolute(scope, &a));
+                        scope_moniker.as_ref().map(|a| RelativeMoniker::from_absolute(scope, &a));
                     fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
                         scope_moniker: scope_moniker.map(|m| m.to_string()),
                         ..fevents::FrameworkCapability::empty()
@@ -152,9 +152,8 @@ fn create_event_fidl_object(event: Event) -> fevents::Event {
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
-    let event_payload =
-        maybe_create_event_payload(&event.scope_moniker, event.event.payload.clone());
-    let handler = Some(serve_handler_async(event));
+    let event_payload = maybe_create_event_payload(&event.scope_moniker, &event.event.payload);
+    let handler = maybe_serve_handler_async(event);
     fevents::Event { event_type, target_moniker, handler, event_payload }
 }
 
@@ -253,7 +252,10 @@ async fn serve_routing_protocol(
 }
 
 /// Serves the server end of Handler FIDL protocol asynchronously
-fn serve_handler_async(event: Event) -> ClientEnd<fevents::HandlerMarker> {
+fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fevents::HandlerMarker>> {
+    if event.sync_mode() == SyncMode::Async {
+        return None;
+    }
     let (client_end, mut stream) = create_request_stream::<fevents::HandlerMarker>()
         .expect("could not create request stream for handler protocol");
     fasync::spawn(async move {
@@ -263,5 +265,5 @@ fn serve_handler_async(event: Event) -> ClientEnd<fevents::HandlerMarker> {
             responder.send().unwrap();
         }
     });
-    client_end
+    Some(client_end)
 }

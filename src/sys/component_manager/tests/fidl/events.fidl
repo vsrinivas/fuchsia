@@ -109,8 +109,8 @@ table Event {
 };
 
 /// Subscribe to events in component manager.
-[Discoverable]
-protocol EventSourceSync {
+[Discoverable, FragileBase]
+protocol EventSource {
     /// Subscribes to the events of the provided EventTypes.
     ///
     /// Returns a EventStreamSync which can be used
@@ -121,6 +121,12 @@ protocol EventSourceSync {
     ///   to some event in the requested `event_types`.
     Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, EventStream stream)
         -> () error fuchsia.component.Error;
+};
+
+/// Subscribe to events in component manager.
+[Discoverable]
+protocol EventSourceSync {
+    compose EventSource;
 
     /// Resume the execution of components within the realm using a scoped
     /// EventSourceSync.  This method is idempotent.

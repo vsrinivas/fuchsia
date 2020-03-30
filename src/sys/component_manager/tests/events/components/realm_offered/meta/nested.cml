@@ -38,17 +38,17 @@
       // These childrens are started by the test once "reporter" has started.
       {
           "name": "child_a",
-          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
           "startup": "lazy",
       },
       {
           "name": "child_b",
-          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
           "startup": "lazy",
       },
       {
           "name": "child_c",
-          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
           "startup": "lazy",
       },
     ],

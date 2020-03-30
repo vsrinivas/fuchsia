@@ -215,7 +215,7 @@ impl BuiltinEnvironment {
             let event_source = self.event_source_factory.create_for_debug().await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
-                event_source.serve_async(stream);
+                event_source.serve(stream);
             });
         }
 

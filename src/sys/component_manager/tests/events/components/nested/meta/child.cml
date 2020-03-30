@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "bin/nested_child",
-    },
-    "use": [
-        { "runner": "elf" }
-    ],
-}
