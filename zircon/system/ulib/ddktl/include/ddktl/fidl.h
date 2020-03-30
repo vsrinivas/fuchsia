@@ -105,6 +105,9 @@ class DdkTransaction : public fidl::Transaction {
   /// to bridge the Transaction and DDK dispatcher.
   zx_status_t Status() __WARN_UNUSED_RESULT {
     status_called_ = true;
+    if (status_ == ZX_OK && ownership_taken_) {
+      return ZX_ERR_ASYNC;
+    }
     return status_;
   }
 

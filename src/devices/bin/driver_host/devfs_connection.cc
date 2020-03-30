@@ -401,7 +401,7 @@ zx_status_t DevfsConnection::ReadMessage(FidlDispatchFunction dispatch) {
   // any associated handles.
   r = dispatch(&msg, &connection);
 
-  if (r != ZX_OK && r != ZX_ERR_ASYNC && !this->reply_called) {
+  if (connection.devfs_connection() == nullptr && r != ZX_ERR_ASYNC && !this->reply_called) {
     // The transaction wasn't handed back to us, so we must manually remove reference count to
     // prevent leak.
     ZX_ASSERT(Release() == false);

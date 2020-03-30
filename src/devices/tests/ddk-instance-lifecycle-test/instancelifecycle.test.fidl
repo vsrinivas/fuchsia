@@ -17,8 +17,7 @@ protocol InstanceDevice {
     SubscribeToLifecycle(request<Lifecycle> lifecycle) -> () error zx.status;
 
     /// Request the asynchronous removal of the main device, rather than the instance devices.
-    // TODO(fxb/49138): This needs to have a reply to work around this bug.
-    RemoveDevice() -> ();
+    RemoveDevice();
 };
 
 protocol Lifecycle {

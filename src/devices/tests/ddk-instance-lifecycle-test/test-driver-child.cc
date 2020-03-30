@@ -74,7 +74,6 @@ void TestLifecycleDriverChildInstance::DdkRelease() {
 
 void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync completer) {
   parent_ctx_->DdkAsyncRemove();
-  completer.Reply();
 }
 
 void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
