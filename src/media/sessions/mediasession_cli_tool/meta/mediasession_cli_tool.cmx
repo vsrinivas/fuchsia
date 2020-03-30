@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/mediasession_cli_tool"
     }
 }
