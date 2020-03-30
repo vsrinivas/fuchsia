@@ -317,7 +317,7 @@ either "cache" or "universe". In that case, simply restarting the
 software on the target (e.g. by closing it completely, or by invoking
 `killall`) will result in the software being immediately updated when it is
 started again. Specifically for shutting down Modular and all dependant
-components, use `sessionctl shutdown_basemgr`.
+components, use `basemgr_launcher shutdown`.
 
 The commands `fx push-package` and `fx build-push` perform manual, forceful
 updates of packages on a target device. These commands do not however know
