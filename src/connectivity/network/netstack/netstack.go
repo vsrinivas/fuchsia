@@ -633,8 +633,14 @@ func (ifs *ifState) stateChange(s link.State) {
 			syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
 		}
 
-		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
-			syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
+		if s == link.StateClosed {
+			if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil {
+				syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
+			}
+		} else {
+			if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
+				syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
+			}
 		}
 
 	case link.StateStarted:

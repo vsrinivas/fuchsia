@@ -453,6 +453,13 @@ func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
 }
 
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
+	c.dispatcher = dispatcher
+
+	// dispatcher may be nil when the NIC in stack.Stack is being removed.
+	if dispatcher == nil {
+		return
+	}
+
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
@@ -647,8 +654,6 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			}
 		}
 	}()
-
-	c.dispatcher = dispatcher
 }
 
 func (c *Client) IsAttached() bool {

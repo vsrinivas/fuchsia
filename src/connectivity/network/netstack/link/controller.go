@@ -26,6 +26,8 @@ func NewLoopbackController() Controller {
 	return &loopbackController{}
 }
 
+var _ Controller = (*loopbackController)(nil)
+
 type loopbackController struct {
 	onStateChange func(State)
 }

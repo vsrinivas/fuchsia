@@ -114,6 +114,55 @@ func TestStackNICEnableDisable(t *testing.T) {
 	}
 }
 
+// TestStackNICRemove tests that the NIC in stack.Stack is removed when the
+// underlying link is closed.
+func TestStackNICRemove(t *testing.T) {
+	ns := newNetstack(t)
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	eth.StopImpl = func() error { return nil }
+	config := netstack.InterfaceConfig{Name: testDeviceName}
+	ifs, err := ns.addEth(testTopoPath, config, &eth)
+	if err != nil {
+		t.Fatalf("ns.addEth(%q, %+v, _): %s", testTopoPath, config, err)
+	}
+
+	// The NIC should initially be disabled in stack.Stack.
+	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
+		t.Errorf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
+	}
+	if _, ok := ns.stack.NICInfo()[ifs.nicid]; !ok {
+		t.Errorf("missing NICInfo for NIC %d", ifs.nicid)
+	}
+	if _, err := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); err != nil {
+		t.Errorf("GetMainNICAddress(%d, %d): %s", ifs.nicid, header.IPv6ProtocolNumber, err)
+	}
+
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// Closing the link should remove the NIC from stack.Stack.
+	if err := ifs.controller.Close(); err != nil {
+		t.Fatal("ifs.controller.Close(): ", err)
+	}
+	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
+		t.Errorf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
+	}
+	if nicInfo, ok := ns.stack.NICInfo()[ifs.nicid]; ok {
+		t.Errorf("unexpected NICInfo found for NIC %d = %+v", ifs.nicid, nicInfo)
+	}
+	if addr, err := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); err != tcpip.ErrUnknownNICID {
+		t.Errorf("got GetMainNICAddress(%d, %d) = (%s, %v), want = (_, %s)", ifs.nicid, header.IPv6ProtocolNumber, addr, err, tcpip.ErrUnknownNICID)
+	}
+
+	// Wait for the controller to stop and free up its resources.
+	ep, ok := ifs.controller.(tcpipstack.LinkEndpoint)
+	if !ok {
+		t.Fatalf("ep (= %T) does not implement tcpipstack.LinkEndpoint", ep)
+	}
+	ep.Wait()
+}
+
 func TestBindingSetCounterStat_Value(t *testing.T) {
 	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
 		new(fidl.BindingSet),
