@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -163,6 +164,8 @@ func Run(cfg *build.Config, args []string) error {
 
 	switch {
 	case *listOfPackageManifestsMode:
+		debug.SetGCPercent(500)
+
 		if len(filePaths) != 1 {
 			return fmt.Errorf("too many file paths supplied")
 		}
