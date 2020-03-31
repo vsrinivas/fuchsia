@@ -68,12 +68,11 @@ if [ -z "${formatter}" ]; then
   formatter="text"
 fi
 format="--format=${formatter}"
-host="$(get-fuchsia-device-addr)"
 regexps="$@"
 find_target="/hub"
 
 # Find all the available services.
-find="$(fx-command-exec "ssh" "${host}" "iquery --find ${find_target}")"
+find="$(fx-command-exec shell iquery --find "${find_target}")"
 
 # Check if we want the system objects
 if [[ "${system_objects}" = "false" ]]; then
@@ -97,4 +96,4 @@ fi
 # Flatten to the format iquery expects.
 flatten="$(echo "${find}" | tr '\n' ' ')"
 
-fx-command-exec "ssh" "${host}" "iquery ${paths} --cat ${format} --recursive ${flatten}"
+fx-command-exec shell iquery "${paths}" --cat "${format}" --recursive "${flatten}"
