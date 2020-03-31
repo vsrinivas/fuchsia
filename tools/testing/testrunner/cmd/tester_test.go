@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -129,10 +130,11 @@ func (*fakeDataSinkCopier) Close() error {
 
 func TestSSHTester(t *testing.T) {
 	cases := []struct {
-		name      string
-		runErrs   []error
-		reconErrs []error
-		wantErr   bool
+		name        string
+		runErrs     []error
+		reconErrs   []error
+		wantErr     bool
+		wantConnErr bool
 	}{
 		{
 			name:    "sucess",
@@ -140,17 +142,33 @@ func TestSSHTester(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test failure",
-			// TODO(garymm,ihuh): Tests should not be getting run thrice.
-			// Adding the test now to document current behavior and make the fix obviously correct.
-			runErrs: []error{fmt.Errorf("test failed once"), fmt.Errorf("test failed twice"), fmt.Errorf("test failed thrice")},
+			name:    "test failure",
+			runErrs: []error{fmt.Errorf("test failed")},
 			wantErr: true,
 		},
 		{
-			name:      "connection error results in retry",
-			runErrs:   []error{sshutil.ConnectionError, sshutil.ConnectionError, nil},
-			reconErrs: []error{fmt.Errorf("failed to connect"), nil},
-			wantErr:   false,
+			name:      "connection error retry and test failure",
+			runErrs:   []error{sshutil.ConnectionError, fmt.Errorf("test failed")},
+			reconErrs: []error{nil},
+			wantErr:   true,
+		},
+		{
+			name:      "reconnect succeeds then fails",
+			runErrs:   []error{sshutil.ConnectionError, sshutil.ConnectionError},
+			reconErrs: []error{nil, fmt.Errorf("reconnect failed")},
+			wantErr:   true,
+			// Make sure we return the original ConnectionError and not the error from the failed
+			// reconnect attempt. This is important because the code that calls Test() in a loop
+			// aborts the loop when it sees an ConnectionError.
+			wantConnErr: true,
+		},
+		{
+			name:      "reconnect succeeds thrice",
+			runErrs:   []error{sshutil.ConnectionError, sshutil.ConnectionError, sshutil.ConnectionError},
+			reconErrs: []error{nil, nil, nil},
+			wantErr:   true,
+			// Reconnection succeeds so we don't want the caller to see a ConnectionError.
+			wantConnErr: false,
 		},
 	}
 	for _, c := range cases {
@@ -172,8 +190,17 @@ func TestSSHTester(t *testing.T) {
 			wantReconnCalls := len(c.reconErrs)
 			wantRunCalls := len(c.runErrs)
 			_, err := tester.Test(context.Background(), build.Test{}, ioutil.Discard, ioutil.Discard)
-			if gotErr := (err != nil); gotErr != c.wantErr {
-				t.Errorf("tester.Test got error: %v, want error: %t", err, c.wantErr)
+			if err == nil {
+				if c.wantErr {
+					t.Errorf("tester.Test got nil error, want non-nil error")
+				}
+			} else {
+				if !c.wantErr {
+					t.Errorf("tester.Test got error: %v, want nil", err)
+				}
+				if isConnErr := errors.Is(err, sshutil.ConnectionError); isConnErr != c.wantConnErr {
+					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
+				}
 			}
 			if wantReconnCalls != runner.reconnectIfNecessaryCalls {
 				t.Errorf("ReconnectIfNecesssary() called wrong number of times. Gott: %d, Want: %d", runner.reconnectIfNecessaryCalls, wantReconnCalls)
