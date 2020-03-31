@@ -7,6 +7,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/ftl/volume.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/inspect/cpp/reader.h>
 
 #include <atomic>
 #include <memory>
@@ -22,6 +23,7 @@ constexpr uint32_t kPageSize = 1024;
 constexpr uint32_t kNumPages = 20;
 constexpr char kMagic = 'f';
 constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {'g', 'u', 'i', 'd'};
+constexpr uint32_t kWearCount = 1337;
 
 bool CheckPattern(const void* buffer, size_t size, char pattern = kMagic) {
   const char* data = reinterpret_cast<const char*>(buffer);
@@ -115,6 +117,7 @@ class FakeVolume final : public ftl::Volume {
   zx_status_t GarbageCollect() final { return ZX_OK; }
   zx_status_t GetStats(Stats* stats) final {
     *stats = {};
+    stats->wear_count = kWearCount;
     return ZX_OK;
   }
 
@@ -490,6 +493,16 @@ TEST_F(BlockDeviceTest, Format) {
   EXPECT_OK(device->Format());
   EXPECT_TRUE(GetVolume()->formatted());
   EXPECT_FALSE(GetVolume()->leveled());
+}
+
+TEST_F(BlockDeviceTest, GetInspectVmo) {
+  ftl::BlockDevice* device = GetDevice();
+  ASSERT_TRUE(device);
+
+  zx::vmo vmo = device->GetInspectVmo();
+  auto hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  auto* wear_count = hierarchy.node().get_property<inspect::UintPropertyValue>("wear_count");
+  EXPECT_EQ(kWearCount, wear_count->value());
 }
 
 TEST_F(BlockDeviceTest, Suspend) {
