@@ -914,7 +914,7 @@ void* cmpct_memalign(size_t size, size_t alignment) {
     return cmpct_alloc(size);
   }
 
-  size_t padded_size = size + alignment + sizeof(free_t) + sizeof(header_t);
+  size_t padded_size = size + alignment + sizeof(free_t);
 
   char* unaligned = (char*)cmpct_alloc(padded_size);
   if (unaligned == NULL) {
@@ -924,7 +924,7 @@ void* cmpct_memalign(size_t size, size_t alignment) {
   Guard<Mutex> guard(TheHeapLock::Get());
 
   size_t mask = alignment - 1;
-  uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) + sizeof(header_t) + mask;
+  uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) + mask;
   char* payload = (char*)(payload_int & ~mask);
   if (unaligned != payload) {
     header_t* unaligned_header = (header_t*)unaligned - 1;
