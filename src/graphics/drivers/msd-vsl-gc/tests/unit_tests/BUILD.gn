@@ -38,6 +38,7 @@ source_set("hardware_tests") {
     "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
     "test_command_buffer.cc",
     "test_device.cc",
+    "test_device_dump.cc",
     "test_events.cc",
     "test_exec.cc",
     "test_memory_write.cc",

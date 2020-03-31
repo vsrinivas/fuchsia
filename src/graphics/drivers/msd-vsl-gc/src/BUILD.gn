@@ -21,6 +21,7 @@ source_set("src") {
     "msd_vsl_context.h",
     "msd_vsl_device.cc",
     "msd_vsl_device.h",
+    "msd_vsl_device_dump.cc",
     "msd_vsl_driver.cc",
     "msd_vsl_driver.h",
     "msd_vsl_semaphore.cc",

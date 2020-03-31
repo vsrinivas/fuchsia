@@ -46,6 +46,14 @@ class MsdVslDevice::InterruptRequest : public DeviceRequest {
   magma::Status Process(MsdVslDevice* device) override { return device->ProcessInterrupt(); }
 };
 
+class MsdVslDevice::DumpRequest : public DeviceRequest {
+ public:
+  DumpRequest() {}
+
+ protected:
+  magma::Status Process(MsdVslDevice* device) override { return device->ProcessDumpStatusToLog(); }
+};
+
 MsdVslDevice::~MsdVslDevice() {
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
@@ -102,6 +110,8 @@ bool MsdVslDevice::Init(void* device_handle) {
 
   if (device_id_ != 0x7000 && device_id_ != 0x8000)
     return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
+
+  revision_ = registers::Revision::Get().ReadFrom(register_io_.get()).chip_revision().get();
 
   gpu_features_ = std::make_unique<GpuFeatures>(register_io_.get());
   DLOG("gpu features: 0x%x minor features 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
@@ -295,7 +305,10 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
       // This should never be null as |WriteInterruptEvent| does not allow it.
       // Ignore it in case it's a spurious interrupt.
       if (!batch) {
-        DMESSAGE("Ignoring interrupt, event %u did not have an associated mapped batch", i);
+        DMESSAGE(
+            "Ignoring interrupt, event %u did not have an associated mapped batch, allocated: %d "
+            "submitted: %d",
+            i, events_[i].allocated, events_[i].submitted);
         continue;
       }
 
@@ -320,6 +333,15 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
 
   ProcessRequestBacklog();
 
+  return MAGMA_STATUS_OK;
+}
+
+magma::Status MsdVslDevice::ProcessDumpStatusToLog() {
+  std::vector<std::string> dump;
+  DumpToString(&dump);
+  for (auto& str : dump) {
+    MAGMA_LOG(INFO, "%s", str.c_str());
+  }
   return MAGMA_STATUS_OK;
 }
 
@@ -822,6 +844,27 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
   return true;
 }
 
+std::vector<MappedBatch*> MsdVslDevice::GetInflightBatches() {
+  std::vector<MappedBatch*> inflight_batches;
+  inflight_batches.reserve(kNumEvents);
+  for (unsigned i = 0; i < kNumEvents; i++) {
+    if (events_[i].submitted) {
+      DASSERT(events_[i].mapped_batch != nullptr);
+      inflight_batches.push_back(events_[i].mapped_batch.get());
+    }
+  }
+  // Sort the batches by sequence number, as the event ids may not correspond to the actual
+  // ordering.
+  std::sort(inflight_batches.begin(), inflight_batches.end(),
+            [](const MappedBatch* a, const MappedBatch* b) {
+              return a->GetSequenceNumber() < b->GetSequenceNumber();
+            });
+
+  return inflight_batches;
+}
+
+void MsdVslDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
+
 magma::Status MsdVslDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) {
   DLOG("SubmitBatch");
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
@@ -881,8 +924,7 @@ magma_status_t MsdVslDevice::ChipIdentity(magma_vsl_gc_chip_identity* out_identi
   }
   memset(out_identity, 0, sizeof(*out_identity));
   out_identity->chip_model = device_id();
-  out_identity->chip_revision =
-      registers::Revision::Get().ReadFrom(register_io_.get()).chip_revision().get();
+  out_identity->chip_revision = revision();
   out_identity->chip_date =
       registers::ChipDate::Get().ReadFrom(register_io_.get()).chip_date().get();
 
@@ -987,4 +1029,6 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
   }
 }
 
-void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {}
+void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {
+  MsdVslDevice::cast(device)->DumpStatusToLog();
+}

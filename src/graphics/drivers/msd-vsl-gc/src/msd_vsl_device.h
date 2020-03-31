@@ -41,7 +41,8 @@ class MsdVslDevice : public msd_device_t,
 
   virtual ~MsdVslDevice();
 
-  uint32_t device_id() { return device_id_; }
+  uint32_t device_id() const { return device_id_; }
+  uint32_t revision() const { return revision_; }
 
   bool IsIdle();
   bool StopRingbuffer();
@@ -50,6 +51,23 @@ class MsdVslDevice : public msd_device_t,
 
   magma_status_t ChipIdentity(magma_vsl_gc_chip_identity* out_identity);
   magma_status_t ChipOption(magma_vsl_gc_chip_option* out_option);
+
+  struct DumpState {
+    uint64_t max_completed_sequence_number;
+    uint64_t next_sequence_number;
+    bool idle;
+    // This may be false if no batch has been submitted yet.
+    bool page_table_arrays_enabled;
+    uint32_t exec_addr;
+
+    std::vector<MappedBatch*> inflight_batches;
+  };
+
+  void Dump(DumpState* dump_state);
+  void DumpToString(std::vector<std::string>* dump_out);
+  void DumpStatusToLog();
+
+  std::vector<MappedBatch*> GetInflightBatches();
 
   static MsdVslDevice* cast(msd_device_t* dev) {
     DASSERT(dev);
@@ -101,12 +119,18 @@ class MsdVslDevice : public msd_device_t,
   void Reset();
   void DisableInterrupts();
 
+  // Appends the formatted string constructed from |fmt| and var args to |dump_out|.
+  void OutputFormattedString(std::vector<std::string>* dump_out, const char* fmt, ...);
+  // Populates |dump_out| with a formatted representation of |dump_state|.
+  void FormatDump(DumpState* dump_state, std::vector<std::string>* dump_out);
+
   void StartDeviceThread();
   int DeviceThreadLoop();
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);
 
   int InterruptThreadLoop();
   magma::Status ProcessInterrupt();
+  magma::Status ProcessDumpStatusToLog();
   void ProcessRequestBacklog();
 
   // Events for triggering interrupts.
@@ -179,6 +203,7 @@ class MsdVslDevice : public msd_device_t,
   std::unique_ptr<magma::RegisterIo> register_io_;
   std::unique_ptr<GpuFeatures> gpu_features_;
   uint32_t device_id_ = 0;
+  uint32_t revision_ = 0;
   std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
   std::unique_ptr<PageTableArrays> page_table_arrays_;
   std::unique_ptr<PageTableSlotAllocator> page_table_slot_allocator_;
@@ -204,6 +229,7 @@ class MsdVslDevice : public msd_device_t,
   uint64_t next_sequence_number_ = 1;
 
   class BatchRequest;
+  class DumpRequest;
   class InterruptRequest;
   class MappingReleaseRequest;
 
@@ -223,6 +249,9 @@ class MsdVslDevice : public msd_device_t,
 
   friend class TestMsdVslDevice;
   friend class TestCommandBuffer;
+  friend class TestDeviceDump_DumpBasic_Test;
+  friend class TestDeviceDump_DumpCommandBuffer_Test;
+  friend class TestDeviceDump_DumpEventBatch_Test;
   friend class TestExec;
   friend class TestExec_Backlog_Test;
   friend class TestExec_BacklogWithInvalidBatch_Test;

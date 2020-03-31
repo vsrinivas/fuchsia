@@ -10,6 +10,7 @@
 #include "magma_util/gpu_mapping.h"
 #include "msd_vsl_buffer.h"
 
+using GpuMappingView = magma::GpuMappingView<MsdVslBuffer>;
 using GpuMapping = magma::GpuMapping<MsdVslBuffer>;
 
 #endif  // GPU_MAPPING_H
