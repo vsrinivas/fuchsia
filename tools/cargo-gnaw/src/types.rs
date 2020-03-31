@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::gn::add_version_suffix,
     anyhow::{anyhow, Error},
     cargo_metadata::Package,
     std::convert::TryFrom,
@@ -52,11 +53,7 @@ pub trait GnData {
 
 impl GnData for Package {
     fn gn_name(&self) -> String {
-        let mut accum = String::new();
-        accum.push_str(&self.name);
-        accum.push_str("-");
-        accum.push_str(self.version.to_string().replace(".", "-").as_str());
-        accum
+        add_version_suffix(&self.name, &self.version)
     }
 
     fn is_proc_macro(&self) -> bool {

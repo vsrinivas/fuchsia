@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::gn::add_version_suffix,
     crate::types::*,
     cargo_metadata::{Package, PackageId},
     semver::Version,
@@ -125,20 +126,12 @@ impl<'a> GnTarget<'a> {
     }
 
     pub fn gn_pkg_name(&self) -> String {
-        let mut accum = String::new();
-        accum.push_str(&self.pkg_name);
-        accum.push_str("-");
-        accum.push_str(self.version.to_string().replace(".", "-").as_str());
-        accum
+        add_version_suffix(&self.pkg_name, &self.version)
     }
 
     /// with version
     pub fn gn_target_name(&self) -> String {
-        let mut accum = String::new();
-        accum.push_str(&self.target_name);
-        accum.push_str("-");
-        accum.push_str(self.version.to_string().replace(".", "-").as_str());
-        accum
+        add_version_suffix(&self.target_name, &self.version)
     }
 
     pub fn gn_target_type(&self) -> String {

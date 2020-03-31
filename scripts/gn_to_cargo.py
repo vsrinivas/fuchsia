@@ -63,12 +63,20 @@ def rebase_gn_path(root_path, location, directory=False):
     target = os.path.dirname(path) if directory else path
     return os.path.join(root_path, target)
 
+class FeatureSpec(object):
+
+    def __init__(self, features, default_features):
+        self.features = features
+        self.default_features = default_features
+
 
 class Project(object):
 
     def __init__(self, project_json):
         self.targets = project_json["targets"]
         self.build_settings = project_json["build_settings"]
+        self.patches = None
+        self.third_party_features = {}
 
     def rust_targets(self):
         for target in self.targets.keys():
@@ -76,11 +84,11 @@ class Project(object):
                 yield target
 
     def dereference_group(self, target):
-        """Dereference proc macro and third-party shims.
+        """Dereference proc macro shims.
 
         If the target happens to be a group which just redirects you to a
-        different rust target, returns the real target label. Otherwise,
-        returns target.
+        different target, returns the real target label. Otherwise, returns
+        target.
         """
         meta = self.targets[target]
         if meta["type"] == "group":
@@ -145,13 +153,34 @@ def write_toml_file(fout, metadata, project, target, lookup):
         for feature in features:
             fout.write("%s = []\n" % feature)
 
+    fout.write("\n[patch.crates-io]\n")
+    for patch in project.patches:
+        path = project.patches[patch]["path"]
+        fout.write(
+            "%s = { path = \"%s/%s\" }\n" % (patch, rust_crates_path, path))
+    fout.write("\n")
+
     # collect all dependencies
     deps = []
     for dep in metadata["deps"]:
         # handle proc macro shims:
         dep = project.dereference_group(dep)
+        # this is a third-party dependency
+        # TODO remove this when all things use GN. temporary hack?
+        if "third_party/rust_crates:" in dep:
+            has_third_party_deps = True
+            match = re.search("rust_crates:([\w-]*)", dep)
+            crate_name, version = str(match.group(1)).rsplit("-v", 1)
+            version = version.replace("_", ".")
+            feature_spec = project.third_party_features.get(crate_name)
+            fout.write("[dependencies.\"%s\"]\n" % crate_name)
+            fout.write("version = \"%s\"\n" % version)
+            if feature_spec:
+                fout.write("features = %s\n" % json.dumps(feature_spec.features))
+                if feature_spec.default_features is False:
+                    fout.write("default-features = false\n")
         # this is a in-tree rust target
-        if "crate_name" in project.targets[dep]:
+        elif "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
             output_name = project.targets[dep]["crate_name"]
             dep_dir = rebase_gn_path(
@@ -162,7 +191,6 @@ def write_toml_file(fout, metadata, project, target, lookup):
                     "crate_path": dep_dir,
                     "crate_name": crate_name,
                 })
-
 
 def main():
     # TODO(tmandry): Remove all hardcoded paths and replace with args.
@@ -185,6 +213,26 @@ def main():
     project = Project(project)
     root_path = project.build_settings["root_path"]
     build_dir = project.build_settings["build_dir"]
+
+    rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
+
+    # this will be removed eventually?
+    with open(rust_crates_path + "/Cargo.toml", "r") as f:
+        cargo_toml = toml.load(f)
+    project.patches = cargo_toml["patch"]["crates-io"]
+
+    # Map from crate name to FeatureSpec. We don't include the version because we don't directly
+    # depend on more than one version of the same crate.
+    def collect_features(deps):
+        for dep, info in deps.iteritems():
+            if isinstance(info, str) or isinstance(info, unicode):
+                continue
+            project.third_party_features[dep] = FeatureSpec(
+                    info.get("features", []),
+                    info.get("default-features", True))
+    collect_features(cargo_toml["dependencies"])
+    for target_info in cargo_toml["target"].itervalues():
+        collect_features(target_info.get("dependencies", {}))
 
     host_binaries = []
     target_binaries = []

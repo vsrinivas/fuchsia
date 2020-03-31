@@ -11,7 +11,17 @@ use {
     std::fmt::Display,
     std::io,
     std::path::Path,
+    std::string::ToString,
 };
+
+/// Utility to add a version suffix to a GN target name.
+pub fn add_version_suffix(prefix: &str, version: &impl ToString) -> String {
+    let mut accum = String::new();
+    accum.push_str(&prefix);
+    accum.push_str("-v");
+    accum.push_str(version.to_string().replace(".", "_").as_str());
+    accum
+}
 
 /// Write a header for the output GN file
 pub fn write_header<W: io::Write>(output: &mut W, _cargo_file: &Path) -> Result<(), Error> {
@@ -317,16 +327,16 @@ fn simple_target() {
     let output = String::from_utf8(output).unwrap();
     assert_eq!(
         output,
-        r#"rust_library("test_package-0-1-0") {
+        r#"rust_library("test_package-v0_1_0") {
   crate_name = "test_target"
   crate_root = "//the/rainbow.rs"
-  output_name = "test_target-2f0d1c7b9ec9c9bf"
+  output_name = "test_target-b9ab75307aed635c"
   
   deps = []
 
   rustenv = []
 
-  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=2f0d1c7b9ec9c9bf","-Cextra-filename=2f0d1c7b9ec9c9bf"]
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=b9ab75307aed635c","-Cextra-filename=b9ab75307aed635c"]
 
   
 }

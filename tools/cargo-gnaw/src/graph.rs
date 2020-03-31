@@ -68,7 +68,15 @@ impl<'a> GnBuildGraph<'a> {
                             self.add_cargo_package(id.clone())?;
                             let platform = target.as_ref().map(|x| format!("{}", x));
                             let platform_deps = dependencies.entry(platform).or_insert(vec![]);
-                            platform_deps.push((&self.metadata[id], node_dep.name.clone()));
+
+                            // Somehow we get duplicates of the same dependency
+                            // from cargo on some targets. Filter those out
+                            // here. This is technically quadratic, but that's
+                            // unlikely to matter for the number of deps on a
+                            // single crate.
+                            if !platform_deps.iter().any(|dep| dep.1 == node_dep.name.clone()) {
+                                platform_deps.push((&self.metadata[id], node_dep.name.clone()));
+                            }
                         }
                         DependencyKind::Build => {
                             if let Some(ref mut build_script) = build_script {

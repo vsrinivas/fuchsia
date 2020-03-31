@@ -8,19 +8,19 @@
 
 
 group("simple") {
-  deps = [":simple-1-0-25"]
+  deps = [":simple-v1_0_25"]
 }
 
-rust_library("simple-1-0-25") {
+rust_library("simple-v1_0_25") {
   crate_name = "simple"
   crate_root = "//tools/cargo-gnaw/src/tests/simple/src/lib.rs"
-  output_name = "simple-9ac42213326ac72d"
+  output_name = "simple-3b5ec47e038ac967"
   
   deps = []
 
   rustenv = []
 
-  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=9ac42213326ac72d","-Cextra-filename=9ac42213326ac72d"]
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=3b5ec47e038ac967","-Cextra-filename=3b5ec47e038ac967"]
 
   
 }
