@@ -27,7 +27,13 @@ DisplayView::DisplayView(scenic::ViewContext context, async::Loop* loop)
       text_node_(session()),
       trace_provider_(loop_->dispatcher()) {}
 
-DisplayView::~DisplayView() {}
+DisplayView::~DisplayView() {
+  for (auto& ipp: image_pipe_properties_) {
+    for (auto& waiter : ipp.waiters) {
+      waiter.second.first->Cancel();
+    }
+  }
+}
 
 std::unique_ptr<DisplayView> DisplayView::Create(scenic::ViewContext context, async::Loop* loop) {
   auto view = std::make_unique<DisplayView>(std::move(context), loop);
