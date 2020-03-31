@@ -128,7 +128,7 @@ async fn get_network_time_backstop(
         .dangerous()
         .set_certificate_verifier(Arc::clone(&verifier) as Arc<dyn rustls::ServerCertVerifier>);
 
-    let client = fuchsia_hyper::new_https_client_dangerous(config);
+    let client = fuchsia_hyper::new_https_client_dangerous(config, Default::default());
 
     let response = client.get(url).compat().await.map_err(|_| HttpsDateError::NetworkError)?;
 

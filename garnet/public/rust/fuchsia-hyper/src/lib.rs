@@ -27,8 +27,12 @@ use {
         },
         Body,
     },
-    std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs},
-    std::pin::Pin,
+    net2::TcpStreamExt as _,
+    std::{
+        net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs},
+        pin::Pin,
+    },
+    tcp_stream_ext::TcpStreamExt as _,
 };
 
 /// A Fuchsia-compatible hyper client configured for making HTTP requests.
@@ -38,26 +42,69 @@ pub type HttpClient = Client<HyperConnector, Body>;
 pub type HttpsClient = Client<hyper_rustls::HttpsConnector<HyperConnector>, Body>;
 
 /// A future that yields a hyper-compatible TCP stream.
-pub struct HyperTcpConnector(Result<TcpConnector, Option<io::Error>>);
+pub struct HyperConnectorFuture {
+    tcp_connector_res: Result<TcpConnector, Option<io::Error>>,
+    tcp_options: TcpOptions,
+}
 
-impl Future for HyperTcpConnector {
+impl Future for HyperConnectorFuture {
     type Output = Result<(Compat<TcpStream>, Connected), io::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let connector = self.0.as_mut().map_err(|x| x.take().unwrap())?;
+        let connector = self.tcp_connector_res.as_mut().map_err(|x| x.take().unwrap())?;
         let stream = ready!(connector.poll_unpin(cx)?);
+        let () = apply_tcp_options(stream.std(), &self.tcp_options)?;
         Poll::Ready(Ok((stream.compat(), Connected::new())))
     }
 }
 
+fn apply_tcp_options(stream: &std::net::TcpStream, options: &TcpOptions) -> Result<(), io::Error> {
+    if let Some(idle) = options.keepalive_idle {
+        stream.set_keepalive(Some(idle))?;
+    } else if options.keepalive_interval.is_some() || options.keepalive_count.is_some() {
+        // This sets SO_KEEPALIVE without setting TCP_KEEPIDLE.
+        stream.set_keepalive(None)?;
+    }
+    if let Some(interval) = options.keepalive_interval {
+        stream.set_keepalive_interval(interval)?;
+    }
+    if let Some(count) = options.keepalive_count {
+        stream.set_keepalive_count(count)?;
+    }
+    Ok(())
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// A container of TCP settings to be applied to the sockets created by the hyper client.
+pub struct TcpOptions {
+    /// This sets TCP_KEEPIDLE and SO_KEEPALIVE.
+    pub keepalive_idle: Option<std::time::Duration>,
+    /// This sets TCP_KEEPINTVL and SO_KEEPALIVE.
+    pub keepalive_interval: Option<std::time::Duration>,
+    /// This sets TCP_KEEPCNT and SO_KEEPALIVE.
+    pub keepalive_count: Option<i32>,
+}
+
 /// A Fuchsia-compatible implementation of hyper's `Connect` trait which allows
 /// creating a TcpStream to a particular destination.
-pub struct HyperConnector;
+pub struct HyperConnector {
+    tcp_options: TcpOptions,
+}
+
+impl HyperConnector {
+    pub fn new() -> Self {
+        Self { tcp_options: std::default::Default::default() }
+    }
+    pub fn from_tcp_options(tcp_options: TcpOptions) -> Self {
+        Self { tcp_options }
+    }
+}
 
 impl Connect for HyperConnector {
     type Transport = Compat<TcpStream>;
     type Error = io::Error;
-    type Future = Compat<HyperTcpConnector>;
+    type Future = Compat<HyperConnectorFuture>;
     fn connect(&self, dst: Destination) -> Self::Future {
         let res = (|| {
             let host = dst.host();
@@ -82,25 +129,35 @@ impl Connect for HyperConnector {
             };
             TcpStream::connect(addr)
         })();
-        HyperTcpConnector(res.map_err(Some)).compat()
+        HyperConnectorFuture { tcp_connector_res: res.map_err(Some), tcp_options: self.tcp_options }
+            .compat()
     }
 }
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP requests.
 pub fn new_client() -> HttpClient {
-    Client::builder().executor(EHandle::local().compat()).build(HyperConnector)
+    Client::builder().executor(EHandle::local().compat()).build(HyperConnector::new())
 }
 
-pub fn new_https_client_dangerous(tls: rustls::ClientConfig) -> HttpsClient {
-    let https = hyper_rustls::HttpsConnector::from((HyperConnector, tls));
+pub fn new_https_client_dangerous(
+    tls: rustls::ClientConfig,
+    tcp_options: TcpOptions,
+) -> HttpsClient {
+    let https =
+        hyper_rustls::HttpsConnector::from((HyperConnector::from_tcp_options(tcp_options), tls));
     Client::builder().executor(EHandle::local().compat()).build(https)
 }
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP and HTTPS requests.
-pub fn new_https_client() -> HttpsClient {
+pub fn new_https_client_from_tcp_options(tcp_options: TcpOptions) -> HttpsClient {
     let mut tls = rustls::ClientConfig::new();
     tls.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
-    new_https_client_dangerous(tls)
+    new_https_client_dangerous(tls, tcp_options)
+}
+
+/// Returns a new Fuchsia-compatible hyper client for making HTTP and HTTPS requests.
+pub fn new_https_client() -> HttpsClient {
+    new_https_client_from_tcp_options(std::default::Default::default())
 }
 
 fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
@@ -108,14 +165,14 @@ fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
         return Some(SocketAddr::V4(SocketAddrV4::new(addr, port)));
     }
 
-    // IpV6 literals are always in []
+    // IPv6 literals are always enclosed in [].
     if !host.starts_with("[") || !host.ends_with(']') {
         return None;
     }
 
     let host = &host[1..host.len() - 1];
 
-    // IPv6 addresses with zones always contains "%25", which is "%" URL encoded.
+    // IPv6 addresses with zones always contain "%25", which is "%" URL encoded.
     let mut host_parts = host.splitn(2, "%25");
 
     let addr = host_parts.next()?.parse::<Ipv6Addr>().ok()?;
@@ -172,8 +229,11 @@ fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fuchsia_async::Executor;
+    use {
+        super::*,
+        fuchsia_async::{self as fasync, net::TcpListener, Executor},
+        futures::stream::StreamExt as _,
+    };
 
     #[test]
     fn can_create_client() {
@@ -185,6 +245,43 @@ mod test {
     fn can_create_https_client() {
         let _exec = Executor::new().unwrap();
         let _client = new_https_client();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn hyper_connector_sets_tcp_options() {
+        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+        let listener = TcpListener::bind(&addr).unwrap();
+        let addr = listener.local_addr().unwrap();
+        let listener = listener.accept_stream();
+        fasync::spawn(async move {
+            listener
+                .map(|res| {
+                    res.unwrap();
+                })
+                .collect()
+                .await
+        });
+
+        let idle = std::time::Duration::from_secs(36);
+        let interval = std::time::Duration::from_secs(47);
+        let count = 58;
+        let connector = HyperConnector::from_tcp_options(TcpOptions {
+            keepalive_idle: Some(idle),
+            keepalive_interval: Some(interval),
+            keepalive_count: Some(count),
+            ..Default::default()
+        });
+        let uri = format!("https://{}", addr).parse::<hyper::Uri>().unwrap();
+        let stream = connector
+            .connect(Destination::try_from_uri(uri).unwrap())
+            .into_inner()
+            .await
+            .unwrap()
+            .0;
+
+        assert_eq!(stream.get_ref().std().keepalive().unwrap(), Some(idle));
+        assert_eq!(stream.get_ref().std().keepalive_interval().unwrap(), interval);
+        assert_eq!(stream.get_ref().std().keepalive_count().unwrap(), count);
     }
 
     #[test]
