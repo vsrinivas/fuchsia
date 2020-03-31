@@ -226,7 +226,7 @@ impl TestCaseProcessor {
 /// Runs the test component using `suite` and collects logs and results.
 pub async fn run_and_collect_results(
     suite: fidl_fuchsia_test::SuiteProxy,
-    mut sender: mpsc::Sender<TestEvent>,
+    sender: mpsc::Sender<TestEvent>,
     test_url: String,
 ) -> Result<(), anyhow::Error> {
     log::debug!("enumerating tests");
@@ -244,7 +244,16 @@ pub async fn run_and_collect_results(
         }
     }
     log::debug!("invocations: {:#?}", invocations);
+    run_and_collect_results_for_invocations(suite, sender, test_url, invocations).await
+}
 
+/// Runs the test component using `suite` and collects logs and results.
+pub async fn run_and_collect_results_for_invocations(
+    suite: fidl_fuchsia_test::SuiteProxy,
+    mut sender: mpsc::Sender<TestEvent>,
+    test_url: String,
+    invocations: Vec<Invocation>,
+) -> Result<(), anyhow::Error> {
     log::debug!("running tests");
     let mut successful_completion = true; // will remain true, if there are no tests to run.
     let mut invocations_iter = invocations.into_iter();

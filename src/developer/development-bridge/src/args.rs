@@ -26,6 +26,10 @@ pub struct TestCommand {
     /// target device
     pub devices: Option<String>,
 
+    #[argh(option)]
+    /// target device
+    pub tests: Option<String>,
+
     #[argh(switch)]
     /// list tests in the Test Suite
     pub list: bool,

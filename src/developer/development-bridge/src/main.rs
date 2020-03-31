@@ -14,13 +14,14 @@ use {
     fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
-    fidl_fuchsia_test::{CaseIteratorMarker, SuiteProxy},
+    fidl_fuchsia_test::{CaseIteratorMarker, Invocation, SuiteProxy},
     futures::{channel::mpsc, FutureExt, StreamExt, TryStreamExt},
+    regex::Regex,
     signal_hook,
     std::env,
     std::process::Command,
     std::sync::{Arc, Mutex},
-    test_executor::{run_and_collect_results as run_tests, TestEvent, TestResult},
+    test_executor::{run_and_collect_results_for_invocations as run_tests, TestEvent, TestResult},
 };
 
 mod args;
@@ -224,13 +225,55 @@ impl Cli {
         }
     }
 
-    async fn run_tests(&self, suite_url: &String) -> Result<(), Error> {
+    async fn get_invocations(
+        &self,
+        suite: &SuiteProxy,
+        test_selector: &Option<Regex>,
+    ) -> Result<Vec<Invocation>, Error> {
+        let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
+        suite.get_tests(server_end).map_err(|e| format_err!("Error getting test steps: {}", e))?;
+
+        let mut invocations = Vec::<Invocation>::new();
+        loop {
+            let cases = case_iterator.get_next().await?;
+            if cases.is_empty() {
+                break;
+            }
+            for case in cases {
+                // TODO: glob type pattern matching would probably be better than regex - maybe
+                // both? Will update after meeting with UX.
+                let test_case_name = case.name.unwrap();
+                match &test_selector {
+                    Some(s) => {
+                        if (s.is_match(&test_case_name)) {
+                            invocations.push(Invocation { name: Some(test_case_name), tag: None });
+                        }
+                    }
+                    None => invocations.push(Invocation { name: Some(test_case_name), tag: None }),
+                }
+            }
+        }
+        Ok(invocations)
+    }
+
+    async fn run_tests(&self, suite_url: &String, tests: &Option<String>) -> Result<(), Error> {
         let (suite_proxy, suite_server_end) =
             fidl::endpoints::create_proxy().expect("creating suite proxy");
         let (_controller_proxy, controller_server_end) =
             fidl::endpoints::create_proxy().expect("creating controller proxy");
 
         log::info!("launching test suite {}", suite_url);
+        println!("*** Launching {} ***", suite_url);
+
+        let test_selector = match tests {
+            Some(s) => match Regex::new(s) {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    return Err(anyhow!("invalid regex for tests: \"{}\"\n{}", s, e));
+                }
+            },
+            None => None,
+        };
 
         self.daemon_proxy
             .launch_suite(&suite_url, suite_server_end, controller_server_end)
@@ -241,15 +284,32 @@ impl Cli {
         log::info!("launched suite, getting tests");
         let (sender, recv) = mpsc::channel(1);
 
+        println!("Getting tests...");
+        let invocations = self.get_invocations(&suite_proxy, &test_selector).await?;
+        if (invocations.is_empty()) {
+            match tests {
+                Some(test_selector) => println!("No test cases match {}", test_selector),
+                None => println!("No tests cases found in suite {}", suite_url),
+            }
+            return Ok(());
+        }
+        println!("Running tests...");
         let (remote, test_fut) =
-            run_tests(suite_proxy, sender, suite_url.to_string()).remote_handle();
-
-        println!("*** Running {} ***", suite_url);
+            run_tests(suite_proxy, sender, suite_url.to_string(), invocations).remote_handle();
         hoist::spawn(remote);
+        let successful_completion = self.collect_events(recv).await;
+        test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
 
+        if !successful_completion {
+            return Err(anyhow!("Test run finished prematurely. Something went wrong."));
+        }
+        println!("*** Finished {} ***", suite_url);
+        Ok(())
+    }
+
+    async fn collect_events(&self, mut recv: mpsc::Receiver<TestEvent>) -> bool {
         let mut successful_completion = false;
-        let events = recv.collect::<Vec<_>>().await;
-        for event in events {
+        while let Some(event) = recv.next().await {
             match event {
                 TestEvent::LogMessage { test_case_name, msg } => {
                     let logs = msg.split("\n");
@@ -260,36 +320,29 @@ impl Cli {
                     }
                 }
                 TestEvent::TestCaseStarted { test_case_name } => {
-                    println!("{} started ...", test_case_name);
+                    println!("[RUNNING]\t{}", test_case_name);
                 }
                 TestEvent::TestCaseFinished { test_case_name, result } => {
                     match result {
-                        TestResult::Passed => println!("{} PASSED", test_case_name),
-                        TestResult::Failed => println!("{} FAILED", test_case_name),
-                        TestResult::Skipped => println!("{} SKIPPED", test_case_name),
-                        TestResult::Error => println!("{} ERROR", test_case_name),
+                        TestResult::Passed => println!("[PASSED]\t{}", test_case_name),
+                        TestResult::Failed => println!("[FAILED]\t{}", test_case_name),
+                        TestResult::Skipped => println!("[SKIPPED]\t{}", test_case_name),
+                        TestResult::Error => println!("[ERROR]\t{}", test_case_name),
                     };
                 }
                 TestEvent::Finish => {
                     successful_completion = true;
-                    println!("*** Finished {} ***", suite_url);
                 }
             };
         }
-
-        test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
-
-        if !successful_completion {
-            return Err(anyhow!("Test run finished prematurely. Something went wrong."));
-        }
-        Ok(())
+        successful_completion
     }
 
     pub async fn test(&self, test: TestCommand) -> Result<(), Error> {
         if (test.list) {
             self.get_tests(&test.url).await
         } else {
-            self.run_tests(&test.url).await
+            self.run_tests(&test.url, &test.tests).await
         }
     }
 
@@ -369,19 +422,12 @@ mod test {
         Case, CaseIteratorRequest, CaseIteratorRequestStream, SuiteRequest, SuiteRequestStream,
     };
 
-    fn spawn_fake_iterator_server(
-        values: Vec<&'static str>,
-        mut stream: CaseIteratorRequestStream,
-    ) {
-        let mut iter = values.into_iter().map(|name| Case { name: Some(name.to_string()) });
+    fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
+        let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
-                match req {
-                    Some(CaseIteratorRequest::GetNext { responder }) => {
-                        responder.send(&mut iter.by_ref().take(50));
-                    }
-                    _ => assert!(false),
-                }
+            while let Ok(Some(CaseIteratorRequest::GetNext { responder })) = stream.try_next().await
+            {
+                responder.send(&mut iter.by_ref().take(50));
             }
         });
     }
@@ -391,7 +437,7 @@ mod test {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(SuiteRequest::GetTests { iterator, control_handle: _ }) => {
-                        let values = vec!["Test 1", "Test 2"];
+                        let values: Vec<String> = (0..100).map(|i| format!("Test {}", i)).collect();
                         let iterator_request_stream = iterator.into_stream().unwrap();
                         spawn_fake_iterator_server(values, iterator_request_stream);
                     }
@@ -479,7 +525,7 @@ mod test {
     fn test_list_tests() -> Result<(), Error> {
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
-        let cmd = TestCommand { url, devices: None, list: true };
+        let cmd = TestCommand { url, devices: None, list: true, tests: None };
         hoist::run(async move {
             let response =
                 Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
@@ -492,7 +538,21 @@ mod test {
     fn test_run_tests() -> Result<(), Error> {
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
-        let cmd = TestCommand { url, devices: None, list: false };
+        let cmd = TestCommand { url, devices: None, list: false, tests: None };
+        hoist::run(async move {
+            let response =
+                Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
+            assert_eq!(response, ());
+        });
+        Ok(())
+    }
+
+    // TODO(fxb/49204): Test the output.
+    #[test]
+    fn test_run_tests_with_selector() -> Result<(), Error> {
+        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
+            .to_string();
+        let cmd = TestCommand { url, devices: None, list: false, tests: Some("1".to_string()) };
         hoist::run(async move {
             let response =
                 Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
