@@ -49,11 +49,13 @@ Commands
         -f: file path or url to a source config file
         -h: SHA256 hash of source config file (optional, with URL)
         -x: [Obsolete] do not disable other active sources (if the provided source is enabled)
+        -verbose: [Temporary] show extra logs
 
     add_repo_cfg  - add a repository config to the set of known repositories, using a source config
         -n: name of the update source (optional, with URL)
         -f: file path or url to a source config file
         -h: SHA256 hash of source config file (optional, with URL)
+        -verbose: [Temporary] show extra logs
 
     rm_src        - remove a source, if it exists, disabling all remaining sources
         -n: name of the update source
@@ -81,6 +83,7 @@ var (
 	version      = fs.String("v", "", "Version of a package")
 	merkle       = fs.String("m", "", "Merkle root of the desired update.")
 	nonExclusive = fs.Bool("x", false, "[Obsolete] When adding or enabling a source, do not disable other sources.")
+	verbose      = fs.Bool("verbose", false, "[Temporary] Show more logs for addSource.")
 )
 
 type ErrGetFile string
@@ -307,6 +310,12 @@ func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineWithCtxInterface,
 	return fmt.Errorf("unable to commit rewrite rule changes")
 }
 
+func logIfVerbose(format string, v ...interface{}) {
+	if *verbose {
+		log.Printf(format, v)
+	}
+}
+
 func addSource(services Services, repoOnly bool) error {
 	if len(*pkgFile) == 0 {
 		return fmt.Errorf("a url or file path (via -f) are required")
@@ -328,6 +337,7 @@ func addSource(services Services, repoOnly bool) error {
 			}
 		}
 
+		logIfVerbose("downloading config file for repo at %s", *pkgFile)
 		resp, err := http.Get(*pkgFile)
 		if err != nil {
 			return NewErrGetFile("failed to GET file", err)
@@ -343,6 +353,7 @@ func addSource(services Services, repoOnly bool) error {
 			return fmt.Errorf("failed to read file body: %v", err)
 		}
 
+		logIfVerbose("successfully downloaded config file, trying to validate with hash %s", hash)
 		if len(expectedHash) != 0 {
 			hasher := sha256.New()
 			hasher.Write(body)
@@ -365,6 +376,7 @@ func addSource(services Services, repoOnly bool) error {
 		source = f
 	}
 
+	logIfVerbose("creating source config from json")
 	var cfg SourceConfig
 	if err := json.NewDecoder(source).Decode(&cfg); err != nil {
 		return fmt.Errorf("failed to parse source config: %v", err)
@@ -396,6 +408,7 @@ func addSource(services Services, repoOnly bool) error {
 	}
 
 	repoCfg := upgradeSourceConfig(cfg)
+	logIfVerbose("making fuchsia.pkg.RepositoryManager.Add FIDL request")
 	s, err := services.repoMgr.Add(fidl.Background(), repoCfg)
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
@@ -412,6 +425,7 @@ func addSource(services Services, repoOnly bool) error {
 	// "fuchsia.com".
 	if !repoOnly && isSourceConfigEnabled(&cfg) {
 		rule := rewriteRuleForId(cfg.Id)
+		logIfVerbose("making fuchsia.pkg.rewrite FIDL requests")
 		if err := replaceDynamicRewriteRules(services.rewriteEngine, rule); err != nil {
 			return err
 		}
