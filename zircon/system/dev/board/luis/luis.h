@@ -17,6 +17,7 @@ namespace board_luis {
 enum {
   BTI_BOARD,
   BTI_EMMC,
+  BTI_SDIO,
   BTI_USB,
 };
 
@@ -39,6 +40,7 @@ class Luis : public ddk::Device<Luis> {
   zx_status_t GpioInit();
   zx_status_t UsbInit();
   zx_status_t I2cInit();
+  zx_status_t SdioInit();
 
   const ddk::PBusProtocolClient pbus_;
   const pdev_board_info_t board_info_;

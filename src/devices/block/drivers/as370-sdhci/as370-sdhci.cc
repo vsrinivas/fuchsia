@@ -4,6 +4,7 @@
 
 #include "as370-sdhci.h"
 
+#include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <memory>
@@ -11,13 +12,107 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <hwreg/bitfields.h>
+#include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/i2c.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <hwreg/bitfields.h>
+
+namespace {
+
+enum {
+  FRAGMENT_PDEV = 0,
+  FRAGMENT_EXPANDER_2,
+  FRAGMENT_EXPANDER_3,
+  FRAGMENT_COUNT,
+};
+
+constexpr uint32_t kPerifStickyResetNAddress = 0x688;
+constexpr uint32_t kSdioPhyRstNBit = 5;
+
+constexpr uint8_t kExpander2SdioOutputEnablePin = 0;
+constexpr uint8_t kExpander3SdSlotPowerOnPin = 1;
+
+constexpr uint8_t kIODirectionAddress = 0x3;
+constexpr uint8_t kOutputStateAddress = 0x5;
+constexpr uint8_t kOutputHighZAddress = 0x7;
+constexpr uint8_t kPullEnableAddress  = 0xb;
+
+zx_status_t I2cModifyBit(ddk::I2cChannel& i2c, uint8_t reg, uint8_t set_mask, uint8_t clear_mask) {
+  uint8_t reg_value = 0;
+  zx_status_t status = i2c.ReadSync(reg, &reg_value, sizeof(reg_value));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to read from I2C register 0x%02x: %d\n", __FILE__, reg, status);
+    return status;
+  }
+
+  reg_value = (reg_value | set_mask) & ~clear_mask;
+  const uint8_t write_buf[] = {reg, reg_value};
+  if ((status = i2c.WriteSync(write_buf, sizeof(write_buf))) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to write to I2C register 0x%02x: %d\n", __FILE__, reg, status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SetExpanderGpioHigh(ddk::I2cChannel& expander, uint8_t bit) {
+  const uint8_t mask = static_cast<uint8_t>(1 << bit);
+  zx_status_t status;
+  if ((status = I2cModifyBit(expander, kPullEnableAddress, 0, mask)) != ZX_OK ||
+      (status = I2cModifyBit(expander, kIODirectionAddress, mask, 0)) != ZX_OK ||
+      (status = I2cModifyBit(expander, kOutputStateAddress, mask, 0)) != ZX_OK ||
+      (status = I2cModifyBit(expander, kOutputHighZAddress, 0, mask)) != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+}  // namespace
 
 namespace sdhci {
 
 zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
-  ddk::PDev pdev(parent);
+  ddk::PDev pdev;
+  zx_status_t status;
+
+  ddk::CompositeProtocolClient composite(parent);
+  if (composite.is_valid()) {
+    zx_device_t* fragments[FRAGMENT_COUNT];
+    size_t fragment_count;
+    composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+
+    if (fragment_count != fbl::count_of(fragments)) {
+      zxlogf(ERROR, "%s: Could not get fragments: expected %zu, got %zu\n", __FILE__,
+             fbl::count_of(fragments), fragment_count);
+      return ZX_ERR_NO_RESOURCES;
+    }
+
+    pdev = ddk::PDev(fragments[FRAGMENT_PDEV]);
+
+    // TODO(bradenkell): The GPIO expander code will likely be specific to the EVK board. Remove it
+    //                   when we get new hardware.
+    ddk::I2cChannel expander2(fragments[FRAGMENT_EXPANDER_2]);
+    if (!expander2.is_valid()) {
+      zxlogf(ERROR, "%s: Could not get I2C fragment\n", __FILE__);
+      return ZX_ERR_NO_RESOURCES;
+    }
+
+    ddk::I2cChannel expander3(fragments[FRAGMENT_EXPANDER_3]);
+    if (!expander3.is_valid()) {
+      zxlogf(ERROR, "%s: Could not get I2C fragment\n", __FILE__);
+      return ZX_ERR_NO_RESOURCES;
+    }
+
+    if ((status = SetExpanderGpioHigh(expander2, kExpander2SdioOutputEnablePin)) != ZX_OK ||
+        (status = SetExpanderGpioHigh(expander3, kExpander3SdSlotPowerOnPin)) != ZX_OK) {
+      return status;
+    }
+  } else {
+    pdev = ddk::PDev(parent);
+  }
+
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -27,8 +122,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
 
   std::optional<ddk::MmioBuffer> core_mmio;
 
-  zx_status_t status = pdev.MapMmio(0, &core_mmio);
-  if (status != ZX_OK) {
+  if ((status = pdev.MapMmio(0, &core_mmio)) != ZX_OK) {
     zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
     return status;
   }
@@ -45,12 +139,22 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  zx::bti bti;
+  if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get BTI: %d\n", __FILE__, status);
+    return status;
+  }
+
+  std::optional<ddk::MmioBuffer> reset_mmio;
+  if (device_info.did == PDEV_DID_VS680_SDHCI1 &&
+      (status = pdev.MapMmio(1, &reset_mmio)) == ZX_OK) {
+    // Set the (active low) reset bit for the SDIO phy on VS680.
+    reset_mmio->SetBit<uint32_t>(kSdioPhyRstNBit, kPerifStickyResetNAddress);
+  }
+
   fbl::AllocChecker ac;
-  std::unique_ptr<As370Sdhci> device(new (&ac)
-                                         As370Sdhci(parent,
-                                                    *std::move(core_mmio),
-                                                    std::move(irq),
-                                                    device_info.did));
+  std::unique_ptr<As370Sdhci> device(new (&ac) As370Sdhci(
+      parent, *std::move(core_mmio), std::move(irq), device_info.did, std::move(bti)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: As370Sdhci alloc failed\n", __FILE__);
     return ZX_ERR_NO_MEMORY;
@@ -89,14 +193,12 @@ zx_status_t As370Sdhci::SdhciGetMmio(zx::vmo* out_mmio, zx_off_t* out_offset) {
 }
 
 zx_status_t As370Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
-  ddk::PDev pdev(parent());
-  if (!pdev.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  return pdev.GetBti(index, out_bti);
+  *out_bti = std::move(bti_);
+  return ZX_OK;
 }
 
+// TODO(bradenkell): The VS680 SDIO base clock seems to be different than what the controller
+//                   expects, as the bus frequency is half of what it should be.
 uint32_t As370Sdhci::SdhciGetBaseClock() { return 0; }
 
 uint64_t As370Sdhci::SdhciGetQuirks() {
@@ -233,7 +335,7 @@ class AtControl : public hwreg::RegisterBase<AtControl, uint32_t> {
 
 
 void As370Sdhci::SdhciHwReset() {
-  if (did_ == PDEV_DID_VS680_SDHCI0) {
+  if (did_ == PDEV_DID_VS680_SDHCI0 || did_ == PDEV_DID_VS680_SDHCI1) {
     //config PHY_CNFG, general configuration
     //Dolphin_BG7_PHY_bring_up_sequence.xlsx
     //step 10
@@ -348,7 +450,7 @@ void As370Sdhci::SdhciHwReset() {
 
     EmmcControl::Get(vptr)
       .ReadFrom(&core_mmio_)
-      .set_card_is_emmc(1)
+      .set_card_is_emmc(did_ == PDEV_DID_VS680_SDHCI0 ? 1 : 0)
       .WriteTo(&core_mmio_);
   }
 }
@@ -362,9 +464,16 @@ static constexpr zx_driver_ops_t as370_sdhci_driver_ops = []() -> zx_driver_ops_
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(as370_sdhci, as370_sdhci_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+ZIRCON_DRIVER_BEGIN(as370_sdhci, as370_sdhci_driver_ops, "zircon", "0.1", 8)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
+
+    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 1),
+
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_SDHCI0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI0),
+    BI_ABORT(),
+
+    BI_LABEL(1),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI1),
 ZIRCON_DRIVER_END(as370_sdhci)

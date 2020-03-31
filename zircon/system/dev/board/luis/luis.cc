@@ -77,6 +77,10 @@ int Luis::Thread() {
     zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
   }
 
+  if (SdioInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: SdioInit() failed\n", __func__);
+  }
+
   return 0;
 }
 }  // namespace board_luis

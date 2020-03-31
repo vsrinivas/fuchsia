@@ -19,6 +19,10 @@ constexpr uint32_t kEmmc0Base = 0xf7aa'0000;
 constexpr uint32_t kEmmc0Size = fbl::round_up<uint32_t, uint32_t>(0x1000, PAGE_SIZE);
 constexpr uint32_t kEmmc0Irq = (13 + 32);
 
+constexpr uint32_t kSdioBase = 0xf7ab'0000;
+constexpr uint32_t kSdioSize = 0x1000;
+constexpr uint32_t kSdioIrq = 15 + 32;
+
 }  // namespace vs680
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_VS680_VS680_HW_H_

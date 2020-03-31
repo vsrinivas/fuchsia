@@ -33,14 +33,20 @@ class As370Sdhci : public DeviceType, public ddk::SdhciProtocol<As370Sdhci, ddk:
   void SdhciHwReset();
 
  private:
-  As370Sdhci(zx_device_t* parent, ddk::MmioBuffer core_mmio, zx::interrupt irq, uint32_t did)
-      : DeviceType(parent), core_mmio_(std::move(core_mmio)), irq_(std::move(irq)), did_(did) {}
+  As370Sdhci(zx_device_t* parent, ddk::MmioBuffer core_mmio, zx::interrupt irq, uint32_t did,
+             zx::bti bti)
+      : DeviceType(parent),
+        core_mmio_(std::move(core_mmio)),
+        irq_(std::move(irq)),
+        did_(did),
+        bti_(std::move(bti)) {}
 
   int IrqThread();
 
   ddk::MmioBuffer core_mmio_;
   zx::interrupt irq_;
   uint32_t did_;
+  zx::bti bti_;
 };
 
 }  // namespace sdhci
