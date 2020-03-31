@@ -12,12 +12,16 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_call.h>
 #include <kernel/atomic.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
+#include <kernel/percpu.h>
 #include <kernel/thread.h>
+#include <ktl/array.h>
 #include <ktl/popcount.h>
 #include <ktl/unique_ptr.h>
 
@@ -334,6 +338,103 @@ bool set_migrate_fn_test() {
   END_TEST;
 }
 
+bool set_migrate_ready_threads_test() {
+  BEGIN_TEST;
+
+  cpu_mask_t active_cpus = mp_get_active_mask();
+  if (active_cpus == 0 || ispow2(active_cpus)) {
+    printf("Expected multiple CPUs to be active.\n");
+    return true;
+  }
+
+  const cpu_num_t kStartingCpu = 0;
+  const cpu_num_t kTargetCpu = 1;
+
+  // The worker thread will validate that it is running on the target CPU.
+  const thread_start_routine worker_body = [](void* arg) -> int {
+    const cpu_num_t current_cpu = arch_curr_cpu_num();
+    if (current_cpu != kTargetCpu) {
+      UNITTEST_FAIL_TRACEF("Expected to be running on CPU %u, but actually running on %u.",
+                           kTargetCpu, current_cpu);
+      return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
+  };
+
+  ktl::array<Thread*, 4> workers{nullptr, nullptr, nullptr, nullptr};
+
+  for (size_t i = 0; i < workers.size(); i++) {
+    workers[i] = Thread::Create("set_migrate_ready_threads_test_worker", worker_body, nullptr,
+                                DEFAULT_PRIORITY);
+    ASSERT_NONNULL(workers[i], "thread_create failed.");
+    workers[i]->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
+  }
+
+  // Move the test thread to the same CPU that the workers will start on.
+  Thread* const current_thread = Thread::Current::Get();
+  cpu_mask_t original_affinity = current_thread->GetCpuAffinity();
+  current_thread->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
+  ASSERT_EQ(arch_curr_cpu_num(), kStartingCpu, "Failed to move test thread to the starting CPU.");
+
+  auto auto_call = fbl::MakeAutoCall([current_thread, original_affinity]() {
+    // Restore original CPU affinity of the test thread.
+    current_thread->SetCpuAffinity(original_affinity);
+  });
+
+  {
+    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabled_guard;
+    const auto context_switches_before = get_local_percpu()->stats.context_switches;
+
+    // Resume the workers with preemption disabled. The workers should stack up
+    // behind the current thread in the run queue. BE CAREFUL not to do anything
+    // that would block until the workers are validated.
+    for (Thread* worker : workers) {
+      worker->Resume();
+
+      // Validate the thread state.
+      thread_state state;
+      cpu_num_t curr_cpu;
+      {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        state = worker->state_;
+        curr_cpu = worker->curr_cpu_;
+      }
+      ASSERT_EQ(state, THREAD_READY, "The worker was in the wrong state.");
+      ASSERT_EQ(curr_cpu, kStartingCpu, "The worker was assigned to the wrong CPU.");
+    }
+
+    // Migrate the ready threads to a different CPU. BE CAREFUL not to do
+    // anything that would block until the workers are validated.
+    for (Thread* worker : workers) {
+      worker->SetCpuAffinity(cpu_num_to_mask(kTargetCpu));
+
+      // Validate the thread state.
+      thread_state state;
+      cpu_num_t curr_cpu;
+      {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        state = worker->state_;
+        curr_cpu = worker->curr_cpu_;
+      }
+      ASSERT_EQ(state, THREAD_READY, "The worker was in the wrong state.");
+      ASSERT_EQ(curr_cpu, kTargetCpu, "The worker was assigned to the wrong CPU.");
+    }
+
+    const auto context_switches_after = get_local_percpu()->stats.context_switches;
+    ASSERT_EQ(context_switches_before, context_switches_after,
+              "The test thread context switched during the critical section.");
+  }
+
+  // Wait for the worker thread results.
+  for (Thread* worker : workers) {
+    int worker_retcode;
+    ASSERT_EQ(worker->Join(&worker_retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join thread.");
+    EXPECT_EQ(worker_retcode, ZX_OK, "Worker thread failed.");
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
@@ -344,4 +445,5 @@ UNITTEST("thread_last_cpu_running_thread", thread_last_cpu_running_thread)
 UNITTEST("thread_empty_soft_affinity_mask", thread_empty_soft_affinity_mask)
 UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_and_hard_affinity)
 UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
+UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

@@ -338,6 +338,9 @@ void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_
   thread->scheduler_state_.expected_runtime_ns_ = SchedDuration{params.capacity};
 }
 
+// Removes the thread at the head of the first eligible run queue. If there is
+// an eligible deadline thread, it takes precedence over available fair
+// threads.
 Thread* Scheduler::DequeueThread(SchedTime now) {
   if (IsDeadlineThreadEligible(now)) {
     return DequeueDeadlineThread(now);
@@ -450,24 +453,8 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
 
-  const bool needs_migration =
-      (GetEffectiveCpuMask(active_mask, current_thread) & current_cpu_mask) == 0;
-
   Thread* next_thread = nullptr;
-  if (is_active && unlikely(needs_migration)) {
-    // The current CPU is not in the thread's affinity mask, find a new CPU
-    // and move it to that queue.
-    Remove(current_thread);
-
-    const cpu_num_t target_cpu = FindTargetCpu(current_thread);
-    Scheduler* const target = Get(target_cpu);
-    DEBUG_ASSERT(target != this || current_thread->next_cpu_ != INVALID_CPU);
-
-    target->Insert(now, current_thread);
-    if (target != this) {
-      mp_reschedule(cpu_num_to_mask(target_cpu), 0);
-    }
-  } else if (is_active && likely(!is_idle)) {
+  if (is_active && likely(!is_idle)) {
     if (timeslice_expired) {
       // If the timeslice expired insert the current thread into the run queue.
       QueueThread(current_thread, Placement::Insertion, now, total_runtime_ns);
@@ -503,19 +490,58 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
     next_thread = DequeueThread(now);
   }
 
-  // If the next thread is scheduled for migration, call the migration function,
-  // migrate the thread, and select another thread to run.
-  cpu_mask_t cpus_to_reschedule_mask = 0;
-  for (; next_thread->next_cpu_ != INVALID_CPU; next_thread = DequeueThread(now)) {
-    DEBUG_ASSERT(next_thread->last_cpu_ == this_cpu());
-    next_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
-    Remove(next_thread);
+  // Returns true when the given thread requires active migration.
+  const auto needs_migration = [active_mask, current_cpu_mask](Thread* const thread) {
+    return (GetEffectiveCpuMask(active_mask, thread) & current_cpu_mask) == 0 ||
+           thread->next_cpu_ != INVALID_CPU;
+  };
 
-    Scheduler* const target = Get(next_thread->next_cpu_);
+  // If the next thread needs *active* migration, call the migration function,
+  // migrate the thread, and select another thread to run.
+  //
+  // Most migrations are passive. Passive migration happens whenever a thread
+  // becomes READY and a different CPU is selected than the last CPU the thread
+  // ran on.
+  //
+  // Active migration happens under the following conditions:
+  //  1. The CPU affinity of a thread that is READY or RUNNING is changed to
+  //     exclude the CPU it is currently active on.
+  //  2. Passive migration, or active migration due to #1, selects a different
+  //     CPU for a thread with a migration function. Migration to the next CPU
+  //     is delayed until the migration function is called on the last CPU.
+  //  3. A thread that is READY or RUNNING is relocated by the periodic load
+  //     balancer. NOT YET IMPLEMENTED.
+  //
+  cpu_mask_t cpus_to_reschedule_mask = 0;
+  for (; needs_migration(next_thread); next_thread = DequeueThread(now)) {
+    // If the thread is not scheduled to migrate to a specifc CPU, find a
+    // suitable target CPU. If the thread has a migration function, the search
+    // will schedule the thread to migrate to a specific CPU and return the
+    // current CPU.
+    cpu_num_t target_cpu = INVALID_CPU;
+    if (next_thread->next_cpu_ == INVALID_CPU) {
+        target_cpu = FindTargetCpu(next_thread);
+        DEBUG_ASSERT(target_cpu != this_cpu() || next_thread->next_cpu_ != INVALID_CPU);
+    }
+
+    // If the thread is scheduled to migrate to a specific CPU, set the target
+    // to that CPU and call the migration function.
+    if (next_thread->next_cpu_ != INVALID_CPU) {
+      DEBUG_ASSERT(next_thread->last_cpu_ == this_cpu());
+      target_cpu = next_thread->next_cpu_;
+      next_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
+      next_thread->next_cpu_ = INVALID_CPU;
+    }
+
+    // The target CPU must always be different than the current CPU.
+    DEBUG_ASSERT(target_cpu != this_cpu());
+
+    // Remove accounting from this run queue and insert in the target run queue.
+    Remove(next_thread);
+    Scheduler* const target = Get(target_cpu);
     target->Insert(now, next_thread);
 
-    cpus_to_reschedule_mask |= cpu_num_to_mask(next_thread->next_cpu_);
-    next_thread->next_cpu_ = INVALID_CPU;
+    cpus_to_reschedule_mask |= cpu_num_to_mask(target_cpu);
   }
 
   // Issue reschedule IPIs to CPUs with migrated threads.
@@ -612,7 +638,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   trace.End(target_cpu, remaining_mask);
 
   bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU && thread->migrate_fn_ &&
-                         mp_is_cpu_active(last_cpu);
+                         (active_mask & last_cpu_mask) != 0;
   if (unlikely(delay_migration)) {
     thread->next_cpu_ = target_cpu;
     return last_cpu;

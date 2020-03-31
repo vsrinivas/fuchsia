@@ -159,9 +159,7 @@ class Scheduler {
   void QueueThread(Thread* thread, Placement placement, SchedTime now = SchedTime{0},
                    SchedDuration total_runtime_ns = SchedDuration{0}) TA_REQ(thread_lock);
 
-  // Removes the thread at the head of the first eligible run queue. If there is
-  // an eligible deadline thread, it takes precedence over available fair
-  // threads.
+  // Removes the thread at the head of the first eligible run queue.
   Thread* DequeueThread(SchedTime now) TA_REQ(thread_lock);
 
   // Removes the thread at the head of the fair run queue and returns it.
