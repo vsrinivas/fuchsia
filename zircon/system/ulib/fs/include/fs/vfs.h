@@ -316,10 +316,15 @@ class Vfs {
   // A lock which should be used to protect lookup and walk operations
   mtx_t vfs_lock_{};
 
-  // Starts tracking the lifetime of the connection.
-  virtual void RegisterConnection(std::unique_ptr<internal::Connection> connection) = 0;
+  // Starts FIDL message dispatching on |channel|, at the same time
+  // starts to manage the lifetime of the connection.
+  //
+  // Implementations must ensure |connection| continues to live on, until
+  // |UnregisterConnection| is called on the pointer to destroy it.
+  virtual zx_status_t RegisterConnection(std::unique_ptr<internal::Connection> connection,
+                                         zx::channel channel) = 0;
 
-  // Stops tracking the lifetime of the connection.
+  // Destroys a connection.
   virtual void UnregisterConnection(internal::Connection* connection) = 0;
 
 #endif  // ifdef __Fuchsia__

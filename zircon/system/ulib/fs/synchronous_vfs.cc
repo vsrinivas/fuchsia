@@ -36,9 +36,16 @@ void SynchronousVfs::Shutdown(ShutdownCallback handler) {
   }
 }
 
-void SynchronousVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection) {
+zx_status_t SynchronousVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection,
+                                               zx::channel channel) {
   ZX_DEBUG_ASSERT(!is_shutting_down_);
   connections_.push_back(std::move(connection));
+  zx_status_t status = connections_.back().StartDispatching(std::move(channel));
+  if (status != ZX_OK) {
+    connections_.pop_back();
+    return status;
+  }
+  return ZX_OK;
 }
 
 void SynchronousVfs::UnregisterConnection(internal::Connection* connection) {

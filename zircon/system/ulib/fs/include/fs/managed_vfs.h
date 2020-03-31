@@ -60,8 +60,8 @@ class ManagedVfs : public Vfs {
   void OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status)
       __TA_EXCLUDES(lock_);
 
-  void RegisterConnection(std::unique_ptr<internal::Connection> connection) final
-      __TA_EXCLUDES(lock_);
+  zx_status_t RegisterConnection(std::unique_ptr<internal::Connection> connection,
+                                 zx::channel channel) final __TA_EXCLUDES(lock_);
   void UnregisterConnection(internal::Connection* connection) final __TA_EXCLUDES(lock_);
   bool IsTerminating() const final;
 

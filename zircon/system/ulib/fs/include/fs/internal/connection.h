@@ -82,6 +82,8 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // Begins waiting for messages on the channel.
   // |channel| is the channel on which the FIDL protocol will be served.
   //
+  // Before calling this function, the connection ownership must be transferred
+  // to the Vfs through |RegisterConnection|.
   // Cannot be called more than once in the lifetime of the connection.
   zx_status_t StartDispatching(zx::channel channel);
 

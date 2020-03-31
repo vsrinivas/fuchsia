@@ -64,10 +64,17 @@ void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_st
   handler(status);
 }
 
-void ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection) {
+zx_status_t ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection,
+                                           zx::channel channel) {
   fbl::AutoLock<fbl::Mutex> lock(&lock_);
   ZX_DEBUG_ASSERT(!is_shutting_down_.load());
   connections_.push_back(std::move(connection));
+  zx_status_t status = connections_.back().StartDispatching(std::move(channel));
+  if (status != ZX_OK) {
+    connections_.pop_back();
+    return status;
+  }
+  return ZX_OK;
 }
 
 void ManagedVfs::UnregisterConnection(internal::Connection* connection) {

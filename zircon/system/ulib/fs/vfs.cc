@@ -555,12 +555,8 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
   if (status != ZX_OK) {
     return status;
   }
-  status = connection->StartDispatching(std::move(channel));
-  if (status != ZX_OK) {
-    return status;
-  }
-  RegisterConnection(std::move(connection));
-  return ZX_OK;
+
+  return RegisterConnection(std::move(connection), std::move(channel));
 }
 
 void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {

@@ -163,6 +163,8 @@ zx_status_t Connection::StartDispatching(zx::channel channel) {
   ZX_DEBUG_ASSERT(channel);
   ZX_DEBUG_ASSERT(!binding_);
   ZX_DEBUG_ASSERT(vfs_->dispatcher());
+  ZX_DEBUG_ASSERT_MSG(InContainer(),
+                      "Connection must be managed by the Vfs when dispatching FIDL messages.");
 
   binding_ = std::make_shared<Binding>(this, vfs_->dispatcher(), std::move(channel));
   zx_status_t status = binding_->StartDispatching();

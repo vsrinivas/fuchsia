@@ -90,7 +90,8 @@ test("fs-connection") {
     }
   }
   sources = [
-    "connection_tests.cc",
+    "connection_contract_tests.cc",
+    "connection_integration_tests.cc",
     "fidl_transaction_tests.cc",
   ]
   deps = [

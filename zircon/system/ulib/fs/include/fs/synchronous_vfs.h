@@ -46,7 +46,8 @@ class SynchronousVfs : public Vfs {
   // It is safe to delete SynchronousVfs from within the closure.
   void Shutdown(ShutdownCallback handler) override;
 
-  void RegisterConnection(std::unique_ptr<internal::Connection> connection) final;
+  zx_status_t RegisterConnection(std::unique_ptr<internal::Connection> connection,
+                                 zx::channel channel) final;
   void UnregisterConnection(internal::Connection* connection) final;
   bool IsTerminating() const final;
 
