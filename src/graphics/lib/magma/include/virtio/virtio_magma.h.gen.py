@@ -54,6 +54,7 @@ def wire_format(type):
   if type == 'uint32_t': width = 4
   if type == 'int32_t': width = 4
   if type == 'magma_bool_t': width = 1
+  if type == 'magma_handle_t': width = 4
   return wire_format_from_width(width)
 
 # License string for the top of the file.

@@ -23,6 +23,21 @@ class VirtMagmaTest : public ::testing::Test {
  protected:
   VirtMagmaTest() {}
   ~VirtMagmaTest() override {}
+
+  void SetUp() override {
+    static constexpr const char* kDevicePath = "/dev/magma0";
+    int device_file_descriptor = open(kDevicePath, O_NONBLOCK);
+    ASSERT_GE(device_file_descriptor, 0)
+        << "Failed to open device " << kDevicePath << " (" << errno << ")";
+    magma_device_import(device_file_descriptor, &device_);
+  }
+
+  virtual void TearDown() override {
+    if (device_) {
+      magma_device_release(device_);
+    }
+  }
+
   magma_device_t device_ = 0;
   magma_connection_t connection_;
   void* driver_handle_;
@@ -33,12 +48,7 @@ class VirtMagmaTest : public ::testing::Test {
 };
 
 TEST_F(VirtMagmaTest, OpenDevice) {
-  static constexpr const char* kDevicePath = "/dev/magma0";
-  int device_file_descriptor = open(kDevicePath, O_NONBLOCK);
-
-  ASSERT_GE(device_file_descriptor, 0)
-      << "Failed to open device " << kDevicePath << " (" << errno << ")";
-  magma_device_import(device_file_descriptor, &device_);
+  // Just run the Setup()
 }
 
 TEST_F(VirtMagmaTest, MagmaQuery) {
