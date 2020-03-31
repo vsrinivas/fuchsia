@@ -817,9 +817,9 @@ mod tests {
             DummyArpContext {
                 proto_addr: Some(TEST_LOCAL_IPV4),
                 hw_addr: TEST_LOCAL_MAC,
-                addr_resolved: vec![],
-                addr_resolution_failed: vec![],
-                addr_resolution_expired: vec![],
+                addr_resolved: Vec::new(),
+                addr_resolution_failed: Vec::new(),
+                addr_resolution_expired: Vec::new(),
                 arp_state: ArpState::default(),
             }
         }

@@ -853,7 +853,7 @@ mod tests {
     #[test]
     fn test_parse_padding() {
         // Test that we properly discard post-packet padding.
-        let mut buffer = Buf::new(vec![], ..)
+        let mut buffer = Buf::new(Vec::new(), ..)
             .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
                 DEFAULT_DST_IP,
                 DEFAULT_DST_IP,

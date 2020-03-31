@@ -1854,7 +1854,7 @@ mod tests {
             let ret = match *net {
                 "alice" => vec![(b.clone(), device, None), (c.clone(), device, None)],
                 "bob" => vec![(a.clone(), device, None)],
-                "calvin" => vec![],
+                "calvin" => Vec::new(),
                 _ => unreachable!(),
             };
 

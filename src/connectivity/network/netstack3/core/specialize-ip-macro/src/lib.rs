@@ -737,7 +737,7 @@ fn remove_from_punctuated<T, P: Default>(p: Punctuated<T, P>, idx: usize) -> Pun
 
 // Extract the Attributes from a statement, and call f on them.
 fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F) -> O {
-    let mut dummy = vec![];
+    let mut dummy = Vec::new();
     f(match stmt {
         Stmt::Local(x) => &mut x.attrs,
         Stmt::Item(Item::ExternCrate(x)) => &mut x.attrs,

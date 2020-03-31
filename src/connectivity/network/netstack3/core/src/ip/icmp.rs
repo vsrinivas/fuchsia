@@ -2252,7 +2252,7 @@ mod tests {
         crate::testutil::set_logger_for_test();
 
         let req = Icmpv4TimestampRequest::new(1, 2, 3);
-        let mut buffer = Buf::new(vec![], ..)
+        let mut buffer = Buf::new(Vec::new(), ..)
             .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,

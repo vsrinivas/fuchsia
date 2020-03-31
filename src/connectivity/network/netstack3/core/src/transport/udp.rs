@@ -1650,7 +1650,7 @@ mod tests {
         frames.set_should_error_for_frame(|_frame_meta| true);
 
         // Now try to send something over this new connection:
-        let send_err = send_udp_conn(&mut ctx, conn, Buf::new(vec![], ..)).unwrap_err();
+        let send_err = send_udp_conn(&mut ctx, conn, Buf::new(Vec::new(), ..)).unwrap_err();
         assert_eq!(send_err, SendError::Unknown);
     }
 

@@ -212,9 +212,9 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
     }
 
     fn fidl_list_interfaces(self) -> Vec<fidl_net_stack::InterfaceInfo> {
-        let mut devices = vec![];
+        let mut devices = Vec::new();
         for device in self.ctx.dispatcher().get_inner::<Devices>().iter_devices() {
-            let mut addresses = vec![];
+            let mut addresses = Vec::new();
             if let Some(core_id) = device.core_id() {
                 for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
                     match addr.try_into_fidl() {
@@ -257,7 +257,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
     ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
         let device =
             self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let mut addresses = vec![];
+        let mut addresses = Vec::new();
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
                 match addr.try_into_fidl() {
