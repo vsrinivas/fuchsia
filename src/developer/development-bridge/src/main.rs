@@ -19,6 +19,7 @@ use {
     regex::Regex,
     signal_hook,
     std::env,
+    std::io::{self, Write},
     std::process::Command,
     std::sync::{Arc, Mutex},
     test_executor::{run_and_collect_results_for_invocations as run_tests, TestEvent, TestResult},
@@ -29,19 +30,23 @@ mod config;
 mod constants;
 
 // Cli
-pub struct Cli {
+pub struct Cli<W: Write + Sync> {
     daemon_proxy: DaemonProxy,
+    writer: W,
 }
 
-impl Cli {
-    pub async fn new() -> Result<Cli, Error> {
-        let mut peer_id = Cli::find_daemon().await?;
-        let daemon_proxy = Cli::create_daemon_proxy(&mut peer_id).await?;
-        Ok(Cli { daemon_proxy })
+impl<W> Cli<W>
+where
+    W: Write + Sync,
+{
+    pub async fn new(writer: W) -> Result<Self, Error> {
+        let mut peer_id = Cli::<W>::find_daemon().await?;
+        let daemon_proxy = Cli::<W>::create_daemon_proxy(&mut peer_id).await?;
+        Ok(Self { daemon_proxy, writer })
     }
 
-    pub fn new_with_proxy(daemon_proxy: DaemonProxy) -> Cli {
-        Cli { daemon_proxy }
+    pub fn new_with_proxy(daemon_proxy: DaemonProxy, writer: W) -> Self {
+        Self { daemon_proxy, writer }
     }
 
     async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy, Error> {
@@ -54,7 +59,7 @@ impl Cli {
 
     async fn find_daemon() -> Result<NodeId, Error> {
         if !is_daemon_running() {
-            Cli::spawn_daemon().await?;
+            Cli::<W>::spawn_daemon().await?;
         }
         let svc = hoist::connect_as_service_consumer()?;
         // Sometimes list_peers doesn't properly report the published services - retry a few times
@@ -127,6 +132,7 @@ impl Cli {
         // TODO(jwing) remove this once that is finished.
         proxy.ping();
 
+        // TODO(fxb/49063): Can't use the self.writer in these threads due to static lifetime.
         let out_thread = std::thread::spawn(move || loop {
             let mut buf = [0u8; 128];
             let n = cout.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
@@ -153,7 +159,7 @@ impl Cli {
                         match exit_code {
                             -1 => println!("This exit code may mean that the specified package doesn't exist.\
                                         \nCheck that the package is in your universe (`fx set --with ...`) and that `fx serve` is running."),
-                            _ => {}
+                            _ => {},
                         };
                         break;
                     }
@@ -191,7 +197,7 @@ impl Cli {
         Ok(())
     }
 
-    async fn get_tests(&self, suite_url: &String) -> Result<(), Error> {
+    async fn get_tests(&mut self, suite_url: &String) -> Result<(), Error> {
         let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
         let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
@@ -215,12 +221,12 @@ impl Cli {
             if cases.is_empty() {
                 return Ok(());
             }
-            println!("Tests in suite {}:\n", suite_url);
+            writeln!(self.writer, "Tests in suite {}:\n", suite_url);
             for case in cases {
                 match case.name {
-                    Some(n) => println!("{}", n),
-                    None => println!("<No name>"),
-                }
+                    Some(n) => writeln!(self.writer, "{}", n),
+                    None => writeln!(self.writer, "<No name>"),
+                };
             }
         }
     }
@@ -256,14 +262,11 @@ impl Cli {
         Ok(invocations)
     }
 
-    async fn run_tests(&self, suite_url: &String, tests: &Option<String>) -> Result<(), Error> {
+    async fn run_tests(&mut self, suite_url: &String, tests: &Option<String>) -> Result<(), Error> {
         let (suite_proxy, suite_server_end) =
             fidl::endpoints::create_proxy().expect("creating suite proxy");
         let (_controller_proxy, controller_server_end) =
             fidl::endpoints::create_proxy().expect("creating controller proxy");
-
-        log::info!("launching test suite {}", suite_url);
-        println!("*** Launching {} ***", suite_url);
 
         let test_selector = match tests {
             Some(s) => match Regex::new(s) {
@@ -275,6 +278,9 @@ impl Cli {
             None => None,
         };
 
+        log::info!("launching test suite {}", suite_url);
+        writeln!(self.writer, "*** Launching {} ***", suite_url);
+
         self.daemon_proxy
             .launch_suite(&suite_url, suite_server_end, controller_server_end)
             .await
@@ -284,16 +290,18 @@ impl Cli {
         log::info!("launched suite, getting tests");
         let (sender, recv) = mpsc::channel(1);
 
-        println!("Getting tests...");
+        writeln!(self.writer, "Getting tests...");
         let invocations = self.get_invocations(&suite_proxy, &test_selector).await?;
         if (invocations.is_empty()) {
             match tests {
-                Some(test_selector) => println!("No test cases match {}", test_selector),
-                None => println!("No tests cases found in suite {}", suite_url),
-            }
+                Some(test_selector) => {
+                    writeln!(self.writer, "No test cases match {}", test_selector)
+                }
+                None => writeln!(self.writer, "No tests cases found in suite {}", suite_url),
+            };
             return Ok(());
         }
-        println!("Running tests...");
+        writeln!(self.writer, "Running tests...");
         let (remote, test_fut) =
             run_tests(suite_proxy, sender, suite_url.to_string(), invocations).remote_handle();
         hoist::spawn(remote);
@@ -303,11 +311,11 @@ impl Cli {
         if !successful_completion {
             return Err(anyhow!("Test run finished prematurely. Something went wrong."));
         }
-        println!("*** Finished {} ***", suite_url);
+        writeln!(self.writer, "*** Finished {} ***", suite_url);
         Ok(())
     }
 
-    async fn collect_events(&self, mut recv: mpsc::Receiver<TestEvent>) -> bool {
+    async fn collect_events(&mut self, mut recv: mpsc::Receiver<TestEvent>) -> bool {
         let mut successful_completion = false;
         while let Some(event) = recv.next().await {
             match event {
@@ -315,19 +323,21 @@ impl Cli {
                     let logs = msg.split("\n");
                     for log in logs {
                         if log.len() > 0 {
-                            println!("{}: {}", test_case_name, log.to_string());
+                            writeln!(self.writer, "{}: {}", test_case_name, log.to_string());
                         }
                     }
                 }
                 TestEvent::TestCaseStarted { test_case_name } => {
-                    println!("[RUNNING]\t{}", test_case_name);
+                    writeln!(self.writer, "[RUNNING]\t{}", test_case_name);
                 }
                 TestEvent::TestCaseFinished { test_case_name, result } => {
                     match result {
-                        TestResult::Passed => println!("[PASSED]\t{}", test_case_name),
-                        TestResult::Failed => println!("[FAILED]\t{}", test_case_name),
-                        TestResult::Skipped => println!("[SKIPPED]\t{}", test_case_name),
-                        TestResult::Error => println!("[ERROR]\t{}", test_case_name),
+                        TestResult::Passed => writeln!(self.writer, "[PASSED]\t{}", test_case_name),
+                        TestResult::Failed => writeln!(self.writer, "[FAILED]\t{}", test_case_name),
+                        TestResult::Skipped => {
+                            writeln!(self.writer, "[SKIPPED]\t{}", test_case_name)
+                        }
+                        TestResult::Error => writeln!(self.writer, "[ERROR]\t{}", test_case_name),
                     };
                 }
                 TestEvent::Finish => {
@@ -338,7 +348,7 @@ impl Cli {
         successful_completion
     }
 
-    pub async fn test(&self, test: TestCommand) -> Result<(), Error> {
+    pub async fn test(&mut self, test: TestCommand) -> Result<(), Error> {
         if (test.list) {
             self.get_tests(&test.url).await
         } else {
@@ -357,9 +367,10 @@ impl Cli {
 
 async fn async_main() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
+    let writer = Box::new(io::stdout());
     match app.subcommand {
         Subcommand::Echo(c) => {
-            match Cli::new().await?.echo(c.text).await {
+            match Cli::new(writer).await?.echo(c.text).await {
                 Ok(r) => {
                     println!("SUCCESS: received {:?}", r);
                 }
@@ -370,7 +381,7 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::List(c) => {
-            match Cli::new().await?.list_targets(c.nodename).await {
+            match Cli::new(writer).await?.list_targets(c.nodename).await {
                 Ok(r) => {
                     println!("SUCCESS: received {:?}", r);
                 }
@@ -381,7 +392,7 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::RunComponent(c) => {
-            match Cli::new().await?.run_component(c.url, &c.args).await {
+            match Cli::new(writer).await?.run_component(c.url, &c.args).await {
                 Ok(r) => {}
                 Err(e) => {
                     println!("ERROR: {:?}", e);
@@ -392,7 +403,7 @@ async fn async_main() -> Result<(), Error> {
         Subcommand::Daemon(_) => start_daemon().await,
         Subcommand::Config(c) => exec_config(c),
         Subcommand::Test(t) => {
-            match Cli::new().await.unwrap().test(t).await {
+            match Cli::new(writer).await.unwrap().test(t).await {
                 Ok(_) => {
                     log::info!("Test successfully run");
                 }
@@ -421,6 +432,7 @@ mod test {
     use fidl_fuchsia_test::{
         Case, CaseIteratorRequest, CaseIteratorRequestStream, SuiteRequest, SuiteRequestStream,
     };
+    use std::io::BufWriter;
 
     fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
         let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
@@ -489,9 +501,11 @@ mod test {
 
     #[test]
     fn test_echo() {
+        let mut output = String::new();
         let echo = "test-echo";
         hoist::run(async move {
-            let echoed = Cli::new_with_proxy(setup_fake_daemon_service())
+            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+            let echoed = Cli::new_with_proxy(setup_fake_daemon_service(), writer)
                 .echo(Some(echo.to_string()))
                 .await
                 .unwrap();
@@ -501,6 +515,7 @@ mod test {
 
     #[test]
     fn test_run_component() -> Result<(), Error> {
+        let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
         let args = vec!["test1".to_string(), "test2".to_string()];
         let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
@@ -510,9 +525,10 @@ mod test {
         let (serr, _) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
         hoist::run(async move {
+            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
             // There isn't a lot we can test here right now since this method has an empty response.
             // We just check for an Ok(()) and leave it to a real integration to test behavior.
-            let response = Cli::new_with_proxy(setup_fake_daemon_service())
+            let response = Cli::new_with_proxy(setup_fake_daemon_service(), writer)
                 .run_component(url.to_string(), &args)
                 .await
                 .unwrap();
@@ -523,25 +539,31 @@ mod test {
 
     #[test]
     fn test_list_tests() -> Result<(), Error> {
+        let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
         let cmd = TestCommand { url, devices: None, list: true, tests: None };
         hoist::run(async move {
+            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
             let response =
-                Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
+                Cli::new_with_proxy(setup_fake_daemon_service(), writer).test(cmd).await.unwrap();
             assert_eq!(response, ());
+            let test = Regex::new(r"Test [0-9+]").expect("test regex");
+            assert_eq!(100, test.find_iter(&output).count());
         });
         Ok(())
     }
 
     #[test]
     fn test_run_tests() -> Result<(), Error> {
+        let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
         let cmd = TestCommand { url, devices: None, list: false, tests: None };
         hoist::run(async move {
+            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
             let response =
-                Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
+                Cli::new_with_proxy(setup_fake_daemon_service(), writer).test(cmd).await.unwrap();
             assert_eq!(response, ());
         });
         Ok(())
@@ -550,12 +572,14 @@ mod test {
     // TODO(fxb/49204): Test the output.
     #[test]
     fn test_run_tests_with_selector() -> Result<(), Error> {
+        let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
         let cmd = TestCommand { url, devices: None, list: false, tests: Some("1".to_string()) };
         hoist::run(async move {
+            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
             let response =
-                Cli::new_with_proxy(setup_fake_daemon_service()).test(cmd).await.unwrap();
+                Cli::new_with_proxy(setup_fake_daemon_service(), writer).test(cmd).await.unwrap();
             assert_eq!(response, ());
         });
         Ok(())
