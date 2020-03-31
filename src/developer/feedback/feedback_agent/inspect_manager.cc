@@ -7,26 +7,28 @@
 namespace feedback {
 
 InspectManager::InspectManager(inspect::Node* root_node) : node_manager_(root_node) {
-  node_manager_.Get("/fuchsia.feedback.ComponentDataRegister");
+  node_manager_.Get("/fidl/fuchsia.feedback.ComponentDataRegister");
   component_data_register_stats_.current_num_connections =
-      node_manager_.Get("/fuchsia.feedback.ComponentDataRegister")
+      node_manager_.Get("/fidl/fuchsia.feedback.ComponentDataRegister")
           .CreateUint("current_num_connections", 0);
   component_data_register_stats_.total_num_connections =
-      node_manager_.Get("/fuchsia.feedback.ComponentDataRegister")
+      node_manager_.Get("/fidl/fuchsia.feedback.ComponentDataRegister")
           .CreateUint("total_num_connections", 0);
 
-  node_manager_.Get("/fuchsia.feedback.DataProvider");
+  node_manager_.Get("/fidl/fuchsia.feedback.DataProvider");
   data_provider_stats_.current_num_connections =
-      node_manager_.Get("/fuchsia.feedback.DataProvider").CreateUint("current_num_connections", 0);
+      node_manager_.Get("/fidl/fuchsia.feedback.DataProvider")
+          .CreateUint("current_num_connections", 0);
   data_provider_stats_.total_num_connections =
-      node_manager_.Get("/fuchsia.feedback.DataProvider").CreateUint("total_num_connections", 0);
+      node_manager_.Get("/fidl/fuchsia.feedback.DataProvider")
+          .CreateUint("total_num_connections", 0);
 
-  node_manager_.Get("/fuchsia.feedback.DeviceIdProvider");
+  node_manager_.Get("/fidl/fuchsia.feedback.DeviceIdProvider");
   device_id_provider_stats_.current_num_connections =
-      node_manager_.Get("/fuchsia.feedback.DeviceIdProvider")
+      node_manager_.Get("/fidl/fuchsia.feedback.DeviceIdProvider")
           .CreateUint("current_num_connections", 0);
   device_id_provider_stats_.total_num_connections =
-      node_manager_.Get("/fuchsia.feedback.DeviceIdProvider")
+      node_manager_.Get("/fidl/fuchsia.feedback.DeviceIdProvider")
           .CreateUint("total_num_connections", 0);
 }
 

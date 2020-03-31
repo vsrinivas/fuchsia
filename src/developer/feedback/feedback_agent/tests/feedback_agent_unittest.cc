@@ -62,118 +62,151 @@ class FeedbackAgentTest : public UnitTestFixture, public CobaltTestFixture {
 TEST_F(FeedbackAgentTest, CheckInspect) {
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(UnorderedElementsAreArray({
-                  NodeMatches(AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                    PropertyList(UnorderedElementsAreArray({
-                                        UintIs("total_num_connections", 0u),
-                                        UintIs("current_num_connections", 0u),
-                                    })))),
-                  NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                    PropertyList(UnorderedElementsAreArray({
-                                        UintIs("total_num_connections", 0u),
-                                        UintIs("current_num_connections", 0u),
-                                    })))),
-                  NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                    PropertyList(UnorderedElementsAreArray({
-                                        UintIs("total_num_connections", 0u),
-                                        UintIs("current_num_connections", 0u),
-                                    })))),
+                  AllOf(NodeMatches(NameMatches("fidl")),
+                        ChildrenMatch(UnorderedElementsAreArray({
+                            NodeMatches(AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                              PropertyList(UnorderedElementsAreArray({
+                                                  UintIs("total_num_connections", 0u),
+                                                  UintIs("current_num_connections", 0u),
+                                              })))),
+                            NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                              PropertyList(UnorderedElementsAreArray({
+                                                  UintIs("total_num_connections", 0u),
+                                                  UintIs("current_num_connections", 0u),
+                                              })))),
+                            NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                              PropertyList(UnorderedElementsAreArray({
+                                                  UintIs("total_num_connections", 0u),
+                                                  UintIs("current_num_connections", 0u),
+                                              })))),
+                        }))),
               })));
 }
 
 TEST_F(FeedbackAgentTest, ComponentDataRegister_CheckInspect) {
   ComponentDataRegisterSyncPtr data_register_1;
   feedback_agent_->HandleComponentDataRegisterRequest(data_register_1.NewRequest());
-  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(NodeMatches(
-                                 AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                       PropertyList(UnorderedElementsAreArray({
-                                           UintIs("total_num_connections", 1u),
-                                           UintIs("current_num_connections", 1u),
-                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 1u),
+                                                 UintIs("current_num_connections", 1u),
+                                             }))))))))));
 
   ComponentDataRegisterSyncPtr data_register_2;
   feedback_agent_->HandleComponentDataRegisterRequest(data_register_2.NewRequest());
-  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(NodeMatches(
-                                 AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                       PropertyList(UnorderedElementsAreArray({
-                                           UintIs("total_num_connections", 2u),
-                                           UintIs("current_num_connections", 2u),
-                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 2u),
+                                                 UintIs("current_num_connections", 2u),
+                                             }))))))))));
 
   data_register_1.Unbind();
   RunLoopUntilIdle();
-  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(NodeMatches(
-                                 AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                       PropertyList(UnorderedElementsAreArray({
-                                           UintIs("total_num_connections", 2u),
-                                           UintIs("current_num_connections", 1u),
-                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 2u),
+                                                 UintIs("current_num_connections", 1u),
+                                             }))))))))));
 
   ComponentDataRegisterSyncPtr data_register_3;
   feedback_agent_->HandleComponentDataRegisterRequest(data_register_3.NewRequest());
-  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(NodeMatches(
-                                 AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                       PropertyList(UnorderedElementsAreArray({
-                                           UintIs("total_num_connections", 3u),
-                                           UintIs("current_num_connections", 2u),
-                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 3u),
+                                                 UintIs("current_num_connections", 2u),
+                                             }))))))))));
 
   data_register_2.Unbind();
   data_register_3.Unbind();
   RunLoopUntilIdle();
-  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(NodeMatches(
-                                 AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                       PropertyList(UnorderedElementsAreArray({
-                                           UintIs("total_num_connections", 3u),
-                                           UintIs("current_num_connections", 0u),
-                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 3u),
+                                                 UintIs("current_num_connections", 0u),
+                                             }))))))))));
 }
 
 TEST_F(FeedbackAgentTest, DataProvider_CheckInspect) {
   DataProviderSyncPtr data_provider_1;
   feedback_agent_->HandleDataProviderRequest(data_provider_1.NewRequest());
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                                       PropertyList(UnorderedElementsAreArray({
-                                                           UintIs("total_num_connections", 1u),
-                                                           UintIs("current_num_connections", 1u),
-                                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 1u),
+                                                       UintIs("current_num_connections", 1u),
+                                                   }))))))))));
 
   DataProviderSyncPtr data_provider_2;
   feedback_agent_->HandleDataProviderRequest(data_provider_2.NewRequest());
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                                       PropertyList(UnorderedElementsAreArray({
-                                                           UintIs("total_num_connections", 2u),
-                                                           UintIs("current_num_connections", 2u),
-                                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 2u),
+                                                       UintIs("current_num_connections", 2u),
+                                                   }))))))))));
 
   data_provider_1.Unbind();
   RunLoopUntilIdle();
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                                       PropertyList(UnorderedElementsAreArray({
-                                                           UintIs("total_num_connections", 2u),
-                                                           UintIs("current_num_connections", 1u),
-                                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 2u),
+                                                       UintIs("current_num_connections", 1u),
+                                                   }))))))))));
 
   DataProviderSyncPtr data_provider_3;
   feedback_agent_->HandleDataProviderRequest(data_provider_3.NewRequest());
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                                       PropertyList(UnorderedElementsAreArray({
-                                                           UintIs("total_num_connections", 3u),
-                                                           UintIs("current_num_connections", 2u),
-                                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 3u),
+                                                       UintIs("current_num_connections", 2u),
+                                                   }))))))))));
 
   data_provider_2.Unbind();
   data_provider_3.Unbind();
   RunLoopUntilIdle();
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                                       PropertyList(UnorderedElementsAreArray({
-                                                           UintIs("total_num_connections", 3u),
-                                                           UintIs("current_num_connections", 0u),
-                                                       })))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 3u),
+                                                       UintIs("current_num_connections", 0u),
+                                                   }))))))))));
 }
 
 TEST_F(FeedbackAgentTest, DeviceIdProvider_CheckInspect) {
@@ -181,52 +214,62 @@ TEST_F(FeedbackAgentTest, DeviceIdProvider_CheckInspect) {
   feedback_agent_->HandleDeviceIdProviderRequest(device_id_provider_1.NewRequest());
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                               PropertyList(UnorderedElementsAreArray({
-                                                   UintIs("total_num_connections", 1u),
-                                                   UintIs("current_num_connections", 1u),
-                                               })))))));
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 1u),
+                                                       UintIs("current_num_connections", 1u),
+                                                   }))))))))));
 
   DeviceIdProviderSyncPtr device_id_provider_2;
   feedback_agent_->HandleDeviceIdProviderRequest(device_id_provider_2.NewRequest());
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                               PropertyList(UnorderedElementsAreArray({
-                                                   UintIs("total_num_connections", 2u),
-                                                   UintIs("current_num_connections", 2u),
-                                               })))))));
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 2u),
+                                                       UintIs("current_num_connections", 2u),
+                                                   }))))))))));
 
   device_id_provider_1.Unbind();
   RunLoopUntilIdle();
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                               PropertyList(UnorderedElementsAreArray({
-                                                   UintIs("total_num_connections", 2u),
-                                                   UintIs("current_num_connections", 1u),
-                                               })))))));
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 2u),
+                                                       UintIs("current_num_connections", 1u),
+                                                   }))))))))));
 
   DeviceIdProviderSyncPtr device_id_provider_3;
   feedback_agent_->HandleDeviceIdProviderRequest(device_id_provider_3.NewRequest());
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                               PropertyList(UnorderedElementsAreArray({
-                                                   UintIs("total_num_connections", 3u),
-                                                   UintIs("current_num_connections", 2u),
-                                               })))))));
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 3u),
+                                                       UintIs("current_num_connections", 2u),
+                                                   }))))))))));
 
   device_id_provider_2.Unbind();
   device_id_provider_3.Unbind();
   RunLoopUntilIdle();
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                               PropertyList(UnorderedElementsAreArray({
-                                                   UintIs("total_num_connections", 3u),
-                                                   UintIs("current_num_connections", 0u),
-                                               })))))));
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("total_num_connections", 3u),
+                                                       UintIs("current_num_connections", 0u),
+                                                   }))))))))));
 }
 
 }  // namespace
