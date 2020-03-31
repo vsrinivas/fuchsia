@@ -6,12 +6,15 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_FAKE_PRIVACY_SETTINGS_H_
 
 #include <fuchsia/settings/cpp/fidl.h>
+#include <fuchsia/settings/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 
 #include <memory>
 #include <vector>
+
+#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 
@@ -20,7 +23,7 @@ namespace feedback {
 // The hanging get pattern behind Watch() requires us to maintain a separate handler per connection
 // to be able to track each connection. Here, we only make a single connection in the unit tests
 // anyway so it's fine if the fake service can have at most one connection.
-class FakePrivacySettings : public fuchsia::settings::Privacy {
+class FakePrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
  public:
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::settings::Privacy> GetHandler() {
@@ -33,6 +36,11 @@ class FakePrivacySettings : public fuchsia::settings::Privacy {
   // |fuchsia::settings::Privacy|
   void Watch(WatchCallback callback) override;
   void Set(fuchsia::settings::PrivacySettings settings, SetCallback callback) override;
+
+  // |fuchsia::settings::testing::Privacy_TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
 
  protected:
   void CloseConnection();
@@ -53,11 +61,13 @@ class FakePrivacySettings : public fuchsia::settings::Privacy {
 
 class FakePrivacySettingsClosesConnectionOnWatch : public FakePrivacySettings {
  public:
+  // |fuchsia::settings::Privacy|
   void Watch(WatchCallback callback) { CloseConnection(); }
 };
 
 class FakePrivacySettingsClosesConnectionOnFirstWatch : public FakePrivacySettings {
  public:
+  // |fuchsia::settings::Privacy|
   void Watch(WatchCallback callback);
 
  private:
