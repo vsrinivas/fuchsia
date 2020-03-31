@@ -214,8 +214,13 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.
 	var copyErr error
 	var sinks runtests.DataSinkMap
 	if t.useRuntests {
+		startTime := time.Now()
 		if sinks, copyErr = t.copier.Copy(dataOutputDir, t.localOutputDir); copyErr != nil {
 			logger.Errorf(ctx, "failed to copy data sinks off target for test %q: %v", test.Name, copyErr)
+		}
+		copyDuration := time.Now().Sub(startTime)
+		if len(sinks) > 0 {
+			logger.Debugf(ctx, "copied data sinks (%v)", copyDuration)
 		}
 	}
 

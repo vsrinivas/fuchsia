@@ -45,11 +45,11 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	}
 
 	o.summary.Tests = append(o.summary.Tests, runtests.TestDetails{
-		Name:       result.Name,
-		GNLabel:    result.GNLabel,
-		OutputFile: outputRelPath,
-		Result:     result.Result,
-		StartTime:  result.StartTime,
+		Name:           result.Name,
+		GNLabel:        result.GNLabel,
+		OutputFile:     outputRelPath,
+		Result:         result.Result,
+		StartTime:      result.StartTime,
 		DurationMillis: duration.Milliseconds(),
 		DataSinks:      result.DataSinks,
 	})
