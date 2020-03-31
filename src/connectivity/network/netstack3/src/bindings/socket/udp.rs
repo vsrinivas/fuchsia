@@ -190,7 +190,7 @@ pub struct SocketControlInfo<I: Ip> {
 enum SocketState<I: Ip> {
     Unbound,
     BoundListen { listener_id: UdpListenerId<I> },
-    BoundConnect { conn_id: UdpConnId<I> },
+    BoundConnect { conn_id: UdpConnId<I>, shutdown_read: bool, shutdown_write: bool },
 }
 
 impl<I: Ip> SocketState<I> {
@@ -434,8 +434,8 @@ where
                             responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
                         }
 
-                        DatagramSocketRequest::Shutdown { how: _, responder: _ } => {
-                            warn!("UDP Shutdown not implemented");
+                        DatagramSocketRequest::Shutdown { how, responder } => {
+                            responder_send!(responder, &mut self.make_handler().await.shutdown(how))
                         }
                         DatagramSocketRequest::RecvMsg {
                             addr_len,
@@ -590,7 +590,7 @@ where
 
                 (list_info.local_ip, Some(list_info.local_port))
             }
-            SocketState::BoundConnect { conn_id } => {
+            SocketState::BoundConnect { conn_id, .. } => {
                 // if we're bound to a connect mode, we need to remove the
                 // connection, and retrieve the bound local addr and port.
                 let conn_info = remove_udp_conn(self.ctx.deref_mut(), conn_id);
@@ -604,7 +604,8 @@ where
             connect_udp(self.ctx.deref_mut(), local_addr, local_port, remote_addr, remote_port)
                 .map_err(IntoErrno::into_errno)?;
 
-        self.get_state_mut().info.state = SocketState::BoundConnect { conn_id };
+        self.get_state_mut().info.state =
+            SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
         I::get_collection_mut(self.ctx.dispatcher_mut()).conns.insert(&conn_id, self.binding_id);
         Ok(())
     }
@@ -641,7 +642,7 @@ where
             SocketState::Unbound { .. } => {
                 return Err(libc::ENOTSOCK);
             }
-            SocketState::BoundConnect { conn_id } => {
+            SocketState::BoundConnect { conn_id, .. } => {
                 let info = get_udp_conn_info(self.ctx.deref(), conn_id);
                 Ok(I::SocketAddress::new_vec(*info.local_ip, info.local_port.get()))
             }
@@ -667,7 +668,7 @@ where
             SocketState::BoundListen { .. } => {
                 return Err(libc::ENOTCONN);
             }
-            SocketState::BoundConnect { conn_id } => {
+            SocketState::BoundConnect { conn_id, .. } => {
                 let info = get_udp_conn_info(self.ctx.deref(), conn_id);
                 Ok(I::SocketAddress::new_vec(*info.remote_ip, info.remote_port.get()))
             }
@@ -683,7 +684,7 @@ where
                 // remove from core:
                 remove_udp_listener(self.ctx.deref_mut(), listener_id);
             }
-            SocketState::BoundConnect { conn_id } => {
+            SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
                 I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id);
                 // remove from core:
@@ -717,6 +718,12 @@ where
         let available = if let Some(front) = state.available_data.pop_front() {
             front
         } else {
+            if let SocketState::BoundConnect { shutdown_read, .. } = state.info.state {
+                if shutdown_read {
+                    // Return empty data to signal EOF.
+                    return Ok((Vec::new(), Vec::new(), Vec::new(), 0));
+                }
+            }
             return Err(libc::EWOULDBLOCK);
         };
         let addr = if addr_len != 0 {
@@ -758,29 +765,33 @@ where
                 // auto-bind here (check POSIX compliance).
                 Err(libc::EDESTADDRREQ)
             }
-            SocketState::BoundConnect { conn_id } => match remote {
-                Some((addr, port)) => {
-                    // caller specified a remote socket address, use
-                    // stateless UDP send using the local address and port
-                    // in `conn_id`.
-                    let conn_info = get_udp_conn_info(self.ctx.deref(), conn_id);
-                    send_udp::<I, Buf<Vec<u8>>, _>(
-                        self.ctx.deref_mut(),
-                        Some(conn_info.local_ip),
-                        Some(conn_info.local_port),
-                        addr,
-                        port,
-                        body,
-                    )
-                    .map_err(IntoErrno::into_errno)
+            SocketState::BoundConnect { conn_id, shutdown_write, .. } => {
+                if shutdown_write {
+                    return Err(libc::EPIPE);
                 }
-                None => {
-                    // caller did not specify a remote socket address, just use
-                    // the existing conn.
-                    send_udp_conn::<_, Buf<Vec<u8>>, _>(self.ctx.deref_mut(), conn_id, body)
+                match remote {
+                    Some((addr, port)) => {
+                        // Caller specified a remote socket address; use stateless
+                        // UDP send using the local address and port in `conn_id`.
+                        let conn_info = get_udp_conn_info(self.ctx.deref(), conn_id);
+                        send_udp::<I, Buf<Vec<u8>>, _>(
+                            self.ctx.deref_mut(),
+                            Some(conn_info.local_ip),
+                            Some(conn_info.local_port),
+                            addr,
+                            port,
+                            body,
+                        )
                         .map_err(IntoErrno::into_errno)
+                    }
+                    None => {
+                        // Caller did not specify a remote socket address; just use
+                        // the existing conn.
+                        send_udp_conn::<_, Buf<Vec<u8>>, _>(self.ctx.deref_mut(), conn_id, body)
+                            .map_err(IntoErrno::into_errno)
+                    }
                 }
-            },
+            }
             SocketState::BoundListen { listener_id } => match remote {
                 Some((addr, port)) => send_udp_listener::<_, Buf<Vec<u8>>, _>(
                     self.ctx.deref_mut(),
@@ -795,6 +806,43 @@ where
             },
         }
         .map(|()| len)
+    }
+
+    fn shutdown(mut self, how: i16) -> Result<(), libc::c_int> {
+        // Only "connected" UDP sockets can be shutdown.
+        if let SocketState::BoundConnect { ref mut shutdown_read, ref mut shutdown_write, .. } =
+            self.get_state_mut().info.state
+        {
+            // Shutting down a socket twice is valid so we can just blindly
+            // set the corresponding flags.
+            match how as i32 {
+                libc::SHUT_RD => {
+                    *shutdown_read = true;
+                }
+                libc::SHUT_WR => {
+                    *shutdown_write = true;
+                }
+                libc::SHUT_RDWR => {
+                    *shutdown_read = true;
+                    *shutdown_write = true;
+                }
+                _ => {
+                    return Err(libc::EINVAL);
+                }
+            }
+            // We have to unblock waiting readers.
+            if *shutdown_read {
+                if let Err(e) = self
+                    .get_state()
+                    .local_event
+                    .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
+                {
+                    error!("Failed to signal peer when shutting down: {:?}", e);
+                }
+            }
+            return Ok(());
+        }
+        Err(libc::ENOTCONN)
     }
 }
 
@@ -1453,5 +1501,108 @@ mod tests {
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
+    }
+
+    async fn test_udp_shutdown<A: TestSockAddr>() {
+        let mut t = TestSetupBuilder::new()
+            .add_endpoint()
+            .add_stack(
+                StackSetupBuilder::new()
+                    .add_named_endpoint(test_ep_name(1), Some(A::config_addr_subnet())),
+            )
+            .build()
+            .await
+            .unwrap();
+        let (socket, events) = get_socket_and_event::<A>(t.get(0)).await;
+        let local = A::create(A::LOCAL_ADDR, 200);
+        let remote = A::create(A::REMOTE_ADDR, 300);
+        assert_eq!(
+            socket
+                .shutdown(libc::SHUT_WR as i16)
+                .await
+                .unwrap()
+                .expect_err("should not shutdown an unconnected socket"),
+            libc::ENOTCONN,
+        );
+        socket.bind(&local).await.unwrap().expect("failed to bind");
+        assert_eq!(
+            socket
+                .shutdown(libc::SHUT_WR as i16)
+                .await
+                .unwrap()
+                .expect_err("should not shutdown an unconnected socket"),
+            libc::ENOTCONN,
+        );
+        socket.connect(&remote).await.unwrap().expect("failed to connect");
+
+        assert_eq!(socket.shutdown(42).await.unwrap().expect_err("invalid args"), libc::EINVAL);
+
+        // Cannot send
+        let body = "Hello".as_bytes();
+        socket.shutdown(libc::SHUT_WR as i16).await.unwrap().expect("failed to shutdown");
+        assert_eq!(
+            socket
+                .send_msg(&[], &mut Some(body).into_iter(), &[], 0)
+                .await
+                .unwrap()
+                .expect_err("writing to an already-shutdown socket should fail"),
+            libc::EPIPE,
+        );
+        let invalid_addr = A::create(A::REMOTE_ADDR, 0);
+        assert_eq!(
+            socket
+                .send_msg(&invalid_addr, &mut Some(body).into_iter(), &[], 0)
+                .await
+                .unwrap()
+                .expect_err(
+                "writing to an invalid address (port 0) should fail with EINVAL instead of EPIPE"
+            ),
+            libc::EINVAL,
+        );
+
+        let (e1, e2) = zx::EventPair::create().unwrap();
+        fasync::spawn(async move {
+            fasync::OnSignals::new(&events, ZXSIO_SIGNAL_INCOMING)
+                .await
+                .expect("should become unblocked because of the shutdown");
+
+            e1.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+        });
+
+        socket.shutdown(libc::SHUT_RD as i16).await.unwrap().expect("failed to shutdown");
+        let (_, data, _, _) = socket
+            .recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0)
+            .await
+            .unwrap()
+            .expect("recvmsg should return empty data");
+        assert!(data.is_empty());
+
+        fasync::OnSignals::new(&e2, zx::Signals::USER_0).await.expect("must be signaled");
+
+        socket
+            .shutdown(libc::SHUT_RD as i16)
+            .await
+            .unwrap()
+            .expect("failed to shutdown the socket twice");
+        socket
+            .shutdown(libc::SHUT_WR as i16)
+            .await
+            .unwrap()
+            .expect("failed to shutdown the socket twice");
+        socket
+            .shutdown(libc::SHUT_RDWR as i16)
+            .await
+            .unwrap()
+            .expect("failed to shutdown the socket twice");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_shutdown_v4() {
+        test_udp_shutdown::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_shutdown_v6() {
+        test_udp_shutdown::<SockAddr6>().await;
     }
 }
