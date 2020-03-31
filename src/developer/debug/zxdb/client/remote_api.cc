@@ -131,4 +131,10 @@ void RemoteAPI::WriteMemory(const debug_ipc::WriteMemoryRequest& request,
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::LoadInfoHandleTable(
+    const debug_ipc::LoadInfoHandleTableRequest& request,
+    fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 }  // namespace zxdb

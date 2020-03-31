@@ -353,6 +353,18 @@ struct ConfigAction {
   std::string value;
 };
 
+// LoadInfoHandleTable -----------------------------------------------------------------------------
+
+struct InfoHandleExtended {
+  uint32_t type = 0;
+  uint32_t handle_value = 0;
+  uint32_t rights = 0;
+  uint32_t props = 0;
+  uint64_t koid = 0;
+  uint64_t related_koid = 0;
+  uint64_t peer_owner_koid = 0;
+};
+
 #pragma pack(pop)
 
 }  // namespace debug_ipc

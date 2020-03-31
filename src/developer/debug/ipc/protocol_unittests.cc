@@ -733,6 +733,51 @@ TEST(Protocol, WriteMemoryReply) {
   ASSERT_EQ(initial.status, second.status);
 }
 
+// LoadInfoHandlTable ------------------------------------------------------------------------------
+
+TEST(Protocol, LoadInfoHandleTableRequest) {
+  LoadInfoHandleTableRequest initial;
+  initial.process_koid = 91823765;
+
+  LoadInfoHandleTableRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+}
+
+TEST(Protocol, LoadInfoHandleTableReply) {
+  LoadInfoHandleTableReply initial;
+  initial.status = 7645;
+  initial.handles.push_back(InfoHandleExtended{.type = 4,
+                                               .handle_value = 0x1234,
+                                               .rights = 0xe,
+                                               .props = 0x1,
+                                               .koid = 884422,
+                                               .related_koid = 91823766,
+                                               .peer_owner_koid = 91823800});
+  initial.handles.push_back(InfoHandleExtended{.type = 3,
+                                               .handle_value = 0x1235,
+                                               .rights = 0xc,
+                                               .props = 0x1,
+                                               .koid = 884433,
+                                               .related_koid = 91823767,
+                                               .peer_owner_koid = 91823801});
+
+  LoadInfoHandleTableReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  ASSERT_EQ(initial.status, second.status);
+  ASSERT_EQ(initial.handles.size(), second.handles.size());
+  for (size_t i = 0; i < initial.handles.size(); ++i) {
+    ASSERT_EQ(initial.handles[i].type, second.handles[i].type);
+    ASSERT_EQ(initial.handles[i].handle_value, second.handles[i].handle_value);
+    ASSERT_EQ(initial.handles[i].rights, second.handles[i].rights);
+    ASSERT_EQ(initial.handles[i].props, second.handles[i].props);
+    ASSERT_EQ(initial.handles[i].koid, second.handles[i].koid);
+    ASSERT_EQ(initial.handles[i].related_koid, second.handles[i].related_koid);
+    ASSERT_EQ(initial.handles[i].peer_owner_koid, second.handles[i].peer_owner_koid);
+  }
+}
+
 // Registers ---------------------------------------------------------------------------------------
 
 using debug_ipc::RegisterID;

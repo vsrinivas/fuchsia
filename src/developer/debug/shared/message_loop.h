@@ -21,6 +21,7 @@
 #include <zircon/compiler.h>
 #else
 // The macros for thread annotations aren't set up for non-Fuchsia builds.
+#undef __TA_REQUIRES
 #define __TA_REQUIRES(arg)
 #endif
 
@@ -299,6 +300,10 @@ class MessageLoop::WatchHandle {
   MessageLoop* msg_loop_ = nullptr;
   int id_ = 0;
 };
+
+#if !defined(__Fuchsia__)
+#undef __TA_REQUIRES
+#endif
 
 }  // namespace debug_ipc
 

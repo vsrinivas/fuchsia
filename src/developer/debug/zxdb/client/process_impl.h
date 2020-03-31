@@ -51,8 +51,11 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void GetTLSHelpers(GetTLSHelpersCallback cb) override;
   void ReadMemory(uint64_t address, uint32_t size,
                   fit::callback<void(const Err&, MemoryDump)> callback) override;
-  virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                           fit::callback<void(const Err&)> callback) override;
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data,
+                   fit::callback<void(const Err&)> callback) override;
+  void LoadInfoHandleTable(
+      fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> callback)
+      override;
 
   // Notifications from the agent that a thread has started or exited.
   void OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume);

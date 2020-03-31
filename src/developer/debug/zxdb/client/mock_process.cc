@@ -85,4 +85,9 @@ void MockProcess::WriteMemory(uint64_t address, std::vector<uint8_t> data,
   MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable { cb(Err()); });
 }
 
+void MockProcess::LoadInfoHandleTable(
+    fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> cb) {
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err()); });
+}
+
 }  // namespace zxdb

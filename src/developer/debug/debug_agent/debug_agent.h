@@ -122,6 +122,8 @@ class DebugAgent : public RemoteAPI,
                    debug_ipc::JobFilterReply* reply) override;
   void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                      debug_ipc::WriteMemoryReply* reply) override;
+  void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
+                             debug_ipc::LoadInfoHandleTableReply* reply) override;
 
   // Breakpoint::ProcessDelegate implementation ----------------------------------------------------
 

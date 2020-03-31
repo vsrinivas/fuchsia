@@ -70,6 +70,9 @@ class RemoteAPIImpl : public RemoteAPI {
                  fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
   void WriteMemory(const debug_ipc::WriteMemoryRequest& request,
                    fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
+  void LoadInfoHandleTable(
+      const debug_ipc::LoadInfoHandleTableRequest& request,
+      fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb) override;
 
  private:
   // Sends a message with an asynchronous reply.

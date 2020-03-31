@@ -573,6 +573,26 @@ bool ReadReply(MessageReader* reader, WriteMemoryReply* reply, uint32_t* transac
   return reader->ReadInt32(&reply->status);
 }
 
+// LoadInfoHandleTable
+// -------------------------------------------------------------------------------------
+
+void WriteRequest(const LoadInfoHandleTableRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kLoadInfoHandleTable, transaction_id);
+  writer->WriteBytes(&request, sizeof(LoadInfoHandleTableRequest));
+}
+
+bool ReadReply(MessageReader* reader, LoadInfoHandleTableReply* reply, uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadInt32(&reply->status))
+    return false;
+  return Deserialize(reader, &reply->handles);
+}
+
 // ConfigAgent -------------------------------------------------------------------------------------
 
 void WriteRequest(const ConfigAgentRequest& request, uint32_t transaction_id,

@@ -145,6 +145,12 @@ void RemoteAPIImpl::WriteMemory(const debug_ipc::WriteMemoryRequest& request,
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::LoadInfoHandleTable(
+    const debug_ipc::LoadInfoHandleTableRequest& request,
+    fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 template <typename SendMsgType, typename RecvMsgType>
 void RemoteAPIImpl::Send(const SendMsgType& send_msg,
                          fit::callback<void(const Err&, RecvMsgType)> callback) {

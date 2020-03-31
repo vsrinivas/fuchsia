@@ -74,6 +74,9 @@ class RemoteAPI {
                          fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb);
   virtual void WriteMemory(const debug_ipc::WriteMemoryRequest& request,
                            fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb);
+  virtual void LoadInfoHandleTable(
+      const debug_ipc::LoadInfoHandleTableRequest& request,
+      fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPI);

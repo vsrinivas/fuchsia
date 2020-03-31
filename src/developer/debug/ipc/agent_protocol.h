@@ -106,6 +106,12 @@ void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWri
 bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request, uint32_t* transaction_id);
 void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id, MessageWriter* writer);
 
+// LoadInfoHandleTable.
+bool ReadRequest(MessageReader* reader, LoadInfoHandleTableRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const LoadInfoHandleTableReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
 // ConfigAgent.
 bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request, uint32_t* transaction_id);
 void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id, MessageWriter* writer);

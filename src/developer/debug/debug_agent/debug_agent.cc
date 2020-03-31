@@ -529,6 +529,15 @@ void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
     reply->status = ZX_ERR_NOT_FOUND;
 }
 
+void DebugAgent::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
+                                       debug_ipc::LoadInfoHandleTableReply* reply) {
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+  if (proc)
+    proc->OnLoadInfoHandleTable(request, reply);
+  else
+    reply->status = ZX_ERR_NOT_FOUND;
+}
+
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())

@@ -44,6 +44,9 @@ class MockProcess : public Process {
                   fit::callback<void(const Err&, MemoryDump)> callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
                    fit::callback<void(const Err&)> callback) override;
+  void LoadInfoHandleTable(
+      fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> callback)
+      override;
 
  private:
   ProcessSymbols* symbols_ = nullptr;

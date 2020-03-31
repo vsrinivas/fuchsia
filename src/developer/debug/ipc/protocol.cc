@@ -57,6 +57,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "ReadMemory";
     case MsgHeader::Type::kWriteMemory:
       return "WriteMemory";
+    case MsgHeader::Type::kLoadInfoHandleTable:
+      return "LoadInfoHandleTable";
     case MsgHeader::Type::kReadRegisters:
       return "ReadRegisters";
     case MsgHeader::Type::kWriteRegisters:

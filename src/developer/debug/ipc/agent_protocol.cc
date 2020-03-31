@@ -477,6 +477,25 @@ void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id, MessageW
   writer->WriteUint64(reply.status);
 }
 
+// LoadInfoHandleTable
+// -------------------------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, LoadInfoHandleTableRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadUint64(&request->process_koid);
+}
+
+void WriteReply(const LoadInfoHandleTableReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kLoadInfoHandleTable, transaction_id);
+  writer->WriteUint32(reply.status);
+  Serialize(reply.handles, writer);
+}
+
 // ReadRegisters -----------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request, uint32_t* transaction_id) {

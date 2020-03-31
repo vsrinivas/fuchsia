@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 24;
+constexpr uint32_t kProtocolVersion = 25;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -50,6 +50,7 @@ struct MsgHeader {
     kThreadStatus,
     kThreads,
     kWriteMemory,
+    kLoadInfoHandleTable,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyException,
@@ -333,6 +334,14 @@ struct WriteMemoryRequest {
 
 struct WriteMemoryReply {
   zx_status_t status = 0;
+};
+
+struct LoadInfoHandleTableRequest {
+  uint64_t process_koid = 0;
+};
+struct LoadInfoHandleTableReply {
+  zx_status_t status = 0;
+  std::vector<InfoHandleExtended> handles;
 };
 
 // ReadRegisters ---------------------------------------------------------------

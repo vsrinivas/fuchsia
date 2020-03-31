@@ -699,6 +699,29 @@ void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
 }
 
+void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
+                                            debug_ipc::LoadInfoHandleTableReply* reply) {
+  size_t actual = 0;
+  size_t avail = 0;
+  reply->status = handle_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &actual, &avail);
+  if (reply->status != ZX_OK) {
+    return;
+  }
+  std::vector<zx_info_handle_extended_t> handles(avail);
+  reply->status = handle_.get_info(ZX_INFO_HANDLE_TABLE, handles.data(),
+                                   avail * sizeof(zx_info_handle_extended_t), &actual, &avail);
+  reply->handles.resize(actual);
+  for (size_t i = 0; i < actual; ++i) {
+    reply->handles[i].type = handles[i].type;
+    reply->handles[i].handle_value = handles[i].handle_value;
+    reply->handles[i].rights = handles[i].rights;
+    reply->handles[i].props = handles[i].props;
+    reply->handles[i].koid = handles[i].koid;
+    reply->handles[i].related_koid = handles[i].related_koid;
+    reply->handles[i].peer_owner_koid = handles[i].peer_owner_koid;
+  }
+}
+
 void DebuggedProcess::SuspendAll(bool synchronous, std::vector<uint64_t>* suspended_koids) {
   // We issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {

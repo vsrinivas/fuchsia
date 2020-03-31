@@ -204,6 +204,23 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
   });
 }
 
+void ProcessImpl::LoadInfoHandleTable(
+    fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> callback) {
+  debug_ipc::LoadInfoHandleTableRequest request;
+  request.process_koid = koid_;
+  session()->remote_api()->LoadInfoHandleTable(
+      request, [callback = std::move(callback)](const Err& err,
+                                                debug_ipc::LoadInfoHandleTableReply reply) mutable {
+        if (reply.status != 0) {
+          callback(Err("Can't load handles error %d.", reply.status));
+        } else if (err.ok()) {
+          callback(std::move(reply.handles));
+        } else {
+          callback(err);
+        }
+      });
+}
+
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume) {
   if (threads_.find(record.thread_koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
