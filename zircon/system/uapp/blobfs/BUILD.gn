@@ -20,6 +20,7 @@ executable("blobfs") {
   }
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/bitmap",

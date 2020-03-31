@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/zx/resource.h>
 
 #include <blobfs/mount.h>
 #include <fs/managed_vfs.h>
@@ -34,7 +35,8 @@ class Runner : public fs::ManagedVfs {
   virtual ~Runner();
 
   static zx_status_t Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
-                            MountOptions* options, std::unique_ptr<Runner>* out);
+                            MountOptions* options, zx::resource vmex_resource,
+                            std::unique_ptr<Runner>* out);
 
   // fs::ManagedVfs interface.
 

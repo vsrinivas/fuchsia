@@ -26,7 +26,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
   }
 
   std::unique_ptr<Blobfs> blobfs;
-  status = Blobfs::Create(loop.dispatcher(), std::move(device), options, &blobfs);
+  status = Blobfs::Create(loop.dispatcher(), std::move(device), options, zx::resource(), &blobfs);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot create filesystem for checking\n");
     return status;

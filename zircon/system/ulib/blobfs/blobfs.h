@@ -15,6 +15,7 @@
 #include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -72,14 +73,16 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   // Creates a blobfs object
   static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                            MountOptions* options, std::unique_ptr<Blobfs>* out);
+                            MountOptions* options, zx::resource vmex_resource,
+                            std::unique_ptr<Blobfs>* out);
 
   // Overrides
   // |write_compression_algorithm = kBlobfsDefaultCompressionAlgorithm|
   // on blob write.
   static zx_status_t CreateWithWriteCompressionAlgorithm(
       async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, MountOptions* options,
-      CompressionAlgorithm write_compression_algorithm, std::unique_ptr<Blobfs>* out);
+      CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource,
+      std::unique_ptr<Blobfs>* out);
 
   static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
 
@@ -191,6 +194,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   bool ShouldCompress() const { return !write_uncompressed_; }
 
+  const zx::resource& vmex_resource() const { return vmex_resource_; }
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -212,7 +217,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
-         CompressionAlgorithm write_compression_algorithm);
+         CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource);
 
   // Terminates all internal connections, updates the "clean bit" (if writable),
   // flushes writeback buffers, empties caches, and returns the underlying
@@ -273,6 +278,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   block_client::BlockGroupRegistry group_registry_;
   Writability writability_;
+  CompressionAlgorithm write_compression_algorithm_;
+  zx::resource vmex_resource_;
 
   std::unique_ptr<Allocator> allocator_;
 
@@ -295,8 +302,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Compression is enabled by default. Use the kernel commandline "blobfs.uncompressed"
   // to disable it.
   bool write_uncompressed_ = false;
-
-  CompressionAlgorithm write_compression_algorithm_;
 };
 
 }  // namespace blobfs

@@ -67,8 +67,8 @@ class TestMounter : public FilesystemMounter {
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
-  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                       size_t len) final {
+  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len,
+                       uint32_t fs_flags) final {
     if (argc != 3) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -79,9 +79,11 @@ class TestMounter : public FilesystemMounter {
     switch (expected_filesystem_) {
       case FilesystemType::kBlobfs:
         EXPECT_STR_EQ(argv[0], "/boot/bin/blobfs");
+        EXPECT_EQ(fs_flags, FS_SVC | FS_SVC_BLOBFS);
         break;
       case FilesystemType::kMinfs:
         EXPECT_STR_EQ(argv[0], "/boot/bin/minfs");
+        EXPECT_EQ(fs_flags, FS_SVC);
         break;
       default:
         ADD_FAILURE("Unexpected filesystem type");

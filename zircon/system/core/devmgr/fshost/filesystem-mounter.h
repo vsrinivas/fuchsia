@@ -71,7 +71,8 @@ class FilesystemMounter {
   // Performs the mechanical action of mounting a filesystem, without
   // validating the type of filesystem being mounted.
   zx_status_t MountFilesystem(const char* mount_path, const char* binary,
-                              const mount_options_t& options, zx::channel block_device_client);
+                              const mount_options_t& options, zx::channel block_device_client,
+                              uint32_t fs_flags);
 
   bool WaitForData() const { return options_.wait_for_data; }
 
@@ -79,7 +80,7 @@ class FilesystemMounter {
   //
   // Virtualized to enable testing.
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                               size_t len);
+                               size_t len, uint32_t fs_flags);
 
   std::unique_ptr<FsManager> fshost_;
   const BlockWatcherOptions options_;

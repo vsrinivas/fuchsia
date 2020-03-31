@@ -28,9 +28,6 @@
       "to": [ "#driver_manager", "#fshost" ],
       "rights": ["rx*"],
     },
-    // Services routed from "realm" at the root are either provided by
-    // bootsvc through component_manager's namespace or by component_manager
-    // itself as a builtin service
     {
       "protocol": [
         "/svc/fuchsia.boot.FactoryItems",
@@ -53,11 +50,19 @@
           "/svc/fuchsia.process.Launcher",
           "/svc/fuchsia.boot.Items",
           "/svc/fuchsia.boot.Arguments",
+          "/svc/fuchsia.cobalt.LoggerFactory",
+          "/svc/fuchsia.tracing.provider.Registry",
       ],
       "from": "realm",
       "to": [ "#driver_manager", "#fshost" ],
     },
-    // ...and the rest of these are services provided by components for each other
+    {
+      "protocol": [
+          "/svc/fuchsia.security.resource.Vmex",
+      ],
+      "from": "realm",
+      "to": [ "#fshost" ],
+    },
     {
       // TODO(fxb/34633): DEPRECATED. Do not add new dependencies on the fshost
       // loader service!
@@ -124,14 +129,6 @@
       "from": "#fshost",
       "to": [ "#driver_manager" ],
       "dependency": "weak_for_migration",
-    },
-    {
-      "protocol": [
-        "/svc/fuchsia.cobalt.LoggerFactory",
-        "/svc/fuchsia.tracing.provider.Registry",
-      ],
-      "from": "realm",
-      "to": [ "#driver_manager", "#fshost" ],
     },
     // Offer the kernel serial console to the driver_manager
     {

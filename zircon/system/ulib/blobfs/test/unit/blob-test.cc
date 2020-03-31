@@ -34,7 +34,8 @@ class BlobTest : public zxtest::Test {
     loop_.StartThread();
 
     MountOptions options;
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
   }
 
   fbl::RefPtr<fs::Vnode> OpenRoot() const {

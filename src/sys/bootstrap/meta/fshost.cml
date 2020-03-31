@@ -6,13 +6,23 @@
     { "runner": "elf" },
     { "directory": "/dev", "rights": ["rw*"] },
     { "directory": "/boot", "rights": ["rx*"] },
-    { "protocol": [
-      "/svc/fuchsia.boot.Arguments",
-      "/svc/fuchsia.boot.Items",
-      "/svc/fuchsia.cobalt.LoggerFactory",
-      "/svc/fuchsia.process.Launcher",
-      "/svc/fuchsia.tracing.provider.Registry",
-    ] },
+    {
+      "protocol": [
+        "/svc/fuchsia.boot.Arguments",
+        "/svc/fuchsia.boot.Items",
+        "/svc/fuchsia.cobalt.LoggerFactory",
+        "/svc/fuchsia.process.Launcher",
+        "/svc/fuchsia.tracing.provider.Registry",
+      ]
+    },
+    // Use fuchsia.security.resource.Vmex but locate it under a separate directory in fshost's
+    // namespace. This enables providing the service only to the blobfs process but not other
+    // filesystems. fshost should not use this itself, only provide to blobfs.
+    // TODO: Once blobfs is a component this can be routed directly to it.
+    {
+      "protocol": "/svc/fuchsia.security.resource.Vmex",
+      "as": "/svc_blobfs/fuchsia.security.resource.Vmex"
+    },
   ],
   "expose": [
     { "directory": "/delayed/fs/pkgfs", "from": "self", "as": "/pkgfs-delayed", "rights": ["rx*"] },

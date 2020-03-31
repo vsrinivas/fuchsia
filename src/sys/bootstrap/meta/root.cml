@@ -38,6 +38,7 @@
     {
       "protocol": [
         "/svc/fuchsia.boot.Items",
+        "/svc/fuchsia.security.resource.Vmex",
       ],
       "from": "realm",
       "to": [ "#bootstrap" ],

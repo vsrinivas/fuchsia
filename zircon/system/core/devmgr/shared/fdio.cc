@@ -49,19 +49,20 @@ static struct {
     uint32_t flags;
     FdioAction action;
 } FSTAB[] = {
-    { "/svc",       "svc",       FS_SVC,      FdioAction::CloneDir },
-    { "/hub",       "hub",       FS_HUB,      FdioAction::AddNsEntry },
-    { "/bin",       "bin",       FS_BIN,      FdioAction::AddNsEntry },
-    { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },
-    { "/boot",      "boot",      FS_BOOT,     FdioAction::CloneDir },
-    { "/data",      "data",      FS_DATA,     FdioAction::AddNsEntry },
-    { "/system",    "system",    FS_SYSTEM,   FdioAction::AddNsEntry },
-    { "/install",   "install",   FS_INSTALL,  FdioAction::AddNsEntry },
-    { "/volume",    "volume",    FS_VOLUME,   FdioAction::AddNsEntry },
-    { "/blob",      "blob",      FS_BLOB,     FdioAction::AddNsEntry },
-    { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::AddNsEntry },
-    { "/tmp",       "tmp",       FS_TMP,      FdioAction::AddNsEntry },
-    { "/blob",      "blobexec",  FS_BLOB_EXEC, FdioAction::AddNsEntry },
+    { "/svc",         "svc",         FS_SVC,        FdioAction::CloneDir },
+    { "/hub",         "hub",         FS_HUB,        FdioAction::AddNsEntry },
+    { "/bin",         "bin",         FS_BIN,        FdioAction::AddNsEntry },
+    { "/dev",         "dev",         FS_DEV,        FdioAction::AddNsEntry },
+    { "/boot",        "boot",        FS_BOOT,       FdioAction::CloneDir },
+    { "/data",        "data",        FS_DATA,       FdioAction::AddNsEntry },
+    { "/system",      "system",      FS_SYSTEM,     FdioAction::AddNsEntry },
+    { "/install",     "install",     FS_INSTALL,    FdioAction::AddNsEntry },
+    { "/volume",      "volume",      FS_VOLUME,     FdioAction::AddNsEntry },
+    { "/blob",        "blob",        FS_BLOB,       FdioAction::AddNsEntry },
+    { "/pkgfs",       "pkgfs",       FS_PKGFS,      FdioAction::AddNsEntry },
+    { "/tmp",         "tmp",         FS_TMP,        FdioAction::AddNsEntry },
+    { "/blob",        "blobexec",    FS_BLOB_EXEC,  FdioAction::AddNsEntry },
+    { "/svc_blobfs",  "svc_blobfs",  FS_SVC_BLOBFS, FdioAction::CloneDir },
 };
 
 // clang-format on

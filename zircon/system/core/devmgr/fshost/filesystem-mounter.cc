@@ -17,17 +17,16 @@
 namespace devmgr {
 
 zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t* hnd,
-                                        uint32_t* ids, size_t len) {
+                                        uint32_t* ids, size_t len, uint32_t fs_flags) {
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
   return launcher.Launch(*zx::job::default_job(), argv[0], argv, nullptr, -1,
-                         /* TODO(fxb/32044) */ zx::resource(), hnd, ids, len, nullptr,
-                         FS_FOR_FSPROC);
+                         /* TODO(fxb/32044) */ zx::resource(), hnd, ids, len, nullptr, fs_flags);
 }
 
 zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const char* binary,
                                                const mount_options_t& options,
-                                               zx::channel block_device_client) {
+                                               zx::channel block_device_client, uint32_t fs_flags) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {
@@ -65,7 +64,8 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
-  status = LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, kNumHandles);
+  status =
+      LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, kNumHandles, fs_flags);
 
   if (status != ZX_OK) {
     return status;
@@ -88,7 +88,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
   }
 
   zx_status_t status =
-      MountFilesystem(PATH_DATA, "/boot/bin/minfs", options, std::move(block_device));
+      MountFilesystem(PATH_DATA, "/boot/bin/minfs", options, std::move(block_device), FS_SVC);
   if (status != ZX_OK) {
     return status;
   }
@@ -104,7 +104,7 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
   }
 
   zx_status_t status =
-      MountFilesystem(PATH_INSTALL, "/boot/bin/minfs", options, std::move(block_device));
+      MountFilesystem(PATH_INSTALL, "/boot/bin/minfs", options, std::move(block_device), FS_SVC);
   if (status != ZX_OK) {
     return status;
   }
@@ -118,8 +118,8 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx_status_t status =
-      MountFilesystem(PATH_BLOB, "/boot/bin/blobfs", options, std::move(block_device));
+  zx_status_t status = MountFilesystem(PATH_BLOB, "/boot/bin/blobfs", options,
+                                       std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
   if (status != ZX_OK) {
     return status;
   }

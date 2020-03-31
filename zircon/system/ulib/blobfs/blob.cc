@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -515,7 +516,14 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   // Only add exec right to VMO if explictly requested.  (Saves a syscall if
   // we're just going to drop the right back again in replace() call below.)
   if (rights & ZX_RIGHT_EXECUTE) {
-    if ((status = clone.replace_as_executable(zx::resource(), &clone)) != ZX_OK) {
+    // Check if the VMEX resource held by Blobfs is valid and fail if it isn't. We do this to make
+    // sure that we aren't implicitly relying on the ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
+    const zx::resource& vmex = blobfs_->vmex_resource();
+    if (!vmex.is_valid()) {
+      FS_TRACE_ERROR("blobfs: No VMEX resource available, executable blobs unsupported\n");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    if ((status = clone.replace_as_executable(vmex, &clone)) != ZX_OK) {
       return status;
     }
   }

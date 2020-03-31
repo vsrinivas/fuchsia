@@ -21,7 +21,7 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   options.metrics = false;
   options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
-  return Blobfs::Create(nullptr, std::move(device), &options, &blobfs);
+  return Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs);
 }
 
 // Formatting filesystems should fail on devices that cannot be written.
@@ -221,7 +221,7 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   mount_options.metrics = false;
   mount_options.journal = false;
   std::unique_ptr<Blobfs> fs = nullptr;
-  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &mount_options, &fs));
+  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &mount_options, zx::resource(), &fs));
   ASSERT_EQ(Writability::ReadOnlyDisk, fs->writability());
 }
 
@@ -240,7 +240,8 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   options.metrics = false;
   options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, Blobfs::Create(nullptr, std::move(device), &options, &blobfs));
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
+            Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
 }
 
 // After formatting a filesystem with block size valid block size N, mounting on

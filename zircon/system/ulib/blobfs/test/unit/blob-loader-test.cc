@@ -38,14 +38,12 @@ std::set<uint64_t> AddressRange(uint64_t start, uint64_t len) {
   return addresses;
 }
 
-
 // FakeUserPager is an implementation of UserPager that uses a static backing buffer as its
 // data source (rather than a block device).
 class FakeUserPager : public UserPager {
  public:
   FakeUserPager() { InitPager(); }
-  FakeUserPager(const char *data, size_t len)
-      : data_(new uint8_t[len], len) {
+  FakeUserPager(const char* data, size_t len) : data_(new uint8_t[len], len) {
     memcpy(data_.get(), data, len);
     InitPager();
   }
@@ -56,9 +54,7 @@ class FakeUserPager : public UserPager {
   // which will bubble back down to the main test thread and cause it to fail too.
   void SetVmoToDetachOnFailure(const zx::vmo& vmo) { handle_to_close_on_failure_ = vmo.get(); }
 
-  void AssertHasNoAddressesMapped() {
-    ASSERT_EQ(mapped_addresses_.size(), 0);
-  }
+  void AssertHasNoAddressesMapped() { ASSERT_EQ(mapped_addresses_.size(), 0); }
 
   void AssertHasAddressesMappedAndVerified(std::set<uint64_t> addresses) {
     for (const auto& address : addresses) {
@@ -71,9 +67,7 @@ class FakeUserPager : public UserPager {
   }
 
  private:
-  void AbortMainThread() {
-    zx_pager_detach_vmo(pager_.get(), handle_to_close_on_failure_);
-  }
+  void AbortMainThread() { zx_pager_detach_vmo(pager_.get(), handle_to_close_on_failure_); }
 
   zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) override {
     vmo_ = zx::unowned_vmo(transfer_vmo);
@@ -150,7 +144,8 @@ class BlobLoaderTest : public zxtest::Test {
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 
     // Pre-seed with some random blobs.
     for (unsigned i = 0; i < 3; i++) {
@@ -299,7 +294,7 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
 TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 
 void DoTest_LargeBlob(BlobLoaderTest* test) {
-  size_t blob_len = 1<<18;
+  size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
@@ -322,7 +317,7 @@ TEST_F(CompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
 
 void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
-  size_t blob_len = (1<<18) - 1;
+  size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
@@ -349,7 +344,7 @@ TEST_F(UncompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
 }
 
 void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
-  size_t blob_len = 1<<18;
+  size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
@@ -368,7 +363,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
   ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
   EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
-  pager.AssertHasAddressesMappedAndVerified(AddressRange(0, 1<<18));
+  pager.AssertHasAddressesMappedAndVerified(AddressRange(0, 1 << 18));
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
@@ -380,7 +375,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 
 void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
-  size_t blob_len = (1<<18) - 1;
+  size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());

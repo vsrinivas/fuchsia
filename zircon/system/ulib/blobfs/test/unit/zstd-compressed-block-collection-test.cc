@@ -48,7 +48,8 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
   }
 
   void AddRandomBlobAndSync(size_t sz, std::unique_ptr<BlobInfo>* out_info) {

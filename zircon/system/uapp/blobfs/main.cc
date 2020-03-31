@@ -5,8 +5,11 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/security/resource/llcpp/fidl.h>
 #include <getopt.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/resource.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -32,6 +35,27 @@ namespace {
 
 using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;
+
+zx::resource AttemptToGetVmexResource() {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return zx::resource();
+  }
+  status = fdio_service_connect("/svc_blobfs/fuchsia.security.resource.Vmex", remote.release());
+  if (status != ZX_OK) {
+    FS_TRACE_WARN("blobfs: Failed to connect to fucshia.security.resource.Vmex: %d\n", status);
+    return zx::resource();
+  }
+
+  auto client = llcpp::fuchsia::security::resource::Vmex::SyncClient{std::move(local)};
+  auto result = client.Get();
+  if (!result.ok()) {
+    FS_TRACE_WARN("blobfs: fuchsia.security.resource.Vmex.Get() failed: %d\n", result.status());
+    return zx::resource();
+  }
+  return std::move(result.Unwrap()->vmex);
+}
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
@@ -61,7 +85,15 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* opt
     return ZX_ERR_BAD_STATE;
   }
 
-  return blobfs::Mount(std::move(device), options, std::move(export_root), layout);
+  // Try and get a ZX_RSRC_KIND_VMEX resource if the fuchsia.security.resource.Vmex service is
+  // available, which will only be the case if this is launched by fshost. This is non-fatal because
+  // blobfs can still otherwise work but will not support executable blobs.
+  zx::resource vmex = AttemptToGetVmexResource();
+  if (!vmex.is_valid()) {
+    FS_TRACE_WARN("blobfs: VMEX resource unavailable, executable blobs are unsupported\n");
+  }
+
+  return blobfs::Mount(std::move(device), options, std::move(export_root), layout, std::move(vmex));
 }
 
 zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {

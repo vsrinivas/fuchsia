@@ -28,7 +28,7 @@ use {
 
 lazy_static! {
     pub static ref VMEX_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.process.Vmex".try_into().unwrap();
+        "/svc/fuchsia.security.resource.Vmex".try_into().unwrap();
 }
 
 /// An implementation of fuchsia.security.resource.Vmex protocol.

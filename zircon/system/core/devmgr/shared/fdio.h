@@ -34,9 +34,11 @@ namespace devmgr {
 #define FS_HUB      0x0800
 #define FS_BIN      0x1000
 #define FS_BLOB_EXEC 0x2000
-// Intended to include everything except for FS_BLOB_EXEC, which conflicts with
-// FS_BLOB, and is not needed except for when spawning pkgfs
-#define FS_ALL      0xDFFF
+#define FS_SVC_BLOBFS 0x4000
+// Intended to include everything except for:
+//   - FS_BLOB_EXEC, which is a RWX blobfs connection and should only be provided to pkgfs
+//   - FS_SVC_BLOBFS, which includes extra services only provided to blobfs
+#define FS_ALL        0x9FFF
 
 // clang-format on
 
