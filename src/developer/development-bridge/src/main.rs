@@ -430,7 +430,8 @@ mod test {
     use super::*;
     use fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequest};
     use fidl_fuchsia_test::{
-        Case, CaseIteratorRequest, CaseIteratorRequestStream, SuiteRequest, SuiteRequestStream,
+        Case, CaseIteratorRequest, CaseIteratorRequestStream, CaseListenerMarker, Result_, Status,
+        SuiteRequest, SuiteRequestStream,
     };
     use std::io::BufWriter;
 
@@ -444,20 +445,42 @@ mod test {
         });
     }
 
-    fn spawn_fake_suite_server(mut stream: SuiteRequestStream) {
+    fn spawn_fake_suite_server(mut stream: SuiteRequestStream, num_tests: usize) {
         hoist::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(SuiteRequest::GetTests { iterator, control_handle: _ }) => {
-                        let values: Vec<String> = (0..100).map(|i| format!("Test {}", i)).collect();
+                        let values: Vec<String> =
+                            (0..num_tests).map(|i| format!("Test {}", i)).collect();
                         let iterator_request_stream = iterator.into_stream().unwrap();
                         spawn_fake_iterator_server(values, iterator_request_stream);
                     }
-                    Some(SuiteRequest::Run { tests, options: _, listener, .. }) => {
+                    Some(SuiteRequest::Run { mut tests, options: _, listener, .. }) => {
                         let listener = listener
                             .into_proxy()
                             .context("Can't convert listener into proxy")
                             .unwrap();
+                        tests.iter_mut().for_each(|t| {
+                            let (log, client_log) =
+                                fidl::Socket::create(fidl::SocketOpts::DATAGRAM)
+                                    .context("failed to create socket")
+                                    .unwrap();
+                            let (case_listener, client_end) =
+                                create_proxy::<CaseListenerMarker>().unwrap();
+                            listener
+                                .on_test_case_started(
+                                    Invocation { name: t.name.take(), tag: None },
+                                    client_log,
+                                    client_end,
+                                )
+                                .context("Cannot send on_test_case_started")
+                                .unwrap();
+                            log.write(b"Test log message\n");
+                            case_listener
+                                .finished(Result_ { status: Some(Status::Passed) })
+                                .context("Cannot send finished")
+                                .unwrap();
+                        });
                         listener.on_finished().context("Cannot send on_finished event").unwrap();
                     }
                     _ => assert!(false),
@@ -467,6 +490,10 @@ mod test {
     }
 
     fn setup_fake_daemon_service() -> DaemonProxy {
+        setup_fake_daemon_service_with_tests(0)
+    }
+
+    fn setup_fake_daemon_service_with_tests(num_tests: usize) -> DaemonProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
@@ -488,7 +515,7 @@ mod test {
                     }
                     Some(DaemonRequest::LaunchSuite { test_url, suite, controller, responder }) => {
                         let suite_request_stream = suite.into_stream().unwrap();
-                        spawn_fake_suite_server(suite_request_stream);
+                        spawn_fake_suite_server(suite_request_stream, num_tests);
                         let _ = responder.send(&mut Ok(()));
                     }
                     _ => assert!(false),
@@ -545,42 +572,71 @@ mod test {
         let cmd = TestCommand { url, devices: None, list: true, tests: None };
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+            let num_tests = 50;
             let response =
-                Cli::new_with_proxy(setup_fake_daemon_service(), writer).test(cmd).await.unwrap();
+                Cli::new_with_proxy(setup_fake_daemon_service_with_tests(num_tests), writer)
+                    .test(cmd)
+                    .await
+                    .unwrap();
             assert_eq!(response, ());
             let test = Regex::new(r"Test [0-9+]").expect("test regex");
-            assert_eq!(100, test.find_iter(&output).count());
+            assert_eq!(num_tests, test.find_iter(&output).count());
+        });
+        Ok(())
+    }
+
+    fn run_tests(
+        num_tests: usize,
+        expected_run: usize,
+        selector: Option<String>,
+    ) -> Result<(), Error> {
+        let mut output = String::new();
+        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
+            .to_string();
+        let cmd = TestCommand { url, devices: None, list: false, tests: selector };
+        hoist::run(async move {
+            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+            let response =
+                Cli::new_with_proxy(setup_fake_daemon_service_with_tests(num_tests), writer)
+                    .test(cmd)
+                    .await
+                    .unwrap();
+            assert_eq!(response, ());
+            let test_running = Regex::new(r"RUNNING").expect("test regex");
+            assert_eq!(expected_run, test_running.find_iter(&output).count());
+            let test_passed = Regex::new(r"PASSED").expect("test regex");
+            assert_eq!(expected_run, test_passed.find_iter(&output).count());
         });
         Ok(())
     }
 
     #[test]
     fn test_run_tests() -> Result<(), Error> {
-        let mut output = String::new();
-        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
-            .to_string();
-        let cmd = TestCommand { url, devices: None, list: false, tests: None };
-        hoist::run(async move {
-            let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let response =
-                Cli::new_with_proxy(setup_fake_daemon_service(), writer).test(cmd).await.unwrap();
-            assert_eq!(response, ());
-        });
-        Ok(())
+        run_tests(100, 100, None)
     }
 
-    // TODO(fxb/49204): Test the output.
     #[test]
     fn test_run_tests_with_selector() -> Result<(), Error> {
+        run_tests(100, 19, Some("6".to_string()))
+    }
+
+    #[test]
+    fn test_run_tests_with_unmatched_selector() -> Result<(), Error> {
+        run_tests(100, 0, Some("Echo".to_string()))
+    }
+
+    #[test]
+    fn test_run_tests_with_invalid_selector() -> Result<(), Error> {
         let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
             .to_string();
-        let cmd = TestCommand { url, devices: None, list: false, tests: Some("1".to_string()) };
+        let cmd = TestCommand { url, devices: None, list: false, tests: Some("[".to_string()) };
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let response =
-                Cli::new_with_proxy(setup_fake_daemon_service(), writer).test(cmd).await.unwrap();
-            assert_eq!(response, ());
+            let response = Cli::new_with_proxy(setup_fake_daemon_service_with_tests(100), writer)
+                .test(cmd)
+                .await;
+            assert!(response.is_err());
         });
         Ok(())
     }
