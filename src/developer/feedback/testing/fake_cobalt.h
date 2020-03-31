@@ -75,11 +75,17 @@ std::vector<EventCodeType> FakeCobalt::GetAllEventsOfType(
   // will actually happen quite often) that the call to WatchLogs() (and maybe even ResetLogger())
   // will get to the component serving both APIs before either of the calls to LogEvent() arrive
   // and a response containing zero or one Cobalt events is received. So, if you wish to remove
-  // this while loop it is a prerequisite that you have figured out a way to guarantee the
+  // this for loop it is a prerequisite that you have figured out a way to guarantee the
   // ordering of independent, asynchronous messages, made it so that you component only ever
   // logs to Cobalt, or don't care about flakes in your tests.
-  while (all_events.size() < num_expected) {
-    logger_querier_->WatchLogs(kProjectId, log_method, &result);
+  //
+  // We can set an upper bound on the number of calls to the LoggerQuerier since calls to
+  // WatchLogs() after the first block if until new events are received. If we assume we send N
+  // cobalt events, in the worst case WatchLogs() is called before any events are received,
+  // returning nothing. Then to get the rest of the N sent events we must make at most N calls to
+  // WatchLogs() since we're guaranteed that each call will return with at least one new event.
+  for (size_t i = 0; i < num_expected + 1 && all_events.size() < num_expected; ++i) {
+    FX_CHECK(logger_querier_->WatchLogs(kProjectId, log_method, &result) == ZX_OK);
     GetNewEventsOfType<EventCodeType>(result, &all_events);
   }
 

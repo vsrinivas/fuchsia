@@ -42,6 +42,11 @@ template("crashpad_agent_package") {
 crashpad_agent_package("crashpad_agent") {
 }
 
+# A fake package for integration test purposes to make sure any config_data() for the real
+# package does not impact the component used in the integration test.
+crashpad_agent_package("fake-crashpad-agent") {
+}
+
 # A fake package for integration test purposes where we want a valid override config_data() that
 # only affects the fake package.
 crashpad_agent_package("fake_crashpad_agent_valid_override_config") {

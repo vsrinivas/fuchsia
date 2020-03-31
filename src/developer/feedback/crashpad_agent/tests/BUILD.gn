@@ -23,7 +23,7 @@ group("tests") {
     # Packages for the components that we are injecting in the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack",
-    "//src/developer/feedback/crashpad_agent",
+    "//src/developer/feedback/crashpad_agent:fake-crashpad-agent",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_invalid_override_config",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_valid_override_config",
     "//src/developer/feedback/testing/fakes:fake-device-id-provider",
