@@ -63,6 +63,18 @@ AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model
   FX_DCHECK(registry);
   FX_DCHECK((type == Type::Input) || (type == Type::Output));
   FX_DCHECK(link_matrix);
+
+  EstablishReferenceClock();
+}
+
+void AudioDevice::EstablishReferenceClock() {
+  // This clock can be created at AudioDevice ctor time, but once we receive details from the driver
+  // (such as whether the device is in the monotonic clock domain), we may transition this to become
+  // a recovered clock that tracks the device's DMA progress across the ring buffer.
+  auto status =
+      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
+                        nullptr, &ref_clock_);
+  FX_DCHECK(status == ZX_OK);
 }
 
 AudioDevice::~AudioDevice() = default;

@@ -8,10 +8,32 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/device_registry.h"
+#include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/testing/clock_test.h"
+
 namespace media::audio {
 namespace {
 
-TEST(AudioDeviceTest, UniqueIdFromString) {
+class FakeAudioDevice : public AudioDevice {
+ public:
+  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
+                  LinkMatrix* link_matrix)
+      : AudioDevice(type, threading_model, registry, link_matrix) {}
+
+  // Needed because AudioDevice is a pure virtual class
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {}
+  void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {}
+};
+
+class AudioDeviceTest : public testing::ThreadingModelFixture {
+ protected:
+  FakeAudioDevice device_{AudioObject::Type::Input, &threading_model(), &context().device_manager(),
+                          &context().link_matrix()};
+};
+
+TEST_F(AudioDeviceTest, UniqueIdFromString) {
   const auto id_result_from_invalid_length = AudioDevice::UniqueIdFromString("efef");
   EXPECT_TRUE(id_result_from_invalid_length.is_error());
 
@@ -29,7 +51,7 @@ TEST(AudioDeviceTest, UniqueIdFromString) {
       << " got: " << AudioDevice::UniqueIdToString(id_result_from_valid.value());
 }
 
-TEST(AudioDeviceTest, UniqueIdFromStringMixedCase) {
+TEST_F(AudioDeviceTest, UniqueIdFromStringMixedCase) {
   const audio_stream_unique_id_t unique_id = {
       .data = {0xff, 0xeb, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
   const auto valid_string = "FFeB0000000000000000000000000000";
@@ -39,6 +61,19 @@ TEST(AudioDeviceTest, UniqueIdFromStringMixedCase) {
   EXPECT_EQ(memcmp(id_result_from_valid.value().data, unique_id.data, 16), 0)
       << "Expected: " << valid_string
       << " got: " << AudioDevice::UniqueIdToString(id_result_from_valid.value());
+}
+
+TEST_F(AudioDeviceTest, DefaultReferenceClock) {
+  ASSERT_TRUE(device_.reference_clock().is_valid());
+
+  testing::VerifyClockAdvances(device_.reference_clock());
+  testing::VerifyClockCanBeRateAdjusted(device_.reference_clock());
+}
+
+TEST_F(AudioDeviceTest, RefClockIsClockMono) {
+  ASSERT_TRUE(device_.reference_clock().is_valid());
+
+  testing::VerifyClockIsSystemMonotonic(device_.reference_clock());
 }
 
 }  // namespace

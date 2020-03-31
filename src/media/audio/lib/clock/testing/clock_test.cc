@@ -34,7 +34,7 @@ void VerifyClockCannotBeRateAdjusted(const zx::clock& ref_clock) {
   zx::clock::update_args args;
   args.reset().set_rate_adjust(+12);
 
-  EXPECT_NE(ref_clock.update(args), ZX_OK);
+  EXPECT_NE(ref_clock.update(args), ZX_OK) << "clock.update with rate_adjust should fail";
 }
 
 // Rate-adjusting this clock should succeed. Validate that the rate change took effect and
@@ -57,7 +57,7 @@ void VerifyClockCanBeRateAdjusted(const zx::clock& ref_clock) {
 
   zx::clock::update_args args;
   args.reset().set_rate_adjust(-100);
-  EXPECT_EQ(ref_clock.update(args), ZX_OK);
+  EXPECT_EQ(ref_clock.update(args), ZX_OK) << "clock.update with rate_adjust failed";
 
   EXPECT_EQ(ref_clock.get_details(&clock_details), ZX_OK);
 
