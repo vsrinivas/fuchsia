@@ -24,7 +24,10 @@ namespace fs {
 
 Vnode::Vnode() = default;
 
-Vnode::~Vnode() = default;
+Vnode::~Vnode() {
+  ZX_DEBUG_ASSERT_MSG(inflight_transactions_.load() == 0, "Inflight transactions in dtor %zu\n",
+                      inflight_transactions_.load());
+}
 
 #ifdef __Fuchsia__
 

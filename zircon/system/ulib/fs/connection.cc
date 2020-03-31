@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/internal/connection.h>
-
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
@@ -24,6 +22,7 @@
 
 #include <fbl/string_buffer.h>
 #include <fs/debug.h>
+#include <fs/internal/connection.h>
 #include <fs/internal/fidl_transaction.h>
 #include <fs/trace.h>
 #include <fs/vfs_types.h>
@@ -68,8 +67,8 @@ bool PrevalidateFlags(uint32_t flags) {
 
   if (flags & fio::OPEN_FLAG_NODE_REFERENCE) {
     constexpr uint32_t kValidFlagsForNodeRef =
-        fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DIRECTORY |
-        fio::OPEN_FLAG_NOT_DIRECTORY | fio::OPEN_FLAG_DESCRIBE;
+        fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NOT_DIRECTORY |
+        fio::OPEN_FLAG_DESCRIBE;
     // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
     if (flags & ~kValidFlagsForNodeRef) {
       return false;
@@ -105,9 +104,7 @@ Binding::Binding(Connection* connection, async_dispatcher_t* dispatcher, zx::cha
       dispatcher_(dispatcher),
       channel_(std::move(channel)) {}
 
-Binding::~Binding() {
-  DetachFromConnection();
-}
+Binding::~Binding() { CancelDispatching(); }
 
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode, VnodeProtocol protocol,
                        VnodeConnectionOptions options, FidlProtocol fidl_protocol)
@@ -150,10 +147,8 @@ void Connection::UnmountAndShutdown(fit::callback<void(zx_status_t)> callback) {
   // However, the connection object may be destroyed before the binding. We need to
   // stop the binding from monitoring further incoming FIDL messages.
   binding_->DetachFromConnection();
-  Vfs::ShutdownCallback closure(
-      [binding = std::move(binding_), callback = std::move(callback)](zx_status_t status) mutable {
-        callback(status);
-      });
+  Vfs::ShutdownCallback closure([binding = std::move(binding_), callback = std::move(callback)](
+                                    zx_status_t status) mutable { callback(status); });
   Vfs* vfs = vfs_;
   SyncTeardown();
   vfs->Shutdown(std::move(closure));
@@ -193,6 +188,7 @@ void Binding::CancelDispatching() {
 
 void Binding::DetachFromConnection() {
   CancelDispatching();
+  UnregisterInflightTransaction();
   connection_ = nullptr;
 }
 
@@ -378,8 +374,8 @@ Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
   if (!options().rights.write) {
     return fit::error(ZX_ERR_BAD_HANDLE);
   }
-  constexpr uint32_t supported_flags = fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME |
-                                       fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
+  constexpr uint32_t supported_flags =
+      fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
   if (flags & ~supported_flags) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }

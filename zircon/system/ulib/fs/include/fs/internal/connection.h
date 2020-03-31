@@ -11,9 +11,9 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fit/result.h>
-#include <lib/fit/function.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fit/function.h>
+#include <lib/fit/result.h>
 #include <lib/zx/event.h>
 #include <stdint.h>
 #include <zircon/fidl.h>
@@ -93,6 +93,9 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // Returns if the handling succeeded. In event of failure, the caller should
   // synchronously teardown the connection.
   bool OnMessage();
+
+  void RegisterInflightTransaction() { vnode_->RegisterInflightTransaction(); }
+  void UnregisterInflightTransaction() { vnode_->UnregisterInflightTransaction(); }
 
  protected:
   // Subclasses of |Connection| should implement a particular |fuchsia.io| protocol.
@@ -293,6 +296,18 @@ class Binding final {
   void AsyncTeardown();
 
   zx::channel& channel() { return channel_; }
+
+  void RegisterInflightTransaction() {
+    ZX_ASSERT(connection_ != nullptr);
+    connection_->RegisterInflightTransaction();
+  }
+  void UnregisterInflightTransaction() {
+    // The only way this condition isn't true is when making a reply to
+    // fuchsia.io/DirectoryAdmin.Unmount.
+    if (connection_ != nullptr) {
+      connection_->UnregisterInflightTransaction();
+    }
+  }
 
  private:
   // Callback for when new signals arrive on the channel, which could be:

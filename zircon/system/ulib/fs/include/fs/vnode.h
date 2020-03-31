@@ -333,9 +333,20 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual void SetRemote(zx::channel remote);
 #endif  // __Fuchsia__
 
+  // Invoked by internal Connections to account transactions
+  void RegisterInflightTransaction() { inflight_transactions_++; }
+  void UnregisterInflightTransaction() { inflight_transactions_--; }
+
+  // Number of FIDL messages issued on this vnode that have been dispatched, but for which a reply
+  // has not been made.
+  size_t inflight_transactions() const { return inflight_transactions_.load(); }
+
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
   Vnode();
+
+ private:
+  std::atomic<size_t> inflight_transactions_ = 0;
 };
 
 // Opens a vnode by reference.

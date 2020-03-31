@@ -10,13 +10,22 @@
 
 #include <fs/internal/connection.h>
 #include <fs/internal/fidl_transaction.h>
+#include <fs/internal/node_connection.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 #include <zxtest/zxtest.h>
 
 TEST(FidlTransaction, Reply) {
   zx::channel client_end, server_end;
   ASSERT_OK(zx::channel::create(0, &client_end, &server_end));
-  auto binding =
-      std::make_shared<fs::internal::Binding>(nullptr, nullptr, std::move(server_end));
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fs::SynchronousVfs vfs(loop.dispatcher());
+
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  fs::internal::NodeConnection connection(&vfs, dir, fs::VnodeProtocol::kDirectory, {});
+  auto binding = std::make_shared<fs::internal::Binding>(&connection, loop.dispatcher(),
+                                                         std::move(server_end));
   zx_txid_t txid = 1;
   fs::internal::FidlTransaction txn(txid, binding);
   uint8_t msg_bytes[sizeof(fidl_message_header_t)] = {};
@@ -28,6 +37,4 @@ TEST(FidlTransaction, Reply) {
                             nullptr));
   ASSERT_EQ(actual, sizeof(fidl_message_header_t));
   ASSERT_EQ(txid, reinterpret_cast<fidl_message_header_t*>(received_msg_bytes)->txid);
-
-  binding.reset();
 }

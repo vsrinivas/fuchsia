@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/internal/fidl_transaction.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/txn_header.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <fs/internal/fidl_transaction.h>
 
 namespace fs {
 
@@ -50,6 +50,7 @@ void FidlTransaction::Close(zx_status_t epitaph) {
 
 FidlTransaction::~FidlTransaction() {
   if (auto binding = binding_.lock()) {
+    binding->UnregisterInflightTransaction();
     zx_status_t status = binding->StartDispatching();
     ZX_ASSERT_MSG(status == ZX_OK, "Dispatch loop unexpectedly ended");
   }
@@ -61,11 +62,17 @@ std::unique_ptr<::fidl::Transaction> FidlTransaction::TakeOwnership() {
 
 FidlTransaction::Result FidlTransaction::ToResult() {
   if (status_ != ZX_OK) {
+    if (auto binding = binding_.lock()) {
+      binding->UnregisterInflightTransaction();
+    }
     binding_.reset();
     return Result::kClosed;
   }
   if (binding_.expired()) {
     return Result::kPendingAsyncReply;
+  }
+  if (auto binding = binding_.lock()) {
+    binding->UnregisterInflightTransaction();
   }
   binding_.reset();
   return Result::kRepliedSynchronously;

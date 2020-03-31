@@ -7,13 +7,13 @@
 #include <lib/fdio/limits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/fidl.h>
+#include <zircon/types.h>
 
 #include <type_traits>
 
 #include <fs/internal/connection.h>
-#include <zircon/compiler.h>
-#include <zircon/fidl.h>
-#include <zircon/types.h>
 
 namespace fs {
 
@@ -22,7 +22,11 @@ namespace internal {
 class FidlTransaction final : public ::fidl::Transaction {
  public:
   FidlTransaction(zx_txid_t transaction_id, std::weak_ptr<internal::Binding> binding)
-      : transaction_id_(transaction_id), binding_(std::move(binding)) {}
+      : transaction_id_(transaction_id), binding_(std::move(binding)) {
+    if (auto binding = binding_.lock()) {
+      binding->RegisterInflightTransaction();
+    }
+  }
 
   ~FidlTransaction() final;
 
@@ -44,11 +48,7 @@ class FidlTransaction final : public ::fidl::Transaction {
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
-  enum class Result {
-    kRepliedSynchronously,
-    kPendingAsyncReply,
-    kClosed
-  };
+  enum class Result { kRepliedSynchronously, kPendingAsyncReply, kClosed };
 
   // Destructively convert the transaction into the result of handling a FIDL method.
   Result ToResult();
