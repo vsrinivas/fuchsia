@@ -44,6 +44,7 @@ use {
     fidl_fuchsia_setui::SetUiServiceRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
+    fuchsia_inspect::component,
     fuchsia_syslog::fx_log_err,
     futures::channel::oneshot::Receiver,
     futures::lock::Mutex,
@@ -177,6 +178,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         runtime: Runtime,
     ) -> (ServiceFs<ServiceObj<'static, ()>>, Receiver<Result<(), Error>>) {
         let mut fs = ServiceFs::new();
+        // Initialize inspect.
+        component::inspector().serve(&mut fs).ok();
         let service_dir =
             if let Runtime::Service = runtime { fs.dir("svc") } else { fs.root_dir() };
 

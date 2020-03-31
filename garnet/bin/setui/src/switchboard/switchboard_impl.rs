@@ -14,11 +14,16 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use fuchsia_async as fasync;
+use fuchsia_inspect::{self as inspect, component};
 use futures::stream::StreamExt;
+use std::collections::VecDeque;
 
 type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
+
+const INSPECT_REQUESTS_COUNT: usize = 25;
 
 /// Minimal data necessary to uniquely identify and interact with a listen
 /// session.
@@ -60,6 +65,27 @@ impl ListenSessionImpl {
     }
 }
 
+/// Information about a switchboard request to be written to inspect.
+///
+/// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
+/// once they go out of scope.
+struct RequestInfo {
+    /// Incrementing count for each request.
+    count: u64,
+
+    /// Node of this info.
+    _node: inspect::Node,
+
+    /// Debug string representation of the SettingType of this request.
+    _setting_type: inspect::StringProperty,
+
+    /// Debug string representation of this SettingRequest.
+    _request: inspect::StringProperty,
+
+    /// Milliseconds since switchboard creation that this request arrived.
+    _timestamp: inspect::StringProperty,
+}
+
 impl ListenSession for ListenSessionImpl {
     fn close(&mut self) {
         if self.closed {
@@ -90,6 +116,12 @@ pub struct SwitchboardImpl {
     listeners: ListenerMap,
     /// registry messenger
     registry_messenger_client: RegistryMessengerClient,
+    /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
+    last_requests: VecDeque<RequestInfo>,
+    /// Inspect node to write last requests to.
+    last_requests_node: fuchsia_inspect::Node,
+    /// Time the switchboard was created, used for inspect timestamps.
+    creation_time: SystemTime,
 }
 
 impl SwitchboardImpl {
@@ -110,12 +142,16 @@ impl SwitchboardImpl {
 
         let (registry_messenger_client, mut receptor) = messenger_result.unwrap();
 
+        let inspector = component::inspector();
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
             listen_cancellation_sender: cancel_listen_tx,
             listeners: HashMap::new(),
             registry_messenger_client: registry_messenger_client,
+            last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
+            last_requests_node: inspector.root().create_child("last_requests"),
+            creation_time: SystemTime::now(),
         }));
 
         {
@@ -189,6 +225,33 @@ impl SwitchboardImpl {
             }
         }
     }
+
+    /// Write a request to inspect.
+    fn record_request(&mut self, setting_type: SettingType, request: SettingRequest) {
+        if self.last_requests.len() >= INSPECT_REQUESTS_COUNT {
+            self.last_requests.pop_back();
+        }
+
+        let count = match self.last_requests.front() {
+            Some(req) => req.count + 1,
+            None => 0,
+        };
+        let timestamp = match self.creation_time.elapsed() {
+            Ok(elapsed) => elapsed.as_millis(),
+            Err(_) => 0,
+        };
+        let node = self.last_requests_node.create_child(format!("{:020}", count));
+        let setting_property = node.create_string("setting_type", format!("{:?}", setting_type));
+        let request_property = node.create_string("request", format!("{:?}", request));
+        let timestamp = node.create_string("timestamp", timestamp.to_string());
+        self.last_requests.push_front(RequestInfo {
+            count,
+            _node: node,
+            _setting_type: setting_property,
+            _request: request_property,
+            _timestamp: timestamp,
+        });
+    }
 }
 
 impl Switchboard for SwitchboardImpl {
@@ -200,6 +263,8 @@ impl Switchboard for SwitchboardImpl {
     ) -> Result<(), Error> {
         let messenger = self.registry_messenger_client.clone();
         let action_id = self.get_next_action_id();
+
+        self.record_request(setting_type.clone(), request.clone());
 
         fasync::spawn(async move {
             let mut receptor = messenger
