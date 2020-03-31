@@ -546,9 +546,9 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
           "interruption",
           "background",
           "communications",
-          "system_agent"
+          "system_agent",
+          "capture:loopback"
         ],
-        "eligible_for_loopback": true,
         "pipeline": {
           "inputs": [
             {

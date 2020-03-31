@@ -95,7 +95,7 @@
         // The mix pipeline to construct for this device.
         "pipeline": { "$ref" : "#definitions/mix_group" }
       },
-      "required": [ "device_id", "supported_output_stream_types", "eligible_for_loopback" ],
+      "required": [ "device_id", "supported_output_stream_types" ],
       "additionalProperties": false
     },
     "thermal_policy_entry" : {

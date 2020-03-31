@@ -263,10 +263,12 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
 
   auto device_id = ParseDeviceIdFromJsonValue(device_id_it->value);
 
+  bool eligible_for_loopback = false;
   auto eligible_for_loopback_it = value.FindMember(kJsonKeyEligibleForLoopback);
-  FX_CHECK(eligible_for_loopback_it != value.MemberEnd());
-  FX_CHECK(eligible_for_loopback_it->value.IsBool());
-  const auto eligible_for_loopback = eligible_for_loopback_it->value.GetBool();
+  if (eligible_for_loopback_it != value.MemberEnd()) {
+    FX_CHECK(eligible_for_loopback_it->value.IsBool());
+    eligible_for_loopback = eligible_for_loopback_it->value.GetBool();
+  }
 
   auto independent_volume_control_it = value.FindMember(kJsonKeyIndependentVolumeControl);
   bool independent_volume_control = false;
