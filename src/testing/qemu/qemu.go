@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -87,6 +88,7 @@ type Params struct {
 	ZBI           string
 	AppendCmdline string
 	Networking    bool
+	Memory        int // megabytes
 }
 
 type Instance struct {
@@ -163,9 +165,16 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 
 func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []string {
 	args = append(args, "-kernel", d.kernelPath(params.Arch))
-	args = append(args, "-m", "2048", "-nographic", "-smp", "4,threads=2",
+	args = append(args, "-nographic", "-smp", "4,threads=2",
 		"-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
 		"-cpu", "Haswell,+smap,-check,-fsgsbase")
+
+	if params.Memory == 0 {
+		args = append(args, "-m", "2048")
+	} else {
+		args = append(args, "-m", strconv.Itoa(params.Memory))
+	}
+
 	if params.Networking {
 		args = append(args, "-nic", "tap,ifname=qemu,script=no,downscript=no")
 	} else {
