@@ -434,9 +434,9 @@ func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.S
 	log.Printf("registering package repository: %s", repo.Dir)
 	var cmd string
 	if createRewriteRule {
-		cmd = fmt.Sprintf("amberctl add_src -f %s -h %s -verbose", repo.URL, repo.Hash)
+		cmd = fmt.Sprintf("amberctl add_src -f %s -h %s", repo.URL, repo.Hash)
 	} else {
-		cmd = fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s -verbose", repo.URL, repo.Hash)
+		cmd = fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repo.URL, repo.Hash)
 	}
 	return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
