@@ -1059,8 +1059,6 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
 
   // Make sure we can find the important partitions.
   std::unique_ptr<paver::PartitionClient> partition;
-  ASSERT_NE(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader), &partition),
-            ZX_OK);
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA), &partition));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB), &partition));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR), &partition));
@@ -1073,13 +1071,9 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
 }
 
 TEST_F(SherlockPartitionerTests, DISABLED_FindBootloader) {
-  std::unique_ptr<BlockDevice> gpt_dev, boot0_dev, boot1_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, kBlockSize, &gpt_dev));
-  ASSERT_NO_FATAL_FAILURES(
-      BlockDevice::Create(devmgr_.devfs_root(), kBoot0Type, kBlockCount, kBlockSize, &boot0_dev));
-  ASSERT_NO_FATAL_FAILURES(
-      BlockDevice::Create(devmgr_.devfs_root(), kBoot1Type, kBlockCount, kBlockSize, &boot1_dev));
 
   std::unique_ptr<gpt::GptDevice> gpt;
   ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
@@ -1090,8 +1084,20 @@ TEST_F(SherlockPartitionerTests, DISABLED_FindBootloader) {
   ASSERT_OK(paver::SherlockPartitioner::Initialize(devmgr_.devfs_root().duplicate(),
                                                    std::move(gpt_fd), &partitioner));
 
+  // No boot0/boot1 yet, we shouldn't be able to find the bootloader.
   std::unique_ptr<paver::PartitionClient> partition;
-  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader), &partition));
+  ASSERT_NOT_OK(partitioner->FindPartition(
+      PartitionSpec(paver::Partition::kBootloader, "skip_metadata"), &partition));
+
+  std::unique_ptr<BlockDevice> boot0_dev, boot1_dev;
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kBoot0Type, kBlockCount, kBlockSize, &boot0_dev));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kBoot1Type, kBlockCount, kBlockSize, &boot1_dev));
+
+  // Now it should succeed.
+  ASSERT_OK(partitioner->FindPartition(
+      PartitionSpec(paver::Partition::kBootloader, "skip_metadata"), &partition));
 }
 
 TEST_F(SherlockPartitionerTests, DISABLED_SupportsPartition) {
@@ -1105,7 +1111,8 @@ TEST_F(SherlockPartitionerTests, DISABLED_SupportsPartition) {
   ASSERT_OK(paver::SherlockPartitioner::Initialize(devmgr_.devfs_root().duplicate(),
                                                    std::move(gpt_fd), &partitioner));
 
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(
+      PartitionSpec(paver::Partition::kBootloader, "skip_metadata")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));

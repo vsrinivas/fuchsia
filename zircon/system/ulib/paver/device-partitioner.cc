@@ -1555,18 +1555,36 @@ zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
   return ZX_OK;
 }
 
+// Sherlock bootloader types:
+//
+// -- default [deprecated] --
+// The combined BL2 + TPL image.
+//
+// This was never actually added to any update packages, because older
+// SherlockBootloaderPartitionClient implementations had a bug where they would
+// write this image to the wrong place in flash which would overwrite critical
+// metadata and brick the device on reboot.
+//
+// In order to prevent this from happening when updating older devices, never
+// use this bootloader type on Sherlock.
+//
+// -- "skip_metadata" --
+// The combined BL2 + TPL image.
+//
+// The image itself is identical to the default, but adding the "skip_metadata"
+// type ensures that older pavers will ignore this image, and only newer
+// implementations which properly skip the metadata section will write it.
 bool SherlockPartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  // TODO(40854): add support for new bootloader content_type which will be
-  // written to the proper offset.
-  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
-                                           PartitionSpec(paver::Partition::kZirconA),
-                                           PartitionSpec(paver::Partition::kZirconB),
-                                           PartitionSpec(paver::Partition::kZirconR),
-                                           PartitionSpec(paver::Partition::kVbMetaA),
-                                           PartitionSpec(paver::Partition::kVbMetaB),
-                                           PartitionSpec(paver::Partition::kVbMetaR),
-                                           PartitionSpec(paver::Partition::kAbrMeta),
-                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+  const PartitionSpec supported_specs[] = {
+      PartitionSpec(paver::Partition::kBootloader, "skip_metadata"),
+      PartitionSpec(paver::Partition::kZirconA),
+      PartitionSpec(paver::Partition::kZirconB),
+      PartitionSpec(paver::Partition::kZirconR),
+      PartitionSpec(paver::Partition::kVbMetaA),
+      PartitionSpec(paver::Partition::kVbMetaB),
+      PartitionSpec(paver::Partition::kVbMetaR),
+      PartitionSpec(paver::Partition::kAbrMeta),
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
 
   for (const auto& supported : supported_specs) {
     if (SpecMatches(spec, supported)) {
