@@ -42,7 +42,6 @@ package("lowpanservice") {
   binaries = [
     {
       name = "lowpanservice"
-      shell = true
     },
   ]
 

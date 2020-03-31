@@ -15,6 +15,7 @@ rustc_test("lowpan_integration_tests") {
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
+    "//src/connectivity/lowpan/service",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
