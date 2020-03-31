@@ -60,7 +60,7 @@ impl LogManager {
     {
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
         for (log_msg, size) in
-            kernel_logger.existing_logs().context("reading from kernel log iterator")?
+            kernel_logger.existing_logs().await.context("reading from kernel log iterator")?
         {
             self.ingest_message(log_msg, size, LogSource::Kernel).await;
         }

@@ -10,13 +10,13 @@ use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::{self, LogMessage};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::stream::{unfold, Stream};
+use futures::stream::{unfold, Stream, TryStreamExt};
 
 #[async_trait]
 pub trait DebugLog {
     /// Reads a single entry off the debug log into `buffer`.  Any existing
     /// contents in `buffer` are overwritten.
-    fn read(&self, buffer: &mut Vec<u8>) -> Result<(), zx::Status>;
+    async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status>;
 
     /// Returns a future that completes when there is another log to read.
     async fn ready_signal(&self) -> Result<(), zx::Status>;
@@ -28,7 +28,7 @@ pub struct KernelDebugLog {
 
 #[async_trait]
 impl DebugLog for KernelDebugLog {
-    fn read(&self, buffer: &mut Vec<u8>) -> Result<(), zx::Status> {
+    async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status> {
         self.debuglogger.read(buffer)
     }
 
@@ -51,26 +51,29 @@ pub struct DebugLogBridge<K: DebugLog> {
     buf: Vec<u8>,
 }
 
-pub struct BridgedLogs<'a, K: DebugLog> {
-    klogger: &'a mut DebugLogBridge<K>,
-}
-
 impl<K: DebugLog> DebugLogBridge<K> {
     pub fn create(debug_log: K) -> Self {
         DebugLogBridge { debug_log, buf: Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX) }
     }
 
-    fn read_log(&mut self) -> Result<(LogMessage, usize), zx::Status> {
+    async fn read_log(&mut self) -> Result<(LogMessage, usize), zx::Status> {
         loop {
-            self.debug_log.read(&mut self.buf)?;
+            self.debug_log.read(&mut self.buf).await?;
             if let Some((message, size)) = convert_to_log_message(self.buf.as_slice()) {
                 return Ok((message, size));
             }
         }
     }
 
-    pub fn existing_logs<'a>(&'a mut self) -> Result<Vec<(LogMessage, usize)>, zx::Status> {
-        BridgedLogs { klogger: self }.collect::<Result<Vec<_>, _>>()
+    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<(LogMessage, usize)>, zx::Status> {
+        unfold(self, move |klogger| async move {
+            match klogger.read_log().await {
+                Err(zx::Status::SHOULD_WAIT) => None,
+                x => Some((x, klogger)),
+            }
+        })
+        .try_collect::<Vec<_>>()
+        .await
     }
 
     pub fn listen(self) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {
@@ -82,7 +85,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
                     }
                 }
                 is_readable = true;
-                match klogger.read_log() {
+                match klogger.read_log().await {
                     Err(zx::Status::SHOULD_WAIT) => {
                         is_readable = false;
                         continue;
@@ -129,23 +132,6 @@ fn convert_to_log_message(buf: &[u8]) -> Option<(LogMessage, usize)> {
     Some((l, size))
 }
 
-impl<K: DebugLog> Iterator for BridgedLogs<'_, K> {
-    type Item = Result<(LogMessage, usize), zx::Status>;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.klogger.read_log() {
-            Err(zx::Status::SHOULD_WAIT) => {
-                return None;
-            }
-            Err(status) => {
-                return Some(Err(status));
-            }
-            Ok(n) => {
-                return Some(Ok(n));
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -163,7 +149,7 @@ pub mod tests {
 
     #[async_trait]
     impl DebugLog for TestDebugLog {
-        fn read(&self, buffer: &mut Vec<u8>) -> Result<(), zx::Status> {
+        async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status> {
             let next_result = self
                 .read_responses
                 .lock()
@@ -311,8 +297,8 @@ pub mod tests {
         assert!(convert_to_log_message(&klog).is_none());
     }
 
-    #[test]
-    fn logger_existing_logs_test() {
+    #[fasync::run_until_stalled(test)]
+    async fn logger_existing_logs_test() {
         let debug_log = TestDebugLog::new();
         let klog = TestDebugEntry::new("test log".as_bytes());
         debug_log.enqueue_read_entry(&klog);
@@ -320,7 +306,7 @@ pub mod tests {
         let mut log_bridge = DebugLogBridge::create(debug_log);
 
         assert_eq!(
-            log_bridge.existing_logs().unwrap(),
+            log_bridge.existing_logs().await.unwrap(),
             vec![(
                 LogMessage {
                     pid: klog.pid,
@@ -340,7 +326,7 @@ pub mod tests {
         debug_log.enqueue_read(vec![]);
         debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
         let mut log_bridge = DebugLogBridge::create(debug_log);
-        assert!(log_bridge.existing_logs().unwrap().is_empty());
+        assert!(log_bridge.existing_logs().await.unwrap().is_empty());
     }
 
     #[fasync::run_until_stalled(test)]
