@@ -21,6 +21,8 @@
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -65,6 +67,19 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
                         std::move(config), std::move(crash_server), std::move(queue)));
 }
 
+namespace {
+
+std::string ReadStringFromFile(const std::string& filepath) {
+  std::string content;
+  if (!files::ReadFileToString(filepath, &content)) {
+    FX_LOGS(ERROR) << "Failed to read content from " << filepath;
+    return "<unknown>";
+  }
+  return fxl::TrimString(content, "\r\n").ToString();
+}
+
+}  // namespace
+
 CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
                              const timekeeper::Clock& clock,
@@ -81,7 +96,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       info_(std::move(info_context)),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
       data_provider_(dispatcher_, services_),
-      device_id_provider_(dispatcher_, services_) {
+      device_id_provider_(dispatcher_, services_),
+      build_version_(ReadStringFromFile("/config/build-info/version")) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
   if (config->crash_server.url) {
@@ -138,9 +154,9 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                        std::map<std::string, std::string> annotations;
                        std::map<std::string, fuchsia::mem::Buffer> attachments;
                        std::optional<fuchsia::mem::Buffer> minidump;
-                       BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
-                                                      utc_provider_.CurrentTime(), device_id,
-                                                      &annotations, &attachments, &minidump);
+                       BuildAnnotationsAndAttachments(
+                           std::move(report), std::move(feedback_data), utc_provider_.CurrentTime(),
+                           device_id, build_version_, &annotations, &attachments, &minidump);
 
                        if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                                         annotations)) {

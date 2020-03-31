@@ -9,8 +9,6 @@
 
 #include <string>
 
-#include "src/lib/files/file.h"
-#include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -148,21 +146,12 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   }
 }
 
-std::string ReadStringFromFile(const std::string& filepath) {
-  std::string content;
-  if (!files::ReadFileToString(filepath, &content)) {
-    FX_LOGS(ERROR) << "Failed to read content from '" << filepath << "'.";
-    return "unknown";
-  }
-  return fxl::TrimString(content, "\r\n").ToString();
-}
-
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<std::string>& device_id,
-                               const bool should_process,
+                               const std::string& build_version, const bool should_process,
                                std::map<std::string, std::string>* annotations) {
   (*annotations)["product"] = "Fuchsia";
-  (*annotations)["version"] = ReadStringFromFile("/config/build-info/version");
+  (*annotations)["version"] = build_version;
   // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
   (*annotations)["ptype"] = program_name;
   (*annotations)["osName"] = "Fuchsia";
@@ -204,8 +193,9 @@ void AddFeedbackAttachments(fuchsia::feedback::Data feedback_data,
 
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     fuchsia::feedback::Data feedback_data,
-                                    std::optional<zx::time_utc> current_time,
-                                    std::optional<std::string> device_id,
+                                    const std::optional<zx::time_utc>& current_time,
+                                    const std::optional<std::string>& device_id,
+                                    const std::string& build_version,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump) {
@@ -218,7 +208,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                    minidump, &should_process);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, device_id, should_process, annotations);
+  AddCrashServerAnnotations(program_name, device_id, build_version, should_process, annotations);
 
   // Feedback annotations common to all crash reports.
   AddFeedbackAnnotations(feedback_data, annotations);

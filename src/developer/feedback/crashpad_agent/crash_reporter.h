@@ -66,6 +66,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   PrivacySettingsWatcher privacy_settings_watcher_;
   FeedbackDataProvider data_provider_;
   FeedbackDeviceIdProvider device_id_provider_;
+  const std::string build_version_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);
 };
