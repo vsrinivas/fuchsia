@@ -4,10 +4,13 @@
 
 use {
     crate::{queue, repository::Repository, repository_manager::Stats},
+    cobalt_client::traits::AsEventCode as _,
+    cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
+    fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::PkgUrl,
@@ -404,6 +407,7 @@ pub fn make_blob_fetch_queue(
     cache: PackageCache,
     max_concurrency: usize,
     stats: Arc<Mutex<Stats>>,
+    cobalt_sender: CobaltSender,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
 
@@ -413,6 +417,7 @@ pub fn make_blob_fetch_queue(
             let http_client = Arc::clone(&http_client);
             let cache = cache.clone();
             let stats = Arc::clone(&stats);
+            let cobalt_sender = cobalt_sender.clone();
 
             async move {
                 trace::duration_begin!("app", "fetch_blob", "merkle" => merkle.to_string().as_str());
@@ -424,6 +429,7 @@ pub fn make_blob_fetch_queue(
                     context.expected_len,
                     &cache,
                     stats,
+                    cobalt_sender,
                 )
                 .map_err(Arc::new)
                 .await;
@@ -444,6 +450,7 @@ async fn fetch_blob(
     expected_len: Option<u64>,
     cache: &PackageCache,
     stats: Arc<Mutex<Stats>>,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), FetchError> {
     if mirrors.is_empty() {
         return Err(FetchError::NoMirrors);
@@ -459,6 +466,7 @@ async fn fetch_blob(
     fuchsia_backoff::retry_or_first_error(retry::blob_fetch(), || {
         let flaked = Arc::clone(&flaked);
         let mirror_stats = &mirror_stats;
+        let mut cobalt_sender = cobalt_sender.clone();
 
         async {
             if let Some((blob, blob_closer)) =
@@ -484,6 +492,14 @@ async fn fetch_blob(
                     mirror_stats.network_blips().increment();
                 }
             }
+        })
+        .inspect(move |res| {
+            let event_code = match res {
+                Ok(()) => metrics::FetchBlobMetricDimensionResult::Success,
+                Err(e) => e.fetch_blob_metric_event_code(),
+            }
+            .as_event_code();
+            cobalt_sender.log_event_count(metrics::FETCH_BLOB_METRIC_ID, event_code, 0, 1);
         })
     })
     .await
@@ -673,6 +689,33 @@ impl FetchError {
             | FetchError::Http { .. }
             | FetchError::BadHttpStatus { .. } => FetchErrorKind::Network,
             _ => FetchErrorKind::Other,
+        }
+    }
+
+    fn fetch_blob_metric_event_code(&self) -> metrics::FetchBlobMetricDimensionResult {
+        match self {
+            FetchError::CreateBlob(_) => metrics::FetchBlobMetricDimensionResult::CreateBlob,
+            FetchError::BadHttpStatus { .. } => {
+                metrics::FetchBlobMetricDimensionResult::BadHttpStatus
+            }
+            FetchError::NoMirrors => metrics::FetchBlobMetricDimensionResult::NoMirrors,
+            FetchError::ContentLengthMismatch { .. } => {
+                metrics::FetchBlobMetricDimensionResult::ContentLengthMismatch
+            }
+            FetchError::UnknownLength { .. } => {
+                metrics::FetchBlobMetricDimensionResult::UnknownLength
+            }
+            FetchError::BlobTooSmall { .. } => {
+                metrics::FetchBlobMetricDimensionResult::BlobTooSmall
+            }
+            FetchError::BlobTooLarge { .. } => {
+                metrics::FetchBlobMetricDimensionResult::BlobTooLarge
+            }
+            FetchError::Truncate(_) => metrics::FetchBlobMetricDimensionResult::Truncate,
+            FetchError::Write(_) => metrics::FetchBlobMetricDimensionResult::Write,
+            FetchError::Hyper { .. } => metrics::FetchBlobMetricDimensionResult::Hyper,
+            FetchError::Http { .. } => metrics::FetchBlobMetricDimensionResult::Http,
+            FetchError::BlobUrl(_) => metrics::FetchBlobMetricDimensionResult::BlobUrl,
         }
     }
 }

@@ -119,10 +119,16 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
 
     let futures = FuturesUnordered::new();
 
+    let (mut cobalt_sender, cobalt_fut) =
+        CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
+            .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    futures.push(cobalt_fut.boxed_local());
+
     let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
         cache.clone(),
         MAX_CONCURRENT_BLOB_FETCHES,
         repo_manager.read().stats(),
+        cobalt_sender.clone(),
     );
     futures.push(blob_fetch_queue.boxed_local());
 
@@ -219,11 +225,6 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     futures.push(fs.collect().boxed_local());
-
-    let (mut cobalt_sender, cobalt_fut) =
-        CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
-            .serve(ConnectionType::project_id(metrics::PROJECT_ID));
-    futures.push(cobalt_fut.boxed_local());
 
     cobalt_sender.log_elapsed_time(
         metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
