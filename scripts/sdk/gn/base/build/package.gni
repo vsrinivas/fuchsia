@@ -42,6 +42,7 @@ template("fuchsia_package") {
   _runtime_deps_file = "$_pkg_out_dir/${package_name}.runtime_deps"
   _archive_manifest = "$_pkg_out_dir/${package_name}.archive_manifest"
   _build_ids_file = "$_pkg_out_dir/ids.txt"
+  _package_file = "$_pkg_out_dir/package"
 
   _packaged_components_metadata =
       "${target_gen_dir}/${package_name}_packaged_components_metadata.json"
@@ -77,6 +78,7 @@ template("fuchsia_package") {
     outputs = [
       _archive_manifest,
       _build_ids_file,
+      _package_file,
     ]
 
     if (!defined(deps)) {
