@@ -638,7 +638,7 @@ zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline);
 
-static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
+static void deadline_callback(Timer* timer, zx_time_t now, void* arg) {
   LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
   if (local_apic_state->lvt_timer & LVT_MASKED) {
     return;
@@ -651,9 +651,9 @@ static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
 }
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
-  timer_cancel(&local_apic_state->timer);
+  local_apic_state->timer.Cancel();
   if (deadline > 0) {
-    timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback, local_apic_state);
+    local_apic_state->timer.SetOneshot(deadline, deadline_callback, local_apic_state);
   }
 }
 

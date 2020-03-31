@@ -20,7 +20,7 @@ namespace internal {
 void wait_queue_insert(wait_queue_t* wait, Thread* t) TA_REQ(thread_lock);
 void wait_queue_remove_head(Thread* t) TA_REQ(thread_lock);
 void wait_queue_remove_thread(Thread* t) TA_REQ(thread_lock);
-void wait_queue_timeout_handler(timer_t* timer, zx_time_t now, void* arg);
+void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg);
 
 // Used by wait_queue_t and OwnedWaitQueue to manage changes to the maximum
 // priority of a wait queue due to external effects (thread priority change,
@@ -103,12 +103,11 @@ inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& 
 inline zx_status_t wait_queue_block_etc_post(wait_queue_t* wait, const Deadline& deadline)
     TA_REQ(thread_lock) {
   Thread* current_thread = Thread::Current::Get();
-  timer_t timer;
+  Timer timer;
 
   // if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue
   if (deadline.when() != ZX_TIME_INFINITE) {
-    timer_init(&timer);
-    timer_set(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
+    timer.Set(deadline, wait_queue_timeout_handler, (void*)current_thread);
   }
 
   ktrace_ptr(TAG_KWAIT_BLOCK, wait, 0, 0);
@@ -119,7 +118,7 @@ inline zx_status_t wait_queue_block_etc_post(wait_queue_t* wait, const Deadline&
 
   // we don't really know if the timer fired or not, so it's better safe to try to cancel it
   if (deadline.when() != ZX_TIME_INFINITE) {
-    timer_cancel(&timer);
+    timer.Cancel();
   }
 
   return current_thread->blocked_status_;

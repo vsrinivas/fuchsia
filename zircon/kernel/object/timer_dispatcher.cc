@@ -21,7 +21,7 @@
 KCOUNTER(dispatcher_timer_create_count, "dispatcher.timer.create")
 KCOUNTER(dispatcher_timer_destroy_count, "dispatcher.timer.destroy")
 
-static void timer_irq_callback(timer* timer, zx_time_t now, void* arg) {
+static void timer_irq_callback(Timer* timer, zx_time_t now, void* arg) {
   // We are in IRQ context and cannot touch the timer state_tracker, so we
   // schedule a DPC to do so. TODO(cpu): figure out ways to reduce the lag.
   auto dpc = reinterpret_cast<Dpc*>(arg);
@@ -59,8 +59,7 @@ TimerDispatcher::TimerDispatcher(uint32_t options)
       timer_dpc_(&dpc_callback, this),
       deadline_(0u),
       slack_amount_(0u),
-      cancel_pending_(false),
-      timer_(TIMER_INITIAL_VALUE(timer_)) {
+      cancel_pending_(false) {
   kcounter_add(dispatcher_timer_create_count, 1);
 }
 
@@ -79,7 +78,7 @@ void TimerDispatcher::on_zero_handles() {
   // possibly on a different CPU) has completed before possibly destroy
   // the timer.  So cancel the timer if we haven't already.
   if (!CancelTimerLocked())
-    timer_cancel(&timer_);
+    timer_.Cancel();
 }
 
 zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack_amount) {
@@ -127,7 +126,7 @@ zx_status_t TimerDispatcher::Cancel() {
 
 void TimerDispatcher::SetTimerLocked(bool cancel_first) {
   if (cancel_first)
-    timer_cancel(&timer_);
+    timer_.Cancel();
 
   slack_mode slack_mode = TIMER_SLACK_CENTER;
 
@@ -147,7 +146,7 @@ void TimerDispatcher::SetTimerLocked(bool cancel_first) {
 
   const TimerSlack slack{slack_amount_, slack_mode};
   const Deadline slackDeadline(deadline_, slack);
-  timer_set(&timer_, slackDeadline, &timer_irq_callback, &timer_dpc_);
+  timer_.Set(slackDeadline, &timer_irq_callback, &timer_dpc_);
 }
 
 bool TimerDispatcher::CancelTimerLocked() {
@@ -167,7 +166,7 @@ bool TimerDispatcher::CancelTimerLocked() {
 
   // The timer is active and needs to be canceled.
   // Refcount is at least 2 because there is a pending timer that we need to cancel.
-  bool timer_canceled = timer_cancel(&timer_);
+  bool timer_canceled = timer_.Cancel();
   if (timer_canceled) {
     // Managed to cancel before OnTimerFired() ran. So we need to decrement the
     // ref count here.

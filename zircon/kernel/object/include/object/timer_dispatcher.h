@@ -46,7 +46,7 @@ class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_
   zx_time_t deadline_ TA_GUARDED(get_lock());
   zx_duration_t slack_amount_ TA_GUARDED(get_lock());
   bool cancel_pending_ TA_GUARDED(get_lock());
-  timer_t timer_ TA_GUARDED(get_lock());
+  Timer timer_ TA_GUARDED(get_lock());
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_TIMER_DISPATCHER_H_

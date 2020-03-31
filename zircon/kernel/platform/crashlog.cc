@@ -26,7 +26,7 @@ recovered_ram_crashlog_t recovered_log;
 zx_status_t log_recovery_result = ZX_ERR_INTERNAL;
 
 DECLARE_SINGLETON_SPINLOCK(uptime_updater_lock);
-timer_t uptime_updater_timer TA_GUARDED(uptime_updater_lock::Get()) = TIMER_INITIAL_VALUE(unused);
+Timer uptime_updater_timer TA_GUARDED(uptime_updater_lock::Get());
 bool uptime_updater_enabled TA_GUARDED(uptime_updater_lock::Get()) = false;
 
 void default_platform_stow_crashlog(zircon_crash_reason_t reason, const void* log, size_t len) {
@@ -179,9 +179,9 @@ void update_uptime_locked() TA_REQ(uptime_updater_lock::Get()) {
 
     Deadline next_update_time{current_time() + kDefaultUpdateInterval,
                               {kDefaultUpdateInterval / 2, TIMER_SLACK_CENTER}};
-    timer_set(
-        &uptime_updater_timer, next_update_time,
-        [](struct timer*, zx_time_t now, void* arg) {
+    uptime_updater_timer.Set(
+        next_update_time,
+        [](Timer*, zx_time_t now, void* arg) {
           Guard<SpinLock, IrqSave> guard{uptime_updater_lock::Get()};
           update_uptime_locked();
         },
@@ -200,7 +200,7 @@ void default_platform_enable_crashlog_uptime_updates(bool enabled) {
       if (uptime_updater_enabled) {
         update_uptime_locked();
       } else {
-        timer_cancel(&uptime_updater_timer);
+        uptime_updater_timer.Cancel();
       }
     }
   }

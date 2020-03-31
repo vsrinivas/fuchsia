@@ -170,22 +170,21 @@ static constexpr TimerSlack kSlack{ZX_MSEC(1), TIMER_SLACK_CENTER};
 // Poll for inputs on the UART.
 //
 // Used for devices where the UART rx interrupt isn't available.
-static void uart_rx_poll(timer_t* t, zx_time_t now, void* arg) {
+static void uart_rx_poll(Timer* t, zx_time_t now, void* arg) {
   const Deadline deadline(zx_time_add_duration(now, ZX_MSEC(10)), kSlack);
-  timer_set(t, deadline, uart_rx_poll, NULL);
+  t->Set(deadline, uart_rx_poll, NULL);
   platform_drain_debug_uart_rx();
 }
 
 // Create a polling thread for the UART.
 static void platform_debug_start_uart_timer() {
-  static timer_t uart_rx_poll_timer;
+  static Timer uart_rx_poll_timer;
   static bool started = false;
 
   if (!started) {
     started = true;
-    timer_init(&uart_rx_poll_timer);
     const Deadline deadline(zx_time_add_duration(current_time(), ZX_MSEC(10)), kSlack);
-    timer_set(&uart_rx_poll_timer, deadline, uart_rx_poll, NULL);
+    uart_rx_poll_timer.Set(deadline, uart_rx_poll, NULL);
   }
 }
 

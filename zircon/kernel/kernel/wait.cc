@@ -139,7 +139,7 @@ void wait_queue_remove_thread(Thread* t) TA_REQ(thread_lock) {
   }
 }
 
-void wait_queue_timeout_handler(timer_t* timer, zx_time_t now, void* arg) {
+void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg) {
   Thread* thread = (Thread*)arg;
 
   DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
@@ -147,7 +147,7 @@ void wait_queue_timeout_handler(timer_t* timer, zx_time_t now, void* arg) {
   // spin trylocking on the thread lock since the routine that set up the callback,
   // wait_queue_block, may be trying to simultaneously cancel this timer while holding the
   // thread_lock.
-  if (timer_trylock_or_cancel(timer, &thread_lock)) {
+  if (timer->TrylockOrCancel(&thread_lock)) {
     return;
   }
 

@@ -94,7 +94,7 @@ zx_status_t suspend_thread(void* raw_arg) {
 
   arch_resume();
   platform_resume();
-  timer_thaw_percpu();
+  TimerQueue::ThawPercpu();
 
   DEBUG_ASSERT(arch_ints_disabled());
   arch_enable_ints();

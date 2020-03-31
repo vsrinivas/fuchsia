@@ -67,7 +67,7 @@ class Guest {
 // Stores the local APIC state across VM exits.
 struct LocalApicState {
   // Timer for APIC timer.
-  timer_t timer;
+  Timer timer;
   // Tracks pending interrupts.
   hypervisor::InterruptTracker<X86_INT_COUNT> interrupt_tracker;
   // LVT timer configuration

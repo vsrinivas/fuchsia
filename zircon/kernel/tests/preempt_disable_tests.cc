@@ -17,7 +17,7 @@
 
 // Test that preempt_disable is set for timer callbacks and that, in this
 // context, preempt_pending will get set by some functions.
-static void timer_callback_func(timer_t* timer, zx_time_t now, void* arg) {
+static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
   event_t* event = (event_t*)arg;
 
   // Timer callbacks should be called in interrupt context with
@@ -62,9 +62,8 @@ static bool test_in_timer_callback() {
   event_t event;
   event_init(&event, false, 0);
 
-  timer_t timer;
-  timer_init(&timer);
-  timer_set(&timer, Deadline::no_slack(0), timer_callback_func, &event);
+  Timer timer;
+  timer.Set(Deadline::no_slack(0), timer_callback_func, &event);
 
   ASSERT_EQ(event_wait(&event), ZX_OK);
   event_destroy(&event);
@@ -223,7 +222,7 @@ static bool test_interrupt_clears_preempt_pending() {
 }
 
 // Timer callback used for testing.
-static void timer_set_preempt_pending(timer_t* timer, zx_time_t now, void* arg) {
+static void timer_set_preempt_pending(Timer* timer, zx_time_t now, void* arg) {
   auto* timer_ran = reinterpret_cast<ktl::atomic<bool>*>(arg);
 
   Thread::Current::PreemptSetPending();
@@ -247,10 +246,9 @@ static bool test_interrupt_with_preempt_disable() {
   // be rescheduled to another CPU.
   Thread::Current::PreemptDisable();
   ktl::atomic<bool> timer_ran(false);
-  timer_t timer;
-  timer_init(&timer);
+  Timer timer;
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
-  timer_set(&timer, deadline, timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
+  timer.Set(deadline, timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
   // Spin until timer_ran is set by the interrupt handler.
   while (!timer_ran.load()) {
   }
@@ -272,10 +270,9 @@ static bool test_interrupt_with_resched_disable() {
   // that we invoked it from.
   Thread::Current::ReschedDisable();
   ktl::atomic<bool> timer_ran(false);
-  timer_t timer;
-  timer_init(&timer);
+  Timer timer;
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
-  timer_set(&timer, deadline, timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
+  timer.Set(deadline, timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
   // Spin until timer_ran is set by the interrupt handler.
   while (!timer_ran.load()) {
   }

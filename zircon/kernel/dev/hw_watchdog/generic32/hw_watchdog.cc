@@ -32,7 +32,7 @@ class GenericWatchdog32 {
   // want to end up registering a global .dtor for no reason.  If/when we get to
   // the point where the kernel can actually "exit" for sanitizer analysis, we
   // will want to come back here and enable this.
-  //~GenericWatchdog32() { timer_cancel(&pet_timer_}; }
+  //~GenericWatchdog32() { pet_timer_.Cancel(); }
 
   // Early init takes place while we are still single threaded, and don't need
   // to worry about thread safety.
@@ -67,7 +67,7 @@ class GenericWatchdog32 {
     } else {
       // Disable the watchdog and cancel any in-flight timer.
       TakeAction(cfg_.disable_action);
-      timer_cancel(&pet_timer_);
+      pet_timer_.Cancel();
     }
 
     return ZX_OK;
@@ -105,7 +105,7 @@ class GenericWatchdog32 {
   dcfg_generic_32bit_watchdog_t cfg_{};
   zx_status_t early_init_result_ = ZX_ERR_INTERNAL;
   zx_time_t last_pet_time_ TA_GUARDED(lock_) = 0;
-  timer_t pet_timer_ TA_GUARDED(lock_) TIMER_INITIAL_VALUE(pet_timer_);
+  Timer pet_timer_ TA_GUARDED(lock_);
   bool is_enabled_ TA_GUARDED(lock_) = false;
 };
 
@@ -235,9 +235,9 @@ void GenericWatchdog32::HandlePetTimer() {
     PetLocked();
     Deadline next_pet_time{last_pet_time_ + (timeout_nsec() / 2),
                            {(timeout_nsec() / 4), TIMER_SLACK_EARLY}};
-    timer_set(
-        &pet_timer_, next_pet_time,
-        [](struct timer*, zx_time_t now, void* arg) {
+    pet_timer_.Set(
+        next_pet_time,
+        [](Timer*, zx_time_t now, void* arg) {
           auto thiz = reinterpret_cast<GenericWatchdog32*>(arg);
           Guard<SpinLock, IrqSave> guard{&thiz->lock_};
           thiz->HandlePetTimer();

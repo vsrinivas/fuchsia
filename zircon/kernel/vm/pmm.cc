@@ -145,9 +145,9 @@ static void pmm_checker_print_status() {
   printf("pmm checker %s\n", pmm_checker_is_enabled() ? "enabled" : "disabled");
 }
 
-static void pmm_dump_timer(struct timer* t, zx_time_t now, void*) {
+static void pmm_dump_timer(Timer* t, zx_time_t now, void*) {
   zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
-  timer_set_oneshot(t, deadline, &pmm_dump_timer, nullptr);
+  t->SetOneshot(deadline, &pmm_dump_timer, nullptr);
   pmm_node.DumpFree();
 }
 
@@ -200,18 +200,17 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     goto usage;
   } else if (!strcmp(argv[1].str, "free")) {
     static bool show_mem = false;
-    static timer_t timer;
+    static Timer timer;
 
     if (!show_mem) {
       printf("pmm free: issue the same command to stop.\n");
-      timer_init(&timer);
       zx_time_t deadline = zx_time_add_duration(current_time(), ZX_SEC(1));
       const TimerSlack slack{ZX_MSEC(20), TIMER_SLACK_CENTER};
       const Deadline slackDeadline(deadline, slack);
-      timer_set(&timer, slackDeadline, &pmm_dump_timer, nullptr);
+      timer.Set(slackDeadline, &pmm_dump_timer, nullptr);
       show_mem = true;
     } else {
-      timer_cancel(&timer);
+      timer.Cancel();
       show_mem = false;
     }
   } else if (!strcmp(argv[1].str, "oom")) {

@@ -264,7 +264,7 @@ zx_status_t Thread::SetRealTime() {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
     if (this == Thread::Current::Get()) {
       // if we're currently running, cancel the preemption timer.
-      timer_preempt_cancel();
+      TimerQueue::PreemptCancel();
     }
     flags_ |= THREAD_FLAG_REAL_TIME;
   }
@@ -958,7 +958,7 @@ void Thread::Current::CheckPreemptPending() {
 }
 
 // timer callback to wake up a sleeping thread
-static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
+static void thread_sleep_handler(Timer* timer, zx_time_t now, void* arg) {
   Thread* t = (Thread*)arg;
 
   DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
@@ -966,7 +966,7 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
   // spin trylocking on the thread lock since the routine that set up the callback,
   // thread_sleep_etc, may be trying to simultaneously cancel this timer while holding the
   // thread_lock.
-  if (timer_trylock_or_cancel(timer, &thread_lock)) {
+  if (timer->TrylockOrCancel(&thread_lock)) {
     return;
   }
 
@@ -1024,8 +1024,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
     return ZX_OK;
   }
 
-  timer_t timer;
-  timer_init(&timer);
+  Timer timer;
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
@@ -1039,7 +1038,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
   }
 
   // set a one shot timer to wake us up and reschedule
-  timer_set(&timer, deadline, thread_sleep_handler, current_thread);
+  timer.Set(deadline, thread_sleep_handler, current_thread);
 
   current_thread->state_ = THREAD_SLEEPING;
   current_thread->blocked_status_ = ZX_OK;
@@ -1049,7 +1048,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
   current_thread->interruptable_ = false;
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
-  timer_cancel(&timer);
+  timer.Cancel();
 
   return current_thread->blocked_status_;
 }

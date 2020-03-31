@@ -349,7 +349,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   }
 
   // Now that the CPU is no longer processing tasks, move all of its timers
-  timer_transition_off_cpu(cpu_id);
+  TimerQueue::TransitionOffCpu(cpu_id);
 
   // Move the CPU's queued DPCs to the current CPU.
   Dpc::ShutdownTransitionOffCpu(cpu_id);

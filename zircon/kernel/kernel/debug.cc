@@ -149,17 +149,17 @@ class RecurringCallback {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(RecurringCallback);
 
-  static void CallbackWrapper(timer_t* t, zx_time_t now, void* arg);
+  static void CallbackWrapper(Timer* t, zx_time_t now, void* arg);
 
   DECLARE_SPINLOCK(SpinLock) lock_;
-  timer_t timer_ = TIMER_INITIAL_VALUE(timer_t);
+  Timer timer_;
   bool started_ = false;
   CallbackFunc func_ = nullptr;
 };
 
 static constexpr TimerSlack kSlack{ZX_MSEC(10), TIMER_SLACK_CENTER};
 
-void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
+void RecurringCallback::CallbackWrapper(Timer* t, zx_time_t now, void* arg) {
   auto cb = static_cast<RecurringCallback*>(arg);
   cb->func_();
 
@@ -168,7 +168,7 @@ void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
 
     if (cb->started_) {
       const Deadline deadline(zx_time_add_duration(now, ZX_SEC(1)), kSlack);
-      timer_set(t, deadline, CallbackWrapper, arg);
+      t->Set(deadline, CallbackWrapper, arg);
     }
   }
 
@@ -182,10 +182,10 @@ void RecurringCallback::Toggle() {
   if (!started_) {
     const Deadline deadline(zx_time_add_duration(current_time(), ZX_SEC(1)), kSlack);
     // start the timer
-    timer_set(&timer_, deadline, CallbackWrapper, static_cast<void*>(this));
+    timer_.Set(deadline, CallbackWrapper, static_cast<void*>(this));
     started_ = true;
   } else {
-    timer_cancel(&timer_);
+    timer_.Cancel();
     started_ = false;
   }
 }

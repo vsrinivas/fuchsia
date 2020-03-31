@@ -657,7 +657,6 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     return ZX_ERR_NO_MEMORY;
   }
 
-  timer_init(&vcpu->local_apic_state_.timer);
   status = vcpu->local_apic_state_.interrupt_tracker.Init();
   if (status != ZX_OK) {
     return status;
@@ -715,7 +714,7 @@ Vcpu::~Vcpu() {
   if (!vmcs_page_.IsAllocated()) {
     return;
   }
-  timer_cancel(&local_apic_state_.timer);
+  local_apic_state_.timer.Cancel();
   thread_->SetMigrateFn(Thread::MigrateFn());
 
   // The destructor may be called from a different thread, therefore we must
