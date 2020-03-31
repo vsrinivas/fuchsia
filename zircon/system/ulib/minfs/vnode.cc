@@ -901,7 +901,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
   zx_status_t status;
 #ifdef __Fuchsia__
   // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
-  ZX_DEBUG_ASSERT(len < TransactionLimits::kMaxWriteBytes);
+  ZX_DEBUG_ASSERT(len <= TransactionLimits::kMaxWriteBytes);
   if ((status = InitVmo(transaction)) != ZX_OK) {
     return status;
   }

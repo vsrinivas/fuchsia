@@ -381,7 +381,7 @@ zx_status_t MinfsCreator::Fsck() {
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }
-  return minfs::Fsck(std::move(bc), minfs::Repair::kEnabled);
+  return minfs::Fsck(std::move(bc), minfs::FsckOptions{ .repair = true });
 }
 
 zx_status_t MinfsCreator::UsedDataSize() {

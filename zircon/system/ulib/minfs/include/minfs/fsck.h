@@ -39,12 +39,9 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
                                    Superblock* out_info);
 #endif
 
-// Indicates whether fsck repair is allowed on the corrupted filesystem.
-enum class Repair {
-  // Do not repair the filesystem.
-  kDisabled,
-  // Repair the filesystem.
-  kEnabled,
+struct FsckOptions {
+  // If true, try and repair the file-system if necessary.
+  bool repair = false;
 };
 
 // Updates generation_count and checksum of the superblock.
@@ -76,7 +73,7 @@ zx_status_t UsedSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size);
 //
 // Invokes CheckSuperblock, and repairs filesystem if needed.
 // On success, returns bcache to |out_bc|, if supplied.
-zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair repair_fs,
+zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
                  std::unique_ptr<Bcache>* out_bc = nullptr);
 
 // Returns number of blocks required to store inode_count inodes

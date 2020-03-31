@@ -83,7 +83,7 @@ blk_t LogicalBlockDoublyIndirect(blk_t doubly_indirect, blk_t indirect = 0, blk_
 
 class MinfsChecker {
  public:
-  static zx_status_t Create(std::unique_ptr<Bcache> bc, Repair fsck_repair,
+  static zx_status_t Create(std::unique_ptr<Bcache> bc, const FsckOptions& options,
                             std::unique_ptr<MinfsChecker>* out);
 
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<MinfsChecker> checker) {
@@ -767,10 +767,10 @@ zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
 MinfsChecker::MinfsChecker()
     : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {}
 
-zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, Repair fsck_repair,
+zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& fsck_options,
                                  std::unique_ptr<MinfsChecker>* out) {
   MountOptions options = {};
-  if (fsck_repair == Repair::kEnabled) {
+  if (fsck_options.repair) {
     options.readonly_after_initialization = false;
     options.repair_filesystem = true;
     options.use_journal = true;
@@ -1085,9 +1085,10 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
   return ZX_OK;
 }
 
-zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr<Bcache>* out_bc) {
+zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
+                 std::unique_ptr<Bcache>* out_bc) {
   std::unique_ptr<MinfsChecker> chk;
-  zx_status_t status = MinfsChecker::Create(std::move(bc), fsck_repair, &chk);
+  zx_status_t status = MinfsChecker::Create(std::move(bc), options, &chk);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck: Init failure: %d\n", status);
     return status;

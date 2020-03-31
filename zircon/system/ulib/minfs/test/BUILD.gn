@@ -47,6 +47,7 @@ test("minfs-unit") {
     "unit/format-test.cc",
     "unit/fsck-test.cc",
     "unit/inspector-test.cc",
+    "unit/journal-integration-fixture.cc",
     "unit/journal-test.cc",
     "unit/loader-test.cc",
     "unit/minfs-inspector-test.cc",

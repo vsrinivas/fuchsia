@@ -41,7 +41,7 @@ TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemWithRepair) {
   std::unique_ptr<Bcache> bcache;
   ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
   ASSERT_OK(Mkfs(bcache.get()));
-  ASSERT_OK(Fsck(std::move(bcache), Repair::kEnabled));
+  ASSERT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }));
 }
 
 TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemWithoutRepair) {
@@ -49,7 +49,7 @@ TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemWithoutRepair) {
   std::unique_ptr<Bcache> bcache;
   ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
   ASSERT_OK(Mkfs(bcache.get()));
-  ASSERT_OK(Fsck(std::move(bcache), Repair::kDisabled));
+  ASSERT_OK(Fsck(std::move(bcache), FsckOptions()));
 }
 
 TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemCheckAfterMount) {
@@ -62,7 +62,7 @@ TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemCheckAfterMount) {
   std::unique_ptr<Minfs> fs;
   ASSERT_OK(Minfs::Create(std::move(bcache), options, &fs));
   bcache = Minfs::Destroy(std::move(fs));
-  ASSERT_OK(Fsck(std::move(bcache), Repair::kEnabled));
+  ASSERT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }));
 }
 
 class ConsistencyCheckerFixtureVerbose : public zxtest::Test {
@@ -158,7 +158,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoInodesPointToABlock) {
   inodes[file2_ino].size = inodes[file1_ino].size;
   EXPECT_OK(bcache->Writeblk(inode_block, inodes));
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), Repair::kEnabled, &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
@@ -185,7 +185,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
   inodes[file_ino].dnum[1] = inodes[file_ino].dnum[0];
   EXPECT_OK(bcache->Writeblk(inode_block, inodes));
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), Repair::kEnabled, &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
@@ -218,7 +218,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
   inodes[file_ino].dinum[0] = inodes[file_ino].dnum[0];
   EXPECT_OK(bcache->Writeblk(inode_block, inodes));
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), Repair::kEnabled, &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions { .repair = true }, &bcache));
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, PurgedFileWithBadMagic) {
@@ -233,7 +233,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, PurgedFileWithBadMagic) {
   inodes[31].magic = kMinfsMagicFile;
   EXPECT_OK(bcache->Writeblk(sb.ino_block, inodes));
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), Repair::kEnabled, &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
 }
 
 }  // namespace

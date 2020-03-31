@@ -81,7 +81,8 @@ void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
 
 // Checks all slices against the block device. May shrink the partition.
 zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
-                        block_client::BlockDevice* device) {
+                        block_client::BlockDevice* device,
+                        bool repair_slices) {
   fuchsia_hardware_block_volume_VolumeInfo fvm_info;
   zx_status_t status = device->VolumeQuery(&fvm_info);
   if (status != ZX_OK) {
@@ -137,7 +138,7 @@ zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    if (fvm_count > minfs_count) {
+    if (repair_slices && fvm_count > minfs_count) {
       // If FVM reports more slices than we expect, try to free remainder.
       extend_request_t shrink;
       shrink.length = fvm_count - minfs_count;
@@ -429,7 +430,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
     const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
     zx_status_t status;
 #ifdef __Fuchsia__
-    status = CheckSlices(info, kBlocksPerSlice, device);
+    status = CheckSlices(info, kBlocksPerSlice, device, /*repair_slices=*/false);
     if (status != ZX_OK) {
       return status;
     }
@@ -1156,7 +1157,8 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   std::unique_ptr<SuperblockManager> sb;
   IntegrityCheck checks = options.repair_filesystem ? IntegrityCheck::kAll : IntegrityCheck::kNone;
 #ifdef __Fuchsia__
-  status = SuperblockManager::Create(bc->device(), &info, bc->Maxblk(), checks, &sb);
+  block_client::BlockDevice* device = bc->device();
+  status = SuperblockManager::Create(device, &info, bc->Maxblk(), checks, &sb);
 #else
   status = SuperblockManager::Create(&info, bc->Maxblk(), checks, &sb);
 #endif
@@ -1186,6 +1188,18 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   }
 
   if (options.repair_filesystem) {
+#ifdef __Fuchsia__
+    if (info.flags & kMinfsFlagFVM) {
+      // After replaying the journal, it's now safe to repair the FVM slices.
+      const size_t kBlocksPerSlice = info.slice_size / kMinfsBlockSize;
+      zx_status_t status;
+      status = CheckSlices(&info, kBlocksPerSlice, device, /*repair_slices=*/true);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+#endif
+
     // On a read-write filesystem we unset the kMinfsFlagClean flag to indicate that the filesystem
     // may begin receiving modifications.
     //
@@ -1767,7 +1781,7 @@ zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
     return status;
   }
 
-  return Fsck(std::move(bc), Repair::kDisabled);
+  return Fsck(std::move(bc), FsckOptions());
 }
 
 zx_status_t SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,

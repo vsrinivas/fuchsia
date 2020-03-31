@@ -38,9 +38,9 @@ namespace {
 
 int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
   if (options.readonly_after_initialization) {
-    return minfs::Fsck(std::move(bc), minfs::Repair::kDisabled);
+    return minfs::Fsck(std::move(bc), minfs::FsckOptions());
   }
-  return minfs::Fsck(std::move(bc), minfs::Repair::kEnabled);
+  return minfs::Fsck(std::move(bc), minfs::FsckOptions{ .repair = true });
 }
 
 using minfs::ServeLayout;

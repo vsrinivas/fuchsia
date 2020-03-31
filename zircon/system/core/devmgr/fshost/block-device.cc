@@ -260,7 +260,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
         fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
         return status;
       }
-      status = minfs::Fsck(std::move(bc), minfs::Repair::kEnabled);
+      status = minfs::Fsck(std::move(bc), minfs::FsckOptions{ .repair = true });
 
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();
@@ -269,11 +269,6 @@ zx_status_t BlockDevice::CheckFilesystem() {
         fprintf(stderr, "|                                                             \n");
         fprintf(stderr, "|   WARNING: fshost fsck failure!                             \n");
         fprintf(stderr, "|   Corrupt %s filesystem\n", disk_format_string_[format_]);
-        fprintf(stderr, "|                                                             \n");
-        fprintf(stderr, "|   If your system encountered power-loss due to an unclean   \n");
-        fprintf(stderr, "|   shutdown, this error was expected. Journaling in minfs    \n");
-        fprintf(stderr, "|   is being tracked by ZX-2093. Re-paving will reset your    \n");
-        fprintf(stderr, "|   device.                                                   \n");
         fprintf(stderr, "|                                                             \n");
         fprintf(stderr, "|   If your system was shutdown cleanly (via 'dm poweroff'    \n");
         fprintf(stderr, "|   or an OTA), report this device to the local-storage       \n");

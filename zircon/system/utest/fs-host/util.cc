@@ -91,5 +91,5 @@ int run_fsck() {
   }
 
   // The filesystem is never repaired on the host side.
-  return Fsck(std::move(block_cache), minfs::Repair::kDisabled);
+  return Fsck(std::move(block_cache), minfs::FsckOptions());
 }
