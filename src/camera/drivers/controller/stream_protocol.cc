@@ -104,7 +104,7 @@ void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, floa
     parent_node = parent_node->parent_node();
   }
   if (parent_node == nullptr) {
-    status = ZX_ERR_INVALID_ARGS;
+    status = ZX_ERR_NOT_SUPPORTED;
   }
 }
 

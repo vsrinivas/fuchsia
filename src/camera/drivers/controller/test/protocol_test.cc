@@ -927,26 +927,6 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ds_frame_count, static_cast<uint32_t>(kNumBuffers));
   }
 
-  void TestInvalidCropRectChange() {
-    auto stream_type = kStreamTypeMonitoring;
-    fuchsia::camera2::StreamPtr stream;
-    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type, stream));
-
-    // Start streaming.
-    async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
-    RunLoopUntilIdle();
-
-    auto callback_called = false;
-    async::PostTask(dispatcher(), [&]() {
-      stream->SetRegionOfInterest(0.0, 0.0, 0.0, 0.0, [&](zx_status_t status) {
-        callback_called = true;
-        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-      });
-    });
-    RunLoopUntilIdle();
-    EXPECT_TRUE(callback_called);
-  }
-
   void TestCropRectChange() {
     auto stream_type = kStreamTypeVideo;
     fuchsia::camera2::StreamPtr stream;
@@ -1002,7 +982,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     async::PostTask(dispatcher(), [&]() {
       stream->SetRegionOfInterest(0.0, 0.0, 0.0, 0.0, [&](zx_status_t status) {
         callback_called = true;
-        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+        EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
       });
     });
     RunLoopUntilIdle();
@@ -1071,8 +1051,6 @@ TEST_F(ControllerProtocolTest, TestFindGraphHead) { TestFindGraphHead(); }
 TEST_F(ControllerProtocolTest, TestResolutionChange) { TestResolutionChange(); }
 
 TEST_F(ControllerProtocolTest, TestPipelineManagerShutdown) { TestPipelineManagerShutdown(); }
-
-TEST_F(ControllerProtocolTest, TestInvalidCropRectChange) { TestInvalidCropRectChange(); }
 
 TEST_F(ControllerProtocolTest, TestCropRectChange) { TestCropRectChange(); }
 
