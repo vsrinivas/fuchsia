@@ -396,6 +396,7 @@ void MediaApp::Play() {
 
     auto now = zx::clock::get_monotonic();
     auto now_str = RefTimeMsStrFromZxTime(now);
+    srand48(now.get());
 
     reference_start_time_ = use_pts_ ? (now + zx::duration{min_lead_time_} + kPlayStartupDelay)
                                      : zx::time{fuchsia::media::NO_TIMESTAMP};
@@ -504,38 +505,42 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
                                     uint64_t frames_since_start, OutputSignalType signal_type,
                                     uint32_t num_chans, double frames_per_period,
                                     double amp_scalar) {
-  double raw_val;  // Generated signal val, before applying amplitude scaling.
-  double rads_per_frame = 2.0 * M_PI / frames_per_period;  // Radians/Frame.
+  const double rads_per_frame = 2.0 * M_PI / frames_per_period;  // Radians/Frame.
 
   for (uint32_t frame = 0; frame < num_frames; ++frame, ++frames_since_start) {
-    switch (signal_type) {
-      case kOutputTypeSine:
-        raw_val = sin(rads_per_frame * frames_since_start);
-        break;
-      case kOutputTypeSquare:
-        raw_val =
-            (fmod(frames_since_start, frames_per_period) >= frames_per_period / 2) ? -1.0 : 1.0;
-        break;
-      case kOutputTypeSawtooth:
-        raw_val = (fmod(frames_since_start / frames_per_period, 1.0) * 2.0) - 1.0;
-        break;
-      case kOutputTypeNoise:
-        // TODO(mpuryear): consider making the white noise generator even more truly random, with
-        // multiple rand() calls at different frequencies.
-        raw_val = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
-        break;
-    }
+    // Generated signal value, before applying amplitude scaling.
+    double raw_val;
 
-    SampleType val = raw_val * amp_scalar;
+    for (auto chan_num = 0u; chan_num < num_chans; ++chan_num) {
+      switch (signal_type) {
+        case kOutputTypeSine:
+          raw_val = sin(rads_per_frame * frames_since_start);
+          break;
+        case kOutputTypeSquare:
+          raw_val =
+              (fmod(frames_since_start, frames_per_period) >= frames_per_period / 2) ? -1.0 : 1.0;
+          break;
+        case kOutputTypeSawtooth:
+          raw_val = (fmod(frames_since_start / frames_per_period, 1.0) * 2.0) - 1.0;
+          break;
+        case kOutputTypeNoise:
+          // TODO(49237): consider making multiple drand() calls at different frequencies.
+          // This would also enable alternate sonic profiles such as "pink" noise.
+          raw_val = drand48() * 2.0 - 1.0;
+          break;
+      }
 
-    // If generating a 24-in-32 signal, clear the unused bottom 8 bits.
-    if (std::is_same_v<SampleType, int32_t>) {
-      val = static_cast<int32_t>(val) & 0xFFFFFF00;
-    }
+      // Final generated signal value
+      SampleType val;
+      if constexpr (std::is_same_v<SampleType, float>) {
+        val = raw_val * amp_scalar;
+      } else if constexpr (std::is_same_v<SampleType, int32_t>) {  // 24-bit in 32-bit container:
+        val = lround(raw_val * amp_scalar / 256.0);                // round at bit 8, and
+        val = val << 8;                                            // leave bits 0-7 blank
+      } else {
+        val = lround(raw_val * amp_scalar);
+      }
 
-    // Put the same content into all channels (even white noise)
-    // TODO(mpuryear): for white noise, treat each channel independently.
-    for (uint32_t chan_num = 0; chan_num < num_chans; ++chan_num) {
       audio_buffer[frame * num_chans + chan_num] = val;
     }
   }
