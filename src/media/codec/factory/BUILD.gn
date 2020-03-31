@@ -41,7 +41,7 @@ executable("codec_detect_hw_encode_test_bin") {
 
   deps = [
     ":factory_source",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
 }
@@ -68,7 +68,7 @@ executable("codec_detect_hw_decode_test_bin") {
 
   deps = [
     ":factory_source",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
 }

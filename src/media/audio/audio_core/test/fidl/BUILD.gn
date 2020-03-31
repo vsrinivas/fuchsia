@@ -31,7 +31,7 @@ executable("audio_fidl_tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/logging",

@@ -376,7 +376,7 @@ executable("device_unittests") {
 
   deps = [
     ":qcow_test_data",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
   ]

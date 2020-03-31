@@ -4,7 +4,5 @@
 
 group("tests") {
   testonly = true
-  deps = [
-    "clocktree/tests:clocktree_test"
-  ]
+  deps = [ "clocktree/tests:clocktree_test" ]
 }

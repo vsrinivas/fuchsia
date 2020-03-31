@@ -23,7 +23,7 @@ executable("codec_adapter_sw_test_bin") {
   sources = [ "codec_adapter_sw_test.cc" ]
 
   deps = [
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs/sw:codec_adapter_sw",
   ]
 }
@@ -47,7 +47,7 @@ executable("timestamp_extrapolator_test_bin") {
   sources = [ "timestamp_extrapolator_tests.cc" ]
 
   deps = [
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:timestamp_extrapolator",
   ]
 }
@@ -82,7 +82,7 @@ executable("chunk_input_stream_test_bin") {
 
   deps = [
     ":test_codec_packets",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:chunk_input_stream",
   ]
 }
@@ -107,7 +107,7 @@ executable("output_sink_test_bin") {
 
   deps = [
     ":test_codec_packets",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:output_sink",
   ]
 }

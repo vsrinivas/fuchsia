@@ -103,7 +103,7 @@ executable("flutter_semantics_tests") {
 
   deps = [
     ":semantics_integration_test_fixture",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
@@ -118,7 +118,7 @@ executable("web_semantics_tests") {
     ":semantics_integration_test_fixture",
     "//src/chromium/web_runner_tests:mock_server",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/ui/a11y/lib/view",

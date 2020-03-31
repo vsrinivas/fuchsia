@@ -11,6 +11,6 @@ executable("test") {
     "//src/camera/calibration/algorithms",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/image_writer",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

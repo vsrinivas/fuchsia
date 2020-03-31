@@ -20,7 +20,7 @@ executable("unittests") {
 
   deps = [
     "//src/lib/cobalt/cpp:unittests",
-    "//src/lib/syslog/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

@@ -204,7 +204,7 @@ executable("cobalt_app_unittests") {
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/cobalt/cpp:metric_event_builder",
     "//src/lib/fsl",
-    "//src/lib/syslog/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/cobalt/src/logger:fake_logger",
     "//third_party/cobalt/src/logger:logger_test_utils",
     "//third_party/cobalt/src/public/testing:fake_cobalt_service",

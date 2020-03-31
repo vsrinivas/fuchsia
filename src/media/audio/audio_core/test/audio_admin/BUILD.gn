@@ -16,7 +16,7 @@ executable("audio_admin_test_bin") {
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test",
     "//zircon/public/lib/fzl",

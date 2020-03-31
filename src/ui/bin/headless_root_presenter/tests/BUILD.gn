@@ -39,7 +39,7 @@ executable("headless_root_presenter_apptests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/ui/bin/headless_root_presenter:lib",
     "//third_party/rapidjson",

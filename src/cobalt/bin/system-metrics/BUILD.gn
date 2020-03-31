@@ -90,7 +90,7 @@ executable("cobalt_system_metrics_unittests") {
     "//src/cobalt/bin/testing:fake_logger_lib",
     "//src/cobalt/bin/utils:clock",
     "//src/lib/fsl",
-    "//src/lib/syslog/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 

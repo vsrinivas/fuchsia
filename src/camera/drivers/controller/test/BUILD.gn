@@ -19,7 +19,7 @@ executable("test") {
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/test_utils",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fake_ddk",

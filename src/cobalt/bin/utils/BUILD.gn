@@ -65,7 +65,6 @@ executable("cobalt_utils_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testing:fake_http_loader",
     "//src/lib/fsl",
-    "//src/lib/syslog/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",

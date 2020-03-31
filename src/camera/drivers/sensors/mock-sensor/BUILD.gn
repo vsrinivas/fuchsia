@@ -66,7 +66,7 @@ executable("mock-sensor-integration-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.camerasensor",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",

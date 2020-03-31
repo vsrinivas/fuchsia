@@ -216,7 +216,7 @@ executable("vmm_unittests") {
     ":guest_config",
     ":lib",
     "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
 

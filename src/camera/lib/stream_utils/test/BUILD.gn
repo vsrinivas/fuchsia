@@ -10,6 +10,6 @@ executable("test") {
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/stream_utils",
     "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

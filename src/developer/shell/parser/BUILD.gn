@@ -35,7 +35,7 @@ test("parser_tests_bin") {
 
   deps = [
     ":parser",
-    "//src/lib/syslog/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fit",
   ]
 }

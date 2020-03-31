@@ -11,7 +11,7 @@ test("input-report-inject-test") {
     "//sdk/fidl/fuchsia.input.inject:fuchsia.input.inject",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

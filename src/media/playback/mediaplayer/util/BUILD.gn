@@ -35,6 +35,6 @@ test("tests") {
 
   deps = [
     ":util",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

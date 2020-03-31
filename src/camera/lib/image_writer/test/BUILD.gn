@@ -17,7 +17,7 @@ executable("test") {
     "//src/camera/lib/image_writer",
     "//src/camera/lib/image_writer:hsv_color_source",
     "//src/camera/lib/image_writer:image_format_rgba",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/image-format",

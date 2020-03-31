@@ -17,7 +17,7 @@ executable("gesture_recognizers_tests") {
   ]
 
   deps = [
-    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
