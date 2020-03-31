@@ -1,13 +1,13 @@
 {
-  "fidl/fuchsia.settings/accessibility.fidl": "6eb250d1b8b1e943425860276946de30",
-  "fidl/fuchsia.settings/audio.fidl": "4a2fd3e931e8cbff47e657f6a4987681",
-  "fidl/fuchsia.settings/device.fidl": "f20ca892f948380b2630ddaa8769e946",
-  "fidl/fuchsia.settings/display.fidl": "2c538a8a80273b89c18b1cefd272552b",
-  "fidl/fuchsia.settings/do_not_disturb.fidl": "cf2a2a00a6905d3a796693793547478b",
-  "fidl/fuchsia.settings/intl.fidl": "2ea30eea629e9d24ec9bda900b0ea0fa",
-  "fidl/fuchsia.settings/night_mode.fidl": "cf992aed829fbee3c5f973997237e3aa",
-  "fidl/fuchsia.settings/privacy.fidl": "4d9c172309061753bb3eff62f26efa58",
-  "fidl/fuchsia.settings/settings.fidl": "8005babad1700cbf2eb0359f5e6ab6e4",
-  "fidl/fuchsia.settings/setup.fidl": "4930a5baeb2ce45c3aec1a6669ebb86e",
-  "fidl/fuchsia.settings/system.fidl": "5fdfc633665314cbd217b6835105428f"
+  "fidl/fuchsia.settings/accessibility.fidl": "f58b81cd735d031f99b4fe810b76f883",
+  "fidl/fuchsia.settings/audio.fidl": "c4723c133307943bfc64fd28d66e44a2",
+  "fidl/fuchsia.settings/device.fidl": "c5e0660e8c5a277ff3d41409f9905b90",
+  "fidl/fuchsia.settings/display.fidl": "7be9d1cacf30290749ec81ce0623413e",
+  "fidl/fuchsia.settings/do_not_disturb.fidl": "9bd21511bc939ad7cea3b6fa7b71fce8",
+  "fidl/fuchsia.settings/intl.fidl": "3f48ff92728a512ff7767337fc362c52",
+  "fidl/fuchsia.settings/night_mode.fidl": "c37d97b3111d3d8db4017872f6176e7a",
+  "fidl/fuchsia.settings/privacy.fidl": "84179421335bed4537d8fa4dcda5170d",
+  "fidl/fuchsia.settings/settings.fidl": "30fc2c4d2806f968f501f96621d81a6a",
+  "fidl/fuchsia.settings/setup.fidl": "e9987e6a39f33a2e19a04c67a7dc67f7",
+  "fidl/fuchsia.settings/system.fidl": "ec09fa81dff19a05971e7eaf873f6b43"
 }

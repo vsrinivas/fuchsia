@@ -5,10 +5,16 @@
 library fuchsia.settings;
 
 /// Settings that influence the device's setup behavior.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Setup {
     /// Gets the current [SetupSettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
     Watch() -> (SetupSettings settings);
 
     /// Changes the settings specified in [SetupSettings]. Any field not set in

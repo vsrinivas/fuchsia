@@ -9,10 +9,16 @@ library fuchsia.settings;
 /// incoming calls could be rejected or silent, and notifications could be
 /// paused, silent, or hidden. High-priority disruptions like alarms can be
 /// allowed.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol DoNotDisturb {
     /// Gets the current [`DoNotDisturbSettings`]. Returns immediately on first
     /// call; subsequent calls return when the values change.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
     Watch() -> (DoNotDisturbSettings settings);
 
     /// Sets [`DoNotDisturbSettings`] settings. Any field not explicitly set in

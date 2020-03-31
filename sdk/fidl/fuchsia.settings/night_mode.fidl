@@ -11,10 +11,16 @@ library fuchsia.settings;
 /// 2. System volume is set to an override maximum.
 /// 3. LED Brightness is set to an overridable maximum.
 /// 4. Sleep mode is enabled/not.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol NightMode {
     /// Gets the current [`NightModeSettings`]. Returns immediately on first
     /// call; subsequent calls return when the values change.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
     Watch() -> (NightModeSettings settings);
 
     /// Sets [`NightModeSettings`] settings. Any field not explicitly set in

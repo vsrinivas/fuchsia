@@ -4,6 +4,10 @@
 
 library fuchsia.settings;
 
+/// Settings related to device info.
+///
+/// Supported SettingsEpitaph enums:
+/// FILE_READ_ERROR, INTERNAL_SERVICE_ERROR
 [Discoverable]
 protocol Device {
     /// Notifies of a change in information about the device.
@@ -11,6 +15,9 @@ protocol Device {
     /// On a given connection, the first call will return the current `settings` value while
     /// subsequent calls will only return the new `settings` value upon a value change. This
     /// follows the hanging get pattern.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
     Watch() -> (DeviceSettings device_settings);
 };
 

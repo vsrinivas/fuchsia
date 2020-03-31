@@ -7,11 +7,22 @@ library fuchsia.settings;
 using fuchsia.media;
 
 /// Settings related to audio.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Audio {
+    /// DEPRECATED: new watches should use Watch2.
+    [Transitional = "Deprecated in favor of Watch2"]
+    Watch() -> (AudioSettings settings) error Error;
+
     /// Gets the current [AudioSettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
-    Watch() -> (AudioSettings settings) error Error;
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    [Transitional = "Replacement for Watch"]
+    Watch2() -> (AudioSettings settings);
 
     /// Sets audio settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.

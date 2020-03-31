@@ -7,8 +7,18 @@ library fuchsia.settings;
 using fuchsia.ui.types;
 
 /// Modify or watch accessibility settings that are persisted.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Accessibility {
+    /// This call may fail if AccessibilitySettings are not accessible, possibly because of file
+    /// system errors, not being supported on this product, or general service failures.
+    ///
+    /// DEPRECATED: new watches should use Watch2.
+    [Transitional = "Deprecated in favor of Watch2"]
+    Watch() -> (AccessibilitySettings settings) error Error;
+
     /// Gets the current value of all accessibility settings. Returns
     /// immediately on first call; subsequent calls return when any of the
     /// values change.
@@ -16,9 +26,10 @@ protocol Accessibility {
     /// - `settings` all current values of the accessibility settings.
     /// * see [`AccessibilitySettings`] for their meaning.
     ///
-    /// This call may fail if AccessibilitySettings are not accessible, possibly because of file
-    /// system errors, not being supported on this product, or general service failures.
-    Watch() -> (AccessibilitySettings settings) error Error;
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    [Transitional = "Replacement for Watch"]
+    Watch2() -> (AccessibilitySettings settings);
 
     /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.

@@ -22,12 +22,17 @@ class MockSetUIAccessibility : public fuchsia::settings::Accessibility {
   void Watch(WatchCallback callback) override;
 
   // |fuchsia.settings.Accessibility|
+  void Watch2(Watch2Callback callback) override;
+
+  // |fuchsia.settings.Accessibility|
   void Set(fuchsia::settings::AccessibilitySettings settings, SetCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::settings::Accessibility> bindings_;
 
   WatchCallback watchCallback_;
+
+  Watch2Callback watch2Callback_;
 
   bool first_watch_;
   fuchsia::settings::AccessibilitySettings settings_;

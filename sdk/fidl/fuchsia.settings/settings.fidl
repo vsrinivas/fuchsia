@@ -9,3 +9,18 @@ enum Error {
     FAILED = 1;
     UNSUPPORTED = 2;
 };
+
+/// Common epitaph messages used across different settings.
+enum SettingsEpitaph {
+    // The request to the service is not supported. The client should not try to reconnect.
+    REQUEST_NOT_SUPPORTED = 1;
+    // There was an unexpected error in the underlying service. The client may try to
+    // reconnect as it is unknown what type of error occurred.
+    INTERNAL_SERVICE_ERROR = 2;
+    // There was an error communicating with persistent storage. The client is not recommended
+    // to reconnect as the storage is not expected to fail.
+    PERSISTENT_STORAGE_ERROR = 3;
+    // Failed to read device information from file. The client is not recommended to try to
+    // reconnect as the file reads are not expected to fail.
+    FILE_READ_ERROR = 4;
+};

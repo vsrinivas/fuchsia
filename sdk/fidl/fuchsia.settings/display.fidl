@@ -6,17 +6,34 @@ library fuchsia.settings;
 
 using fuchsia.ui.types;
 
-/// Settings related to display
+/// Settings related to display.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Display {
+    /// DEPRECATED: new watches should use Watch2.
+    [Transitional = "Deprecated in favor of Watch2"]
+    Watch() -> (DisplaySettings settings) error Error;
+
     /// Gets the current [DisplaySettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
-    Watch() -> (DisplaySettings settings) error Error;
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    [Transitional = "Replacement for Watch"]
+    Watch2() -> (DisplaySettings settings);
+
+    /// DEPRECATED: new watches should use WatchLightSensor2.
+    WatchLightSensor(float32 delta) -> (LightSensorData light_sensor_data) error Error;
 
     /// Obtains the current data from the light sensor. Returns immediately on
     /// first call; subsequent calls return when the light sensor value changes
     ///  by a certain amount measured in lux.
-    WatchLightSensor(float32 delta) -> (LightSensorData light_sensor_data) error Error;
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    WatchLightSensor2(float32 delta) -> (LightSensorData light_sensor_data);
 
     /// Sets display settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.

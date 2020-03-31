@@ -25,6 +25,16 @@ void MockSetUIAccessibility::Watch(WatchCallback callback) {
   }
 }
 
+void MockSetUIAccessibility::Watch2(Watch2Callback callback) {
+  watch2Callback_ = std::move(callback);
+
+  // First call to Watch should return immediately.
+  if (first_watch_) {
+    watch2Callback_(std::move(settings_));
+    first_watch_ = false;
+  }
+}
+
 void MockSetUIAccessibility::Set(fuchsia::settings::AccessibilitySettings settings,
                                  SetCallback callback) {
   if (watchCallback_) {

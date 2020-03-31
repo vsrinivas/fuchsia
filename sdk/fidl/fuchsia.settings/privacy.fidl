@@ -4,15 +4,25 @@
 
 library fuchsia.settings;
 
+/// Settings related to privacy.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Privacy {
+    /// DEPRECATED: new watches should use Watch2.
+    [Transitional = "Deprecated in favor of Watch2"]
+    Watch() -> (PrivacySettings settings) error Error;
+
     /// Notifies of a change in privacy settings.
     ///
     /// On a given connection, the server will return immediately if this is the first call made,
-    /// if an error occurred or if the `settings` value has changed since a previous call.
-    /// Otherwise, the server will wait on a value change or error before returning the new value
-    /// or error. This follows the hanging get pattern.
-    Watch() -> (PrivacySettings settings) error Error;
+    /// or if the `settings` value has changed since a previous call. Otherwise, the server will
+    /// wait on a value change before returning the new value. This follows the hanging get pattern.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel will be closed.
+    [Transitional = "Replacement for Watch"]
+    Watch2() -> (PrivacySettings settings);
 
     /// Sets the privacy settings.
     ///
