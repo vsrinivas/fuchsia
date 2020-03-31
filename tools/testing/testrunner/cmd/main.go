@@ -165,7 +165,7 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 		// Tell tests written in Rust to print stack on failures.
 		"RUST_BACKTRACE=1",
 	)
-	localTester := newSubprocessTester(localWD, localEnv)
+	localTester := newSubprocessTester(localWD, localEnv, perTestTimeout)
 	if err := runTests(ctx, localTests, localTester, outputs); err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 		if nodename == "" {
 			return fmt.Errorf("%s must be set", nodenameEnvVar)
 		}
-		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests)
+		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
 	} else {
 		// TODO(fxbug.dev/41930): create a serial test runner in this case.
 		return fmt.Errorf("%s must be set", sshKeyEnvVar)
@@ -214,23 +214,13 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 	multistdout := io.MultiWriter(stdout, os.Stdout)
 	multistderr := io.MultiWriter(stderr, os.Stderr)
 
-	if perTestTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, perTestTimeout)
-		defer cancel()
-	}
-
 	startTime := time.Now()
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
 	if err != nil {
 		result = runtests.TestFailure
-		if err == context.DeadlineExceeded {
-			logger.Errorf(ctx, "test killed because timeout reached (%v)", perTestTimeout)
-		} else {
-			logger.Errorf(ctx, err.Error())
-			if errors.Is(err, sshutil.ConnectionError) {
-				return nil, err
-			}
+		logger.Errorf(ctx, err.Error())
+		if errors.Is(err, sshutil.ConnectionError) {
+			return nil, err
 		}
 	}
 

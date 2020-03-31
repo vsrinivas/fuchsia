@@ -33,7 +33,19 @@ const (
 	runTestSuiteName     = "run-test-suite"
 
 	componentV2Suffix = ".cm"
+
+	// Returned by both run-test-component and run-test-suite to indicate the
+	// test timed out.
+	timeoutExitCode = 21
 )
+
+type timeoutError struct {
+	timeout time.Duration
+}
+
+func (e *timeoutError) Error() string {
+	return fmt.Sprintf("test killed because timeout reached (%v)", e.timeout)
+}
 
 // For testability
 type cmdRunner interface {
@@ -55,17 +67,19 @@ type dataSinkCopier interface {
 
 // subprocessTester executes tests in local subprocesses.
 type subprocessTester struct {
-	r cmdRunner
+	r              cmdRunner
+	perTestTimeout time.Duration
 }
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func newSubprocessTester(dir string, env []string) *subprocessTester {
+func newSubprocessTester(dir string, env []string, perTestTimeout time.Duration) *subprocessTester {
 	return &subprocessTester{
 		r: &runner.SubprocessRunner{
 			Dir: dir,
 			Env: env,
 		},
+		perTestTimeout: perTestTimeout,
 	}
 }
 
@@ -77,7 +91,16 @@ func (t *subprocessTester) Test(ctx context.Context, test build.Test, stdout io.
 		}
 		command = []string{test.Path}
 	}
-	return nil, t.r.Run(ctx, command, stdout, stderr)
+	if t.perTestTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout)
+		defer cancel()
+	}
+	err := t.r.Run(ctx, command, stdout, stderr)
+	if err == context.DeadlineExceeded {
+		return nil, &timeoutError{t.perTestTimeout}
+	}
+	return nil, err
 }
 
 func (t *subprocessTester) Close() error {
@@ -91,13 +114,14 @@ type fuchsiaSSHTester struct {
 	copier                      dataSinkCopier
 	useRuntests                 bool
 	localOutputDir              string
+	perTestTimeout              time.Duration
 	connectionErrorRetryBackoff retry.Backoff
 }
 
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputDir string, useRuntests bool) (*fuchsiaSSHTester, error) {
+func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputDir string, useRuntests bool, perTestTimeout time.Duration) (*fuchsiaSSHTester, error) {
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %v", err)
@@ -121,6 +145,7 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 		copier:                      copier,
 		useRuntests:                 useRuntests,
 		localOutputDir:              localOutputDir,
+		perTestTimeout:              perTestTimeout,
 		connectionErrorRetryBackoff: retry.NewConstantBackoff(time.Second),
 	}, nil
 }
@@ -142,9 +167,21 @@ func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
 	return nil
 }
 
+func (t *fuchsiaSSHTester) isTimeoutError(test build.Test, err error) bool {
+	if t.perTestTimeout <= 0 || (
+	// We only know how to interpret the exit codes of these test runners.
+	test.Command[0] != runTestComponentName && test.Command[0] != runTestSuiteName) {
+		return false
+	}
+	if exitErr, ok := err.(*ssh.ExitError); ok {
+		return exitErr.Waitmsg.ExitStatus() == timeoutExitCode
+	}
+	return false
+}
+
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
-	setCommand(&test, t.useRuntests, dataOutputDir)
+	setCommand(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	var testErr error
 	const maxReconnectAttempts = 2
 	retry.Retry(ctx, retry.WithMaxRetries(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
@@ -168,6 +205,10 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.
 
 	if errors.Is(testErr, sshutil.ConnectionError) {
 		return nil, testErr
+	}
+
+	if t.isTimeoutError(test, testErr) {
+		testErr = &timeoutError{t.perTestTimeout}
 	}
 
 	var copyErr error
@@ -194,7 +235,7 @@ func (t *fuchsiaSSHTester) Close() error {
 	return t.r.Close()
 }
 
-func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string) {
+func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) {
 	if len(test.Command) > 0 {
 		return
 	}
@@ -207,14 +248,31 @@ func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string) {
 			dir := path.Dir(test.Path)
 			test.Command = []string{runtestsName, "-t", name, dir, "-o", remoteOutputDir}
 		}
-		return
+		if timeout > 0 {
+			test.Command = append(test.Command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
+		}
 	} else if test.PackageURL != "" {
 		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
-			test.Command = []string{runTestSuiteName, test.PackageURL}
+			test.Command = []string{runTestSuiteName}
+			// TODO(fxbug.dev/49262): Once fixed, combine
+			// timeout flag setting for v1 and v2.
+			if timeout > 0 {
+				test.Command = append(test.Command, "--timeout", fmt.Sprintf("%d", int64(timeout.Seconds())))
+			}
 		} else {
-			test.Command = []string{runTestComponentName, test.PackageURL}
+			test.Command = []string{runTestComponentName}
+			if timeout > 0 {
+				test.Command = append(test.Command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
+			}
 		}
+		test.Command = append(test.Command, test.PackageURL)
 	} else {
 		test.Command = []string{test.Path}
+		if timeout > 0 {
+			logger.Warningf(
+				context.Background(),
+				"timeout specified but will not be enforced because the test is being run directly (not by a runner such as %s)",
+				runTestComponentName)
+		}
 	}
 }

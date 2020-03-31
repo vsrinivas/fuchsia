@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"testing"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
@@ -203,7 +204,7 @@ func TestSSHTester(t *testing.T) {
 				}
 			}
 			if wantReconnCalls != runner.reconnectIfNecessaryCalls {
-				t.Errorf("ReconnectIfNecesssary() called wrong number of times. Gott: %d, Want: %d", runner.reconnectIfNecessaryCalls, wantReconnCalls)
+				t.Errorf("ReconnectIfNecesssary() called wrong number of times. Got: %d, Want: %d", runner.reconnectIfNecessaryCalls, wantReconnCalls)
 			}
 			if wantRunCalls != runner.runCalls {
 				t.Errorf("Run() called wrong number of times. Got: %d, Want: %d", runner.runCalls, wantRunCalls)
@@ -217,6 +218,7 @@ func TestSetCommand(t *testing.T) {
 		name        string
 		test        build.Test
 		useRuntests bool
+		timeout     time.Duration
 		expected    []string
 	}{
 		{
@@ -246,6 +248,15 @@ func TestSetCommand(t *testing.T) {
 			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR"},
 		},
 		{
+			name:        "use runtests timeout",
+			useRuntests: true,
+			test: build.Test{
+				Path: "/path/to/test",
+			},
+			timeout:  time.Second,
+			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR", "-i", "1"},
+		},
+		{
 			name:        "system path",
 			useRuntests: false,
 			test: build.Test{
@@ -263,6 +274,16 @@ func TestSetCommand(t *testing.T) {
 			expected: []string{"run-test-component", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
+			name:        "components v1 timeout",
+			useRuntests: false,
+			test: build.Test{
+				Path:       "/path/to/test",
+				PackageURL: "fuchsia-pkg://example.com/test.cmx",
+			},
+			timeout:  time.Second,
+			expected: []string{"run-test-component", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
+		},
+		{
 			name:        "components v2",
 			useRuntests: false,
 			test: build.Test{
@@ -271,11 +292,21 @@ func TestSetCommand(t *testing.T) {
 			},
 			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
 		},
+		{
+			name:        "components v2 timeout",
+			useRuntests: false,
+			test: build.Test{
+				Path:       "/path/to/test",
+				PackageURL: "fuchsia-pkg://example.com/test.cm",
+			},
+			timeout:  time.Second,
+			expected: []string{"run-test-suite", "--timeout", "1", "fuchsia-pkg://example.com/test.cm"},
+		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			setCommand(&c.test, c.useRuntests, "REMOTE_DIR")
+			setCommand(&c.test, c.useRuntests, "REMOTE_DIR", c.timeout)
 			if !reflect.DeepEqual(c.test.Command, c.expected) {
 				t.Errorf("unexpected command:\nexpected: %q\nactual: %q\n", c.expected, c.test.Command)
 			}
