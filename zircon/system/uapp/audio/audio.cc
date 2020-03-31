@@ -16,14 +16,16 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
+#include "generated-source.h"
+#include "noise-source.h"
 #include "sine-source.h"
 #include "wav-sink.h"
 #include "wav-source.h"
 
 static constexpr float DEFAULT_PLUG_MONITOR_DURATION = 10.0f;
 static constexpr float MIN_PLUG_MONITOR_DURATION = 0.5f;
-static constexpr float DEFAULT_TONE_DURATION = 1.5f;
-static constexpr float MIN_TONE_DURATION = 0.001f;
+static constexpr float DEFAULT_PLAY_DURATION = 1.5f;
+static constexpr float MIN_PLAY_DURATION = 0.001f;
 static constexpr float DEFAULT_TONE_FREQ = 440.0f;
 static constexpr float MIN_TONE_FREQ = 15.0f;
 static constexpr float MAX_TONE_FREQ = 20000.0f;
@@ -45,6 +47,7 @@ enum class Command {
   GAIN,
   PLUG_MONITOR,
   TONE,
+  NOISE,
   PLAY,
   RECORD,
 };
@@ -95,9 +98,14 @@ void usage(const char* prog_name) {
          "         at %d mSec.  Default is %.1f Hz for %.1f seconds\n",
           MIN_TONE_FREQ,
           MAX_TONE_FREQ,
-          static_cast<int>(MIN_TONE_DURATION * 1000),
+          static_cast<int>(MIN_PLAY_DURATION * 1000),
           DEFAULT_TONE_FREQ,
-          DEFAULT_TONE_DURATION);
+          DEFAULT_PLAY_DURATION);
+  printf("noise  : Params : [<duration>]\n"
+         "         Play pseudo-white noise for the specified duration.  Duration is\n"
+         "         given in seconds and floored at %d mSec.  Default is %.1f seconds\n",
+          static_cast<int>(MIN_PLAY_DURATION * 1000),
+          DEFAULT_PLAY_DURATION);
   printf("play   : Params : <file>\n");
   printf("         Play the specified WAV file on the selected output.\n");
   printf("record : Params : <file> [duration]\n"
@@ -319,6 +327,7 @@ int main(int argc, const char** argv) {
     { "gain",   Command::GAIN,          false, false },
     { "pmon",   Command::PLUG_MONITOR,  false, false },
     { "tone",   Command::TONE,          true,  false },
+    { "noise",  Command::NOISE,         true,  false },
     { "play",   Command::PLAY,          true,  false },
     { "record", Command::RECORD,        false, true  },
       // clang-format on
@@ -463,24 +472,26 @@ int main(int argc, const char** argv) {
       break;
 
     case Command::TONE:
-      duration = DEFAULT_TONE_DURATION;
+    case Command::NOISE:
+      duration = DEFAULT_PLAY_DURATION;
       if (arg < argc) {
-        if (sscanf(argv[arg], "%f", &tone_freq) != 1) {
-          printf("Failed to parse tone frequency \"%s\"\n", argv[arg]);
-          return -1;
+        if (cmd == Command::TONE) {
+          if (sscanf(argv[arg], "%f", &tone_freq) != 1) {
+            printf("Failed to parse tone frequency \"%s\"\n", argv[arg]);
+            return -1;
+          }
+          arg++;
+          tone_freq = fbl::clamp(tone_freq, 15.0f, 20000.0f);
         }
-        arg++;
-
         if (arg < argc) {
           if (sscanf(argv[arg], "%f", &duration) != 1) {
-            printf("Failed to parse tone duration \"%s\"\n", argv[arg]);
+            printf("Failed to parse playback duration \"%s\"\n", argv[arg]);
             return -1;
           }
           arg++;
         }
 
-        tone_freq = fbl::clamp(tone_freq, 15.0f, 20000.0f);
-        duration = fbl::max(duration, MIN_TONE_DURATION);
+        duration = fbl::max(duration, MIN_PLAY_DURATION);
       }
       break;
 
@@ -562,6 +573,24 @@ int main(int argc, const char** argv) {
 
       printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
       return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
+    }
+
+    case Command::NOISE: {
+      if (stream->input()) {
+        printf("The \"noise\" command can only be used on output streams.\n");
+        return -1;
+      }
+
+      NoiseSource noise_source;
+      res =
+          noise_source.Init(tone_freq, 1.0, duration, frame_rate, channels, active, sample_format);
+      if (res != ZX_OK) {
+        printf("Failed to initialize white noise generator (res %d)\n", res);
+        return res;
+      }
+
+      printf("Playing white noise for %.2f seconds\n", duration);
+      return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(noise_source);
     }
 
     case Command::PLAY: {

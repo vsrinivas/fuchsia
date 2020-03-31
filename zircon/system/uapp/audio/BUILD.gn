@@ -27,10 +27,16 @@ group("audio") {
 source_set("src") {
   visibility = [ ":*" ]
   sources = [
-    "sine-source.cc",
+    "generated-source.cc",
+    "generated-source.h",
+    "noise-source.h",
+    "sine-source.h",
     "wav-common.cc",
+    "wav-common.h",
     "wav-sink.cc",
+    "wav-sink.h",
     "wav-source.cc",
+    "wav-source.h",
   ]
   public_deps = [
     "//zircon/public/lib/fbl",
@@ -55,7 +61,10 @@ test("test") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio-test"
-  sources = [ "sine-source-test.cc" ]
+  sources = [
+    "noise-source-test.cc",
+    "sine-source-test.cc",
+  ]
   include_dirs = [ "." ]
   deps = [
     ":src",

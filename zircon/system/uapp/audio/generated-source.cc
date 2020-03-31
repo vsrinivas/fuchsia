@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sine-source.h"
+#include "generated-source.h"
 
-#include <math.h>
 #include <zircon/assert.h>
 
 #include <limits>
 
 #include <fbl/algorithm.h>
 
-zx_status_t SineSource::Init(float freq, float amp, float duration_secs, uint32_t frame_rate,
-                             uint32_t channels, uint32_t active,
-                             audio_sample_format_t sample_format) {
+zx_status_t GeneratedSource::Init(float freq, float amp, float duration_secs, uint32_t frame_rate,
+                                  uint32_t channels, uint32_t active,
+                                  audio_sample_format_t sample_format) {
   if (!frame_rate)
     return ZX_ERR_INVALID_ARGS;
 
@@ -28,7 +27,6 @@ zx_status_t SineSource::Init(float freq, float amp, float duration_secs, uint32_
                            ? std::numeric_limits<uint64_t>::max()
                            : static_cast<uint64_t>(duration_secs * static_cast<float>(frame_rate_));
   frames_produced_ = 0;
-  sine_scalar_ = (freq * 2.0 * M_PI) / frame_rate_;
   amp_ = fbl::clamp<double>(amp, 0.0, 1.0);
 
   switch (static_cast<audio_sample_format_t>(sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK)) {
@@ -47,7 +45,7 @@ zx_status_t SineSource::Init(float freq, float amp, float duration_secs, uint32_
   }
 }
 
-zx_status_t SineSource::GetFormat(Format* out_format) {
+zx_status_t GeneratedSource::GetFormat(Format* out_format) {
   if (out_format == nullptr)
     return ZX_ERR_INVALID_ARGS;
 
@@ -58,7 +56,7 @@ zx_status_t SineSource::GetFormat(Format* out_format) {
   return ZX_OK;
 }
 
-zx_status_t SineSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) {
+zx_status_t GeneratedSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) {
   ZX_DEBUG_ASSERT(get_frames_thunk_ != nullptr);
   return ((*this).*(get_frames_thunk_))(buffer, buf_space, out_packed);
 }
@@ -117,12 +115,12 @@ struct SampleTraits<AUDIO_SAMPLE_FORMAT_32BIT> {
 }  // namespace
 
 template <audio_sample_format_t SAMPLE_FORMAT>
-zx_status_t SineSource::InitInternal() {
+zx_status_t GeneratedSource::InitInternal() {
   using SampleType = typename SampleTraits<SAMPLE_FORMAT>::SampleType;
   using ComputedType = typename SampleTraits<SAMPLE_FORMAT>::ComputedType;
 
   sample_format_ = SAMPLE_FORMAT;
-  get_frames_thunk_ = &SineSource::GetFramesInternal<SAMPLE_FORMAT>;
+  get_frames_thunk_ = &GeneratedSource::GetFramesInternal<SAMPLE_FORMAT>;
   frame_size_ = static_cast<uint32_t>(sizeof(SampleType) * channels_);
   amp_ *= std::numeric_limits<ComputedType>::max() - 1;
 
@@ -130,7 +128,8 @@ zx_status_t SineSource::InitInternal() {
 }
 
 template <audio_sample_format_t SAMPLE_FORMAT>
-zx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint32_t* out_packed) {
+zx_status_t GeneratedSource::GetFramesInternal(void* buffer, uint32_t buf_space,
+                                               uint32_t* out_packed) {
   using Traits = SampleTraits<SAMPLE_FORMAT>;
   using SampleType = typename SampleTraits<SAMPLE_FORMAT>::SampleType;
   using ComputedType = typename SampleTraits<SAMPLE_FORMAT>::ComputedType;
@@ -144,13 +143,13 @@ zx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint
   ZX_DEBUG_ASSERT(frames_produced_ < frames_to_produce_);
   uint64_t todo =
       fbl::min<uint64_t>(frames_to_produce_ - frames_produced_, buf_space / frame_size_);
-  double pos = sine_scalar_ * static_cast<double>(frames_produced_);
+  double pos = pos_scalar_ * static_cast<double>(frames_produced_);
   auto buf = reinterpret_cast<SampleType*>(buffer);
 
   for (uint64_t i = 0; i < todo; ++i) {
-    auto val = static_cast<ComputedType>(amp_ * sin(pos));
-
     for (uint32_t j = 0; j < channels_; ++j) {
+      auto val = static_cast<ComputedType>(amp_ * GenerateValue(pos));
+
       if (active_ == kAllChannelsActive || (active_ & (1 << j))) {
         *(buf++) = Traits::encode(val);
       } else {
@@ -158,7 +157,7 @@ zx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint
       }
     }
 
-    pos += sine_scalar_;
+    pos += pos_scalar_;
   }
 
   *out_packed = static_cast<uint32_t>(todo * frame_size_);
