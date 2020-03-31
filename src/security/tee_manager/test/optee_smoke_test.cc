@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/tee/cpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/zx/handle.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <gtest/gtest.h>
 #include <tee-client-api/tee_client_api.h>
@@ -25,6 +29,15 @@ const uint32_t kKeysafeGetHardwareDerivedKeyCmdID = 5;
 const char kHardwareKeyInfo[] = "zxcrypt";
 const size_t kExpectedKeyInfoSize = 32;
 const size_t kDerivedKeySize = 16;
+
+uint32_t GetHandleCount(zx::unowned_handle h) {
+  zx_info_handle_count_t info = {};
+  auto err = h->get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
+  if (err) {
+    return -1;
+  }
+  return info.handle_count;
+}
 
 }  // namespace
 
@@ -57,6 +70,7 @@ class OpteeSmokeTest : public sys::testing::TestWithEnvironment {
     // nothing to do here
   }
 
+  TEEC_Context* GetContext() { return &context_; }
   TEEC_Session* GetSession() { return &session_; }
 
  private:
@@ -109,6 +123,34 @@ TEST_F(OpteeSmokeTest, SupportsNullMemoryReferences) {
   // the error origin is not the api or the comms.
   ASSERT_TRUE(IsTeecSuccess(op_result) || ((op_result.return_origin != TEEC_ORIGIN_API) &&
                                            (op_result.return_origin != TEEC_ORIGIN_COMMS)));
+}
+
+TEST_F(OpteeSmokeTest, VmosNotLeaked) {
+  // key_info is |kHardwareKeyInfo| padded with 0.
+  uint8_t key_info[kExpectedKeyInfoSize] = {};
+  memcpy(key_info, kHardwareKeyInfo, sizeof(kHardwareKeyInfo));
+
+  TEEC_SharedMemory shared_mem = {
+      .buffer = nullptr, .size = kDerivedKeySize, .flags = TEEC_MEM_OUTPUT};
+  auto alloc_result = TEEC_AllocateSharedMemory(GetContext(), &shared_mem);
+  ASSERT_TRUE(IsTeecSuccess(alloc_result));
+
+  auto shared_mem_cleanup = fit::defer([&shared_mem]() { TEEC_ReleaseSharedMemory(&shared_mem); });
+
+  TEEC_Operation op = {};
+  op.params[0].tmpref.buffer = key_info;
+  op.params[0].tmpref.size = sizeof(key_info);
+  op.params[3].memref = {.parent = &shared_mem, .size = kDerivedKeySize, .offset = 0};
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_MEMREF_WHOLE);
+
+  OperationResult op_result;
+  op_result.result = TEEC_InvokeCommand(GetSession(), kKeysafeGetHardwareDerivedKeyCmdID, &op,
+                                        &op_result.return_origin);
+
+  ASSERT_TRUE(IsTeecSuccess(op_result));
+  ASSERT_EQ(op.params[3].memref.size, kDerivedKeySize);
+
+  ASSERT_EQ(GetHandleCount(zx::unowned_handle(shared_mem.imp.vmo)), 1u);
 }
 
 }  // namespace test

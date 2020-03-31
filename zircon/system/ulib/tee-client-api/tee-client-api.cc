@@ -630,7 +630,7 @@ TEEC_Result PostprocessPartialMemref(uint32_t param_type, const fuchsia_tee::Par
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PostprocessOperation(fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+TEEC_Result PostprocessOperation(const fidl::VectorView<fuchsia_tee::Parameter>& parameter_set,
                                  TEEC_Operation* out_operation) {
   if (!out_operation) {
     return TEEC_SUCCESS;
@@ -914,7 +914,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   // Try and run post-processing regardless of TEE operation status. Even if an error occurred,
   // the parameter set may have been updated.
   processing_rc = out_result.has_parameter_set()
-                      ? PostprocessOperation(std::move(out_result.parameter_set()), operation)
+                      ? PostprocessOperation(out_result.parameter_set(), operation)
                       : TEEC_ERROR_COMMUNICATION;
 
   if (out_result.return_code() != TEEC_SUCCESS) {
@@ -992,7 +992,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
   // Try and run post-processing regardless of TEE operation status. Even if an error occurred,
   // the parameter set may have been updated.
   processing_rc = out_result.has_parameter_set()
-                      ? PostprocessOperation(std::move(out_result.parameter_set()), operation)
+                      ? PostprocessOperation(out_result.parameter_set(), operation)
                       : TEEC_ERROR_COMMUNICATION;
 
   if (out_result.return_code() != TEEC_SUCCESS) {

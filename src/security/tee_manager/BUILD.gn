@@ -123,5 +123,8 @@ executable("optee_smoke_test_bin") {
 
   sources = [ "test/optee_smoke_test.cc" ]
 
-  deps = [ ":test_common" ]
+  deps = [
+    ":test_common",
+    "//zircon/public/lib/fit",
+  ]
 }
