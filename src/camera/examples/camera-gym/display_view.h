@@ -31,6 +31,9 @@ class DisplayView : public scenic::BaseView {
   zx_status_t Initialize();
   zx_status_t RunOneSession();
 
+  // If enabled, displays a text description of the current configuration
+  void SetDescriptionEnabled(bool enabled);
+
  private:
   // |scenic::BaseView|
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;

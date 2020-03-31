@@ -109,10 +109,17 @@ zx_status_t DisplayView::RunOneSession() {
     // Kick start the stream
     stream_provider_->PostGetNextFrame();
   }
-  root_node().AddChild(text_node_);
   InvalidateScene();
 
   return ZX_OK;
+}
+
+void DisplayView::SetDescriptionEnabled(bool enabled) {
+  if (enabled) {
+    root_node().AddChild(text_node_);
+  } else {
+    text_node_.Detach();
+  }
 }
 
 void DisplayView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
