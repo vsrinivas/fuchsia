@@ -134,11 +134,25 @@ impl EventDispatcher {
 
 pub struct EventStream {
     rx: mpsc::Receiver<Event>,
+    tx: mpsc::Sender<Event>,
+    dispatchers: Vec<Arc<EventDispatcher>>,
 }
 
 impl EventStream {
-    fn new(rx: mpsc::Receiver<Event>) -> Self {
-        Self { rx }
+    fn new() -> Self {
+        let (tx, rx) = mpsc::channel(2);
+        Self { rx, tx, dispatchers: vec![] }
+    }
+
+    fn create_dispatcher(
+        &mut self,
+        sync_mode: SyncMode,
+        scope_monikers: HashSet<AbsoluteMoniker>,
+    ) -> Weak<EventDispatcher> {
+        let dispatcher =
+            Arc::new(EventDispatcher::new(sync_mode.clone(), scope_monikers, self.tx.clone()));
+        self.dispatchers.push(dispatcher.clone());
+        Arc::downgrade(&dispatcher)
     }
 
     /// Receives the next event from the sender.
@@ -169,7 +183,7 @@ impl EventStream {
 
 /// Subscribes to events from multiple tasks and sends events to all of them.
 pub struct EventRegistry {
-    dispatcher_map: Arc<Mutex<HashMap<EventType, Vec<EventDispatcher>>>>,
+    dispatcher_map: Arc<Mutex<HashMap<EventType, Vec<Weak<EventDispatcher>>>>>,
 }
 
 impl EventRegistry {
@@ -204,13 +218,12 @@ impl EventRegistry {
         event_types: Vec<(EventType, HashSet<AbsoluteMoniker>)>,
     ) -> EventStream {
         // TODO(fxb/48510): get rid of this channel and use FIDL directly.
-        let (tx, rx) = mpsc::channel(0);
-        let event_stream = EventStream::new(rx);
+        let mut event_stream = EventStream::new();
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
         for (event_type, scope_monikers) in event_types {
             let dispatchers = dispatcher_map.entry(event_type).or_insert(vec![]);
-            let dispatcher = EventDispatcher::new(sync_mode.clone(), scope_monikers, tx.clone());
+            let dispatcher = event_stream.create_dispatcher(sync_mode.clone(), scope_monikers);
             dispatchers.push(dispatcher);
         }
 
@@ -218,7 +231,7 @@ impl EventRegistry {
     }
 
     /// Sends the event to all dispatchers and waits to be unblocked by all
-    async fn send(&self, event: &ComponentEvent) -> Result<(), ModelError> {
+    async fn dispatch(&self, event: &ComponentEvent) -> Result<(), ModelError> {
         // Copy the senders so we don't hold onto the sender map lock
         // If we didn't do this, it is possible to deadlock while holding onto this lock.
         // For example,
@@ -227,9 +240,18 @@ impl EventRegistry {
         // If task B was required to respond to event1, then this is a deadlock.
         // Neither task can make progress.
         let dispatchers = {
-            let dispatcher_map = self.dispatcher_map.lock().await;
-            if let Some(dispatchers) = dispatcher_map.get(&event.payload.type_()) {
-                dispatchers.clone()
+            let mut dispatcher_map = self.dispatcher_map.lock().await;
+            if let Some(dispatchers) = dispatcher_map.get_mut(&event.payload.type_()) {
+                let mut strong_dispatchers = vec![];
+                dispatchers.retain(|dispatcher| {
+                    if let Some(dispatcher) = dispatcher.upgrade() {
+                        strong_dispatchers.push(dispatcher);
+                        true
+                    } else {
+                        false
+                    }
+                });
+                strong_dispatchers
             } else {
                 // There were no senders for this event. Do nothing.
                 return Ok(());
@@ -275,12 +297,83 @@ impl EventRegistry {
 
         Ok(())
     }
+
+    #[cfg(test)]
+    async fn dispatchers_per_event_type(&self, event_type: EventType) -> usize {
+        let dispatcher_map = self.dispatcher_map.lock().await;
+        dispatcher_map.get(&event_type).map(|dispatchers| dispatchers.len()).unwrap_or_default()
+    }
 }
 
 #[async_trait]
 impl Hook for EventRegistry {
     async fn on(self: Arc<Self>, event: &ComponentEvent) -> Result<(), ModelError> {
-        self.send(event).await?;
+        self.dispatch(event).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::model::hooks::{Event as ComponentEvent, EventPayload},
+        maplit::hashset,
+    };
+
+    async fn dispatch_fake_event(registry: &EventRegistry) -> Result<(), ModelError> {
+        let root_component_url = "test:///root".to_string();
+        let event = ComponentEvent::new(
+            AbsoluteMoniker::root(),
+            EventPayload::Discovered { component_url: root_component_url },
+        );
+        registry.dispatch(&event).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn drop_dispatcher_when_event_stream_dropped() {
+        let event_registry = EventRegistry::new();
+
+        assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+
+        let mut event_stream_a = event_registry
+            .subscribe(
+                &SyncMode::Async,
+                vec![(EventType::Discovered, hashset!(AbsoluteMoniker::root()))],
+            )
+            .await;
+
+        assert_eq!(1, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+
+        let mut event_stream_b = event_registry
+            .subscribe(
+                &SyncMode::Async,
+                vec![(EventType::Discovered, hashset!(AbsoluteMoniker::root()))],
+            )
+            .await;
+
+        assert_eq!(2, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+
+        dispatch_fake_event(&event_registry).await.unwrap();
+
+        // Verify that both EventStreams receive the event.
+        assert!(event_stream_a.next().await.is_some());
+        assert!(event_stream_b.next().await.is_some());
+        assert_eq!(2, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+
+        drop(event_stream_a);
+
+        // EventRegistry won't drop EventDispatchers until an event is dispatched.
+        assert_eq!(2, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+
+        dispatch_fake_event(&event_registry).await.unwrap();
+
+        assert!(event_stream_b.next().await.is_some());
+        assert_eq!(1, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+
+        drop(event_stream_b);
+
+        dispatch_fake_event(&event_registry).await.unwrap();
+        assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
     }
 }
