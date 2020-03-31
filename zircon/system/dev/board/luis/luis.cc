@@ -54,9 +54,13 @@ zx_status_t Luis::Start() {
 }
 
 int Luis::Thread() {
-  auto status = GpioInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GpioInit() failed: %s\n", __func__, zx_status_get_string(status));
+  if (ClockInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: ClockInit() failed\n", __func__);
+    return thrd_error;
+  }
+
+  if (GpioInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: GpioInit() failed\n", __func__);
     return thrd_error;
   }
 

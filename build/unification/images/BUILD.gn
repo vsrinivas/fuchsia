@@ -1504,6 +1504,7 @@ aggregate_manifest("migrated-image") {
 #------------------
 #------------------
 #------------------
+    "//src/devices/clock/drivers/vs680-clk:vs680-clk-manifest",
 #------------------
 #------------------
 #------------------

@@ -512,6 +512,7 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "sys/platform/14:02:c/vs680-usb-phy",
       "sys/platform/00:00:5",
       "sys/platform/00:00:9/dw-i2c/i2c/i2c-1-98",
+      "sys/platform/14:00:d/vs680-clk",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

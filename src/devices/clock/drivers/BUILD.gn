@@ -5,5 +5,8 @@
 group("tests") {
   testonly = true
 
-  deps = [ "as370-clk:tests" ]
+  deps = [
+    "as370-clk:tests",
+    "vs680-clk:tests",
+  ]
 }

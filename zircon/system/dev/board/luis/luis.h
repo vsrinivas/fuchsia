@@ -34,6 +34,7 @@ class Luis : public ddk::Device<Luis> {
   zx_status_t Start();
   int Thread();
 
+  zx_status_t ClockInit();
   zx_status_t EmmcInit();
   zx_status_t GpioInit();
   zx_status_t UsbInit();

@@ -7,7 +7,12 @@
 
 #include <limits.h>
 
+#include <fbl/algorithm.h>
+
 namespace vs680 {
+
+constexpr uint32_t kChipCtrlBase = 0xf7ea'0000;
+constexpr uint32_t kChipCtrlSize = 0x800;
 
 // SDIO Registers
 constexpr uint32_t kEmmc0Base = 0xf7aa'0000;

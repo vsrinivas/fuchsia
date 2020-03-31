@@ -300,6 +300,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AS370_SDHCI0       10
 #define PDEV_DID_VS680_SDHCI0       11
 #define PDEV_DID_VS680_USB_PHY      12
+#define PDEV_DID_VS680_CLOCK        13
 
 // Maxim
 #define PDEV_VID_MAXIM              21

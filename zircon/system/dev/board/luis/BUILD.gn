@@ -24,6 +24,7 @@ driver_module("luis") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
   sources = [
+    "luis-clock.cc",
     "luis-emmc.cc",
     "luis-gpio.cc",
     "luis-i2c.cc",
