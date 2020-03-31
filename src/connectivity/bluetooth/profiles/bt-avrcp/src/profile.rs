@@ -14,7 +14,6 @@ use {
 };
 
 bitflags! {
-    #[allow(dead_code)]
     pub struct AvcrpTargetFeatures: u16 {
         const CATEGORY1         = 1 << 0;
         const CATEGORY2         = 1 << 1;
@@ -30,7 +29,6 @@ bitflags! {
 }
 
 bitflags! {
-    #[allow(dead_code)]
     pub struct AvcrpControllerFeatures: u16 {
         const CATEGORY1         = 1 << 0;
         const CATEGORY2         = 1 << 1;
@@ -51,17 +49,10 @@ const AV_REMOTE_TARGET_CLASS: u16 = 0x110c;
 const AV_REMOTE_CLASS: u16 = 0x110e;
 const AV_REMOTE_CONTROLLER_CLASS: u16 = 0x110f;
 
-/// Make the SDP definition for the AVRCP service.
-/// TODO(1346): We need two entries in SDP in the future. One for target and one for controller.
-///       We are using using one unified profile for both because of limitations in BrEdr service.
-fn make_profile_service_definition() -> ServiceDefinition {
-    let service_class_uuids: Vec<fidl_fuchsia_bluetooth::Uuid> = vec![
-        Uuid::new16(AV_REMOTE_TARGET_CLASS).into(),
-        Uuid::new16(AV_REMOTE_CLASS).into(),
-        Uuid::new16(AV_REMOTE_CONTROLLER_CLASS).into(),
-    ];
+/// The common service definition for AVRCP Target and Controller.
+/// AVRCP 1.6, Section 8.
+fn build_common_service_definition() -> ServiceDefinition {
     ServiceDefinition {
-        service_class_uuids: Some(service_class_uuids), // AVRCP UUID
         protocol_descriptor_list: Some(vec![
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::L2Cap,
@@ -77,14 +68,46 @@ fn make_profile_service_definition() -> ServiceDefinition {
             major_version: 1,
             minor_version: 6,
         }]),
-        additional_attributes: Some(vec![Attribute {
-            id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
-            element: DataElement::Uint16(
-                AvcrpTargetFeatures::CATEGORY1.bits() | AvcrpTargetFeatures::CATEGORY2.bits(),
-            ),
-        }]),
         ..ServiceDefinition::new_empty()
     }
+}
+
+/// Make the SDP definition for the AVRCP Controller service.
+/// AVRCP 1.6, Section 8, Table 8.1.
+fn make_controller_service_definition() -> ServiceDefinition {
+    let mut service = build_common_service_definition();
+
+    let service_class_uuids: Vec<fidl_fuchsia_bluetooth::Uuid> =
+        vec![Uuid::new16(AV_REMOTE_CLASS).into(), Uuid::new16(AV_REMOTE_CONTROLLER_CLASS).into()];
+    service.service_class_uuids = Some(service_class_uuids);
+
+    service.additional_attributes = Some(vec![Attribute {
+        id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
+        element: DataElement::Uint16(
+            AvcrpControllerFeatures::CATEGORY1.bits() | AvcrpControllerFeatures::CATEGORY2.bits(),
+        ),
+    }]);
+
+    service
+}
+
+/// Make the SDP definition for the AVRCP Target service.
+/// AVRCP 1.6, Section 8, Table 8.2.
+fn make_target_service_definition() -> ServiceDefinition {
+    let mut service = build_common_service_definition();
+
+    let service_class_uuids: Vec<fidl_fuchsia_bluetooth::Uuid> =
+        vec![Uuid::new16(AV_REMOTE_TARGET_CLASS).into()];
+    service.service_class_uuids = Some(service_class_uuids);
+
+    service.additional_attributes = Some(vec![Attribute {
+        id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
+        element: DataElement::Uint16(
+            AvcrpTargetFeatures::CATEGORY1.bits() | AvcrpTargetFeatures::CATEGORY2.bits(),
+        ),
+    }]);
+
+    service
 }
 
 #[derive(Debug, PartialEq, Hash, Clone, Copy)]
@@ -207,7 +230,7 @@ pub fn connect_and_advertise(
     let (connection_client, connection_requests) =
         create_request_stream().context("Couldn't create ConnectionTarget")?;
 
-    let service_defs = vec![make_profile_service_definition()];
+    let service_defs = vec![make_controller_service_definition(), make_target_service_definition()];
     profile_svc.advertise(
         &mut service_defs.into_iter(),
         SecurityRequirements::new_empty(),
