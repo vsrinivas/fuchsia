@@ -90,7 +90,15 @@ template("magma_vulkan_icd") {
 
   shared_library_target_name = "${target_name}__shlib"
   shared_library(shared_library_target_name) {
-    forward_variables_from(invoker, "*", [ "imported_symbols_allowlist" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "imported_symbols_allowlist",
+                             "configs",
+                           ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
     if (!is_debug) {
       version_script =
           rebase_path("//src/graphics/lib/magma/scripts/libvulkan.version")
