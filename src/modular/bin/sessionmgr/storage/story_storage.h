@@ -117,48 +117,6 @@ class StoryStorage : public PageClient {
                                     fit::function<void(fidl::StringPtr* value)> mutate_fn,
                                     const void* context);
 
-  // Sets the type and data for the Entity stored under |cookie|.
-  //
-  // |type| If Entity data has already been written, this type is expected to
-  //        match the type which was previously written.
-  // |data| The data to write to the Entity.
-  FuturePtr<Status> SetEntityData(const std::string& cookie, const std::string& type,
-                                  fuchsia::mem::Buffer data);
-
-  // Returns the type for the Entity stored under the provided |cookie|.
-  //
-  // If an error occurred the Status will indicate the error, and returned
-  // string will be empty.
-  FuturePtr<Status, std::string> GetEntityType(const std::string& cookie);
-
-  // Returns the data for the Entity stored under the provided |cookie|.
-  //
-  // |type| The expected type of the data.
-  //
-  // If an error occurred the Status will indicate the error, and returned
-  // fuchsia::mem::BufferPtr will be nullptr.
-  FuturePtr<Status, fuchsia::mem::BufferPtr> GetEntityData(const std::string& cookie,
-                                                           const std::string& type);
-
-  // Registers a watcher for an Entity. The EntityWatcher is notified of data
-  // changes until it is closed.
-  //
-  // |cookie| The Entity cookie.
-  // |type| The type of the observed entity data.
-  // |watcher| The entity watcher which will get notified of updates to the
-  // entity stored under |cookie|.
-  void WatchEntity(const std::string& cookie, const std::string& type,
-                   fuchsia::modular::EntityWatcherPtr watcher);
-
-  // Sets the |entity_name| of the Entity associated with |cookie|.
-  //
-  // Once an entity has been named, the associated |cookie| can be retrieved by
-  // calling |GetEntityCookieForName|.
-  FuturePtr<Status> SetEntityName(const std::string& cookie, const std::string& entity_name);
-
-  // Gets the Entity cookie associated with the specified name.
-  FuturePtr<Status, std::string> GetEntityCookieForName(const std::string& entity_name);
-
   // Completes the returned future after all prior methods have completed.
   FuturePtr<> Sync();
 
@@ -171,11 +129,6 @@ class StoryStorage : public PageClient {
 
   // |PageClient|
   void OnPageConflict(Conflict* conflict) override;
-
-  // Notifies any watchers in |entity_watchers_[cookie]|.
-  //
-  // |value| is a valid fuchsia::mem::Buffer.
-  void NotifyEntityWatchers(const std::string& cookie, fuchsia::mem::Buffer value);
 
   // Completes the returned Future when the ledger notifies us (through
   // OnPageChange()) of a write for |key| with |value|.
@@ -192,10 +145,6 @@ class StoryStorage : public PageClient {
 
   // Called when new ModuleData is encountered from the Ledger.
   fit::function<void(ModuleData)> on_module_data_updated_;
-
-  // A map of Entity cookie (i.e. Ledger key) -> set of watchers. Multiple
-  // watchers can watch the same entity.
-  std::map<std::string, fidl::InterfacePtrSet<fuchsia::modular::EntityWatcher>> entity_watchers_;
 
   // A map of ledger (key, value) to (vec of future). When we see a
   // notification in OnPageChange() for a matching (key, value), we complete

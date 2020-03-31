@@ -87,12 +87,4 @@ void ModuleContextImpl::RemoveSelfFromStory() {
   story_controller_impl_->RemoveModuleFromStory(module_data_->module_path());
 }
 
-void ModuleContextImpl::CreateEntity(
-    std::string type, fuchsia::mem::Buffer data,
-    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-    CreateEntityCallback callback) {
-  story_controller_impl_->CreateEntity(type, std::move(data), std::move(entity_request),
-                                       std::move(callback));
-}
-
 }  // namespace modular

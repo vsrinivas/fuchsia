@@ -13,8 +13,6 @@ namespace {
 constexpr char kModuleName[] = "mod_name";
 constexpr char kStoryName[] = "story";
 constexpr char kIntentAction[] = "action";
-constexpr char kTestData[] = "test-data";
-constexpr char kTestType[] = "test-type";
 
 class StoryModuleTest : public modular_testing::TestHarnessFixture {
  public:
@@ -33,6 +31,7 @@ class StoryModuleTest : public modular_testing::TestHarnessFixture {
   std::string test_entity_provider_agent_url_;
 };
 
+// TODO: maybe remove
 TEST_F(StoryModuleTest, ModuleWritesToOutput) {
   fuchsia::modular::Intent intent;
   intent.handler = test_module_->url();
@@ -40,16 +39,6 @@ TEST_F(StoryModuleTest, ModuleWritesToOutput) {
 
   modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));
   RunLoopUntil([&] { return test_module_->is_running(); });
-
-  fsl::SizedVmo vmo;
-  fsl::VmoFromString(kTestData, &vmo);
-  fuchsia::modular::EntityPtr entity;
-  fidl::StringPtr reference;
-  test_module_->module_context()->CreateEntity(
-      kTestType, std::move(vmo).ToTransport(), entity.NewRequest(),
-      [&reference](fidl::StringPtr entity_reference) { reference = std::move(entity_reference); });
-
-  RunLoopUntil([&] { return reference.has_value(); });
 }
 
 }  // namespace

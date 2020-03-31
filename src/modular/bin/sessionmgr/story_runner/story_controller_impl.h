@@ -106,11 +106,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(const std::vector<std::string>& module_path);
 
-  // Called by ModuleContextImpl.
-  void CreateEntity(std::string type, fuchsia::mem::Buffer data,
-                    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-                    fit::function<void(std::string /* entity_reference */)> callback);
-
   // Stops the story as part of a story provider operation. The story provider
   // can indicate whether this is part of an operation where all stories are
   // stopped at once in order to stop the session shell, indicated by bulk being

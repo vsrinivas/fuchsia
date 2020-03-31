@@ -5,7 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.ui.views;
-using fuchsia.mem;
 
 /// This interface is exposed to all Module instances in a story. It allows to
 /// create Link instances and run more Module instances.
@@ -44,18 +43,6 @@ protocol ModuleContext {
     /// module and remove it from the story. If there are no more running modules
     /// in the story the story will be deleted.
     RemoveSelfFromStory();
-
-    /// Creates a [fuchsia.modular.Entity] with the given [type] and [data]. The
-    /// lifetime of the created entity is tied to the lifetime of the current story,
-    /// but can be dereferenced by modules and agents outside the scope of the story.
-    ///
-    /// [entity_request] will be connected to the created entity, or closed if the
-    /// creation fails.
-    ///
-    /// The returned [reference] is the entity reference for the created entity, or
-    /// null if the entity creation failed.
-    CreateEntity(string type, fuchsia.mem.Buffer data, request<Entity> entity_request)
-        -> (string? entity_reference);
 };
 
 /// Communicates the status of an Intent to a Module.

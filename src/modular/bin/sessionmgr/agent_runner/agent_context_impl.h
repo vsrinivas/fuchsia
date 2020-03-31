@@ -73,14 +73,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request);
 
-  // Called by AgentRunner when the framework wants to talk to the
-  // |fuchsia::modular::EntityProvider| service from this agent. Similar to
-  // NewAgentConnection(), this operation will pend until the entity provider
-  // agent is initialized.
-  void NewEntityProviderConnection(
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request);
-
   enum class State { INITIALIZING, RUNNING, TERMINATING };
   State state() { return state_; }
 
@@ -90,10 +82,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
   // |fuchsia::modular::AgentContext|
   void GetTokenManager(fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) override;
-
-  // |fuchsia::modular::AgentContext|
-  void GetEntityReferenceFactory(
-      fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request) override;
 
   // |fuchsia::auth::TokenManager|
   void Authorize(fuchsia::auth::AppConfig app_config,
@@ -140,7 +128,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   component::ServiceProviderImpl service_provider_impl_;
 
   AgentRunner* const agent_runner_;                     // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;  // Not owned.
   AgentServicesFactory* const agent_services_factory_;  // Not owned.
 
   inspect::Node agent_node_;

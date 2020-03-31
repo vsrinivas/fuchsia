@@ -28,7 +28,6 @@
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/story/model/noop_story_model_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_model_owner.h"
-#include "src/modular/bin/sessionmgr/story_runner/story_entity_provider.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -54,7 +53,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
                     AgentServicesFactory* agent_services_factory,
-                    EntityProviderRunner* entity_provider_runner,
                     PresentationProvider* presentation_provider, bool enable_story_shell_preload,
                     inspect::Node* root_node);
 
@@ -84,8 +82,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Called by StoryControllerImpl.
   AgentServicesFactory* agent_services_factory() { return agent_services_factory_; }
-
-  fuchsia::modular::EntityResolver* entity_resolver() { return entity_provider_runner_; }
 
   // Called by StoryControllerImpl.
   const fuchsia::modular::AppConfig& story_shell_config() const { return story_shell_config_; }
@@ -128,24 +124,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
   void WatchVisualState(fidl::StringPtr story_id,
                         fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
-
-  // Creates an entity with the specified |type| and |data| in the story with
-  // |story_id|.
-  //
-  // |callback| will be called with a reference to the created entity. If the
-  // creation failed the |entity_request| is dropped.
-  void CreateEntity(const std::string& story_id, fidl::StringPtr type, fuchsia::mem::Buffer data,
-                    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-                    fit::function<void(std::string /* entity_reference */)> callback);
-
-  // Creates an entity with the specified |type| and |data| in the story with
-  // |story_id|.
-  //
-  // The story provider guarantees the uniqueness of the EntityProvider
-  // associated with any given story.
-  void ConnectToStoryEntityProvider(
-      const std::string& story_id,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request);
 
   // Converts a StoryInfo2 to StoryInfo.
   static fuchsia::modular::StoryInfo StoryInfo2ToStoryInfo(
@@ -248,7 +226,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
     std::unique_ptr<StoryControllerImpl> controller_impl;
     std::unique_ptr<StoryStorage> storage;
-    std::unique_ptr<StoryEntityProvider> entity_provider;
     fuchsia::modular::internal::StoryDataPtr current_data;
 
     std::unique_ptr<inspect::Node> story_node;
@@ -263,7 +240,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   const ComponentContextInfo component_context_info_;
 
   AgentServicesFactory* const agent_services_factory_;  // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;  // Not owned.
   PresentationProvider* const presentation_provider_;   // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
@@ -298,7 +274,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   class StopStoryCall;
   class StopAllStoriesCall;
   class StopStoryShellCall;
-  class GetStoryEntityProviderCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

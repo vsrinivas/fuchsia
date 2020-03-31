@@ -12,7 +12,6 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/ledger_client/page_id.h"
-#include "src/modular/lib/testing/entity_resolver_fake.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
@@ -41,68 +40,6 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
       return false;
     }
 
-    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*> old_params;
-    if (old_intent.parameters) {
-      for (const auto& entry : *old_intent.parameters) {
-        old_params[entry.name] = &entry.data;
-      }
-    }
-
-    std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*> new_params;
-    if (new_intent.parameters) {
-      for (const auto& entry : *new_intent.parameters) {
-        new_params[entry.name] = &entry.data;
-      }
-    }
-
-    if (new_params.size() != old_params.size()) {
-      return false;
-    }
-
-    for (const auto& entry : new_params) {
-      const auto& name = entry.first;
-      if (old_params.count(name) == 0) {
-        return false;
-      }
-
-      const auto& new_param = *entry.second;
-      const auto& old_param = *old_params[name];
-
-      // If a parameter type changed, or a link mapping changed, we
-      // need to relaunch.
-      if (old_param.Which() != new_param.Which()) {
-        return false;
-      }
-
-      switch (old_param.Which()) {
-        case fuchsia::modular::IntentParameterData::Tag::kEntityType:
-          if (old_param.entity_type() != new_param.entity_type()) {
-            return false;
-          }
-          break;
-        case fuchsia::modular::IntentParameterData::Tag::kEntityReference:
-          if (old_param.entity_reference() != new_param.entity_reference()) {
-            return false;
-          }
-          break;
-        case fuchsia::modular::IntentParameterData::Tag::kJson: {
-          std::string old_string;
-          std::string new_string;
-          if (old_param.json().size == 0 && new_param.json().size == 0) {
-            break;
-          }
-
-          FX_CHECK(fsl::StringFromVmo(old_param.json(), &old_string));
-          FX_CHECK(fsl::StringFromVmo(new_param.json(), &new_string));
-          if (old_string != new_string) {
-            return false;
-          }
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::Invalid:
-          break;
-      }
-    }
     return true;
   }
 
@@ -136,64 +73,6 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
     return intent;
   }
 
-  void AddEntityRefParameter(fuchsia::modular::Intent* intent, const std::string& name,
-                             const std::string& reference) {
-    fuchsia::modular::IntentParameter parameter;
-    parameter.name = name;
-    parameter.data.set_entity_reference(reference);
-    if (!intent->parameters.has_value()) {
-      intent->parameters.emplace();
-    }
-    intent->parameters->push_back(std::move(parameter));
-  }
-
-  void AddEntityTypeParameter(fuchsia::modular::Intent* intent, const std::string& name,
-                              std::vector<std::string> types) {
-    fuchsia::modular::IntentParameter parameter;
-    parameter.name = name;
-    parameter.data.set_entity_type(types);
-    if (!intent->parameters.has_value()) {
-      intent->parameters.emplace();
-    }
-    intent->parameters->push_back(std::move(parameter));
-  }
-
-  void AddParameterWithoutName(fuchsia::modular::Intent* intent) {
-    fuchsia::modular::IntentParameter parameter;
-    fsl::SizedVmo vmo;
-    FX_CHECK(fsl::VmoFromString("10", &vmo));
-    parameter.data.set_json(std::move(vmo).ToTransport());
-    if (!intent->parameters.has_value()) {
-      intent->parameters.emplace();
-    }
-    intent->parameters->push_back(std::move(parameter));
-  }
-
-  void AddJsonParameter(fuchsia::modular::Intent* intent, const std::string& name,
-                        const std::string& json) {
-    fuchsia::modular::IntentParameter parameter;
-    parameter.name = name;
-    fsl::SizedVmo vmo;
-    FX_CHECK(fsl::VmoFromString(json, &vmo));
-    parameter.data.set_json(std::move(vmo).ToTransport());
-    if (!intent->parameters.has_value()) {
-      intent->parameters.emplace();
-    }
-    intent->parameters->push_back(std::move(parameter));
-  }
-
-  void AddInvalidParameter(fuchsia::modular::Intent* intent, const std::string& name) {
-    // This parameter has no data union field set, hence it's invalid.
-    fuchsia::modular::IntentParameterData data;
-    fuchsia::modular::IntentParameter parameter;
-    parameter.name = name;
-    parameter.data = std::move(data);
-    if (!intent->parameters.has_value()) {
-      intent->parameters.emplace();
-    }
-    intent->parameters->push_back(std::move(parameter));
-  }
-
   // Initializes a parent mod for the mod created during the test. The goal of
   // this mod is to test parameters of type link_name and as the
   // surface_relation_parent_mod.
@@ -202,7 +81,6 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
     fuchsia::modular::ModuleData module_data;
     module_data.mutable_module_path()->push_back(mod_name);
     module_data.set_intent(fuchsia::modular::Intent{});
-    AddJsonParameter(module_data.mutable_intent(), param_name, param_value);
 
     fuchsia::modular::ModuleParameterMapEntry parameter_entry;
     auto link_path = MakeLinkPath(link_path_name);
@@ -224,7 +102,6 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
 TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   // Set up command
   auto intent = CreateEmptyIntent("intent_action", "mod_url");
-  intent.parameters.emplace();
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   // Run the command and assert results.
@@ -258,7 +135,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
 // internally.
 TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   auto intent = CreateEmptyIntent("intent_action", "mod_url");
-  intent.parameters.emplace();
   auto command = MakeAddModCommand("mod", "" /* parent mod is null */, 0.5, intent);
 
   // Run the command and assert results.
@@ -307,64 +183,9 @@ TEST_F(AddModCommandRunnerTest, ExecuteNoModulesFound) {
   RunLoopUntil([&] { return done; });
 }
 
-TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
-  // Set up command
-  auto intent = CreateEmptyIntent("intent_action", "mod_url");
-  AddJsonParameter(&intent, "param_json", R"({"@type": "foo"})");
-  auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
-
-  // Add a mod to begin with.
-  bool done{};
-  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-                     done = true;
-                   });
-  RunLoopUntil([&] { return done; });
-
-  // Get the link path for the param of the mod we created.
-  fuchsia::modular::LinkPath link_path;
-  std::vector<std::string> full_path{"parent_mod", "mod"};
-  story_storage_->ReadModuleData(full_path)->Then([&](fuchsia::modular::ModuleDataPtr result) {
-    for (auto& entry : result->parameter_map().entries) {
-      if (entry.name == "param_json") {
-        fidl::Clone(entry.link_path, &link_path);
-      }
-    }
-  });
-
-  // Create AddMod intent for a mod with the same name as the one we created
-  // previously.
-  auto intent2 = CreateEmptyIntent("intent_action", "mod_url");
-  AddJsonParameter(&intent2, "param_json", R"({"@type": "baz"})");
-  fuchsia::modular::AddMod add_mod;
-  add_mod.mod_name = {"parent_mod", "mod"};
-  intent2.Clone(&add_mod.intent);
-  fuchsia::modular::StoryCommand command2;
-  command2.set_add_mod(std::move(add_mod));
-
-  done = false;
-  runner_->Execute(story_id_, story_storage_.get(), std::move(command2),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-                     done = true;
-                   });
-  RunLoopUntil([&] { return done; });
-
-  done = false;
-  // Verify we updated an existing link.
-  story_storage_->GetLinkValue(link_path)->Then(
-      [&](StoryStorage::Status status, fidl::StringPtr v) {
-        EXPECT_EQ(R"({"@type": "baz"})", *v);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
-}
-
 TEST_F(AddModCommandRunnerTest, AcceptsModNameTransitional) {
   // Set up command
   auto intent = CreateEmptyIntent("intent_action", "mod_url");
-  AddJsonParameter(&intent, "param_json", R"({"@type": "foo"})");
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   // Keep only `mod_name_transitional`

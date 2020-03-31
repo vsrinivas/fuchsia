@@ -27,16 +27,6 @@ bool StartsWith(const std::string& string, const std::string& prefix) {
   return string.compare(0, prefix.size(), prefix) == 0;
 }
 
-std::string EntityKeyForCookie(const std::string& cookie) { return kEntityKeyPrefix + cookie; }
-
-std::string EntityTypeKeyForCookie(const std::string& cookie) {
-  return kEntityKeyPrefix + cookie + "/type";
-}
-
-std::string CookieFromEntityKey(const std::string& key) {
-  return key.substr(sizeof(kEntityKeyPrefix) - 1);
-}
-
 }  // namespace
 
 StoryStorage::StoryStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id)
@@ -267,189 +257,6 @@ class WriteVmoCall : public Operation<StoryStorage::Status> {
   StoryStorage::Status status_;
 };
 
-// Returns the type of the entity with the associated |cookie|.
-//
-// If no type is found for the given |cookie|, the returned status will be
-// |INVALID_ENTITY_COOKIE|.
-class GetEntityTypeCall : public PageOperation<StoryStorage::Status, std::string> {
- public:
-  GetEntityTypeCall(PageClient* page_client, const std::string& cookie, ResultCall result_call)
-      : PageOperation("StoryStorage::GetEntityTypeCall", page_client->page(),
-                      std::move(result_call)),
-        page_client_(page_client),
-        cookie_(cookie) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this, &status_, &type_};
-    status_ = StoryStorage::Status::OK;
-
-    operation_queue_.Add(std::make_unique<ReadVmoCall>(
-        page_client_, EntityTypeKeyForCookie(cookie_),
-        [this, flow](fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> result) {
-          if (result.is_error() && result.error() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
-            status_ = StoryStorage::Status::INVALID_ENTITY_COOKIE;
-            return;
-          }
-
-          if (result.is_error()) {
-            status_ = StoryStorage::Status::LEDGER_ERROR;
-            return;
-          }
-          FX_CHECK(fsl::StringFromVmo(result.value(), &type_));
-        }));
-  }
-
-  PageClient* const page_client_;
-  const std::string cookie_;
-  std::string type_;
-  StoryStorage::Status status_;
-  OperationQueue operation_queue_;
-};
-
-class GetEntityDataCall : public PageOperation<StoryStorage::Status, fuchsia::mem::BufferPtr> {
- public:
-  GetEntityDataCall(PageClient* page_client, const std::string& cookie, const std::string& type,
-                    ResultCall result_call)
-      : PageOperation("StoryStorage::GetEntityDataCall", page_client->page(),
-                      std::move(result_call)),
-        page_client_(page_client),
-        cookie_(cookie),
-        type_(type) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this, &status_, &result_};
-    status_ = StoryStorage::Status::OK;
-
-    operation_queue_.Add(std::make_unique<GetEntityTypeCall>(
-        page_client_, cookie_, [this, flow](StoryStorage::Status status, const std::string& type) {
-          if (status != StoryStorage::Status::OK) {
-            status_ = status;
-            return;
-          }
-
-          if (type_ != type) {
-            status_ = StoryStorage::Status::INVALID_ENTITY_TYPE;
-            return;
-          }
-
-          operation_queue_.Add(std::make_unique<ReadVmoCall>(
-              page_client_, EntityKeyForCookie(cookie_),
-              [this, flow](fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> result) {
-                status_ = StoryStorage::Status::LEDGER_ERROR;
-                if (result.is_ok()) {
-                  status_ = StoryStorage::Status::OK;
-                  result_ = fidl::MakeOptional(std::move(result.value()));
-                }
-              }));
-        }));
-  }
-
-  PageClient* const page_client_;
-  const std::string cookie_;
-  std::string type_;
-  fuchsia::mem::BufferPtr result_ = nullptr;
-  StoryStorage::Status status_;
-  OperationQueue operation_queue_;
-};
-
-// Sets the type and value of the Entity stored under |cookie|.
-//
-// The type and value are written to separate keys in a single transaction.
-//
-// The |result_call| is wrapped in a function which checks whether or not all
-// the writes were successfull prior to commiting the transaction.
-class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
- public:
-  SetEntityDataCall(PageClient* page_client, const std::string& cookie, const std::string& type,
-                    fuchsia::mem::Buffer value, ResultCall result_call)
-      : PageOperation("StoryStorage::SetEntityDataCall", page_client->page(),
-                      [result_call = std::move(result_call),
-                       page = page_client->page()](StoryStorage::Status status) mutable {
-                        // The result_call may be std::moved again, and cannot be
-                        // const to do so, so we declare the lambda mutable.
-                        // The result callback is wrapped in order to commit/rollback
-                        // the transaction. It's important to note that the operation
-                        // instance will be deleted by the time this callback is
-                        // executed.
-                        if (status == StoryStorage::Status::OK) {
-                          page->Commit();
-                        } else {
-                          page->Rollback();
-                        }
-                        result_call(status);
-                      }),
-        page_client_(page_client),
-        cookie_(cookie),
-        type_(type),
-        value_(std::move(value)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this, &status_};
-    status_ = StoryStorage::Status::OK;
-    // This transaction will be either committed or rolled back in the wrapped
-    // result call.
-    page()->StartTransaction();
-
-    // First verify the type of the data to write matches the existing entity
-    // type.
-    operation_queue_.Add(std::make_unique<GetEntityTypeCall>(
-        page_client_, cookie_, [this, flow](StoryStorage::Status status, const std::string& type) {
-          if (status == StoryStorage::Status::LEDGER_ERROR) {
-            status_ = StoryStorage::Status::LEDGER_ERROR;
-            return;
-          }
-
-          if (status == StoryStorage::Status::INVALID_ENTITY_COOKIE || type == type_) {
-            // If the type is empty it has never been written before (empty
-            // types are not permitted so will not be written in the first
-            // place).
-            PerformWrites(flow);
-          } else {
-            status_ = StoryStorage::Status::INVALID_ENTITY_TYPE;
-            return;
-          }
-        }));
-  }
-
-  void PerformWrites(FlowToken flow) {
-    // Write the entity data.
-    WriteVmo(std::move(value_), EntityKeyForCookie(cookie_), flow);
-
-    // Write the entity type.
-    fuchsia::mem::Buffer type_vmo;
-    FX_CHECK(fsl::VmoFromString(type_, &type_vmo));
-    WriteVmo(std::move(type_vmo), EntityTypeKeyForCookie(cookie_), flow);
-  }
-
-  void WriteVmo(fuchsia::mem::Buffer data, const std::string& key, FlowToken flow) {
-    page()->CreateReferenceFromBuffer(
-        std::move(data),
-        [this, key, flow](fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) {
-          if (result.is_response()) {
-            page()->PutReference(to_array(key), std::move(result.response().reference),
-                                 fuchsia::ledger::Priority::EAGER);
-          } else {
-            FX_LOGS(ERROR) << trace_name() << " "
-                           << "SetEntityDataCall.CreateReferenceFromBuffer " << key << " "
-                           << zx_status_get_string(result.err());
-            status_ = StoryStorage::Status::LEDGER_ERROR;
-          }
-        });
-  }
-
-  PageClient* const page_client_;
-  std::string cookie_;
-  std::string type_;
-  fuchsia::mem::Buffer value_;
-
-  StoryStorage::Status status_;
-
-  OperationQueue operation_queue_;
-};
-
 // Returns: 1) if a mutation happened, 2) the status and 3) the new value.
 class UpdateLinkCall : public Operation<bool, StoryStorage::Status, fidl::StringPtr> {
  public:
@@ -548,87 +355,6 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
                                               fidl::StringPtr new_value) { return status; });
 }
 
-FuturePtr<StoryStorage::Status> StoryStorage::SetEntityData(const std::string& cookie,
-                                                            const std::string& type,
-                                                            fuchsia::mem::Buffer data) {
-  auto did_update = Future<StoryStorage::Status>::Create("StoryStorage.CreateEntity.did_update");
-  if (type.empty()) {
-    did_update->Complete(StoryStorage::Status::INVALID_ENTITY_TYPE);
-  } else if (cookie.empty()) {
-    did_update->Complete(StoryStorage::Status::INVALID_ENTITY_COOKIE);
-  } else {
-    operation_queue_.Add(std::make_unique<SetEntityDataCall>(this, cookie, type, std::move(data),
-                                                             did_update->Completer()));
-  }
-  return did_update;
-}
-
-FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetEntityType(
-    const std::string& cookie) {
-  auto did_update =
-      Future<StoryStorage::Status, std::string>::Create("StoryStorage.GetEntityType.did_update");
-  operation_queue_.Add(std::make_unique<GetEntityTypeCall>(this, cookie, did_update->Completer()));
-  return did_update;
-}
-
-FuturePtr<StoryStorage::Status, fuchsia::mem::BufferPtr> StoryStorage::GetEntityData(
-    const std::string& cookie, const std::string& type) {
-  auto did_update = Future<StoryStorage::Status, fuchsia::mem::BufferPtr>::Create(
-      "StoryStorage.GetEntityData.did_update");
-  operation_queue_.Add(
-      std::make_unique<GetEntityDataCall>(this, cookie, type, did_update->Completer()));
-  return did_update;
-}
-
-void StoryStorage::WatchEntity(const std::string& cookie, const std::string& type,
-                               fuchsia::modular::EntityWatcherPtr entity_watcher) {
-  operation_queue_.Add(std::make_unique<GetEntityDataCall>(
-      this, cookie, type,
-      [this, cookie, entity_watcher = std::move(entity_watcher)](
-          StoryStorage::Status status, std::unique_ptr<fuchsia::mem::Buffer> value) mutable {
-        // Send the current value as the initial update.
-        entity_watcher->OnUpdated(std::move(value));
-
-        auto existing_watchers_it = entity_watchers_.try_emplace(cookie);
-        existing_watchers_it.first->second.AddInterfacePtr(std::move(entity_watcher));
-      }));
-}
-
-FuturePtr<StoryStorage::Status> StoryStorage::SetEntityName(const std::string& cookie,
-                                                            const std::string& entity_name) {
-  auto did_set = Future<StoryStorage::Status>::Create("StoryStorage.SetEntityName.did_set");
-  fuchsia::mem::Buffer data;
-  if (fsl::VmoFromString(cookie, &data)) {
-    operation_queue_.Add(std::make_unique<WriteVmoCall>(this, kEntityNamePrefix + entity_name,
-                                                        std::move(data), did_set->Completer()));
-  } else {
-    did_set->Complete(StoryStorage::Status::VMO_COPY_ERROR);
-  }
-  return did_set;
-}
-
-FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetEntityCookieForName(
-    const std::string& entity_name) {
-  auto did_get =
-      Future<StoryStorage::Status, std::string>::Create("StoryStorage.GetEntityName.did_get");
-  operation_queue_.Add(std::make_unique<ReadVmoCall>(
-      this, kEntityNamePrefix + entity_name,
-      [did_get](fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> result) {
-        if (result.is_error()) {
-          did_get->Complete(StoryStorage::Status::LEDGER_ERROR, "");
-          return;
-        }
-        std::string cookie;
-        if (!fsl::StringFromVmo(result.value(), &cookie)) {
-          did_get->Complete(StoryStorage::Status::VMO_COPY_ERROR, "");
-          return;
-        }
-
-        did_get->Complete(StoryStorage::Status::OK, std::move(cookie));
-      }));
-  return did_get;
-}
-
 FuturePtr<> StoryStorage::Sync() {
   auto ret = Future<>::Create("StoryStorage::Sync.ret");
   operation_queue_.Add(NewCallbackOperation(
@@ -639,11 +365,6 @@ FuturePtr<> StoryStorage::Sync() {
 }
 
 void StoryStorage::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr value) {
-  if (StartsWith(key, kEntityKeyPrefix)) {
-    NotifyEntityWatchers(CookieFromEntityKey(key), std::move(*value));
-    return;
-  }
-
   std::string value_string;
   if (!fsl::StringFromVmo(*value, &value_string)) {
     return;
@@ -662,14 +383,6 @@ void StoryStorage::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr 
       }
       on_module_data_updated_(std::move(*module_data));
     }
-  } else if (!StartsWith(key, kEntityNamePrefix)) {
-    // TODO(thatguy): We store some Link data on the root page (where
-    // StoryData is stored) for the session shell to make use of. This means we
-    // get notified in that instance of changes we don't care about.
-    //
-    // Consider putting all story-scoped data under a shared prefix, and use
-    // that when initializing the PageClient.
-    FX_LOGS(ERROR) << "Unexpected StoryStorage Ledger key prefix: " << key;
   }
 
   if (pending_writes_it != pending_writes_.end()) {
@@ -692,17 +405,6 @@ void StoryStorage::OnPageConflict(Conflict* conflict) {
   // TODO(thatguy): Add basic conflict resolution. We can force a conflict for
   // link data in tests by using Page.StartTransaction() in UpdateLinkValue().
   FX_LOGS(WARNING) << "StoryStorage::OnPageConflict() for link key " << to_string(conflict->key);
-}
-
-void StoryStorage::NotifyEntityWatchers(const std::string& cookie, fuchsia::mem::Buffer value) {
-  auto range = entity_watchers_.equal_range(cookie);
-  for (auto it = range.first; it != range.second; ++it) {
-    for (const auto& watcher : it->second.ptrs()) {
-      fuchsia::mem::Buffer clone;
-      fuchsia::mem::Clone(value, &clone);
-      (*watcher)->OnUpdated(std::make_unique<fuchsia::mem::Buffer>(std::move(clone)));
-    }
-  }
 }
 
 FuturePtr<> StoryStorage::WaitForWrite(const std::string& key, const std::string& value) {

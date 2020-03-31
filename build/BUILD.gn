@@ -680,7 +680,6 @@ group("deprecated_package_underscore") {
     "//src/modular/bin/modular_test_harness:tests",
     "//src/modular/bin/sessionctl:sessionctl_unittests",
     "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
-    "//src/modular/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
     "//src/modular/bin/sessionmgr/storage:storage_unittests",
     "//src/modular/bin/sessionmgr/story/model:story_model_unittests",

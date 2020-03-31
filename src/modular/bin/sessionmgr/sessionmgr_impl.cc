@@ -359,10 +359,6 @@ void SessionmgrImpl::InitializeAgentRunner() {
       [this]() { return terminating_; }));
   OnTerminate(Reset(&startup_agent_launcher_));
 
-  entity_provider_runner_ =
-      std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
-  OnTerminate(Reset(&entity_provider_runner_));
-
   // Initialize the AgentRunner.
   //
   // The AgentRunner must use its own |ArgvInjectingLauncher|, different from the
@@ -385,15 +381,15 @@ void SessionmgrImpl::InitializeAgentRunner() {
   agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
   agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), startup_agent_launcher_.get(),
-                                      entity_provider_runner_.get(), &inspect_root_node_,
-                                      std::move(agent_service_index), sessionmgr_context_));
+                                      &inspect_root_node_, std::move(agent_service_index),
+                                      sessionmgr_context_));
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
 
 void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                        fuchsia::modular::AppConfig story_shell_config,
                                        bool use_session_shell_for_story_shell_factory) {
-  ComponentContextInfo component_context_info{agent_runner_.get(), entity_provider_runner_.get()};
+  ComponentContextInfo component_context_info{agent_runner_.get()};
 
   startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
                                        config_.startup_agents());
@@ -431,8 +427,8 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
       std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
-      entity_provider_runner_.get(), presentation_provider_impl_.get(),
-      (config_.enable_story_shell_preload()), &inspect_root_node_));
+      presentation_provider_impl_.get(), (config_.enable_story_shell_preload()),
+      &inspect_root_node_));
 
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
@@ -632,22 +628,6 @@ void SessionmgrImpl::Logout() { session_context_->Logout(); }
 void SessionmgrImpl::Restart() { session_context_->Restart(); }
 
 void SessionmgrImpl::Shutdown() { session_context_->Shutdown(); }
-
-// |EntityProviderLauncher|
-void SessionmgrImpl::ConnectToEntityProvider(
-    const std::string& agent_url,
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
-  FX_DCHECK(agent_runner_.get());
-  agent_runner_->ConnectToEntityProvider(agent_url, std::move(entity_provider_request),
-                                         std::move(agent_controller_request));
-}
-
-void SessionmgrImpl::ConnectToStoryEntityProvider(
-    const std::string& story_id,
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) {
-  story_provider_impl_->ConnectToStoryEntityProvider(story_id, std::move(entity_provider_request));
-}
 
 void SessionmgrImpl::OnTerminate(fit::function<void(fit::function<void()>)> action) {
   on_terminate_cbs_.emplace_back(std::move(action));

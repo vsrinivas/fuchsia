@@ -212,7 +212,6 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
     : url_(agent_config.url),
       component_context_impl_(info.component_context_info, kAgentComponentNamespace, url_, url_),
       agent_runner_(info.component_context_info.agent_runner),
-      entity_provider_runner_(info.component_context_info.entity_provider_runner),
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)) {
   agent_runner_->PublishAgentServices(url_, &service_provider_impl_);
@@ -280,18 +279,6 @@ void AgentContextImpl::NewAgentConnection(
       }));
 }
 
-void AgentContextImpl::NewEntityProviderConnection(
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
-  operation_queue_.Add(std::make_unique<SyncCall>(
-      [this, entity_provider_request = std::move(entity_provider_request),
-       agent_controller_request = std::move(agent_controller_request)]() mutable {
-        FX_CHECK(state_ == State::RUNNING);
-        app_client_->services().ConnectToService(std::move(entity_provider_request));
-        agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
-      }));
-}
-
 void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   component_context_impl_.Connect(std::move(request));
@@ -300,11 +287,6 @@ void AgentContextImpl::GetComponentContext(
 void AgentContextImpl::GetTokenManager(
     fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
   token_manager_bindings_.AddBinding(this, std::move(request));
-}
-
-void AgentContextImpl::GetEntityReferenceFactory(
-    fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request) {
-  entity_provider_runner_->ConnectEntityReferenceFactory(url_, std::move(request));
 }
 
 void AgentContextImpl::Authorize(

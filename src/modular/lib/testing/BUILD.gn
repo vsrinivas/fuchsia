@@ -7,7 +7,6 @@ group("testing") {
   deps = [
     ":component_base",
     ":component_main",
-    ":entity_resolver_fake",
     ":ledger_repository_for_testing",
     ":mock_base",
     ":session_shell_base",
@@ -45,19 +44,6 @@ source_set("component_main") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-}
-
-source_set("entity_resolver_fake") {
-  testonly = true
-
-  sources = [
-    "entity_resolver_fake.cc",
-    "entity_resolver_fake.h",
-  ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
-
-  deps = [ "//src/lib/fsl" ]
 }
 
 source_set("session_shell_base") {

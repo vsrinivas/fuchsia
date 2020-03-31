@@ -33,7 +33,6 @@ namespace modular {
 constexpr char kAgentComponentNamespace[] = "agents";
 
 class AgentContextImpl;
-class EntityProviderRunner;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
@@ -43,7 +42,7 @@ class EntityProviderRunner;
 class AgentRunner {
  public:
   AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
-              EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
+              inspect::Node* session_inspect_node,
               std::map<std::string, std::string> agent_service_index = {},
               sys::ComponentContext* const sessionmgr_context = nullptr);
   ~AgentRunner();
@@ -75,13 +74,6 @@ class AgentRunner {
   // Supports implementation of ComponentContext/ConnectToAgentService().
   void ConnectToAgentService(const std::string& requestor_url,
                              fuchsia::modular::AgentServiceRequest request);
-
-  // Connects to an agent (and starts it up if it doesn't exist) through its
-  // |fuchsia::modular::EntityProvider| service.
-  void ConnectToEntityProvider(
-      const std::string& agent_url,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
   // NOTE: This should NOT take a const reference, since |agent_url| will die
@@ -133,7 +125,6 @@ class AgentRunner {
 
   fuchsia::sys::Launcher* const launcher_;
   AgentServicesFactory* const agent_services_factory_;
-  EntityProviderRunner* const entity_provider_runner_;
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;

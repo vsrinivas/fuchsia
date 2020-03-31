@@ -33,7 +33,6 @@
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
@@ -45,7 +44,6 @@
 #include "src/modular/bin/sessionmgr/story_runner/story_shell_context_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/entity/cpp/json.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/ledger_client/operations.h"
@@ -144,15 +142,6 @@ void StoryControllerImpl::RunningModInfo::InitializeInspect(
       modular_config::kInspectIntentAction, module_data->intent().action.value_or(""));
   module_intent_handler_property = mod_inspect_node.CreateString(
       modular_config::kInspectIntentHandler, module_data->intent().handler.value_or(""));
-
-  std::string formatted_params = "";
-  if (module_data->intent().parameters.has_value()) {
-    for (auto& param : *module_data->intent().parameters) {
-      formatted_params.append("name : " + param.name.value_or("") + " ");
-    }
-  }
-  module_intent_params_property =
-      mod_inspect_node.CreateString(modular_config::kInspectIntentParams, formatted_params);
 
   std::string module_path_str = fxl::JoinStrings(module_data->module_path(), ", ");
   module_path_property =
@@ -1222,14 +1211,6 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
 
 void StoryControllerImpl::RemoveModuleFromStory(const std::vector<std::string>& module_path) {
   operation_queue_.Add(std::make_unique<StopModuleAndStoryIfEmptyCall>(this, module_path, [] {}));
-}
-
-void StoryControllerImpl::CreateEntity(
-    std::string type, fuchsia::mem::Buffer data,
-    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-    fit::function<void(std::string /* entity_reference */)> callback) {
-  story_provider_impl_->CreateEntity(story_id_, type, std::move(data), std::move(entity_request),
-                                     std::move(callback));
 }
 
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {

@@ -86,7 +86,6 @@ executable("add_mod_command_runner_unittest") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/testing:entity_resolver_fake",
     "//src/modular/lib/testing:test_with_session_storage",
   ]
 }

@@ -19,10 +19,11 @@ struct Intent {
     /// module.
     string? handler;
 
-    /// The parameters that will be passed to the handler of `action`.
+    /// NON-FUNCTIONAL: `parameters` is no longer supported but must remain for ABI compatibility.
     vector<IntentParameter>? parameters;
 };
 
+/// NON-FUNCTIONAL: `IntentParameter` is no longer supported but must remain for ABI compatibility.
 /// A struct representing a parameter that is passed to the handler of an Intent's
 /// Action.
 struct IntentParameter {
@@ -34,6 +35,8 @@ struct IntentParameter {
     IntentParameterData data;
 };
 
+/// NON-FUNCTIONAL: `IntentParameterData` is no longer supported but must remain defined for
+/// `IntentParameter`'s ABI compatibility.
 union IntentParameterData {
     /// Set this if you already have an Entity reference at runtime.
     /// Entity.getTypes() will be used to set the constraints for this noun during

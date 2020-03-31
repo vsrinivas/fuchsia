@@ -158,7 +158,6 @@ executable("story_storage_unittest") {
     "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/async/cpp:future",
-    "//src/modular/lib/entity:entity_watcher",
     "//src/modular/lib/testing:test_with_ledger",
   ]
 }

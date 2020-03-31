@@ -42,77 +42,8 @@ void XdrSurfaceRelation(XdrContext* const xdr, fuchsia::modular::SurfaceRelation
   xdr->Field("emphasis", &data->emphasis);
 }
 
-void XdrIntentParameterData(XdrContext* const xdr,
-                            fuchsia::modular::IntentParameterData* const data) {
-  static constexpr char kTag[] = "tag";
-  static constexpr char kEntityReference[] = "entity_reference";
-  static constexpr char kJson[] = "json";
-  static constexpr char kEntityType[] = "entity_type";
-
-  switch (xdr->op()) {
-    case XdrOp::FROM_JSON: {
-      std::string tag;
-      xdr->Field(kTag, &tag);
-
-      if (tag == kEntityReference) {
-        fidl::StringPtr value;
-        xdr->Field(kEntityReference, &value);
-        data->set_entity_reference(value.value_or(""));
-      } else if (tag == kJson) {
-        fidl::StringPtr value;
-        xdr->Field(kJson, &value);
-        fsl::SizedVmo vmo;
-        FX_CHECK(fsl::VmoFromString(*value, &vmo));
-        data->set_json(std::move(vmo).ToTransport());
-      } else if (tag == kEntityType) {
-        ::std::vector<::std::string> value;
-        xdr->Field(kEntityType, &value);
-        data->set_entity_type(std::move(value));
-      } else {
-        FX_LOGS(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: " << tag;
-      }
-      break;
-    }
-
-    case XdrOp::TO_JSON: {
-      std::string tag;
-
-      switch (data->Which()) {
-        case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
-          tag = kEntityReference;
-          fidl::StringPtr value = data->entity_reference();
-          xdr->Field(kEntityReference, &value);
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kJson: {
-          tag = kJson;
-          std::string json_string;
-          FX_CHECK(fsl::StringFromVmo(data->json(), &json_string));
-          fidl::StringPtr value = json_string;
-          xdr->Field(kJson, &value);
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
-          tag = kEntityType;
-          std::vector<std::string> value = data->entity_type();
-          xdr->Field(kEntityType, &value);
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::Invalid:
-          FX_LOGS(ERROR) << "XdrIntentParameterData TO_JSON unknown tag: "
-                         << static_cast<int>(data->Which());
-          break;
-      }
-
-      xdr->Field(kTag, &tag);
-      break;
-    }
-  }
-}
-
 void XdrIntentParameter(XdrContext* const xdr, fuchsia::modular::IntentParameter* const data) {
   xdr->Field("name", &data->name);
-  xdr->Field("data", &data->data, XdrIntentParameterData);
 }
 
 void XdrIntent(XdrContext* const xdr, fuchsia::modular::Intent* const data) {

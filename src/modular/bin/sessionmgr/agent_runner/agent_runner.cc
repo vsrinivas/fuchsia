@@ -26,13 +26,11 @@ constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
                          AgentServicesFactory* const agent_services_factory,
-                         EntityProviderRunner* const entity_provider_runner,
                          inspect::Node* session_inspect_node,
                          std::map<std::string, std::string> agent_service_index,
                          sys::ComponentContext* const sessionmgr_context)
     : launcher_(launcher),
       agent_services_factory_(agent_services_factory),
-      entity_provider_runner_(entity_provider_runner),
       terminating_(std::make_shared<bool>(false)),
       session_inspect_node_(session_inspect_node),
       agent_service_index_(std::move(agent_service_index)),
@@ -142,7 +140,7 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
 
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
-  ComponentContextInfo component_info = {this, entity_provider_runner_};
+  ComponentContextInfo component_info = {this};
   AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
@@ -234,18 +232,6 @@ void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
 
   ConnectToService(requestor_url, agent_url, std::move(*request.mutable_agent_controller()),
                    request.service_name(), std::move(*request.mutable_channel()));
-}
-
-void AgentRunner::ConnectToEntityProvider(
-    const std::string& agent_url,
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
-  EnsureAgentIsRunning(
-      agent_url, [this, agent_url, entity_provider_request = std::move(entity_provider_request),
-                  agent_controller_request = std::move(agent_controller_request)]() mutable {
-        running_agents_[agent_url]->NewEntityProviderConnection(
-            std::move(entity_provider_request), std::move(agent_controller_request));
-      });
 }
 
 bool AgentRunner::AgentInServiceIndex(const std::string& agent_url) const {

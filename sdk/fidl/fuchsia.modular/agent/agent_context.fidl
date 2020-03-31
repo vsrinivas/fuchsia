@@ -13,11 +13,6 @@ protocol AgentContext {
     /// namespace/environment for Modules.
     GetComponentContext(request<ComponentContext> request);
 
-    /// Connects to an EntityReferenceFactory for this Agent. Entity references
-    /// obtained from this EntityReferenceFactory will be resolved back to this
-    /// Agent.
-    GetEntityReferenceFactory(request<EntityReferenceFactory> request);
-
     /// The auth token manager this Agent may use for accessing external services.
     GetTokenManager(request<fuchsia.auth.TokenManager> request);
 };

@@ -17,12 +17,10 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
                                            std::string component_instance_id,
                                            std::string component_url)
     : agent_runner_(info.agent_runner),
-      entity_provider_runner_(info.entity_provider_runner),
       component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
   FX_DCHECK(agent_runner_);
-  FX_DCHECK(entity_provider_runner_);
 }
 
 ComponentContextImpl::~ComponentContextImpl() = default;
@@ -48,11 +46,6 @@ void ComponentContextImpl::ConnectToAgent(
 
 void ComponentContextImpl::ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) {
   agent_runner_->ConnectToAgentService(component_instance_id_, std::move(request));
-}
-
-void ComponentContextImpl::GetEntityResolver(
-    fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
-  entity_provider_runner_->ConnectEntityResolver(std::move(request));
 }
 
 }  // namespace modular

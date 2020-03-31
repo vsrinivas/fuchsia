@@ -140,8 +140,6 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
               session_storage_, container.storage.get(), container.model_owner->NewMutator(),
               container.model_owner->NewObserver(), story_provider_impl_,
               container.story_node.get());
-          container.entity_provider =
-              std::make_unique<StoryEntityProvider>(container.storage.get());
           // Register a listener on the StoryModel so that we can signal
           // our watchers when relevant data changes.
           container.model_observer->RegisterListener(
@@ -220,43 +218,6 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
 };
 
-class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEntityProvider*> {
- public:
-  GetStoryEntityProviderCall(StoryProviderImpl* const story_provider_impl,
-                             const std::string& story_id, inspect::Node* root_node,
-                             ResultCall result_call)
-      : Operation("StoryProviderImpl::GetStoryEntityProviderCall", std::move(result_call)),
-        story_provider_impl_(story_provider_impl),
-        story_id_(story_id),
-        session_inspect_node_(root_node) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this, &story_entity_provider_};
-
-    operation_queue_.Add(std::make_unique<LoadStoryRuntimeCall>(
-        story_provider_impl_, story_provider_impl_->session_storage_, story_id_,
-        session_inspect_node_, [this, flow](StoryRuntimeContainer* story_controller_container) {
-          if (story_controller_container) {
-            story_entity_provider_ = story_controller_container->entity_provider.get();
-          }
-        }));
-  }
-
-  StoryProviderImpl* const story_provider_impl_;  // not owned
-
-  // The returned story entity provider.
-  StoryEntityProvider* story_entity_provider_ = nullptr;
-
-  fuchsia::modular::StoryInfoPtr story_info_;
-
-  OperationQueue operation_queue_;
-
-  std::string story_id_;
-
-  inspect::Node* session_inspect_node_;
-};
-
 StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std::string device_id,
                                      SessionStorage* const session_storage,
                                      fuchsia::modular::AppConfig story_shell_config,
@@ -264,7 +225,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std
                                      const ComponentContextInfo& component_context_info,
                                      fuchsia::modular::FocusProviderPtr focus_provider,
                                      AgentServicesFactory* const agent_services_factory,
-                                     EntityProviderRunner* const entity_provider_runner,
                                      PresentationProvider* const presentation_provider,
                                      const bool enable_story_shell_preload,
                                      inspect::Node* root_node)
@@ -276,7 +236,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std
       enable_story_shell_preload_(enable_story_shell_preload),
       component_context_info_(component_context_info),
       agent_services_factory_(agent_services_factory),
-      entity_provider_runner_(entity_provider_runner),
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
@@ -672,51 +631,6 @@ void StoryProviderImpl::NotifyStoryWatchers(
                    story_visibility_state);
     (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
   }
-}
-
-void StoryProviderImpl::CreateEntity(
-    const std::string& story_id, fidl::StringPtr type, fuchsia::mem::Buffer data,
-    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-    fit::function<void(std::string /* entity_reference */)> callback) {
-  operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
-      this, story_id, session_inspect_node_,
-      [this, type, story_id, data = std::move(data), callback = std::move(callback),
-       entity_request = std::move(entity_request)](StoryEntityProvider* entity_provider) mutable {
-        // Once the entity provider for the given story is available, create
-        // the entity.
-        entity_provider->CreateEntity(
-            type.value_or(""), std::move(data),
-            [this, story_id, callback = std::move(callback),
-             entity_request = std::move(entity_request)](std::string cookie) mutable {
-              if (cookie.empty()) {
-                // Return nullptr to indicate the entity creation failed.
-                callback(nullptr);
-                return;
-              }
-
-              std::string entity_reference =
-                  entity_provider_runner_->CreateStoryEntityReference(story_id, cookie);
-
-              // Once the entity reference has been created, it can be
-              // used to connect the entity request.
-              fuchsia::modular::EntityResolverPtr resolver;
-              entity_provider_runner_->ConnectEntityResolver(resolver.NewRequest());
-              resolver->ResolveEntity(entity_reference, std::move(entity_request));
-
-              callback(entity_reference);
-            });
-      }));
-}
-
-void StoryProviderImpl::ConnectToStoryEntityProvider(
-    const std::string& story_id,
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) {
-  operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
-      this, story_id, session_inspect_node_,
-      [entity_provider_request =
-           std::move(entity_provider_request)](StoryEntityProvider* entity_provider) mutable {
-        entity_provider->Connect(std::move(entity_provider_request));
-      }));
 }
 
 void StoryProviderImpl::GetPresentation(

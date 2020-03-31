@@ -197,14 +197,6 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   AddMod add_mod;
   add_mod.mod_name_transitional = "mod1";
   add_mod.intent.handler = kFakeModuleUrl;
-  fuchsia::modular::IntentParameter param;
-  param.name = "root";
-  fsl::SizedVmo vmo;
-  const std::string initial_json = R"({"created-with-info": true})";
-  ASSERT_TRUE(fsl::VmoFromString(initial_json, &vmo));
-  param.data.set_json(std::move(vmo).ToTransport());
-  add_mod.intent.parameters.emplace();
-  add_mod.intent.parameters->push_back(std::move(param));
 
   StoryCommand command;
   command.set_add_mod(std::move(add_mod));

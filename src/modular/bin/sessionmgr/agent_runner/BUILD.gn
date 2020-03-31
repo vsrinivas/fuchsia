@@ -60,7 +60,6 @@ executable("agent_runner_unittest") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/ledger_client:page_client",
     "//src/modular/lib/pseudo_dir",
@@ -90,7 +89,6 @@ source_set("public") {
     "//src/ledger/fidl/fuchsia.ledger",
     "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/modular/bin/sessionmgr:agent_services_factory",
-    "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/lib/async/cpp:operation",
   ]
 }

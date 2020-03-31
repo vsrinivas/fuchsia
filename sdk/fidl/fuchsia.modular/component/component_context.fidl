@@ -38,10 +38,6 @@ protocol ComponentContext {
     ///     the agent (either specified or discovered)
     [Transitional]
     ConnectToAgentService(AgentServiceRequest request);
-
-    /// Gets the EntityResolver service, which can be used to resolve an entity
-    /// reference to an Entity interface.
-    GetEntityResolver(request<EntityResolver> request);
 };
 
 /// Used by ComponentContext.ConnectToAgentService

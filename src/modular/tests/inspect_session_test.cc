@@ -40,9 +40,7 @@ constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fak
 constexpr char kSessionmgrSelector[] = "*_inspect/sessionmgr.cmx:root";
 constexpr char kSessionmgrName[] = "sessionmgr.cmx";
 // The initial module's intent parameter data. This needs to be JSON formatted.
-constexpr char kInitialIntentParameterData[] = "\"initial\"";
 constexpr char kIntentAction[] = "action";
-constexpr char kIntentParameterName[] = "intent_parameter";
 
 class InspectSessionTest : public modular_testing::TestHarnessFixture {
  protected:
@@ -84,21 +82,10 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
 
     return fit::ok(std::move(result.value()[0]));
   }
-
-  fuchsia::modular::Intent CreateIntent(std::string handler, std::string parameter_name,
-                                        std::string parameter_data) {
+  fuchsia::modular::Intent CreateIntent(std::string handler) {
     fuchsia::modular::Intent intent;
     intent.handler = handler;
     intent.action = kIntentAction;
-
-    fuchsia::modular::IntentParameter intent_parameter;
-    intent_parameter.name = parameter_name;
-    intent_parameter.data = fuchsia::modular::IntentParameterData();
-    fsl::SizedVmo vmo;
-    ZX_ASSERT(fsl::VmoFromString(parameter_data, &vmo));
-    intent_parameter.data.set_json(std::move(vmo).ToTransport());
-    intent.parameters.emplace();
-    intent.parameters->push_back(std::move(intent_parameter));
 
     return intent;
   }
@@ -277,8 +264,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
   puppet_master->ControlStory(kStoryId, story_master.NewRequest());
   AddMod add_mod;
   add_mod.mod_name_transitional = "mod1";
-  auto initial_module_intent =
-      CreateIntent(kFakeModuleUrl, kIntentParameterName, kInitialIntentParameterData);
+  auto initial_module_intent = CreateIntent(kFakeModuleUrl);
   add_mod.intent = std::move(initial_module_intent);
 
   StoryCommand command;
@@ -323,9 +309,6 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
                                                         modular_config::kInspectIntentAction}));
   EXPECT_EQ(rapidjson::Value("False"),
             data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIsDeleted}));
-  EXPECT_EQ(
-      rapidjson::Value("name : intent_parameter "),
-      data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIntentParams}));
   EXPECT_EQ(rapidjson::Value("NONE"),
             data.GetByPath({"root", kStoryId, kFakeModuleUrl,
                             modular_config::kInspectSurfaceRelationArrangement}));

@@ -21,8 +21,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
-#include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
-#include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "src/modular/bin/sessionmgr/startup_agent_launcher.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
@@ -47,8 +45,7 @@ class StoryStorage;
 class VisibleStoriesHandler;
 
 class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
-                       fuchsia::modular::SessionShellContext,
-                       EntityProviderLauncher {
+                       fuchsia::modular::SessionShellContext {
  public:
   SessionmgrImpl(sys::ComponentContext* component_context,
                  fuchsia::modular::session::SessionmgrConfig config, inspect::Node object);
@@ -104,17 +101,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void Logout() override;
   void Restart() override;
   void Shutdown();
-
-  // |EntityProviderLauncher|
-  void ConnectToEntityProvider(
-      const std::string& agent_url,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) override;
-
-  // |EntityProviderLauncher|
-  void ConnectToStoryEntityProvider(
-      const std::string& story_id,
-      fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) override;
 
   // Called during initialization. Schedules the given action to be executed
   // during termination. This allows to create something like an asynchronous
@@ -185,8 +171,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
   std::unique_ptr<ViewHost> session_shell_view_host_;
-
-  std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
 
   std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;

@@ -23,7 +23,6 @@
 #include "gtest/gtest.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 #include "src/modular/lib/testing/mock_base.h"
@@ -133,15 +132,10 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
  public:
   AgentRunnerTest() = default;
 
-  void SetUp() override {
-    gtest::RealLoopFixture::SetUp();
-
-    entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(nullptr);
-  }
+  void SetUp() override { gtest::RealLoopFixture::SetUp(); }
 
   void TearDown() override {
     agent_runner_.reset();
-    entity_provider_runner_.reset();
 
     gtest::RealLoopFixture::TearDown();
   }
@@ -150,8 +144,7 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, /*agent_services_factory=*/nullptr, entity_provider_runner_.get(), &node_,
-          std::move(agent_service_index_));
+          &launcher_, /*agent_services_factory=*/nullptr, &node_, std::move(agent_service_index_));
     }
     return agent_runner_.get();
   }
@@ -245,7 +238,6 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   inspect::Node node_;
 
   files::ScopedTempDir mq_data_dir_;
-  std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<modular::AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;
 

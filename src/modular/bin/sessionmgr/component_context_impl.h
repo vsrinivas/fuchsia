@@ -6,13 +6,13 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_COMPONENT_CONTEXT_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
 namespace modular {
 
@@ -21,7 +21,6 @@ class AgentRunner;
 // The parameters of component context that do not vary by instance.
 struct ComponentContextInfo {
   AgentRunner* const agent_runner;
-  EntityProviderRunner* const entity_provider_runner;
 };
 
 // Implements the fuchsia::modular::ComponentContext interface, which is
@@ -58,11 +57,7 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   // |fuchsia::modular::ComponentContext|
   void ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) override;
 
-  // |fuchsia::modular::ComponentContext|
-  void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
-
   AgentRunner* const agent_runner_;
-  EntityProviderRunner* const entity_provider_runner_;
 
   const std::string component_namespace_;
   const std::string component_instance_id_;
