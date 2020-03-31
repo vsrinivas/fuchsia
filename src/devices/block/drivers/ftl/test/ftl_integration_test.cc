@@ -7,8 +7,6 @@
 #include "ftl_test_observer.h"
 #include "launch.h"
 
-// TODO(FLK-160): Re-enable when flakiness is fixed.
-#if !defined(__arm__) && !defined(__aarch64__)
 TEST(FtlTest, BlockTest) {
   const char* argv[] = {"/boot/bin/blktest", "-d", kTestDevice, nullptr};
 
@@ -21,4 +19,3 @@ TEST(FtlTest, IoCheck) {
 
   ASSERT_EQ(0, Execute(argv));
 }
-#endif
