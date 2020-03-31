@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     fidl::endpoints::{ClientEnd, DiscoverableService},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
+    fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_pkg::{
@@ -36,6 +37,7 @@ use {
         convert::TryInto,
         fs::File,
         io::{self, BufWriter, Read},
+        path::{Path, PathBuf},
         sync::Arc,
     },
     tempfile::TempDir,
@@ -71,6 +73,7 @@ pub struct MountsBuilder {
     static_repository: Option<RepositoryConfig>,
     dynamic_rewrite_rules: Option<RuleConfig>,
     dynamic_repositories: Option<RepositoryConfigs>,
+    custom_config_data: Vec<(PathBuf, String)>,
 }
 
 impl MountsBuilder {
@@ -101,6 +104,11 @@ impl MountsBuilder {
         self.dynamic_repositories = Some(dynamic_repositories);
         self
     }
+    /// Injects a file with custom contents into /config/data. Panics if file already exists.
+    pub fn custom_config_data(mut self, path: impl Into<PathBuf>, data: impl Into<String>) -> Self {
+        self.custom_config_data.push((path.into(), data.into()));
+        self
+    }
     pub fn build(self) -> Mounts {
         let mounts = Mounts {
             pkg_resolver_data: self
@@ -121,6 +129,9 @@ impl MountsBuilder {
         }
         if let Some(config) = self.dynamic_repositories {
             mounts.add_dynamic_repositories(&config);
+        }
+        for (path, data) in self.custom_config_data {
+            mounts.add_custom_config_data(path, data);
         }
         mounts
     }
@@ -164,6 +175,17 @@ impl Mounts {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let f = File::create(d.path().join("repositories.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), repo_configs).unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+
+    fn add_custom_config_data(&self, path: impl AsRef<Path>, data: String) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
+            let path = d.path().join(path);
+            assert!(!path.exists());
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, &data).unwrap();
         } else {
             panic!("not supported");
         }
@@ -416,7 +438,7 @@ impl BootArgumentsService<'_> {
 }
 
 struct MockLogger {
-    cobalt_events: Mutex<Vec<fidl_fuchsia_cobalt::CobaltEvent>>,
+    cobalt_events: Mutex<Vec<CobaltEvent>>,
 }
 
 impl MockLogger {
@@ -472,12 +494,26 @@ impl MockLoggerFactory {
         }
     }
 
-    pub fn events(&self) -> Vec<fidl_fuchsia_cobalt::CobaltEvent> {
+    pub fn events(&self) -> Vec<CobaltEvent> {
         self.loggers
             .lock()
             .iter()
             .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
             .collect()
+    }
+
+    pub async fn wait_for_at_least_one_event_with_metric_id(&self, id: u32) -> Vec<CobaltEvent> {
+        loop {
+            let events: Vec<CobaltEvent> = self
+                .events()
+                .into_iter()
+                .filter(|CobaltEvent { metric_id, .. }| *metric_id == id)
+                .collect();
+            if !events.is_empty() {
+                return events;
+            }
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+        }
     }
 }
 

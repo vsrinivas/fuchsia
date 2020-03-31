@@ -6,14 +6,14 @@
 use {
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
+    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, Event, EventPayload},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
         serve::{handler, UriPathHandler},
         Package, PackageBuilder, RepositoryBuilder,
     },
-    fuchsia_zircon::{self as zx, Status},
-    lib::{TestEnvBuilder, EMPTY_REPO_PATH},
+    fuchsia_zircon::Status,
+    lib::{make_repo, make_repo_config, MountsBuilder, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::sync::Arc,
 };
@@ -22,24 +22,110 @@ use {
 async fn pkg_resolver_startup_duration() {
     let env = TestEnvBuilder::new().build();
 
-    loop {
-        let events = env.mocks.logger_factory.events();
-        if !events.is_empty() {
-            let CobaltEvent { metric_id: _, event_codes, component, payload } = events
-                .iter()
-                .find(|CobaltEvent { metric_id, .. }| {
-                    *metric_id == metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID
-                })
-                .unwrap();
+    let events = env
+        .mocks
+        .logger_factory
+        .wait_for_at_least_one_event_with_metric_id(
+            metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
+        )
+        .await;
+    assert_matches!(
+        events[0],
+        CobaltEvent {
+            metric_id: metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
+            ref event_codes,
+            component: None,
+            payload: EventPayload::ElapsedMicros(_)
+        } if event_codes == &vec![0]
+    );
 
-            assert_eq!(event_codes, &vec![0]);
-            assert_eq!(component, &None);
-            assert_matches!(payload, EventPayload::ElapsedMicros(_));
+    env.stop().await;
+}
 
-            break;
-        }
-        fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
-    }
+async fn assert_repository_manager_load_static_configs_result(
+    env: &TestEnv,
+    result: metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult,
+) {
+    assert_eq!(
+        env.mocks
+            .logger_factory
+            .wait_for_at_least_one_event_with_metric_id(
+                metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+            )
+            .await,
+        vec![CobaltEvent {
+            metric_id: metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+            event_codes: vec![result.as_event_code()],
+            component: None,
+            payload: EventPayload::Event(Event {})
+        }]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn repository_manager_load_static_configs_success() {
+    let env = TestEnvBuilder::new()
+        .mounts(lib::MountsBuilder::new().static_repository(make_repo()).build())
+        .build();
+
+    assert_repository_manager_load_static_configs_result(
+        &env,
+        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success,
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn repository_manager_load_static_configs_io() {
+    let env = TestEnvBuilder::new().build();
+
+    assert_repository_manager_load_static_configs_result(
+        &env,
+        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io,
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn repository_manager_load_static_configs_parse() {
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .custom_config_data("repositories/invalid.json", "invalid-json")
+                .build(),
+        )
+        .build();
+
+    assert_repository_manager_load_static_configs_result(
+        &env,
+        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse,
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn repository_manager_load_static_configs_overridden() {
+    let json = serde_json::to_string(&make_repo_config(&make_repo())).unwrap();
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .custom_config_data("repositories/1.json", &json)
+                .custom_config_data("repositories/2.json", json)
+                .build(),
+        )
+        .build();
+
+    assert_repository_manager_load_static_configs_result(
+        &env,
+        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden,
+    )
+    .await;
 
     env.stop().await;
 }

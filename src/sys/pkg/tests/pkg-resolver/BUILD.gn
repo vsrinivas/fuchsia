@@ -450,6 +450,7 @@ rustc_test("metrics") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:serde_json",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }

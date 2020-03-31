@@ -4,10 +4,11 @@
 
 use {
     anyhow::{Context as _, Error},
+    cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
-    fuchsia_cobalt::{CobaltConnector, ConnectionType},
+    fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
@@ -101,11 +102,19 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
     let experiment_state = Arc::new(RwLock::new(experiment_state));
     let experiments = Arc::clone(&experiment_state).into();
 
+    let futures = FuturesUnordered::new();
+
+    let (mut cobalt_sender, cobalt_fut) =
+        CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
+            .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    futures.push(cobalt_fut.boxed_local());
+
     let font_package_manager = Arc::new(load_font_package_manager());
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(
         inspector.root().create_child("repository_manager"),
         experiments,
         &config,
+        cobalt_sender.clone(),
     )));
     let rewrite_manager = Arc::new(RwLock::new(
         load_rewrite_manager(
@@ -116,13 +125,6 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         )
         .await,
     ));
-
-    let futures = FuturesUnordered::new();
-
-    let (mut cobalt_sender, cobalt_fut) =
-        CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
-            .serve(ConnectionType::project_id(metrics::PROJECT_ID));
-    futures.push(cobalt_fut.boxed_local());
 
     let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
         cache.clone(),
@@ -243,21 +245,31 @@ fn load_repo_manager(
     node: inspect::Node,
     experiments: Experiments,
     config: &Config,
+    mut cobalt_sender: CobaltSender,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
     let dynamic_repo_path =
         if config.enable_dynamic_configuration() { Some(DYNAMIC_REPO_PATH) } else { None };
-    RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
+    match RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder
         })
         .inspect_node(node)
         .load_static_configs_dir(STATIC_REPO_DIR)
-        .unwrap_or_else(|(builder, errs)| {
+    {
+        Ok(builder) => {
+            cobalt_sender.log_event(
+                metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success
+                    .as_event_code(),
+            );
+            builder
+        }
+        Err((builder, errs)) => {
             for err in errs {
-                match err {
+                match &err {
                     crate::repository_manager::LoadError::Io { path: _, error }
                         if error.kind() == io::ErrorKind::NotFound =>
                     {
@@ -265,10 +277,18 @@ fn load_repo_manager(
                     }
                     _ => fx_log_err!("error loading static repo config: {}", err),
                 };
+
+                let dimension_result: metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult
+                    = err.into();
+                cobalt_sender.log_event(
+                    metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+                    dimension_result.as_event_code(),
+                );
             }
             builder
-        })
-        .build()
+        }
+    }
+    .build()
 }
 
 async fn load_rewrite_manager(

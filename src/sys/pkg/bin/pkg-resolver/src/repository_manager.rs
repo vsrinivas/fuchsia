@@ -9,6 +9,7 @@ use {
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
     },
+    cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -608,6 +609,22 @@ impl fmt::Display for LoadError {
             }
             LoadError::Overridden { replaced_config } => {
                 write!(f, "repository config for {} was overridden", replaced_config.repo_url())
+            }
+        }
+    }
+}
+
+impl From<LoadError> for metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult {
+    fn from(error: LoadError) -> Self {
+        match error {
+            LoadError::Io { .. } => {
+                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io
+            }
+            LoadError::Parse { .. } => {
+                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse
+            }
+            LoadError::Overridden { .. } => {
+                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden
             }
         }
     }
