@@ -71,7 +71,7 @@ constexpr char kAttachmentLogSystem[] = "log.system.txt";
 constexpr char kAttachmentLogSystemPrevious[] = "log.system.previous_boot.txt";
 
 // Bugreport key.
-constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
+constexpr char kAttachmentBundle[] = "bugreport.zip";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Device ID
