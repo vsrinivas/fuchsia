@@ -142,26 +142,22 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverOpaque) {
   const glm::vec4 kBlack(0, 0, 0, 1);
 
   SetupFrame();
-
-  auto gpu_uploader =
-      std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-
-  ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-  escher::PaperTransformStack* transform_stack = ren->transform_stack();
+  BeginRenderingFrame();
+  escher::PaperTransformStack* transform_stack = renderer()->transform_stack();
 
   transform_stack->PushTranslation(vec2(0, 0));
   {
     transform_stack->PushElevation(0);
     vec2 top_left(0, 0);
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
-    ren->DrawRect(top_left, bottom_right, Material::New(kBlack));
+    renderer()->DrawRect(top_left, bottom_right, Material::New(kBlack));
     transform_stack->Pop();
   }
   {
     transform_stack->PushElevation(-1);
     vec2 top_left(0, 0);
     vec2 bottom_right(kFramebufferWidth * 3 / 4, kFramebufferHeight * 3 / 4);
-    ren->DrawRect(top_left, bottom_right, Material::New(kYellow));
+    renderer()->DrawRect(top_left, bottom_right, Material::New(kYellow));
     transform_stack->Pop();
   }
   {
@@ -170,20 +166,14 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverOpaque) {
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
     MaterialPtr material = Material::New(kCyan75);
     material->set_type(Material::Type::kTranslucent);
-    ren->DrawRect(top_left, bottom_right, material);
+    renderer()->DrawRect(top_left, bottom_right, material);
     transform_stack->Pop();
   }
 
-  ren->FinalizeFrame();
-  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-  gpu_uploader->AddSignalSemaphore(upload_semaphore);
-  gpu_uploader->Submit();
-  ren->EndFrame(upload_semaphore);
+  EndRenderingFrame();
   escher()->vk_device().waitIdle();
 
-  auto bytes = ReadbackFromColorAttachment(fd.frame, fd.color_attachment->swapchain_layout(),
-                                           vk::ImageLayout::eColorAttachmentOptimal);
-
+  auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
   auto expected_histogram = ColorHistogram<ColorBgra>({{ColorBgra(0xFF, 0xFF, 0x00, 0xFF), 8u},
@@ -193,7 +183,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverOpaque) {
 
   EXPECT_RESULT_OK(ExpectHistogramMatch(histogram, expected_histogram));
 
-  fd.frame->EndFrame(SemaphorePtr(), []() {});
+  frame_data().frame->EndFrame(SemaphorePtr(), []() {});
 }
 
 // We draw the following scene:
@@ -228,26 +218,22 @@ VK_TEST_F(OpacityShapeTest, OpaqueOverTranslucent) {
   const glm::vec4 kBlack(0, 0, 0, 1);
 
   SetupFrame();
-
-  auto gpu_uploader =
-      std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-
-  ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-  escher::PaperTransformStack* transform_stack = ren->transform_stack();
+  BeginRenderingFrame();
+  escher::PaperTransformStack* transform_stack = renderer()->transform_stack();
 
   transform_stack->PushTranslation(vec2(0, 0));
   {
     transform_stack->PushElevation(0);
     vec2 top_left(0, 0);
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
-    ren->DrawRect(top_left, bottom_right, Material::New(kBlack));
+    renderer()->DrawRect(top_left, bottom_right, Material::New(kBlack));
     transform_stack->Pop();
   }
   {
     transform_stack->PushElevation(-2);
     vec2 top_left(kFramebufferWidth / 2, kFramebufferHeight / 2);
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
-    ren->DrawRect(top_left, bottom_right, Material::New(kYellow));
+    renderer()->DrawRect(top_left, bottom_right, Material::New(kYellow));
     transform_stack->Pop();
   }
   {
@@ -256,20 +242,14 @@ VK_TEST_F(OpacityShapeTest, OpaqueOverTranslucent) {
     vec2 bottom_right(kFramebufferWidth * 3 / 4, kFramebufferHeight * 3 / 4);
     MaterialPtr material = Material::New(kCyan75);
     material->set_type(Material::Type::kTranslucent);
-    ren->DrawRect(top_left, bottom_right, material);
+    renderer()->DrawRect(top_left, bottom_right, material);
     transform_stack->Pop();
   }
 
-  ren->FinalizeFrame();
-  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-  gpu_uploader->AddSignalSemaphore(upload_semaphore);
-  gpu_uploader->Submit();
-  ren->EndFrame(upload_semaphore);
+  EndRenderingFrame();
   escher()->vk_device().waitIdle();
 
-  auto bytes = ReadbackFromColorAttachment(fd.frame, fd.color_attachment->swapchain_layout(),
-                                           vk::ImageLayout::eColorAttachmentOptimal);
-
+  auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
   auto expected_histogram = ColorHistogram<ColorBgra>({{ColorBgra(0xFF, 0xFF, 0x00, 0xFF), 4u},
@@ -278,7 +258,7 @@ VK_TEST_F(OpacityShapeTest, OpaqueOverTranslucent) {
 
   EXPECT_RESULT_OK(ExpectHistogramMatch(histogram, expected_histogram));
 
-  fd.frame->EndFrame(SemaphorePtr(), []() {});
+  frame_data().frame->EndFrame(SemaphorePtr(), []() {});
 }
 
 // We draw the following scene:
@@ -314,19 +294,15 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
   const glm::vec4 kWhite(1, 1, 1, 1);
 
   SetupFrame();
-
-  auto gpu_uploader =
-      std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-
-  ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-  escher::PaperTransformStack* transform_stack = ren->transform_stack();
+  BeginRenderingFrame();
+  escher::PaperTransformStack* transform_stack = renderer()->transform_stack();
 
   transform_stack->PushTranslation(vec2(0, 0));
   {
     transform_stack->PushElevation(0);
     vec2 top_left(0, 0);
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
-    ren->DrawRect(top_left, bottom_right, Material::New(kWhite));
+    renderer()->DrawRect(top_left, bottom_right, Material::New(kWhite));
     transform_stack->Pop();
   }
   {
@@ -335,7 +311,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
     vec2 bottom_right(kFramebufferWidth * 3 / 4, kFramebufferHeight * 3 / 4);
     MaterialPtr material = Material::New(kCyan25);
     material->set_type(Material::Type::kTranslucent);
-    ren->DrawRect(top_left, bottom_right, material);
+    renderer()->DrawRect(top_left, bottom_right, material);
     transform_stack->Pop();
   }
   {
@@ -344,20 +320,14 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
     MaterialPtr material = Material::New(kYellow50);
     material->set_type(Material::Type::kTranslucent);
-    ren->DrawRect(top_left, bottom_right, material);
+    renderer()->DrawRect(top_left, bottom_right, material);
     transform_stack->Pop();
   }
 
-  ren->FinalizeFrame();
-  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-  gpu_uploader->AddSignalSemaphore(upload_semaphore);
-  gpu_uploader->Submit();
-  ren->EndFrame(upload_semaphore);
+  EndRenderingFrame();
   escher()->vk_device().waitIdle();
 
-  auto bytes = ReadbackFromColorAttachment(fd.frame, fd.color_attachment->swapchain_layout(),
-                                           vk::ImageLayout::eColorAttachmentOptimal);
-
+  auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
   auto expected_histogram = ColorHistogram<ColorBgra>({{ColorBgra(0xBF, 0xFF, 0xFF, 0xFF), 8u},
@@ -367,7 +337,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
 
   EXPECT_RESULT_OK(ExpectHistogramMatch(histogram, expected_histogram));
 
-  fd.frame->EndFrame(SemaphorePtr(), []() {});
+  TeardownFrame();
 }
 
 // We draw the following scene:
@@ -400,11 +370,6 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
 VK_TEST_F(OpacityShapeTest, PremultipliedTexture) {
   const glm::vec4 kFuchsia(1, 0, 1, 1);
 
-  SetupFrame();
-
-  auto gpu_uploader =
-      std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-
   std::array<uint8_t, 4> cyan_25_premultiplied_bytes = {0x00, 0x40, 0x40, 0x40};
   ImagePtr cyan_25_image = CreateImageFrom1x1RgbaBytes(escher().get(), cyan_25_premultiplied_bytes);
   TexturePtr cyan_25_texture =
@@ -412,35 +377,30 @@ VK_TEST_F(OpacityShapeTest, PremultipliedTexture) {
   MaterialPtr cyan_25_material = Material::New(vec4(1, 1, 1, 1), cyan_25_texture);
   cyan_25_material->set_type(Material::Type::kTranslucent);
 
-  ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-  escher::PaperTransformStack* transform_stack = ren->transform_stack();
+  SetupFrame();
+  BeginRenderingFrame();
+  escher::PaperTransformStack* transform_stack = renderer()->transform_stack();
 
   transform_stack->PushTranslation(vec2(0, 0));
   {
     transform_stack->PushElevation(0);
     vec2 top_left(0, 0);
     vec2 bottom_right(kFramebufferWidth, kFramebufferHeight);
-    ren->DrawRect(top_left, bottom_right, Material::New(kFuchsia));
+    renderer()->DrawRect(top_left, bottom_right, Material::New(kFuchsia));
     transform_stack->Pop();
   }
   {
     transform_stack->PushElevation(-1);
     vec2 top_left(0, 0);
     vec2 bottom_right(kFramebufferWidth * 3 / 4, kFramebufferHeight * 3 / 4);
-    ren->DrawRect(top_left, bottom_right, cyan_25_material);
+    renderer()->DrawRect(top_left, bottom_right, cyan_25_material);
     transform_stack->Pop();
   }
 
-  ren->FinalizeFrame();
-  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-  gpu_uploader->AddSignalSemaphore(upload_semaphore);
-  gpu_uploader->Submit();
-  ren->EndFrame(upload_semaphore);
+  EndRenderingFrame();
   escher()->vk_device().waitIdle();
 
-  auto bytes = ReadbackFromColorAttachment(fd.frame, fd.color_attachment->swapchain_layout(),
-                                           vk::ImageLayout::eColorAttachmentOptimal);
-
+  auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
   auto expected_histogram = ColorHistogram<ColorBgra>(
@@ -448,7 +408,7 @@ VK_TEST_F(OpacityShapeTest, PremultipliedTexture) {
 
   EXPECT_RESULT_OK(ExpectHistogramMatch(histogram, expected_histogram));
 
-  fd.frame->EndFrame(SemaphorePtr(), []() {});
+  TeardownFrame();
 }
 
 }  // namespace test

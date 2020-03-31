@@ -25,8 +25,7 @@ class DebugShapeTest : public PaperRendererTest {
  public:
   // Used by tests that call DebugRects::Color when drawing.
   int32_t GetColoredData(DebugRects::Color kColor) {
-    auto bytes = ReadbackFromColorAttachment(fd.frame, vk::ImageLayout::eColorAttachmentOptimal,
-                                             vk::ImageLayout::eColorAttachmentOptimal);
+    auto bytes = GetPixelData();
     const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
     EXPECT_EQ(2U, histogram.size());
 
@@ -55,25 +54,16 @@ VK_TEST_F(DebugShapeTest, Text) {
     // number of black pixels in the glyph after scaling is 16.
     std::function<void(std::string, size_t)> draw_and_check_histogram = [&](std::string glyphs,
                                                                             size_t expected_black) {
-      auto gpu_uploader =
-          std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-
-      ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-      ren->DrawDebugText(glyphs, {0, 10 * scale}, scale);
-      ren->FinalizeFrame();
-      auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-      gpu_uploader->AddSignalSemaphore(upload_semaphore);
-      gpu_uploader->Submit();
-      ren->EndFrame(upload_semaphore);
+      BeginRenderingFrame();
+      renderer()->DrawDebugText(glyphs, {0, 10 * scale}, scale);
+      EndRenderingFrame();
 
       const int32_t scale_squared = scale * scale;
 
       size_t expected_white =
           (glyphs.length() * kNumPixelsPerGlyph - expected_black) * scale_squared;
 
-      auto bytes = ReadbackFromColorAttachment(fd.frame, fd.color_attachment->swapchain_layout(),
-                                               vk::ImageLayout::eColorAttachmentOptimal);
-
+      auto bytes = GetPixelData();
       const ColorHistogram<ColorBgra> histogram(bytes.data(),
                                                 kFramebufferWidth * kFramebufferHeight);
 
@@ -98,7 +88,7 @@ VK_TEST_F(DebugShapeTest, Text) {
     // Draw several glyphs next to each other.
     draw_and_check_histogram(" 1A!", 0 + 5 + 12 + 4);
 
-    fd.frame->EndFrame(SemaphorePtr(), []() {});
+    TeardownFrame();
   }
   escher()->vk_device().waitIdle();
   ASSERT_TRUE(escher()->Cleanup());
@@ -117,31 +107,18 @@ VK_TEST_F(DebugShapeTest, Lines) {
           auto expected_colored = endCoord * thickness;
 
           {
-            auto gpu_uploader =
-                std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-            ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-            ren->DrawVLine(kColor, 0, 0, endCoord, thickness);
-            ren->FinalizeFrame();
-            auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-            gpu_uploader->AddSignalSemaphore(upload_semaphore);
-            gpu_uploader->Submit();
-            ren->EndFrame(std::move(upload_semaphore));
+            BeginRenderingFrame();
+            renderer()->DrawVLine(kColor, 0, 0, endCoord, thickness);
+            EndRenderingFrame();
           }
           EXPECT_EQ(expected_colored, GetColoredData(kColor))
               << "FAILED WHILE DRAWING VERTICAL LINE OF COLOR \"" << kColor
               << "\" AT THICKNESS: " << thickness;
 
           {
-            auto gpu_uploader =
-                std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-            ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
-
-            ren->DrawHLine(kColor, 0, 0, endCoord, thickness);
-            ren->FinalizeFrame();
-            auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-            gpu_uploader->AddSignalSemaphore(upload_semaphore);
-            gpu_uploader->Submit();
-            ren->EndFrame(std::move(upload_semaphore));
+            BeginRenderingFrame();
+            renderer()->DrawHLine(kColor, 0, 0, endCoord, thickness);
+            EndRenderingFrame();
           }
           EXPECT_EQ(expected_colored, GetColoredData(kColor))
               << "FAILED WHILE DRAWING HORIZONTAL LINE OF COLOR \"" << kColor
@@ -151,8 +128,7 @@ VK_TEST_F(DebugShapeTest, Lines) {
     draw_and_check_histogram(escher::DebugRects::kPurple, (uint8_t)500);
     draw_and_check_histogram(escher::DebugRects::kRed, (uint8_t)800);
     draw_and_check_histogram(escher::DebugRects::kYellow, (uint8_t)200);
-
-    fd.frame->EndFrame(SemaphorePtr(), []() {});
+    TeardownFrame();
   }
   escher()->vk_device().waitIdle();
   ASSERT_TRUE(escher()->Cleanup());
@@ -171,11 +147,8 @@ VK_TEST_F(DebugShapeTest, PaperTimestampGraph) {
     // not negative. All other values are 0 to simplify the test.
     std::function<void(int8_t, int8_t)> draw_and_check_histogram = [&](uint8_t start_time,
                                                                        uint8_t done_time) {
-      auto gpu_uploader =
-          std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
-
       EXPECT_TRUE(depth_buffer() || i == 1);
-      ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
+      BeginRenderingFrame();
       EXPECT_TRUE(depth_buffer());
 
       PaperRenderer::Timestamp ts;
@@ -189,14 +162,9 @@ VK_TEST_F(DebugShapeTest, PaperTimestampGraph) {
       graph.AddTimestamp(ts);
       constexpr uint32_t kGraphHeight = 500;
       constexpr uint32_t kGraphWidth = 500;
-      graph.DrawGraphContentOn(ren.get(), {{0, 0}, {kGraphWidth, kGraphHeight}});
+      graph.DrawGraphContentOn(renderer(), {{0, 0}, {kGraphWidth, kGraphHeight}});
 
-      ren->FinalizeFrame();
-      auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-      gpu_uploader->AddSignalSemaphore(upload_semaphore);
-      gpu_uploader->Submit();
-      ren->EndFrame(std::move(upload_semaphore));
-
+      EndRenderingFrame();
       int16_t render_time = done_time - start_time;
 
       const int16_t h_interval = kGraphHeight / 35;
@@ -211,7 +179,7 @@ VK_TEST_F(DebugShapeTest, PaperTimestampGraph) {
     int8_t end = i * 2;
     draw_and_check_histogram(1, end);
 
-    fd.frame->EndFrame(SemaphorePtr(), []() {});
+    TeardownFrame();
   }
   escher()->vk_device().waitIdle();
   ASSERT_TRUE(escher()->Cleanup());

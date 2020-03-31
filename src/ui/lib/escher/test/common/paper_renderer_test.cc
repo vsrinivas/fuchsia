@@ -34,30 +34,48 @@ void PaperRendererTest::SetUp() {
   } else {
     GTEST_SKIP() << "Cannot find a valid depth stencil format, test skipped";
   }
-  ren = PaperRenderer::New(escher(), config);
+  renderer_ = PaperRenderer::New(escher(), config);
 }
 
 void PaperRendererTest::TearDown() {
-  ren.reset();
+  renderer_.reset();
   ReadbackTest::TearDown();
 }
 
 void PaperRendererTest::SetupFrame() {
-  fd = NewFrame(vk::ImageLayout::eColorAttachmentOptimal);
+  frame_data_ = NewFrame(vk::ImageLayout::eColorAttachmentOptimal);
+  gpu_uploader_ = std::make_shared<BatchGpuUploader>(escher(), frame_data_.frame->frame_number());
 
-  scene = fxl::MakeRefCounted<PaperScene>();
-  scene->point_lights.resize(0);
-  scene->ambient_light.color = vec3(1, 1, 1);
-  scene->bounding_box =
+  scene_ = fxl::MakeRefCounted<PaperScene>();
+  scene_->point_lights.resize(0);
+  scene_->ambient_light.color = vec3(1, 1, 1);
+  scene_->bounding_box =
       BoundingBox(vec3(0, 0, -200), vec3(kFramebufferWidth, kFramebufferHeight, 1));
 
-  const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
+  const escher::ViewingVolume& volume = ViewingVolume(scene_->bounding_box);
   escher::Camera cam = escher::Camera::NewOrtho(volume);
-  cameras = {cam};
+  cameras_ = {cam};
 };
 
-std::vector<uint8_t> PaperRendererTest::GetFrameData() {
-  return ReadbackFromColorAttachment(fd.frame, vk::ImageLayout::eColorAttachmentOptimal,
+void PaperRendererTest::TeardownFrame() {
+  frame_data_.frame->EndFrame(SemaphorePtr(), []() {});
+}
+
+void PaperRendererTest::BeginRenderingFrame() {
+  renderer_->BeginFrame(frame_data_.frame, gpu_uploader_, scene_, cameras_,
+                        frame_data_.color_attachment);
+}
+
+void PaperRendererTest::EndRenderingFrame() {
+  renderer_->FinalizeFrame();
+  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+  gpu_uploader_->AddSignalSemaphore(upload_semaphore);
+  gpu_uploader_->Submit();
+  renderer_->EndFrame(upload_semaphore);
+}
+
+std::vector<uint8_t> PaperRendererTest::GetPixelData() {
+  return ReadbackFromColorAttachment(frame_data_.frame, vk::ImageLayout::eColorAttachmentOptimal,
                                      vk::ImageLayout::eColorAttachmentOptimal);
 };
 

@@ -25,20 +25,33 @@ class PaperRendererTest : public ReadbackTest {
   // Sets up the environment including the frame, scene, and cameras.
   void SetupFrame();
 
-  // Get current image data from the frame.
-  std::vector<uint8_t> GetFrameData();
+  // Tear down the created frame.
+  void TeardownFrame();
 
- public:
-  TexturePtr depth_buffer() { return ren->depth_buffers_[0]; }
+  // Initialize the GPU uploader, and configure the renderer to begin
+  // a frame.
+  void BeginRenderingFrame();
 
-  // TODO(48928): Rename these member variables and make them private,
-  // in tests inheriting from this fixture we should use getters instead.
-  escher::PaperRendererPtr ren;
+  // Generate all commands (including from renderer and GPU uploader)
+  // and emit them to the command buffer.
+  void EndRenderingFrame();
+
+  // Get current image pixels from the frame.
+  std::vector<uint8_t> GetPixelData();
+
+  PaperRenderer* renderer() const { return renderer_.get(); }
+  BatchGpuUploader* gpu_uploader() const { return gpu_uploader_.get(); }
+  const ReadbackTest::FrameData& frame_data() const { return frame_data_; }
+  TexturePtr depth_buffer() const { return renderer_->depth_buffers_[0]; }
+
+ private:
+  PaperRendererPtr renderer_;
 
   // Frame environment variables.
-  ReadbackTest::FrameData fd;
-  escher::PaperScenePtr scene;
-  std::vector<Camera> cameras;
+  ReadbackTest::FrameData frame_data_;
+  PaperScenePtr scene_;
+  std::vector<Camera> cameras_;
+  std::shared_ptr<BatchGpuUploader> gpu_uploader_;
 };
 
 }  // namespace test
