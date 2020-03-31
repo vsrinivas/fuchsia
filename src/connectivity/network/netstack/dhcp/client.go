@@ -64,6 +64,9 @@ const (
 
 // Stats collects DHCP statistics per client.
 type Stats struct {
+	InitAcquire                 tcpip.StatCounter
+	RenewAcquire                tcpip.StatCounter
+	RebindAcquire               tcpip.StatCounter
 	SendDiscovers               tcpip.StatCounter
 	RecvOffers                  tcpip.StatCounter
 	SendRequests                tcpip.StatCounter
@@ -181,11 +184,14 @@ func (c *Client) Run(ctx context.Context) {
 				case initSelecting:
 					// Nothing to do. The client is initializing, no leases have been acquired.
 					// Thus no times are set for renew, rebind, and lease expiration.
+					c.stats.InitAcquire.Increment()
 				case renewing:
+					c.stats.RenewAcquire.Increment()
 					if tilRebind := time.Until(rebindTime); tilRebind < acquisitionTimeout {
 						acquisitionTimeout = tilRebind
 					}
 				case rebinding:
+					c.stats.RebindAcquire.Increment()
 					if tilLeaseExpire := time.Until(leaseExpirationTime); tilLeaseExpire < acquisitionTimeout {
 						acquisitionTimeout = tilLeaseExpire
 					}
