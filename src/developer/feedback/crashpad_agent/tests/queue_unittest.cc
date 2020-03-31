@@ -13,6 +13,8 @@
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
@@ -75,40 +77,41 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-class QueueTest : public UnitTestFixture {
+class QueueTest : public UnitTestFixture, CobaltTestFixture {
  public:
+  QueueTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
+
+  void SetUp() override {
+    settings_.set_upload_policy(UploadPolicy::LIMBO);
+    inspector_ = std::make_unique<inspect::Inspector>();
+    info_context_ =
+        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+
+    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpNetworkReachabilityProvider();
+    RunLoopUntilIdle();
+  }
+
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
   }
 
  protected:
-  void SetUpNetworkReachabilityProvider(
-      std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider) {
-    network_reachability_provider_ = std::move(network_reachability_provider);
-    if (network_reachability_provider_) {
-      InjectServiceProvider(network_reachability_provider_.get());
-    }
+  void SetUpNetworkReachabilityProvider() {
+    network_reachability_provider_ = std::make_unique<stubs::NetworkReachabilityProvider>();
+    InjectServiceProvider(network_reachability_provider_.get());
   }
 
   void SetUpQueue(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
     program_id_ = 1;
     state_ = QueueOps::SetStateToLeaveAsPending;
+    expected_queue_contents_.clear();
     upload_attempt_results_ = upload_attempt_results;
     next_upload_attempt_result_ = upload_attempt_results_.cbegin();
-    expected_queue_contents_.clear();
-
-    settings_.set_upload_policy(UploadPolicy::LIMBO);
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
-    inspector_ = std::make_unique<inspect::Inspector>();
 
-    SetUpNetworkReachabilityProvider(std::make_unique<stubs::NetworkReachabilityProvider>());
-
-    info_context_ =
-        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
     queue_ = Queue::TryCreate(dispatcher(), services(), info_context_, crash_server_.get());
-
     ASSERT_TRUE(queue_);
-
     queue_->WatchSettings(&settings_);
   }
 
