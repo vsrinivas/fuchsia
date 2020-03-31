@@ -19,7 +19,8 @@ template("zircon_runtime_library") {
 
   label = "//build/unification/images:lib.${invoker.library}"
   if (toolchain_variant.instrumented && toolchain_variant.name != "") {
-    label += ".${toolchain_variant.name}"
+    # Fuzzers just use the base variant.
+    label += "." + string_replace(toolchain_variant.name, "-fuzzer", "")
   }
 
   out_dir = get_label_info(label, "target_out_dir")
