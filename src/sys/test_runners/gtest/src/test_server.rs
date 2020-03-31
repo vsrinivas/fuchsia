@@ -269,16 +269,19 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, stdlogger) = test_runners_lib::launch_process(
-            &component.binary,
-            &component.name,
-            Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
-            component.ns.clone().map_err(NamespaceError::Clone)?,
-            Some(args),
-            Some(names),
-            None,
-        )
-        .await?;
+        let (process, _job, stdlogger) =
+            test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
+                bin_path: &component.binary,
+                process_name: &component.name,
+                job: Some(
+                    component.job.create_child_job().map_err(KernelError::CreateJob).unwrap(),
+                ),
+                ns: component.ns.clone().map_err(NamespaceError::Clone)?,
+                args: Some(args),
+                name_infos: Some(names),
+                environs: None,
+            })
+            .await?;
 
         let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
             .map_err(KernelError::CreateSocket)
@@ -418,16 +421,19 @@ impl TestServer {
         args.extend(component.args.clone());
 
         // Load bearing to hold job guard.
-        let (process, _job, stdlogger) = test_runners_lib::launch_process(
-            &component.binary,
-            &component.name,
-            Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
-            component.ns.clone().map_err(NamespaceError::Clone)?,
-            Some(args),
-            Some(names),
-            None,
-        )
-        .await?;
+        let (process, _job, stdlogger) =
+            test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
+                bin_path: &component.binary,
+                process_name: &component.name,
+                job: Some(
+                    component.job.create_child_job().map_err(KernelError::CreateJob).unwrap(),
+                ),
+                ns: component.ns.clone().map_err(NamespaceError::Clone)?,
+                args: Some(args),
+                name_infos: Some(names),
+                environs: None,
+            })
+            .await?;
 
         // collect stdout in background before waiting for process termination.
         let std_reader = LogStreamReader::new(stdlogger);

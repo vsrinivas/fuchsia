@@ -200,7 +200,8 @@ pub struct LauncherConfigArgs<'a> {
     /// Name of the binary to add to `LaunchInfo`.
     pub name: &'a str,
 
-    ///  Arguments to binary.
+    /// Arguments to binary. Binary path will be automatically
+    /// prepended so that should not be passed as first argument.
     pub args: Option<Vec<String>>,
 
     /// Namespace for binary process to be launched.

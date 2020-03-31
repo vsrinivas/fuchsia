@@ -155,25 +155,27 @@ pub enum LaunchError {
     UnExpectedError,
 }
 
+/// Arguments to launch_process.
+pub struct LaunchProcessArgs<'a> {
+    /// Relative binary path to /pkg.
+    pub bin_path: &'a str,
+    /// Name of the binary to add to process.
+    pub process_name: &'a str,
+    ///Job used launch process, if None, a new child of default_job() is used.
+    pub job: Option<zx::Job>,
+    /// Namespace for binary process to be launched.
+    pub ns: ComponentNamespace,
+    /// Arguments to binary. Binary name is automatically appended as first argument.
+    pub args: Option<Vec<String>>,
+    /// Extra names to add to namespace. by default only names from `ns` are added.
+    pub name_infos: Option<Vec<fproc::NameInfo>>,
+    /// Process environment variables.
+    pub environs: Option<Vec<String>>,
+}
+
 /// Launches process, assigns a logger as stdout/stderr to launched process.
-///
-///  # Arguments
-///
-/// * `bin_path` - relative binary path to /pkg
-/// * `process_name` - Name of the binary to add to process.
-/// * `job` - Job used launch process, if None, a new child of default_job() is used.
-/// * `ns` - Namespace for binary process to be launched.
-/// * `args` - Arguments to binary. Binary name is automatically appended as first argument.
-/// * `names_info` - Extra names to add to namespace. by default only names from `ns` are added.
-/// * `environs` - Process environment variables.
 pub async fn launch_process(
-    bin_path: &str,
-    process_name: &str,
-    job: Option<zx::Job>,
-    ns: ComponentNamespace,
-    args: Option<Vec<String>>,
-    name_infos: Option<Vec<fproc::NameInfo>>,
-    environs: Option<Vec<String>>,
+    args: LaunchProcessArgs<'_>,
 ) -> Result<(Process, ScopedJob, LoggerStream), LaunchError> {
     let launcher = connect_to_service::<fproc::LauncherMarker>().map_err(LaunchError::Launcher)?;
 
@@ -198,14 +200,14 @@ pub async fn launch_process(
     // Load the component
     let mut launch_info =
         runner::component::configure_launcher(runner::component::LauncherConfigArgs {
-            bin_path,
-            name: process_name,
-            args,
-            ns,
-            job,
+            bin_path: args.bin_path,
+            name: args.process_name,
+            args: args.args,
+            ns: args.ns,
+            job: args.job,
             handle_infos: Some(handle_infos),
-            name_infos,
-            environs,
+            name_infos: args.name_infos,
+            environs: args.environs,
             launcher: &launcher,
         })
         .await

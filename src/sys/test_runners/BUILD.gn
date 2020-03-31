@@ -52,7 +52,10 @@ test_package("test-runner-unit-tests") {
 
 group("test_runners") {
   testonly = true
-  deps = [ "gtest" ]
+  deps = [
+    "gtest",
+    "rust",
+  ]
 }
 
 group("tests") {
@@ -60,5 +63,6 @@ group("tests") {
   deps = [
     ":test-runner-unit-tests",
     "gtest:tests",
+    "rust:tests",
   ]
 }

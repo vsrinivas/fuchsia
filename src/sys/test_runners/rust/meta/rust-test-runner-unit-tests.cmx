@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/rust-test-runner-unit-tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

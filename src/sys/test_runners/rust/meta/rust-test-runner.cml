@@ -1,0 +1,36 @@
+{
+    program: {
+        binary: "bin/rust_test_runner"
+    },
+    runners: [
+        {
+            name: "rust_test_runner",
+            from: "self",
+            path: "/svc/fuchsia.component.runner.ComponentRunner"
+        }
+    ],
+    use: [
+        {
+            runner: "elf"
+        },
+        {
+            storage: "data"
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.component.runner.ComponentRunner",
+            from: "self"
+        },
+        {
+            runner: "rust_test_runner",
+            from: "self"
+        }
+    ]
+}
