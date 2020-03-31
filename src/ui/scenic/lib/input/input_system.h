@@ -33,7 +33,7 @@ class InputSystem : public System,
   static constexpr TypeId kTypeId = kInput;
   static const char* kName;
 
-  explicit InputSystem(SystemContext context, gfx::Engine* engine);
+  explicit InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph);
   ~InputSystem() override = default;
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(
@@ -76,7 +76,7 @@ class InputSystem : public System,
                                                   const glm::mat4& layer_transform) const;
 
  private:
-  gfx::Engine* const engine_;
+  fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
 
   // Send hard keyboard events to IME Service for dispatch via IME.
   // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.

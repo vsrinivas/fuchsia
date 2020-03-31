@@ -199,7 +199,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-  auto input = scenic_.RegisterSystem<input::InputSystem>(&engine_.value());
+  auto input = scenic_.RegisterSystem<input::InputSystem>(engine_.value().scene_graph());
   FXL_DCHECK(input);
 #endif
 

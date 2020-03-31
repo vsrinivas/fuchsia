@@ -35,8 +35,8 @@ class InputSystem;
 class InputCommandDispatcher : public CommandDispatcher {
  public:
   InputCommandDispatcher(scheduling::SessionId session_id,
-                         std::shared_ptr<EventReporter> event_reporter, gfx::Engine* engine,
-                         InputSystem* input_system);
+                         std::shared_ptr<EventReporter> event_reporter,
+                         fxl::WeakPtr<gfx::SceneGraph> scene_graph, InputSystem* input_system);
   ~InputCommandDispatcher() override = default;
 
   // |CommandDispatcher|
@@ -48,14 +48,17 @@ class InputCommandDispatcher : public CommandDispatcher {
 
  private:
   // Per-command dispatch logic.
-  void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
+  void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
+                       const gfx::LayerStackPtr& layer_stack);
   void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd& command);
   void DispatchCommand(const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& command);
   void DispatchCommand(const fuchsia::ui::input::SetParallelDispatchCmd& command);
 
   // Per-pointer-type dispatch logic.
-  void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
-  void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
+  void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
+                            const gfx::LayerStackPtr& layer_stack);
+  void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
+                            const gfx::LayerStackPtr& layer_stack);
 
   // Dispatches an event to a parallel set of views; set may be empty.
   // Conditionally trigger focus change request, based on |views_and_event.event.phase|.
@@ -107,7 +110,7 @@ class InputCommandDispatcher : public CommandDispatcher {
   // FIELDS
   const scheduling::SessionId session_id_;
   std::shared_ptr<EventReporter> event_reporter_;
-  gfx::Engine* const engine_ = nullptr;
+  fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
   InputSystem* const input_system_ = nullptr;
 
   // Tracks the set of Views each touch event is delivered to; basically, a map from pointer ID to a

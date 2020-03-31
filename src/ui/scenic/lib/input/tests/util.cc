@@ -149,7 +149,7 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
   frame_scheduler->AddSessionUpdater(gfx->GetWeakPtr());
   scenic_->SetFrameScheduler(frame_scheduler);
 
-  input_system_ = scenic->RegisterSystem<InputSystem>(engine_.get());
+  input_system_ = scenic->RegisterSystem<InputSystem>(engine_->scene_graph());
   scenic->SetInitialized();
 }
 

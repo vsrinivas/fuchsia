@@ -17,9 +17,9 @@ namespace input {
 
 const char* InputSystem::kName = "InputSystem";
 
-InputSystem::InputSystem(SystemContext context, gfx::Engine* engine)
-    : System(std::move(context)), engine_(engine) {
-  FXL_CHECK(engine_);
+InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph)
+    : System(std::move(context)), scene_graph_(scene_graph) {
+  FXL_CHECK(scene_graph);
   ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
   ime_service_.set_error_handler(
       [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
@@ -37,7 +37,7 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
     scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
     std::shared_ptr<ErrorReporter> error_reporter) {
   return CommandDispatcherUniquePtr(
-      new InputCommandDispatcher(session_id, std::move(event_reporter), engine_, this),
+      new InputCommandDispatcher(session_id, std::move(event_reporter), scene_graph_, this),
       // Custom deleter.
       [](CommandDispatcher* cd) { delete cd; });
 }
@@ -57,11 +57,11 @@ void InputSystem::Register(
 
 std::optional<glm::mat4> InputSystem::GetGlobalTransformByViewRef(
     const fuchsia::ui::views::ViewRef& view_ref) const {
-  if (!engine_->scene_graph()) {
+  if (!scene_graph_) {
     return std::nullopt;
   }
   zx_koid_t view_ref_koid = fsl::GetKoid(view_ref.reference.get());
-  return engine_->scene_graph()->view_tree().GlobalTransformOf(view_ref_koid);
+  return scene_graph_->view_tree().GlobalTransformOf(view_ref_koid);
 }
 
 void InputSystem::RegisterListener(

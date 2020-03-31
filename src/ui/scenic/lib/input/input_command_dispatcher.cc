@@ -46,9 +46,8 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   return (((uint64_t)ia) << 32) | ib;
 }
 
-gfx::LayerStackPtr GetLayerStack(gfx::Engine* engine, GlobalId compositor_id) {
-  FXL_DCHECK(engine);
-  gfx::CompositorWeakPtr compositor = engine->scene_graph()->GetCompositor(compositor_id);
+gfx::LayerStackPtr GetLayerStack(const gfx::SceneGraph& scene_graph, GlobalId compositor_id) {
+  gfx::CompositorWeakPtr compositor = scene_graph.GetCompositor(compositor_id);
   FXL_DCHECK(compositor) << "No compositor, violated invariant.";
 
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
@@ -98,18 +97,22 @@ AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& ori
 
 InputCommandDispatcher::InputCommandDispatcher(scheduling::SessionId session_id,
                                                std::shared_ptr<EventReporter> event_reporter,
-                                               gfx::Engine* engine, InputSystem* input_system)
+                                               fxl::WeakPtr<gfx::SceneGraph> scene_graph,
+                                               InputSystem* input_system)
     : session_id_(session_id),
       event_reporter_(std::move(event_reporter)),
-      engine_(engine),
+      scene_graph_(scene_graph),
       input_system_(input_system) {
-  FXL_CHECK(engine_);
+  FXL_CHECK(scene_graph_);
   FXL_CHECK(input_system_);
 }
 
 void InputCommandDispatcher::ReportPointerEventToPointerCaptureListener(
     const PointerEvent& pointer_event, GlobalId compositor_id) {
-  const auto layers = GetLayerStack(engine_, compositor_id)->layers();
+  if (!scene_graph_)
+    return;  // Can't find coordinate space if there is no scene.
+
+  const auto layers = GetLayerStack(*scene_graph_.get(), compositor_id)->layers();
   if (!layers.empty()) {
     // Assume we only have one layer.
     const glm::mat4 screen_to_world_space_transform =
@@ -123,6 +126,8 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
                                              scheduling::PresentId present_id) {
   TRACE_DURATION("input", "dispatch_command", "command", "ScenicCmd");
   FXL_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
+  if (!scene_graph_)
+    return;  // Scene graph does not exist. Can not dispatch input.
 
   InputCommand& input = command.input();
   if (input.is_send_keyboard_input()) {
@@ -130,7 +135,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
   } else if (input.is_send_pointer_input()) {
     // Compositor and layer stack required for dispatch.
     GlobalId compositor_id(session_id_, input.send_pointer_input().compositor_id);
-    gfx::CompositorWeakPtr compositor = engine_->scene_graph()->GetCompositor(compositor_id);
+    gfx::CompositorWeakPtr compositor = scene_graph_->GetCompositor(compositor_id);
     if (!compositor)
       return;  // It's legal to race against GFX's compositor setup.
 
@@ -138,7 +143,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
     if (!layer_stack)
       return;  // It's legal to race against GFX's layer stack setup.
 
-    DispatchCommand(input.send_pointer_input());
+    DispatchCommand(input.send_pointer_input(), layer_stack);
   } else if (input.is_set_hard_keyboard_delivery()) {
     DispatchCommand(input.set_hard_keyboard_delivery());
   } else if (input.is_set_parallel_dispatch()) {
@@ -146,15 +151,16 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd& command) {
+void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd& command,
+                                             const gfx::LayerStackPtr& layer_stack) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
 
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH:
-      DispatchTouchCommand(command);
+      DispatchTouchCommand(command, layer_stack);
       break;
     case PointerEventType::MOUSE:
-      DispatchMouseCommand(command);
+      DispatchMouseCommand(command, layer_stack);
       break;
     default:
       // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER
@@ -172,7 +178,8 @@ void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd& command)
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& command) {
+void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& command,
+                                                  const gfx::LayerStackPtr& layer_stack) {
   TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
   trace_flow_id_t trace_id =
       PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor);
@@ -188,10 +195,8 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
   FXL_DCHECK(pointer_phase != Phase::HOVER) << "Oops, touch device had unexpected HOVER event.";
 
   if (pointer_phase == Phase::ADD) {
-    GlobalId compositor_id(session_id_, command.compositor_id);
-
     gfx::SessionHitAccumulator accumulator;
-    PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &accumulator);
+    PerformGlobalHitTest(layer_stack, pointer, &accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
@@ -266,8 +271,6 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
     // for "top hit".
     glm::mat4 view_transform(1.f);
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-    const GlobalId compositor_id(session_id_, command.compositor_id);
-    gfx::LayerStackPtr layer_stack = GetLayerStack(engine_, compositor_id);
     {
       // Find top-hit target and send it to accessibility.
       // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
@@ -292,12 +295,12 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
         pointer_id,
         {.event = std::move(command.pointer_event),
          .parallel_event_receivers = std::move(deferred_event_receivers),
-         .compositor_id = compositor_id},
+         .compositor_id = GlobalId{session_id_, command.compositor_id}},
         std::move(packet));
   } else {
     // TODO(48150): Delete when we delete the PointerCapture functionality.
-    const GlobalId compositor_id(session_id_, command.compositor_id);
-    ReportPointerEventToPointerCaptureListener(command.pointer_event, compositor_id);
+    ReportPointerEventToPointerCaptureListener(command.pointer_event,
+                                               GlobalId{session_id_, command.compositor_id});
   }
 
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
@@ -321,7 +324,8 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
-void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& command) {
+void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& command,
+                                                  const gfx::LayerStackPtr& layer_stack) {
   TRACE_DURATION("input", "dispatch_command", "command", "MouseCmd");
 
   const uint32_t device_id = command.pointer_event.device_id;
@@ -334,13 +338,11 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
       << "Oops, mouse device (id=" << device_id << ") had an unexpected event: " << pointer_phase;
 
   if (pointer_phase == Phase::DOWN) {
-    GlobalId compositor_id(session_id_, command.compositor_id);
-
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &top_hit);
+    PerformGlobalHitTest(layer_stack, pointer, &top_hit);
 
     ViewStack hit_view;
 
@@ -383,13 +385,11 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
 
   // Deal with unlatched MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
-    GlobalId compositor_id(session_id_, command.compositor_id);
-
     // Find top-hit target and send it this move event.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &top_hit);
+    PerformGlobalHitTest(layer_stack, pointer, &top_hit);
 
     if (top_hit.hit()) {
       const gfx::ViewHit& hit = *top_hit.hit();
@@ -410,12 +410,15 @@ void InputCommandDispatcher::DispatchCommand(
   // Expected (but soon to be deprecated) event flow.
   ReportToImeService(input_system_->ime_service(), command.keyboard_event);
 
+  if (!scene_graph_)
+    return;
+
   // Unusual: Clients may have requested direct delivery when focused.
   const zx_koid_t focused_view = focus();
   if (focused_view == ZX_KOID_INVALID)
     return;  // No receiver.
 
-  const scenic_impl::gfx::ViewTree& view_tree = engine_->scene_graph()->view_tree();
+  const scenic_impl::gfx::ViewTree& view_tree = scene_graph_->view_tree();
   EventReporterWeakPtr reporter = view_tree.EventReporterOf(focused_view);
   scheduling::SessionId session_id = view_tree.SessionIdOf(focused_view);
   if (reporter && input_system_->hard_keyboard_requested().count(session_id) > 0) {
@@ -526,10 +529,10 @@ void InputCommandDispatcher::ReportToImeService(
 }
 
 zx_koid_t InputCommandDispatcher::focus() const {
-  if (!engine_->scene_graph())
+  if (!scene_graph_)
     return ZX_KOID_INVALID;  // No scene graph, no view tree, no focus chain.
 
-  const auto& chain = engine_->scene_graph()->view_tree().focus_chain();
+  const auto& chain = scene_graph_->view_tree().focus_chain();
   if (chain.empty())
     return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
 
@@ -539,10 +542,10 @@ zx_koid_t InputCommandDispatcher::focus() const {
 }
 
 zx_koid_t InputCommandDispatcher::focus_chain_root() const {
-  if (!engine_->scene_graph())
+  if (!scene_graph_)
     return ZX_KOID_INVALID;  // No scene graph, no view tree, no focus chain.
 
-  const auto& chain = engine_->scene_graph()->view_tree().focus_chain();
+  const auto& chain = scene_graph_->view_tree().focus_chain();
   if (chain.empty())
     return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
 
@@ -595,16 +598,16 @@ bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
 void InputCommandDispatcher::RequestFocusChange(zx_koid_t view) {
   FXL_DCHECK(view != ZX_KOID_INVALID) << "precondition";
 
-  if (!engine_->scene_graph())
+  if (!scene_graph_)
     return;  // No scene graph, no view tree, no focus chain.
 
-  if (engine_->scene_graph()->view_tree().focus_chain().empty())
+  if (scene_graph_->view_tree().focus_chain().empty())
     return;  // Scene not present, or scene not connected to compositor.
 
   // Input system acts on authority of top-most view.
-  const zx_koid_t requestor = engine_->scene_graph()->view_tree().focus_chain()[0];
+  const zx_koid_t requestor = scene_graph_->view_tree().focus_chain()[0];
 
-  auto status = engine_->scene_graph()->RequestFocusChange(requestor, view);
+  auto status = scene_graph_->RequestFocusChange(requestor, view);
   FXL_VLOG(1) << "Scenic RequestFocusChange. Authority: " << requestor << ", request: " << view
               << ", status: " << static_cast<int>(status);
 
