@@ -7,8 +7,11 @@
 
 #include "app.h"
 
+void runThirdPartyFunc();
+
 // Usage: accept argument "real_device_path" or "-t mock_device_path"
 int main(int argc, const char** argv) {
+  runThirdPartyFunc();
   otstack::OtStackApp app;
 
   syslog::InitLogger({"ot-stack"});

@@ -17,6 +17,7 @@ source_set("app") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
+    "//src/connectivity/openthread/third_party/openthread/platform",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

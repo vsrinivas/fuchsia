@@ -3,5 +3,8 @@
 # found in the LICENSE file.
 
 group("openthread") {
-  deps = [ "spinel-framer" ]
+  deps = [
+    "platform",
+    "spinel-framer",
+  ]
 }
