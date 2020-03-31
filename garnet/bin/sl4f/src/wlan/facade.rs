@@ -46,6 +46,14 @@ impl WlanFacade {
         Ok(wlan_iface_ids)
     }
 
+    /// Gets the list of wlan interface IDs.
+    pub async fn get_phy_id_list(&self) -> Result<Vec<u16>, Error> {
+        let wlan_phy_ids = wlan_service_util::get_phy_list(&self.wlan_svc)
+            .await
+            .context("Get Phy Id List: failed to get wlan phy list")?;
+        Ok(wlan_phy_ids)
+    }
+
     pub async fn scan(&self) -> Result<Vec<String>, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)

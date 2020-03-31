@@ -33,6 +33,19 @@ pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, E
     Ok(wlan_iface_ids)
 }
 
+/// Returns the list of Phy IDs for this system.
+///
+/// # Arguments
+/// * `wlan_svc`: a DeviceServiceProxy
+pub async fn get_phy_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
+    let response = wlan_svc.list_phys().await.context("Error getting phy list")?;
+    let mut wlan_phy_ids = Vec::new();
+    for phy_info in response.phys {
+        wlan_phy_ids.push(phy_info.phy_id);
+    }
+    Ok(wlan_phy_ids)
+}
+
 pub async fn get_iface_sme_proxy(
     wlan_svc: &WlanService,
     iface_id: u16,
@@ -306,7 +319,8 @@ mod tests {
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_device_service::{
             self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, DeviceServiceRequest,
-            DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse, QueryIfaceResponse,
+            DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse, ListPhysResponse,
+            PhyListItem, QueryIfaceResponse,
         },
         fidl_fuchsia_wlan_sme::{
             BssInfo, ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
@@ -331,7 +345,7 @@ mod tests {
             => responder);
         responder
             .send(&mut ListIfacesResponse { ifaces: iface_list_vec })
-            .expect("fake query list response: send failed")
+            .expect("fake query iface list response: send failed")
     }
 
     fn extract_sme_server_from_get_client_sme_req_and_respond(
@@ -639,6 +653,73 @@ mod tests {
         assert_eq!(response, iface_id_list)
     }
 
+    #[test]
+    fn list_phys_returns_iface_id_vector() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let (wlan_service, server) = create_wlan_service_util();
+        let mut next_device_service_req = server.into_future();
+
+        // create the data to use in the response
+        let phy_id_list: Vec<u16> = vec![0, 1, 35, 36];
+        let mut phy_list_vec = vec![];
+        for id in &phy_id_list {
+            phy_list_vec.push(PhyListItem { phy_id: *id, path: format!("/fake/path/{}", *id) });
+        }
+
+        let fut = get_phy_list(&wlan_service);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        send_phy_list_response(&mut exec, &mut next_device_service_req, phy_list_vec);
+
+        let complete = exec.run_until_stalled(&mut fut);
+
+        let list_response = match complete {
+            Poll::Ready(result) => result,
+            _ => panic!("Expected an phy list response"),
+        };
+
+        let response = match list_response {
+            Ok(response) => response,
+            Err(_) => panic!("Expected a valid list response"),
+        };
+
+        // now verify the response
+        assert_eq!(response, phy_id_list)
+    }
+
+    #[test]
+    fn list_phys_properly_handles_zero_phys() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let (wlan_service, server) = create_wlan_service_util();
+        let mut next_device_service_req = server.into_future();
+
+        // create the data to use in the response
+        let phy_id_list: Vec<u16> = vec![];
+        let phy_list_vec = vec![];
+
+        let fut = get_phy_list(&wlan_service);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        send_phy_list_response(&mut exec, &mut next_device_service_req, phy_list_vec);
+
+        let complete = exec.run_until_stalled(&mut fut);
+
+        let list_response = match complete {
+            Poll::Ready(result) => result,
+            _ => panic!("Expected an phy list response"),
+        };
+
+        let response = match list_response {
+            Ok(response) => response,
+            Err(_) => panic!("Expected a valid list response"),
+        };
+
+        // now verify the response
+        assert_eq!(response, phy_id_list)
+    }
+
     fn poll_device_service_req(
         exec: &mut Executor,
         next_device_service_req: &mut StreamFuture<DeviceServiceRequestStream>,
@@ -663,6 +744,21 @@ mod tests {
 
         // now send the response back
         let _result = responder.send(&mut ListIfacesResponse { ifaces: iface_list_vec });
+    }
+
+    fn send_phy_list_response(
+        exec: &mut Executor,
+        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
+        phy_list_vec: Vec<PhyListItem>,
+    ) {
+        let responder = match poll_device_service_req(exec, server) {
+            Poll::Ready(DeviceServiceRequest::ListPhys { responder }) => responder,
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a ListPhys request"),
+        };
+
+        // now send the response back
+        let _result = responder.send(&mut ListPhysResponse { phys: phy_list_vec });
     }
 
     #[test]

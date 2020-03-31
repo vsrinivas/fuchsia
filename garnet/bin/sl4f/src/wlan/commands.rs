@@ -59,6 +59,11 @@ impl Facade for WlanFacade {
                 let result = self.get_iface_id_list().await?;
                 to_value(result).map_err(|e| format_err!("error handling get_iface_id_list: {}", e))
             }
+            "get_phy_id_list" => {
+                fx_log_info!(tag: "WlanFacade", "Getting the phy id list.");
+                let result = self.get_phy_id_list().await?;
+                to_value(result).map_err(|e| format_err!("error handling get_phy_id_list: {}", e))
+            }
             "destroy_iface" => {
                 fx_log_info!(tag: "WlanFacade", "Performing wlan destroy_iface");
                 let iface_id = parse_u64_identifier(args.clone())?;
