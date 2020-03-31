@@ -579,6 +579,7 @@ impl Node {
     create_exponential_histogram_property_fn!(double, Double, f64);
 
     /// Creates a lazy node from the given VMO.
+    #[must_use]
     pub fn create_lazy_child_from_vmo(&self, name: impl AsRef<str>, vmo: Arc<zx::Vmo>) -> LazyNode {
         self.create_lazy_child(name.as_ref(), move || {
             let vmo_clone = vmo.clone();
