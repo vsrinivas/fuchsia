@@ -4,11 +4,12 @@
 
 #include <lib/cksum.h>
 
+#include <string>
+
 #include <libabr/abr_data.h>
 #include <libabr/abr_util.h>
 #include <libabr/libabr.h>
 #include <zxtest/zxtest.h>
-#include <string>
 
 namespace {
 

@@ -203,7 +203,7 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
     return 0;
   }
 
-  auto res2 = paver_svc_->FindBootManager(std::move(remote), true);
+  auto res2 = paver_svc_->FindBootManager(std::move(remote));
   status = res2.status();
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: unable to find boot manager\n");

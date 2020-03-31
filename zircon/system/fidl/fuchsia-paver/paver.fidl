@@ -96,12 +96,9 @@ protocol Paver {
 
     /// Attempts to auto-discover the boot manager.
     ///
-    /// `initialize` should only be set to true to initialize ABR metadata for the first time
-    /// (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
-    ///
     /// `boot_manager` will be closed on error, with an epitaph provided on failure reason.
     /// ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
-    FindBootManager(request<BootManager> boot_manager, bool initialize);
+    FindBootManager(request<BootManager> boot_manager);
 };
 
 /// Protocol for reading and writing boot partitions.
@@ -183,6 +180,9 @@ protocol DynamicDataSink {
 };
 
 /// Protocol for managing boot configurations.
+///
+/// All functions will first check the A/B/R metadata and reset it to
+/// the default state if it's invalid.
 protocol BootManager {
     /// Queries active configuration.
     QueryActiveConfiguration() -> (Configuration configuration) error zx.status;

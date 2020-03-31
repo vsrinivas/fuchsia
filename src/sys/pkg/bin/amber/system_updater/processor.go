@@ -69,7 +69,7 @@ func ConnectToPaver(context *context.Context) (*paver.DataSinkWithCtxInterface, 
 		return nil, nil, err
 	}
 
-	err = pxy.FindBootManager(fidl.Background(), bootManagerReq, false)
+	err = pxy.FindBootManager(fidl.Background(), bootManagerReq)
 	if err != nil {
 		syslog.Errorf("could not find boot manager: %s", err)
 		return nil, nil, err

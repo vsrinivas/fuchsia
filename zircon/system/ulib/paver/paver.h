@@ -27,8 +27,7 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
                       UseBlockDeviceCompleter::Sync completer) override;
 
-  void FindBootManager(zx::channel boot_manager, bool intialize,
-                       FindBootManagerCompleter::Sync completer) override;
+  void FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync completer) override;
 
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
@@ -171,7 +170,7 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
   BootManager(std::unique_ptr<abr::Client> abr_client) : abr_client_(std::move(abr_client)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                   zx::channel server, bool initialize);
+                   zx::channel server);
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override;
 

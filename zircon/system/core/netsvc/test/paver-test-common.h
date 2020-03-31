@@ -102,17 +102,12 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
         dispatcher_, std::move(dynamic_data_sink), this);
   }
 
-  void FindBootManager(zx::channel boot_manager, bool initialize,
+  void FindBootManager(zx::channel boot_manager,
                        FindBootManagerCompleter::Sync _completer) override {
     last_command_ = Command::kInitializeAbr;
     if (abr_supported_) {
-      if (initialize) {
-        abr_initialized_ = true;
-      }
-      if (abr_initialized_) {
-        fidl::Bind<::llcpp::fuchsia::paver::BootManager::Interface>(dispatcher_,
-                                                                    std::move(boot_manager), this);
-      }
+      fidl::Bind<::llcpp::fuchsia::paver::BootManager::Interface>(dispatcher_,
+                                                                  std::move(boot_manager), this);
     }
   }
 
@@ -319,7 +314,6 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   std::string expected_block_device_;
   std::string supported_firmware_type_;
   bool abr_supported_ = false;
-  bool abr_initialized_ = false;
   AbrData abr_data_ = kInitAbrData;
 
   async_dispatcher_t* dispatcher_ = nullptr;

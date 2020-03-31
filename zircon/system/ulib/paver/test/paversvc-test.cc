@@ -29,6 +29,7 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <libabr/abr_data.h>
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
@@ -298,11 +299,11 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
                                    &fvm_));
   }
 
-  void FindBootManager(bool initialize = false) {
+  void FindBootManager() {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-    auto result = client_->FindBootManager(std::move(remote), initialize);
+    auto result = client_->FindBootManager(std::move(remote));
     ASSERT_OK(result.status());
     boot_manager_.emplace(std::move(local));
   }
@@ -316,16 +317,16 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     data_sink_.emplace(std::move(local));
   }
 
-  void SetAbr(const abr::Data& data) {
+  void SetAbr(const AbrData& data) {
     auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
                 (60 * kKilobyte);
-    *reinterpret_cast<abr::Data*>(buf) = data;
+    *reinterpret_cast<AbrData*>(buf) = data;
   }
 
-  abr::Data GetAbr() {
+  AbrData GetAbr() {
     auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
                 (60 * kKilobyte);
-    return *reinterpret_cast<abr::Data*>(buf);
+    return *reinterpret_cast<AbrData*>(buf);
   }
 
   using PaverServiceTest::ValidateWritten;
@@ -372,12 +373,12 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   fbl::unique_fd fvm_;
 };
 
-constexpr abr::Data kAbrData = {
+constexpr AbrData kAbrData = {
     .magic = {'\0', 'A', 'B', '0'},
-    .version_major = abr::kMajorVersion,
-    .version_minor = abr::kMinorVersion,
+    .version_major = kAbrMajorVersion,
+    .version_minor = kAbrMinorVersion,
     .reserved1 = {},
-    .slots =
+    .slot_data =
         {
             {
                 .priority = 0,
@@ -392,24 +393,23 @@ constexpr abr::Data kAbrData = {
                 .reserved = {},
             },
         },
-    .oneshot_recovery_boot = 0,
+    .one_shot_recovery_boot = 0,
     .reserved2 = {},
     .crc32 = {},
 };
 
-void ComputeCrc(abr::Data* data) {
-  data->crc32 =
-      htobe32(crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(abr::Data, crc32)));
+void ComputeCrc(AbrData* data) {
+  data->crc32 = htobe32(crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(AbrData, crc32)));
 }
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = {};
+  
+  AbrData abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager(true));
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
@@ -418,11 +418,11 @@ TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
 TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  abr::Data abr_data = kAbrData;
+  AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager(true));
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
@@ -431,24 +431,22 @@ TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationInvalidAbr) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  abr::Data abr_data = {};
+  AbrData abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager(true));
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_err());
-  ASSERT_STATUS(result->result.err(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[0].priority = 0;
-  abr_data.slots[1].priority = 0;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].priority = 0;
+  abr_data.slot_data[1].priority = 0;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -463,7 +461,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  abr::Data abr_data = kAbrData;
+  AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -478,9 +476,9 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[0].priority = 2;
-  abr_data.slots[0].successful_boot = 1;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].priority = 2;
+  abr_data.slot_data[0].successful_boot = 1;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -495,7 +493,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  abr::Data abr_data = kAbrData;
+  auto abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -510,10 +508,9 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[1].successful_boot = 0;
-  abr_data.slots[1].tries_remaining = 1;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[1].successful_boot = 0;
+  abr_data.slot_data[1].tries_remaining = 1;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -528,8 +525,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
+  AbrData abr_data = kAbrData;  
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -544,14 +540,13 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
+  AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slots[0].priority = 2;
-  abr_data.slots[0].tries_remaining = abr::kMaxTriesRemaining;
-  abr_data.slots[0].successful_boot = 0;
+  abr_data.slot_data[0].priority = kAbrMaxPriority;
+  abr_data.slot_data[0].tries_remaining = kAbrMaxTriesRemaining;
+  abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
@@ -565,16 +560,15 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[1].priority = abr::kMaxPriority;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[1].priority = kAbrMaxPriority;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slots[1].priority = 1;
-  abr_data.slots[0].priority = 2;
-  abr_data.slots[0].tries_remaining = abr::kMaxTriesRemaining;
-  abr_data.slots[0].successful_boot = 0;
+  abr_data.slot_data[1].priority = kAbrMaxPriority - 1;
+  abr_data.slot_data[0].priority = kAbrMaxPriority;
+  abr_data.slot_data[0].tries_remaining = kAbrMaxTriesRemaining;
+  abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
@@ -588,17 +582,16 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[0].priority = 2;
-  abr_data.slots[0].tries_remaining = 3;
-  abr_data.slots[0].successful_boot = 0;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].priority = 2;
+  abr_data.slot_data[0].tries_remaining = 3;
+  abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slots[0].priority = 0;
-  abr_data.slots[0].tries_remaining = 0;
-  abr_data.slots[0].successful_boot = 0;
+  abr_data.slot_data[0].priority = 0;
+  abr_data.slot_data[0].tries_remaining = 0;
+  abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
@@ -613,16 +606,15 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[1].tries_remaining = 3;
-  abr_data.slots[1].successful_boot = 0;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[1].successful_boot = 0;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slots[1].priority = 0;
-  abr_data.slots[1].tries_remaining = 0;
-  abr_data.slots[1].successful_boot = 0;
+  abr_data.slot_data[1].priority = 0;
+  abr_data.slot_data[1].tries_remaining = 0;
+  abr_data.slot_data[1].successful_boot = 0;
   ComputeCrc(&abr_data);
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
@@ -637,15 +629,14 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
 
 TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[1].tries_remaining = 3;
-  abr_data.slots[1].successful_boot = 0;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[1].successful_boot = 0;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slots[1].tries_remaining = 0;
-  abr_data.slots[1].successful_boot = 1;
+  abr_data.slot_data[1].tries_remaining = 0;
+  abr_data.slot_data[1].successful_boot = 1;
   ComputeCrc(&abr_data);
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
@@ -659,11 +650,10 @@ TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
 
 TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthyBothPriorityZero) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-
-  abr::Data abr_data = kAbrData;
-  abr_data.slots[1].tries_remaining = 3;
-  abr_data.slots[1].successful_boot = 0;
-  abr_data.slots[1].priority = 0;
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[1].successful_boot = 0;
+  abr_data.slot_data[1].priority = 0;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 

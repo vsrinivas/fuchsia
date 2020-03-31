@@ -378,24 +378,35 @@ zx::channel OpenServiceRoot() {
   return service_root;
 }
 
-bool IsBootable(const abr::SlotData& slot) {
-  return slot.priority > 0 && (slot.tries_remaining > 0 || slot.successful_boot);
+std::optional<Configuration> SlotIndexToConfiguration(AbrSlotIndex slot_index) {
+  switch (slot_index) {
+    case kAbrSlotIndexA:
+      return Configuration::A;
+    case kAbrSlotIndexB:
+      return Configuration::B;
+    case kAbrSlotIndexR:
+      return Configuration::RECOVERY;
+  }
+  ERROR("Unknown Abr slot index %d\n", static_cast<int>(slot_index));
+  return std::nullopt;
+}
+
+std::optional<AbrSlotIndex> ConfigurationToSlotIndex(Configuration config) {
+  switch (config) {
+    case Configuration::A:
+      return kAbrSlotIndexA;
+    case Configuration::B:
+      return kAbrSlotIndexB;
+    case Configuration::RECOVERY:
+      return kAbrSlotIndexR;
+  }
+  ERROR("Unknown configuration %d\n", static_cast<int>(config));
+  return std::nullopt;
 }
 
 std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_client) {
-  const bool config_a_bootable = IsBootable(abr_client.Data().slots[0]);
-  const bool config_b_bootable = IsBootable(abr_client.Data().slots[1]);
-  const uint8_t config_a_priority = abr_client.Data().slots[0].priority;
-  const uint8_t config_b_priority = abr_client.Data().slots[1].priority;
-
-  // A wins on ties.
-  if (config_a_bootable && (config_a_priority >= config_b_priority || !config_b_bootable)) {
-    return Configuration::A;
-  } else if (config_b_bootable) {
-    return Configuration::B;
-  } else {
-    return std::nullopt;
-  }
+  auto slot_index = abr_client.GetBootSlot(false, nullptr);
+  return slot_index == kAbrSlotIndexR ? std::nullopt : SlotIndexToConfiguration(slot_index);
 }
 
 // Helper to wrap a std::variant with a WriteFirmwareResult union.
@@ -443,8 +454,7 @@ void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_si
                         std::move(block_device), std::move(dynamic_data_sink));
 }
 
-void Paver::FindBootManager(zx::channel boot_manager, bool initialize,
-                            FindBootManagerCompleter::Sync _completer) {
+void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync _completer) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
@@ -454,7 +464,7 @@ void Paver::FindBootManager(zx::channel boot_manager, bool initialize,
   }
 
   BootManager::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_),
-                    std::move(boot_manager), initialize);
+                    std::move(boot_manager));
 }
 
 void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
@@ -780,34 +790,13 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
 }
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                       zx::channel svc_root, zx::channel server, bool initialize) {
+                       zx::channel svc_root, zx::channel server) {
   std::unique_ptr<abr::Client> abr_client;
   if (zx_status_t status =
           abr::Client::Create(std::move(devfs_root), std::move(svc_root), &abr_client);
       status != ZX_OK) {
     ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
     fidl_epitaph_write(server.get(), status);
-    return;
-  }
-
-  const bool valid = abr_client->IsValid();
-
-  if (!valid && initialize) {
-    abr::Data data = abr_client->Data();
-    memset(&data, 0, sizeof(data));
-    memcpy(data.magic, abr::kMagic, sizeof(abr::kMagic));
-    data.version_major = abr::kMajorVersion;
-    data.version_minor = abr::kMinorVersion;
-
-    if (zx_status_t status = abr_client->Persist(data); status != ZX_OK) {
-      ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
-      fidl_epitaph_write(server.get(), status);
-      return;
-    }
-    ZX_DEBUG_ASSERT(abr_client->IsValid());
-  } else if (!valid) {
-    ERROR("ABR metadata is not valid!\n");
-    fidl_epitaph_write(server.get(), ZX_ERR_NOT_SUPPORTED);
     return;
   }
 
@@ -826,23 +815,18 @@ void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sy
 
 void BootManager::QueryConfigurationStatus(Configuration configuration,
                                            QueryConfigurationStatusCompleter::Sync completer) {
-  const abr::SlotData* slot;
-  switch (configuration) {
-    case Configuration::A:
-      slot = &abr_client_->Data().slots[0];
-      break;
-    case Configuration::B:
-      slot = &abr_client_->Data().slots[1];
-      break;
-    default:
-      ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
-      completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
+  AbrSlotInfo slot;
+  auto slot_index = ConfigurationToSlotIndex(configuration);
+  if (auto res = slot_index ? abr_client_->GetSlotInfo(*slot_index, &slot) : ZX_ERR_INVALID_ARGS;
+      res != ZX_OK) {
+    ERROR("Failed to get slot info %d\n", static_cast<uint32_t>(configuration));
+    completer.ReplyError(res);
+    return;
   }
 
-  if (!IsBootable(*slot)) {
+  if (!slot.is_bootable) {
     completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE);
-  } else if (slot->successful_boot == 0) {
+  } else if (slot.is_marked_successful == 0) {
     completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::PENDING);
   } else {
     completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
@@ -853,34 +837,11 @@ void BootManager::SetConfigurationActive(Configuration configuration,
                                          SetConfigurationActiveCompleter::Sync completer) {
   LOG("Setting configuration %d as active\n", static_cast<uint32_t>(configuration));
 
-  abr::Data data = abr_client_->Data();
-
-  abr::SlotData *primary, *secondary;
-  switch (configuration) {
-    case Configuration::A:
-      primary = &data.slots[0];
-      secondary = &data.slots[1];
-      break;
-    case Configuration::B:
-      primary = &data.slots[1];
-      secondary = &data.slots[0];
-      break;
-    default:
-      ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
-      completer.Reply(ZX_ERR_INVALID_ARGS);
-      return;
-  }
-  if (secondary->priority >= abr::kMaxPriority) {
-    // 0 means unbootable, so we reset down to 1 to indicate lowest priority.
-    secondary->priority = 1;
-  }
-  primary->successful_boot = 0;
-  primary->tries_remaining = abr::kMaxTriesRemaining;
-  primary->priority = static_cast<uint8_t>(secondary->priority + 1);
-
-  if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
-    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
-    completer.Reply(status);
+  auto slot_index = ConfigurationToSlotIndex(configuration);
+  if (auto res = slot_index ? abr_client_->MarkSlotActive(*slot_index) : ZX_ERR_INVALID_ARGS;
+      res != ZX_OK) {
+    ERROR("Failed to set configuration: %d active\n", static_cast<uint32_t>(configuration));
+    completer.Reply(res);
     return;
   }
 
@@ -893,28 +854,11 @@ void BootManager::SetConfigurationUnbootable(Configuration configuration,
                                              SetConfigurationUnbootableCompleter::Sync completer) {
   LOG("Setting configuration %d as unbootable\n", static_cast<uint32_t>(configuration));
 
-  auto data = abr_client_->Data();
-
-  abr::SlotData* slot;
-  switch (configuration) {
-    case Configuration::A:
-      slot = &data.slots[0];
-      break;
-    case Configuration::B:
-      slot = &data.slots[1];
-      break;
-    default:
-      ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
-      completer.Reply(ZX_ERR_INVALID_ARGS);
-      return;
-  }
-  slot->successful_boot = 0;
-  slot->tries_remaining = 0;
-  slot->priority = 0;
-
-  if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
-    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
-    completer.Reply(status);
+  auto slot_index = ConfigurationToSlotIndex(configuration);
+  if (auto res = slot_index ? abr_client_->MarkSlotUnbootable(*slot_index) : ZX_ERR_INVALID_ARGS;
+      res != ZX_OK) {
+    ERROR("Failed to set configuration: %d unbootable\n", static_cast<uint32_t>(configuration));
+    completer.Reply(res);
     return;
   }
 
@@ -927,8 +871,6 @@ void BootManager::SetActiveConfigurationHealthy(
     SetActiveConfigurationHealthyCompleter::Sync completer) {
   LOG("Setting active configuration as healthy\n");
 
-  abr::Data data = abr_client_->Data();
-
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
   if (!config) {
     ERROR("No configuration bootable. Cannot mark as successful boot.\n");
@@ -936,24 +878,10 @@ void BootManager::SetActiveConfigurationHealthy(
     return;
   }
 
-  abr::SlotData* slot;
-  switch (*config) {
-    case Configuration::A:
-      slot = &data.slots[0];
-      break;
-    case Configuration::B:
-      slot = &data.slots[1];
-      break;
-    default:
-      // We've previously validated active is A or B.
-      ZX_ASSERT(false);
-  }
-  slot->tries_remaining = 0;
-  slot->successful_boot = 1;
-
-  if (zx_status_t status = abr_client_->Persist(data); status != ZX_OK) {
-    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
-    completer.Reply(status);
+  if (auto res = abr_client_->MarkSlotSuccessful(*ConfigurationToSlotIndex(*config));
+      res != ZX_OK) {
+    ERROR("Failed to set configuration: %d healthy\n", static_cast<uint32_t>(*config));
+    completer.Reply(res);
     return;
   }
 

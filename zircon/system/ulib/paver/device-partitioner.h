@@ -24,7 +24,6 @@
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
 
-#include "abr.h"
 #include "partition-client.h"
 
 namespace paver {

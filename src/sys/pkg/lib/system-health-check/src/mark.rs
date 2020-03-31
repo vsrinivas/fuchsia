@@ -23,7 +23,7 @@ async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
 
     let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
 
-    paver.find_boot_manager(boot_manager_server_end, false)?;
+    paver.find_boot_manager(boot_manager_server_end)?;
 
     match boot_manager.set_active_configuration_healthy().await.map(Status::from_raw) {
         Ok(Status::OK) => (),

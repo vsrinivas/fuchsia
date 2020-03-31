@@ -10,6 +10,9 @@
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/status.h>
+
+#include <libabr/libabr.h>
 
 #include <string_view>
 
@@ -73,29 +76,24 @@ zx_status_t SupportsVerifiedBoot(const zx::channel& svc_root) {
   return ZX_OK;
 }
 
-// Implementation of abr::Client which works with a contiguous partition storing abr::Data.
+// Implementation of abr::Client which works with a contiguous partition storing AbrData.
 class PartitionClient : public Client {
  public:
-  // |partition| should contain abr::Data with no offset.
+  // |partition| should contain AbrData with no offset.
   static zx_status_t Create(std::unique_ptr<paver::PartitionClient> partition,
                             std::unique_ptr<abr::Client>* out);
 
-  zx_status_t Persist(abr::Data data) override;
-
-  const abr::Data& Data() const override { return data_; }
-
  private:
-  PartitionClient(std::unique_ptr<paver::PartitionClient> partition, zx::vmo vmo, size_t block_size,
-                  const abr::Data& data)
-      : partition_(std::move(partition)),
-        vmo_(std::move(vmo)),
-        block_size_(block_size),
-        data_(data) {}
+  PartitionClient(std::unique_ptr<paver::PartitionClient> partition, zx::vmo vmo, size_t block_size)
+      : partition_(std::move(partition)), vmo_(std::move(vmo)), block_size_(block_size) {}
 
   std::unique_ptr<paver::PartitionClient> partition_;
   zx::vmo vmo_;
   size_t block_size_;
-  abr::Data data_;
+
+  zx_status_t Read(uint8_t* buffer, size_t size) override;
+
+  zx_status_t Write(const uint8_t* buffer, size_t size) override;
 };
 
 zx_status_t PartitionClient::Create(std::unique_ptr<paver::PartitionClient> partition,
@@ -115,21 +113,22 @@ zx_status_t PartitionClient::Create(std::unique_ptr<paver::PartitionClient> part
     return status;
   }
 
-  abr::Data data;
-  if (zx_status_t status = vmo.read(&data, 0, sizeof(data)); status != ZX_OK) {
-    return status;
-  }
-
-  out->reset(new PartitionClient(std::move(partition), std::move(vmo), block_size, data));
+  out->reset(new PartitionClient(std::move(partition), std::move(vmo), block_size));
   return ZX_OK;
 }
 
-zx_status_t PartitionClient::Persist(abr::Data data) {
-  UpdateCrc(&data);
-  if (memcmp(&data, &data_, sizeof(data)) == 0) {
-    return ZX_OK;
+zx_status_t PartitionClient::Read(uint8_t* buffer, size_t size) {
+  if (zx_status_t status = partition_->Read(vmo_, block_size_); status != ZX_OK) {
+    return status;
   }
-  if (zx_status_t status = vmo_.write(&data, 0, sizeof(data)); status != ZX_OK) {
+  if (zx_status_t status = vmo_.read(buffer, 0, size); status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t PartitionClient::Write(const uint8_t* buffer, size_t size) {
+  if (zx_status_t status = vmo_.write(buffer, 0, size); status != ZX_OK) {
     return status;
   }
   if (zx_status_t status = partition_->Write(vmo_, block_size_); status != ZX_OK) {
@@ -138,8 +137,6 @@ zx_status_t PartitionClient::Persist(abr::Data data) {
   if (zx_status_t status = partition_->Flush(); status != ZX_OK) {
     return status;
   }
-
-  data_ = data;
   return ZX_OK;
 }
 
@@ -153,24 +150,42 @@ zx_status_t Client::Create(fbl::unique_fd devfs_root, const zx::channel& svc_roo
 
   if (AstroClient::Create(devfs_root.duplicate(), out) == ZX_OK ||
       SherlockClient::Create(std::move(devfs_root), out) == ZX_OK) {
+    (*out)->abr_ops_ = {out->get(), Client::ReadAbrMetaData, Client::WriteAbrMetaData};
     return ZX_OK;
   }
+
   return ZX_ERR_NOT_FOUND;
 }
 
-bool Client::IsValid() const {
-  return memcmp(Data().magic, kMagic, kMagicLen) == 0 && Data().version_major == kMajorVersion &&
-         Data().version_minor == kMinorVersion && Data().slots[0].priority <= kMaxPriority &&
-         Data().slots[1].priority <= kMaxPriority &&
-         Data().slots[0].tries_remaining <= kMaxTriesRemaining &&
-         Data().slots[1].tries_remaining <= kMaxTriesRemaining &&
-         Data().crc32 == htobe32(crc32(0, reinterpret_cast<const uint8_t*>(&Data()),
-                                       sizeof(abr::Data) - sizeof(uint32_t)));
+bool Client::ReadAbrMetaData(void* context, size_t size, uint8_t* buffer) {
+  if (auto res = static_cast<Client*>(context)->Read(buffer, size); res != ZX_OK) {
+    ERROR("Failed to read abr data from storage. %s\n", zx_status_get_string(res));
+    return false;
+  }
+  return true;
 }
 
-void Client::UpdateCrc(abr::Data* data) {
-  data->crc32 = htobe32(
-      crc32(0, reinterpret_cast<const uint8_t*>(data), sizeof(abr::Data) - sizeof(uint32_t)));
+bool Client::WriteAbrMetaData(void* context, const uint8_t* buffer, size_t size) {
+  if (auto res = static_cast<Client*>(context)->Write(buffer, size); res != ZX_OK) {
+    ERROR("Failed to write abr data to storage. %s\n", zx_status_get_string(res));
+    return false;
+  }
+  return true;
+}
+
+zx_status_t Client::AbrResultToZxStatus(AbrResult status) {
+  switch (status) {
+    case kAbrResultOk:
+      return ZX_OK;
+    case kAbrResultErrorIo:
+      return ZX_ERR_IO;
+    case kAbrResultErrorInvalidData:
+      return ZX_ERR_INVALID_ARGS;
+    case kAbrResultErrorUnsupportedVersion:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  ERROR("Unknown Abr result code %d!\n", status);
+  return ZX_ERR_INTERNAL;
 }
 
 zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out) {
@@ -210,6 +225,10 @@ zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<ab
   }
 
   return PartitionClient::Create(std::move(partition), out);
+}
+
+extern "C" uint32_t AbrCrc32(const void* buf, size_t buf_size) {
+  return crc32(0UL, reinterpret_cast<const uint8_t*>(buf), buf_size);
 }
 
 }  // namespace abr

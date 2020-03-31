@@ -70,6 +70,7 @@ test("paver-test") {
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
+    "//zircon/public/lib/libabr",
     "//zircon/public/lib/paver",
     "//zircon/public/lib/ramdevice-client-static",
     "//zircon/public/lib/svc",

@@ -47,7 +47,7 @@ impl PaverFacade {
     ) -> Result<QueryActiveConfigurationResult, Error> {
         let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
 
-        self.proxy()?.find_boot_manager(boot_manager_server_end, false)?;
+        self.proxy()?.find_boot_manager(boot_manager_server_end)?;
 
         match boot_manager.query_active_configuration().await {
             Ok(Ok(config)) => Ok(QueryActiveConfigurationResult::Success(config.into())),
@@ -79,7 +79,7 @@ impl PaverFacade {
     ) -> Result<QueryConfigurationStatusResult, Error> {
         let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
 
-        self.proxy()?.find_boot_manager(boot_manager_server_end, false)?;
+        self.proxy()?.find_boot_manager(boot_manager_server_end)?;
 
         match boot_manager.query_configuration_status(args.configuration.into()).await {
             Ok(Ok(status)) => Ok(QueryConfigurationStatusResult::Success(status.into())),
