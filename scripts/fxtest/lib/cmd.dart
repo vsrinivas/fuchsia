@@ -49,6 +49,9 @@ class FuchsiaTestCommand {
   /// Translator between [TestEvent] instances and output for the user.
   final OutputFormatter outputFormatter;
 
+  /// Wrapper around tests and [Process] instances.
+  final TestRunner testRunner;
+
   int _numberOfTests;
 
   FuchsiaTestCommand({
@@ -56,7 +59,28 @@ class FuchsiaTestCommand {
     @required this.fuchsiaLocator,
     @required this.outputFormatter,
     @required this.testsConfig,
-  }) : _numberOfTests = 0;
+    TestRunner testRunner,
+  })  : _numberOfTests = 0,
+        testRunner = testRunner ?? SymbolizingTestRunner(fx: fuchsiaLocator.fx);
+
+  factory FuchsiaTestCommand.fromConfig(
+    TestsConfig testsConfig, {
+    FuchsiaLocator fuchsiaLocator,
+    TestRunner testRunner,
+  }) {
+    fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
+    return FuchsiaTestCommand(
+      analyticsReporter: testsConfig.flags.dryRun
+          ? AnalyticsReporter.noop()
+          : AnalyticsReporter(
+              fuchsiaLocator: fuchsiaLocator,
+            ),
+      fuchsiaLocator: fuchsiaLocator,
+      outputFormatter: OutputFormatter.fromConfig(testsConfig),
+      testRunner: testRunner,
+      testsConfig: testsConfig,
+    );
+  }
 
   Stream<TestEvent> get stream => _eventStreamController.stream;
 
@@ -105,27 +129,31 @@ class FuchsiaTestCommand {
       manifestFileName: 'tests.json',
     );
     return manifestReader.aggregateTests(
-      buildDir: fuchsiaLocator.buildDir,
       eventEmitter: emitEvent,
       exactMatching: testsConfig.flags.exactMatches,
+      testBundleBuilder: testBundleBuilder,
       testDefinitions: testDefinitions,
       testsConfig: testsConfig,
-      testRunner: SymbolizingTestRunner(
-        fx: fuchsiaLocator.fx,
-      ),
     );
   }
 
-  Stream<TestEvent> runTests(List<TestBundle> testBundles) async* {
-    Function(String) realtimeOutputSink = testsConfig.flags.allOutput
-        ? (String val) {
-            emitEvent(TestInfo(val, requiresPadding: false));
-          }
-        : null;
+  TestBundle testBundleBuilder(TestDefinition testDefinition) =>
+      TestBundle.build(
+        realtimeOutputSink: getRealtimeOutputSink(),
+        testRunner: testRunner,
+        testDefinition: testDefinition,
+        testsConfig: testsConfig,
+        workingDirectory: fuchsiaLocator.buildDir,
+      );
 
+  Function(String) getRealtimeOutputSink() => testsConfig.flags.allOutput
+      ? (String val) => emitEvent(TestInfo(val, requiresPadding: false))
+      : null;
+
+  Stream<TestEvent> runTests(List<TestBundle> testBundles) async* {
     var count = 0;
     for (TestBundle testBundle in testBundles) {
-      yield* testBundle.run(realtimeOutputSink: realtimeOutputSink);
+      yield* testBundle.run();
 
       count += 1;
       _numberOfTests = count;

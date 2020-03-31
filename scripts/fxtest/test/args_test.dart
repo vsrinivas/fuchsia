@@ -137,12 +137,15 @@ void main() {
         ],
         passThroughTokens: ['--xyz'],
       );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunner: FakeTestRunner.passing(),
+      );
       ParsedManifest manifest = tr.aggregateTests(
-        buildDir: '/custom',
         eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
         testDefinitions: testDefinitions,
         testsConfig: testsConfig,
-        testRunner: FakeTestRunner.passing(),
       );
       expect(manifest.testBundles, hasLength(1));
       var stream = StreamQueue(manifest.testBundles[0].run());
@@ -167,12 +170,15 @@ void main() {
           ['example test']
         ],
       );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunner: FakeTestRunner.passing(),
+      );
       ParsedManifest manifest = tr.aggregateTests(
-        buildDir: '/custom',
         eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
         testDefinitions: testDefinitions,
         testsConfig: testsConfig,
-        testRunner: FakeTestRunner.passing(),
       );
       expect(manifest.testBundles, hasLength(1));
       var stream = StreamQueue(manifest.testBundles[0].run());

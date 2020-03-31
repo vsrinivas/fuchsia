@@ -17,6 +17,13 @@ class TestBundle {
   // That which actually launches a process to run the test.
   final TestRunner testRunner;
 
+  /// Sink for realtime updates from the running test process.
+  final Function(String) _realtimeOutputSink;
+
+  /// Copy of all output, used to send to user when a timeout happens and
+  /// [_realtimeOutputSink] is null.
+  final StringBuffer _outputBuffer;
+
   /// The directory from which our test assumes it was invoked.
   final String workingDirectory;
 
@@ -42,16 +49,44 @@ class TestBundle {
     this.extraFlags = const [],
     this.raiseOnFailure = false,
     this.isDryRun = false,
-  }) {
+    Function(String) realtimeOutputSink,
+  })  : _realtimeOutputSink = realtimeOutputSink,
+        _outputBuffer = StringBuffer() {
     if (testRunner == null) {
       throw AssertionError('`testRunner` must not equal `null`');
     }
   }
 
+  factory TestBundle.build({
+    @required TestDefinition testDefinition,
+    @required TestsConfig testsConfig,
+    @required String workingDirectory,
+    @required TestRunner testRunner,
+    Function(String) realtimeOutputSink,
+  }) =>
+      TestBundle(
+        testDefinition,
+        extraFlags: testsConfig.passThroughTokens,
+        isDryRun: testsConfig.flags.dryRun,
+        raiseOnFailure: testsConfig.flags.shouldFailFast,
+        runnerFlags: testsConfig.runnerTokens,
+        realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
+        testRunner: testRunner,
+        workingDirectory: workingDirectory,
+      );
+
+  Function(String) get realtimeOutputSink => (String val) {
+        if (_realtimeOutputSink != null) {
+          _realtimeOutputSink(val);
+        } else {
+          _outputBuffer.writeln(val);
+        }
+      };
+
   /// Invokes the actual test that this class wraps.
   ///
   /// Returns a stream of test events that send feedback to the user.
-  Stream<TestEvent> run({Function(String) realtimeOutputSink}) async* {
+  Stream<TestEvent> run() async* {
     var testType = testDefinition.executionHandle.testType;
     if (testType == TestType.unsupportedDeviceTest) {
       var greyTestName =

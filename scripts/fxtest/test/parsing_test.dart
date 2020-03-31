@@ -176,13 +176,16 @@ void main() {
         results: parsedArgs,
         testNameGroups: testNamesCollector.collect(),
       );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunner: TestRunner(),
+      );
       return tr.aggregateTests(
-        buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         exactMatching: testsConfig.flags.exactMatches,
+        testBundleBuilder: cmd.testBundleBuilder,
         testsConfig: testsConfig,
         testDefinitions: testDefs ?? testDefinitions,
-        testRunner: testRunner,
       );
     }
 
@@ -279,12 +282,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(testNameGroups: [
         ['fancy']
       ]);
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: testDefinitions,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: testRunner,
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: testDefinitions,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
@@ -296,12 +302,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.host(testNameGroups: [
         ['fancy']
       ]);
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: testDefinitions,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: testRunner,
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: testDefinitions,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(0));
     });
@@ -321,12 +330,15 @@ void main() {
             path: 'host_x64/test',
           ),
         ]);
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: testRunner,
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
 
       expect(parsedManifest.testBundles, hasLength(1));
@@ -351,12 +363,15 @@ void main() {
             path: '/pkgfs/stuff',
           ),
         ]);
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: testRunner,
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
 
       expect(parsedManifest.testBundles, hasLength(0));
@@ -413,12 +428,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(
         testNameGroups: collector.collect(),
       );
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: TestRunner(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
 
       expect(parsedManifest.testBundles, hasLength(0));
@@ -432,12 +450,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(
         testNameGroups: collector.collect(),
       );
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: TestRunner(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
       var bundles = parsedManifest.testBundles;
 
@@ -454,12 +475,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(
         testNameGroups: collector.collect(),
       );
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: TestRunner(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
       var bundles = parsedManifest.testBundles;
 
@@ -475,12 +499,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(
         testNameGroups: collector.collect(),
       );
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: TestRunner(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
       var bundles = parsedManifest.testBundles;
 
@@ -498,12 +525,15 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(
         testNameGroups: collector.collect(),
       );
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: tds,
-        buildDir: fuchsiaLocator.buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
         testRunner: TestRunner(),
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
       );
       var bundles = parsedManifest.testBundles;
 

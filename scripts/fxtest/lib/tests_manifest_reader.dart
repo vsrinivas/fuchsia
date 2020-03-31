@@ -113,11 +113,10 @@ class TestsManifestReader {
   /// Loops over the provided list of [TestDefinition]s and, based on the
   /// results of all registered [Checker]s, returns a list of [TestBundle]s.
   ParsedManifest aggregateTests({
+    @required TestBundle Function(TestDefinition) testBundleBuilder,
     @required List<TestDefinition> testDefinitions,
     @required void Function(TestEvent) eventEmitter,
     @required TestsConfig testsConfig,
-    @required String buildDir,
-    @required TestRunner testRunner,
     bool exactMatching = false,
   }) {
     List<TestBundle> testBundles = [];
@@ -180,17 +179,7 @@ class TestsManifestReader {
 
           // Now that we know we're seeing this `packageName` for the first
           // time, we can add it to the queue
-          testBundles.add(
-            TestBundle(
-              testDefinition,
-              runnerFlags: testsConfig.runnerTokens,
-              extraFlags: testsConfig.passThroughTokens,
-              isDryRun: testsConfig.flags.dryRun,
-              raiseOnFailure: testsConfig.flags.shouldFailFast,
-              workingDirectory: buildDir,
-              testRunner: testRunner,
-            ),
-          );
+          testBundles.add(testBundleBuilder(testDefinition));
 
           // Setting this flag breaks out of the Tier 2 (PermutatedTestFlags)
           // loop

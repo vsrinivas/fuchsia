@@ -40,6 +40,25 @@ abstract class OutputFormatter {
         _buffer = buffer ?? OutputBuffer(),
         _hasStartedTests = false;
 
+  factory OutputFormatter.fromConfig(TestsConfig testsConfig) {
+    if (testsConfig.flags.infoOnly) {
+      return InfoFormatter();
+    }
+    var slowTestThreshold = testsConfig.flags.warnSlowerThan > 0
+        ? Duration(seconds: testsConfig.flags.warnSlowerThan)
+        : null;
+    return testsConfig.flags.isVerbose
+        ? VerboseOutputFormatter(
+            hasRealTimeOutput: testsConfig.flags.allOutput,
+            slowTestThreshold: slowTestThreshold,
+            shouldColorizeOutput: testsConfig.flags.simpleOutput,
+          )
+        : CondensedOutputFormatter(
+            slowTestThreshold: slowTestThreshold,
+            shouldColorizeOutput: testsConfig.flags.simpleOutput,
+          );
+  }
+
   bool get hasStartedTests => _hasStartedTests;
   int get numFailures => _testResultEvents.where((ev) => !ev.isSuccess).length;
 
