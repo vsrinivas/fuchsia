@@ -32,7 +32,6 @@ class AudioCapturerTest : public testing::ThreadingModelFixture {
 
  protected:
   void SetUp() override {
-    Logging::Init(-media::audio::SPEW, {"audio_capturer_impl_test"});
     testing::ThreadingModelFixture::SetUp();
 
     auto format = Format::Create(stream_type_).take_value();

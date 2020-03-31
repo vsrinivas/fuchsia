@@ -96,9 +96,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
   RouteGraphTest(const DeviceConfig& device_config)
       : ThreadingModelFixture(
             ProcessConfig(VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
-                          device_config, ThermalConfig({}))) {
-    Logging::Init(-media::audio::SPEW, {"route_graph_test"});
-  }
+                          device_config, ThermalConfig({}))) { }
 
   struct FakeOutputAndDriver {
     std::shared_ptr<FakeAudioOutput> output;

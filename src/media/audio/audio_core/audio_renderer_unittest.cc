@@ -32,7 +32,6 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
 
  protected:
   void SetUp() override {
-    Logging::Init(-media::audio::SPEW, {"audio_core"});
     testing::ThreadingModelFixture::SetUp();
 
     renderer_ = std::make_unique<AudioRenderer>(fidl_renderer_.NewRequest(), &context());
