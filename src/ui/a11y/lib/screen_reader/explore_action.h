@@ -8,7 +8,7 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>
 
-#include "src/ui/a11y/lib/screen_reader/actions.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 namespace a11y {

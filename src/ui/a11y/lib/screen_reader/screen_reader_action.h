@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_SCREEN_READER_ACTIONS_H_
-#define SRC_UI_A11Y_LIB_SCREEN_READER_ACTIONS_H_
+#ifndef SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_ACTION_H_
+#define SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_ACTION_H_
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
@@ -75,4 +75,4 @@ class ScreenReaderAction {
 
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_SCREEN_READER_ACTIONS_H_
+#endif  // SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_ACTION_H_

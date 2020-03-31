@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/screen_reader/actions.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 
 #include <lib/fit/bridge.h>
 

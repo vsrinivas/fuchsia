@@ -10,8 +10,8 @@
 #include <cstdint>
 
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/ui/a11y/lib/screen_reader/actions.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 
 namespace a11y {
 namespace {

@@ -4,14 +4,14 @@
 
 source_set("screen_reader") {
   sources = [
-    "actions.cc",
-    "actions.h",
     "default_action.cc",
     "default_action.h",
     "explore_action.cc",
     "explore_action.h",
     "screen_reader.cc",
     "screen_reader.h",
+    "screen_reader_action.cc",
+    "screen_reader_action.h",
     "screen_reader_context.cc",
     "screen_reader_context.h",
   ]
