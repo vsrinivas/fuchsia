@@ -11,12 +11,14 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(  # scripts
-        SCRIPT_DIR))  # unification
+        SCRIPT_DIR))  # owner
 
 
+# $ what_do_i_own.py me@mydomain file_i_own file_i_dont
+# file_i_own
 def main():
     parser = argparse.ArgumentParser(
-        description='Finds all OWNERS of given paths')
+        description='Filters `paths` for those owned by `owner`')
     parser.add_argument('owner')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()

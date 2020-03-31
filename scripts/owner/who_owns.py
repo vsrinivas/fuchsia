@@ -11,7 +11,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(  # scripts
-        SCRIPT_DIR))  # unification
+        SCRIPT_DIR))  # owner
 
 owner_exp = re.compile('^\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)')
 perfile_exp = re.compile(
@@ -19,9 +19,17 @@ perfile_exp = re.compile(
     '[a-zA-Z0-9-.]+)')
 
 
+# $ ./who_owns.py file1
+# owner1@example.com,owner2@example.com
+#
+# $ ./who_owns.py file2
+# owner3@example.com
+#
+# $ ./who_owns.py file1 file2
+# owner1@example.com,owner2@example.com,owner3@example.com
 def main():
     parser = argparse.ArgumentParser(
-        description='Finds all OWNERS of given paths')
+        description='Finds all OWNERS of `paths`')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
     abspaths = [os.path.abspath(path) for path in args.paths]
