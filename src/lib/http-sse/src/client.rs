@@ -4,6 +4,7 @@
 
 use {
     crate::{Event, EventSource},
+    fuchsia_hyper::HttpsClient,
     futures::{
         compat::{Compat01As03, Future01CompatExt, Stream01CompatExt},
         stream::Stream,
@@ -24,12 +25,15 @@ pub struct Client {
 
 impl Client {
     /// Connects to an http url and, on success, returns a `Stream` of SSE events.
-    pub async fn connect(url: impl AsRef<str>) -> Result<Self, ClientConnectError> {
+    pub async fn connect(
+        https_client: HttpsClient,
+        url: impl AsRef<str>,
+    ) -> Result<Self, ClientConnectError> {
         let request = Request::get(url.as_ref())
             .header("accept", "text/event-stream")
             .body(Body::empty())
             .map_err(|e| ClientConnectError::CreateRequest(e))?;
-        let response = fuchsia_hyper::new_https_client()
+        let response = https_client
             .request(request)
             .compat()
             .await
@@ -94,6 +98,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+        fuchsia_hyper::new_https_client,
         futures::{
             future::{Future, FutureExt, TryFutureExt},
             io::AsyncReadExt,
@@ -142,7 +147,7 @@ mod tests {
         }
         let url = spawn_server(handle_req);
 
-        let client = Client::connect(url).await.unwrap();
+        let client = Client::connect(new_https_client(), url).await.unwrap();
         let events: Result<Vec<_>, _> = client.collect::<Vec<_>>().await.into_iter().collect();
 
         assert_eq!(events.unwrap(), vec![make_event()]);
@@ -164,18 +169,24 @@ mod tests {
         }
         let url = spawn_server(handle_req);
 
-        let client = Client::connect(url).await.unwrap();
+        let client = Client::connect(new_https_client(), url).await.unwrap();
         client.collect::<Vec<_>>().await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn error_create_request() {
-        assert_matches!(Client::connect("\n").await, Err(ClientConnectError::CreateRequest(_)));
+        assert_matches!(
+            Client::connect(new_https_client(), "\n").await,
+            Err(ClientConnectError::CreateRequest(_))
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn error_make_request() {
-        assert_matches!(Client::connect("bad_url").await, Err(ClientConnectError::MakeRequest(_)));
+        assert_matches!(
+            Client::connect(new_https_client(), "bad_url").await,
+            Err(ClientConnectError::MakeRequest(_))
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -185,7 +196,10 @@ mod tests {
         }
         let url = spawn_server(handle_req);
 
-        assert_matches!(Client::connect(url).await, Err(ClientConnectError::HttpStatus(_)));
+        assert_matches!(
+            Client::connect(new_https_client(), url).await,
+            Err(ClientConnectError::HttpStatus(_))
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -215,7 +229,7 @@ mod tests {
                 .unwrap())
         }
         let url = spawn_server(handle_req);
-        let mut client = Client::connect(url).await.unwrap();
+        let mut client = Client::connect(new_https_client(), url).await.unwrap();
 
         assert_matches!(client.try_next().await, Err(ClientPollError::NextChunk(_)));
     }

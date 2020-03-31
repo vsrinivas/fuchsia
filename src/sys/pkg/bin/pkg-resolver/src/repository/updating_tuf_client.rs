@@ -242,7 +242,19 @@ where
     }
 
     async fn connect(&self) -> Result<http_sse::Client, http_sse::ClientConnectError> {
-        match http_sse::Client::connect(&self.auto_url).await {
+        // The /auto protocol has no heartbeat, so, without TCP keepalive, a client cannot
+        // differentiate a repository that is not updating from a repository that has dropped
+        // the connection.
+        let mut tcp_options = fuchsia_hyper::TcpOptions::default();
+        tcp_options.keepalive_idle = Some(std::time::Duration::from_secs(15));
+        tcp_options.keepalive_interval = Some(std::time::Duration::from_secs(5));
+        tcp_options.keepalive_count = Some(2);
+        match http_sse::Client::connect(
+            fuchsia_hyper::new_https_client_from_tcp_options(tcp_options),
+            &self.auto_url,
+        )
+        .await
+        {
             Ok(sse_client) => {
                 self.inspect.connect_success_count.increment();
                 Ok(sse_client)

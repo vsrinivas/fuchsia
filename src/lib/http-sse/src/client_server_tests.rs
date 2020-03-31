@@ -7,6 +7,7 @@
 use {
     super::*,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+    fuchsia_hyper::new_https_client,
     futures::{
         compat::Future01CompatExt,
         future::{join, FutureExt, TryFutureExt},
@@ -54,7 +55,7 @@ fn spawn_server(buffer_size: usize) -> (String, EventSender) {
 #[fasync::run_singlethreaded(test)]
 async fn single_client_single_event() {
     let (url, event_sender) = spawn_server(1);
-    let mut client = Client::connect(&url).await.unwrap();
+    let mut client = Client::connect(new_https_client(), &url).await.unwrap();
     let event = Event::from_type_and_data("event_type", "event_data").unwrap();
 
     let (_, recv) = join(event_sender.send(&event), client.next()).await;
@@ -65,8 +66,8 @@ async fn single_client_single_event() {
 #[fasync::run_singlethreaded(test)]
 async fn multiple_clients_multiple_events() {
     let (url, event_sender) = spawn_server(2);
-    let client0 = Client::connect(&url).await.unwrap();
-    let client1 = Client::connect(&url).await.unwrap();
+    let client0 = Client::connect(new_https_client(), &url).await.unwrap();
+    let client1 = Client::connect(new_https_client(), &url).await.unwrap();
     let events = vec![
         Event::from_type_and_data("event_type0", "event_data0").unwrap(),
         Event::from_type_and_data("event_type1", "event_data1").unwrap(),
