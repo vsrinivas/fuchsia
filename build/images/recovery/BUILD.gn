@@ -76,6 +76,7 @@ assemble_system("recovery-eng") {
   netboot = true
   devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
   cmdline = [
+              "console.shell=true",
               "netsvc.disable=false",
               "kernel.enable-debugging-syscalls=true",
               "kernel.enable-serial-syscalls=true",
