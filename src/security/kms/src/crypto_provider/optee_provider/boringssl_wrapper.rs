@@ -107,7 +107,8 @@ impl Cbb {
         if result == 0 {
             return None;
         }
-        let v = unsafe { slice::from_raw_parts(output_bytes, usize::from(output_size)).to_vec() };
+        let output_size = output_size.try_into().unwrap();
+        let v = unsafe { slice::from_raw_parts(output_bytes, output_size).to_vec() };
         unsafe { OPENSSL_free(output_bytes as *mut std::ffi::c_void) };
         Some(v)
     }

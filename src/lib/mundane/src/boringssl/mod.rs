@@ -156,7 +156,7 @@ impl CStackWrapper<CBB> {
                 let ptr = CBB_data(self.as_const()).unwrap_abort();
                 // TODO(joshlf): Can with_data use this to smuggle out the
                 // reference, outliving the lifetime of self?
-                with_data(slice::from_raw_parts(ptr.as_ptr(), usize::from(len)))
+                with_data(slice::from_raw_parts(ptr.as_ptr(), len.try_into().unwrap_abort()))
             }
         }
     }
@@ -166,7 +166,7 @@ impl CStackWrapper<CBS> {
     /// The `CBS_len` function.
     #[must_use]
     pub fn cbs_len(&self) -> usize {
-        unsafe { usize::from(CBS_len(self.as_const())) }
+        unsafe { CBS_len(self.as_const()).try_into().unwrap_abort() }
     }
 
     /// Invokes a callback on a temporary `CBS`.
@@ -552,8 +552,7 @@ impl CStackWrapper<HMAC_CTX> {
     /// by `HMAC_size`).
     pub fn hmac_final(&mut self, out: &mut [u8]) {
         unsafe {
-            let size = HMAC_size(self.as_const());
-            assert_abort_eq!(out.len(), usize::from(size));
+            assert_abort_eq!(HMAC_size(self.as_const()).try_into(), Ok(out.len()));
             let mut size = 0;
             // HMAC_Final is documented to fail on allocation failure, but an
             // internal comment states that it's infallible. In either case, we
@@ -926,20 +925,21 @@ impl BoringError {
 fn get_error_stack_trace() -> Vec<String> {
     // Credit to agl@google.com for this implementation.
 
-    unsafe extern "C" fn error_callback(s: *const c_char, s_len: usize, ctx: *mut c_void) -> c_int {
+    // Generic insanity here to allow s_len to transition from usize to u64 due to
+    // https://github.com/rust-lang/rust-bindgen/commit/5d38f2aca6e92eb835963b7f2a381540dc504912.
+    unsafe extern "C" fn error_callback<T>(s: *const c_char, s_len: T, ctx: *mut c_void) -> c_int
+    where
+        T: TryInto<usize>,
+        Result<usize, <T as TryInto<usize>>::Error>: UnwrapAbort<Item = usize>,
+    {
         let stack_trace = ctx as *mut Vec<String>;
-        let s = ::std::slice::from_raw_parts(s as *const u8, s_len);
+        let s = ::std::slice::from_raw_parts(s as *const u8, s_len.try_into().unwrap_abort());
         (*stack_trace).push(String::from_utf8_lossy(s).to_string());
         1
     }
 
     let mut stack_trace = Vec::new();
-    unsafe {
-        ERR_print_errors_cb(
-            Some(error_callback as unsafe extern "C" fn(*const c_char, _, *mut c_void) -> c_int),
-            &mut stack_trace as *mut _ as *mut c_void,
-        )
-    };
+    unsafe { ERR_print_errors_cb(Some(error_callback), &mut stack_trace as *mut _ as *mut c_void) };
     stack_trace
 }
 

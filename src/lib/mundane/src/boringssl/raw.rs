@@ -477,7 +477,7 @@ pub unsafe fn RSA_sign_pss_mgf1(
         ),
     );
     if r.is_ok() {
-        *out_len = usize::from(tmp_len);
+        *out_len = tmp_len.try_into().unwrap_abort();
     }
     r
 }
