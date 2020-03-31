@@ -63,7 +63,7 @@ if (is_linux || is_mac) {
         dimensions = {
           device_type = "Intel NUC Kit NUC7i5DNHE"
         }
-        tags = [ "reboot" ]
+        tags = [ "e2e-isolated" ]
       },
     ]
     timeout = "10m"
