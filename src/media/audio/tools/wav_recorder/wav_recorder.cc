@@ -8,6 +8,8 @@
 #include <lib/zx/clock.h>
 #include <poll.h>
 
+#include <iostream>
+
 #include "lib/media/audio/cpp/types.h"
 
 namespace media::tools {
@@ -22,12 +24,14 @@ constexpr char kGainOption[] = "gain";
 constexpr char kMuteOption[] = "mute";
 constexpr char kAsyncModeOption[] = "async";
 constexpr char kPacketDurationOption[] = "packet-ms";
-constexpr char kVerboseOption[] = "v";
-constexpr char kShowUsageOption1[] = "help";
-constexpr char kShowUsageOption2[] = "?";
 constexpr char kRecordDurationOption[] = "duration";
 constexpr char kDurationDefaultSecs[] = "2.0";
 constexpr float kMaxDurationSecs = 86400.0f;
+constexpr char kVerboseOption[] = "v";
+constexpr char kShowUsageOption1[] = "help";
+constexpr char kShowUsageOption2[] = "?";
+
+constexpr uint32_t kPayloadBufferId = 0;
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
@@ -75,11 +79,11 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
   audio_capturer_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Client connection to fuchsia.media.AudioCapturer failed: " << status;
+    std::cerr << "Client connection to fuchsia.media.AudioCapturer failed: " << status << std::endl;
     Shutdown();
   });
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Client connection to fuchsia.media.GainControl failed: " << status;
+    std::cerr << "Client connection to fuchsia.media.GainControl failed: " << status << std::endl;
     Shutdown();
   });
 
@@ -101,49 +105,47 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
 
 void WavRecorder::Usage() {
   printf("\nUsage: %s [options] <filename>\n", cmd_line_.argv0().c_str());
-  printf("Record an audio signal from the specified source, to a .wav file.\n");
+  printf("Record an audio signal from the specified source to a .wav file.\n");
   printf("\nValid options:\n");
 
-  printf("\n   By default, use the preferred input device\n");
-  printf(" --%s\t\tCapture final-mix output from the preferred output device\n", kLoopbackOption);
+  printf("\n    By default, use the preferred input device\n");
+  printf("  --%s\t\tCapture final-mix output from the preferred output device\n", kLoopbackOption);
 
   printf(
-      "\n   By default, use device-preferred channel count and frame rate, in 32-bit float "
+      "\n    By default, use device-preferred channel count and frame rate, in 32-bit float "
       "samples\n");
-  printf(" --%s=<NUM_CHANS>\tSpecify the number of channels (in [%u, %u])\n", kChannelsOption,
+  printf("  --%s=<NUM_CHANS>\tSpecify the number of channels (min %u, max %u)\n", kChannelsOption,
          fuchsia::media::MIN_PCM_CHANNEL_COUNT, fuchsia::media::MAX_PCM_CHANNEL_COUNT);
-  printf(" --%s=<rate>\t\tSpecify the capture frame rate (Hz in [%u, %u])\n", kFrameRateOption,
-         fuchsia::media::MIN_PCM_FRAMES_PER_SECOND, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-  printf(" --%s\t\tRecord and save as left-justified 24-in-32 int ('padded-24')\n",
+  printf("  --%s=<rate>\t\tSpecify the capture frame rate, in Hz (min %u, max %u)\n",
+         kFrameRateOption, fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
+         fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
+  printf("  --%s\t\tRecord and save as left-justified 24-in-32 int ('padded-24')\n",
          k24In32FormatOption);
-  printf(" --%s\t\tRecord as 24-in-32 'padded-24'; save as 'packed-24'\n", kPacked24FormatOption);
-  printf(" --%s\t\tRecord and save as 16-bit integer\n", kInt16FormatOption);
+  printf("  --%s\t\tRecord as 24-in-32 'padded-24'; save as 'packed-24'\n", kPacked24FormatOption);
+  printf("  --%s\t\tRecord and save as 16-bit integer\n", kInt16FormatOption);
 
-  printf("\n   By default, don't set AudioCapturer gain and mute (unity 0 dB, unmuted)\n");
-  printf(
-      " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; %.1f if only '--%s' is provided)\n",
-      kGainOption, fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB,
-      kDefaultCaptureGainDb, kGainOption);
-  printf(" --%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only '--%s' is provided)\n",
+  printf("\n    By default, don't set AudioCapturer gain and mute (unity 0 dB and unmuted)\n");
+  printf("  --%s[=<GAIN_DB>]\tSet stream gain, in dB (min %.1f, max +%.1f, default %.1f)\n",
+         kGainOption, fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB,
+         kDefaultCaptureGainDb);
+  printf("  --%s[=<0|1>]\tSet stream mute (0=Unmute or 1=Mute; Mute if only '--%s' is provided)\n",
          kMuteOption, kMuteOption);
 
-  printf("\n   By default, use packet-by-packet ('synchronous') mode\n");
-  printf(" --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n", kAsyncModeOption);
+  printf("\n    By default, use packet-by-packet ('synchronous') mode\n");
+  printf("  --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n", kAsyncModeOption);
 
-  printf("\n   By default, capture audio using packets of 100.0 msec\n");
-  printf(" --%s=<MSECS>\tSpecify the duration (in milliseconds) of each capture packet\n",
+  printf("\n    By default, capture audio using packets of 100.0 msec\n");
+  printf("  --%s=<MSECS>\tSpecify the duration (in milliseconds) of each capture packet\n",
          kPacketDurationOption);
-  printf("\t\t\tMinimum packet duration is %.1f milliseconds\n", kMinPacketSizeMsec);
+  printf("\t\t\tMinimum packet duration is %.1f millisec\n", kMinPacketSizeMsec);
 
-  printf("\n   By default, capture waits for a keystroke\n");
-  printf(" --%s[=<SECS>]\tSpecify a fixed duration rather than waiting for keystroke\n",
+  printf("\n    By default, capture until a key is pressed\n");
+  printf("  --%s[=<SECS>]\tSpecify a fixed duration rather than waiting for keystroke\n",
          kRecordDurationOption);
-  printf("\t\t\tDuration must be positive (max: %.1f)\n", kMaxDurationSecs);
-  printf("\t\t\tIf only --%s is specified, then a duration of %s is used.\n", kRecordDurationOption,
-         kDurationDefaultSecs);
+  printf("\t\t\t(min 0.0, max %.1f, default %s)\n", kMaxDurationSecs, kDurationDefaultSecs);
 
-  printf("\n --%s\t\t\tBe verbose; display per-packet info\n", kVerboseOption);
-  printf(" --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
+  printf("\n  --%s\t\t\tDisplay per-packet information\n", kVerboseOption);
+  printf("  --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
   printf("\n");
 }
 
@@ -164,7 +166,7 @@ void WavRecorder::Shutdown() {
       printf("file close failed.\n");
     }
   } else {
-    if (!wav_writer_.Delete()) {
+    if (wav_writer_initialized_ && !wav_writer_.Delete()) {
       printf("Could not delete WAV file.\n");
     }
   }
@@ -179,20 +181,19 @@ bool WavRecorder::SetupPayloadBuffer() {
   payload_buf_frames_ = frames_per_packet_ * packets_per_payload_buf_;
   payload_buf_size_ = payload_buf_frames_ * bytes_per_frame_;
 
-  zx_status_t res;
-  res = zx::vmo::create(payload_buf_size_, 0, &payload_buf_vmo_);
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create " << payload_buf_size_ << " byte payload buffer (res "
-                   << res << ")";
+  auto status = zx::vmo::create(payload_buf_size_, 0, &payload_buf_vmo_);
+  if (status != ZX_OK) {
+    std::cerr << "Failed to create " << payload_buf_size_ << "-byte payload buffer: " << status
+              << std::endl;
     return false;
   }
 
   uintptr_t tmp;
-  res =
+  status =
       zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_, ZX_VM_PERM_READ, &tmp);
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to map " << payload_buf_size_ << " byte payload buffer (res " << res
-                   << ")";
+  if (status != ZX_OK) {
+    std::cerr << "Failed to map " << payload_buf_size_ << "-byte payload buffer: " << status
+              << std::endl;
     return false;
   }
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
@@ -207,7 +208,7 @@ void WavRecorder::SendCaptureJob() {
   ++outstanding_capture_jobs_;
 
   // clang-format off
-  audio_capturer_->CaptureAt(0,
+  audio_capturer_->CaptureAt(kPayloadBufferId,
       payload_buf_frame_offset_,
       frames_per_packet_,
       [this](fuchsia::media::StreamPacket packet) {
@@ -226,10 +227,9 @@ void WavRecorder::SendCaptureJob() {
 // setup our VMO and add it as a payload buffer, send a series of empty packets
 void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
-  zx_status_t res;
 
   if (!type.medium_specific.is_audio()) {
-    FX_LOGS(ERROR) << "Default format is not audio!";
+    std::cerr << "Default format is not audio!" << std::endl;
     return;
   }
 
@@ -348,8 +348,10 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   // Write the inital WAV header
   if (!wav_writer_.Initialize(filename_, sample_format_, channel_count_, frames_per_second_,
                               bits_per_sample)) {
+    printf("Could not create the file '%s'\n", filename_);
     return;
   }
+  wav_writer_initialized_ = true;
 
   // If desired format differs from default capturer format, change formats now.
   if (change_format) {
@@ -368,9 +370,12 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   // Check whether the user wanted a specific duration for each capture packet.
   if (cmd_line_.GetOptionValue(kPacketDurationOption, &opt)) {
     double packet_size_msec;
-    if (sscanf(opt.c_str(), "%lf", &packet_size_msec) != 1 ||
-        packet_size_msec < kMinPacketSizeMsec) {
+    if (sscanf(opt.c_str(), "%lf", &packet_size_msec) != 1) {
       Usage();
+      return;
+    }
+    if (packet_size_msec < kMinPacketSizeMsec) {
+      printf("Packet size must be at least %.1f msec\n", kMinPacketSizeMsec);
       return;
     }
     // Don't simply ZX_MSEC(packet_size_msec): that discards any fractional component
@@ -383,13 +388,13 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   }
 
   zx::vmo audio_capturer_vmo;
-  res = payload_buf_vmo_.duplicate(
+  auto status = payload_buf_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &audio_capturer_vmo);
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to duplicate VMO handle (res " << res << ")";
+  if (status != ZX_OK) {
+    std::cerr << "Failed to duplicate VMO handle: " << status << std::endl;
     return;
   }
-  audio_capturer_->AddPayloadBuffer(0, std::move(audio_capturer_vmo));
+  audio_capturer_->AddPayloadBuffer(kPayloadBufferId, std::move(audio_capturer_vmo));
 
   // Will we operate in synchronous or asynchronous mode?  If synchronous, queue
   // all our capture buffers to get the ball rolling. If asynchronous, set an
@@ -423,7 +428,9 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
                 ? (pack_24bit_samples_ ? "packed 24-bit signed int" : "24-bit-in-32-bit signed int")
                 : "16-bit signed int",
       frames_per_second_, channel_count_);
+
   printf("from %s into '%s'\n", loopback_ ? "loopback" : "default input", filename_);
+
   printf("using %u packets of %u frames (%.3lf msec) in a %.3f-sec payload buffer\n",
          packets_per_payload_buf_, frames_per_packet_,
          (static_cast<float>(frames_per_packet_) / frames_per_second_) * 1000.0f,

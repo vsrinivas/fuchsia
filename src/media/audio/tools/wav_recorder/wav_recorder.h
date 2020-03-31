@@ -44,6 +44,7 @@ class WavRecorder {
   fuchsia::media::audio::GainControlPtr gain_control_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
+  bool wav_writer_initialized_ = false;
 
   fxl::CommandLine cmd_line_;
   fit::closure quit_callback_;

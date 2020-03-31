@@ -20,8 +20,7 @@ typedef enum {
   kOutputTypeSquare,
   kOutputTypeSawtooth,
 } OutputSignalType;
-// TODO(mpuryear): refactor the signal-generation section to make it easier for new generators to be
-// added.
+// TODO(49220): refactor signal-generation to make it easier for new generators to be added.
 
 constexpr std::array<std::pair<const char*, fuchsia::media::AudioRenderUsage>,
                      fuchsia::media::RENDER_USAGE_COUNT>
@@ -91,6 +90,8 @@ class MediaApp {
     usage_volume_ = volume;
   }
 
+  void set_verbose(bool verbose) { verbose_ = verbose; }
+
   void Run(sys::ComponentContext* app_context);
 
  private:
@@ -99,30 +100,34 @@ class MediaApp {
   void DisplayConfigurationSettings();
   void SetAudioCoreSettings(sys::ComponentContext* app_context);
   void AcquireAudioRenderer(sys::ComponentContext* app_context);
-  void SetStreamType();
-
+  void SetAudioRendererEvents();
+  void ResetAudioRendererEvents();
+  zx_status_t ConfigureAudioRenderer();
+  bool InitializeWavWriter();
   zx_status_t CreateMemoryMapping();
+
+  void Play();
+  void SendPacket();
+  void OnSendPacketComplete(uint64_t frames_completed);
 
   struct AudioPacket {
     fuchsia::media::StreamPacket stream_packet;
     fzl::VmoMapper* vmo;
   };
   AudioPacket CreateAudioPacket(uint64_t packet_num);
-  void GenerateAudioForPacket(const AudioPacket& packet, uint64_t payload_num);
+  void GenerateAudioForPacket(const AudioPacket& packet, uint64_t packet_num);
   template <typename SampleType>
   static void WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
                                    uint64_t frames_since_start, OutputSignalType signal_type,
                                    uint32_t num_chans, double frames_per_period, double amp_scalar);
 
-  void SendPacket(uint64_t payload_num);
-  void OnSendPacketComplete();
-
   void Shutdown();
-
   fit::closure quit_callback_;
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
+  bool received_min_lead_time_ = false;
+  int64_t min_lead_time_ = 0;
 
   std::vector<fzl::VmoMapper> payload_buffers_;
 
@@ -148,6 +153,8 @@ class MediaApp {
   uint32_t frames_per_payload_;
   uint32_t num_payload_buffers_;
 
+  zx::time reference_start_time_;
+  zx::time media_start_time_;
   bool use_pts_ = false;
   bool set_continuity_threshold_ = false;
   float pts_continuity_threshold_secs_;
@@ -161,11 +168,13 @@ class MediaApp {
   uint64_t num_packets_to_send_;
   uint64_t num_packets_sent_ = 0u;
   uint64_t num_packets_completed_ = 0u;
+  uint64_t num_frames_sent_ = 0u;
+  uint64_t num_frames_completed_ = 0u;
 
   bool save_to_file_ = false;
   std::string file_name_;
   media::audio::WavWriter<> wav_writer_;
-  bool wav_writer_is_initialized_ = false;
+  bool wav_writer_initialized_ = false;
 
   bool set_stream_gain_ = false;
   float stream_gain_db_ = kUnityGainDb;
@@ -180,6 +189,8 @@ class MediaApp {
   float usage_gain_db_ = kUnityGainDb;
   bool set_usage_volume_ = false;
   float usage_volume_;
+
+  bool verbose_ = false;
 };
 
 }  // namespace media::tools
