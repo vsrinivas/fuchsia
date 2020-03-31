@@ -15,7 +15,6 @@ use core::time::Duration;
 use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ipv4Addr};
 use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
-use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::Rng;
 use thiserror::Error;
@@ -178,44 +177,26 @@ impl<D> IgmpTimerId<D> {
     }
 }
 
-/// A handler for IGMP timer events.
-///
-/// This type cannot be constructed, and is only meant to be used at the type
-/// level. We implement [`TimerHandler`] for `IgmpTimerHandler` rather than just
-/// provide the top-level `handle_timer` functions so that `IgmpTimerHandler`
-/// can be used in tests with the [`DummyTimerContextExt`] trait and with the
-/// [`DummyNetwork`] type.
-///
-/// [`DummyTimerContextExt`]: crate::context::testutil::DummyTimerContextExt
-/// [`DummyNetwork`]: crate::context::testutil::DummyNetwork
-pub(crate) struct IgmpTimerHandler {
-    _never: Never,
-}
-
-impl<C: IgmpContext> TimerHandler<C, IgmpTimerId<C::DeviceId>> for IgmpTimerHandler {
-    fn handle_timer(ctx: &mut C, timer: IgmpTimerId<C::DeviceId>) {
+impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
+    fn handle_timer(&mut self, timer: IgmpTimerId<C::DeviceId>) {
         match timer {
             IgmpTimerId::ReportDelay { device, group_addr } => {
-                let actions = match ctx.get_state_mut_with(device).groups.get_mut(&group_addr) {
+                let actions = match self.get_state_mut_with(device).groups.get_mut(&group_addr) {
                     Some(state) => state.report_timer_expired(),
                     None => {
                         error!("Not already a member");
                         return;
                     }
                 };
-                run_actions(ctx, device, actions, group_addr);
+                run_actions(self, device, actions, group_addr);
             }
             IgmpTimerId::V1RouterPresent { device } => {
-                for (_, state) in ctx.get_state_mut_with(device).groups.iter_mut() {
+                for (_, state) in self.get_state_mut_with(device).groups.iter_mut() {
                     state.v1_router_present_timer_expired();
                 }
             }
         }
     }
-}
-
-pub(crate) fn handle_timeout<C: IgmpContext>(ctx: &mut C, id: IgmpTimerId<C::DeviceId>) {
-    IgmpTimerHandler::handle_timer(ctx, id)
 }
 
 fn send_igmp_message<C: IgmpContext, M>(
@@ -652,7 +633,7 @@ mod tests {
         igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
 
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
 
         // we should get two Igmpv2 reports, one for the unsolicited one for the host
         // to turn into Delay Member state and the other one for the timer being fired.
@@ -665,7 +646,7 @@ mod tests {
         igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
         assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 2);
 
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
@@ -681,7 +662,7 @@ mod tests {
             _ => panic!("Wrong State!"),
         }
 
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 3);
         ensure_ttl_ihl_rtr(&ctx);
     }
@@ -716,7 +697,7 @@ mod tests {
         let instant2 = ctx.timers()[1].0.clone();
         assert_eq!(instant1, instant2);
 
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         // After the first timer, we send out our V1 report.
         assert_eq!(ctx.frames().len(), 2);
         // the last frame being sent should be a V1 report.
@@ -724,7 +705,7 @@ mod tests {
         // 34 and 0x12 are hacky but they can quickly tell it is a V1 report.
         assert_eq!(frame[24], 0x12);
 
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         // After the second timer, we should reset our flag for v1 routers.
         let group_state = ctx
             .get_state_with(DummyDeviceId)
@@ -737,7 +718,7 @@ mod tests {
         }
 
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 3);
         // Now we should get V2 report
         assert_eq!(ctx.frames().last().unwrap().1[24], 0x16);
@@ -764,7 +745,7 @@ mod tests {
         let instant2 = ctx.timers()[1].0.clone();
         // because of the message, our timer should be reset to a nearer future
         assert!(instant2 <= instant1);
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
         // make sure it is a V2 report
@@ -779,7 +760,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report
         assert_eq!(ctx.frames().len(), 1);
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         // The report after the delay
         assert_eq!(ctx.frames().len(), 2);
         assert!(igmp_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
@@ -824,14 +805,14 @@ mod tests {
         assert_eq!(ctx.timers().len(), 2);
         // The initial unsolicited report
         assert_eq!(ctx.frames().len(), 2);
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 4);
         receive_igmp_general_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
         // Two new timers should be there.
         assert_eq!(ctx.timers().len(), 2);
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
-        assert!(ctx.trigger_next_timer::<IgmpTimerHandler>());
+        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer());
         // Two new reports should be sent
         assert_eq!(ctx.frames().len(), 6);
         ensure_ttl_ihl_rtr(&ctx);

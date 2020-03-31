@@ -15,7 +15,6 @@ use core::time::Duration;
 use log::{debug, error};
 use net_types::ip::{Ip, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
-use never::Never;
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 #[cfg(test)]
@@ -307,40 +306,22 @@ impl<D> MldReportDelay<D> {
     }
 }
 
-/// A handler for MLD timer events.
-///
-/// This type cannot be constructed, and is only meant to be used at the type
-/// level. We implement [`TimerHandler`] for `MldTimerHandler` rather than just
-/// provide the top-level `handle_timer` functions so that `MldTimerHandler`
-/// can be used in tests with the [`DummyTimerContextExt`] trait and with the
-/// [`DummyNetwork`] type.
-///
-/// [`DummyTimerContextExt`]: crate::context::testutil::DummyTimerContextExt
-/// [`DummyNetwork`]: crate::context::testutil::DummyNetwork
-pub(crate) struct MldTimerHandler {
-    _never: Never,
-}
-
-impl<C: MldContext> TimerHandler<C, MldReportDelay<C::DeviceId>> for MldTimerHandler {
-    fn handle_timer(ctx: &mut C, timer: MldReportDelay<C::DeviceId>) {
+impl<C: MldContext> TimerHandler<MldReportDelay<C::DeviceId>> for C {
+    fn handle_timer(&mut self, timer: MldReportDelay<C::DeviceId>) {
         let MldReportDelay { device, group_addr } = timer;
         // TODO(rheacock): Handle the case where this returns an error.
         let _ = send_mld_packet::<_, &[u8], _>(
-            ctx,
+            self,
             device,
             group_addr,
             MulticastListenerReport,
             group_addr,
             (),
         );
-        if let Err(e) = ctx.get_state_mut_with(device).report_timer_expired(group_addr) {
+        if let Err(e) = self.get_state_mut_with(device).report_timer_expired(group_addr) {
             error!("MLD timer fired, but an error has occurred: {}", e);
         }
     }
-}
-
-pub(crate) fn handle_timeout<C: MldContext>(ctx: &mut C, id: MldReportDelay<C::DeviceId>) {
-    MldTimerHandler::handle_timer(ctx, id)
 }
 
 fn run_actions<C: MldContext>(
@@ -629,7 +610,7 @@ mod tests {
         mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
 
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(ctx.trigger_next_timer());
 
         // we should get two MLD reports, one for the unsolicited one for the host
         // to turn into Delay Member state and the other one for the timer being fired.
@@ -652,7 +633,7 @@ mod tests {
         // the query says that it wants to hear from us immediately
         assert_eq!(ctx.frames().len(), 2);
         // there should be no timers set
-        assert!(!ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(!ctx.trigger_next_timer());
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
@@ -666,7 +647,7 @@ mod tests {
         mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
         assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 2);
 
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
@@ -682,7 +663,7 @@ mod tests {
             _ => panic!("Wrong State!"),
         }
 
-        assert!(ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 3);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -697,7 +678,7 @@ mod tests {
         mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
         assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 2);
 
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(0));
@@ -715,7 +696,7 @@ mod tests {
         }
 
         // No timers!
-        assert!(!ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(!ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 3);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -753,7 +734,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report
         assert_eq!(ctx.frames().len(), 1);
-        assert!(ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         // The report after the delay
         assert_eq!(ctx.frames().len(), 2);
         assert!(mld_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
@@ -796,7 +777,7 @@ mod tests {
         let mut ctx = DummyContext::default();
         ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
         mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
-        assert!(ctx.trigger_next_timer::<MldTimerHandler>());
+        assert!(ctx.trigger_next_timer());
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
             ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().addr().get());

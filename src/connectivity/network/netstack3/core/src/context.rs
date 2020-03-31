@@ -147,9 +147,9 @@ pub(crate) trait TimerContext<Id>: InstantContext {
 /// A handler for timer firing events.
 ///
 /// A `TimerHandler` is a type capable of handling the event of a timer firing.
-pub(crate) trait TimerHandler<Ctx, Id> {
+pub(crate) trait TimerHandler<Id> {
     /// Handle a timer firing.
-    fn handle_timer(ctx: &mut Ctx, id: Id);
+    fn handle_timer(&mut self, id: Id);
 }
 
 // NOTE:
@@ -656,17 +656,19 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) trait DummyTimerContextExt<Id>: AsMut<DummyTimerContext<Id>> + Sized {
+    pub(crate) trait DummyTimerContextExt<Id>:
+        AsMut<DummyTimerContext<Id>> + TimerHandler<Id> + Sized
+    {
         /// Trigger the next timer, if any.
         ///
         /// `trigger_next_timer` triggers the next timer, if any, and advances
         /// the internal clock to the timer's scheduled time. It returns whether
         /// a timer was triggered.
-        fn trigger_next_timer<H: TimerHandler<Self, Id>>(&mut self) -> bool {
+        fn trigger_next_timer(&mut self) -> bool {
             match self.as_mut().timers.pop() {
                 Some(InstantAndData(t, id)) => {
                     self.as_mut().instant.time = t;
-                    H::handle_timer(self, id);
+                    self.handle_timer(id);
                     true
                 }
                 None => false,
@@ -681,10 +683,7 @@ pub(crate) mod testutil {
         /// # Panics
         ///
         /// Panics if `instant` is in the past.
-        fn trigger_timers_until_instant<H: TimerHandler<Self, Id>>(
-            &mut self,
-            instant: DummyInstant,
-        ) -> usize {
+        fn trigger_timers_until_instant(&mut self, instant: DummyInstant) -> usize {
             assert!(instant > self.as_mut().now());
             let mut timers_fired = 0;
 
@@ -693,7 +692,7 @@ pub(crate) mod testutil {
                     break;
                 }
 
-                assert!(self.trigger_next_timer::<H>());
+                assert!(self.trigger_next_timer());
                 timers_fired += 1;
             }
 
@@ -707,15 +706,15 @@ pub(crate) mod testutil {
         /// then, inclusive.
         ///
         /// Returns the number of timers triggered.
-        fn trigger_timers_for<H: TimerHandler<Self, Id>>(&mut self, duration: Duration) -> usize {
+        fn trigger_timers_for(&mut self, duration: Duration) -> usize {
             let instant = self.as_mut().now() + duration;
             // We know the call to `self.trigger_timers_until_instant` will not panic because
             // we provide an instant that is greater than or equal to the current time.
-            self.trigger_timers_until_instant::<H>(instant)
+            self.trigger_timers_until_instant(instant)
         }
     }
 
-    impl<Id, T: AsMut<DummyTimerContext<Id>>> DummyTimerContextExt<Id> for T {}
+    impl<Id, T: AsMut<DummyTimerContext<Id>> + TimerHandler<Id>> DummyTimerContextExt<Id> for T {}
 
     /// A dummy [`FrameContext`].
     pub struct DummyFrameContext<Meta> {
@@ -1112,7 +1111,7 @@ pub(crate) mod testutil {
         ///   new simulation time are sent to their destinations, handled using
         ///   the `FH` type parameter.
         /// - All timer events whose deadline is less than or equal to the new
-        ///   simulation time are fired, handled using the `TH` type parameter.
+        ///   simulation time are fired.
         ///
         /// If any new events are created during the operation of frames or
         /// timers, they **will not** be taken into account in the current
@@ -1130,10 +1129,12 @@ pub(crate) mod testutil {
         /// destinations.
         pub(crate) fn step<
             FH: FrameHandler<DummyContext<S, TimerId, SendMeta>, DeviceId, RecvMeta, Buf<Vec<u8>>>,
-            TH: TimerHandler<DummyContext<S, TimerId, SendMeta>, TimerId>,
         >(
             &mut self,
-        ) -> StepResult {
+        ) -> StepResult
+        where
+            DummyContext<S, TimerId, SendMeta>: TimerHandler<TimerId>,
+        {
             self.collect_frames();
 
             let next_step = if let Some(t) = self.next_step() {
@@ -1186,7 +1187,7 @@ pub(crate) mod testutil {
                 }
 
                 for t in timers {
-                    TH::handle_timer(ctx, t);
+                    ctx.handle_timer(t);
                     ret.timers_fired += 1;
                 }
             }
@@ -1293,13 +1294,10 @@ pub(crate) mod testutil {
         fn test_dummy_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl TimerHandler<DummyContext<Vec<(usize, DummyInstant)>, usize>, usize> for () {
-                fn handle_timer(
-                    ctx: &mut DummyContext<Vec<(usize, DummyInstant)>, usize>,
-                    id: usize,
-                ) {
-                    let now = ctx.now();
-                    ctx.get_mut().push((id, now));
+            impl TimerHandler<usize> for DummyContext<Vec<(usize, DummyInstant)>, usize> {
+                fn handle_timer(&mut self, id: usize) {
+                    let now = self.now();
+                    self.get_mut().push((id, now));
                 }
             }
 
@@ -1307,7 +1305,7 @@ pub(crate) mod testutil {
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
-            assert!(!ctx.trigger_next_timer::<()>());
+            assert!(!ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             const ONE_SEC: Duration = Duration::from_secs(1);
@@ -1324,7 +1322,7 @@ pub(crate) mod testutil {
             // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
             assert_eq!(ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
 
-            assert!(ctx.trigger_next_timer::<()>());
+            assert!(ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
 
             // After the timer fires, it should not still be scheduled at some instant.
@@ -1335,14 +1333,14 @@ pub(crate) mod testutil {
 
             // Once it's been triggered, it should be canceled and not triggerable again.
             ctx = Default::default();
-            assert!(!ctx.trigger_next_timer::<()>());
+            assert!(!ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then cancel it, it shouldn't fire.
             ctx = Default::default();
             ctx.schedule_timer(ONE_SEC, 0);
             assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
-            assert!(!ctx.trigger_next_timer::<()>());
+            assert!(!ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then schedule the same ID again, the
@@ -1358,7 +1356,7 @@ pub(crate) mod testutil {
             ctx.schedule_timer(Duration::from_secs(0), 0);
             ctx.schedule_timer(Duration::from_secs(1), 1);
             ctx.schedule_timer(Duration::from_secs(2), 2);
-            ctx.trigger_timers_until_instant::<()>(ONE_SEC_INSTANT);
+            ctx.trigger_timers_until_instant(ONE_SEC_INSTANT);
 
             // The first two timers should have fired.
             assert_eq!(

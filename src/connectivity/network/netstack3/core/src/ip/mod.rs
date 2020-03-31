@@ -33,7 +33,7 @@ use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, Either, EmptyBuf, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
-use crate::context::{CounterContext, FrameContext, StateContext, TimerContext};
+use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler};
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
@@ -46,10 +46,10 @@ use crate::ip::icmp::{
 use crate::ip::igmp::{IgmpContext, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::mld::{MldContext, MldFrameMetadata, MldReportDelay};
-use crate::ip::path_mtu::{handle_pmtu_timer, IpLayerPathMtuCache, PmtuTimerId};
+use crate::ip::path_mtu::{IpLayerPathMtuCache, PmtuTimerId};
 use crate::ip::reassembly::{
-    handle_reassembly_timer, process_fragment, reassemble_packet, FragmentCacheKey,
-    FragmentProcessingState, IpLayerFragmentCache,
+    process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
+    IpLayerFragmentCache,
 };
 use crate::ip::socket::{IpSock, IpSockUpdate};
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
@@ -550,12 +550,16 @@ impl IpLayerTimerId {
 /// Handle a timer event firing in the IP layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLayerTimerId) {
     match id {
-        IpLayerTimerId::ReassemblyTimeoutv4(key) => handle_reassembly_timer::<Ipv4, _>(ctx, key),
-        IpLayerTimerId::ReassemblyTimeoutv6(key) => handle_reassembly_timer::<Ipv6, _>(ctx, key),
-        IpLayerTimerId::PmtuTimeout(IpVersion::V4) => handle_pmtu_timer::<Ipv4, _>(ctx),
-        IpLayerTimerId::PmtuTimeout(IpVersion::V6) => handle_pmtu_timer::<Ipv6, _>(ctx),
-        IpLayerTimerId::IgmpTimer(timer) => crate::ip::igmp::handle_timeout(ctx, timer),
-        IpLayerTimerId::MldTimer(timer) => crate::ip::mld::handle_timeout(ctx, timer),
+        IpLayerTimerId::ReassemblyTimeoutv4(key) => ctx.handle_timer(key),
+        IpLayerTimerId::ReassemblyTimeoutv6(key) => ctx.handle_timer(key),
+        IpLayerTimerId::PmtuTimeout(IpVersion::V4) => {
+            ctx.handle_timer(PmtuTimerId::<Ipv4>::default())
+        }
+        IpLayerTimerId::PmtuTimeout(IpVersion::V6) => {
+            ctx.handle_timer(PmtuTimerId::<Ipv6>::default())
+        }
+        IpLayerTimerId::IgmpTimer(timer) => ctx.handle_timer(timer),
+        IpLayerTimerId::MldTimer(timer) => ctx.handle_timer(timer),
     }
 }
 

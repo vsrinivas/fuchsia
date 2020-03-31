@@ -35,13 +35,11 @@ use alloc::collections::{BTreeSet, BinaryHeap};
 use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::convert::TryFrom;
-use core::marker::PhantomData;
 use core::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ip, IpAddress, IpVersion};
-use never::Never;
 use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
@@ -87,39 +85,10 @@ impl<I: Ip, C: TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFra
 {
 }
 
-/// A handler for reassembly timer events.
-///
-/// See [`IpLayerFragmentCache::handle_reassembly_timer`] for more information.
-///
-/// This type cannot be constructed, and is only meant to be used at the type
-/// level. We implement [`TimerHandler`] for `FragmentTimerHandler` rather than just
-/// provide the top-level `handle_timer` functions so that `FragmentTimerHandler`
-/// can be used in tests with the [`DummyTimerContextExt`] trait and with the
-/// [`DummyNetwork`] type.
-///
-/// [`DummyTimerContextExt`]: crate::context::testutil::DummyTimerContextExt
-/// [`DummyNetwork`]: crate::context::testutil::DummyNetwork
-pub(crate) struct FragmentTimerHandler<I> {
-    _ip: PhantomData<I>,
-    _never: Never,
-}
-
-impl<I: Ip, C: FragmentContext<I>> TimerHandler<C, FragmentCacheKey<I::Addr>>
-    for FragmentTimerHandler<I>
-{
-    fn handle_timer(ctx: &mut C, key: FragmentCacheKey<I::Addr>) {
-        ctx.get_state_mut().handle_reassembly_timer(key);
+impl<A: IpAddress, C: FragmentContext<A::Version>> TimerHandler<FragmentCacheKey<A>> for C {
+    fn handle_timer(&mut self, key: FragmentCacheKey<A>) {
+        self.get_state_mut().handle_reassembly_timer(key);
     }
-}
-
-/// Handles reassembly timers.
-///
-/// See [`FragmentTimerHandler`] for more information.
-pub(crate) fn handle_reassembly_timer<I: Ip, C: FragmentContext<I>>(
-    ctx: &mut C,
-    key: FragmentCacheKey<I::Addr>,
-) {
-    FragmentTimerHandler::<I>::handle_timer(ctx, key)
 }
 
 /// Trait that must be implemented by any packet type that is fragmentable.
@@ -1142,7 +1111,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
-        assert!(ctx.trigger_next_timer::<FragmentTimerHandler<I>>());
+        assert!(ctx.trigger_next_timer());
 
         // Make sure no other times exist..
         assert_eq!(ctx.timers().len(), 0);
@@ -1374,13 +1343,13 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_2, 2, 3, ExpectedResult::NeedMore);
 
         // Advance time by 30s (should be at 30s now).
-        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(30)), 0);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(30)), 0);
 
         // Process fragment #2 for packet #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 2, 3, ExpectedResult::NeedMore);
 
         // Advance time by 10s (should be at 40s now).
-        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(10)), 0);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 0);
 
         // Process fragment #1 for packet #2
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_2, 1, 3, ExpectedResult::NeedMore);
@@ -1389,7 +1358,7 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 1, 3, ExpectedResult::ReadyReassemble);
 
         // Advance time by 10s (should be at 50s now).
-        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(10)), 0);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 0);
 
         // Process fragment #0 for packet #1
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_1, 0, 3, ExpectedResult::NeedMore);
@@ -1399,7 +1368,7 @@ mod tests {
 
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
-        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(10)), 1);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 1);
 
         // Make sure no other times exist.
         assert_eq!(ctx.timers().len(), 0);

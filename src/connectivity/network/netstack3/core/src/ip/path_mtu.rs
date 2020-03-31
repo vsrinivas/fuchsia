@@ -11,7 +11,6 @@ use core::time::Duration;
 
 use log::trace;
 use net_types::ip::{Ip, IpAddress, IpVersion};
-use never::Never;
 
 use crate::context::{InstantContext, StateContext, TimerContext, TimerHandler};
 use crate::Instant;
@@ -70,7 +69,7 @@ const PMTU_PLATEAUS: [u32; 12] =
     [65535, 32000, 17914, 8166, 4352, 2002, 1492, 1280, 1006, 508, 296, 68];
 
 /// The timer ID for the path MTU cache.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub(crate) struct PmtuTimerId<I: Ip>(PhantomData<I>);
 
 /// The execution context for the path MTU cache.
@@ -331,28 +330,10 @@ fn update_pmtu_inner<I: Ip, C: PmtuContext<I>>(
     ret
 }
 
-/// A handler for PMTU timer events.
-///
-/// This performs scheduled maintenance on PMTU data such as resetting PMTU
-/// values of stale cached values to restart the PMTU discovery process.
-///
-/// This type cannot be constructed, and is only meant to be used at the type
-/// level. We implement [`TimerHandler`] for `PmtuTimerHandler` rather than just
-/// provide the top-level `handle_timer` functions so that `PmtuTimerHandler`
-/// can be used in tests with the [`DummyTimerContextExt`] trait and with the
-/// [`DummyNetwork`] type.
-///
-/// [`DummyTimerContextExt`]: crate::context::testutil::DummyTimerContextExt
-/// [`DummyNetwork`]: crate::context::testutil::DummyNetwork
-pub(crate) struct PmtuTimerHandler<I> {
-    _ip: PhantomData<I>,
-    _never: Never,
-}
-
-impl<I: Ip, C: PmtuContext<I>> TimerHandler<C, PmtuTimerId<I>> for PmtuTimerHandler<I> {
-    fn handle_timer(ctx: &mut C, _timer: PmtuTimerId<I>) {
-        let curr_time = ctx.now();
-        let mut cache = ctx.get_state_mut();
+impl<I: Ip, C: PmtuContext<I>> TimerHandler<PmtuTimerId<I>> for C {
+    fn handle_timer(&mut self, _timer: PmtuTimerId<I>) {
+        let curr_time = self.now();
+        let mut cache = self.get_state_mut();
 
         // Make sure we expected this timer to fire.
         assert!(cache.timer_scheduled);
@@ -393,16 +374,9 @@ impl<I: Ip, C: PmtuContext<I>> TimerHandler<C, PmtuTimerId<I>> for PmtuTimerHand
             // only occur if there is already a PMTU maintenance task scheduled. We
             // will only reach here after starting a maintenance task and clear the
             // task's `TimerId` so the panic condition will not be triggered.
-            create_maintenance_timer(ctx);
+            create_maintenance_timer(self);
         }
     }
-}
-
-/// Handle a scheduled PMTU timer firing.
-///
-/// See [`PmtuTimerHandler`] for more information.
-pub(crate) fn handle_pmtu_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
-    PmtuTimerHandler::<I>::handle_timer(ctx, PmtuTimerId::<I>(PhantomData::<I>))
 }
 
 /// Create a PMTU maintenance task to occur after a duration of
@@ -580,7 +554,7 @@ mod tests {
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Update pmtu from local to remote.
         // PMTU should be updated to `new_mtu1` and last updated instant
@@ -597,7 +571,7 @@ mod tests {
         );
 
         // Advance time to 2s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu1` and last updated instant
@@ -617,7 +591,7 @@ mod tests {
         let new_mtu2 = min_mtu::<I>() + 100;
 
         // Advance time to 3s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Updating again should return the last pmtu
         // PMTU should be updated to `new_mtu2` and last updated instant
@@ -635,7 +609,7 @@ mod tests {
         );
 
         // Advance time to 4s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu2` and last updated instant
@@ -655,7 +629,7 @@ mod tests {
         let new_mtu3 = new_mtu2 - 10;
 
         // Advance time to 5s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure update only if new PMTU is less than current (it is).
         // PMTU should be updated to `new_mtu3` and last updated instant
@@ -673,7 +647,7 @@ mod tests {
         );
 
         // Advance time to 6s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu3` and last updated instant
@@ -694,7 +668,7 @@ mod tests {
         let new_mtu4 = new_mtu3 + 50;
 
         // Advance time to 7s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure update only if new PMTU is less than current (it isn't)
         assert_eq!(
@@ -710,7 +684,7 @@ mod tests {
         );
 
         // Advance time to 8s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure the update didn't work.
         // PMTU and last updated should not have changed.
@@ -728,7 +702,7 @@ mod tests {
         let low_mtu = min_mtu::<I>() - 1;
 
         // Advance time to 9s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Updating with mtu value less than the minimum MTU should fail.
         assert_eq!(
@@ -744,7 +718,7 @@ mod tests {
         );
 
         // Advance time to 10s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure the update didn't work.
         // PMTU and last updated should not have changed.
@@ -773,7 +747,7 @@ mod tests {
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Update pmtu from local to remote.
         // PMTU should be updated to `new_mtu1` and last updated instant
@@ -793,7 +767,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
 
         // Advance time to 2s.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration), 0);
+        assert_eq!(ctx.trigger_timers_for(duration), 0);
 
         // Make sure the update worked.
         // PMTU should be updated to `new_mtu1` and last updated instant
@@ -811,7 +785,7 @@ mod tests {
         );
 
         // Advance time to 30mins.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration * 1798), 0);
+        assert_eq!(ctx.trigger_timers_for(duration * 1798), 0);
 
         // Update pmtu from local to another remote.
         // PMTU should be updated to `new_mtu1` and last updated instant
@@ -854,7 +828,7 @@ mod tests {
 
         // Advance time to 1hr + 1s.
         // Should have triggered a timer.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration * 1801), 1);
+        assert_eq!(ctx.trigger_timers_for(duration * 1801), 1);
         // Make sure none of the cache data has been marked as
         // stale and removed.
         assert_eq!(
@@ -880,7 +854,7 @@ mod tests {
 
         // Advance time to 3hr + 1s.
         // Should have triggered 2 timers.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration * 7200), 2);
+        assert_eq!(ctx.trigger_timers_for(duration * 7200), 2);
         // Make sure only the earlier PMTU data got marked
         // as stale and removed.
         assert!(
@@ -903,7 +877,7 @@ mod tests {
 
         // Advance time to 4hr + 1s.
         // Should have triggered 1 timers.
-        assert_eq!(ctx.trigger_timers_for::<PmtuTimerHandler<I>>(duration * 3600), 1);
+        assert_eq!(ctx.trigger_timers_for(duration * 3600), 1);
         // Make sure both PMTU data got marked
         // as stale and removed.
         assert!(
