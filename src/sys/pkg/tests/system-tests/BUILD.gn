@@ -33,18 +33,21 @@ go_test("system_tests_reboot") {
   gopackages = [ "fuchsia.googlesource.com/system_tests/reboot_test" ]
   disabled = true
   deps = [ ":system_tests_lib" ]
+  non_go_deps = [ "//garnet/bin/sl4f" ]
 }
 
 go_test("system_tests_tracking") {
   gopackages = [ "fuchsia.googlesource.com/system_tests/tracking_test" ]
   disabled = true
   deps = [ ":system_tests_lib" ]
+  non_go_deps = [ "//garnet/bin/sl4f" ]
 }
 
 go_test("system_tests_upgrade") {
   gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
   disabled = true
   deps = [ ":system_tests_lib" ]
+  non_go_deps = [ "//garnet/bin/sl4f" ]
 }
 
 group("system_tests") {
