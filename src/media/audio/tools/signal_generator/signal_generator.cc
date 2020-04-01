@@ -4,12 +4,14 @@
 #include "src/media/audio/tools/signal_generator/signal_generator.h"
 
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/clock.h>
 
 #include <iostream>
 
 #include <fbl/algorithm.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/lib/clock/utils.h"
 
 namespace media::tools {
 
@@ -84,8 +86,8 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
     return;
   }
 
-  // Start playback for this renderer.
-  Play();
+  // Retrieve the default reference clock for this renderer; once we receive it, start playback.
+  GetClockAndStart();
 }
 
 bool MediaApp::ParameterRangeChecks() {
@@ -139,6 +141,21 @@ bool MediaApp::ParameterRangeChecks() {
   if (frames_per_payload_ < frame_rate_ / 1000) {
     std::cerr << "Payload size must be 1 millisecond or more" << std::endl;
     ret_val = false;
+  }
+
+  if (adjusting_clock_rate_) {
+    clock_type_ = ClockType::Custom;
+
+    if (clock_rate_adjustment_ > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST) {
+      std::cerr << "Clock adjustment must be " << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST
+                << " parts-per-million or less" << std::endl;
+      ret_val = false;
+    }
+    if (clock_rate_adjustment_ < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) {
+      std::cerr << "Clock rate adjustment must be " << ZX_CLOCK_UPDATE_MIN_RATE_ADJUST
+                << " parts-per-million or more" << std::endl;
+      ret_val = false;
+    }
   }
 
   stream_gain_db_ = fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
@@ -227,6 +244,25 @@ void MediaApp::DisplayConfigurationSettings() {
     printf(", after explicitly %s this stream", stream_mute_ ? "muting" : "unmuting");
   }
 
+  printf(".\nThe stream's reference clock will be ");
+  switch (clock_type_) {
+    case ClockType::Default:
+      printf("the default clock");
+      break;
+    case ClockType::Optimal:
+      printf("the AudioCore-provided 'optimal' clock");
+      break;
+    case ClockType::Monotonic:
+      printf("a clone of the MONOTONIC clock");
+      break;
+    case ClockType::Custom:
+      printf("a custom clock");
+      if (adjusting_clock_rate_) {
+        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_);
+      }
+      break;
+  }
+
   printf(".\nSignal will play for %.3f seconds, using %u %stimestamped buffers of %u frames",
          duration_secs_, total_num_mapped_payloads_, (!use_pts_ ? "non-" : ""),
          frames_per_payload_);
@@ -313,6 +349,49 @@ zx_status_t MediaApp::ConfigureAudioRenderer() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
+  if (clock_type_ != ClockType::Default) {
+    zx::clock reference_clock_to_set;
+
+    if (clock_type_ == ClockType::Optimal) {
+      reference_clock_to_set = zx::clock(ZX_HANDLE_INVALID);
+    } else {
+      // In both Monotonic and Custom cases, we start with a clone of CLOCK_MONOTONIC.
+      // Create, possibly rate-adjust, reduce rights, then send to SetRefClock().
+      zx::clock custom_clock;
+      status = zx::clock::create(
+          ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START, nullptr,
+          &custom_clock);
+      if (status != ZX_OK) {
+        std::cerr << "zx::clock::create failed: " << status << std::endl;
+        return status;
+      }
+      if (clock_type_ == ClockType::Custom && adjusting_clock_rate_) {
+        zx::clock::update_args args;
+        args.reset().set_rate_adjust(clock_rate_adjustment_);
+        status = custom_clock.update(args);
+        if (status != ZX_OK) {
+          std::cerr << "zx::clock::update failed: " << status << std::endl;
+          return status;
+        }
+      }
+
+      // The clock we send to AudioRenderer cannot have ZX_RIGHT_WRITE. Most clients would retain
+      // their custom clocks for subsequent rate-adjustment, and thus would use 'duplicate' to
+      // create the rights-reduced clock. This app doesn't yet allow rate-adjustment during playback
+      // (we also don't need this clock to read the current ref time: we call GetReferenceClock
+      // later), so we use 'replace' (not 'duplicate').
+      auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+      status = custom_clock.replace(rights, &reference_clock_to_set);
+      if (status != ZX_OK) {
+        std::cerr << "zx::clock::duplicate failed: " << status << std::endl;
+        return status;
+      }
+    }
+
+    audio_renderer_->SetReferenceClock(std::move(reference_clock_to_set));
+  }
+  // we retrieve the reference clock later in GetClockAndStart
+
   if (use_pts_) {
     audio_renderer_->SetPtsUnits(frame_rate_, 1);
   }
@@ -383,7 +462,23 @@ zx_status_t MediaApp::CreateMemoryMapping() {
   return ZX_OK;
 }
 
+void MediaApp::GetClockAndStart() {
+  audio_renderer_->GetReferenceClock([this](zx::clock received_clock) {
+    reference_clock_ = std::move(received_clock);
+
+    if (verbose_) {
+      audio::GetAndDisplayClockDetails(reference_clock_);
+    }
+
+    zx_time_t mono_now = zx::clock::get_monotonic().get();
+    srand48(mono_now);
+
+    Play();
+  });
+}
+
 // Prime (pre-submit) an initial set of packets, then start playback.
+// Called from the GetReferenceClock callback
 void MediaApp::Play() {
   if (num_packets_to_send_ > 0) {
     // We can only send down as many packets as will concurrently fit into our payload buffer.
@@ -394,32 +489,55 @@ void MediaApp::Play() {
       SendPacket();
     }
 
-    auto now = zx::clock::get_monotonic();
-    auto now_str = RefTimeMsStrFromZxTime(now);
-    srand48(now.get());
+    zx_time_t ref_now;
+    auto status = reference_clock_.read(&ref_now);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "zx::clock::read failed during Play()";
+      Shutdown();
+      return;
+    }
+    srand48(ref_now);
 
-    reference_start_time_ = use_pts_ ? (now + zx::duration{min_lead_time_} + kPlayStartupDelay)
-                                     : zx::time{fuchsia::media::NO_TIMESTAMP};
+    reference_start_time_ =
+        use_pts_ ? (zx::time{ref_now} + zx::duration{min_lead_time_} + kPlayStartupDelay)
+                 : zx::time{fuchsia::media::NO_TIMESTAMP};
     media_start_time_ = zx::time{use_pts_ ? 0 : fuchsia::media::NO_TIMESTAMP};
 
-    auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
-    auto requested_media_str = RefTimeStrFromZxTime(media_start_time_);
-
     if (verbose_) {
-      printf("\nCalling Play (ref %s, media %s) at %s\n", requested_ref_str.c_str(),
-             requested_media_str.c_str(), now_str.c_str());
+      auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
+      auto requested_media_str = RefTimeStrFromZxTime(media_start_time_);
+
+      auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+
+      auto mono_now = zx::clock::get_monotonic();
+      auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
+
+      printf("\nCalling Play (ref %s, media %s) at ref_now %s : mono_now %s\n",
+             requested_ref_str.c_str(), requested_media_str.c_str(), ref_now_str.c_str(),
+             mono_now_str.c_str());
     }
 
     auto play_completion_func = [this](int64_t actual_ref_start, int64_t actual_media_start) {
       if (verbose_) {
-        auto now = zx::clock::get_monotonic();
-        auto now_str = RefTimeMsStrFromZxTime(now);
-
         auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
         auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
 
-        printf("Play callback(ref %s, media %s) at %s\n\n", actual_ref_str.c_str(),
-               actual_media_str.c_str(), now_str.c_str());
+        zx_time_t ref_now;
+        auto status = reference_clock_.read(&ref_now);
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "zx::clock::read failed during Play callback";
+          Shutdown();
+          return;
+        }
+
+        auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+
+        auto mono_now = zx::clock::get_monotonic();
+        auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
+
+        printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
+               actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
+               mono_now_str.c_str());
       }
     };
 
@@ -563,13 +681,23 @@ void MediaApp::SendPacket() {
   }
 
   if (verbose_) {
-    auto now = zx::clock::get_monotonic();
-
     auto pts_str = RefTimeStrFromZxTime(zx::time{packet.stream_packet.pts});
-    auto now_str = RefTimeMsStrFromZxTime(now);
 
-    printf("Sending packet %4lu (media pts %s) at %s\n", num_packets_sent_, pts_str.c_str(),
-           now_str.c_str());
+    auto mono_now = zx::clock::get_monotonic();
+    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
+
+    zx_time_t ref_now;
+    auto status = reference_clock_.read(&ref_now);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "zx::clock::read failed during SendPacket()";
+      Shutdown();
+      return;
+    }
+
+    auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+
+    printf("Sending packet %4lu (media pts %s) at ref_now %s : mono_now %s\n", num_packets_sent_,
+           pts_str.c_str(), ref_now_str.c_str(), mono_now_str.c_str());
   }
 
   ++num_packets_sent_;
@@ -583,11 +711,22 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
   num_frames_completed_ += frames_completed;
 
   if (verbose_) {
-    auto now = zx::clock::get_monotonic();
+    auto mono_now = zx::clock::get_monotonic();
+    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
 
-    auto now_str = RefTimeMsStrFromZxTime(now);
-    printf("Packet %4lu complete (%5lu, %8lu frames total) at %s\n", num_packets_completed_,
-           frames_completed, num_frames_completed_, now_str.c_str());
+    zx_time_t ref_now;
+    auto status = reference_clock_.read(&ref_now);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "zx::clock::read failed during OnSendPacketComplete()";
+      Shutdown();
+      return;
+    }
+
+    auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+
+    printf("Packet %4lu complete (%5lu, %8lu frames total) at ref_now %s : mono_now %s\n",
+           num_packets_completed_, frames_completed, num_frames_completed_, ref_now_str.c_str(),
+           mono_now_str.c_str());
   }
 
   ++num_packets_completed_;

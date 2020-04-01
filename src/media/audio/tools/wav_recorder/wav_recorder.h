@@ -13,6 +13,10 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
+namespace {
+typedef enum { Default, Optimal, Monotonic, Custom } ClockType;
+}  // namespace
+
 namespace media::tools {
 
 class WavRecorder {
@@ -31,14 +35,19 @@ class WavRecorder {
 
  private:
   void Usage();
-  void Shutdown();
+
   bool SetupPayloadBuffer();
-  void SendCaptureJob();
+  zx_status_t EstablishReferenceClock();
+  void ReceiveClockAndContinue(zx::clock received_clock);
   void OnDefaultFormatFetched(fuchsia::media::StreamType type);
+
+  void SendCaptureJob();
   void OnPacketProduced(fuchsia::media::StreamPacket pkt);
   void TimeToStr(int64_t time, char* time_str);
   void DisplayPacket(fuchsia::media::StreamPacket pkt);
+
   void OnQuit();
+  void Shutdown();
 
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
@@ -51,6 +60,11 @@ class WavRecorder {
   const char* filename_ = "";
   bool verbose_ = false;
   bool loopback_ = false;
+
+  zx::clock reference_clock_;
+  ClockType clock_type_ = ClockType::Default;
+  bool adjusting_clock_rate_ = false;
+  int32_t clock_rate_adjustment_;
 
   zx::vmo payload_buf_vmo_;
   void* payload_buf_virt_ = nullptr;

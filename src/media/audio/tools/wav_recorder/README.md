@@ -27,6 +27,13 @@ WavWriter class to record a waveform audio file.
       By default, use packet-by-packet ('synchronous') mode
     --async                Capture using sequential-buffer ('asynchronous') mode
 
+      By default, use the default reference clock
+    --optimal-clock        Use the 'optimal' reference clock provided by the Audio service
+    --monotonic-clock      Set the local system monotonic clock as reference for this stream
+    --custom-clock         Use a custom clock as this stream's reference clock
+    --rate-adjust[=<PPM>]  Run faster/slower than local system clock, in parts-per-million
+                           (min -1000, max 1000; -75 if unspecified). Implies '--custom-clock'
+
       By default, capture audio using packets of 100.0 msec
     --packet-ms=<MSECS>    Specify the duration (in milliseconds) of each capture packet
                            Minimum packet duration is 1.0 millisec

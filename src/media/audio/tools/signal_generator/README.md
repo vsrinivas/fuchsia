@@ -52,6 +52,13 @@ These optional parameters are interpreted as follows:
 
       Subsequent settings (e.g. gain, timestamps) do not affect .wav file contents
 
+      Use the default reference clock unless specified otherwise
+    --optimal-clock          Request and use the 'optimal' reference clock provided by the Audio service
+    --monotonic-clock        Clone CLOCK_MONOTONIC and use it as this stream's reference clock
+    --custom-clock           Create and use a custom clock as this stream's reference clock
+    --rate-adjust[=<PPM>]    Run faster/slower than local system clock, in parts-per-million
+                             (-1000 min, +1000 max, use -75 if unspecified). Implies '--custom-clock'
+
       By default, submit data in non-timestamped buffers of 480 frames and 1 VMOs.
     --pts                    Apply presentation timestamps (units: frames)
     --threshold[=<SECS>]     Set PTS discontinuity threshold, in seconds (default 0.0)

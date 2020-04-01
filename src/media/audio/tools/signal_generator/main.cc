@@ -32,6 +32,12 @@ constexpr char kAmplitudeDefaultScale[] = "0.25";
 constexpr char kSaveToFileSwitch[] = "wav";
 constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
 
+constexpr char kOptimalClockSwitch[] = "optimal-clock";
+constexpr char kMonotonicClockSwitch[] = "monotonic-clock";
+constexpr char kCustomClockSwitch[] = "custom-clock";
+constexpr char kClockRateSwitch[] = "rate-adjust";
+constexpr char kClockRateDefault[] = "-75";
+
 constexpr char kFramesPerPayloadSwitch[] = "frames";
 constexpr char kFramesPerPayloadDefault[] = "480";
 
@@ -106,7 +112,20 @@ void usage(const char* prog_name) {
 
   printf("\n    Subsequent settings (e.g. gain, timestamps) do not affect .wav file contents\n");
 
-  printf("\n    By default, submit data in non-timestamped buffers of %s frames and %s VMOs.\n",
+  printf("\n    Use the default reference clock unless specified otherwise\n");
+  printf("  --%s\t Request and use the 'optimal' reference clock provided by the Audio service\n",
+         kOptimalClockSwitch);
+  printf("  --%s\t Clone CLOCK_MONOTONIC and use it as this stream's reference clock\n",
+         kMonotonicClockSwitch);
+  printf("  --%s\t Create and use a custom clock as this stream's reference clock\n",
+         kCustomClockSwitch);
+  printf("  --%s[=<PPM>]\t Run faster/slower than local system clock, in parts-per-million\n",
+         kClockRateSwitch);
+  printf("\t\t\t (%d min, %d max, use %s if unspecified). Implies '--%s'\n",
+         ZX_CLOCK_UPDATE_MIN_RATE_ADJUST, ZX_CLOCK_UPDATE_MAX_RATE_ADJUST, kClockRateDefault,
+         kCustomClockSwitch);
+
+  printf("\n    By default, submit data in non-timestamped buffers of %s frames and %s VMOs\n",
          kFramesPerPayloadDefault, kNumPayloadBuffersDefault);
   printf("  --%s\t\t\t Apply presentation timestamps (units: frames)\n", kUsePtsSwitch);
   printf("  --%s[=<SECS>]\t Set PTS discontinuity threshold, in seconds (default %s)\n",
@@ -248,6 +267,25 @@ int main(int argc, const char** argv) {
   std::string num_payload_buffers_str =
       command_line.GetOptionValueWithDefault(kNumPayloadBuffersSwitch, kNumPayloadBuffersDefault);
   media_app.set_num_payload_buffers(fxl::StringToNumber<uint32_t>(num_payload_buffers_str));
+
+  // Handle any explicit reference clock selection
+  if (command_line.HasOption(kCustomClockSwitch) || command_line.HasOption(kClockRateSwitch)) {
+    media_app.set_clock_type(ClockType::Custom);
+    if (command_line.HasOption(kClockRateSwitch)) {
+      std::string rate_adjustment_str;
+      command_line.GetOptionValue(kClockRateSwitch, &rate_adjustment_str);
+      if (rate_adjustment_str == "") {
+        rate_adjustment_str = kClockRateDefault;
+      }
+      media_app.adjust_clock_rate(fxl::StringToNumber<int32_t>(rate_adjustment_str));
+    }
+  } else if (command_line.HasOption(kOptimalClockSwitch)) {
+    media_app.set_clock_type(ClockType::Optimal);
+  } else if (command_line.HasOption(kMonotonicClockSwitch)) {
+    media_app.set_clock_type(ClockType::Monotonic);
+  } else {
+    media_app.set_clock_type(ClockType::Default);
+  }
 
   // Handle timestamp usage
   media_app.set_use_pts(command_line.HasOption(kUsePtsSwitch));

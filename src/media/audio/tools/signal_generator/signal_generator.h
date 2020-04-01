@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/clock.h>
 
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
@@ -21,6 +22,8 @@ typedef enum {
   kOutputTypeSawtooth,
 } OutputSignalType;
 // TODO(49220): refactor signal-generation to make it easier for new generators to be added.
+
+typedef enum { Default, Optimal, Monotonic, Custom } ClockType;
 
 constexpr std::array<std::pair<const char*, fuchsia::media::AudioRenderUsage>,
                      fuchsia::media::RENDER_USAGE_COUNT>
@@ -57,6 +60,12 @@ class MediaApp {
   }
   void set_num_payload_buffers(uint32_t num_payload_buffers) {
     num_payload_buffers_ = num_payload_buffers;
+  }
+
+  void set_clock_type(ClockType type) { clock_type_ = type; }
+  void adjust_clock_rate(int32_t rate_adjustment) {
+    adjusting_clock_rate_ = true;
+    clock_rate_adjustment_ = rate_adjustment;
   }
 
   void set_use_pts(bool use_pts) { use_pts_ = use_pts; }
@@ -98,6 +107,7 @@ class MediaApp {
   bool ParameterRangeChecks();
   void SetupPayloadCoefficients();
   void DisplayConfigurationSettings();
+
   void SetAudioCoreSettings(sys::ComponentContext* app_context);
   void AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetAudioRendererEvents();
@@ -106,7 +116,9 @@ class MediaApp {
   bool InitializeWavWriter();
   zx_status_t CreateMemoryMapping();
 
+  void GetClockAndStart();
   void Play();
+
   void SendPacket();
   void OnSendPacketComplete(uint64_t frames_completed);
 
@@ -152,6 +164,11 @@ class MediaApp {
   double duration_secs_;
   uint32_t frames_per_payload_;
   uint32_t num_payload_buffers_;
+
+  zx::clock reference_clock_;
+  ClockType clock_type_ = ClockType::Default;
+  bool adjusting_clock_rate_ = false;
+  int32_t clock_rate_adjustment_ = 0;
 
   zx::time reference_start_time_;
   zx::time media_start_time_;
