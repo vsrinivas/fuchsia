@@ -33,6 +33,7 @@ fidl("fuchsia.modular") {
     "module/module_manifest.fidl",
     "module/module_state.fidl",
     "session/focus.fidl",
+    "session/session_restart_controller.fidl",
     "session/session_shell.fidl",
     "story/create_link.fidl",
     "story/create_module_parameter_map.fidl",

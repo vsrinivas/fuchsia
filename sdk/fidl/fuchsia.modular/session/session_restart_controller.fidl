@@ -1,0 +1,13 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+/// A capability, typically offered from `sessionmgr` to select child components,
+/// allowing them to request the session to be restarted.
+[Discoverable]
+protocol SessionRestartController {
+    /// Requests to cleanly terminate and then immediately restart the session.
+    Restart();
+};

@@ -343,12 +343,11 @@ void SessionmgrImpl::InitializeAgentRunner() {
         }
         puppet_master_impl_->Connect(std::move(request));
       },
-      // Give agents SessionShellContext for its Restart() method. See fxb/48003.
-      [this](fidl::InterfaceRequest<fuchsia::modular::SessionShellContext> request) {
+      [this](fidl::InterfaceRequest<fuchsia::modular::SessionRestartController> request) {
         if (terminating_) {
           return;
         }
-        session_shell_context_bindings_.AddBinding(this, std::move(request));
+        session_restart_controller_bindings_.AddBinding(this, std::move(request));
       },
       [this](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
         if (terminating_) {

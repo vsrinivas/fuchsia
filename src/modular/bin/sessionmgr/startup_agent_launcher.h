@@ -19,7 +19,6 @@
 
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
-
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"
 
 namespace modular {
@@ -30,8 +29,10 @@ class StartupAgentLauncher : public AgentServicesFactory {
   StartupAgentLauncher(
       fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
-      fidl::InterfaceRequestHandler<fuchsia::modular::SessionShellContext> session_shell_context_connector,
-      fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
+      fidl::InterfaceRequestHandler<fuchsia::modular::SessionRestartController>
+          session_restart_controller_connector,
+      fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
+          intl_property_provider_connector,
       fit::function<bool()> is_terminating_cb);
 
   ~StartupAgentLauncher() override = default;
@@ -91,8 +92,8 @@ class StartupAgentLauncher : public AgentServicesFactory {
       focus_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
       puppet_master_connector_;
-  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::SessionShellContext>)>
-      session_shell_context_connector_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::SessionRestartController>)>
+      session_restart_controller_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
       intl_property_provider_connector_;
 

@@ -32,7 +32,7 @@ class AgentSessionRestartTest : public modular_testing::TestHarnessFixture {
   }
 };
 
-// Test that an Agent can use the SessionShellContext protocol to restart the session.
+// Test that an Agent can use the SessionRestartController protocol to restart the session.
 TEST_F(AgentSessionRestartTest, AgentCanRestartSession) {
   auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
@@ -42,7 +42,7 @@ TEST_F(AgentSessionRestartTest, AgentCanRestartSession) {
 
   modular_testing::TestHarnessBuilder builder(std::move(spec));
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
-  builder.InterceptComponent(AddSandboxServices({fuchsia::modular::SessionShellContext::Name_},
+  builder.InterceptComponent(AddSandboxServices({fuchsia::modular::SessionRestartController::Name_},
                                                 agent->BuildInterceptOptions()));
   builder.BuildAndRun(test_harness());
 
@@ -50,9 +50,9 @@ TEST_F(AgentSessionRestartTest, AgentCanRestartSession) {
   RunLoopUntil([&] { return session_shell->is_running() && agent->is_running(); });
 
   // Issue a restart command from the Agent.
-  auto session_shell_context =
-      agent->component_context()->svc()->Connect<fuchsia::modular::SessionShellContext>();
-  session_shell_context->Restart();
+  auto session_restart_controller =
+      agent->component_context()->svc()->Connect<fuchsia::modular::SessionRestartController>();
+  session_restart_controller->Restart();
 
   // Wait for the session shell to die (indicating a restart), then wait for it to come back.
   RunLoopUntil([&] { return !session_shell->is_running(); });

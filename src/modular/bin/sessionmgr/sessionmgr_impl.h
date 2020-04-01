@@ -45,7 +45,8 @@ class StoryStorage;
 class VisibleStoriesHandler;
 
 class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
-                       fuchsia::modular::SessionShellContext {
+                       fuchsia::modular::SessionShellContext,
+                       fuchsia::modular::SessionRestartController {
  public:
   SessionmgrImpl(sys::ComponentContext* component_context,
                  fuchsia::modular::session::SessionmgrConfig config, inspect::Node object);
@@ -159,6 +160,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   component::ServiceProviderImpl session_shell_services_;
 
   fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
+  fidl::BindingSet<fuchsia::modular::SessionRestartController> session_restart_controller_bindings_;
 
   fuchsia::modular::internal::SessionContextPtr session_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
