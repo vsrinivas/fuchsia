@@ -8,7 +8,7 @@
 //! IGMPv2. One important difference to note is that MLD uses ICMPv6 (IP
 //! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
-use alloc::collections::HashMap;
+use alloc::collections::hash_map::{Entry, HashMap};
 use alloc::vec::Vec;
 use core::time::Duration;
 
@@ -17,7 +17,6 @@ use net_types::ip::{Ip, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
-#[cfg(test)]
 use rand::Rng;
 use thiserror::Error;
 use zerocopy::ByteSlice;
@@ -227,24 +226,31 @@ impl<I: Instant> Default for MldInterface<I> {
 }
 
 impl<I: Instant> MldInterface<I> {
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     fn join_group<R: Rng>(
         &mut self,
         rng: &mut R,
         addr: MulticastAddr<Ipv6Addr>,
         now: I,
     ) -> Actions<MldProtocolSpecific> {
-        self.groups.entry(addr).or_insert(MldGroupState::default()).join_group(rng, now)
+        match self.groups.entry(addr) {
+            Entry::Occupied(_) => Actions::nothing(),
+            Entry::Vacant(entry) => {
+                let (state, actions) = GmpStateMachine::join_group(rng, now);
+                entry.insert(state);
+                actions
+            }
+        }
     }
 
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
+    // TODO(rheacock): remove `allow(dead_code)` when this is used.
+    #[allow(dead_code)]
     fn leave_group(
         &mut self,
         addr: MulticastAddr<Ipv6Addr>,
     ) -> MldResult<Actions<MldProtocolSpecific>> {
-        match self.groups.remove(&addr).as_mut() {
+        match self.groups.remove(&addr) {
             Some(state) => Ok(state.leave_group()),
             None => Err(MldError::NotAMember { addr: addr.get() }),
         }
@@ -272,7 +278,7 @@ pub(crate) fn mld_join_group<C: MldContext>(
     let now = ctx.now();
     let (state, rng) = ctx.get_state_rng_with(device);
     let actions = state.join_group(rng, group_addr, now);
-    // actions will be `Nothing` if the the host is not in the `NonMember` state.
+    // `actions` will be `Nothing` if we were already a member of the group.
     run_actions(ctx, device, actions, group_addr);
 }
 
@@ -494,9 +500,8 @@ mod tests {
         // MLD allows a router to ask for report immediately, by specifying the
         // `MaxRespDelay` to be 0. If this is the case, the host should send the
         // report immediately instead of setting a timer.
-        let mut s = MldGroupState::default();
         let mut rng = new_rng(0);
-        s.join_group(&mut rng, Instant::now());
+        let (mut s, _actions) = MldGroupState::join_group(&mut rng, Instant::now());
         let actions = s.query_received(&mut rng, Duration::from_secs(0), Instant::now());
         let vec = actions.into_iter().collect::<Vec<Action<_>>>();
         assert_eq!(vec.len(), 2);

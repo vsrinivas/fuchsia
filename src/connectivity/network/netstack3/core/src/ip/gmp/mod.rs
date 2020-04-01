@@ -143,12 +143,26 @@ impl<P: ProtocolSpecific> IntoIterator for Actions<P> {
     }
 }
 
-/// The three states that are common in both MLD and IGMPv2.
+/// Two of the three states that are common in both IGMPv2 and MLD.
+///
+/// Unlike the [IGMPv2] and [MLD] RFCs, a `MemberState` cannot be in the
+/// Non-Member state. We can construct the Non-Member state ephemerally, but we
+/// cannot store it in a `MemberState`.
+///
+/// This allows us to guarantee that the only way to construct a `MemberState`
+/// is through the [`join_group`] constructor, which constructs an ephemeral
+/// Non-Member state but then immediately executes the "join group" transition.
+/// This, combined with the fact that `leave_group` consumes its `MemberState`
+/// argument by value, allows us to guarantee that we only store `MemberState`s
+/// for groups we have actually joined, and that `MemberState`s are immediately
+/// removed when we leave a group.
 ///
 /// As with [`GmpAction`], the terms used here are biased towards IGMPv2. In
 /// MLD, their names are {Non, Delaying, Idle}-Listener instead.
+///
+/// [IGMPv2]: https://tools.ietf.org/html/rfc2236
+/// [MLD]: https://tools.ietf.org/html/rfc2710
 enum MemberState<I: Instant, P: ProtocolSpecific> {
-    NonMember(GmpHostState<NonMember, P>),
     Delaying(GmpHostState<DelayingMember<I>, P>),
     Idle(GmpHostState<IdleMember, P>),
 }
@@ -369,12 +383,6 @@ impl<P: ProtocolSpecific> GmpHostState<IdleMember, P> {
     }
 }
 
-impl<I: Instant, P: ProtocolSpecific> From<GmpHostState<NonMember, P>> for MemberState<I, P> {
-    fn from(s: GmpHostState<NonMember, P>) -> Self {
-        MemberState::NonMember(s)
-    }
-}
-
 impl<I: Instant, P: ProtocolSpecific> From<GmpHostState<DelayingMember<I>, P>>
     for MemberState<I, P>
 {
@@ -399,19 +407,50 @@ impl<S, P: ProtocolSpecific> Transition<S, P> {
 }
 
 impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
-    fn join_group<R: Rng>(self, rng: &mut R, now: I) -> (MemberState<I, P>, Actions<P>) {
-        match self {
-            MemberState::NonMember(state) => state.join_group(rng, now).into_state_actions(),
-            state => (state, Actions::nothing()),
-        }
+    /// Performs the "join group" transition, producing a new `MemberState` and
+    /// set of actions to execute.
+    ///
+    /// In the [IGMPv2] and [MLD] RFCs, the "join group" transition moves from
+    /// the Non-Member state to the Delaying Member state. However, we don't
+    /// allow `MemberState` to be in the Non-Member state, so we instead
+    /// implement `join_group` as a constructor of a new state which starts off
+    /// in the Delaying Member state. Since `join_group` is the only way to
+    /// construct a `MemberState`, this ensures that we don't store a state for
+    /// a group until we've joined that group.
+    ///
+    /// [IGMPv2]: https://tools.ietf.org/html/rfc2236
+    /// [MLD]: https://tools.ietf.org/html/rfc2710
+    fn join_group<R: Rng>(
+        protocol_specific: P,
+        cfg: P::Config,
+        rng: &mut R,
+        now: I,
+    ) -> (MemberState<I, P>, Actions<P>) {
+        GmpHostState { protocol_specific, cfg, state: NonMember }
+            .join_group(rng, now)
+            .into_state_actions()
     }
 
-    fn leave_group(self) -> (MemberState<I, P>, Actions<P>) {
-        match self {
-            MemberState::Delaying(state) => state.leave_group().into_state_actions(),
-            MemberState::Idle(state) => state.leave_group().into_state_actions(),
-            state => (state, Actions::nothing()),
-        }
+    /// Performs the "leave group" transition, consuming the state by value, and
+    /// returning a set of actions to execute.
+    ///
+    /// In the [IGMPv2] and [MLD] RFCs, the "leave group" transition moves from
+    /// any state to the Non-Member state. However, we don't allow `MemberState`
+    /// to be in the Non-Member state, so we instead implement `leave_group` by
+    /// consuming the state by value. This ensures that once a group has been
+    /// left, we don't spuriously store state for it.
+    ///
+    /// [IGMPv2]: https://tools.ietf.org/html/rfc2236
+    /// [MLD]: https://tools.ietf.org/html/rfc2710
+    fn leave_group(self) -> Actions<P> {
+        // Rust can infer these types, but since we're just discarding `_state`,
+        // we explicitly make sure it's the state we expect in case we introduce
+        // a bug.
+        let Transition(_state, actions): Transition<NonMember, _> = match self {
+            MemberState::Delaying(state) => state.leave_group(),
+            MemberState::Idle(state) => state.leave_group(),
+        };
+        actions
     }
 
     fn query_received<R: Rng>(
@@ -427,7 +466,6 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
             MemberState::Idle(state) => {
                 state.query_received(rng, max_resp_time, now).into_state_actions()
             }
-            state => (state, Actions::nothing()),
         }
     }
 
@@ -447,33 +485,39 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
 }
 
 struct GmpStateMachine<I: Instant, P: ProtocolSpecific> {
+    // Invariant: `inner` is always `Some`. It is stored as an `Option` so that
+    // methods can `.take()` the `MemberState` in order to perform transitions
+    // that consume `MemberState` by value. However, a new `MemberState` is
+    // always put back in its place so that `inner` is `Some` by the time the
+    // methods return.
     inner: Option<MemberState<I, P>>,
 }
 
-impl<I: Instant, P: ProtocolSpecific + Default> Default for GmpStateMachine<I, P>
+impl<I: Instant, P: ProtocolSpecific + Default> GmpStateMachine<I, P>
 where
     P::Config: Default,
 {
-    fn default() -> Self {
-        GmpStateMachine {
-            inner: Some(MemberState::NonMember(GmpHostState {
-                protocol_specific: P::default(),
-                cfg: P::Config::default(),
-                state: NonMember {},
-            })),
-        }
+    /// When a "join group" command is received.
+    ///
+    /// `join_group` initializes a new state machine in the Non-Member state and
+    /// then immediately executes the "join group" transition. The new state
+    /// machine is returned along with any actions to take.
+    fn join_group<R: Rng>(rng: &mut R, now: I) -> (GmpStateMachine<I, P>, Actions<P>) {
+        let (state, actions) =
+            MemberState::join_group(P::default(), P::Config::default(), rng, now);
+        (GmpStateMachine { inner: Some(state) }, actions)
     }
 }
 
 impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
-    /// When a "join group" command is received.
-    fn join_group<R: Rng>(&mut self, rng: &mut R, now: I) -> Actions<P> {
-        self.update(|s| s.join_group(rng, now))
-    }
-
     /// When a "leave group" command is received.
-    fn leave_group(&mut self) -> Actions<P> {
-        self.update(MemberState::leave_group)
+    ///
+    /// `leave_group` consumes the state machine by value since we don't allow
+    /// storing a state machine in the Non-Member state.
+    fn leave_group(self) -> Actions<P> {
+        // This `unwrap` is safe because we maintain the invariant that `inner`
+        // is always `Some`.
+        self.inner.unwrap().leave_group()
     }
 
     /// When a query is received, and we have to respond within max_resp_time.
@@ -511,13 +555,6 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
         self.update(|s| {
             (
                 match s {
-                    MemberState::NonMember(GmpHostState { state, cfg, .. }) => {
-                        MemberState::NonMember(GmpHostState::<NonMember, P> {
-                            state,
-                            cfg,
-                            protocol_specific: ps,
-                        })
-                    }
                     MemberState::Delaying(GmpHostState { state, cfg, .. }) => {
                         MemberState::Delaying(GmpHostState { state, cfg, protocol_specific: ps })
                     }
@@ -585,7 +622,6 @@ mod test {
     impl<P: ProtocolSpecific> GmpStateMachine<Instant, P> {
         pub(crate) fn get_config_mut(&mut self) -> &mut P::Config {
             match self.inner.as_mut().unwrap() {
-                MemberState::NonMember(s) => &mut s.cfg,
                 MemberState::Delaying(s) => &mut s.cfg,
                 MemberState::Idle(s) => &mut s.cfg,
             }
@@ -615,8 +651,7 @@ mod test {
 
     #[test]
     fn test_gmp_state_non_member_to_delay_should_set_flag() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         match s.get_inner() {
             MemberState::Delaying(s) => assert!(s.get_state().last_reporter),
             _ => panic!("Wrong State!"),
@@ -625,21 +660,18 @@ mod test {
 
     #[test]
     fn test_gmp_state_non_member_to_delay_actions() {
-        let mut s = DummyGmpStateMachine::default();
-        let actions = s.join_group(&mut new_rng(0), Instant::now());
+        let (_state, actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         assert!(at_least_one_action(
             actions,
             Action::<DummyProtocolSpecific>::Generic(GmpAction::SendReport(DummyProtocolSpecific,))
         ));
-        let mut s = DummyGmpStateMachine::default();
-        let actions = s.join_group(&mut new_rng(0), Instant::now());
+        let (_state, actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         assert!(at_least_one_report(actions, DEFAULT_UNSOLICITED_REPORT_INTERVAL));
     }
 
     #[test]
     fn test_gmp_state_delay_dont_reset_timer() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let actions = s.query_received(&mut new_rng(0), Duration::from_secs(100), Instant::now());
         for _ in actions {
             panic!("There should be no actions at all")
@@ -647,16 +679,14 @@ mod test {
     }
     #[test]
     fn test_gmp_state_delay_reset_timer() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let actions = s.query_received(&mut new_rng(0), Duration::from_secs(1), Instant::now());
         at_least_one_report(actions, Duration::from_secs(1));
     }
 
     #[test]
     fn test_gmp_state_delay_to_idle_with_report_no_flag() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         s.report_received();
         match s.get_inner() {
             MemberState::Idle(s) => {
@@ -668,8 +698,7 @@ mod test {
 
     #[test]
     fn test_gmp_state_delay_to_idle_without_report_set_flag() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         s.report_timer_expired();
         match s.get_inner() {
             MemberState::Idle(s) => {
@@ -681,14 +710,13 @@ mod test {
 
     #[test]
     fn test_gmp_state_leave_should_send_leave() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let actions = s.leave_group();
         assert!(at_least_one_action(
             actions,
             Action::<DummyProtocolSpecific>::Generic(GmpAction::SendLeave)
         ));
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         s.report_timer_expired();
         let actions = s.leave_group();
         assert!(at_least_one_action(
@@ -699,14 +727,13 @@ mod test {
 
     #[test]
     fn test_gmp_state_delay_to_other_states_should_stop_timer() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let actions = s.leave_group();
         assert!(at_least_one_action(
             actions,
             Action::<DummyProtocolSpecific>::Generic(GmpAction::StopReportTimer)
         ));
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let actions = s.report_received();
         assert!(at_least_one_action(
             actions,
@@ -716,8 +743,7 @@ mod test {
 
     #[test]
     fn test_gmp_state_other_states_to_delay_should_start_timer() {
-        let mut s = DummyGmpStateMachine::default();
-        let actions = s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         assert!(at_least_one_report(actions, DEFAULT_UNSOLICITED_REPORT_INTERVAL));
         s.report_received();
         let actions = s.query_received(&mut new_rng(0), Duration::from_secs(1), Instant::now());
@@ -726,9 +752,8 @@ mod test {
 
     #[test]
     fn test_gmp_state_leave_send_anyway_do_send() {
-        let mut s = DummyGmpStateMachine::default();
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         *s.get_config_mut() = true;
-        s.join_group(&mut new_rng(0), Instant::now());
         s.report_received();
         match s.get_inner() {
             MemberState::Idle(s) => assert!(!s.get_state().last_reporter),
@@ -743,8 +768,7 @@ mod test {
 
     #[test]
     fn test_gmp_state_leave_not_the_last_do_nothing() {
-        let mut s = DummyGmpStateMachine::default();
-        s.join_group(&mut new_rng(0), Instant::now());
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         s.report_received();
         let actions = s.leave_group();
         for _ in actions {

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Internet Group Management Protocol (IGMP).
+//! Internet Group Management Protocol, Version 2 (IGMPv2).
 //!
-//! IGMP is a communications protocol used by hosts and adjacent routers on IPv4
-//! networks to establish multicast group memberships.
+//! IGMPv2 is a communications protocol used by hosts and adjacent routers on
+//! IPv4 networks to establish multicast group memberships.
 
-use alloc::collections::HashMap;
+use alloc::collections::hash_map::{Entry, HashMap};
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
 use core::time::Duration;
@@ -411,7 +411,14 @@ impl<I: Instant> IgmpInterface<I> {
         addr: MulticastAddr<Ipv4Addr>,
         now: I,
     ) -> Actions<Igmpv2ProtocolSpecific> {
-        self.groups.entry(addr).or_insert(GmpStateMachine::default()).join_group(rng, now)
+        match self.groups.entry(addr) {
+            Entry::Occupied(_) => Actions::nothing(),
+            Entry::Vacant(entry) => {
+                let (state, actions) = GmpStateMachine::join_group(rng, now);
+                entry.insert(state);
+                actions
+            }
+        }
     }
 
     // TODO(rheacock): remove `allow(dead_code)` when this is used.
@@ -420,7 +427,7 @@ impl<I: Instant> IgmpInterface<I> {
         &mut self,
         addr: MulticastAddr<Ipv4Addr>,
     ) -> IgmpResult<Actions<Igmpv2ProtocolSpecific>, D> {
-        match self.groups.remove(&addr).as_mut() {
+        match self.groups.remove(&addr) {
             Some(state) => Ok(state.leave_group()),
             None => Err(IgmpError::NotAMember { addr: addr.get() }),
         }
@@ -438,7 +445,7 @@ pub(crate) fn igmp_join_group<C: IgmpContext>(
     let now = ctx.now();
     let (state, rng) = ctx.get_state_rng_with(device);
     let actions = state.join_group(rng, group_addr, now);
-    // actions will be `Nothing` if the the host is not in the `NonMember` state.
+    // `actions` will be `Nothing` if we were already a member of the group.
     run_actions(ctx, device, actions, group_addr);
 }
 
@@ -537,8 +544,7 @@ mod tests {
     #[test]
     fn test_igmp_state_with_igmpv1_router() {
         let mut rng = new_rng(0);
-        let mut s = IgmpGroupState::default();
-        s.join_group(&mut rng, time::Instant::now());
+        let (mut s, _actions) = IgmpGroupState::join_group(&mut rng, time::Instant::now());
         s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         let actions = s.report_timer_expired();
         at_least_one_action(
@@ -551,9 +557,8 @@ mod tests {
 
     #[test]
     fn test_igmp_state_igmpv1_router_present_timer_expires() {
-        let mut s = IgmpGroupState::default();
         let mut rng = new_rng(0);
-        s.join_group(&mut rng, time::Instant::now());
+        let (mut s, _actions) = IgmpGroupState::join_group(&mut rng, time::Instant::now());
         s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         match s.get_inner() {
             MemberState::Delaying(state) => {
