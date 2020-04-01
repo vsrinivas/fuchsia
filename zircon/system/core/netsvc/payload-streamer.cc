@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include "zircon/errors.h"
 
 namespace netsvc {
 
@@ -16,8 +17,8 @@ PayloadStreamer::PayloadStreamer(zx::channel chan, ReadCallback callback)
 
 void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
   if (vmo_) {
-    vmo_.reset();
-    mapper_.Unmap();
+    completer.Reply(ZX_ERR_ALREADY_BOUND);
+    return;
   }
 
   vmo_ = std::move(vmo);

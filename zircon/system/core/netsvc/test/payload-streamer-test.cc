@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <zxtest/zxtest.h>
+#include "zircon/errors.h"
 
 class PayloadStreamerTest : public zxtest::Test {
  protected:
@@ -58,7 +59,7 @@ TEST_F(PayloadStreamerTest, RegisterVmoTwice) {
 
   auto result2 = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result2.status());
-  ASSERT_OK(result2.value().status);
+  ASSERT_EQ(result2.value().status, ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(PayloadStreamerTest, ReadData) {
