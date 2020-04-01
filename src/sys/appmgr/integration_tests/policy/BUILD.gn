@@ -13,6 +13,9 @@ group("policy") {
 }
 
 test_package("policy-integration-tests") {
+  deprecated_shell = "//build"
+  rootjob_svc = "//build"
+  rootresource_svc = "//build"
   deps = [
     ":policy_test",
     "//src/sys/appmgr/integration_tests:echo_server",
@@ -40,6 +43,46 @@ test_package("policy-integration-tests") {
     {
       path = "meta/package_cache.cmx"
       dest = "package_cache_denied.cmx"
+    },
+    {
+      path = "meta/package_resolver.cmx"
+      dest = "package_resolver_denied.cmx"
+    },
+    {
+      path = "meta/package_resolver.cmx"
+      dest = "package_resolver_allowed.cmx"
+    },
+    {
+      path = "meta/root_job.cmx"
+      dest = "root_job_denied.cmx"
+    },
+    {
+      path = "meta/root_job.cmx"
+      dest = "root_job_allowed.cmx"
+    },
+    {
+      path = "meta/root_resource.cmx"
+      dest = "root_resource_denied.cmx"
+    },
+    {
+      path = "meta/root_resource.cmx"
+      dest = "root_resource_allowed.cmx"
+    },
+    {
+      path = "meta/deprecated_shell.cmx"
+      dest = "deprecated_shell_denied.cmx"
+    },
+    {
+      path = "meta/deprecated_shell.cmx"
+      dest = "deprecated_shell_allowed.cmx"
+    },
+    {
+      path = "meta/pkgfs_versions.cmx"
+      dest = "pkgfs_versions_denied.cmx"
+    },
+    {
+      path = "meta/pkgfs_versions.cmx"
+      dest = "pkgfs_versions_allowed.cmx"
     },
   ]
 }

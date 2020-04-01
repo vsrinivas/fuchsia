@@ -89,6 +89,7 @@ group("deprecated_shell_allowlist") {
     "//src/devices/tests/libdriver-integration-test",
     "//src/devices/bin/driver_manager:driver_manager_tests",
     "//src/sys/pkg/bin/system-update-checker:system-update-checker",
+    "//src/sys/appmgr/integration_tests/policy:policy-integration-tests",
   ]
 }
 
@@ -113,6 +114,7 @@ group("rootresource_svc_allowlist") {
     "//src/testing/loadbench:loadbench",
     "//src/testing/loadbench:loadbench_tests",
     "//src/virtualization/bin/vmm:vmm",
+    "//src/sys/appmgr/integration_tests/policy:policy-integration-tests",
   ]
 }
 
@@ -143,6 +145,7 @@ group("rootjob_svc_allowlist") {
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//src/lib/process_builder:process_builder_tests",
     "//src/sys/component_manager:component_manager_tests",
+    "//src/sys/appmgr/integration_tests/policy:policy-integration-tests",
   ]
 }
 

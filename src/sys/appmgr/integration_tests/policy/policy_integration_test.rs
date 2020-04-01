@@ -9,15 +9,30 @@ use {
     lazy_static::lazy_static,
 };
 
+macro_rules! policy_url {
+    ($cmx:expr) => {
+        format!("{}{}", "fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/", $cmx)
+    };
+}
+
 lazy_static! {
-    static ref NONE_ACCEPTED_URL: String =
-        "fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/none.cmx".to_string();
-    static ref PACKAGE_CACHE_DENIED_URL: String =
-        "fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_cache_denied.cmx"
-            .to_string();
-    static ref PACKAGE_CACHE_ALLOWED_URL: String =
-        "fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_cache_allowed.cmx"
-            .to_string();
+    static ref NONE_ACCEPTED_URL: String = policy_url!("none.cmx");
+    static ref PACKAGE_CACHE_DENIED_URL: String = policy_url!("package_cache_denied.cmx");
+    static ref PACKAGE_CACHE_ALLOWED_URL: String = policy_url!("package_cache_allowed.cmx");
+    static ref PACKAGE_RESOLVER_DENIED_URL: String = policy_url!("package_resolver_denied.cmx");
+    static ref PACKAGE_RESOLVER_ALLOWED_URL: String = policy_url!("package_resolver_allowed.cmx");
+    static ref ROOT_JOB_DENIED_URL: String = policy_url!("root_job_denied.cmx");
+    static ref ROOT_JOB_ALLOWED_URL: String = policy_url!("root_job_allowed.cmx");
+    static ref ROOT_RESOURCE_DENIED_URL: String = policy_url!("root_resource_denied.cmx");
+    static ref ROOT_RESOURCE_ALLOWED_URL: String = policy_url!("root_resource_allowed.cmx");
+    static ref PKGFS_VERSIONS_DENIED_URL: String = policy_url!("pkgfs_versions_denied.cmx");
+    static ref PKGFS_VERSIONS_ALLOWED_URL: String = policy_url!("pkgfs_versions_allowed.cmx");
+    static ref DEPRECATED_SHELL_DENIED_URL: String = policy_url!("deprecated_shell_denied.cmx");
+    static ref DEPRECATED_SHELL_ALLOWED_URL: String = policy_url!("deprecated_shell_allowed.cmx");
+    static ref DEPRECATED_EXEC_DENIED_URL: String =
+        policy_url!("deprecated_ambient_replace_as_exec_denied.cmx");
+    static ref DEPRECATED_EXEC_ALLOWED_URL: String =
+        policy_url!("deprecated_ambient_replace_as_exec_allowed.cmx");
 }
 
 async fn launch_component(component_url: &str) -> Result<String, Error> {
@@ -54,5 +69,65 @@ async fn package_cache_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn package_cache_denied() -> Result<(), Error> {
     assert_launch_denied(&PACKAGE_CACHE_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn package_resolver_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&PACKAGE_RESOLVER_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn package_resolver_denied() -> Result<(), Error> {
+    assert_launch_denied(&PACKAGE_RESOLVER_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn root_job_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&ROOT_JOB_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn root_job_denied() -> Result<(), Error> {
+    assert_launch_denied(&ROOT_JOB_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn root_resource_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&ROOT_RESOURCE_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn root_resource_denied() -> Result<(), Error> {
+    assert_launch_denied(&ROOT_RESOURCE_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn pkgfs_versions_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&PKGFS_VERSIONS_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn pkgfs_versions_denied() -> Result<(), Error> {
+    assert_launch_denied(&PKGFS_VERSIONS_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn deprecated_shell_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&DEPRECATED_SHELL_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn deprecated_shell_denied() -> Result<(), Error> {
+    assert_launch_denied(&DEPRECATED_SHELL_DENIED_URL).await;
     Ok(())
 }

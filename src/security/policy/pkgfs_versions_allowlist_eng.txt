@@ -1,1 +1,2 @@
 fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cmx
+fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/pkgfs_versions_allowed.cmx
