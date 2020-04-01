@@ -660,9 +660,9 @@ void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, not in unbinding state, flags are 0x%x\n",
              dev.get(), dev->name, dev->flags);
   }
-  if (dev->outstanding_transactions > 0) {
-    ZX_PANIC("device: %p(%s): cannot reply to unbind, currently has %d outstanding transactions\n",
-             dev.get(), dev->name, dev->outstanding_transactions.load());
+  if (dev->vnode->inflight_transactions() > 0) {
+    ZX_PANIC("device: %p(%s): cannot reply to unbind, currently has %zu outstanding transactions\n",
+             dev.get(), dev->name, dev->vnode->inflight_transactions());
   }
 
 #if TRACE_ADD_REMOVE
@@ -682,9 +682,10 @@ void DriverHostContext::DeviceSuspendReply(const fbl::RefPtr<zx_device_t>& dev, 
   // selective suspend on a device. 1. When we create a connection in ReadMessage
   // 2. When we wrap the txn in Transaction.
   // 3. When we make the suspend txn asynchronous using ToAsync()
-  if (dev->outstanding_transactions > 3) {
-    ZX_PANIC("device: %p(%s): cannot reply to suspend, currently has %d outstanding transactions\n",
-             dev.get(), dev->name, dev->outstanding_transactions.load());
+  if (dev->vnode->inflight_transactions() > 3) {
+    ZX_PANIC(
+        "device: %p(%s): cannot reply to suspend, currently has %zu outstanding transactions\n",
+        dev.get(), dev->name, dev->vnode->inflight_transactions());
   }
 
   if (dev->suspend_cb) {

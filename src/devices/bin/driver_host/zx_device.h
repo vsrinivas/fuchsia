@@ -34,10 +34,11 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 
-#include "devfs_connection.h"
+#include "devfs_vnode.h"
 
 class CompositeDevice;
 class DeviceControllerConnection;
+class DriverHostContext;
 struct ProxyIostate;
 
 // RAII object around async trace entries
@@ -213,10 +214,6 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   uint32_t flags = 0;
 
-  // Reference count of all outstanding transactions belonging to this device. These include read,
-  // write, and fidl message transactions.
-  std::atomic<uint32_t> outstanding_transactions = 0;
-
   zx::eventpair event;
   zx::eventpair local_event;
 
@@ -271,6 +268,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // value to determine if an expected shutdown is happening.  See comments in
   // DriverManagerRemove().
   std::atomic<DeviceControllerConnection*> conn = nullptr;
+  // Actual type is DevfsVnode.  Needs to be fs::Vnode to break header cycle
+  fbl::RefPtr<fs::Vnode> vnode;
 
   fbl::Mutex proxy_ios_lock;
   ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
@@ -333,6 +332,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     get_trace_label(tag, &name);
     return AsyncTrace(category, name.data());
   }
+
+  DriverHostContext* driver_host_context() const { return driver_host_context_; };
 
  private:
   explicit zx_device(DriverHostContext* ctx);

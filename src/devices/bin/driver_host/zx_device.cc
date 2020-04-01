@@ -11,13 +11,13 @@
 #include <fbl/mutex.h>
 
 #include "composite_device.h"
-#include "devfs_connection.h"
 #include "driver_host.h"
 
 zx_device::zx_device(DriverHostContext* ctx) : driver_host_context_(ctx) {}
 
 zx_status_t zx_device::Create(DriverHostContext* ctx, fbl::RefPtr<zx_device>* out_dev) {
   *out_dev = fbl::AdoptRef(new zx_device(ctx));
+  (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev);
   return ZX_OK;
 }
 
@@ -116,6 +116,7 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
   }
   return ZX_OK;
 }
+
 zx_status_t zx_device::SetPerformanceStates(
     const device_performance_state_info_t* performance_states, uint8_t count) {
   if (count < fuchsia_device_MIN_DEVICE_PERFORMANCE_STATES ||

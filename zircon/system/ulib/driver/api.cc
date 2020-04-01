@@ -108,3 +108,7 @@ __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(voi
 }
 __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) { /* no abort here */
 }
+
+__EXPORT void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {
+  __builtin_abort();
+}

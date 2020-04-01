@@ -174,11 +174,6 @@ zx_status_t DriverHostContext::ScheduleWork(const fbl::RefPtr<zx_device_t>& dev,
   return ZX_OK;
 }
 
-zx_status_t DriverHostContext::StartConnection(fbl::RefPtr<DevfsConnection> conn, zx::channel h) {
-  conn->set_channel(std::move(h));
-  return DevfsConnection::BeginWait(std::move(conn), loop_.dispatcher());
-}
-
 // Send message to driver_manager asking to add child device to
 // parent device.  Called under the api lock.
 zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& parent,
@@ -294,6 +289,10 @@ zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev)
   // shutdown packet, so it needs to check if dev->conn has been nulled to
   // handle that gracefully.
   dev->conn.store(nullptr);
+
+  // Drop the device vnode, since no one should be able to open connections anymore.
+  // This will break the reference cycle between the DevfsVnode and the zx_device.
+  dev->vnode.reset();
 
   log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
 

@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Moveright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,49 +12,58 @@
 #include <memory>
 #include <type_traits>
 
+#include <ddk/device.h>
+
 namespace ddk {
 
-class Connection {
+namespace internal {
+
+class Transaction {
  public:
-  Connection(fidl_txn_t txn, zx_txid_t txid, uintptr_t devhost_ctx)
-      : txn_(txn), txid_(txid), devhost_ctx_(devhost_ctx) {}
+  explicit Transaction(device_fidl_txn_t txn) : txn_(txn) {}
 
-  fidl_txn_t* Txn() { return &txn_; }
-  const fidl_txn_t* Txn() const { return &txn_; }
+  fidl_txn_t* Txn() { return &txn_.txn; }
+  const fidl_txn_t* Txn() const { return &txn_.txn; }
 
-  zx_txid_t Txid() const { return txid_; }
+  uintptr_t DriverHostCtx() const { return txn_.driver_host_context; }
 
-  uintptr_t DevhostContext() const { return devhost_ctx_; }
+  device_fidl_txn_t* DeviceFidlTxn() { return &txn_; }
 
-  // Utilizes a |fidl_txn_t| object as a wrapped Connection.
+  // Utilizes a |fidl_txn_t| object as a wrapped Transaction.
   //
-  // Only safe to call if |txn| was previously returned by |Connection.Txn()|.
-  static const Connection* FromTxn(const fidl_txn_t* txn);
+  // Only safe to call if |txn| was previously returned by |Transaction.Txn()|.
+  static Transaction* FromTxn(fidl_txn_t* txn);
 
-  // Copies txn into a new Connection.
+  // Moves txn into a new Transaction.
   //
-  // This may be useful for copying a Connection out of stack-allocated scope,
+  // Only intended to be used by ddk::Transaction.
+  // This is useful for copying a Transaction out of stack-allocated scope,
   // so a response may be generated asynchronously.
   //
-  // Only safe to call if |txn| was previously returned by |Connection.Txn()|.
-  static Connection CopyTxn(const fidl_txn_t* txn);
+  // Only safe to call if |txn| was previously returned by |Transaction.Txn()|.
+  static Transaction MoveTxn(fidl_txn_t* txn);
 
  private:
-  fidl_txn_t txn_;
-  zx_txid_t txid_;
-
-  // Private information only for use by devhost.
-  uintptr_t devhost_ctx_;
+  device_fidl_txn_t txn_;
 };
 
-inline const Connection* Connection::FromTxn(const fidl_txn_t* txn) {
-  static_assert(std::is_standard_layout<Connection>::value,
+inline Transaction* Transaction::FromTxn(fidl_txn_t* txn) {
+  static_assert(std::is_standard_layout<Transaction>::value,
                 "Cannot cast from non-standard layout class");
-  static_assert(offsetof(Connection, txn_) == 0, "Connection must be convertable to txn");
-  return reinterpret_cast<const Connection*>(txn);
+  static_assert(offsetof(Transaction, txn_) == 0, "Transaction must be convertable to txn");
+  return reinterpret_cast<Transaction*>(txn);
 }
 
-inline Connection Connection::CopyTxn(const fidl_txn_t* txn) { return *FromTxn(txn); }
+inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
+  auto real_txn = FromTxn(txn);
+
+  auto new_value = *real_txn;
+  // Invalidate the old version
+  real_txn->txn_.driver_host_context = 0;
+  return new_value;
+}
+
+}  // namespace internal
 
 }  // namespace ddk
 
@@ -91,7 +100,8 @@ inline Connection Connection::CopyTxn(const fidl_txn_t* txn) { return *FromTxn(t
 // Note that this class is not thread safe.
 class DdkTransaction : public fidl::Transaction {
  public:
-  explicit DdkTransaction(fidl_txn_t* txn) : connection_(ddk::Connection::CopyTxn(txn)) {}
+  explicit DdkTransaction(fidl_txn_t* txn)
+      : connection_(ddk::internal::Transaction::MoveTxn(txn)) {}
 
   ~DdkTransaction() {
     ZX_ASSERT_MSG(ownership_taken_ || status_called_,
@@ -133,11 +143,16 @@ class DdkTransaction : public fidl::Transaction {
 
   std::unique_ptr<Transaction> TakeOwnership() final {
     ownership_taken_ = true;
-    return std::make_unique<DdkTransaction>(std::move(*this));
+
+    device_fidl_txn_t new_fidl_txn;
+    device_fidl_transaction_take_ownership(connection_.Txn(), &new_fidl_txn);
+    auto new_txn = std::make_unique<DdkTransaction>(std::move(*this));
+    new_txn->connection_ = ddk::internal::Transaction(new_fidl_txn);
+    return new_txn;
   }
 
  private:
-  ddk::Connection connection_;  // includes a fidl_txn_t.
+  ddk::internal::Transaction connection_;  // includes a fidl_txn_t.
   zx_status_t status_ = ZX_OK;
   bool closed_ = false;
   bool status_called_ = false;

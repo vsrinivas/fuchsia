@@ -16,6 +16,9 @@ zx_library("ddktl") {
 
     # <ddktl/protocol/display-controller.h> has #include <lib/zx/vmo.h>.
     "$zx/system/ulib/zx:headers",
+
+    # <ddktl/fidl.h> has #include <ddk/device.h>
+    "$zx/system/ulib/ddk",
   ]
   deps = [
     "$zx/system/dev/lib/mmio",

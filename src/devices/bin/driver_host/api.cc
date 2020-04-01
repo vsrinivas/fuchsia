@@ -381,3 +381,14 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
   vfprintf(stderr, fmt, ap);
   va_end(ap);
 }
+
+__EXPORT void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {
+  auto fidl_txn = FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
+
+  ZX_ASSERT_MSG(std::holds_alternative<fidl::Transaction*>(fidl_txn),
+                "Can only take ownership of transaction once\n");
+
+  auto result = std::get<fidl::Transaction*>(fidl_txn)->TakeOwnership();
+  auto new_ddk_txn = MakeDdkInternalTransaction(std::move(result));
+  *new_txn = *new_ddk_txn.DeviceFidlTxn();
+}

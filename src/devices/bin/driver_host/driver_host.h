@@ -29,7 +29,6 @@
 #include <fbl/string.h>
 
 #include "async_loop_owned_rpc_handler.h"
-#include "devfs_connection.h"
 #include "driver_host_context.h"
 #include "lock.h"
 #include "zx_device.h"
@@ -76,8 +75,6 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
 
   DriverHostContext* const driver_host_context_;
 };
-
-zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
 }  // namespace internal
 

@@ -6,6 +6,7 @@
 #define DDK_DEVICE_H_
 
 #include <zircon/compiler.h>
+#include <zircon/fidl.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -17,9 +18,6 @@ typedef struct zx_driver zx_driver_t;
 typedef struct zx_device_prop zx_device_prop_t;
 
 typedef struct zx_protocol_device zx_protocol_device_t;
-
-typedef struct fidl_msg fidl_msg_t;
-typedef struct fidl_txn fidl_txn_t;
 
 // Max device name length, not including a null-terminator
 #define ZX_DEVICE_NAME_MAX 31
@@ -449,6 +447,22 @@ zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* dat
 // metadata to arbitrary topo paths.
 zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
                                     const void* data, size_t length);
+
+// The true type of the fidl_txn_t* given by the message() operation.  Represents the necessary
+// information to construct a reply.
+typedef struct device_fidl_txn {
+  fidl_txn_t txn;
+  // Internal value used for driver host bookkeeping.  Must not be mutated.
+  uintptr_t driver_host_context;
+} device_fidl_txn_t;
+
+// Takes ownership of the given FIDL transaction.
+//
+// |txn| is expected to be a fidl_txn_t* given to a device's message callback.
+// After calling this function, it is invalid to use |txn|.  On success, |*new_txn| will refer to a
+// new device_fidl_txn_t which is safe to use until after its reply method is invoked or the owning
+// device's unbind hook is completed, whichever is earlier.
+void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn);
 
 // Schedule a callback to be run at a later point. Similar to the device callbacks, it
 // is *not* okay to block in the callback.

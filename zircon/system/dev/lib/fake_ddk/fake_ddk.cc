@@ -381,6 +381,11 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
   return ZX_OK;
 }
 
+__EXPORT
+void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {
+  *new_txn = {*txn, 0};
+}
+
 __EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
                                           size_t* size) {
   // This is currently a no-op.

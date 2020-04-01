@@ -13,6 +13,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <fs/managed_vfs.h>
 
 #include "async_loop_owned_event_handler.h"
 #include "lock.h"
@@ -24,14 +25,12 @@ class DriverHostContext {
   using Callback = fit::inline_callback<void(void), 2 * sizeof(void*)>;
 
   explicit DriverHostContext(const async_loop_config_t* config, zx::resource root_resource = {})
-      : loop_(config), root_resource_(std::move(root_resource)) {}
+      : loop_(config), vfs_(loop_.dispatcher()), root_resource_(std::move(root_resource)) {}
 
   zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch);
 
   zx_status_t ScheduleWork(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
                            void* cookie) TA_REQ(api_lock_);
-
-  zx_status_t StartConnection(fbl::RefPtr<DevfsConnection> ios, zx::channel h);
 
   void ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev);
 
@@ -135,6 +134,8 @@ class DriverHostContext {
 
   async::Loop& loop() { return loop_; }
 
+  fs::Vfs* vfs() { return &vfs_; }
+
   const zx::resource& root_resource() { return root_resource_; }
 
   ApiLock& api_lock() TA_RET_CAP(api_lock_) { return api_lock_; }
@@ -199,6 +200,7 @@ class DriverHostContext {
   zx_status_t DeviceValidate(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
 
   async::Loop loop_;
+  fs::ManagedVfs vfs_;
 
   // Used to serialize API operations
   ApiLock api_lock_;

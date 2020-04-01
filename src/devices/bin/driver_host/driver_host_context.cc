@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
+#include <fs/vfs.h>
 
 #include "log.h"
 
@@ -95,9 +96,9 @@ zx_status_t DriverHostContext::SetupEventWaiter() {
 }
 
 void DriverHostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event_waiter,
-                                              async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                              zx_status_t status,
-                                              const zx_packet_signal_t* signal) {
+                                                 async_dispatcher_t* dispatcher,
+                                                 async::WaitBase* wait, zx_status_t status,
+                                                 const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     log(ERROR, "driver_host: event waiter error: %d\n", status);
     return;
@@ -110,4 +111,20 @@ void DriverHostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> ev
     printf("%s: invalid signals %x\n", __func__, signal->observed);
     abort();
   }
+}
+
+zx_status_t DriverHostContext::DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
+                                             zx::channel c) {
+  auto options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
+
+  fbl::RefPtr<fs::Vnode> target;
+  zx_status_t status = dev->vnode->OpenValidating(options, &target);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (target == nullptr) {
+    target = dev->vnode;
+  }
+
+  return vfs_.Serve(std::move(target), std::move(c), options);
 }
