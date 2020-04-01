@@ -1,10 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/ramdevice_client_lib_test"
     },
     "sandbox": {
-        "dev": [
-            "misc/ramctl"
+        "services": [
+            "fuchsia.test.IsolatedDevmgr"
         ]
     }
 }

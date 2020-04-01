@@ -4,14 +4,18 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
 rustc_library("ramdevice_client") {
   with_unit_tests = true
   edition = "2018"
   deps = [
     "//src/lib/fdio/rust:fdio",
-    "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:matches",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   non_rust_deps = [ "//zircon/public/lib/ramdevice-client" ]
@@ -27,7 +31,45 @@ test_package("ramdevice_client_tests") {
   ]
 }
 
+devmgr_manifest("devmgr.manifest") {
+  testonly = true
+}
+
+# Test component that exposes a /dev filesystem containing ramdisk support as
+# its fuchsia.test.IsolatedDevmgr service.
+package("ramdisk-isolated-devmgr") {
+  testonly = true
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+  deps = [
+    ":devmgr.manifest",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/lib/isolated_devmgr",
+  ]
+
+  binaries = [
+    {
+      name = "isolated_devmgr"
+    },
+  ]
+
+  loadable_modules = [
+    {
+      name = "ramdisk.so"
+    },
+  ]
+
+  meta = [
+    {
+      dest = "ramdisk-isolated-devmgr.cmx"
+      path = "meta/ramdisk-isolated-devmgr.cmx"
+    },
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":ramdevice_client_tests" ]
+  deps = [
+    ":ramdevice_client_tests",
+    ":ramdisk-isolated-devmgr",
+  ]
 }

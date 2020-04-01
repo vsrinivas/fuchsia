@@ -5,26 +5,125 @@
 //! A safe rust wrapper for creating and using ramdisks.
 //!
 //! Ramdisks are, by default, placed in `/dev`. If this ramdisk is being used in a sandbox, it has
-//! to have access to dev. This can be done by adding the following to the relevant .cmx file -
+//! to have access to `/dev`. This can be done by adding the following to the relevant .cmx file -
 //!
 //! ```
 //! "sandbox": {
 //!     "dev": [ "misc/ramctl" ]
 //! }
 //! ```
+//!
+//! Alternatively, an isolated instance of devmgr can be used to isolate the ramdisks from the
+//! system device manager. Tests can provide their own devmgr through
+//! [`RamdiskClientBuilder::dev_root`] or use the pre-defined ramdisk-only isolated devmgr through
+//! [`RamdiskClientBuilder::isolated_dev_root`] by depending on
+//! `//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr` and adding the following to the
+//! relevant test .cmx file -
+//!
+//! ```
+//! "facets": {
+//!     "fuchsia.test": {
+//!         "injected-services": {
+//!             "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+//!         }
+//!     }
+//! },
+//! "sandbox": {
+//!     "services": [
+//!         "fuchsia.test.IsolatedDevmgr"
+//!     ]
+//! }
+//! ```
 
 #![deny(missing_docs)]
-#![feature()]
 
 #[allow(bad_style)]
 mod ramdevice_sys;
 
 use {
     fdio, fuchsia_zircon as zx,
-    std::{ffi, ptr},
+    std::{
+        ffi, fs,
+        os::unix::io::{AsRawFd, RawFd},
+        ptr,
+    },
 };
 
-/// A client for managing a ramdisk. This can be created with the [`RamdiskClient::create`] function.
+/// A type to help construct a [`RamdeviceClient`].
+pub struct RamdiskClientBuilder {
+    block_size: u64,
+    block_count: u64,
+    dev_root: Option<DevRoot>,
+}
+
+enum DevRoot {
+    Provided(fs::File),
+    Isolated,
+}
+
+impl RamdiskClientBuilder {
+    /// Create a new ramdisk builder with the given block_size and block_count.
+    pub fn new(block_size: u64, block_count: u64) -> Self {
+        Self { block_size, block_count, dev_root: None }
+    }
+
+    /// Use the given directory as "/dev" instead of opening "/dev" from the environment.
+    pub fn dev_root(&mut self, dev_root: fs::File) -> &mut Self {
+        self.dev_root = Some(DevRoot::Provided(dev_root));
+        self
+    }
+
+    /// Use "/svc/fuchsia.test.IsolatedDevmgr" as "/dev" instead of opening "/dev" directly from
+    /// the environment. Tests using this API should ensure a service with that name exists in the
+    /// current namespace. See the module documentation for more info.
+    pub fn isolated_dev_root(&mut self) -> &mut Self {
+        self.dev_root = Some(DevRoot::Isolated);
+        self
+    }
+
+    /// Create the ramdisk.
+    pub fn build(&mut self) -> Result<RamdiskClient, zx::Status> {
+        let block_size = self.block_size;
+        let block_count = self.block_count;
+
+        let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
+        let status = match &self.dev_root {
+            Some(dev_root) => {
+                // If this statement needs to open the dev_root itself, hold onto the File to
+                // ensure dev_root_fd is valid for this block.
+                let (dev_root_fd, _dev_root) = match &dev_root {
+                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
+                    DevRoot::Isolated => {
+                        let devmgr = open_isolated_devmgr()?;
+                        (devmgr.as_raw_fd(), Some(devmgr))
+                    }
+                };
+
+                // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
+                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe {
+                    ramdevice_sys::ramdisk_create_at(
+                        dev_root_fd,
+                        block_size,
+                        block_count,
+                        &mut ramdisk,
+                    )
+                }
+            }
+            None => {
+                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe { ramdevice_sys::ramdisk_create(block_size, block_count, &mut ramdisk) }
+            }
+        };
+        zx::Status::ok(status)?;
+
+        Ok(RamdiskClient { ramdisk })
+    }
+}
+
+/// A client for managing a ramdisk. This can be created with the [`RamdiskClient::create`]
+/// function or through the type returned by [`RamdiskClient::builder`] to specify additional
+/// options.
 pub struct RamdiskClient {
     // we own this pointer - nothing in the ramdisk library keeps it, and we don't pass it anywhere,
     // and the only valid way to get one is to have been the thing that made the ramdisk in the
@@ -33,16 +132,18 @@ pub struct RamdiskClient {
 }
 
 impl RamdiskClient {
-    /// Create a new ramdisk.
-    pub fn create(block_size: u64, block_count: u64) -> Result<Self, zx::Status> {
-        let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
-        let status =
-            unsafe { ramdevice_sys::ramdisk_create(block_size, block_count, &mut ramdisk) };
-        zx::Status::ok(status)?;
-        Ok(RamdiskClient { ramdisk })
+    /// Create a new ramdisk builder with the given block_size and block_count.
+    pub fn builder(block_size: u64, block_count: u64) -> RamdiskClientBuilder {
+        RamdiskClientBuilder::new(block_size, block_count)
     }
 
-    /// Get the device path of the associated ramdisk.
+    /// Create a new ramdisk.
+    pub fn create(block_size: u64, block_count: u64) -> Result<Self, zx::Status> {
+        Self::builder(block_size, block_count).build()
+    }
+
+    /// Get the device path of the associated ramdisk. Note that if this ramdisk was created with a
+    /// custom dev_root, the returned path will be relative to that handle.
     pub fn get_path(&self) -> &str {
         unsafe {
             let raw_path = ramdevice_sys::ramdisk_get_path(self.ramdisk);
@@ -53,8 +154,17 @@ impl RamdiskClient {
 
     /// Get an open channel to the underlying ramdevice.
     pub fn open(&self) -> Result<zx::Channel, zx::Status> {
-        let (client_chan, server_chan) = zx::Channel::create()?;
-        fdio::service_connect(self.get_path(), server_chan)?;
+        struct UnownedFd(RawFd);
+        impl AsRawFd for UnownedFd {
+            fn as_raw_fd(&self) -> RawFd {
+                self.0
+            }
+        }
+
+        // Safe because self.ramdisk is valid and the borrowed fd is not borrowed beyond this
+        // method call.
+        let fd = unsafe { ramdevice_sys::ramdisk_get_block_fd(self.ramdisk) };
+        let client_chan = fdio::clone_channel(&UnownedFd(fd))?;
         Ok(client_chan)
     }
 
@@ -74,42 +184,55 @@ impl Drop for RamdiskClient {
     }
 }
 
+fn open_isolated_devmgr() -> Result<fs::File, zx::Status> {
+    let (client_chan, server_chan) = zx::Channel::create()?;
+    fdio::service_connect("/svc/fuchsia.test.IsolatedDevmgr", server_chan)?;
+
+    let devmgr = fdio::create_fd(client_chan.into())?.into();
+    Ok(devmgr)
+}
+
 #[cfg(test)]
 mod tests {
     use {
-        super::RamdiskClient,
+        super::*,
         fidl_fuchsia_io::{NodeInfo, NodeProxy},
         fuchsia_async as fasync,
+        matches::assert_matches,
     };
 
-    // #[test]
-    #[allow(dead_code)] // TODO(FLK-375): this test is flaking. re-enable once we figure out why.
+    // Note that if these tests flake, all downstream tests that depend on this crate may too.
+
+    #[test]
     fn create_get_path_destroy() {
         // just make sure all the functions are hooked up properly.
-        let ramdisk = RamdiskClient::create(512, 2048).expect("failed to create ramdisk");
+        let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
+        let ramdisk = RamdiskClient::builder(512, 2048)
+            .dev_root(devmgr)
+            .build()
+            .expect("failed to create ramdisk");
         let _path = ramdisk.get_path();
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    // #[test]
-    #[allow(dead_code)] // TODO(FLK-375): this test is flaking. re-enable once we figure out why.
-    fn create_write_destroy() {
-        let ramdisk = RamdiskClient::create(512, 2048).expect("failed to create ramdisk");
+    #[test]
+    fn create_open_destroy() {
+        let ramdisk = RamdiskClient::builder(512, 2048).isolated_dev_root().build().unwrap();
+        assert_matches!(ramdisk.open(), Ok(_));
+        assert_eq!(ramdisk.destroy(), Ok(()));
+    }
 
-        let device = ramdisk.open().expect("failed to open channel to ramdisk");
+    #[fasync::run_singlethreaded(test)]
+    async fn create_describe_destroy() {
+        let ramdisk = RamdiskClient::builder(512, 2048).isolated_dev_root().build().unwrap();
+        let device = ramdisk.open().unwrap();
+
         // ask it to describe itself using the Node interface
-        let mut executor = fasync::Executor::new().expect("failed to create executor");
         let fasync_channel =
             fasync::Channel::from_channel(device).expect("failed to convert to fasync channel");
         let proxy = NodeProxy::new(fasync_channel);
-        executor.run_singlethreaded(async move {
-            let info = proxy.describe().await.expect("failed to get node info");
-            if let NodeInfo::Device(_) = info {
-                println!("device!");
-            } else {
-                panic!("not a device?");
-            }
-        });
+        let info = proxy.describe().await.expect("failed to get node info");
+        assert_matches!(info, NodeInfo::Device(_));
 
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
