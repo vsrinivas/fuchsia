@@ -8,21 +8,22 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/developer/feedback/testing/fakes/fake_crash_reporter.h"
+#include "src/developer/feedback/testing/fakes/device_id_provider.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback", "test"});
 
-  FX_LOGS(INFO) << "Starting FakeCrashReporter";
+  FX_LOGS(INFO) << "Starting FakeDeviceIdProvider";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
-  feedback::FakeCrashReporter crash_reporter;
+  feedback::fakes::DeviceIdProvider device_id_provider;
 
-  fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
-  context->outgoing()->AddPublicService(crash_reporter_bindings.GetHandler(&crash_reporter));
+  fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_bindings;
+  context->outgoing()->AddPublicService(
+      device_id_provider_bindings.GetHandler(&device_id_provider));
 
   loop.Run();
 

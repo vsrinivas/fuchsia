@@ -17,7 +17,7 @@ package("fake_crash_reporter") {
     },
   ]
 
-  deps = [ ":fake_crash_reporter_main" ]
+  deps = [ ":crash_reporter_main" ]
 
   visibility = [
     "//src/developer/feedback/*",
@@ -42,7 +42,7 @@ package("fake_data_provider") {
     },
   ]
 
-  deps = [ ":fake_data_provider_main" ]
+  deps = [ ":data_provider_main" ]
 
   visibility = [ "//src/developer/feedback/*" ]
 }
@@ -57,7 +57,7 @@ package("fake-device-id-provider") {
     },
   ]
 
-  deps = [ ":fake_device_id_provider_main" ]
+  deps = [ ":device_id_provider_main" ]
 
   visibility = [ "//src/developer/feedback/*" ]
 }
@@ -65,13 +65,13 @@ package("fake-device-id-provider") {
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("fake_crash_reporter_main") {
+executable("crash_reporter_main") {
   output_name = "fake_crash_reporter"
 
   sources = [
-    "fake_crash_reporter.cc",
-    "fake_crash_reporter.h",
-    "fake_crash_reporter_main.cc",
+    "crash_reporter.cc",
+    "crash_reporter.h",
+    "crash_reporter_main.cc",
   ]
 
   deps = [
@@ -84,13 +84,13 @@ executable("fake_crash_reporter_main") {
   ]
 }
 
-executable("fake_data_provider_main") {
+executable("data_provider_main") {
   output_name = "fake_data_provider"
 
   sources = [
-    "fake_data_provider.cc",
-    "fake_data_provider.h",
-    "fake_data_provider_main.cc",
+    "data_provider.cc",
+    "data_provider.h",
+    "data_provider_main.cc",
   ]
 
   deps = [
@@ -107,13 +107,13 @@ executable("fake_data_provider_main") {
   ]
 }
 
-executable("fake_device_id_provider_main") {
+executable("device_id_provider_main") {
   output_name = "fake_device_id_provider"
 
   sources = [
-    "fake_device_id_provider.cc",
-    "fake_device_id_provider.h",
-    "fake_device_id_provider_main.cc",
+    "device_id_provider.cc",
+    "device_id_provider.h",
+    "device_id_provider_main.cc",
   ]
 
   deps = [
@@ -125,4 +125,39 @@ executable("fake_device_id_provider_main") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("cobalt") {
+  testonly = true
+
+  sources = [ "cobalt.h" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.cobalt.test",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/system/fidl/fuchsia-cobalt",
+  ]
+}
+
+source_set("privacy_settings") {
+  testonly = true
+
+  sources = [
+    "privacy_settings.cc",
+    "privacy_settings.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [ "//zircon/public/lib/fit" ]
 }

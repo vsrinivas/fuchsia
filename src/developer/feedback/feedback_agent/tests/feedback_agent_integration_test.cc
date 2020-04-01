@@ -20,7 +20,7 @@
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
-#include "src/developer/feedback/testing/fake_cobalt.h"
+#include "src/developer/feedback/testing/fakes/cobalt.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
@@ -82,7 +82,7 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
  public:
   void SetUp() override {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
-    fake_cobalt_ = std::make_unique<FakeCobalt>(environment_services_);
+    fake_cobalt_ = std::make_unique<fakes::Cobalt>(environment_services_);
   }
 
   void TearDown() override {
@@ -198,7 +198,7 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
 
  protected:
-  std::unique_ptr<FakeCobalt> fake_cobalt_;
+  std::unique_ptr<fakes::Cobalt> fake_cobalt_;
 };
 
 TEST_F(FeedbackAgentIntegrationTest, ComponentDataRegister_Upsert_SmokeTest) {

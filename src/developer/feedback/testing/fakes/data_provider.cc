@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/testing/fakes/fake_data_provider.h"
+#include "src/developer/feedback/testing/fakes/data_provider.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -18,6 +18,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
+namespace fakes {
 namespace {
 
 using namespace fuchsia::feedback;
@@ -84,7 +85,7 @@ std::unique_ptr<Screenshot> LoadPngScreenshot() {
 
 }  // namespace
 
-void FakeDataProvider::GetData(GetDataCallback callback) {
+void DataProvider::GetData(GetDataCallback callback) {
   Data data;
   data.set_annotations(CreateAnnotations()).set_attachment_bundle(CreateBundleAttachment());
 
@@ -92,7 +93,7 @@ void FakeDataProvider::GetData(GetDataCallback callback) {
   callback(DataProvider_GetData_Result::WithResponse(std::move(response)));
 }
 
-void FakeDataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
+void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   switch (encoding) {
     case ImageEncoding::PNG:
       callback(LoadPngScreenshot());
@@ -101,4 +102,5 @@ void FakeDataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallba
   }
 }
 
+}  // namespace fakes
 }  // namespace feedback

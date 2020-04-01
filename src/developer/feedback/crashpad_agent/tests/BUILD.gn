@@ -188,8 +188,6 @@ executable("crash_reporter_unittest") {
 
   sources = [
     "crash_reporter_unittest.cc",
-    "fake_privacy_settings.cc",
-    "fake_privacy_settings.h",
     "stub_crash_server.cc",
     "stub_crash_server.h",
     "stub_feedback_data_provider.cc",
@@ -209,6 +207,7 @@ executable("crash_reporter_unittest") {
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/fakes:privacy_settings",
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/testing/stubs:network_reachability_provider",
     "//src/developer/feedback/testing/stubs:utc_provider",
@@ -233,7 +232,7 @@ executable("crashpad_agent_integration_test") {
   deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/testing:fake_cobalt",
+    "//src/developer/feedback/testing/fakes:cobalt",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -350,11 +349,7 @@ executable("inspect_manager_unittest") {
 executable("privacy_settings_ptr_unittest") {
   testonly = true
 
-  sources = [
-    "fake_privacy_settings.cc",
-    "fake_privacy_settings.h",
-    "privacy_settings_ptr_unittest.cc",
-  ]
+  sources = [ "privacy_settings_ptr_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
@@ -362,6 +357,7 @@ executable("privacy_settings_ptr_unittest") {
     "//src/developer/feedback/crashpad_agent:privacy_settings_ptr",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/fakes:privacy_settings",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",

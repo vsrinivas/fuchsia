@@ -28,11 +28,11 @@
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
-#include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_device_id_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/fakes/privacy_settings.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
 #include "src/developer/feedback/testing/stubs/utc_provider.h"
@@ -184,7 +184,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
     InjectServiceProvider(network_reachability_provider_.get());
   }
 
-  void SetUpPrivacySettings(std::unique_ptr<FakePrivacySettings> privacy_settings) {
+  void SetUpPrivacySettings(std::unique_ptr<fakes::PrivacySettings> privacy_settings) {
     privacy_settings_ = std::move(privacy_settings);
     if (privacy_settings_) {
       InjectServiceProvider(privacy_settings_.get());
@@ -443,7 +443,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
-  std::unique_ptr<FakePrivacySettings> privacy_settings_;
+  std::unique_ptr<fakes::PrivacySettings> privacy_settings_;
   std::unique_ptr<stubs::UtcProvider> utc_provider_;
 
  protected:
@@ -680,7 +680,7 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
-  SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettings(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptInDataSharing);
   SetUpUtcProvider({kExternalResponse});
 
@@ -700,7 +700,7 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
       std::make_unique<StubCrashServer>(std::vector<bool>({})));
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
-  SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettings(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
   SetUpUtcProvider({kExternalResponse});
 
@@ -718,7 +718,7 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
-  SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettings(std::make_unique<fakes::PrivacySettings>());
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());

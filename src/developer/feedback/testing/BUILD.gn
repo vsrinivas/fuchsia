@@ -18,21 +18,6 @@ source_set("cobalt_test_fixture") {
   ]
 }
 
-source_set("fake_cobalt") {
-  testonly = true
-
-  sources = [ "fake_cobalt.h" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.cobalt.test",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:cobalt",
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//zircon/system/fidl/fuchsia-cobalt",
-  ]
-}
-
 source_set("gmatchers") {
   testonly = true
 

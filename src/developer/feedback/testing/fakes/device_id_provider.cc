@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/testing/fakes/fake_device_id_provider.h"
+#include "src/developer/feedback/testing/fakes/device_id_provider.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
@@ -12,10 +12,11 @@
 #include "src/lib/uuid/uuid.h"
 
 namespace feedback {
+namespace fakes {
 
 using namespace fuchsia::feedback;
 
-void FakeDeviceIdProvider::GetId(GetIdCallback callback) {
+void DeviceIdProvider::GetId(GetIdCallback callback) {
   if (!device_id_) {
     device_id_ = std::make_unique<std::optional<std::string>>(std::nullopt);
     std::string uuid = uuid::Generate();
@@ -37,4 +38,5 @@ void FakeDeviceIdProvider::GetId(GetIdCallback callback) {
   callback(std::move(result));
 }
 
+}  // namespace fakes
 }  // namespace feedback

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_FAKE_PRIVACY_SETTINGS_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_FAKE_PRIVACY_SETTINGS_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_PRIVACY_SETTINGS_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_PRIVACY_SETTINGS_H_
 
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl_test_base.h>
@@ -17,13 +17,14 @@
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
+namespace fakes {
 
-// Fake fuchsia.settings.Privacy service.
+// Fake server for fuchsia.settings.Privacy.
 //
 // The hanging get pattern behind Watch() requires us to maintain a separate handler per connection
 // to be able to track each connection. Here, we only make a single connection in the unit tests
 // anyway so it's fine if the fake service can have at most one connection.
-class FakePrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
+class PrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
  public:
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::settings::Privacy> GetHandler() {
@@ -59,13 +60,13 @@ class FakePrivacySettings : public fuchsia::settings::testing::Privacy_TestBase 
   std::unique_ptr<WatchCallback> watcher_;
 };
 
-class FakePrivacySettingsClosesConnectionOnWatch : public FakePrivacySettings {
+class PrivacySettingsClosesConnectionOnWatch : public PrivacySettings {
  public:
   // |fuchsia::settings::Privacy|
   void Watch(WatchCallback callback) { CloseConnection(); }
 };
 
-class FakePrivacySettingsClosesConnectionOnFirstWatch : public FakePrivacySettings {
+class PrivacySettingsClosesConnectionOnFirstWatch : public PrivacySettings {
  public:
   // |fuchsia::settings::Privacy|
   void Watch(WatchCallback callback);
@@ -74,6 +75,7 @@ class FakePrivacySettingsClosesConnectionOnFirstWatch : public FakePrivacySettin
   bool first_watch_ = true;
 };
 
+}  // namespace fakes
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_FAKE_PRIVACY_SETTINGS_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_PRIVACY_SETTINGS_H_

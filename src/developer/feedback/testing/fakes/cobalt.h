@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_
-#define SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_COBALT_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_COBALT_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/cobalt/test/cpp/fidl.h>
@@ -16,12 +16,13 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace fakes {
 
-// A wrapper for getting events from a mock cobalt component in integration tests.
-class FakeCobalt {
+// A wrapper for getting events from a mock_cobalt component in integration tests.
+class Cobalt {
  public:
-  FakeCobalt(std::shared_ptr<sys::ServiceDirectory> environment_services);
-  ~FakeCobalt();
+  Cobalt(std::shared_ptr<sys::ServiceDirectory> environment_services);
+  ~Cobalt();
 
   template <typename EventCodeType>
   std::vector<EventCodeType> GetAllEventsOfType(size_t num_expected,
@@ -35,11 +36,11 @@ class FakeCobalt {
   fuchsia::cobalt::test::LoggerQuerierSyncPtr logger_querier_;
 };
 
-FakeCobalt::FakeCobalt(std::shared_ptr<sys::ServiceDirectory> environment_services) {
+Cobalt::Cobalt(std::shared_ptr<sys::ServiceDirectory> environment_services) {
   environment_services->Connect(logger_querier_.NewRequest());
 }
 
-FakeCobalt::~FakeCobalt() {
+Cobalt::~Cobalt() {
   using fuchsia::cobalt::test::LogMethod;
   FX_CHECK(logger_querier_) << "logger_querier_ disconnected. Cannot reset mock_cobalt, aborting";
 
@@ -63,8 +64,8 @@ FakeCobalt::~FakeCobalt() {
 }
 
 template <typename EventCodeType>
-std::vector<EventCodeType> FakeCobalt::GetAllEventsOfType(
-    size_t num_expected, fuchsia::cobalt::test::LogMethod log_method) {
+std::vector<EventCodeType> Cobalt::GetAllEventsOfType(size_t num_expected,
+                                                      fuchsia::cobalt::test::LogMethod log_method) {
   fuchsia::cobalt::test::LoggerQuerier_WatchLogs_Result result;
   std::vector<EventCodeType> all_events;
 
@@ -93,9 +94,8 @@ std::vector<EventCodeType> FakeCobalt::GetAllEventsOfType(
 }
 
 template <typename EventCodeType>
-void FakeCobalt::GetNewEventsOfType(
-    const fuchsia::cobalt::test::LoggerQuerier_WatchLogs_Result& result,
-    std::vector<EventCodeType>* all_events) {
+void Cobalt::GetNewEventsOfType(const fuchsia::cobalt::test::LoggerQuerier_WatchLogs_Result& result,
+                                std::vector<EventCodeType>* all_events) {
   FXL_CHECK(result.is_response());
 
   const auto& response = result.response();
@@ -110,6 +110,7 @@ void FakeCobalt::GetNewEventsOfType(
   }
 }
 
+}  // namespace fakes
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_

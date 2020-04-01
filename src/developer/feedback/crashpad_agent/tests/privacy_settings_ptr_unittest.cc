@@ -13,7 +13,7 @@
 #include <optional>
 
 #include "src/developer/feedback/crashpad_agent/settings.h"
-#include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
+#include "src/developer/feedback/testing/fakes/privacy_settings.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -47,7 +47,7 @@ class PrivacySettingsWatcherTest : public UnitTestFixture,
 
  protected:
   void SetUpPrivacySettingsProvider(
-      std::unique_ptr<FakePrivacySettings> privacy_settings_provider) {
+      std::unique_ptr<fakes::PrivacySettings> privacy_settings_provider) {
     privacy_settings_provider_ = std::move(privacy_settings_provider);
     if (privacy_settings_provider_) {
       InjectServiceProvider(privacy_settings_provider_.get());
@@ -71,7 +71,7 @@ class PrivacySettingsWatcherTest : public UnitTestFixture,
   PrivacySettingsWatcher watcher_;
 
  private:
-  std::unique_ptr<FakePrivacySettings> privacy_settings_provider_;
+  std::unique_ptr<fakes::PrivacySettings> privacy_settings_provider_;
 };
 
 TEST_F(PrivacySettingsWatcherTest, SetUp) {
@@ -120,7 +120,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerNotAvail
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerClosesConnection) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettingsClosesConnectionOnWatch>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettingsClosesConnectionOnWatch>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
@@ -131,7 +131,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerClosesCo
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfNoCallToSet) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
@@ -142,7 +142,8 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfNoCallToSet) {
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnRetry) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettingsClosesConnectionOnFirstWatch>());
+  SetUpPrivacySettingsProvider(
+      std::make_unique<fakes::PrivacySettingsClosesConnectionOnFirstWatch>());
 
   SetPrivacySettings(kUserOptIn);
 
@@ -164,7 +165,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnRetry) {
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_OptIn) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   SetPrivacySettings(kUserOptIn);
   watcher_.StartWatching();
@@ -176,7 +177,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_Op
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_OptOut) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   SetPrivacySettings(kUserOptOut);
   watcher_.StartWatching();
@@ -188,7 +189,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_Op
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_NotSet) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   SetPrivacySettings(kNotSet);
   watcher_.StartWatching();
@@ -200,7 +201,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_No
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_OptIn) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
@@ -216,7 +217,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_O
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_OptOut) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
@@ -232,7 +233,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_O
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_NotSet) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
@@ -248,7 +249,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnSecondWatch_N
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnEachWatch) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettings>());
+  SetUpPrivacySettingsProvider(std::make_unique<fakes::PrivacySettings>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
