@@ -713,7 +713,7 @@ zx_status_t VnodeMinfs::WriteExactInternal(Transaction* transaction, const void*
   return ZX_OK;
 }
 
-void VnodeMinfs::RemoveInodeLink(PendingWork* transaction) {
+zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
   ZX_ASSERT(inode_.link_count > 0);
 
   // This effectively 'unlinks' the target node without deleting the direntry
@@ -732,10 +732,20 @@ void VnodeMinfs::RemoveInodeLink(PendingWork* transaction) {
       Purge(transaction);
     } else {
       fs_->AddUnlinked(transaction, this);
+      if (IsDirectory()) {
+        // If it's a directory, we need to remove the . and .. entries, which should be the only
+        // entries.
+        inode_.dirent_count = 0;
+        zx_status_t status = TruncateInternal(transaction, 0);
+        if (status != ZX_OK) {
+          return status;
+        }
+      }
     }
   }
 
   InodeSync(transaction, kMxFsSyncMtime);
+  return ZX_OK;
 }
 
 void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
@@ -822,6 +832,9 @@ zx_status_t VnodeMinfs::Close() {
     zx_status_t status;
     std::unique_ptr<Transaction> transaction;
     if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+      // In case of error, we still need to release this vnode because it's not possible to retry,
+      // and we cannot block destruction. The inode will get cleaned up on next remount.
+      fs_->VnodeRelease(this);
       return status;
     }
     fs_->RemoveUnlinked(transaction.get(), this);

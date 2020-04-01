@@ -431,7 +431,7 @@ bool TestDirectoryAfterRmdir(void) {
 
   // Remove the directory. It's still open, so it should appear empty.
   ASSERT_EQ(rmdir("::dir"), 0);
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, nullptr, 0));
 
   // But we can't make new files / directories, by path...
   ASSERT_EQ(mkdir("::dir/subdir", 0755), -1);
@@ -444,24 +444,48 @@ bool TestDirectoryAfterRmdir(void) {
   // In fact, the "dir" path should still be usable, even as a file!
   fbl::unique_fd fd2(open("::dir", O_CREAT | O_EXCL | O_RDWR));
   ASSERT_TRUE(fd2);
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, nullptr, 0));
   ASSERT_EQ(close(fd2.release()), 0);
   ASSERT_EQ(unlink("::dir"), 0);
 
   // After all that, dir still looks like an empty directory...
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, nullptr, 0));
   ASSERT_EQ(closedir(dir), 0);
+
+  END_TEST;
+}
+
+bool TestRenameIntoUnlinkedDirectoryFails() {
+  BEGIN_TEST;
+
+  ASSERT_EQ(mkdir("::foo", 0755), 0, "");
+  fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+  ASSERT_TRUE(foo_fd);
+  fbl::unique_fd baz_fd(open("::baz", O_CREAT | O_RDWR));
+  ASSERT_TRUE(baz_fd);
+  fbl::unique_fd root_fd(open("::", O_RDONLY | O_DIRECTORY, 0644));
+  ASSERT_TRUE(root_fd);
+  ASSERT_EQ(renameat(root_fd.get(), "baz", foo_fd.get(), "baz"), 0);
+  ASSERT_EQ(renameat(foo_fd.get(), "baz", root_fd.get(), "baz"), 0);
+  ASSERT_EQ(unlink("::foo"), 0);
+  ASSERT_EQ(renameat(root_fd.get(), "baz", foo_fd.get(), "baz"), -1);
+  ASSERT_EQ(errno, EPIPE);  // ZX_ERR_BAD_STATE maps to EPIPE, for now.
 
   END_TEST;
 }
 
 RUN_FOR_ALL_FILESYSTEMS(
     directory_tests,
-    RUN_TEST_MEDIUM(TestDirectoryCoalesce) RUN_TEST_MEDIUM(TestDirectoryCoalesceLargeRecord)
-        RUN_TEST_MEDIUM(TestDirectoryFilenameMax) RUN_TEST_LARGE(TestDirectoryLarge)
-            RUN_TEST_MEDIUM(TestDirectoryTrailingSlash) RUN_TEST_MEDIUM(TestDirectoryReaddir)
-                RUN_TEST_LARGE(TestDirectoryReaddirRmAll) RUN_TEST_MEDIUM(TestDirectoryRewind)
-                    RUN_TEST_MEDIUM(TestDirectoryAfterRmdir))
+    RUN_TEST_MEDIUM(TestDirectoryCoalesce)
+    RUN_TEST_MEDIUM(TestDirectoryCoalesceLargeRecord)
+    RUN_TEST_MEDIUM(TestDirectoryFilenameMax)
+    RUN_TEST_LARGE(TestDirectoryLarge)
+    RUN_TEST_MEDIUM(TestDirectoryTrailingSlash)
+    RUN_TEST_MEDIUM(TestDirectoryReaddir)
+    RUN_TEST_LARGE(TestDirectoryReaddirRmAll)
+    RUN_TEST_MEDIUM(TestDirectoryRewind)
+    RUN_TEST_MEDIUM(TestDirectoryAfterRmdir)
+    RUN_TEST_MEDIUM(TestRenameIntoUnlinkedDirectoryFails))
 
 // TODO(smklein): Run this when MemFS can execute it without causing an OOM
 #if 0

@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include <block-client/cpp/fake-device.h>
+#include <fbl/auto_call.h>
 #include <fs-management/mount.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
@@ -110,6 +111,8 @@ class ConsistencyCheckerFixtureVerbose : public zxtest::Test {
   }
 
   void TearDown() override { EXPECT_NULL(fs_.get()); }
+  Minfs& fs() { return *fs_; }
+  std::unique_ptr<Minfs> TakeFs() { return std::move(fs_); }
 
  private:
   std::unique_ptr<Minfs> fs_;
@@ -234,6 +237,103 @@ TEST_F(ConsistencyCheckerFixtureVerbose, PurgedFileWithBadMagic) {
   EXPECT_OK(bcache->Writeblk(sb.ino_block, inodes));
 
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
+}
+
+TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotEntry) {
+  {
+    fbl::RefPtr<VnodeMinfs> root;
+    EXPECT_OK(fs().VnodeGet(&root, kMinfsRootIno));
+    // Read the block containing the directory entry.
+    uint8_t data[kMinfsBlockSize];
+    Bcache& bcache = *fs().GetMutableBcache();
+    blk_t root_dir_block = root->GetInode()->dnum[0] + fs().Info().dat_block;
+    ASSERT_OK(bcache.Readblk(root_dir_block, data));
+    Dirent* de = reinterpret_cast<Dirent*>(data);
+    de->ino = 0;
+    ASSERT_OK(bcache.Writeblk(root_dir_block, data));
+  }
+
+  std::unique_ptr<Bcache> bcache;
+  destroy_fs(&bcache);
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
+}
+
+TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotDotEntry) {
+  {
+    fbl::RefPtr<VnodeMinfs> root;
+    EXPECT_OK(fs().VnodeGet(&root, kMinfsRootIno));
+    // Read the block containing the directory entry.
+    uint8_t data[kMinfsBlockSize];
+    Bcache& bcache = *fs().GetMutableBcache();
+    blk_t root_dir_block = root->GetInode()->dnum[0] + fs().Info().dat_block;
+    ASSERT_OK(bcache.Readblk(root_dir_block, data));
+    Dirent* de = reinterpret_cast<Dirent*>(&data[0] + DirentSize(1));
+    de->ino = 0;
+    ASSERT_OK(bcache.Writeblk(root_dir_block, data));
+  }
+
+  std::unique_ptr<Bcache> bcache;
+  destroy_fs(&bcache);
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
+}
+
+void CreateUnlinkedDirectoryWithEntry(
+    std::unique_ptr<Minfs> fs, std::unique_ptr<Bcache>* bcache_out) {
+  ino_t ino;
+  blk_t inode_block;
+
+  {
+    fbl::RefPtr<VnodeMinfs> root;
+    ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+    fbl::RefPtr<fs::Vnode> child_;
+    ASSERT_OK(root->Create(&child_, "foo", 0));
+    auto child = fbl::RefPtr<VnodeMinfs>::Downcast(std::move(child_));
+    auto close_child = fbl::MakeAutoCall([child]() { child->Close(); });
+    ino = child->GetIno();
+    ASSERT_GT(kMinfsInodesPerBlock, ino);
+
+    uint8_t data[kMinfsBlockSize];
+    Dirent* de = reinterpret_cast<Dirent*>(&data[0]);
+    de->ino = ino;
+    de->reclen = DirentSize(1);
+    de->namelen = 1;
+    de->type = kMinfsTypeDir;
+    de->name[0] = '.';
+
+    size_t written;
+    ASSERT_OK(child->Write(data, de->reclen, 0, &written));
+    ASSERT_EQ(written, de->reclen);
+
+    ASSERT_OK(root->Unlink("foo", false));
+
+    sync_completion_t completion;
+    fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    EXPECT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+
+    inode_block = fs->Info().ino_block;
+
+    // Prevent the inode from being purged when we close the child.
+    fs->SetReadonly(true);
+    fs->StopWriteback();
+  }
+
+  std::unique_ptr<Bcache> bcache = Minfs::Destroy(std::move(fs));
+
+  // Now hack the inode so it looks like a directory with an invalid entry count.
+  Inode inodes[kMinfsInodesPerBlock];
+  ASSERT_OK(bcache->Readblk(inode_block, &inodes));
+  Inode& inode = inodes[ino];
+  inode.magic = kMinfsMagicDir;
+  inode.dirent_count = 1;
+  ASSERT_OK(bcache->Writeblk(inode_block, &inodes));
+
+  *bcache_out = std::move(bcache);
+}
+
+TEST_F(ConsistencyCheckerFixtureVerbose, UnlinkedDirectoryHasBadEntryCount) {
+  std::unique_ptr<Bcache> bcache;
+  ASSERT_NO_FATAL_FAILURES(CreateUnlinkedDirectoryWithEntry(TakeFs(), &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = false }, &bcache));
 }
 
 }  // namespace

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -18,9 +19,10 @@
 #include <fbl/unique_fd.h>
 
 #include "filesystems.h"
+#include "misc.h"
 
 // Make some files, then unlink them.
-bool TestUnlinkSimple(void) {
+bool TestUnlinkSimple() {
   BEGIN_TEST;
   const char* const paths[] = {"::abc", "::def", "::ghi", "::jkl", "::mnopqrstuvxyz"};
   for (size_t i = 0; i < fbl::count_of(paths); i++) {
@@ -57,7 +59,7 @@ static bool simple_write_test(int fd, size_t data_index) {
   return simple_read_test(fd, data_index);
 }
 
-bool TestUnlinkUseAfterwards(void) {
+bool TestUnlinkUseAfterwards() {
   BEGIN_TEST;
 
   const char* path = "::foobar";
@@ -78,7 +80,7 @@ bool TestUnlinkUseAfterwards(void) {
   END_TEST;
 }
 
-bool TestUnlinkOpenElsewhere(void) {
+bool TestUnlinkOpenElsewhere() {
   BEGIN_TEST;
 
   const char* path = "::foobar";
@@ -102,7 +104,7 @@ bool TestUnlinkOpenElsewhere(void) {
   END_TEST;
 }
 
-bool test_remove(void) {
+bool TestRemove() {
   BEGIN_TEST;
 
   // Test the trivial cases of removing files and directories
@@ -135,5 +137,7 @@ bool test_remove(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(unlink_tests,
-                        RUN_TEST_MEDIUM(TestUnlinkSimple) RUN_TEST_MEDIUM(TestUnlinkUseAfterwards)
-                            RUN_TEST_MEDIUM(TestUnlinkOpenElsewhere) RUN_TEST_MEDIUM(test_remove);)
+                        RUN_TEST_MEDIUM(TestUnlinkSimple)
+                        RUN_TEST_MEDIUM(TestUnlinkUseAfterwards)
+                        RUN_TEST_MEDIUM(TestUnlinkOpenElsewhere)
+                        RUN_TEST_MEDIUM(TestRemove))

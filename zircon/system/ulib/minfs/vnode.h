@@ -207,7 +207,7 @@ class VnodeMinfs : public fs::Vnode,
   // If the link count becomes zero, the node either:
   // 1) Calls |Purge()| (if no open fds exist), or
   // 2) Adds itself to the "unlinked list", to be purged later.
-  void RemoveInodeLink(PendingWork* transaction);
+  [[nodiscard]] zx_status_t RemoveInodeLink(Transaction* transaction);
 
   // TODO(smklein): These operations and members are protected as a historical artifact
   // of "File + Directory + Vnode" being a single class. They should be transitioned to

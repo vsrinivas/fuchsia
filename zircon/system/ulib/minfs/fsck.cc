@@ -256,6 +256,10 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     uint32_t data[MINFS_DIRENT_SIZE];
     size_t actual;
     status = vn->ReadInternal(nullptr, data, MINFS_DIRENT_SIZE, off, &actual);
+    if (status == ZX_OK && actual == 0 && inode->link_count == 0 && parent == 0) {
+      // This is OK as it's an unlinked directory.
+      break;
+    }
     if (status != ZX_OK || actual != MINFS_DIRENT_SIZE) {
       FS_TRACE_ERROR("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
       if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
@@ -338,15 +342,23 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     }
     eno++;
   }
+  if (inode->link_count == 0 && inode->dirent_count != 0) {
+    FS_TRACE_ERROR("check: dirent_count (%u) for unlinked directory != 0\n",
+                   inode->dirent_count);
+    conforming_ = false;
+  }
   if (dirent_count != inode->dirent_count) {
     FS_TRACE_ERROR("check: ino#%u: dirent_count of %u != %u (actual)\n", ino, inode->dirent_count,
                    dirent_count);
+    conforming_ = false;
   }
-  if (dot == false) {
+  if (dot == false && inode->link_count > 0) {
     FS_TRACE_ERROR("check: ino#%u: directory missing '.'\n", ino);
+    conforming_ = false;
   }
-  if (dotdot == false) {
+  if (dotdot == false && inode->link_count > 0) {
     FS_TRACE_ERROR("check: ino#%u: directory missing '..'\n", ino);
+    conforming_ = false;
   }
   return ZX_OK;
 }

@@ -366,6 +366,11 @@ class Minfs :
 
 #ifdef __Fuchsia__
   fbl::Mutex* GetLock() const final { return &txn_lock_; }
+
+  // Terminates all writeback queues, and flushes pending operations to the underlying device.
+  //
+  // If |!IsReadonly()|, also sets the dirty bit to a "clean" status.
+  void StopWriteback();
 #endif
 
   Bcache* GetMutableBcache() final { return bc_.get(); }
@@ -410,12 +415,7 @@ class Minfs :
   // Updates the clean bit and oldest revision in the super block.
   zx_status_t UpdateCleanBitAndOldestRevision(bool is_clean);
 
-#ifdef __Fuchsia__
-  // Terminates all writeback queues, and flushes pending operations to the underlying device.
-  //
-  // If |!IsReadonly()|, also sets the dirty bit to a "clean" status.
-  void StopWriteback();
-#else
+#ifndef __Fuchsia__
   zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
 #endif
 

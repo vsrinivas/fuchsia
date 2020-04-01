@@ -124,8 +124,7 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len,
   fs::DirentFiller df(data, len);
   if (!IsDirectory()) {
     // This WAS a directory, but it has been deleted.
-    Dnode::ReaddirStart(&df, cookie);
-    *out_actual = df.BytesFilled();
+    *out_actual = 0;
     return ZX_OK;
   }
   dnode_->Readdir(&df, cookie);
@@ -312,7 +311,7 @@ zx_status_t VnodeDir::CreateFromVmo(fbl::StringPiece name, zx_handle_t vmo, zx_o
 
 zx_status_t VnodeDir::CanCreate(fbl::StringPiece name) const {
   if (!IsDirectory()) {
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_BAD_STATE;
   }
   zx_status_t status;
   if ((status = dnode_->Lookup(name, nullptr)) == ZX_ERR_NOT_FOUND) {

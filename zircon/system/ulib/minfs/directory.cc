@@ -213,7 +213,10 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     inode_.link_count--;
   }
 
-  childvn->RemoveInodeLink(transaction);
+  status = childvn->RemoveInodeLink(transaction);
+  if (status != ZX_OK) {
+    return status;
+  }
   transaction->PinVnode(fbl::RefPtr(this));
   transaction->PinVnode(childvn);
   return kDirIteratorSaveSync;
@@ -293,7 +296,10 @@ zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir,
   // entry, making the rename operation idempotent w.r.t. the parent link
   // count.
 
-  vn->RemoveInodeLink(args->transaction);
+  status = vn->RemoveInodeLink(args->transaction);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   de->ino = args->ino;
   status =
@@ -509,6 +515,12 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
                                size_t* out_actual) {
   TRACE_DURATION("minfs", "Directory::Readdir");
   FS_TRACE_DEBUG("minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, GetIno(), cookie, len);
+
+  if (IsUnlinked()) {
+    *out_actual = 0;
+    return ZX_OK;
+  }
+
   DirCookie* dc = reinterpret_cast<DirCookie*>(cookie);
   fs::DirentFiller df(dirents, len);
 
@@ -728,6 +740,9 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   // ensure that the vnodes containing oldname and newname are directories
   if (!(newdir_minfs->IsDirectory())) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (newdir_minfs->IsUnlinked()) {
+    return ZX_ERR_BAD_STATE;
   }
   auto newdir = fbl::RefPtr<Directory>::Downcast(newdir_minfs);
 
