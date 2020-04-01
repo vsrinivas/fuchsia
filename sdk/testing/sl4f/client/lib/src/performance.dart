@@ -314,14 +314,16 @@ class Performance {
     return processedResultFile;
   }
 
-  /// A helper function that converts the results to the catapult format.
+  /// Send the given perf test results for upload to the Catapult Dashboard.
   ///
-  /// Returns the converted benchmark result [File].
+  /// This converts the results to Catapult format.  If uploading to Catapult is
+  /// enabled, this puts the resulting file in a directory with a filename
+  /// indicating that it should be uploaded.
   ///
   /// TODO(fxb/23091): Remove the uploadToCatapultDashboard argument once all
   /// the performance tests are moved over to using SL4F and this argument is
   /// unused.
-  Future<File> convertResults(
+  Future<void> convertResults(
       String converterPath, File result, Map<String, String> environment,
       {bool uploadToCatapultDashboard = true}) async {
     _log.info('Converting the results into the catapult format');
@@ -402,7 +404,6 @@ class Performance {
     }
     _log.info('Conversion to catapult results format completed.'
         ' Output file: $outputFileName');
-    return Future.value(File(outputFileName));
   }
 }
 

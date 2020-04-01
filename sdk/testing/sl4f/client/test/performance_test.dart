@@ -165,10 +165,8 @@ void main(List<String> args) {
         FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
 
     // With no buildbucket id env variable, it should do a local run.
-    File convertedFile = await performance.convertResults(
-        '/bin/catapult_converter',
+    await performance.convertResults('/bin/catapult_converter',
         File('test1-benchmark.fuchsiaperf.json'), {});
-    expect(convertedFile.path, endsWith('test1-benchmark.catapult_json'));
     var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
@@ -204,9 +202,8 @@ void main(List<String> args) {
       'INPUT_COMMIT_REF': 'refs/heads/master'
     };
 
-    convertedFile = await performance.convertResults('/bin/catapult_converter',
+    await performance.convertResults('/bin/catapult_converter',
         File('test2-benchmark.fuchsiaperf.json'), environment);
-    expect(convertedFile.path, endsWith('test2-benchmark.catapult_json'));
     verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
@@ -226,9 +223,8 @@ void main(List<String> args) {
 
     // If head is not on master, then it should be appended to master name.
     environment['INPUT_COMMIT_REF'] = 'refs/heads/releases/rc1';
-    convertedFile = await performance.convertResults('/bin/catapult_converter',
+    await performance.convertResults('/bin/catapult_converter',
         File('test3-benchmark.fuchsiaperf.json'), environment);
-    expect(convertedFile.path, endsWith('test3-benchmark.catapult_json'));
     verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);

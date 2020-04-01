@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert' show json, LineSplitter, utf8;
-import 'dart:io' show File, Platform, Process, ProcessSignal;
+import 'dart:io' show Platform, Process, ProcessSignal;
 
 import 'package:meta/meta.dart' show visibleForTesting;
 
@@ -166,9 +166,8 @@ class Power {
     await _zedmon.start();
   }
 
-  /// Stop collecting power data, and return a reference to a catapult.json file
-  /// containing the results.
-  Future<File> stopRecording(String converterPath) async {
+  /// Stop collecting power data.
+  Future<void> stopRecording(String converterPath) async {
     final powerSummary = await _zedmon.stop();
     _zedmon = null;
     final testCaseResults =
@@ -179,7 +178,7 @@ class Power {
     final perfFile = await _dump.writeAsString(
         'power', 'fuchsiaperf.json', json.encode(results));
 
-    return await _performance.convertResults(
+    await _performance.convertResults(
         converterPath, perfFile, Platform.environment);
   }
 }
