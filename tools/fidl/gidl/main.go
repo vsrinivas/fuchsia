@@ -31,8 +31,8 @@ import (
 // backend and writes them to the io.Writer.
 type Generator func(io.Writer, gidlir.All, fidlir.Root) error
 
-var generators = map[string]Generator{
-	"go":          gidlgolang.Generate,
+var conformanceGenerators = map[string]Generator{
+	"go":          gidlgolang.GenerateConformanceTests,
 	"cpp":         gidlcpp.Generate,
 	"llcpp":       gidlllcpp.Generate,
 	"dart":        gidldart.Generate,
@@ -40,10 +40,30 @@ var generators = map[string]Generator{
 	"transformer": gidltransformer.Generate,
 }
 
+var benchmarkGenerators = map[string]Generator{
+	"go": gidlgolang.GenerateBenchmarks,
+}
+
+var allGenerators = map[string]map[string]Generator{
+	"conformance": conformanceGenerators,
+	"benchmark":   benchmarkGenerators,
+}
+
+var allGeneratorTypes = func() []string {
+	var list []string
+	for generatorType := range allGenerators {
+		list = append(list, generatorType)
+	}
+	sort.Strings(list)
+	return list
+}()
+
 var allLanguages = func() []string {
 	var list []string
-	for language := range generators {
-		list = append(list, language)
+	for _, generatorMap := range allGenerators {
+		for language := range generatorMap {
+			list = append(list, language)
+		}
 	}
 	sort.Strings(list)
 	return list
@@ -53,6 +73,7 @@ var allLanguages = func() []string {
 type GIDLFlags struct {
 	JSONPath *string
 	Language *string
+	Type     *string
 	Out      *string
 }
 
@@ -66,7 +87,8 @@ var flags = GIDLFlags{
 		"relative path to the FIDL intermediate representation."),
 	Language: flag.String("language", "",
 		fmt.Sprintf("target language (%s)", strings.Join(allLanguages, "/"))),
-	Out: flag.String("out", "-", "optional path to write output to"),
+	Type: flag.String("type", "", fmt.Sprintf("output type (%s)", strings.Join(allGeneratorTypes, "/"))),
+	Out:  flag.String("out", "-", "optional path to write output to"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -127,7 +149,13 @@ func main() {
 		panic("must specify --language")
 	}
 	buf := new(bytes.Buffer)
-	generator, ok := generators[language]
+
+	gidlir.ValidateAllType(gidl, *flags.Type)
+	generatorMap, ok := allGenerators[*flags.Type]
+	if !ok {
+		panic(fmt.Sprintf("unknown generator type: %s", *flags.Type))
+	}
+	generator, ok := generatorMap[language]
 	if !ok {
 		panic(fmt.Sprintf("unknown language: %s", language))
 	}

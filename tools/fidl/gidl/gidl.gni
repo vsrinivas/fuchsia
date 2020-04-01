@@ -11,6 +11,12 @@ template("gidl") {
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
 
+  # TODO(fxb/49261) Remove this default generator type.
+  generator_type = "conformance"
+  if (defined(invoker.type)) {
+    generator_type = invoker.type
+  }
+
   fidl_target =
       get_label_info(invoker.fidl, "label_no_toolchain") + "($fidl_toolchain)"
   json_file = get_label_info(fidl_target, "target_gen_dir") + "/" +
@@ -19,6 +25,8 @@ template("gidl") {
   compiled_action(target_name) {
     tool = "//tools/fidl/gidl:gidl"
     args = [
+             "-type",
+             generator_type,
              "-language",
              invoker.language,
              "-json",
@@ -27,17 +35,14 @@ template("gidl") {
              rebase_path(invoker.output),
            ] + rebase_path(invoker.inputs)
     inputs = invoker.inputs
-    outputs = [
-      invoker.output,
-    ]
-    deps = [
-      fidl_target,
-    ]
+    outputs = [ invoker.output ]
+    deps = [ fidl_target ]
     forward_variables_from(invoker, [ "testonly" ])
   }
 }
 
 template("gidl_source_set") {
+  assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
   assert(defined(invoker.language))
@@ -53,6 +58,7 @@ template("gidl_source_set") {
 
   gidl_target = "${target_name}_gidl"
   gidl(gidl_target) {
+    type = invoker.type
     language = invoker.language
     output = generated_file
     fidl = invoker.fidl
@@ -61,9 +67,7 @@ template("gidl_source_set") {
   }
 
   source_set(target_name) {
-    sources = [
-      generated_file,
-    ]
+    sources = [ generated_file ]
     deps = [
       ":${gidl_target}",
       fidl_bindings,
@@ -82,6 +86,7 @@ template("gidl_source_set") {
 
 template("gidl_cpp") {
   gidl_source_set(target_name) {
+    type = "conformance"
     language = "cpp"
     forward_variables_from(invoker, "*")
   }
@@ -89,6 +94,7 @@ template("gidl_cpp") {
 
 template("gidl_llcpp") {
   gidl_source_set(target_name) {
+    type = "conformance"
     language = "llcpp"
     bindings_suffix = "_llcpp"
     forward_variables_from(invoker, "*")

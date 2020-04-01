@@ -541,6 +541,7 @@ func TestParseEncodeBenchmarkCase(t *testing.T) {
 func TestParseDecodeBenchmarkCase(t *testing.T) {
 	gidl := `
 	decode_benchmark("OneStringOfMaxLengthFive-empty") {
+		type = TypeName,
 		bytes = [
 			16:raw(
 				1, 0, 0, 0, 0, 0, 0, 0, // length
@@ -553,6 +554,7 @@ func TestParseDecodeBenchmarkCase(t *testing.T) {
 	expectedAll := ir.All{
 		DecodeBenchmark: []ir.DecodeBenchmark{{
 			Name: "OneStringOfMaxLengthFive-empty",
+			Type: "TypeName",
 			Encodings: []ir.Encoding{{
 				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{

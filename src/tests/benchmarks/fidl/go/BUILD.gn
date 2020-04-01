@@ -9,6 +9,7 @@ import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
 go_binary("go_fidl_benchmarks_bin") {
+  testonly = true
   output_name = "go_fidl_benchmarks"
   gopackage = "go_fidl_benchmarks"
 
@@ -16,14 +17,16 @@ go_binary("go_fidl_benchmarks_bin") {
 }
 
 go_library("go_fidl_benchmarks_lib") {
+  testonly = true
   name = "go_fidl_benchmarks"
   deps = [
     "//garnet/go/src/benchmarking",
-    "//src/tests/benchmarks/fidl/go/benchmark_suite",
+    "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_go_lib",
   ]
 }
 
 package("go_fidl_benchmarks") {
+  testonly = true
   deps = [ ":go_fidl_benchmarks_bin" ]
 
   binary = "go_fidl_benchmarks"

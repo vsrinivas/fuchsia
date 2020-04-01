@@ -61,6 +61,7 @@ type EncodeBenchmark struct {
 type DecodeBenchmark struct {
 	Name              string
 	Encodings         []Encoding
+	Type              string
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
 }

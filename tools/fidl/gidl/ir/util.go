@@ -4,6 +4,8 @@
 
 package ir
 
+import "reflect"
+
 func Merge(input []All) All {
 	var output All
 	for _, elem := range input {
@@ -18,6 +20,12 @@ func Merge(input []All) All {
 		}
 		for _, decodeFailure := range elem.DecodeFailure {
 			output.DecodeFailure = append(output.DecodeFailure, decodeFailure)
+		}
+		for _, encodeBenchmark := range elem.EncodeBenchmark {
+			output.EncodeBenchmark = append(output.EncodeBenchmark, encodeBenchmark)
+		}
+		for _, decodeBenchmark := range elem.DecodeBenchmark {
+			output.DecodeBenchmark = append(output.DecodeBenchmark, decodeBenchmark)
 		}
 	}
 	return output
@@ -54,7 +62,35 @@ func FilterByBinding(input All, binding string) All {
 			output.DecodeFailure = append(output.DecodeFailure, def)
 		}
 	}
+	for _, def := range input.EncodeBenchmark {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.EncodeBenchmark = append(output.EncodeBenchmark, def)
+		}
+	}
+	for _, def := range input.DecodeBenchmark {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.DecodeBenchmark = append(output.DecodeBenchmark, def)
+		}
+	}
 	return output
+}
+
+func ValidateAllType(input All, generatorType string) {
+	forbid := func(fields ...interface{}) {
+		for _, field := range fields {
+			if reflect.ValueOf(field).Len() > 0 {
+				panic("illegal field specified")
+			}
+		}
+	}
+	switch generatorType {
+	case "conformance":
+		forbid(input.EncodeBenchmark, input.DecodeBenchmark)
+	case "benchmark":
+		forbid(input.EncodeSuccess, input.DecodeSuccess, input.EncodeFailure, input.DecodeFailure)
+	default:
+		panic("unknown case")
+	}
 }
 
 // ContainsUnknownField returns if the value or any subvalue contains an unknown

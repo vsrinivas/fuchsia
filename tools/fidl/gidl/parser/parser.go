@@ -254,12 +254,13 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"decode_benchmark": {
-		requiredKinds: map[bodyElement]bool{isBytes: true},
+		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeBenchmark{
 				Name:              name,
 				Encodings:         body.Encodings,
+				Type:              body.Type,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
 			}

@@ -1,0 +1,32 @@
+import("//build/fidl/fidl.gni")
+import("//build/go/go_library.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+benchmark_suite_gidl_files =
+    [ "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl" ]
+benchmark_suite_fidl_files = [ "inline.test.fidl" ]
+
+fidl("benchmark_suite_fidl") {
+  testonly = true
+  name = "benchmarkfidl"
+  sources = benchmark_suite_fidl_files
+}
+
+gidl_go_out_dir = "$target_gen_dir/../go/benchmark_suite"
+
+gidl("benchmark_suite_go") {
+  testonly = true
+  type = "benchmark"
+  language = "go"
+  inputs = benchmark_suite_gidl_files
+  fidl = ":benchmark_suite_fidl"
+  output = "$gidl_go_out_dir/benchmark_suite.go"
+}
+
+go_library("benchmark_suite_go_lib") {
+  testonly = true
+  name = "benchmark_suite"
+  source_dir = gidl_go_out_dir
+  non_go_deps = [ ":benchmark_suite_go" ]
+  deps = [ ":benchmark_suite_fidl(${go_toolchain})" ]
+}
