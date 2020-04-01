@@ -9,7 +9,7 @@ using fuchsia.mem;
 using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
-// TODO(fxb/29926): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
+// TODO(fxb/29927): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
 enum ConsoleLogLevel : int32 {
     /// No logging.
     NONE = 100;
@@ -217,12 +217,16 @@ protocol Frame {
     /// If set to a value other than [`fuchsia.web.ConsoleLogLevel/NONE`], allows web content to
     /// log messages to the system logger using the console APIs (`debug()`, `log()`, `info()`,
     /// `warn()` and `error()`).
+    /// The default value is [`fuchsia.web.ConsoleLogLevel/NONE`].
+    ///
+    /// As the system log may be persisted, it is recommended that
+    /// [`fuchsia.web.ConsoleLogLevel/NONE`] be used in Incognito and other private browsing modes.
     ///
     /// When logged to the system logger:
     /// - `debug()`, `log()` and `info()` logs are logged with
     ///   [`fuchsia.logger.LogLevelFilter/INFO`] severity level.
-    /// - `warn()` logs are logged with [`fuchsia.logger.LogLevelFilter/INFO`] severity level.
-    /// - `error()` logs are logged with [`fuchsia.logger.LogLevelFilter/INFO`] severity level.
+    /// - `warn()` logs are logged with [`fuchsia.logger.LogLevelFilter/WARNING`] severity level.
+    /// - `error()` logs are logged with [`fuchsia.logger.LogLevelFilter/ERROR`] severity level.
     SetJavaScriptLogLevel(ConsoleLogLevel level);
 
     [Transitional, Deprecated]
@@ -273,15 +277,17 @@ protocol Frame {
 
     /// Sets whether to block all HTMLMediaElements in the frame from fetching and loading media
     /// resources.
-    /// While blocked, elements with `autoplay` set to `true` will not start playback. The
-    /// promises returned by calls to `play()` will remain unresolved until loading is unblocked
-    /// by a call to this method.
-    /// When unblock is called, resource fetching, loading and playback will begin.
-    ///
-    /// Any elements with fetching or loading media resources in progress before media loading was
-    /// blocked will continue to fetch, load and start playback as appropriate. This includes calls
-    /// to `play()` even after media loading is blocked.
     /// May be used, for example, to prevent loading media in frames that are not visible.
+    ///
+    /// While media loading is blocked, elements with `autoplay` set to `true` will not start
+    /// playback. The promises returned by calls to `play()` will remain unresolved until loading is
+    /// unblocked by a call to this method.
+    /// When media loading is unblocked, elements will begin fetching, resource, loading, and
+    /// playing as appropriate.
+    ///
+    /// Any elements that have begun fetching or loading media resources for the current source
+    /// before media loading was blocked will continue to fetch, load, and start playback as
+    /// appropriate. This includes calls to `play()` even after media loading is blocked.
     [Transitional]
     SetBlockMediaLoading(bool blocked);
 };

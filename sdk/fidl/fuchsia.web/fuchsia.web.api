@@ -3,7 +3,7 @@
   "fidl/fuchsia.web/context.fidl": "56ddaf9840a2e9828485aafef8358dc9",
   "fidl/fuchsia.web/cookie.fidl": "35fcef3f5e2f5cffe35b50c68f928e46",
   "fidl/fuchsia.web/debug.fidl": "a5f00329a4c99475aec80f11927fa777",
-  "fidl/fuchsia.web/frame.fidl": "08ab24f01aa3ee6a8864f5551e3704d3",
+  "fidl/fuchsia.web/frame.fidl": "c8d0dd6fc9e9d702306883f1d160e87d",
   "fidl/fuchsia.web/navigation.fidl": "ea2efba0c8b619de0f5195489d6886bc",
   "fidl/fuchsia.web/url_request_rewrite_rules.fidl": "51a6abc02b3a9e94090ea629d9719e2f"
 }
