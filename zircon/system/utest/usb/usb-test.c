@@ -32,7 +32,6 @@ static zx_status_t check_xhci_root_hubs(DIR* d) {
   if (count < 2) {
     return ZX_ERR_BAD_STATE;
   }
-  closedir(d);
   return ZX_OK;
 }
 
@@ -54,8 +53,10 @@ static bool usb_root_hubs_test(void) {
   zx_status_t status = check_xhci_root_hubs(d);
   if (status != ZX_OK) {
     unittest_printf_critical(" Root hub creation failed.[SKIPPING]");
+    closedir(d);
     return true;
   }
+  closedir(d);
   END_TEST;
 }
 
@@ -123,15 +124,17 @@ static bool usb_bulk_scatter_gather_test(void) {
       .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_RANDOM,
       .len = 230,
   };
-  fuchsia_hardware_usb_tester_SgList sg_list = {.entries =
-                                                    {
-                                                        {.length = 10, .offset = 100},
-                                                        {.length = 30, .offset = 1000},
-                                                        {.length = 100, .offset = 4000},
-                                                        {.length = 40, .offset = 5000},
-                                                        {.length = 50, .offset = 10000},
-                                                    },
-                                                .len = 5};
+  fuchsia_hardware_usb_tester_SgList sg_list = {
+      .entries = {
+          {.length = 10, .offset = 100},
+          {.length = 30, .offset = 1000},
+          {.length = 100, .offset = 4000},
+          {.length = 40, .offset = 5000},
+          {.length = 50, .offset = 10000},
+      },
+      .len = 5,
+  };
+
   zx_status_t status;
   ASSERT_EQ(
       fuchsia_hardware_usb_tester_DeviceBulkLoopback(dev_svc, &params, &sg_list, NULL, &status),
