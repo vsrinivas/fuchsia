@@ -29,6 +29,7 @@ driver_module("luis") {
     "luis-gpio.cc",
     "luis-i2c.cc",
     "luis-sdio.cc",
+    "luis-thermal.cc",
     "luis-usb.cc",
     "luis.cc",
   ]
@@ -44,6 +45,7 @@ driver_module("luis") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:llcpp",
   ]
 }
 

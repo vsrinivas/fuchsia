@@ -38,6 +38,7 @@ class Luis : public ddk::Device<Luis> {
   zx_status_t ClockInit();
   zx_status_t EmmcInit();
   zx_status_t GpioInit();
+  zx_status_t ThermalInit();
   zx_status_t UsbInit();
   zx_status_t I2cInit();
   zx_status_t SdioInit();

@@ -73,6 +73,10 @@ int Luis::Thread() {
     zxlogf(ERROR, "%s: EmmcInit() failed\n", __func__);
   }
 
+  if (ThermalInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: ThermalInit() failed\n", __func__);
+  }
+
   if (UsbInit() != ZX_OK) {
     zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
   }

@@ -1,0 +1,83 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("vs680-thermal") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "vs680-thermal.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/as370",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.clock",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:llcpp",
+  ]
+}
+
+migrated_manifest("vs680-thermal-manifest") {
+  deps = [ ":vs680-thermal" ]
+}
+
+test("vs680-thermal-test") {
+  defines = [ "_ALL_SOURCE" ]
+  output_name = "vs680-thermal-test"
+  sources = [
+    "vs680-thermal-test.cc",
+    "vs680-thermal.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/as370",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.clock",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:llcpp",
+  ]
+}
+
+unittest_package("vs680-thermal-test-package") {
+  package_name = "vs680-thermal-test"
+  deps = [ ":vs680-thermal-test" ]
+  tests = [
+    {
+      name = "vs680-thermal-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vs680-thermal-test-package" ]
+}

@@ -10,5 +10,6 @@ group("tests") {
     "aml-thermal-s912:tests",
     "as370-thermal:tests",
     "mtk-thermal:tests",
+    "vs680-thermal:tests",
   ]
 }

@@ -1341,6 +1341,7 @@ aggregate_manifest("migrated-image") {
     "//src/connectivity/ethernet/drivers/asix-88179:fake-asix-88179-manifest",
     "//src/connectivity/ethernet/drivers/asix-88772b:asix-88772b-manifest",
     "//src/devices/thermal/drivers/as370-thermal:as370-thermal-manifest",
+    "//src/devices/thermal/drivers/vs680-thermal:vs680-thermal-manifest",
     "//src/graphics/display/drivers/amlogic-display:amlogic-display-manifest",
     "//src/media/audio/drivers/astro-pdm-input:astro-pdm-input-manifest",
     "//src/media/audio/drivers/astro-tdm-output:astro-tdm-output-manifest",
