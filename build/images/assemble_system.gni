@@ -5,6 +5,7 @@
 import("//build/config.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/pkgfs.gni")
