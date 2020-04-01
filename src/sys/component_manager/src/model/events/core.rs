@@ -75,8 +75,7 @@ impl EventSourceFactory {
             // This hook provides the EventSource capability to components in the tree
             HooksRegistration::new(
                 "EventSourceFactory",
-                // TODO(fxb/48359): track destroyed to clean up any stored data.
-                vec![EventType::CapabilityRouted, EventType::Resolved],
+                vec![EventType::CapabilityRouted, EventType::Destroyed, EventType::Resolved],
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
         ]);
@@ -130,6 +129,11 @@ impl EventSourceFactory {
         }
     }
 
+    async fn on_destroyed_async(self: &Arc<Self>, target_moniker: &AbsoluteMoniker) {
+        let mut event_source_registry = self.event_source_registry.lock().await;
+        event_source_registry.remove(&target_moniker);
+    }
+
     async fn on_resolved_async(
         self: &Arc<Self>,
         target_moniker: &AbsoluteMoniker,
@@ -154,6 +158,12 @@ impl EventSourceFactory {
         event_source_registry.insert(key, event_source);
         Ok(())
     }
+
+    #[cfg(test)]
+    async fn has_event_source(&self, abs_moniker: &AbsoluteMoniker) -> bool {
+        let event_source_registry = self.event_source_registry.lock().await;
+        event_source_registry.contains_key(abs_moniker)
+    }
 }
 
 #[async_trait]
@@ -174,6 +184,9 @@ impl Hook for EventSourceFactory {
                         capability_provider.take(),
                     )
                     .await?;
+            }
+            EventPayload::Destroyed => {
+                self.on_destroyed_async(&event.target_moniker).await;
             }
             EventPayload::Resolved { decl } => {
                 self.on_resolved_async(&event.target_moniker, decl).await?;
@@ -380,5 +393,66 @@ impl CapabilityProvider for EventSource {
             .expect("could not convert channel into stream");
         self.serve(stream);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::model::{
+            hooks::Hooks, model::ModelParams, resolver::ResolverRegistry,
+            testing::test_helpers::ComponentDeclBuilder,
+        },
+        cm_rust::{UseProtocolDecl, UseSource},
+    };
+
+    async fn dispatch_resolved_event(
+        hooks: &Hooks,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let decl = ComponentDeclBuilder::new()
+            .use_(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Framework,
+                source_path: (*EVENT_SOURCE_SYNC_SERVICE_PATH).clone(),
+                target_path: (*EVENT_SOURCE_SYNC_SERVICE_PATH).clone(),
+            }))
+            .build();
+        let event =
+            Event::new(target_moniker.clone(), EventPayload::Resolved { decl: decl.clone() });
+        hooks.dispatch(&event).await
+    }
+
+    async fn dispatch_destroyed_event(
+        hooks: &Hooks,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let event = Event::new(target_moniker.clone(), EventPayload::Destroyed);
+        hooks.dispatch(&event).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn drop_event_source_when_component_destroyed() {
+        let model = {
+            let registry = ResolverRegistry::new();
+            Arc::new(Model::new(ModelParams {
+                root_component_url: "test:///root".to_string(),
+                root_resolver_registry: registry,
+            }))
+        };
+        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
+
+        let hooks = Hooks::new(None);
+        hooks.install(event_source_factory.hooks()).await;
+
+        let root = AbsoluteMoniker::root();
+
+        // Verify that there is no EventSource for the root until we dispatch the Resolved event.
+        assert!(!event_source_factory.has_event_source(&root).await);
+        dispatch_resolved_event(&hooks, &root).await.unwrap();
+        assert!(event_source_factory.has_event_source(&root).await);
+        // Verify that destroying the component destroys the EventSource.
+        dispatch_destroyed_event(&hooks, &root).await.unwrap();
+        assert!(!event_source_factory.has_event_source(&root).await);
     }
 }
