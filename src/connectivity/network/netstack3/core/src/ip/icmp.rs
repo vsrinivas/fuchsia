@@ -21,7 +21,7 @@ use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, NoRouteError, SocketError};
 use crate::ip::forwarding::ForwardingTable;
 use crate::ip::{
-    mld::MldHandler,
+    gmp::mld::MldHandler,
     path_mtu::PmtuHandler,
     socket::{
         BufferIpSocketContext, IpSock, IpSocket, IpSocketContext, SendError, UnroutableBehavior,
@@ -2088,7 +2088,7 @@ mod tests {
         DualStateContext, FrameContext, TimerContext,
     };
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
-    use crate::ip::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
+    use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
     use crate::ip::{

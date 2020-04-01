@@ -128,8 +128,6 @@ where
             .iter_mut()
             .map(|(addr, state)| (addr.clone(), handler(rng, state)))
             .collect::<Vec<_>>();
-        // `addr` must be a multicast address, otherwise it will not have
-        // an associated state in the first place
         for (addr, actions) in addr_and_actions {
             run_actions(ctx, device, actions, addr);
         }
@@ -148,7 +146,8 @@ where
 
 #[derive(Debug, Error)]
 pub(crate) enum MldError {
-    /// The host is trying to operate on an group address of which the host is not a member.
+    /// The host is trying to operate on an group address of which the host is
+    /// not a member.
     #[error("the host has not already been a member of the address: {}", addr)]
     NotAMember { addr: Ipv6Addr },
     /// Failed to send an IGMP packet.
@@ -169,9 +168,9 @@ pub(crate) struct MldConfig {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub(crate) struct ImmediateIdleState;
 
-/// The default value for `unsolicited_report_interval` [RFC 2710 section 7.10]
+/// The default value for `unsolicited_report_interval` [RFC 2710 Section 7.10]
 ///
-/// [RFC 2710 section 7.10] https://tools.ietf.org/html/rfc2710#section-7.10
+/// [RFC 2710 Section 7.10]: https://tools.ietf.org/html/rfc2710#section-7.10
 const DEFAULT_UNSOLICITED_REPORT_INTERVAL: Duration = Duration::from_secs(10);
 
 impl Default for MldConfig {
@@ -214,7 +213,7 @@ impl ProtocolSpecific for MldProtocolSpecific {
 }
 
 /// The state on a multicast address.
-pub(crate) type MldGroupState<I> = GmpStateMachine<I, MldProtocolSpecific>;
+type MldGroupState<I> = GmpStateMachine<I, MldProtocolSpecific>;
 
 /// The States on all the interested multicast address of an interface.
 pub(crate) struct MldInterface<I: Instant> {
@@ -378,8 +377,8 @@ fn run_action<C: MldContext>(
 
 /// Send an MLD packet.
 ///
-/// The MLD packet being sent should have its `hop_limit` to be 1 and
-/// a `RouterAlert` option in its Hop-by-Hop Options extensions header.
+/// The MLD packet being sent should have its `hop_limit` to be 1 and a
+/// `RouterAlert` option in its Hop-by-Hop Options extensions header.
 fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -388,10 +387,10 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
     group_addr: M::GroupAddr,
     max_resp_delay: M::MaxRespDelay,
 ) -> MldResult<()> {
-    // According to https://tools.ietf.org/html/rfc3590#section-4,
-    // if a valid link-local address is not available for the device (e.g., one
-    // has not been configured), the message is sent with the unspecified
-    // address (::) as the IPv6 source address.
+    // According to https://tools.ietf.org/html/rfc3590#section-4, if a valid
+    // link-local address is not available for the device (e.g., one has not
+    // been configured), the message is sent with the unspecified address (::)
+    // as the IPv6 source address.
 
     let src_ip =
         ctx.get_ipv6_link_local_addr(device).map_or(Ipv6::UNSPECIFIED_ADDRESS, |x| x.get());
@@ -433,8 +432,9 @@ mod tests {
     use crate::wire::icmp::mld::MulticastListenerQuery;
     use crate::wire::icmp::{IcmpParseArgs, Icmpv6Packet};
 
-    /// A dummy [`MldContext`] that stores the [`MldInterface`] and an optional IPv6 link-local
-    /// address that may be returned in calls to [`MldContext::get_ipv6_link_local_addr`].
+    /// A dummy [`MldContext`] that stores the [`MldInterface`] and an optional
+    /// IPv6 link-local address that may be returned in calls to
+    /// [`MldContext::get_ipv6_link_local_addr`].
     struct DummyMldContext {
         interface: MldInterface<DummyInstant>,
         ipv6_link_local: Option<LinkLocalAddr<Ipv6Addr>>,
@@ -489,11 +489,11 @@ mod tests {
 
     #[test]
     fn test_mld_immediate_report() {
-        // Most of the test surface is covered by the GMP implementation,
-        // MLD specific part is mostly passthrough. This test case is here
-        // because MLD allows a router to ask for report immediately, by
-        // specifying the `MaxRespDelay` to be 0. If this is the case, the
-        // host should send the report immediately instead of setting a timer.
+        // Most of the test surface is covered by the GMP implementation, MLD
+        // specific part is mostly passthrough. This test case is here because
+        // MLD allows a router to ask for report immediately, by specifying the
+        // `MaxRespDelay` to be 0. If this is the case, the host should send the
+        // report immediately instead of setting a timer.
         let mut s = MldGroupState::default();
         let mut rng = new_rng(0);
         s.join_group(&mut rng, Instant::now());
@@ -612,8 +612,9 @@ mod tests {
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
         assert!(ctx.trigger_next_timer());
 
-        // we should get two MLD reports, one for the unsolicited one for the host
-        // to turn into Delay Member state and the other one for the timer being fired.
+        // We should get two MLD reports - one for the unsolicited one for the
+        // host to turn into Delay Member state and the other one for the timer
+        // being fired.
         assert_eq!(ctx.frames().len(), 2);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -652,7 +653,8 @@ mod tests {
 
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
 
-        // We have received a query, hence we are falling back to Delay Member state.
+        // We have received a query, hence we are falling back to Delay Member
+        // state.
         let group_state = ctx
             .get_state_with(DummyDeviceId)
             .groups
@@ -683,8 +685,8 @@ mod tests {
 
         receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(0));
 
-        // Since it is an immediate query, we will send a report immediately and turn
-        // into Idle state again
+        // Since it is an immediate query, we will send a report immediately and
+        // turn into Idle state again
         let group_state = ctx
             .get_state_with(DummyDeviceId)
             .groups
@@ -705,9 +707,10 @@ mod tests {
         }
     }
 
-    // TODO: It seems like the RNG is always giving us quite small values, so the test logic
-    // for the timers doesn't hold. Ignore the test for now until we have a way to reliably
-    // generate a larger value for duration.
+    // TODO(fxbug.dev/49298): It seems like the RNG is always giving us quite
+    // small values, so the test logic for the timers doesn't hold. Ignore the
+    // test for now until we have a way to reliably generate a larger value for
+    // duration.
     #[test]
     #[ignore]
     fn test_mld_integration_delay_reset_timer() {

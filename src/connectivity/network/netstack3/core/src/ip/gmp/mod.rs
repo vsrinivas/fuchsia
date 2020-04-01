@@ -2,12 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! This module is created in hope of unifying MLD and IGMPv2
-//! and enable sharing the common state machine among these two
-//! Group Management Protocols. The name GMP actually comes from
-//! RFC 4604, quoted as saying: "Due to the commonality of function,
-//! the term "Group Management Protocol", or "GMP", will be used to
-//! refer to both IGMP and MLD.
+//! Group Management Protocols (GMPs).
+//!
+//! This module provides implementations of the Internet Group Managent Protocol
+//! (IGMP) and the Multicast Listener Discovery (MLD) protocol. These allow
+//! hosts to join IPv4 and IPv6 multicast groups respectively.
+//!
+//! The term "Group Management Protocol" is defined in [RFC 4606]:
+//!
+//! > Due to the commonality of function, the term "Group Management Protocol",
+//! > or "GMP", will be used to refer to both IGMP and MLD.
+//!
+//! [RFC 4606]: https://tools.ietf.org/html/rfc4604
+
+pub(crate) mod igmp;
+pub(crate) mod mld;
 
 use alloc::vec::{self, Vec};
 use core::convert::TryFrom;
@@ -19,9 +28,9 @@ use crate::Instant;
 
 /// This trait is used to model the different parts of the two protocols.
 ///
-/// Though MLD and IGMPv2 share the most part of their state machines
-/// there are some subtle differences between each other.
-pub(crate) trait ProtocolSpecific: Copy {
+/// Though MLD and IGMPv2 share the most part of their state machines there are
+/// some subtle differences between each other.
+trait ProtocolSpecific: Copy {
     /// The type for protocol-specific actions.
     type Action;
     /// The type for protocol-specific configs.
@@ -30,21 +39,22 @@ pub(crate) trait ProtocolSpecific: Copy {
     /// The maximum delay to wait to send an unsolicited report.
     fn cfg_unsolicited_report_interval(cfg: &Self::Config) -> Duration;
 
-    /// Whether the host should send a leave message even it is not the last host.
+    /// Whether the host should send a leave message even if it is not the last
+    /// host in the group.
     fn cfg_send_leave_anyway(cfg: &Self::Config) -> bool;
 
     /// Get the _real_ `MAX_RESP_TIME`
     ///
     /// For IGMP messages, if the given duration is zero, it should be
-    /// interpreted as 10 seconds; While for MLD messages, this function
-    /// is the same as the identity function.
+    /// interpreted as 10 seconds. For MLD messages, this function is the
+    /// identity function.
     fn get_max_resp_time(resp_time: Duration) -> Duration;
 
     /// Respond to a query in a protocol-specific way.
     ///
-    /// When receiving a query, IGMPv2 needs to check whether the query
-    /// is an IGMPv1 message and, if so, set a local "IGMPv1 Router Present"
-    /// flag and set a timer. For MLD, this function is a no-op.
+    /// When receiving a query, IGMPv2 needs to check whether the query is an
+    /// IGMPv1 message and, if so, set a local "IGMPv1 Router Present" flag and
+    /// set a timer. For MLD, this function is a no-op.
     fn do_query_received_specific(
         cfg: &Self::Config,
         actions: &mut Actions<Self>,
@@ -54,40 +64,39 @@ pub(crate) trait ProtocolSpecific: Copy {
 }
 
 /// This is used to represent the states that are common in both MLD and IGMPv2.
-/// The state machine should behave as described on [RFC 2236 page 10] and
-/// [RFC 2710 page 10].
+/// The state machine should behave as described on [RFC 2236 page 10] and [RFC
+/// 2710 page 10].
 ///
 /// [RFC 2236 page 10]: https://tools.ietf.org/html/rfc2236#page-10
 /// [RFC 2710 page 10]: https://tools.ietf.org/html/rfc2710#page-10
-pub(crate) struct GmpHostState<State, P: ProtocolSpecific> {
+struct GmpHostState<State, P: ProtocolSpecific> {
     state: State,
-    /// `protocol_specific` are the value(s) you don't want the
-    /// users to have a chance to modify. It is supposed to be
-    /// only modified by the protocol itself.
+    /// `protocol_specific` are the value(s) you don't want the users to have a
+    /// chance to modify. It is supposed to be only modified by the protocol
+    /// itself.
     protocol_specific: P,
-    /// `cfg` is used to store value(s) that is supposed to be
-    /// modified by users.
+    /// `cfg` is used to store value(s) that is supposed to be modified by
+    /// users.
     cfg: P::Config,
 }
 
-// Used to write tests in other modules
+// Used to write tests in the `igmp` and `mld` modules.
 #[cfg(test)]
 impl<S, P: ProtocolSpecific> GmpHostState<S, P> {
-    pub(crate) fn get_protocol_specific(&self) -> P {
+    fn get_protocol_specific(&self) -> P {
         self.protocol_specific
     }
 
-    pub(crate) fn get_state(&self) -> &S {
+    fn get_state(&self) -> &S {
         &self.state
     }
 }
 
 /// Generic actions that will be used both in MLD and IGMPv2.
 ///
-/// The terms are biased towards IGMPv2. `Leave` is called `Done`
-/// in MLD.
+/// The terms are biased towards IGMPv2. `Leave` is called `Done` in MLD.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum GmpAction<P: ProtocolSpecific> {
+enum GmpAction<P: ProtocolSpecific> {
     ScheduleReportTimer(Duration),
     StopReportTimer,
     SendLeave,
@@ -96,31 +105,31 @@ pub(crate) enum GmpAction<P: ProtocolSpecific> {
 
 /// The type to represent the actions generated by the state machine.
 ///
-/// An action could either be a generic action as defined in `GmpAction`
-/// Or any other protocol-specific action that is associated with `ProtocolSpecific`.
+/// An action could either be a generic action as defined in `GmpAction` Or any
+/// other protocol-specific action that is associated with `ProtocolSpecific`.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum Action<P: ProtocolSpecific> {
+enum Action<P: ProtocolSpecific> {
     Generic(GmpAction<P>),
     Specific(P::Action),
 }
 
 /// A collection of `Action`s.
 // TODO: switch to ArrayVec if performance ever becomes a concern.
-pub(crate) struct Actions<P: ProtocolSpecific>(Vec<Action<P>>);
+struct Actions<P: ProtocolSpecific>(Vec<Action<P>>);
 
 impl<P: ProtocolSpecific> Actions<P> {
     /// Create an initially empty set of actions.
-    pub(crate) fn nothing() -> Actions<P> {
+    fn nothing() -> Actions<P> {
         Actions(Vec::new())
     }
 
     /// Add a generic action to the set.
-    pub(crate) fn push_generic(&mut self, action: GmpAction<P>) {
+    fn push_generic(&mut self, action: GmpAction<P>) {
         self.0.push(Action::Generic(action));
     }
 
     /// Add a specific action to the set.
-    pub(crate) fn push_specific(&mut self, action: P::Action) {
+    fn push_specific(&mut self, action: P::Action) {
         self.0.push(Action::Specific(action));
     }
 }
@@ -136,9 +145,9 @@ impl<P: ProtocolSpecific> IntoIterator for Actions<P> {
 
 /// The three states that are common in both MLD and IGMPv2.
 ///
-/// Again, the terms used here are biased towards IGMPv2. In MLD,
-/// their names are {Non, Delaying, Idle}-Listener instead.
-pub(crate) enum MemberState<I: Instant, P: ProtocolSpecific> {
+/// As with [`GmpAction`], the terms used here are biased towards IGMPv2. In
+/// MLD, their names are {Non, Delaying, Idle}-Listener instead.
+enum MemberState<I: Instant, P: ProtocolSpecific> {
     NonMember(GmpHostState<NonMember, P>),
     Delaying(GmpHostState<DelayingMember<I>, P>),
     Idle(GmpHostState<IdleMember, P>),
@@ -146,36 +155,35 @@ pub(crate) enum MemberState<I: Instant, P: ProtocolSpecific> {
 
 /// The transition between one state and the next.
 ///
-/// A `Transition` includes the next state to enter and any actions
-/// to take while executing the transition.
+/// A `Transition` includes the next state to enter and any actions to take
+/// while executing the transition.
 struct Transition<S, P: ProtocolSpecific>(GmpHostState<S, P>, Actions<P>);
 
 /// Represents Non Member-specific state variables. Empty for now.
-pub(crate) struct NonMember;
+struct NonMember;
 
 /// Represents Delaying Member-specific state variables.
-pub(crate) struct DelayingMember<I: Instant> {
-    /// The expiration time for the current timer.
-    /// Useful to check if the timer needs to be reset
-    /// when a query arrives.
-    pub(crate) timer_expiration: I,
+struct DelayingMember<I: Instant> {
+    /// The expiration time for the current timer. Useful to check if the timer
+    /// needs to be reset when a query arrives.
+    timer_expiration: I,
 
-    /// Used to indicate whether we need to send out a Leave message
-    /// when we are leaving the group. This flag will become false
-    /// once we heard about another reporter.
-    pub(crate) last_reporter: bool,
+    /// Used to indicate whether we need to send out a Leave message when we are
+    /// leaving the group. This flag will become false once we heard about
+    /// another reporter.
+    last_reporter: bool,
 }
 
 /// Represents Idle Member-specific state variables.
-pub(crate) struct IdleMember {
-    /// Used to indicate whether we need to send out a Leave message
-    /// when we are leaving the group.
-    pub(crate) last_reporter: bool,
+struct IdleMember {
+    /// Used to indicate whether we need to send out a Leave message when we are
+    /// leaving the group.
+    last_reporter: bool,
 }
 
 impl<S, P: ProtocolSpecific> GmpHostState<S, P> {
-    /// Construct a `Transition` from this state into the new state `T` with
-    /// the given actions.
+    /// Construct a `Transition` from this state into the new state `T` with the
+    /// given actions.
     fn transition<T>(self, t: T, actions: Actions<P>) -> Transition<T, P> {
         Transition(
             GmpHostState { state: t, protocol_specific: self.protocol_specific, cfg: self.cfg },
@@ -183,8 +191,8 @@ impl<S, P: ProtocolSpecific> GmpHostState<S, P> {
         )
     }
 
-    /// Construct a `Transition` from this state into the new state `T` with
-    /// a given protocol-specific value and actions.
+    /// Construct a `Transition` from this state into the new state `T` with a
+    /// given protocol-specific value and actions.
     fn transition_with_protocol_specific<T>(
         self,
         t: T,
@@ -199,8 +207,8 @@ impl<S, P: ProtocolSpecific> GmpHostState<S, P> {
 ///
 /// # Arguments
 ///
-/// * `old` is `None` if there are currently no timers, otherwise `Some(t)` where t is the old
-///   instant when the currently installed timer should fire.
+/// * `old` is `None` if there are currently no timers, otherwise `Some(t)`
+///   where t is the old instant when the currently installed timer should fire.
 /// * `resp_time` is the maximum response time required by Query message.
 /// * `now` is the current time.
 /// * `ps` is the current protocol-specific state.
@@ -438,7 +446,7 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
     }
 }
 
-pub(crate) struct GmpStateMachine<I: Instant, P: ProtocolSpecific> {
+struct GmpStateMachine<I: Instant, P: ProtocolSpecific> {
     inner: Option<MemberState<I, P>>,
 }
 
@@ -459,17 +467,17 @@ where
 
 impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
     /// When a "join group" command is received.
-    pub(crate) fn join_group<R: Rng>(&mut self, rng: &mut R, now: I) -> Actions<P> {
+    fn join_group<R: Rng>(&mut self, rng: &mut R, now: I) -> Actions<P> {
         self.update(|s| s.join_group(rng, now))
     }
 
     /// When a "leave group" command is received.
-    pub(crate) fn leave_group(&mut self) -> Actions<P> {
+    fn leave_group(&mut self) -> Actions<P> {
         self.update(MemberState::leave_group)
     }
 
     /// When a query is received, and we have to respond within max_resp_time.
-    pub(crate) fn query_received<R: Rng>(
+    fn query_received<R: Rng>(
         &mut self,
         rng: &mut R,
         max_resp_time: Duration,
@@ -479,17 +487,17 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
     }
 
     /// We have received a report from another host on our local network.
-    pub(crate) fn report_received(&mut self) -> Actions<P> {
+    fn report_received(&mut self) -> Actions<P> {
         self.update(MemberState::report_received)
     }
 
     /// The timer installed has expired.
-    pub(crate) fn report_timer_expired(&mut self) -> Actions<P> {
+    fn report_timer_expired(&mut self) -> Actions<P> {
         self.update(MemberState::report_timer_expired)
     }
 
     /// Update the state with no argument.
-    pub(crate) fn update<F: FnOnce(MemberState<I, P>) -> (MemberState<I, P>, Actions<P>)>(
+    fn update<F: FnOnce(MemberState<I, P>) -> (MemberState<I, P>, Actions<P>)>(
         &mut self,
         f: F,
     ) -> Actions<P> {
@@ -499,7 +507,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
     }
 
     /// Update the state with a new protocol-specific value.
-    pub(crate) fn update_with_protocol_specific(&mut self, ps: P) {
+    fn update_with_protocol_specific(&mut self, ps: P) {
         self.update(|s| {
             (
                 match s {
@@ -523,7 +531,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
     }
 
     #[cfg(test)]
-    pub(crate) fn get_inner(&self) -> &MemberState<I, P> {
+    fn get_inner(&self) -> &MemberState<I, P> {
         self.inner.as_ref().unwrap()
     }
 }
@@ -593,7 +601,8 @@ mod test {
         actions.into_iter().any(|a| a == action)
     }
 
-    // whether there is at least one `SendReport` action within `upper` in the future
+    // Whether there is at least one `SendReport` action within `upper` in the
+    // future.
     fn at_least_one_report(actions: Actions<DummyProtocolSpecific>, upper: Duration) -> bool {
         actions.into_iter().any(|a| {
             if let Action::Generic(GmpAction::ScheduleReportTimer(d)) = a {

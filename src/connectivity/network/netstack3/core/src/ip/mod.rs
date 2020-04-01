@@ -8,11 +8,9 @@
 pub(crate) mod path_mtu;
 
 mod forwarding;
-mod gmp;
+pub(crate) mod gmp;
 pub mod icmp;
-pub(crate) mod igmp;
 mod ipv6;
-pub(crate) mod mld;
 pub(crate) mod reassembly;
 pub(crate) mod socket;
 mod types;
@@ -37,15 +35,15 @@ use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, T
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
+use crate::ip::gmp::igmp::{IgmpContext, IgmpPacketMetadata, IgmpTimerId};
+use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldReportDelay};
 use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, BufferIcmpContext,
     BufferIcmpEventDispatcher, IcmpContext, IcmpEventDispatcher, IcmpIpExt, IcmpIpTransportContext,
     Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6State,
     Icmpv6StateBuilder,
 };
-use crate::ip::igmp::{IgmpContext, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
-use crate::ip::mld::{MldContext, MldFrameMetadata, MldReportDelay};
 use crate::ip::path_mtu::{IpLayerPathMtuCache, PmtuTimerId};
 use crate::ip::reassembly::{
     process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
@@ -719,7 +717,7 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 IpProto::Icmp => <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
                 IpProto::Igmp => {
-                    igmp::receive_igmp_packet(
+                    crate::ip::gmp::igmp::receive_igmp_packet(
                         ctx,
                         device.expect("IGMP messages should come from a device"),
                         src_ip,

@@ -124,8 +124,6 @@ where
             .iter_mut()
             .map(|(addr, state)| (addr.clone(), handler(rng, state, &msg)))
             .collect::<Vec<_>>();
-        // `addr` must be a multicast address, otherwise it will not have
-        // an associated state in the first place
         for (addr, actions) in addr_and_actions {
             run_actions(ctx, device, actions, addr);
         }
@@ -135,7 +133,6 @@ where
             Some(state) => handler(rng, state, &msg),
             None => return Err(IgmpError::NotAMember { addr: *group_addr }),
         };
-        // `group_addr` here must be a multicast address for similar reasons
         run_actions(ctx, device, actions, group_addr);
         Ok(())
     } else {
@@ -145,7 +142,8 @@ where
 
 #[derive(Debug, Error)]
 pub(crate) enum IgmpError<D: Display + Debug + Send + Sync + 'static> {
-    /// The host is trying to operate on an group address of which the host is not a member.
+    /// The host is trying to operate on an group address of which the host is
+    /// not a member.
     #[error("the host has not already been a member of the address: {}", addr)]
     NotAMember { addr: Ipv4Addr },
     /// Failed to send an IGMP packet.
@@ -245,29 +243,31 @@ enum Igmpv2Actions {
 }
 
 struct Igmpv2HostConfig {
-    // When a host wants to send a report not because
-    // of a query, this value is used as the delay timer.
+    // When a host wants to send a report not because of a query, this value is
+    // used as the delay timer.
     unsolicited_report_interval: Duration,
-    // When this option is true, the host can send a leave
-    // message even when it is not the last one in the multicast
-    // group.
+    // When this option is true, the host can send a leave message even when it
+    // is not the last one in the multicast group.
     send_leave_anyway: bool,
     // Default timer value for Version 1 Router Present Timeout.
     v1_router_present_timeout: Duration,
 }
 
-/// The default value for `unsolicited_report_interval` as per [RFC 2236 section 8.10].
+/// The default value for `unsolicited_report_interval` as per [RFC 2236 Section
+/// 8.10].
 ///
-/// [RFC 2236 section 8.10]: https://tools.ietf.org/html/rfc2236#section-8.10
+/// [RFC 2236 Section 8.10]: https://tools.ietf.org/html/rfc2236#section-8.10
 const DEFAULT_UNSOLICITED_REPORT_INTERVAL: Duration = Duration::from_secs(10);
-/// The default value for `v1_router_present_timeout` as per [RFC 2236 section 8.11].
+/// The default value for `v1_router_present_timeout` as per [RFC 2236 Section
+/// 8.11].
 ///
-/// [RFC 2236 section 8.11]: https://tools.ietf.org/html/rfc2236#section-8.11
+/// [RFC 2236 Section 8.11]: https://tools.ietf.org/html/rfc2236#section-8.11
 const DEFAULT_V1_ROUTER_PRESENT_TIMEOUT: Duration = Duration::from_secs(400);
 /// The default value for the `MaxRespTime` if the query is a V1 query, whose
-/// `MaxRespTime` field is 0 in the packet. Please refer to [RFC 2236 section 4]
+/// `MaxRespTime` field is 0 in the packet. Please refer to [RFC 2236 Section
+/// 4].
 ///
-/// [RFC 2236 section 4]: https://tools.ietf.org/html/rfc2236#section-4
+/// [RFC 2236 Section 4]: https://tools.ietf.org/html/rfc2236#section-4
 const DEFAULT_V1_QUERY_MAX_RESP_TIME: Duration = Duration::from_secs(10);
 
 impl Default for Igmpv2HostConfig {
@@ -306,11 +306,11 @@ impl ProtocolSpecific for Igmpv2ProtocolSpecific {
         max_resp_time: Duration,
         _old: Igmpv2ProtocolSpecific,
     ) -> Igmpv2ProtocolSpecific {
-        // IGMPv2 hosts should be compatible with routers that only speak IGMPv1.
-        // When an IGMPv2 host receives an IGMPv1 query (whose `MaxRespCode` is 0),
-        // it should set up a timer and only respond with IGMPv1 responses before
-        // the timer expires. Please refer to https://tools.ietf.org/html/rfc2236#section-4
-        // for details.
+        // IGMPv2 hosts should be compatible with routers that only speak
+        // IGMPv1. When an IGMPv2 host receives an IGMPv1 query (whose
+        // `MaxRespCode` is 0), it should set up a timer and only respond with
+        // IGMPv1 responses before the timer expires. Please refer to
+        // https://tools.ietf.org/html/rfc2236#section-4 for details.
         let new_ps = Igmpv2ProtocolSpecific { v1_router_present: max_resp_time.as_micros() == 0 };
         if new_ps.v1_router_present {
             actions.push_specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
@@ -475,8 +475,9 @@ mod tests {
     use crate::testutil::{new_rng, FakeCryptoRng};
     use crate::wire::igmp::messages::IgmpMembershipQueryV2;
 
-    /// A dummy [`IgmpContext`] that stores the [`IgmpInterface`] and an optional IPv4 address
-    /// and subnet that may be returned in calls to [`IgmpContext::get_ip_addr_subnet`].
+    /// A dummy [`IgmpContext`] that stores the [`IgmpInterface`] and an
+    /// optional IPv4 address and subnet that may be returned in calls to
+    /// [`IgmpContext::get_ip_addr_subnet`].
     struct DummyIgmpContext {
         interface: IgmpInterface<DummyInstant>,
         addr_subnet: Option<AddrSubnet<Ipv4Addr>>,
@@ -635,8 +636,9 @@ mod tests {
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
         assert!(ctx.trigger_next_timer());
 
-        // we should get two Igmpv2 reports, one for the unsolicited one for the host
-        // to turn into Delay Member state and the other one for the timer being fired.
+        // We should get two Igmpv2 reports - one for the unsolicited one for
+        // the host to turn into Delay Member state and the other one for the
+        // timer being fired.
         assert_eq!(ctx.frames().len(), 2);
     }
 
@@ -651,7 +653,8 @@ mod tests {
 
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
 
-        // We have received a query, hence we are falling back to Delay Member state.
+        // We have received a query, hence we are falling back to Delay Member
+        // state.
         let group_state = ctx
             .get_state_with(DummyDeviceId)
             .groups
@@ -678,7 +681,7 @@ mod tests {
         receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(0));
         assert_eq!(ctx.frames().len(), 1);
 
-        // Since we have heard from the v1 router, we should have set our flag
+        // Since we have heard from the v1 router, we should have set our flag.
         let group_state = ctx
             .get_state_with(DummyDeviceId)
             .groups
@@ -692,7 +695,7 @@ mod tests {
         }
 
         assert_eq!(ctx.frames().len(), 1);
-        // Two timers: one for the delayed report, one for the v1 router timer
+        // Two timers: one for the delayed report, one for the v1 router timer.
         assert_eq!(ctx.timers().len(), 2);
         let instant2 = ctx.timers()[1].0.clone();
         assert_eq!(instant1, instant2);
@@ -700,7 +703,7 @@ mod tests {
         assert!(ctx.trigger_next_timer());
         // After the first timer, we send out our V1 report.
         assert_eq!(ctx.frames().len(), 2);
-        // the last frame being sent should be a V1 report.
+        // The last frame being sent should be a V1 report.
         let (_, frame) = ctx.frames().last().unwrap();
         // 34 and 0x12 are hacky but they can quickly tell it is a V1 report.
         assert_eq!(frame[24], 0x12);
@@ -788,7 +791,8 @@ mod tests {
         assert_eq!(ctx.frames().len(), 1);
         receive_igmp_report(&mut ctx, DummyDeviceId);
         assert_eq!(ctx.timers().len(), 0);
-        // The report should be discarded because we have received from someone else.
+        // The report should be discarded because we have received from someone
+        // else.
         assert_eq!(ctx.frames().len(), 1);
         assert!(igmp_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
             .is_ok());

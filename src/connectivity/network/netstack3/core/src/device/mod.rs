@@ -33,8 +33,8 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{NdpHandler, NdpPacketHandler};
-use crate::ip::igmp::IgmpInterface;
-use crate::ip::mld::MldInterface;
+use crate::ip::gmp::igmp::IgmpInterface;
+use crate::ip::gmp::mld::MldInterface;
 use crate::ip::socket::IpSockUpdate;
 use crate::wire::icmp::ndp::NdpPacket;
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
