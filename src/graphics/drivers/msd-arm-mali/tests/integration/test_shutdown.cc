@@ -112,7 +112,6 @@ static void test_shutdown(uint32_t iters) {
 
 }  // namespace
 
-// TODO(fxb/42824): Re-enable when unbind issue is fixed.
-TEST(Shutdown, DISABLED_Test) { test_shutdown(1); }
+TEST(Shutdown, Test) { test_shutdown(1); }
 
-TEST(Shutdown, DISABLED_Stress) { test_shutdown(10); }
+TEST(Shutdown, Stress) { test_shutdown(10); }
