@@ -745,6 +745,9 @@ template("package") {
             [ "#!resolve fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}" ])
         shell_binaries +=
             [ "${dest}=" + rebase_path(shellfile, root_build_dir) ]
+
+        # The shell environment is not intended for production use.
+        pkg.deps += [ "//build/images:non_production_tag" ]
       }
 
       pkg_manifest += [
