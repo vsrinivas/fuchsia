@@ -1102,9 +1102,11 @@ template("variant_target") {
         }
       }
     }
-  } else if (current_toolchain == shlib_toolchain) {
+  } else if (current_toolchain == shlib_toolchain ||
+             builder_toolchain == toolchain_variant.base) {
     # Don't copy from a variant into a -shared toolchain, because nobody
-    # looks for an executable or loadable_module there.  Instead, just
+    # looks for an executable or loadable_module there. Don't copy from
+    # the base toolchain to a variant, either. Instead, in both cases just
     # forward any deps to the real target.
     group(target_name) {
       forward_variables_from(target_invoker,
