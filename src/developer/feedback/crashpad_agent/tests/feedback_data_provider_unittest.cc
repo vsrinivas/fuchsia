@@ -7,7 +7,7 @@
 #include <lib/async/cpp/executor.h>
 
 #include "lib/fit/result.h"
-#include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
+#include "src/developer/feedback/testing/stubs/data_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -25,21 +25,18 @@ class FeedbackDataProviderTest : public UnitTestFixture {
       : UnitTestFixture(), executor_(dispatcher()), data_provider_(dispatcher(), services()) {}
 
  protected:
-  // Sets up the underlying feedback data provider and registers it in the
-  // |service_directory_provider_|.
-  void SetUpStubFeedbackDataProvider(
-      std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider) {
-    stub_feedback_data_provider_ = std::move(stub_feedback_data_provider);
-    if (stub_feedback_data_provider_) {
-      InjectServiceProvider(stub_feedback_data_provider_.get());
+  void SetUpDataProvider(std::unique_ptr<stubs::DataProvider> stub_data_provider) {
+    stub_data_provider_ = std::move(stub_data_provider);
+    if (stub_data_provider_) {
+      InjectServiceProvider(stub_data_provider_.get());
     }
   }
 
-  size_t total_num_feedback_data_provider_bindings() {
-    return stub_feedback_data_provider_->total_num_bindings();
+  size_t total_num_data_provider_connections() {
+    return stub_data_provider_->total_num_connections();
   }
 
-  bool is_feedback_data_provider_bound() { return stub_feedback_data_provider_->is_bound(); }
+  bool is_data_provider_bound() { return stub_data_provider_->is_bound(); }
 
   std::vector<fit::result<Data>> GetFeedbackData(size_t num_parallel_calls) {
     std::vector<fit::result<Data>> results(num_parallel_calls);
@@ -53,7 +50,7 @@ class FeedbackDataProviderTest : public UnitTestFixture {
     return results;
   }
 
-  void CloseConnection() { stub_feedback_data_provider_->CloseConnection(); }
+  void CloseConnection() { stub_data_provider_->CloseConnection(); }
 
   async::Executor& executor() { return executor_; }
   FeedbackDataProvider& data_provider() { return data_provider_; }
@@ -61,14 +58,14 @@ class FeedbackDataProviderTest : public UnitTestFixture {
  private:
   async::Executor executor_;
   FeedbackDataProvider data_provider_;
-  std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
+  std::unique_ptr<stubs::DataProvider> stub_data_provider_;
 };
 
 TEST_F(FeedbackDataProviderTest, Check_DataProviderConnectionIsReused) {
   const size_t num_calls = 5u;
   // We use a stub that returns no data as we are not interested in the payload, just the number of
   // different connections to the stub.
-  SetUpStubFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+  SetUpDataProvider(std::make_unique<stubs::DataProviderReturnsNoData>());
 
   const std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
 
@@ -77,15 +74,15 @@ TEST_F(FeedbackDataProviderTest, Check_DataProviderConnectionIsReused) {
     EXPECT_TRUE(result.is_error());
   }
 
-  EXPECT_EQ(total_num_feedback_data_provider_bindings(), 1u);
-  EXPECT_FALSE(is_feedback_data_provider_bound());
+  EXPECT_EQ(total_num_data_provider_connections(), 1u);
+  EXPECT_FALSE(is_data_provider_bound());
 }
 
 TEST_F(FeedbackDataProviderTest, Check_DataProviderReconnectsCorrectly) {
   const size_t num_calls = 5u;
   // We use a stub that returns no data as we are not interested in the payload, just the number of
   // different connections to the stub.
-  SetUpStubFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+  SetUpDataProvider(std::make_unique<stubs::DataProviderReturnsNoData>());
 
   std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
 
@@ -94,8 +91,8 @@ TEST_F(FeedbackDataProviderTest, Check_DataProviderReconnectsCorrectly) {
     EXPECT_TRUE(result.is_error());
   }
 
-  EXPECT_EQ(total_num_feedback_data_provider_bindings(), 1u);
-  EXPECT_FALSE(is_feedback_data_provider_bound());
+  EXPECT_EQ(total_num_data_provider_connections(), 1u);
+  EXPECT_FALSE(is_data_provider_bound());
 
   results.clear();
   results = GetFeedbackData(num_calls);
@@ -105,15 +102,15 @@ TEST_F(FeedbackDataProviderTest, Check_DataProviderReconnectsCorrectly) {
     EXPECT_TRUE(result.is_error());
   }
 
-  EXPECT_EQ(total_num_feedback_data_provider_bindings(), 2u);
-  EXPECT_FALSE(is_feedback_data_provider_bound());
+  EXPECT_EQ(total_num_data_provider_connections(), 2u);
+  EXPECT_FALSE(is_data_provider_bound());
 }
 
 TEST_F(FeedbackDataProviderTest, Fail_OnNoFeedbackDataProvider) {
   const size_t num_calls = 1u;
 
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
-  SetUpStubFeedbackDataProvider(nullptr);
+  SetUpDataProvider(nullptr);
 
   std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
   ASSERT_EQ(results.size(), num_calls);
@@ -123,7 +120,7 @@ TEST_F(FeedbackDataProviderTest, Fail_OnNoFeedbackDataProvider) {
 TEST_F(FeedbackDataProviderTest, Fail_OnFeedbackDataProviderTakingTooLong) {
   const size_t num_calls = 1u;
 
-  SetUpStubFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
+  SetUpDataProvider(std::make_unique<stubs::DataProviderNeverReturning>());
 
   std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
   RunLoopFor(kDefaultTimeout);

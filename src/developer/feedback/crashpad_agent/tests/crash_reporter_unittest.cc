@@ -29,11 +29,11 @@
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
-#include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
-#include "src/developer/feedback/crashpad_agent/tests/stub_feedback_device_id_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/fakes/privacy_settings.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/data_provider.h"
+#include "src/developer/feedback/testing/stubs/device_id_provider.h"
 #include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
 #include "src/developer/feedback/testing/stubs/utc_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
@@ -164,15 +164,14 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
         std::make_unique<StubCrashServer>(upload_attempt_results));
   }
 
-  void SetUpFeedbackDataProvider(std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider) {
+  void SetUpDataProvider(std::unique_ptr<stubs::DataProvider> feedback_data_provider) {
     feedback_data_provider_ = std::move(feedback_data_provider);
     if (feedback_data_provider_) {
       InjectServiceProvider(feedback_data_provider_.get());
     }
   }
 
-  void SetUpFeedbackDeviceIdProvider(
-      std::unique_ptr<StubFeedbackDeviceIdProvider> feedback_device_id_provider) {
+  void SetUpDeviceIdProvider(std::unique_ptr<stubs::DeviceIdProvider> feedback_device_id_provider) {
     feedback_device_id_provider_ = std::move(feedback_device_id_provider);
     if (feedback_device_id_provider_) {
       InjectServiceProvider(feedback_device_id_provider_.get());
@@ -438,8 +437,8 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
  protected:
-  std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
-  std::unique_ptr<StubFeedbackDeviceIdProvider> feedback_device_id_provider_;
+  std::unique_ptr<stubs::DataProvider> feedback_data_provider_;
+  std::unique_ptr<stubs::DeviceIdProvider> feedback_device_id_provider_;
 
  private:
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
@@ -462,8 +461,8 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -474,8 +473,8 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
 
 TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({
       UtcProvider::Response(UtcProvider::Response::Value::kBackstop),
       UtcProvider::Response(UtcProvider::Response::Value::kNoResponse),
@@ -491,8 +490,8 @@ TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
 
 TEST_F(CrashReporterTest, Check_guidNotSet) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProviderReturnsError>());
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderReturnsError>());
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -509,8 +508,8 @@ TEST_F(CrashReporterTest, Check_guidNotSet) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   std::vector<Attachment> attachments;
@@ -532,8 +531,8 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   CrashReport report;
@@ -550,8 +549,8 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   CrashReport report;
@@ -570,8 +569,8 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
 
 TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
@@ -582,8 +581,8 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneGenericCrashReport("some-signature").is_ok());
@@ -596,8 +595,8 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   fuchsia::mem::Buffer minidump;
@@ -613,8 +612,8 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
@@ -627,8 +626,8 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   fuchsia::mem::Buffer stack_trace;
@@ -649,8 +648,8 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
@@ -664,7 +663,7 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
 
 TEST_F(CrashReporterTest, Fail_OnInvalidInputCrashReport) {
   SetUpCrashReporterDefaultConfig();
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
@@ -678,8 +677,8 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettings(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptInDataSharing);
   SetUpUtcProvider({kExternalResponse});
@@ -698,8 +697,8 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({})));
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettings(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
   SetUpUtcProvider({kExternalResponse});
@@ -716,8 +715,8 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettings(std::make_unique<fakes::PrivacySettings>());
   SetUpUtcProvider({kExternalResponse});
 
@@ -734,8 +733,8 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
 
 TEST_F(CrashReporterTest, Succeed_OnConcurrentReports) {
   SetUpCrashReporterDefaultConfig(std::vector<bool>(10, kUploadSuccessful));
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   // We generate ten crash reports before runnning the loop to make sure that one crash
@@ -766,8 +765,8 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadFailed})));
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
@@ -779,8 +778,8 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                                 /*url=*/nullptr,
                             }});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
@@ -788,8 +787,8 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProviderReturnsNoAttachment>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
@@ -800,8 +799,8 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProviderReturnsNoAnnotation>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
@@ -812,8 +811,8 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProviderReturnsNoData>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
@@ -824,8 +823,8 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
@@ -840,7 +839,7 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpCrashReporterDefaultConfig();
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
@@ -851,8 +850,8 @@ TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
 
 TEST_F(CrashReporterTest, Check_InspectTreeAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDataProvider(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProvider({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());

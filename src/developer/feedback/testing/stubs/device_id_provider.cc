@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/crashpad_agent/tests/stub_feedback_device_id_provider.h"
+#include "src/developer/feedback/testing/stubs/device_id_provider.h"
 
-#include "src/lib/fxl/logging.h"
+#include <zircon/errors.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace stubs {
 namespace {
 
 using Response = fuchsia::feedback::DeviceIdProvider_GetId_Response;
@@ -15,33 +18,33 @@ using Error = fuchsia::feedback::DeviceIdError;
 
 }  // namespace
 
-void StubFeedbackDeviceIdProvider::CloseConnection() {
+void DeviceIdProvider::CloseConnection() {
   if (binding_) {
     binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
-void StubFeedbackDeviceIdProvider::GetId(GetIdCallback callback) {
+void DeviceIdProvider::GetId(GetIdCallback callback) {
   callback(Result::WithResponse(Response(std::string(device_id_))));
 }
 
-void StubFeedbackDeviceIdProviderReturnsError::GetId(GetIdCallback callback) {
+void DeviceIdProviderReturnsError::GetId(GetIdCallback callback) {
   callback(Result::WithErr(Error::NOT_FOUND));
 }
 
-void StubFeedbackDeviceIdProviderNeverReturns::GetId(GetIdCallback callback) {}
+void DeviceIdProviderNeverReturns::GetId(GetIdCallback callback) {}
 
-StubFeedbackDeviceIdProviderExpectsOneCall::~StubFeedbackDeviceIdProviderExpectsOneCall() {
-  FXL_CHECK(!is_first_) << "Too few calls made to GetId, expecting 1 call";
+DeviceIdProviderExpectsOneCall::~DeviceIdProviderExpectsOneCall() {
+  FX_CHECK(!is_first_) << "Too few calls made to GetId, expecting 1 call";
 }
 
-void StubFeedbackDeviceIdProviderExpectsOneCall::GetId(GetIdCallback callback) {
-  FXL_CHECK(is_first_) << "Too many calls made to GetId, expecting 1 call";
+void DeviceIdProviderExpectsOneCall::GetId(GetIdCallback callback) {
+  FX_CHECK(is_first_) << "Too many calls made to GetId, expecting 1 call";
   is_first_ = false;
   callback(Result::WithResponse(Response(std::string(device_id()))));
 }
 
-void StubFeedbackDeviceIdProviderClosesFirstConnection::GetId(GetIdCallback callback) {
+void DeviceIdProviderClosesFirstConnection::GetId(GetIdCallback callback) {
   if (is_first_) {
     is_first_ = false;
     CloseConnection();
@@ -51,4 +54,5 @@ void StubFeedbackDeviceIdProviderClosesFirstConnection::GetId(GetIdCallback call
   callback(Result::WithResponse(Response(std::string(device_id()))));
 }
 
+}  // namespace stubs
 }  // namespace feedback

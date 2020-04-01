@@ -190,10 +190,6 @@ executable("crash_reporter_unittest") {
     "crash_reporter_unittest.cc",
     "stub_crash_server.cc",
     "stub_crash_server.h",
-    "stub_feedback_data_provider.cc",
-    "stub_feedback_data_provider.h",
-    "stub_feedback_device_id_provider.cc",
-    "stub_feedback_device_id_provider.h",
   ]
 
   deps = [
@@ -209,6 +205,8 @@ executable("crash_reporter_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/fakes:privacy_settings",
     "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:data_provider",
+    "//src/developer/feedback/testing/stubs:device_id_provider",
     "//src/developer/feedback/testing/stubs:network_reachability_provider",
     "//src/developer/feedback/testing/stubs:utc_provider",
     "//src/developer/feedback/utils:cobalt",
@@ -292,16 +290,13 @@ executable("database_unittest") {
 executable("feedback_data_provider_unittest") {
   testonly = true
 
-  sources = [
-    "feedback_data_provider_unittest.cc",
-    "stub_feedback_data_provider.cc",
-    "stub_feedback_data_provider.h",
-  ]
+  sources = [ "feedback_data_provider_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/crashpad_agent:feedback_data_provider",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:data_provider",
     "//src/lib/fsl:fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -311,16 +306,13 @@ executable("feedback_data_provider_unittest") {
 executable("feedback_device_id_provider_unittest") {
   testonly = true
 
-  sources = [
-    "feedback_device_id_provider_unittest.cc",
-    "stub_feedback_device_id_provider.cc",
-    "stub_feedback_device_id_provider.h",
-  ]
+  sources = [ "feedback_device_id_provider_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/crashpad_agent:feedback_device_id_provider",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:device_id_provider",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

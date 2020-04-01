@@ -6,6 +6,8 @@
 # SOURCES
 ###############################################################################
 source_set("board_info_provider") {
+  testonly = true
+
   sources = [
     "board_info_provider.cc",
     "board_info_provider.h",
@@ -23,6 +25,8 @@ source_set("board_info_provider") {
 }
 
 source_set("channel_provider") {
+  testonly = true
+
   sources = [
     "channel_provider.cc",
     "channel_provider.h",
@@ -113,7 +117,31 @@ source_set("data_provider") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("device_id_provider") {
+  testonly = true
+
+  sources = [
+    "device_id_provider.cc",
+    "device_id_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 source_set("inspect") {
+  testonly = true
+
   sources = [
     "inspect_archive.cc",
     "inspect_archive.h",
@@ -136,6 +164,8 @@ source_set("inspect") {
 }
 
 source_set("logger") {
+  testonly = true
+
   sources = [
     "logger.cc",
     "logger.h",
@@ -155,6 +185,8 @@ source_set("logger") {
 }
 
 source_set("product_info_provider") {
+  testonly = true
+
   sources = [
     "product_info_provider.cc",
     "product_info_provider.h",
@@ -194,6 +226,8 @@ source_set("network_reachability_provider") {
 }
 
 source_set("scenic") {
+  testonly = true
+
   sources = [
     "scenic.cc",
     "scenic.h",

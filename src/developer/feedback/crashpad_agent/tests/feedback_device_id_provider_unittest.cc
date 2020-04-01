@@ -10,7 +10,7 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/crashpad_agent/tests/stub_feedback_device_id_provider.h"
+#include "src/developer/feedback/testing/stubs/device_id_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -28,8 +28,8 @@ class FeedbackDeviceIdProviderTest : public UnitTestFixture {
       : UnitTestFixture(), executor_(dispatcher()), device_id_provider_(dispatcher(), services()) {}
 
  protected:
-  void SetUpStubFeedbackDeviceIdProvider(
-      std::unique_ptr<StubFeedbackDeviceIdProvider> stub_feedback_device_id_provider) {
+  void SetUpDeviceIdProvider(
+      std::unique_ptr<stubs::DeviceIdProvider> stub_feedback_device_id_provider) {
     stub_feedback_device_id_provider_ = std::move(stub_feedback_device_id_provider);
     if (stub_feedback_device_id_provider_) {
       InjectServiceProvider(stub_feedback_device_id_provider_.get());
@@ -56,18 +56,16 @@ class FeedbackDeviceIdProviderTest : public UnitTestFixture {
   async::Executor executor_;
 
   FeedbackDeviceIdProvider device_id_provider_;
-  std::unique_ptr<StubFeedbackDeviceIdProvider> stub_feedback_device_id_provider_;
+  std::unique_ptr<stubs::DeviceIdProvider> stub_feedback_device_id_provider_;
 };
 
 TEST_F(FeedbackDeviceIdProviderTest, Check_DeviceIsCachedInConstructor) {
-  SetUpStubFeedbackDeviceIdProvider(
-      std::make_unique<StubFeedbackDeviceIdProviderExpectsOneCall>(kDefaultDeviceId));
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderExpectsOneCall>(kDefaultDeviceId));
   RunLoopUntilIdle();
 }
 
 TEST_F(FeedbackDeviceIdProviderTest, Check_CachedDeviceIdReturned) {
-  SetUpStubFeedbackDeviceIdProvider(
-      std::make_unique<StubFeedbackDeviceIdProvider>(kDefaultDeviceId));
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   RunLoopUntilIdle();
 
   const std::optional<std::string> id = GetId();
@@ -76,20 +74,19 @@ TEST_F(FeedbackDeviceIdProviderTest, Check_CachedDeviceIdReturned) {
 }
 
 TEST_F(FeedbackDeviceIdProviderTest, Check_ErrorCachedInConstructor) {
-  SetUpStubFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProviderReturnsError>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderReturnsError>());
   RunLoopUntilIdle();
 }
 
 TEST_F(FeedbackDeviceIdProviderTest, Check_CachedErrorReturned) {
-  SetUpStubFeedbackDeviceIdProvider(std::make_unique<StubFeedbackDeviceIdProviderReturnsError>());
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderReturnsError>());
   RunLoopUntilIdle();
 
   EXPECT_FALSE(GetId().has_value());
 }
 
 TEST_F(FeedbackDeviceIdProviderTest, Check_ErrorOnTimeout) {
-  SetUpStubFeedbackDeviceIdProvider(
-      std::make_unique<StubFeedbackDeviceIdProviderNeverReturns>(kDefaultDeviceId));
+  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderNeverReturns>(kDefaultDeviceId));
 
   bool is_called = false;
   std::optional<std::string> device_id = std::nullopt;
@@ -108,8 +105,8 @@ TEST_F(FeedbackDeviceIdProviderTest, Check_ErrorOnTimeout) {
 }
 
 TEST_F(FeedbackDeviceIdProviderTest, Check_SuccessOnSecondAttempt) {
-  SetUpStubFeedbackDeviceIdProvider(
-      std::make_unique<StubFeedbackDeviceIdProviderClosesFirstConnection>(kDefaultDeviceId));
+  SetUpDeviceIdProvider(
+      std::make_unique<stubs::DeviceIdProviderClosesFirstConnection>(kDefaultDeviceId));
   RunLoopUntilIdle();
 
   // We need to run the loop for longer than the exponential backoff becuase the backoff is

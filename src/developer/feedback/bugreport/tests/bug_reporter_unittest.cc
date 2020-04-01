@@ -40,7 +40,8 @@ class BugReporterTest : public gtest::TestLoopFixture {
 
  protected:
   void SetUpDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
-    data_provider_ = std::make_unique<stubs::DataProvider>(std::move(attachment_bundle));
+    data_provider_ =
+        std::make_unique<stubs::DataProviderBundleAttachment>(std::move(attachment_bundle));
     ASSERT_EQ(service_directory_provider_.AddService(data_provider_->GetHandler()), ZX_OK);
   }
 
@@ -52,7 +53,7 @@ class BugReporterTest : public gtest::TestLoopFixture {
   std::string bugreport_path_;
 
  private:
-  std::unique_ptr<stubs::DataProvider> data_provider_;
+  std::unique_ptr<stubs::DataProviderBase> data_provider_;
   files::ScopedTempDir tmp_dir_;
 };
 
