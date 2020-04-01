@@ -1680,7 +1680,7 @@ void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t
 }
 
 vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
-                                                       VmObject** owner_out,
+                                                       VmObjectPaged** owner_out,
                                                        uint64_t* owner_offset_out) {
   DEBUG_ASSERT(page_list_.Lookup(offset) == nullptr || page_list_.Lookup(offset)->IsEmpty());
 
@@ -1691,44 +1691,33 @@ vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_
   VmObjectPaged* cur = this;
   AssertHeld(cur->lock_);
   uint64_t cur_offset = offset;
-  while (!page && cur_offset < cur->parent_limit_) {
+  while (cur_offset < cur->parent_limit_) {
     // If there's no parent, then parent_limit_ is 0 and we'll never enter the loop
     DEBUG_ASSERT(cur->parent_);
-    AssertHeld(cur->parent_->lock_ref());
+    VmObjectPaged* parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+    // If parent is null it means it wasn't actually paged, which shouldn't happen.
+    DEBUG_ASSERT(parent);
+    AssertHeld(parent->lock_ref());
 
     uint64_t parent_offset;
     bool overflowed = add_overflow(cur->parent_offset_, cur_offset, &parent_offset);
     ASSERT(!overflowed);
-    if (parent_offset >= cur->parent_->size()) {
-      // The offset is off the end of the parent, so cur is the VmObject
+    if (parent_offset >= parent->size()) {
+      // The offset is off the end of the parent, so cur is the VmObjectPaged
       // which will provide the page.
       break;
     }
 
-    if (!cur->parent_->is_paged()) {
-      uint parent_pf_flags = pf_flags & ~VMM_PF_FLAG_WRITE;
-      auto status = cur->parent_->GetPageLocked(parent_offset, parent_pf_flags, nullptr, nullptr,
-                                                &page, nullptr);
-      // The first if statement should ensure we never make an out-of-range query into a
-      // physical VMO, and physical VMOs will always return a page for all valid offsets.
-      DEBUG_ASSERT(status == ZX_OK);
-      DEBUG_ASSERT(page != nullptr);
-
-      *owner_out = cur->parent_.get();
-      *owner_offset_out = parent_offset;
-      return page;
-    } else {
-      cur = VmObjectPaged::AsVmObjectPaged(cur->parent_);
-      cur_offset = parent_offset;
-      VmPageOrMarker* p = cur->page_list_.Lookup(parent_offset);
-      if (p && !p->IsEmpty()) {
-        // If we found a page we want to return it, and if we found a marker we should stop
-        // searching.
-        if (p->IsPage()) {
-          page = p->Page();
-        }
-        break;
+    cur = parent;
+    cur_offset = parent_offset;
+    VmPageOrMarker* p = cur->page_list_.Lookup(parent_offset);
+    if (p && !p->IsEmpty()) {
+      // If we found a page we want to return it, and if we found a marker we should stop
+      // searching.
+      if (p->IsPage()) {
+        page = p->Page();
       }
+      break;
     }
   }
 
@@ -1791,7 +1780,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, offset, pf_flags,
           vmm_pf_flags_to_string(pf_flags, pf_string));
 
-  VmObject* page_owner;
+  VmObjectPaged* page_owner;
   uint64_t owner_offset;
   if (!parent_ || is_marker) {
     // Avoid the function call in the common case.
@@ -1807,18 +1796,13 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       return ZX_ERR_NOT_FOUND;
     }
 
-    // Since physical VMOs always provide pages for their full range, we should
-    // never get here for physical VMOs.
-    DEBUG_ASSERT(page_owner->is_paged());
-    VmObjectPaged* typed_owner = static_cast<VmObjectPaged*>(page_owner);
-
-    if (typed_owner->page_source_) {
+    if (page_owner->page_source_) {
       zx_status_t status =
-          typed_owner->page_source_->GetPage(owner_offset, page_request, &p, nullptr);
+          page_owner->page_source_->GetPage(owner_offset, page_request, &p, nullptr);
       // Pager page sources will never synchronously return a page.
       DEBUG_ASSERT(status != ZX_OK);
 
-      if (typed_owner != this && status == ZX_ERR_NOT_FOUND) {
+      if (page_owner != this && status == ZX_ERR_NOT_FOUND) {
         // The default behavior of clones of detached pager VMOs fault in zero
         // pages instead of propagating the pager's fault.
         // TODO(stevensd): Add an arg to zx_vmo_create_child to optionally fault here.
@@ -1872,8 +1856,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     }
   } else {
     // We need a writable page; let ::CloneCowPageLocked handle inserting one.
-    res_page = CloneCowPageLocked(offset, free_list, static_cast<VmObjectPaged*>(page_owner), p,
-                                  owner_offset);
+    res_page = CloneCowPageLocked(offset, free_list, page_owner, p, owner_offset);
     if (res_page == nullptr) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -2130,7 +2113,7 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
   }
   // If we don't have a committed page we need to check our parent.
   if (!slot || !slot->IsPage()) {
-    VmObject* page_owner;
+    VmObjectPaged* page_owner;
     uint64_t owner_offset;
     if (!FindInitialPageContentLocked(page_base_offset, VMM_PF_FLAG_WRITE, &page_owner,
                                       &owner_offset)) {
@@ -2272,7 +2255,7 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
     // avoids us calling it when we don't need to, or calling it more than once.
     struct InitialPageContent {
       bool inited = false;
-      VmObject* page_owner;
+      VmObjectPaged* page_owner;
       uint64_t owner_offset;
       vm_page_t* page;
     } initial_content_;
@@ -2349,10 +2332,8 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
     // perform slightly more complex cow forking.
     const InitialPageContent& content = get_initial_page_content();
     if (slot->IsEmpty() && content.page_owner->is_hidden()) {
-      // We know it is paged because we just checked that it was hidden.
-      VmObjectPaged* typed_owner = static_cast<VmObjectPaged*>(content.page_owner);
-      zx_status_t result = CloneCowPageAsZeroLocked(offset, free_list, typed_owner, content.page,
-                                                    content.owner_offset);
+      zx_status_t result = CloneCowPageAsZeroLocked(offset, free_list, content.page_owner,
+                                                    content.page, content.owner_offset);
       if (result != ZX_OK) {
         return result;
       }

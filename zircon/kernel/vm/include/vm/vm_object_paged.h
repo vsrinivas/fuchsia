@@ -226,12 +226,12 @@ class VmObjectPaged final : public VmObject {
   // Searches for info for initialization of a page being commited into |this| at |offset|.
   //
   // If an ancestor has a committed page which corresponds to |offset|, returns that page
-  // as well as the VmObject and offset which own the page. If no ancestor has a committed
-  // page for the offset, returns null as well as the VmObject/offset which need to be queried
+  // as well as the VmObjectPaged and offset which own the page. If no ancestor has a committed
+  // page for the offset, returns null as well as the VmObjectPaged/offset which need to be queried
   // to populate the page.
   //
   // It is an error to call this when |this| has a committed page at |offset|.
-  vm_page_t* FindInitialPageContentLocked(uint64_t offset, uint pf_flags, VmObject** owner_out,
+  vm_page_t* FindInitialPageContentLocked(uint64_t offset, uint pf_flags, VmObjectPaged** owner_out,
                                           uint64_t* owner_offset_out) TA_REQ(lock_);
 
   // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
