@@ -4,10 +4,11 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "shell-commands"
         ],
         "services": [
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
         ]
     }
 }

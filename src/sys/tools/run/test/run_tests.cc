@@ -18,8 +18,10 @@ TEST(Run, Daemonize) {
   // It is not possible to use the /bin trampoline unless
   // fuchsia.process.Resolver is proxied to the child process.
   const char* run_d_command_argv[] = {
-      "/pkgfs/packages/run/0/bin/run", "-d",
-      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx", nullptr};
+      // We intentionally use tramploline instead of packaging 'run' with the test so that we can
+      // test developer workflow.
+      "/bin/run", "-d", "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
+      nullptr};
 
   zx::job job;
   uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_STDIO;
