@@ -394,6 +394,7 @@ build_api_module("tool_paths") {
 group("tool_paths.metadata") {
   visibility = [ ":tool_paths" ]
   prebuilt_tools = [
+    "//garnet/bin/perfcompare",
     "//prebuilt/sdk/bazel/bazel",
     "//prebuilt/third_party/rust/$host_platform/bin/cargo",
     "//prebuilt/third_party/rust/$host_platform/bin/rustc",
