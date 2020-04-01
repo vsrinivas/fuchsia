@@ -11,6 +11,8 @@ import("//src/lib/vulkan/layers.gni")
 
 # Provides the Vulkan headers and entry points via the Vulkan loader.
 group("vulkan") {
+  public_configs = [ ":vulkan_hpp" ]
+
   public_deps = [
     ":headers",
     "//third_party/Vulkan-Loader:libvulkan",
@@ -39,6 +41,10 @@ group("loader_and_validation_tests") {
 # The vulkaninfo application.
 group("vulkaninfo") {
   public_deps = [ "//third_party/Vulkan-Tools:vulkaninfo" ]
+}
+
+config("vulkan_hpp") {
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 }
 
 sdk_atom("vulkan_layers") {
