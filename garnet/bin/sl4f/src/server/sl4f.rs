@@ -25,6 +25,9 @@ use crate::audio::facade::AudioFacade;
 // Session related includes
 use crate::basemgr::facade::BaseManagerFacade;
 
+// Battery related includes
+use crate::battery_simulator::facade::BatterySimulatorFacade;
+
 // Bluetooth related includes
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
@@ -128,6 +131,7 @@ impl Sl4f {
                 "audio_facade" => AudioFacade::new()?,
                 "avdtp_facade" => AvdtpFacade::new(),
                 "basemgr_facade" => BaseManagerFacade::new(),
+                "battery_simulator" => BatterySimulatorFacade::new(),
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),

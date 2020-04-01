@@ -30,6 +30,8 @@
             "fuchsia.netstack.Netstack",
             "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.power.BatteryManager",
+            "fuchsia.power.test.BatterySimulator",
             "fuchsia.process.Launcher",
             "fuchsia.settings.Setup",
             "fuchsia.setui.SetUiService",

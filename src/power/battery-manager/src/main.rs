@@ -109,7 +109,7 @@ async fn main() -> Result<(), Error> {
                         .await;
 
                     if let Err(e) = res {
-                        fx_log_err!("batsim: BatterySimulator failed {}", e);
+                        fx_log_err!("BatterySimulator failed {}", e);
                     }
                 }
             }
