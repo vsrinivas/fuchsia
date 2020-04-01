@@ -26,8 +26,6 @@ class Scenic {
         await _sl4f.request('scenic_facade.TakeScreenshot');
     final Map<String, dynamic> info = response['info'];
 
-    assert(info['pixel_format'], 'Bgra8');
-
     final image = Image.fromBytes(
         info['width'], info['height'], base64Decode(response['data']),
         format: Format.bgra);
