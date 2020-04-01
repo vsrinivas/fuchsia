@@ -443,6 +443,11 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  if ((st = iobuf_.CacheOp(ZX_VMO_OP_CACHE_CLEAN, 0, count * sizeof(DescriptorType))) != ZX_OK) {
+    zxlogf(ERROR, "sdhci: cache clean failed with error %d\n", st);
+    return st;
+  }
+
   AdmaSystemAddress::Get(0).FromValue(Lo32(desc_phys)).WriteTo(&regs_mmio_buffer_);
   AdmaSystemAddress::Get(1).FromValue(Hi32(desc_phys)).WriteTo(&regs_mmio_buffer_);
 
