@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
 #include <poll.h>
 
 #include <cmath>
@@ -187,6 +188,9 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     // Assign our lone shared payload buffer to the AudioRenderer.
     audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
 
+    // Use AudioRenderer's 'optimal' clock, to synchronize with the output device.
+    audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+
     // Configure the renderer to use input frames of audio as its PTS units.
     audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
 
@@ -199,6 +203,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     }
 
     if (interactive_) {
+      std::cout << "\n   Press 'q' or Esc to exit ...\n\n";
+
       std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
       std::cout << "|A| |S|  |  |F| |G|  |  |J| |K| |L|  |  |'|\n";
       std::cout << "+-+ +-+  |  +-+ +-+  |  +-+ +-+ +-+  |  +-+\n";

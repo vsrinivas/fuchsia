@@ -7,7 +7,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/zx/clock.h>
 #include <math.h>
+
+#include <iostream>
 
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -64,9 +67,12 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "fuchsia::media::AudioRenderer connection lost. Quitting.";
+    std::cerr << "fuchsia::media::AudioRenderer connection lost: " << status << std::endl;
     Shutdown();
   });
+
+  // Tell AudioRenderer we want to use its 'optimal' reference clock, not our own.
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
 }
 
 // Set the AudioRenderer's audio stream_type: mono 48kHz 32-bit float.
@@ -95,7 +101,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
                                    &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
+    std::cerr << "VmoMapper:::CreateAndMap failed: " << status << std::endl;
     return status;
   }
 
@@ -116,16 +122,14 @@ void MediaApp::WriteAudioIntoBuffer() {
 // We divide our cross-proc buffer into different zones, called payloads.
 // Create a packet that corresponds to this particular payload.
 // By specifying NO_TIMESTAMP for each packet's presentation timestamp, we rely
-// on the AudioRenderer to treat the sequence of packets as a contiguous
-// unbroken stream of audio. We just need to make sure we present packets early
-// enough, and for this example we actually submit all packets before starting
-// playback.
+// on AudioRenderer to treat the sequence of packets as a contiguous unbroken
+// stream of audio. We just need to make sure we present packets early enough.
+// For this example we actually submit all packets before playback starts.
 fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
   fuchsia::media::StreamPacket packet;
 
   // leave packet.pts as the default (fuchsia::media::NO_TIMESTAMP)
   // leave packet.payload_buffer_id as default (0): we only map a single buffer
-
   packet.payload_offset = (payload_num * payload_size_) % total_mapping_size_;
   packet.payload_size = payload_size_;
   return packet;

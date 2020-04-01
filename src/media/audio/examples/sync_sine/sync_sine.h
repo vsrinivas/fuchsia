@@ -8,6 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/clock.h>
 
 namespace examples {
 
@@ -21,22 +22,23 @@ class MediaApp {
   void set_high_water_mark_from_ms(int64_t value) { high_water_mark_ = ZX_MSEC(value); }
   void set_float(bool enable_float) { use_float_ = enable_float; }
 
-  int Run();
+  zx_status_t Run();
 
  private:
-  bool AcquireAudioRendererSync();
-  bool SetStreamType();
+  zx_status_t AcquireAudioRendererSync();
+  zx_status_t SetReferenceClock();
+  zx_status_t SetStreamType();
 
   zx_status_t CreateMemoryMapping();
 
   void WriteAudioIntoBuffer(void* buffer, size_t num_frames);
 
-  bool RefillBuffer();
+  zx_status_t RefillBuffer();
 
   fuchsia::media::StreamPacket CreateAudioPacket(size_t payload_num);
-  bool SendAudioPacket(fuchsia::media::StreamPacket packet);
+  zx_status_t SendAudioPacket(fuchsia::media::StreamPacket packet);
 
-  void WaitForPackets(size_t num_packets);
+  zx_status_t WaitForPackets(size_t num_packets);
 
   fuchsia::media::AudioRendererSyncPtr audio_renderer_sync_;
 
@@ -46,6 +48,8 @@ class MediaApp {
   size_t payload_size_;
   size_t total_mapping_size_;
   size_t num_packets_sent_ = 0u;
+
+  zx::clock reference_clock_;
   zx_time_t clock_start_time_;
   bool start_time_known_ = false;
 
