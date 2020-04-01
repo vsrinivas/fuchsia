@@ -33,8 +33,9 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{NdpHandler, NdpPacketHandler};
-use crate::ip::gmp::igmp::IgmpInterface;
-use crate::ip::gmp::mld::MldInterface;
+use crate::ip::gmp::igmp::IgmpGroupState;
+use crate::ip::gmp::mld::MldGroupState;
+use crate::ip::gmp::MulticastGroupSet;
 use crate::ip::socket::IpSockUpdate;
 use crate::wire::icmp::ndp::NdpPacket;
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
@@ -159,10 +160,15 @@ impl<D: EventDispatcher>
     }
 }
 
-impl<D: EventDispatcher> DualStateContext<IgmpInterface<D::Instant>, D::Rng, DeviceId, ()>
+impl<D: EventDispatcher>
+    DualStateContext<MulticastGroupSet<Ipv4Addr, IgmpGroupState<D::Instant>>, D::Rng, DeviceId, ()>
     for Context<D>
 {
-    fn get_states_with(&self, device: DeviceId, _id1: ()) -> (&IgmpInterface<D::Instant>, &D::Rng) {
+    fn get_states_with(
+        &self,
+        device: DeviceId,
+        _id1: (),
+    ) -> (&MulticastGroupSet<Ipv4Addr, IgmpGroupState<D::Instant>>, &D::Rng) {
         match device.protocol {
             DeviceProtocol::Ethernet => (
                 &self.state().device.ethernet.get(device.id()).unwrap().device.ip().igmp,
@@ -175,7 +181,7 @@ impl<D: EventDispatcher> DualStateContext<IgmpInterface<D::Instant>, D::Rng, Dev
         &mut self,
         device: DeviceId,
         _id1: (),
-    ) -> (&mut IgmpInterface<D::Instant>, &mut D::Rng) {
+    ) -> (&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<D::Instant>>, &mut D::Rng) {
         let (state, dispatcher) = self.state_and_dispatcher();
         match device.protocol {
             DeviceProtocol::Ethernet => (
@@ -186,10 +192,15 @@ impl<D: EventDispatcher> DualStateContext<IgmpInterface<D::Instant>, D::Rng, Dev
     }
 }
 
-impl<D: EventDispatcher> DualStateContext<MldInterface<D::Instant>, D::Rng, DeviceId, ()>
+impl<D: EventDispatcher>
+    DualStateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<D::Instant>>, D::Rng, DeviceId, ()>
     for Context<D>
 {
-    fn get_states_with(&self, device: DeviceId, _id1: ()) -> (&MldInterface<D::Instant>, &D::Rng) {
+    fn get_states_with(
+        &self,
+        device: DeviceId,
+        _id1: (),
+    ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<D::Instant>>, &D::Rng) {
         match device.protocol {
             DeviceProtocol::Ethernet => (
                 &self.state().device.ethernet.get(device.id()).unwrap().device.ip().mld,
@@ -202,7 +213,7 @@ impl<D: EventDispatcher> DualStateContext<MldInterface<D::Instant>, D::Rng, Devi
         &mut self,
         device: DeviceId,
         _id1: (),
-    ) -> (&mut MldInterface<D::Instant>, &mut D::Rng) {
+    ) -> (&mut MulticastGroupSet<Ipv6Addr, MldGroupState<D::Instant>>, &mut D::Rng) {
         let (state, dispatcher) = self.state_and_dispatcher();
         match device.protocol {
             DeviceProtocol::Ethernet => (
@@ -568,10 +579,10 @@ struct IpDeviceState<I: Instant> {
     route_ipv6: bool,
 
     /// MLD State.
-    mld: MldInterface<I>,
+    mld: MulticastGroupSet<Ipv6Addr, MldGroupState<I>>,
 
     /// IGMP State.
-    igmp: IgmpInterface<I>,
+    igmp: MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>>,
 }
 
 impl<I: Instant> Default for IpDeviceState<I> {
@@ -584,8 +595,8 @@ impl<I: Instant> Default for IpDeviceState<I> {
             ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
             route_ipv4: false,
             route_ipv6: false,
-            mld: MldInterface::default(),
-            igmp: IgmpInterface::default(),
+            mld: MulticastGroupSet::default(),
+            igmp: MulticastGroupSet::default(),
         }
     }
 }

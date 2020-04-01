@@ -2088,7 +2088,8 @@ mod tests {
         DualStateContext, FrameContext, TimerContext,
     };
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
-    use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
+    use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay};
+    use crate::ip::gmp::MulticastGroupSet;
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
     use crate::ip::{
@@ -2935,14 +2936,19 @@ mod tests {
         }
     }
 
-    impl DualStateContext<MldInterface<DummyInstant>, FakeCryptoRng<XorShiftRng>, DummyDeviceId>
-        for Dummyv6Context
+    impl
+        DualStateContext<
+            MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
+            FakeCryptoRng<XorShiftRng>,
+            DummyDeviceId,
+        > for Dummyv6Context
     {
         fn get_states_with(
             &self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (&MldInterface<DummyInstant>, &FakeCryptoRng<XorShiftRng>) {
+        ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, &FakeCryptoRng<XorShiftRng>)
+        {
             unimplemented!()
         }
 
@@ -2950,7 +2956,10 @@ mod tests {
             &mut self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (&mut MldInterface<DummyInstant>, &mut FakeCryptoRng<XorShiftRng>) {
+        ) -> (
+            &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
+            &mut FakeCryptoRng<XorShiftRng>,
+        ) {
             unimplemented!()
         }
     }
@@ -2974,12 +2983,20 @@ mod tests {
         }
     }
 
-    impl StateContext<MldInterface<DummyInstant>, DummyDeviceId> for Dummyv6Context {
-        fn get_state_with(&self, _id: DummyDeviceId) -> &MldInterface<DummyInstant> {
+    impl StateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, DummyDeviceId>
+        for Dummyv6Context
+    {
+        fn get_state_with(
+            &self,
+            _id: DummyDeviceId,
+        ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
             unimplemented!()
         }
 
-        fn get_state_mut_with(&mut self, _id: DummyDeviceId) -> &mut MldInterface<DummyInstant> {
+        fn get_state_mut_with(
+            &mut self,
+            _id: DummyDeviceId,
+        ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
             unimplemented!()
         }
     }

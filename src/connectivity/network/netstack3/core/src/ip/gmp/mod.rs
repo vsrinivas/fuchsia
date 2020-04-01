@@ -18,13 +18,110 @@
 pub(crate) mod igmp;
 pub(crate) mod mld;
 
+use alloc::collections::hash_map::{Entry, HashMap};
 use alloc::vec::{self, Vec};
 use core::convert::TryFrom;
 use core::time::Duration;
 
+use net_types::ip::IpAddress;
+use net_types::MulticastAddr;
 use rand::Rng;
 
 use crate::Instant;
+
+/// A set of reference-counted multicast groups and associated data.
+///
+/// `MulticastGroupSet` is a set of multicast groups, each with associated data
+/// `T`. Each group is reference-counted, only being removed once its reference
+/// count reaches zero.
+pub(crate) struct MulticastGroupSet<A: IpAddress, T> {
+    inner: HashMap<MulticastAddr<A>, (usize, T)>,
+}
+
+impl<A: IpAddress, T> Default for MulticastGroupSet<A, T> {
+    fn default() -> MulticastGroupSet<A, T> {
+        MulticastGroupSet { inner: HashMap::default() }
+    }
+}
+
+impl<A: IpAddress, T> MulticastGroupSet<A, T> {
+    /// Joins a multicast group and initializes it with a GMP state machine.
+    ///
+    /// `join_group_gmp` joins the multicast group `group`. If the group was not
+    /// already joined, then a new instance of [`GmpStateMachine`] is generated
+    /// using [`GmpStateMachine::join_group`], it is inserted with a reference
+    /// count of 1, and the list of actions returned by `join_group` is
+    /// returned. Otherwise, if the group was already joined, its reference
+    /// count is incremented and [`Actions::nothing()`] is returned.
+    ///
+    /// [`Actions::nothing()`]: Actions::nothing
+    #[cfg_attr(not(test), allow(unused))] // TODO(joshlf): Remove once this is used.
+    fn join_group_gmp<I: Instant, P: ProtocolSpecific + Default, R: Rng>(
+        &mut self,
+        group: MulticastAddr<A>,
+        rng: &mut R,
+        now: I,
+    ) -> Actions<P>
+    where
+        T: From<GmpStateMachine<I, P>>,
+        P::Config: Default,
+    {
+        match self.inner.entry(group) {
+            Entry::Occupied(_) => Actions::nothing(),
+            Entry::Vacant(entry) => {
+                let (state, actions) = GmpStateMachine::join_group(rng, now);
+                entry.insert((1, T::from(state)));
+                actions
+            }
+        }
+    }
+
+    /// Leaves a multicast group.
+    ///
+    /// `leave_group_gmp` leaves the multicast group `group` by decrementing the
+    /// reference count on the group. If the reference count does not reach 0,
+    /// then `Some(Actions::nothing())` is returned. If the reference count
+    /// reaches 0, then the group is removed from the set and it is left using
+    /// [`GmpStateMachine::leave_group`] and the resulting actions are returned.
+    ///
+    /// If the group is not in the set, `leave_group_gmp` returns `None`.
+    #[cfg_attr(not(test), allow(unused))] // TODO(joshlf): Remove once this is used.
+    fn leave_group_gmp<I: Instant, P: ProtocolSpecific>(
+        &mut self,
+        group: MulticastAddr<A>,
+    ) -> Option<Actions<P>>
+    where
+        T: Into<GmpStateMachine<I, P>>,
+    {
+        match self.inner.entry(group) {
+            Entry::Vacant(_) => None,
+            Entry::Occupied(mut entry) => {
+                let (refcnt, _) = entry.get_mut();
+                *refcnt -= 1;
+                if *refcnt == 0 {
+                    Some(entry.remove().1.into().leave_group())
+                } else {
+                    Some(Actions::nothing())
+                }
+            }
+        }
+    }
+}
+
+impl<A: IpAddress, T> MulticastGroupSet<A, T> {
+    #[cfg(test)]
+    fn get(&self, group: &MulticastAddr<A>) -> Option<&T> {
+        self.inner.get(group).map(|(_, t)| t)
+    }
+
+    fn get_mut(&mut self, group: &MulticastAddr<A>) -> Option<&mut T> {
+        self.inner.get_mut(group).map(|(_, t)| t)
+    }
+
+    fn iter_mut<'a>(&'a mut self) -> impl 'a + Iterator<Item = (&'a MulticastAddr<A>, &'a mut T)> {
+        self.inner.iter_mut().map(|(group, (_, t))| (group, t))
+    }
+}
 
 /// This trait is used to model the different parts of the two protocols.
 ///

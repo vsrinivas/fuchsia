@@ -8,7 +8,6 @@
 //! IGMPv2. One important difference to note is that MLD uses ICMPv6 (IP
 //! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
-use alloc::collections::hash_map::{Entry, HashMap};
 use alloc::vec::Vec;
 use core::time::Duration;
 
@@ -17,12 +16,13 @@ use net_types::ip::{Ip, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
-use rand::Rng;
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext, TimerHandler};
-use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
+use crate::ip::gmp::{
+    Action, Actions, GmpAction, GmpStateMachine, MulticastGroupSet, ProtocolSpecific,
+};
 use crate::ip::{IpDeviceIdContext, IpProto};
 use crate::wire::icmp::mld::{
     IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
@@ -58,7 +58,7 @@ pub(crate) trait MldContext:
     IpDeviceIdContext
     + TimerContext<MldReportDelay<<Self as IpDeviceIdContext>::DeviceId>>
     + RngStateContext<
-        MldInterface<<Self as InstantContext>::Instant>,
+        MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>>,
         <Self as IpDeviceIdContext>::DeviceId,
     > + FrameContext<EmptyBuf, MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>>
 {
@@ -93,12 +93,14 @@ impl<C: MldContext> MldHandler for C {
             MldPacket::MulticastListenerQuery(msg) => {
                 let now = self.now();
                 let max_response_delay: Duration = msg.body().max_response_delay();
-                handle_mld_message(self, device, msg.body(), |rng, state| {
+                handle_mld_message(self, device, msg.body(), |rng, MldGroupState(state)| {
                     state.query_received(rng, max_response_delay, now)
                 })
             }
             MldPacket::MulticastListenerReport(msg) => {
-                handle_mld_message(self, device, msg.body(), |_, state| state.report_received())
+                handle_mld_message(self, device, msg.body(), |_, MldGroupState(state)| {
+                    state.report_received()
+                })
             }
             MldPacket::MulticastListenerDone(_) => {
                 debug!("Hosts are not interested in Done messages");
@@ -123,7 +125,6 @@ where
     let group_addr = body.group_addr;
     if !group_addr.is_specified() {
         let addr_and_actions = state
-            .groups
             .iter_mut()
             .map(|(addr, state)| (addr.clone(), handler(rng, state)))
             .collect::<Vec<_>>();
@@ -132,7 +133,7 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match state.groups.get_mut(&group_addr) {
+        let actions = match state.get_mut(&group_addr) {
             Some(state) => handler(rng, state),
             None => return Err(MldError::NotAMember { addr: group_addr.get() }),
         };
@@ -212,53 +213,24 @@ impl ProtocolSpecific for MldProtocolSpecific {
 }
 
 /// The state on a multicast address.
-type MldGroupState<I> = GmpStateMachine<I, MldProtocolSpecific>;
+pub(crate) struct MldGroupState<I: Instant>(GmpStateMachine<I, MldProtocolSpecific>);
 
-/// The States on all the interested multicast address of an interface.
-pub(crate) struct MldInterface<I: Instant> {
-    groups: HashMap<MulticastAddr<Ipv6Addr>, MldGroupState<I>>,
-}
-
-impl<I: Instant> Default for MldInterface<I> {
-    fn default() -> Self {
-        MldInterface { groups: HashMap::new() }
+impl<I: Instant> From<GmpStateMachine<I, MldProtocolSpecific>> for MldGroupState<I> {
+    fn from(state: GmpStateMachine<I, MldProtocolSpecific>) -> MldGroupState<I> {
+        MldGroupState(state)
     }
 }
 
-impl<I: Instant> MldInterface<I> {
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    fn join_group<R: Rng>(
-        &mut self,
-        rng: &mut R,
-        addr: MulticastAddr<Ipv6Addr>,
-        now: I,
-    ) -> Actions<MldProtocolSpecific> {
-        match self.groups.entry(addr) {
-            Entry::Occupied(_) => Actions::nothing(),
-            Entry::Vacant(entry) => {
-                let (state, actions) = GmpStateMachine::join_group(rng, now);
-                entry.insert(state);
-                actions
-            }
-        }
+impl<I: Instant> From<MldGroupState<I>> for GmpStateMachine<I, MldProtocolSpecific> {
+    fn from(MldGroupState(state): MldGroupState<I>) -> GmpStateMachine<I, MldProtocolSpecific> {
+        state
     }
+}
 
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    fn leave_group(
-        &mut self,
-        addr: MulticastAddr<Ipv6Addr>,
-    ) -> MldResult<Actions<MldProtocolSpecific>> {
-        match self.groups.remove(&addr) {
-            Some(state) => Ok(state.leave_group()),
-            None => Err(MldError::NotAMember { addr: addr.get() }),
-        }
-    }
-
+impl<I: Instant> MulticastGroupSet<Ipv6Addr, MldGroupState<I>> {
     fn report_timer_expired(&mut self, addr: MulticastAddr<Ipv6Addr>) -> MldResult<()> {
-        match self.groups.get_mut(&addr) {
-            Some(state) => {
+        match self.get_mut(&addr) {
+            Some(MldGroupState(state)) => {
                 state.report_timer_expired();
                 Ok(())
             }
@@ -277,8 +249,7 @@ pub(crate) fn mld_join_group<C: MldContext>(
 ) {
     let now = ctx.now();
     let (state, rng) = ctx.get_state_rng_with(device);
-    let actions = state.join_group(rng, group_addr, now);
-    // `actions` will be `Nothing` if we were already a member of the group.
+    let actions = state.join_group_gmp(group_addr, rng, now);
     run_actions(ctx, device, actions, group_addr);
 }
 
@@ -293,7 +264,10 @@ pub(crate) fn mld_leave_group<C: MldContext>(
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) -> MldResult<()> {
-    let actions = ctx.get_state_mut_with(device).leave_group(group_addr)?;
+    let actions = ctx
+        .get_state_mut_with(device)
+        .leave_group_gmp(group_addr)
+        .ok_or(MldError::NotAMember { addr: group_addr.get() })?;
     run_actions(ctx, device, actions, group_addr);
     Ok(())
 }
@@ -442,13 +416,13 @@ mod tests {
     /// IPv6 link-local address that may be returned in calls to
     /// [`MldContext::get_ipv6_link_local_addr`].
     struct DummyMldContext {
-        interface: MldInterface<DummyInstant>,
+        groups: MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
         ipv6_link_local: Option<LinkLocalAddr<Ipv6Addr>>,
     }
 
     impl Default for DummyMldContext {
         fn default() -> Self {
-            DummyMldContext { interface: MldInterface::default(), ipv6_link_local: None }
+            DummyMldContext { groups: MulticastGroupSet::default(), ipv6_link_local: None }
         }
     }
 
@@ -462,25 +436,33 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl DualStateContext<MldInterface<DummyInstant>, FakeCryptoRng<XorShiftRng>, DummyDeviceId>
-        for DummyContext
+    impl
+        DualStateContext<
+            MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
+            FakeCryptoRng<XorShiftRng>,
+            DummyDeviceId,
+        > for DummyContext
     {
         fn get_states_with(
             &self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (&MldInterface<DummyInstant>, &FakeCryptoRng<XorShiftRng>) {
+        ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, &FakeCryptoRng<XorShiftRng>)
+        {
             let (state, rng) = self.get_states();
-            (&state.interface, rng)
+            (&state.groups, rng)
         }
 
         fn get_states_mut_with(
             &mut self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (&mut MldInterface<DummyInstant>, &mut FakeCryptoRng<XorShiftRng>) {
+        ) -> (
+            &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
+            &mut FakeCryptoRng<XorShiftRng>,
+        ) {
             let (state, rng) = self.get_states_mut();
-            (&mut state.interface, rng)
+            (&mut state.groups, rng)
         }
     }
 
@@ -501,7 +483,7 @@ mod tests {
         // `MaxRespDelay` to be 0. If this is the case, the host should send the
         // report immediately instead of setting a timer.
         let mut rng = new_rng(0);
-        let (mut s, _actions) = MldGroupState::join_group(&mut rng, Instant::now());
+        let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, Instant::now());
         let actions = s.query_received(&mut rng, Duration::from_secs(0), Instant::now());
         let vec = actions.into_iter().collect::<Vec<Action<_>>>();
         assert_eq!(vec.len(), 2);
@@ -660,9 +642,8 @@ mod tests {
 
         // We have received a query, hence we are falling back to Delay Member
         // state.
-        let group_state = ctx
+        let MldGroupState(group_state) = ctx
             .get_state_with(DummyDeviceId)
-            .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
             .unwrap();
         match group_state.get_inner() {
@@ -692,9 +673,8 @@ mod tests {
 
         // Since it is an immediate query, we will send a report immediately and
         // turn into Idle state again
-        let group_state = ctx
+        let MldGroupState(group_state) = ctx
             .get_state_with(DummyDeviceId)
-            .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
             .unwrap();
         match group_state.get_inner() {

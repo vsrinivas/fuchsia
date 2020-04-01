@@ -7,7 +7,6 @@
 //! IGMPv2 is a communications protocol used by hosts and adjacent routers on
 //! IPv4 networks to establish multicast group memberships.
 
-use alloc::collections::hash_map::{Entry, HashMap};
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
 use core::time::Duration;
@@ -16,12 +15,13 @@ use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ipv4Addr};
 use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
-use rand::Rng;
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext, TimerHandler};
-use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
+use crate::ip::gmp::{
+    Action, Actions, GmpAction, GmpStateMachine, MulticastGroupSet, ProtocolSpecific,
+};
 use crate::ip::{IpDeviceIdContext, IpProto, Ipv4Option};
 use crate::wire::igmp::{
     messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
@@ -52,7 +52,7 @@ pub(crate) trait IgmpContext:
     IpDeviceIdContext
     + TimerContext<IgmpTimerId<<Self as IpDeviceIdContext>::DeviceId>>
     + RngStateContext<
-        IgmpInterface<<Self as InstantContext>::Instant>,
+        MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>,
         <Self as IpDeviceIdContext>::DeviceId,
     > + FrameContext<EmptyBuf, IgmpPacketMetadata<<Self as IpDeviceIdContext>::DeviceId>>
 {
@@ -79,15 +79,19 @@ pub(crate) fn receive_igmp_packet<C: IgmpContext, B: BufferMut>(
     if let Err(e) = match packet {
         IgmpPacket::MembershipQueryV2(msg) => {
             let now = ctx.now();
-            handle_igmp_message(ctx, device, msg, |rng, state, msg| {
+            handle_igmp_message(ctx, device, msg, |rng, IgmpGroupState(state), msg| {
                 state.query_received(rng, msg.max_response_time().into(), now)
             })
         }
         IgmpPacket::MembershipReportV1(msg) => {
-            handle_igmp_message(ctx, device, msg, |_, state, _| state.report_received())
+            handle_igmp_message(ctx, device, msg, |_, IgmpGroupState(state), _| {
+                state.report_received()
+            })
         }
         IgmpPacket::MembershipReportV2(msg) => {
-            handle_igmp_message(ctx, device, msg, |_, state, _| state.report_received())
+            handle_igmp_message(ctx, device, msg, |_, IgmpGroupState(state), _| {
+                state.report_received()
+            })
         }
         IgmpPacket::LeaveGroup(_) => {
             debug!("Hosts are not interested in Leave Group messages");
@@ -120,7 +124,6 @@ where
     let (state, rng) = ctx.get_state_rng_with(device);
     if !group_addr.is_specified() {
         let addr_and_actions = state
-            .groups
             .iter_mut()
             .map(|(addr, state)| (addr.clone(), handler(rng, state, &msg)))
             .collect::<Vec<_>>();
@@ -129,7 +132,7 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match state.groups.get_mut(&group_addr) {
+        let actions = match state.get_mut(&group_addr) {
             Some(state) => handler(rng, state, &msg),
             None => return Err(IgmpError::NotAMember { addr: *group_addr }),
         };
@@ -179,8 +182,8 @@ impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
     fn handle_timer(&mut self, timer: IgmpTimerId<C::DeviceId>) {
         match timer {
             IgmpTimerId::ReportDelay { device, group_addr } => {
-                let actions = match self.get_state_mut_with(device).groups.get_mut(&group_addr) {
-                    Some(state) => state.report_timer_expired(),
+                let actions = match self.get_state_mut_with(device).get_mut(&group_addr) {
+                    Some(IgmpGroupState(state)) => state.report_timer_expired(),
                     None => {
                         error!("Not already a member");
                         return;
@@ -189,7 +192,7 @@ impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
                 run_actions(self, device, actions, group_addr);
             }
             IgmpTimerId::V1RouterPresent { device } => {
-                for (_, state) in self.get_state_mut_with(device).groups.iter_mut() {
+                for (_, IgmpGroupState(state)) in self.get_state_mut_with(device).iter_mut() {
                     state.v1_router_present_timer_expired();
                 }
             }
@@ -321,22 +324,25 @@ impl ProtocolSpecific for Igmpv2ProtocolSpecific {
     }
 }
 
-type IgmpGroupState<I> = GmpStateMachine<I, Igmpv2ProtocolSpecific>;
+pub(crate) struct IgmpGroupState<I: Instant>(GmpStateMachine<I, Igmpv2ProtocolSpecific>);
 
-impl<I: Instant> IgmpGroupState<I> {
-    fn v1_router_present_timer_expired(&mut self) {
-        self.update_with_protocol_specific(Igmpv2ProtocolSpecific { v1_router_present: false });
+impl<I: Instant> From<GmpStateMachine<I, Igmpv2ProtocolSpecific>> for IgmpGroupState<I> {
+    fn from(state: GmpStateMachine<I, Igmpv2ProtocolSpecific>) -> IgmpGroupState<I> {
+        IgmpGroupState(state)
     }
 }
 
-/// This is used to represent the groups that an IGMP host is interested in.
-pub(crate) struct IgmpInterface<I: Instant> {
-    groups: HashMap<MulticastAddr<Ipv4Addr>, IgmpGroupState<I>>,
+impl<I: Instant> From<IgmpGroupState<I>> for GmpStateMachine<I, Igmpv2ProtocolSpecific> {
+    fn from(
+        IgmpGroupState(state): IgmpGroupState<I>,
+    ) -> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
+        state
+    }
 }
 
-impl<I: Instant> Default for IgmpInterface<I> {
-    fn default() -> Self {
-        IgmpInterface { groups: HashMap::new() }
+impl<I: Instant> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
+    fn v1_router_present_timer_expired(&mut self) {
+        self.update_with_protocol_specific(Igmpv2ProtocolSpecific { v1_router_present: false });
     }
 }
 
@@ -402,38 +408,6 @@ fn run_action<C: IgmpContext>(
     Ok(())
 }
 
-impl<I: Instant> IgmpInterface<I> {
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    fn join_group<R: Rng>(
-        &mut self,
-        rng: &mut R,
-        addr: MulticastAddr<Ipv4Addr>,
-        now: I,
-    ) -> Actions<Igmpv2ProtocolSpecific> {
-        match self.groups.entry(addr) {
-            Entry::Occupied(_) => Actions::nothing(),
-            Entry::Vacant(entry) => {
-                let (state, actions) = GmpStateMachine::join_group(rng, now);
-                entry.insert(state);
-                actions
-            }
-        }
-    }
-
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    fn leave_group<D: Display + Debug + Send + Sync>(
-        &mut self,
-        addr: MulticastAddr<Ipv4Addr>,
-    ) -> IgmpResult<Actions<Igmpv2ProtocolSpecific>, D> {
-        match self.groups.remove(&addr) {
-            Some(state) => Ok(state.leave_group()),
-            None => Err(IgmpError::NotAMember { addr: addr.get() }),
-        }
-    }
-}
-
 /// Make our host join a multicast group.
 // TODO(rheacock): remove `#[cfg(test)]` when this is used.
 #[cfg(test)]
@@ -444,8 +418,7 @@ pub(crate) fn igmp_join_group<C: IgmpContext>(
 ) {
     let now = ctx.now();
     let (state, rng) = ctx.get_state_rng_with(device);
-    let actions = state.join_group(rng, group_addr, now);
-    // `actions` will be `Nothing` if we were already a member of the group.
+    let actions = state.join_group_gmp(group_addr, rng, now);
     run_actions(ctx, device, actions, group_addr);
 }
 
@@ -460,7 +433,10 @@ pub(crate) fn igmp_leave_group<C: IgmpContext>(
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv4Addr>,
 ) -> IgmpResult<(), C::DeviceId> {
-    let actions = ctx.get_state_mut_with(device).leave_group(group_addr)?;
+    let actions = ctx
+        .get_state_mut_with(device)
+        .leave_group_gmp(group_addr)
+        .ok_or(IgmpError::NotAMember { addr: group_addr.get() })?;
     run_actions(ctx, device, actions, group_addr);
     Ok(())
 }
@@ -482,17 +458,17 @@ mod tests {
     use crate::testutil::{new_rng, FakeCryptoRng};
     use crate::wire::igmp::messages::IgmpMembershipQueryV2;
 
-    /// A dummy [`IgmpContext`] that stores the [`IgmpInterface`] and an
+    /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
     /// optional IPv4 address and subnet that may be returned in calls to
     /// [`IgmpContext::get_ip_addr_subnet`].
     struct DummyIgmpContext {
-        interface: IgmpInterface<DummyInstant>,
+        groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
         addr_subnet: Option<AddrSubnet<Ipv4Addr>>,
     }
 
     impl Default for DummyIgmpContext {
         fn default() -> Self {
-            DummyIgmpContext { interface: IgmpInterface::default(), addr_subnet: None }
+            DummyIgmpContext { groups: MulticastGroupSet::default(), addr_subnet: None }
         }
     }
 
@@ -506,25 +482,33 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl DualStateContext<IgmpInterface<DummyInstant>, FakeCryptoRng<XorShiftRng>, DummyDeviceId>
-        for DummyContext
+    impl
+        DualStateContext<
+            MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
+            FakeCryptoRng<XorShiftRng>,
+            DummyDeviceId,
+        > for DummyContext
     {
         fn get_states_with(
             &self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (&IgmpInterface<DummyInstant>, &FakeCryptoRng<XorShiftRng>) {
+        ) -> (&MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>, &FakeCryptoRng<XorShiftRng>)
+        {
             let (state, rng) = self.get_states();
-            (&state.interface, rng)
+            (&state.groups, rng)
         }
 
         fn get_states_mut_with(
             &mut self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (&mut IgmpInterface<DummyInstant>, &mut FakeCryptoRng<XorShiftRng>) {
+        ) -> (
+            &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
+            &mut FakeCryptoRng<XorShiftRng>,
+        ) {
             let (state, rng) = self.get_states_mut();
-            (&mut state.interface, rng)
+            (&mut state.groups, rng)
         }
     }
 
@@ -544,7 +528,7 @@ mod tests {
     #[test]
     fn test_igmp_state_with_igmpv1_router() {
         let mut rng = new_rng(0);
-        let (mut s, _actions) = IgmpGroupState::join_group(&mut rng, time::Instant::now());
+        let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, time::Instant::now());
         s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         let actions = s.report_timer_expired();
         at_least_one_action(
@@ -558,7 +542,10 @@ mod tests {
     #[test]
     fn test_igmp_state_igmpv1_router_present_timer_expires() {
         let mut rng = new_rng(0);
-        let (mut s, _actions) = IgmpGroupState::join_group(&mut rng, time::Instant::now());
+        let (mut s, _actions) = GmpStateMachine::<_, Igmpv2ProtocolSpecific>::join_group(
+            &mut rng,
+            time::Instant::now(),
+        );
         s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         match s.get_inner() {
             MemberState::Delaying(state) => {
@@ -660,9 +647,8 @@ mod tests {
 
         // We have received a query, hence we are falling back to Delay Member
         // state.
-        let group_state = ctx
+        let IgmpGroupState(group_state) = ctx
             .get_state_with(DummyDeviceId)
-            .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
             .unwrap();
         match group_state.get_inner() {
@@ -687,9 +673,8 @@ mod tests {
         assert_eq!(ctx.frames().len(), 1);
 
         // Since we have heard from the v1 router, we should have set our flag.
-        let group_state = ctx
+        let IgmpGroupState(group_state) = ctx
             .get_state_with(DummyDeviceId)
-            .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
             .unwrap();
         match group_state.get_inner() {
@@ -715,9 +700,8 @@ mod tests {
 
         assert!(ctx.trigger_next_timer());
         // After the second timer, we should reset our flag for v1 routers.
-        let group_state = ctx
+        let IgmpGroupState(group_state) = ctx
             .get_state_with(DummyDeviceId)
-            .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
             .unwrap();
         match group_state.get_inner() {
