@@ -38,6 +38,7 @@ mod data_structures;
 mod device;
 pub mod error;
 mod ip;
+mod socket;
 #[cfg(test)]
 mod testutil;
 mod transport;

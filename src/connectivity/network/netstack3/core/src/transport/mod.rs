@@ -195,25 +195,20 @@ where
     }
 
     /// Update the elements of the map in-place, retaining only the elements for
-    /// which `f` returns true.
+    /// which `f` returns `Ok`.
     ///
-    /// `update_return` invokes `f` on each element of the map, and removes from
-    /// the map those elements for which `f` returns false. The return value is
-    /// an iterator over the removed elements.
+    /// `update_retain` has the same behavior as [`IdMap::update_retain`]; see
+    /// its documentation for details.
     ///
-    /// WARNING: The mutation will only occur when the returned iterator is
-    /// executed. Simply calling `update_retain` and then discarding the return
-    /// value will do nothing!
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    pub(crate) fn update_retain<'a, F: 'a + Fn(&mut C) -> bool>(
+    /// [`IdMap::update_retain`]: crate::data_structures::IdMap::update_retain
+    pub(crate) fn update_retain<'a, E: 'a, F: 'a + Fn(&mut C) -> Result<(), E>>(
         &'a mut self,
         f: F,
-    ) -> impl 'a + Iterator<Item = (usize, C)> {
+    ) -> impl 'a + Iterator<Item = (usize, C, E)> {
         let addr_to_id = &mut self.addr_to_id;
-        self.id_to_conn.update_retain(f).map(move |(id, conn)| {
+        self.id_to_conn.update_retain(f).map(move |(id, conn, err)| {
             addr_to_id.remove(&(&conn).into()).unwrap();
-            (id, conn)
+            (id, conn, err)
         })
     }
 }

@@ -16,57 +16,17 @@ use crate::device::{AddressEntry, DeviceId};
 use crate::error::NoRouteError;
 use crate::ip::forwarding::ForwardingTable;
 use crate::ip::{IpExt, IpProto};
+use crate::socket::Socket;
 use crate::wire::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// A socket identifying a connection between a local and remote IP host.
-///
-/// `IpSocket`s may cache certain routing information that is used to speed up
-/// the operation of sending outbound packets. However, this means that updates
-/// to global state (for example, updates to the forwarding table) may
-/// invalidate that cached information. Thus, certain updates may require
-/// updating all stored sockets as well. See the `Update` and `UpdateMeta`
-/// associated types and the `apply_update` method for more details.
-pub(crate) trait IpSocket<I: Ip> {
-    /// The type of updates to the socket.
-    ///
-    /// Updates are emitted whenever information changes that might require
-    /// information cached in sockets to be updated. For example, changes to the
-    /// forwarding table might require that a socket's outbound device be
-    /// updated.
-    type Update;
-
-    /// Metadata required to perform an update.
-    ///
-    /// Extra metadata may be required in order to apply an update to a socket.
-    type UpdateMeta;
-
+pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = NoRouteError> {
     /// Get the local IP address.
     fn local_ip(&self) -> &SpecifiedAddr<I::Addr>;
 
     /// Get the remote IP address.
     fn remote_ip(&self) -> &SpecifiedAddr<I::Addr>;
-
-    /// Apply an update to the socket.
-    ///
-    /// `apply_update` applies the given update, possibly changing cached
-    /// information. If it returns `Err`, then a) the socket is no longer
-    /// routable AND, b) the socket's unroutable behavior is
-    /// [`UnroutableBehavior::Close`]. In this case, the socket must be closed.
-    /// This is a MUST, not a SHOULD, as the cached information is now invalid,
-    /// and the behavior of any further use of the socket is not well-defined.
-    /// It is the caller's responsibility to ensure that the socket is no longer
-    /// used, including instructing the bindings not to use it again.
-    ///
-    /// If the socket is no longer routable but the socket's unroutable behavior
-    /// is [`UnroutableBehavior::StayOpen`], then the socket remains open, and
-    /// `apply_update` returns `Ok`. So long as the socket is unroutable, calls
-    /// to [`BufferIpSocketContext::send_ip_packet`] will fail.
-    fn apply_update(
-        &mut self,
-        update: &Self::Update,
-        meta: &Self::UpdateMeta,
-    ) -> Result<(), NoRouteError>;
 }
 
 /// An execution context defining a type of IP socket.
@@ -138,16 +98,26 @@ pub(crate) trait BufferIpSocketContext<I: Ip, B: BufferMut>: IpSocketContext<I> 
 /// What should a socket do when it becomes unroutable?
 ///
 /// `UnroutableBehavior` describes how a socket is configured to behave if it
-/// becomes unroutable.
+/// becomes unroutable. In particular, this affects the behavior of
+/// [`Socket::apply_update`].
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[allow(unused)]
 pub(crate) enum UnroutableBehavior {
-    /// The socket should stay open. Attempting to send a packet while the
-    /// socket is unroutable will return an error on a per-packet basis. If the
-    /// socket later becomes routable again, these operations will succeed
-    /// again.
+    /// The socket should stay open.
+    ///
+    /// When a call to [`Socket::apply_update`] results in the socket becoming
+    /// unroutable, the socket will remain open, and `apply_update` will return
+    /// `Ok`.
+    ///
+    /// So long as the socket is unroutable, attempting to send packets will
+    /// fail on a per-packet basis. If the socket later becomes routable again,
+    /// these operations will succeed again.
     StayOpen,
     /// The socket should close.
+    ///
+    /// When a call to [`Socket::apply_update`] results in the socket becoming
+    /// unroutable, the socket will be closed - `apply_update` will return
+    /// `Err`.
     Close,
 }
 
@@ -268,17 +238,10 @@ impl<I: IpExt> IpSockUpdate<I> {
     }
 }
 
-impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
+impl<I: IpExt, D> Socket for IpSock<I, D> {
     type Update = IpSockUpdate<I>;
     type UpdateMeta = ForwardingTable<I, D>;
-
-    fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
-        &self.local_ip
-    }
-
-    fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
-        &self.remote_ip
-    }
+    type UpdateError = NoRouteError;
 
     fn apply_update(
         &mut self,
@@ -292,6 +255,16 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
         // should allow us to continue testing Netstack3 until we implement this
         // method.
         unimplemented!()
+    }
+}
+
+impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
+    fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
+        &self.local_ip
+    }
+
+    fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
+        &self.remote_ip
     }
 }
 
@@ -671,21 +644,14 @@ pub(crate) mod testutil {
         _marker: PhantomData<I>,
     }
 
-    impl<I: Ip> IpSocket<I> for DummyIpSocket<I::Addr> {
-        type Update = DummyIpSocketUpdate<I>;
+    impl<A: IpAddress> Socket for DummyIpSocket<A> {
+        type Update = DummyIpSocketUpdate<A::Version>;
         type UpdateMeta = ();
-
-        fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
-            &self.local_ip
-        }
-
-        fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
-            &self.remote_ip
-        }
+        type UpdateError = NoRouteError;
 
         fn apply_update(
             &mut self,
-            update: &DummyIpSocketUpdate<I>,
+            update: &DummyIpSocketUpdate<A::Version>,
             _meta: &(),
         ) -> Result<(), NoRouteError> {
             if !update.routable && self.unroutable_behavior == UnroutableBehavior::Close {
@@ -693,6 +659,16 @@ pub(crate) mod testutil {
             }
             self.routable = update.routable;
             Ok(())
+        }
+    }
+
+    impl<I: Ip> IpSocket<I> for DummyIpSocket<I::Addr> {
+        fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
+            &self.local_ip
+        }
+
+        fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
+            &self.remote_ip
         }
     }
 

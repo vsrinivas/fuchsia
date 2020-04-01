@@ -29,6 +29,7 @@ use crate::ip::{
     BufferIpTransportContext, IpDeviceIdContext, IpExt, IpProto, IpTransportContext,
     IpVersionMarker, TransportReceiveError, IPV6_MIN_MTU,
 };
+use crate::socket::Socket;
 use crate::transport::ConnAddrMap;
 use crate::wire::icmp::{
     self as wire_icmp, peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage,
@@ -253,7 +254,7 @@ impl<I: Ip> From<IcmpConnId<I>> for usize {
 /// - namely, those contained in ICMPv4 sockets.
 pub(super) fn apply_ipv4_socket_update<C: Icmpv4SocketContext>(
     ctx: &mut C,
-    update: <C::IpSocket as IpSocket<Ipv4>>::Update,
+    update: <C::IpSocket as Socket>::Update,
 ) {
     let (state, meta) = ctx.get_state_and_update_meta();
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
@@ -261,13 +262,10 @@ pub(super) fn apply_ipv4_socket_update<C: Icmpv4SocketContext>(
     let closed_conns = state
         .inner
         .conns
-        .update_retain(|conn| match conn.ip.apply_update(&update, meta) {
-            Ok(()) => true,
-            Err(NoRouteError) => false,
-        })
+        .update_retain(|conn| conn.ip.apply_update(&update, meta))
         .collect::<Vec<_>>();
-    for (id, _conn) in closed_conns {
-        ctx.close_icmp_connection(IcmpConnId::new(id), NoRouteError);
+    for (id, _conn, err) in closed_conns {
+        ctx.close_icmp_connection(IcmpConnId::new(id), err);
     }
 }
 
@@ -275,7 +273,7 @@ pub(super) fn apply_ipv4_socket_update<C: Icmpv4SocketContext>(
 /// - namely, those contained in ICMPv6 sockets.
 pub(super) fn apply_ipv6_socket_update<C: Icmpv6SocketContext>(
     ctx: &mut C,
-    update: <C::IpSocket as IpSocket<Ipv6>>::Update,
+    update: <C::IpSocket as Socket>::Update,
 ) {
     let (state, meta) = ctx.get_state_and_update_meta();
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
@@ -283,13 +281,10 @@ pub(super) fn apply_ipv6_socket_update<C: Icmpv6SocketContext>(
     let closed_conns = state
         .inner
         .conns
-        .update_retain(|conn| match conn.ip.apply_update(&update, meta) {
-            Ok(()) => true,
-            Err(NoRouteError) => false,
-        })
+        .update_retain(|conn| conn.ip.apply_update(&update, meta))
         .collect::<Vec<_>>();
-    for (id, _conn) in closed_conns {
-        ctx.close_icmp_connection(IcmpConnId::new(id), NoRouteError);
+    for (id, _conn, err) in closed_conns {
+        ctx.close_icmp_connection(IcmpConnId::new(id), err);
     }
 }
 
@@ -401,10 +396,7 @@ pub(crate) trait Icmpv4SocketContext:
     /// update at the same time.
     fn get_state_and_update_meta(
         &mut self,
-    ) -> (
-        &mut Icmpv4State<Self::Instant, Self::IpSocket>,
-        &<Self::IpSocket as IpSocket<Ipv4>>::UpdateMeta,
-    );
+    ) -> (&mut Icmpv4State<Self::Instant, Self::IpSocket>, &<Self::IpSocket as Socket>::UpdateMeta);
 }
 
 /// The execution context for ICMPv6 sockets.
@@ -422,10 +414,7 @@ pub(crate) trait Icmpv6SocketContext:
     /// update at the same time.
     fn get_state_and_update_meta(
         &mut self,
-    ) -> (
-        &mut Icmpv6State<Self::Instant, Self::IpSocket>,
-        &<Self::IpSocket as IpSocket<Ipv6>>::UpdateMeta,
-    );
+    ) -> (&mut Icmpv6State<Self::Instant, Self::IpSocket>, &<Self::IpSocket as Socket>::UpdateMeta);
 }
 
 impl<D: EventDispatcher> IcmpSocketContext<Ipv4> for Context<D> {

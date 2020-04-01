@@ -347,41 +347,42 @@ impl<T> IdMap<T> {
     }
 
     /// Update the elements of the map in-place, retaining only the elements for
-    /// which `f` returns true.
+    /// which `f` returns `Ok`.
     ///
-    /// `update_return` invokes `f` on each element of the map, and removes from
-    /// the map those elements for which `f` returns false. The return value is
-    /// an iterator over the removed elements.
-    ///
-    /// WARNING: The mutation will only occur when the returned iterator is
-    /// executed. Simply calling `update_retain` and then discarding the return
-    /// value will do nothing!
-    pub fn update_retain<'a, F: 'a + FnMut(&mut T) -> bool>(
+    /// `update_return` returns an iterator that invokes `f` on each element of
+    /// the map, and removes from the map those elements for which `f` returns
+    /// `Err`. The returned iterator iterates over the removed elements, each
+    /// paired with the error that `f` returned that caused it to be removed.
+    /// The removal only happens as the iterator is executed, so calling
+    /// `update_retain` and not executing the returned iterator will do nothing.
+    pub fn update_retain<'a, E: 'a, F: 'a + FnMut(&mut T) -> Result<(), E>>(
         &'a mut self,
         mut f: F,
-    ) -> impl 'a + Iterator<Item = (Key, T)>
+    ) -> impl 'a + Iterator<Item = (Key, T, E)>
     where
         T: 'a,
     {
         (0..self.data.len()).filter_map(move |k| {
             let ret = if let IdMapEntry::Allocated(t) = self.data.get_mut(k).unwrap() {
-                if !f(t) {
-                    // Note the use of `remove_inner` rather than `remove` here.
-                    // `remove` calls `self.compress()`, which is an O(n)
-                    // operation. Instead, we postpone that operation and
-                    // perform it once during the last iteration so that the
-                    // overall complexity is O(n) rather than O(n^2).
-                    //
-                    // TODO(joshlf): Could we improve the performance here by
-                    // doing something smarter than just calling `remove_inner`?
-                    // E.g., perhaps we could build up a separate linked list
-                    // that we only insert into the existing free list once at
-                    // the end? That there is a performance issue here at all is
-                    // pure speculation, and will need to be measured to
-                    // determine whether such an optimization is worth it.
-                    Some((k, self.remove_inner(k).unwrap()))
-                } else {
-                    None
+                match f(t) {
+                    Ok(()) => None,
+                    Err(err) => {
+                        // Note the use of `remove_inner` rather than `remove`
+                        // here. `remove` calls `self.compress()`, which is an
+                        // O(n) operation. Instead, we postpone that operation
+                        // and perform it once during the last iteration so that
+                        // the overall complexity is O(n) rather than O(n^2).
+                        //
+                        // TODO(joshlf): Could we improve the performance here
+                        // by doing something smarter than just calling
+                        // `remove_inner`? E.g., perhaps we could build up a
+                        // separate linked list that we only insert into the
+                        // existing free list once at the end? That there is a
+                        // performance issue here at all is pure speculation,
+                        // and will need to be measured to determine whether
+                        // such an optimization is worth it.
+                        Some((k, self.remove_inner(k).unwrap(), err))
+                    }
                 }
             } else {
                 None
@@ -836,13 +837,14 @@ mod tests {
 
         let old_map = map.clone();
 
-        // Keep only the even entries, and double the rest.
+        // Keep only the even entries, and double the rest. For the rejected
+        // entries, return their square.
         let f = |x: &mut usize| {
             if *x % 2 == 0 {
-                false
+                Err((*x) * (*x))
             } else {
                 *x *= 2;
-                true
+                Ok(())
             }
         };
 
@@ -856,7 +858,7 @@ mod tests {
         let taken: Vec<_> = map.update_retain(f).collect();
         let remaining: Vec<_> = map.iter().map(|(key, entry)| (key, entry.clone())).collect();
 
-        assert_eq!(taken.as_slice(), [(0, 0), (2, 2), (4, 4), (6, 6)]);
+        assert_eq!(taken.as_slice(), [(0, 0, 0), (2, 2, 4), (4, 4, 16), (6, 6, 36)]);
         assert_eq!(remaining.as_slice(), [(1, 2), (3, 6), (5, 10), (7, 14)]);
 
         // Second, test that the underlying vector is compressed after the
@@ -878,8 +880,8 @@ mod tests {
             ]
         );
 
-        let taken: Vec<_> = map.update_retain(|x| *x < 10).collect();
-        assert_eq!(taken, [(5, 10), (7, 14)]);
+        let taken: Vec<_> = map.update_retain(|x| if *x < 10 { Ok(()) } else { Err(()) }).collect();
+        assert_eq!(taken, [(5, 10, ()), (7, 14, ())]);
 
         // Make sure that the underlying vector has been compressed.
         assert_eq!(map.data, [free_tail(2), Allocated(2), free_head(0), Allocated(6),]);
