@@ -91,6 +91,14 @@
       "to": [ "#appmgr" ],
     },
     {
+      "protocol": [
+        "/svc/fuchsia.logger.LogSink",
+      ],
+      "from": "#appmgr",
+      "to": [ "#test_manager" ],
+      "dependency": "weak_for_migration",
+    },
+    {
       "directory": "/config/data",
       "subdir": "fonts",
       "from": "realm",
