@@ -98,7 +98,7 @@ zbi_input("integration-test-deps") {
     # requesting libdriver.so from the bootsvc loader service.
     # This could possibly be smaller, but seems pretty reasonable.
     "//build/unification/zbi:bin.device-name-provider-zbi",
-    "//build/unification/zbi:bin.miscsvc-zbi",
+    "//zircon/system/core/miscsvc",
     "//build/unification/zbi:bin.netsvc-zbi",
     "//build/unification/zbi:bin.pwrbtn-monitor-zbi",
     "//build/unification/zbi:bin.svchost-zbi",

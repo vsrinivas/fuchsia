@@ -78,7 +78,6 @@ group("zbi") {
 # Artifacts imported from the ZN build which may be added to ZBI tests.
 
 zbiables = [
-  "bin.miscsvc",
   "bin.netsvc",
   "bin.device-name-provider",
   "bin.pwrbtn-monitor",
