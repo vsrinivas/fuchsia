@@ -75,13 +75,40 @@ rustc_binary("bin") {
   ]
 }
 
-# TODO(jwing): convert to v2 tests.
 test_package("remote-control-lib-tests") {
-  deps = [ ":lib_test" ]
+  deps = [
+    ":lib_test",
+    "//src/developer/remote-control/testing/mock-sys-launcher:mock-sys-launcher-bin",
+    "//src/sys/test_adapters/rust",
+  ]
+  meta = [
+    {
+      path = rebase_path("testing/mock-sys-launcher/meta/mock_sys_launcher.cml")
+      dest = "mock_sys_launcher.cm"
+    },
+    {
+      path = rebase_path("meta/test_driver.cml")
+      dest = "test_driver.cm"
+    },
+  ]
 
-  tests = [
+  binaries = [
+    {
+      # TODO: Remove once tests can use a test runner
+      name = "rust_test_adapter"
+    },
+    {
+      name = "mock_sys_launcher"
+    },
     {
       name = "remote_control_lib_test"
+    },
+  ]
+
+  v2_tests = [
+    {
+      name = "remote_control_lib_test"
+      environments = basic_envs
     },
   ]
 }

@@ -428,7 +428,7 @@ mod tests {
 
         let _ = rcs_proxy
             .start_component(
-                "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
+                "fuchsia-pkg://fuchsia.com/remote-control#meta/spawn_hello_world.cm",
                 &mut std::iter::empty::<_>(),
                 sout,
                 serr,
@@ -439,8 +439,8 @@ mod tests {
             .unwrap();
 
         verify_exit_code(proxy, 0).await;
-        verify_socket_content(cout, "Hello, world!\n");
-        verify_socket_content(cerr, "");
+        verify_socket_content(cout, "Hello, world!");
+        verify_socket_content(cerr, "Hello, stderr!");
 
         Ok(())
     }
@@ -456,7 +456,7 @@ mod tests {
 
         let _ = rcs_proxy
             .start_component(
-                "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cmx",
+                "fuchsia-pkg://fuchsia.com/remote-control#meta/spawn_and_kill.cm",
                 &mut std::iter::empty::<_>(),
                 sout,
                 serr,
@@ -482,7 +482,7 @@ mod tests {
 
         let _start_response = rcs_proxy
             .start_component(
-                "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/this_package_doesnt_exist.cmx",
+                "fuchsia-pkg://fuchsia.com/remote-control#meta/non_existent.cm",
                 &mut std::iter::empty::<_>(),
                 sout,
                 serr,

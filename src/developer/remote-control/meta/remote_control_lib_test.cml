@@ -1,0 +1,41 @@
+{
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.Suite",
+            "from": "#test-driver",
+        },
+    ],
+    "offer": [
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [ "#sys-launcher", "#test-driver" ],
+        },
+        {
+            "protocol": [
+                "/svc/fuchsia.logger.LogSink",
+
+                // This is required for the rust test adapter.
+                "/svc/fuchsia.process.Launcher",
+            ],
+            "from": "realm",
+            "to": [ "#test-driver" ],
+        },
+        {
+            "protocol": "/svc/fuchsia.sys.Launcher",
+            "from": "#sys-launcher",
+            "to": [ "#test-driver" ],
+        },
+    ],
+    "children": [
+        {
+            "name": "test-driver",
+            "url": "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/test_driver.cm",
+        },
+        {
+            "name": "sys-launcher",
+            "url":
+                "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/mock_sys_launcher.cm",
+        },
+    ],
+}

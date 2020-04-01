@@ -1,0 +1,30 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [
+            "/pkg/test/remote_control_lib_test",
+        ],
+    },
+
+    "use": [
+        {
+            "runner": "elf",
+        },
+        {
+            "protocol":[
+                "/svc/fuchsia.sys.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+
+                // This is required for the rust test adapter.
+                "/svc/fuchsia.process.Launcher",
+            ],
+            from: "realm",
+        },
+    ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.Suite",
+            "from": "self",
+        },
+    ],
+}

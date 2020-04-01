@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "bin/mock_sys_launcher"
+    },
+    "use": [
+        { "runner": "elf" },
+        {
+            "protocol": [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+            from: "realm",
+        },
+    ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.sys.Launcher",
+            "from": "self",
+        },
+    ],
+}
