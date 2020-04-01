@@ -1269,7 +1269,7 @@ void thread_secondary_cpu_init_early(Thread* t) {
 void thread_secondary_cpu_entry() {
   mp_set_curr_cpu_active(true);
 
-  Dpc::InitForCpu();
+  DpcSystem::InitForCpu();
 
   // Exit from our bootstrap thread, and enter the scheduler on this cpu
   Thread::Current::Exit(0);

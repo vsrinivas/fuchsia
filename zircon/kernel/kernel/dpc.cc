@@ -66,7 +66,12 @@ zx_status_t Dpc::QueueThreadLocked() {
   return ZX_OK;
 }
 
-zx_status_t Dpc::Shutdown(uint cpu_id, zx_time_t deadline) {
+void Dpc::Invoke() {
+  if (func_)
+    func_(this);
+}
+
+zx_status_t DpcSystem::Shutdown(uint cpu_id, zx_time_t deadline) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
   spin_lock_saved_state_t state;
@@ -91,7 +96,7 @@ zx_status_t Dpc::Shutdown(uint cpu_id, zx_time_t deadline) {
   return t->Join(nullptr, deadline);
 }
 
-void Dpc::ShutdownTransitionOffCpu(uint cpu_id) {
+void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
   spin_lock_saved_state_t state;
@@ -120,9 +125,7 @@ void Dpc::ShutdownTransitionOffCpu(uint cpu_id) {
   spin_unlock_irqrestore(&dpc_lock, state);
 }
 
-int Dpc::WorkerThread(void* arg) {
-  Dpc dpc_local;
-
+int DpcSystem::WorkerThread(void* arg) {
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, SPIN_LOCK_FLAG_INTERRUPTS);
 
@@ -150,23 +153,23 @@ int Dpc::WorkerThread(void* arg) {
     // if the list is now empty, unsignal the event so we block until it is
     if (!dpc) {
       event_unsignal(event);
-      dpc_local.func_ = nullptr;
-    } else {
-      dpc_local = *dpc;
+      spin_unlock_irqrestore(&dpc_lock, state);
+      continue;
     }
+
+    // Copy the dpc to the stack.
+    Dpc dpc_local = *dpc;
 
     spin_unlock_irqrestore(&dpc_lock, state);
 
-    // call the dpc
-    if (dpc_local.func_) {
-      dpc_local.func_(&dpc_local);
-    }
+    // Call the dpc.
+    dpc_local.Invoke();
   }
 
   return 0;
 }
 
-void Dpc::InitForCpu() {
+void DpcSystem::InitForCpu() {
   struct percpu* cpu = get_local_percpu();
   uint cpu_num = arch_curr_cpu_num();
 
@@ -180,7 +183,7 @@ void Dpc::InitForCpu() {
 
   char name[10];
   snprintf(name, sizeof(name), "dpc-%u", cpu_num);
-  cpu->dpc_thread = Thread::Create(name, &Dpc::WorkerThread, nullptr, DPC_THREAD_PRIORITY);
+  cpu->dpc_thread = Thread::Create(name, &DpcSystem::WorkerThread, nullptr, DPC_THREAD_PRIORITY);
   DEBUG_ASSERT(cpu->dpc_thread != nullptr);
   cpu->dpc_thread->SetCpuAffinity(cpu_num_to_mask(cpu_num));
 
@@ -196,7 +199,7 @@ void Dpc::InitForCpu() {
 
 static void dpc_init(unsigned int level) {
   // Initialize dpc for the main CPU.
-  Dpc::InitForCpu();
+  DpcSystem::InitForCpu();
 }
 
 LK_INIT_HOOK(dpc, dpc_init, LK_INIT_LEVEL_THREADING)

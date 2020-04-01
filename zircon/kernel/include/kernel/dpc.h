@@ -14,6 +14,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <kernel/thread.h>
 
+struct DpcSystem;
+
 // Deferred Procedure Calls - queue callback to invoke on the current CPU in thread context.
 // DPCs are executed with interrupts enabled; DPCs do not ever migrate CPUs while executing.
 // A DPC may not execute on the original current CPU if it is hotunplugged/offlined.
@@ -54,6 +56,17 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
   // Returns ZX_ERR_ALREADY_EXISTS if |this| is already queued.
   zx_status_t QueueThreadLocked() TA_REQ(thread_lock);
 
+ private:
+  // The DpcSystem, or more specifically, its worker threads, are the only thing to actually call
+  // the functions queued onto Dpcs.
+  friend struct DpcSystem;
+  void Invoke();
+
+  Func* func_;
+  void* arg_;
+};
+
+struct DpcSystem {
   // Initializes the DPC subsystem for the current cpu.
   static void InitForCpu();
 
@@ -90,9 +103,6 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
 
  private:
   static int WorkerThread(void* arg);
-
-  Func* func_;
-  void* arg_;
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_DPC_H_

@@ -301,7 +301,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
 
   // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
   // nothing is running on it, we'll migrate its queued DPCs to another CPU.
-  zx_status_t status = Dpc::Shutdown(cpu_id, deadline);
+  zx_status_t status = DpcSystem::Shutdown(cpu_id, deadline);
   if (status != ZX_OK) {
     return status;
   }
@@ -352,7 +352,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   TimerQueue::TransitionOffCpu(cpu_id);
 
   // Move the CPU's queued DPCs to the current CPU.
-  Dpc::ShutdownTransitionOffCpu(cpu_id);
+  DpcSystem::ShutdownTransitionOffCpu(cpu_id);
 
   return platform_mp_cpu_unplug(cpu_id);
 }
