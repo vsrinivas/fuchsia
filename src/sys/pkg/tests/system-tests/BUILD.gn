@@ -87,6 +87,8 @@ if (is_linux || is_mac) {
 
   system_test_upgrade_suite("nuc-release-upgrade") {
     release_builder = "fuchsia/global.ci/fuchsia-x64-release-build_only"
+    # FIXME(fxb/46175) This can be removed once NUCs support `dm reboot-recovery`.
+    ota_to_recovery = true
     environments = [
       {
         dimensions = {

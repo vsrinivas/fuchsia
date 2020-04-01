@@ -19,6 +19,10 @@ _environment_service_account =
 #     `fuchsia/ci/fuchsia-x64-release`.
 #   - Type: string
 #
+#   ota_to_recovery
+#   - Optional: OTA to recovery instead of rebooting to recovery. Default false.
+#   - Type: boolean
+#
 #   environments
 #   - Required: What environments this test should target.
 #   - Type: see //build/testing/test_spec.gni for more details. Note that
@@ -100,6 +104,10 @@ template("system_test_upgrade_suite") {
         "-cycle-count",
         invoker.cycle_count,
       ]
+    }
+
+    if (defined(invoker.ota_to_recovery) && invoker.ota_to_recovery) {
+      _command += [ "-ota-to-recovery" ]
     }
 
     test_spec(_spec_target_name) {
