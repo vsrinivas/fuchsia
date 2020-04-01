@@ -6,6 +6,7 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/unification/images/migrated_manifest.gni")
 import("//build/unification/zbi/tests.gni")
+import("//build/unification/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
 # Composes a test zbi out of Zircon artifacts.
@@ -28,48 +29,62 @@ import("//zircon/public/gn/test/zbi_test_success.gni")
 #     See zbi.gni.
 template("migrated_zbi_test") {
   main_target = target_name
-  arg_target = "${target_name}_args"
-  rsp_target = "${target_name}_manifest"
+  input_target = "${target_name}_input"
+  rsp_target = "${target_name}_rsp"
   zbi_target = "${target_name}_zbi"
 
   group_deps = []
 
   rsp_file = "$target_gen_dir/$target_name.zbi.rsp"
 
-  zbi_args = []
+  entries = []
   if (defined(invoker.args)) {
-    zbi_args += invoker.args
+    entries += invoker.args
   }
-  zbi_args += [ "userboot.shutdown" ]
+  entries += [ "userboot.shutdown" ]
 
-  group(arg_target) {
-    metadata = {
-      migrated_zbi_barrier = []
-      migrated_zbi_input_args = [ "--type=cmdline" ]
-      foreach(arg, zbi_args) {
-        migrated_zbi_input_args += [ "--entry=$arg" ]
-      }
+  zbi_input(input_target) {
+    forward_variables_from(invoker, [ "deps" ])
+    testonly = true
+    type = "cmdline"
+    args = []
+    foreach(entry, entries) {
+      args += [ "--entry=$entry" ]
     }
   }
 
   generated_file(rsp_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = invoker.deps + [ ":$arg_target" ]
+    testonly = true
+    deps = [ ":$input_target" ]
     data_keys = [ "migrated_zbi_input_args" ]
     walk_keys = [ "migrated_zbi_barrier" ]
     output_conversion = "list lines"
     outputs = [ rsp_file ]
   }
 
-  output_file = "$target_out_dir/$target_name.zbi"
+  output_file = target_name
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  }
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".zbi"
+  }
+  if (defined(invoker.output_dir)) {
+    output_file = "${invoker.output_dir}/$output_file"
+  } else {
+    output_file = "$target_out_dir/$output_file"
+  }
+
   zbi_tool = "$zircon_tools_dir/zbi"
 
   action(zbi_target) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
+    forward_variables_from(invoker, [ "visibility" ])
+
+    testonly = true
 
     script = "//build/unification/zbi/run_zbi.py"
 
@@ -135,11 +150,9 @@ template("migrated_zbi_test") {
     reference_target = "${target_name}_reference"
 
     action(reference_target) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
+      forward_variables_from(invoker, [ "visibility" ])
+
+      testonly = true
 
       script = "//build/unification/zbi/compare_zbis.py"
 
@@ -180,9 +193,10 @@ template("migrated_zbi_test") {
     forward_variables_from(invoker,
                            [
                              "assert_no_deps",
-                             "testonly",
                              "visibility",
                            ])
+
+    testonly = true
 
     public_deps = group_deps
 

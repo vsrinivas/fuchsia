@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zbi/migrated_zbi_content.gni")
-
 # Generates a manifest for a given target recently migrated from the ZN build.
 #
 # The output of this action is a manifest file that replaces the one supplied
@@ -13,19 +11,12 @@ import("//build/unification/zbi/migrated_zbi_content.gni")
 #
 # Parameters
 #
-#   deps (required)
+#   deps (optional)
 #     [list of labels] The targets to generate a manifest for.
-#
-#   zbi (optional)
-#     [boolean] Whether to allow manifest contents to be added to ZBI files.
-#     Defaults to false.
 #
 #   testonly (optional)
 #     Same as for any GN target.
 template("migrated_manifest") {
-  assert(defined(invoker.deps) && invoker.deps != [],
-         "Need deps to generate a manifest for")
-
   if (is_fuchsia) {
     main_target = target_name
     generate_target = "${target_name}_generate"
@@ -54,6 +45,13 @@ template("migrated_manifest") {
 
     # Resolve file references in the gathered metadata.
     action(main_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                               "visibility",
+                             ])
+
       script = "//build/unification/images/unroll_manifest.py"
 
       inputs = [ intermediate_file ]
@@ -66,16 +64,21 @@ template("migrated_manifest") {
         rebase_path(manifest_file, root_build_dir),
       ]
 
-      deps = [ ":$generate_target" ]
-    }
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":$generate_target" ]
 
-    if (defined(invoker.zbi) && invoker.zbi) {
-      migrated_zbi_content("$target_name-zbi") {
-        deps = [ ":$main_target" ]
-        manifest = manifest_file
+      metadata = {
+        migrated_manifest_barrier = []
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
       }
     }
   } else {
+    not_needed(invoker, "*")
+
     # This template does nothing on non-Fuchsia platforms.
     group(target_name) {
     }

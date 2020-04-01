@@ -1,0 +1,129 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/images/migrated_manifest.gni")
+
+# Define inputs to a dependent zbi() target.
+#
+# The target generates a manifest that collects any manifest_lines from its
+# dependencies' metadata, e.g. contributed by resource() targets.  It
+# contributes metadata that will drive zbi() to use this manifest, as well
+# as any non-BOOTFS inputs given via $sources and $args.
+#
+# resource() targets in the dependencies explicitly contribute to the
+# manifest.  Many other target types such as executable() and
+# shared_library() that have a $install_path parameter (even if defaulted)
+# implicitly contribute to the manifest.
+#
+# It's not necessary to use an explicit zbi_input() target just to collect
+# files into the BOOTFS of a zbi().  Use zbi_input() explicitly to get the
+# manifest file as an explicit build artifact, to apply a target directory
+# prefix to the manfiest file, or to include other types.
+#
+# Parameters
+#
+#   data_deps, deps
+#     Optional: Dependencies examined for metadata.  Any other zbi_input()
+#     or zbi() targets in this dependency graph will flow into any zbi()
+#     target that depends on this one.  Any manifest metadata will be collected
+#     here into a manifest file; see manifest_file().
+#     Type: list(label)
+#
+#   prefix
+#     Optional: Directory prefix prepended to the target path in each
+#     manifest entry.  This is normalized when nonempty so it need not end
+#     with a `/`.
+#     Type: string
+#     Default: ""
+#
+#   type
+#     Optional: The input type for any $sources or $args, as in the
+#     `--type` switch to the `zbi` tool.  See `zbi --help` for the set of
+#     available types.  A value of "" uses `zbi --files`.
+#     Type: string
+#     Default: ""
+#
+#   sources
+#     Optional: Files to put into the ZBI.  $type determines what kinds of
+#     files these can be and how their contents are used.  If $type is ""
+#     (the default), then these can be manifest files or directories.
+#     Type: list(file)
+#
+#   args
+#     Optional: Additional arguments to the `zbi` tool.  These are switches
+#     that will precede the $sources on the `zbi` command line, so they
+#     can include e.g. `--prefix=...` to affect contents of manifest file.
+#     The most common use is "--entry=..." to provide literal contents right
+#     in the GN file (e.g. for `type = "cmdline"`).
+#
+#   See manifest_file() for additional parameters.  The manifest file
+#   produced from those parameters contributes to the BOOTFS (as modified
+#   by $prefix).
+#
+template("zbi_input") {
+  manifest_file = "$target_out_dir/$target_name.unification.manifest"
+
+  migrated_manifest(target_name) {
+    prefix = ""
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "args",
+                             "metadata",
+                             "type",
+                             "sources",
+                           ])
+
+    metadata = {
+      migrated_zbi_barrier = []
+      migrated_zbi_input_args = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # When a zbi() target depends on this zbi_input() target, it includes
+      # other zbi_input() targets in this target's deps, but not data_deps.
+      if (defined(invoker.deps)) {
+        migrated_zbi_barrier += invoker.deps
+      }
+
+      # An explicit type applies only to $sources and $args.
+      if (defined(invoker.type) && invoker.type != "") {
+        migrated_zbi_input_args += [ "--type=${invoker.type}" ]
+      } else if (defined(invoker.args) || defined(invoker.sources)) {
+        migrated_zbi_input_args += [
+          # The implicit type is always --files, and needs to be reset in
+          # case the previous `zbi_input_args` list collected left a
+          # different `--type=...` as the last state.
+          "--files",
+
+          # Following $args and $sources entries shouldn't get a
+          # previously-set prefix.
+          "--prefix=",
+        ]
+      }
+
+      # Explicit $args come first, for e.g. "-u" or "-g" to affect inputs.
+      # $args may also contain "--entry=..." payloads directly.
+      if (defined(invoker.args)) {
+        migrated_zbi_input_args += invoker.args
+      }
+
+      if (defined(invoker.sources)) {
+        migrated_zbi_input_args += rebase_path(invoker.sources, root_build_dir)
+      }
+
+      # Always include the manifest generated from the deps here.  The
+      # `migrated_manifest_barrier` in migrated_manifest() will prevent zbi()
+      # from collecting `migrated_manifest_lines` that are redundant with this
+      # manifest.
+      migrated_zbi_input_args += [
+        "--prefix=$prefix",
+        "--files",
+        rebase_path(manifest_file, root_build_dir),
+      ]
+    }
+  }
+}
