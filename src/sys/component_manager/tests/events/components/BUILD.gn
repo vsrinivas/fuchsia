@@ -152,3 +152,37 @@ rustc_binary("realm_offered_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 }
+
+rustc_binary("capability_ready_root_bin") {
+  name = "capability_ready_root"
+  edition = "2018"
+  source_root = "capability_ready/root.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:maplit",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("capability_ready_child_bin") {
+  name = "capability_ready_child"
+  edition = "2018"
+  source_root = "capability_ready/child.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}

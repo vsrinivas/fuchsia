@@ -1,0 +1,22 @@
+{
+    "program": {
+        "binary": "bin/capability_ready_child",
+    },
+    "use": [
+        { "runner": "elf" }
+    ],
+    "expose": [
+      {
+        "directory": "/foo",
+        "rights": [ "r*" ],
+        "from": "self",
+        "to": "framework",
+      },
+      {
+        "directory": "/bar",
+        "rights": [ "r*" ],
+        "from": "self",
+        "to": "framework",
+      }
+    ],
+}

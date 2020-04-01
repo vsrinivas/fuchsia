@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
-    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
     fuchsia_component::client::{connect_channel_to_service, connect_to_service},
     futures::{
         channel::oneshot,
@@ -666,7 +666,6 @@ impl Drop for EventLog {
 ///   * protocol -> If a payload contains protocols, describe the additional params:
 ///     * name -> FIDL name for the protocol
 ///     * ty -> Rust type for the protocol proxy
-///     * trait_name -> Rust name for the trait implementing this protocol
 macro_rules! create_event {
     (
         event_type: $event_type:ident,
@@ -682,7 +681,6 @@ macro_rules! create_event {
                 {
                     name: $protocol_name:ident,
                     ty: $protocol_ty:ty,
-                    trait_name: $protocol_trait_name:ident,
                 }
             )*},
         }
@@ -690,7 +688,7 @@ macro_rules! create_event {
         pub struct $event_type {
             target_moniker: String,
             handler: Option<fevents::HandlerProxy>,
-            $($protocol_name: $protocol_ty,)*
+            $(pub $protocol_name: $protocol_ty,)*
             $(pub $data_name: $data_ty,)*
         }
 
@@ -748,14 +746,6 @@ macro_rules! create_event {
                 self.handler
             }
         }
-
-        $(
-            impl $protocol_trait_name for $event_type {
-                fn protocol_proxy(&self) -> $protocol_ty {
-                    self.$protocol_name.clone()
-                }
-            }
-        )*
     };
     ($event_type:ident) => {
         pub struct $event_type {
@@ -811,6 +801,24 @@ create_event!(Resolved);
 create_event!(Started);
 create_event!(Stopped);
 create_event!(
+    event_type: CapabilityReady,
+    payload: {
+        name: capability_ready,
+        data: {
+            {
+                name: path,
+                ty: String,
+            }
+        },
+        protocols: {
+            {
+                name: node,
+                ty: fio::NodeProxy,
+            }
+        },
+    }
+);
+create_event!(
     event_type: CapabilityRouted,
     payload: {
         name: routing_payload,
@@ -828,8 +836,13 @@ create_event!(
             {
                 name: routing_protocol,
                 ty: fevents::RoutingProtocolProxy,
-                trait_name: RoutingProtocol,
             }
         },
     }
 );
+
+impl RoutingProtocol for CapabilityRouted {
+    fn protocol_proxy(&self) -> fevents::RoutingProtocolProxy {
+        self.routing_protocol.clone()
+    }
+}

@@ -5,10 +5,11 @@
 library fuchsia.test.events;
 
 using fuchsia.component;
+using fuchsia.io;
 
 /// The maximum number of event types that a receiver can listen to.
 /// This capacity should match the actual number of event types.
-const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 9;
+const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 8;
 
 /// The maximum string length of a capability ID.
 /// This value is currently set arbitrarily.
@@ -18,36 +19,39 @@ const uint64 MAX_CAPABILITY_ID_LENGTH = 50;
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
 enum EventType {
+    /// A capability exposed to the framework by a component is available.
+    CAPABILITY_READY = 1;
+
     /// A capability is being requested by a component and its routing
     /// has also been determined.
     /// The event propagation system is used to supply the capability being requested.
-    CAPABILITY_ROUTED = 1;
+    CAPABILITY_ROUTED = 2;
 
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    DESTROYED = 2;
+    DESTROYED = 3;
 
     /// A component instance was discovered. This is the first stage in the lifecycle
     /// of components. Dispatched for dynamic children when they're created, for static
     /// children when their parent is resolved, and for the root when the component manager
     /// starts.
-    DISCOVERED = 3;
+    DISCOVERED = 4;
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
-    MARKED_FOR_DESTRUCTION = 4;
+    MARKED_FOR_DESTRUCTION = 5;
 
     /// An instance's declaration was resolved successfully for the first time.
-    RESOLVED = 5;
+    RESOLVED = 6;
 
     /// This instance has started, according to component manager. However, if this is an
     /// executable component, the runner has further work to do to launch the component.
-    STARTED = 6;
+    STARTED = 7;
 
     /// An instance was stopped successfully.
     /// This event must occur before Destroyed.
-    STOPPED = 7;
+    STOPPED = 8;
 };
 
 /// Describes the source of a routed capability.
@@ -74,8 +78,20 @@ table ComponentCapability {
 
 /// Encapsulates additional data/protocols for some event types.
 table EventPayload {
+    /// Payload for CapabilityReady events
+    1: CapabilityReadyPayload capability_ready;
+
     /// Payload for CapabilityRouted events
-    1: RoutingPayload routing_payload;
+    2: RoutingPayload routing_payload;
+};
+
+/// Payload for CapabilityReady events
+table CapabilityReadyPayload {
+    /// The path of the capability.
+    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+
+    /// Channel to the node exposed by the event source at `path`.
+    2: fuchsia.io.Node node;
 };
 
 /// Payload for CapabilityRouted events

@@ -15,8 +15,10 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_test_events as fevents,
-    fuchsia_async as fasync, fuchsia_trace as trace, fuchsia_zircon as zx,
+    fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_io::{self as fio, NodeProxy},
+    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_trace as trace,
+    fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     log::{debug, error, warn},
     std::{path::PathBuf, sync::Arc},
@@ -81,7 +83,7 @@ async fn serve_event_stream(
         trace::duration!("component_manager", "events:fidl_get_next");
         // Create the basic Event FIDL object.
         // This will begin serving the Handler protocol asynchronously.
-        let event_fidl_object = create_event_fidl_object(event);
+        let event_fidl_object = create_event_fidl_object(event)?;
 
         if let Err(e) = listener.on_event(event_fidl_object) {
             // It's not an error for the client to drop the listener.
@@ -97,64 +99,91 @@ async fn serve_event_stream(
 fn maybe_create_event_payload(
     scope: &AbsoluteMoniker,
     event_payload: &EventPayload,
-) -> Option<fevents::EventPayload> {
+) -> Result<Option<fevents::EventPayload>, fidl::Error> {
     match event_payload {
-        EventPayload::CapabilityRouted { source, capability_provider, .. } => {
-            let routing_protocol = Some(serve_routing_protocol_async(capability_provider.clone()));
-
-            // Runners are special. They do not have a path, so their name is the capability ID.
-            let capability_id = Some(
-                if let CapabilitySource::Framework {
-                    capability: FrameworkCapability::Runner(name),
-                    ..
-                } = &source
-                {
-                    name.to_string()
-                } else if let Some(path) = source.path() {
-                    path.to_string()
-                } else {
-                    return None;
-                },
-            );
-
-            let source = Some(match source {
-                CapabilitySource::Framework { scope_moniker, .. } => {
-                    let scope_moniker =
-                        scope_moniker.as_ref().map(|a| RelativeMoniker::from_absolute(scope, &a));
-                    fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
-                        scope_moniker: scope_moniker.map(|m| m.to_string()),
-                        ..fevents::FrameworkCapability::empty()
-                    })
-                }
-                CapabilitySource::Component { realm, .. } => {
-                    let realm = realm.upgrade().ok()?;
-                    let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
-                    fevents::CapabilitySource::Component(fevents::ComponentCapability {
-                        source_moniker: Some(source_moniker.to_string()),
-                        ..fevents::ComponentCapability::empty()
-                    })
-                }
-                _ => return None,
-            });
-
-            let routing_payload =
-                Some(fevents::RoutingPayload { routing_protocol, capability_id, source });
-            Some(fevents::EventPayload { routing_payload, ..fevents::EventPayload::empty() })
+        EventPayload::CapabilityReady { path, node } => {
+            maybe_create_capability_ready_payload(path.to_string(), node)
         }
-        _ => None,
+        EventPayload::CapabilityRouted { source, capability_provider, .. } => {
+            Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
+        }
+        _ => Ok(None),
     }
+}
+
+fn maybe_create_capability_ready_payload(
+    path: String,
+    node: &NodeProxy,
+) -> Result<Option<fevents::EventPayload>, fidl::Error> {
+    let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
+    node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
+    let node_client_end = node_clone
+        .into_channel()
+        .expect("could not convert directory to channel")
+        .into_zx_channel()
+        .into();
+    let payload = fevents::CapabilityReadyPayload { path: Some(path), node: Some(node_client_end) };
+    Ok(Some(fevents::EventPayload {
+        capability_ready: Some(payload),
+        ..fevents::EventPayload::empty()
+    }))
+}
+
+fn maybe_create_capability_routed_payload(
+    scope: &AbsoluteMoniker,
+    source: &CapabilitySource,
+    capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
+) -> Option<fevents::EventPayload> {
+    let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
+
+    // Runners are special. They do not have a path, so their name is the capability ID.
+    let capability_id = Some(
+        if let CapabilitySource::Framework {
+            capability: FrameworkCapability::Runner(name), ..
+        } = &source
+        {
+            name.to_string()
+        } else if let Some(path) = source.path() {
+            path.to_string()
+        } else {
+            return None;
+        },
+    );
+
+    let source = Some(match source {
+        CapabilitySource::Framework { scope_moniker, .. } => {
+            let scope_moniker =
+                scope_moniker.as_ref().map(|a| RelativeMoniker::from_absolute(scope, &a));
+            fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
+                scope_moniker: scope_moniker.as_ref().map(|m| m.to_string()),
+                ..fevents::FrameworkCapability::empty()
+            })
+        }
+        CapabilitySource::Component { realm, .. } => {
+            let realm = realm.upgrade().ok()?;
+            let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
+            fevents::CapabilitySource::Component(fevents::ComponentCapability {
+                source_moniker: Some(source_moniker.to_string()),
+                ..fevents::ComponentCapability::empty()
+            })
+        }
+        _ => return None,
+    });
+
+    let routing_payload = Some(fevents::RoutingPayload { routing_protocol, capability_id, source });
+    Some(fevents::EventPayload { routing_payload, ..fevents::EventPayload::empty() })
 }
 
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_event_fidl_object(event: Event) -> fevents::Event {
+fn create_event_fidl_object(event: Event) -> Result<fevents::Event, fidl::Error> {
     let event_type = Some(event.event.payload.type_().into());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
-    let event_payload = maybe_create_event_payload(&event.scope_moniker, &event.event.payload);
+    let event_payload = maybe_create_event_payload(&event.scope_moniker, &event.event.payload)?;
     let handler = maybe_serve_handler_async(event);
-    fevents::Event { event_type, target_moniker, handler, event_payload }
+    Ok(fevents::Event { event_type, target_moniker, handler, event_payload })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.

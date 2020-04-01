@@ -13,7 +13,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     cm_rust::ComponentDecl,
-    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
     fidl_fuchsia_test_events as fevents, fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
     io_util,
@@ -92,11 +92,23 @@ macro_rules! events {
                 ]
             }
         }
+
+        impl EventPayload {
+            pub fn type_(&self) -> EventType {
+                match self {
+                    $(
+                        EventPayload::$name { .. } => EventType::$name,
+                    )*
+                }
+            }
+        }
     };
 }
 
 // Keep the event types listed below in alphabetical order!
 events!([
+    /// A capability exposed to the framework by a component is available.
+    (CapabilityReady, capability_ready),
     /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
     (CapabilityRouted, capability_routed),
@@ -150,6 +162,10 @@ impl HooksRegistration {
 #[derive(Clone)]
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
+    CapabilityReady {
+        path: String,
+        node: NodeProxy,
+    },
     CapabilityRouted {
         source: CapabilitySource,
         // Events are passed to hooks as immutable borrows. In order to mutate,
@@ -197,21 +213,7 @@ impl RuntimeInfo {
 // TODO(fsamuel): We should probably preserve the original error messages
 // instead of dropping them.
 fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
-    dir.and_then(|d| io_util::clone_directory(d, CLONE_FLAG_SAME_RIGHTS).ok())
-}
-
-impl EventPayload {
-    pub fn type_(&self) -> EventType {
-        match self {
-            EventPayload::CapabilityRouted { .. } => EventType::CapabilityRouted,
-            EventPayload::Destroyed => EventType::Destroyed,
-            EventPayload::Discovered { .. } => EventType::Discovered,
-            EventPayload::MarkedForDestruction => EventType::MarkedForDestruction,
-            EventPayload::Resolved { .. } => EventType::Resolved,
-            EventPayload::Started { .. } => EventType::Started,
-            EventPayload::Stopped => EventType::Stopped,
-        }
-    }
+    dir.and_then(|d| io_util::clone_directory(d, fio::CLONE_FLAG_SAME_RIGHTS).ok())
 }
 
 impl fmt::Debug for EventPayload {
@@ -219,6 +221,7 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.type_());
         match self {
+            EventPayload::CapabilityReady { path, .. } => formatter.field("path", &path).finish(),
             EventPayload::CapabilityRouted { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }

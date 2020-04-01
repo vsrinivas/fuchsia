@@ -395,6 +395,24 @@ impl ComponentDecl {
             _ => false,
         })
     }
+
+    /// Returns directories and protocol exposed from self to framework.
+    pub fn get_self_capabilities_exposed_to_framework(&self) -> Vec<ExposeDecl> {
+        // TODO(miguelfrde): also include protocols.
+        self.exposes
+            .iter()
+            .filter(|expose_decl| match expose_decl {
+                ExposeDecl::Directory(decl) => {
+                    decl.target == ExposeTarget::Framework && decl.source == ExposeSource::Self_
+                }
+                ExposeDecl::Protocol(decl) => {
+                    decl.target == ExposeTarget::Framework && decl.source == ExposeSource::Self_
+                }
+                _ => false,
+            })
+            .cloned()
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

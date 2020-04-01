@@ -17,6 +17,7 @@ pub(crate) mod actions;
 pub(crate) mod environment;
 pub(crate) mod events;
 pub(crate) mod resolver;
+pub(crate) mod rights;
 pub(crate) mod routing;
 pub(crate) mod routing_facade;
 pub(crate) mod runner;
@@ -25,7 +26,6 @@ mod addable_directory;
 mod dir_tree;
 mod exposed_dir;
 mod namespace;
-mod rights;
 mod storage;
 #[cfg(test)]
 mod tests;

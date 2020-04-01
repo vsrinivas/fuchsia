@@ -20,7 +20,7 @@ use {
     cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
@@ -234,7 +234,7 @@ impl Realm {
 
         routing::route_and_open_storage_capability(
             &UseStorageDecl::Meta,
-            MODE_TYPE_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             self,
             server_chan,
         )
@@ -933,10 +933,15 @@ async fn stop_component_internal<'a>(
 pub mod tests {
     use {
         super::*,
-        crate::model::testing::{
-            mocks::{ControlMessage, ControllerActionResponse, MockController},
-            routing_test_helpers::RoutingTest,
-            test_helpers::{self, ComponentDeclBuilder},
+        crate::model::{
+            binding::Binder,
+            hooks::EventType,
+            rights::READ_RIGHTS,
+            testing::{
+                mocks::{ControlMessage, ControllerActionResponse, MockController},
+                routing_test_helpers::RoutingTest,
+                test_helpers::{self, ComponentDeclBuilder},
+            },
         },
         fidl::endpoints,
         fuchsia_async as fasync,
@@ -1261,7 +1266,6 @@ pub mod tests {
     // the exposed dir is no longer being served.
     #[fasync::run_singlethreaded(test)]
     async fn stop_component_closes_exposed_dir() {
-        use crate::model::binding::Binder;
         let test = RoutingTest::new(
             "root",
             vec![(
@@ -1292,5 +1296,50 @@ pub mod tests {
         fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
             .await
             .expect("failed waiting for channel to close");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn notify_capability_ready() {
+        let test = RoutingTest::new(
+            "root",
+            vec![(
+                "root",
+                ComponentDeclBuilder::new()
+                    .expose(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+                        source: cm_rust::ExposeSource::Self_,
+                        source_path: "/diagnostics".try_into().expect("bad cap path"),
+                        target: cm_rust::ExposeTarget::Framework,
+                        target_path: "/diagnostics".try_into().expect("bad cap path"),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                    }))
+                    .build(),
+            )],
+        )
+        .await;
+
+        let mut event_source = test
+            .builtin_environment
+            .event_source_factory
+            .create_for_debug()
+            .await
+            .expect("create event source");
+        let mut event_stream = event_source
+            .subscribe(vec![EventType::CapabilityReady])
+            .await
+            .expect("subscribe to event stream");
+        event_source.start_component_tree().await;
+
+        let _realm = test.model.bind(&vec![].into()).await.expect("failed to bind");
+        let event =
+            event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
+
+        assert_eq!(event.target_moniker, AbsoluteMoniker::root());
+        match event.payload {
+            EventPayload::CapabilityReady { path, .. } => {
+                assert_eq!(path, "/diagnostics");
+            }
+            payload => panic!("Expected capability ready. Got: {:?}", payload),
+        }
     }
 }

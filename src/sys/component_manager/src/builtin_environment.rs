@@ -14,6 +14,7 @@ use {
             system_controller::SystemController,
             vmex::VmexService,
         },
+        capability_ready_notifier::CapabilityReadyNotifier,
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
@@ -64,6 +65,7 @@ pub struct BuiltinEnvironment {
     pub builtin_runners: HashMap<CapabilityName, Arc<BuiltinRunner>>,
     pub event_source_factory: Arc<EventSourceFactory>,
     pub stop_notifier: Arc<RootRealmStopNotifier>,
+    pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
     is_debug: bool,
 }
 
@@ -176,6 +178,11 @@ impl BuiltinEnvironment {
         let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
         model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
+        // Set up the capability ready notifier.
+        let capability_ready_notifier =
+            Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(model)));
+        model.root_realm.hooks.install(capability_ready_notifier.hooks()).await;
+
         Ok(BuiltinEnvironment {
             boot_args,
             process_launcher,
@@ -193,6 +200,7 @@ impl BuiltinEnvironment {
             builtin_runners: builtin_runner_hooks,
             event_source_factory,
             stop_notifier,
+            capability_ready_notifier,
             is_debug: args.debug,
         })
     }

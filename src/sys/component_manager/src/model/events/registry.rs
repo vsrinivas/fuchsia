@@ -197,15 +197,7 @@ impl EventRegistry {
             // However, a task will only receive events to which it subscribed.
             HooksRegistration::new(
                 "EventRegistry",
-                vec![
-                    EventType::CapabilityRouted,
-                    EventType::Destroyed,
-                    EventType::Discovered,
-                    EventType::MarkedForDestruction,
-                    EventType::Resolved,
-                    EventType::Started,
-                    EventType::Stopped,
-                ],
+                EventType::values(),
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
         ]

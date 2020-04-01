@@ -1,0 +1,38 @@
+{
+    "program": {
+        "binary": "bin/capability_ready_root"
+    },
+    "use": [
+      { "runner": "elf" },
+      {
+        "protocol": [
+          "/svc/fidl.examples.routing.echo.Echo",
+          "/svc/fuchsia.test.events.EventSourceSync",
+        ],
+        "from": "framework",
+      },
+      {
+        "event": "capability_ready",
+        "filter": {
+          "path": [ "/foo", "/bar/baz" ],
+        },
+        "from": "framework",
+      },
+    ],
+    "offer": [
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#child",
+            ]
+        },
+    ],
+    "children": [
+        {
+            "name": "child",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm",
+            "startup": "eager",
+        },
+    ],
+}

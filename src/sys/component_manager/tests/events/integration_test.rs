@@ -251,3 +251,30 @@ async fn event_dispatch_order_test() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn event_capability_ready() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_root.cm",
+    )
+    .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+
+    let (capability, mut echo_rx) = EchoCapability::new();
+    let injector = event_source.install_injector(capability).await?;
+
+    event_source.start_component_tree().await?;
+
+    let mut messages = vec![];
+    for _ in 0..2 {
+        let event = echo_rx.next().await.unwrap();
+        messages.push(event.message.clone());
+        event.resume();
+    }
+    messages.sort_unstable();
+    assert_eq!(vec!["Saw /bar on ./child:0", "Saw /foo on ./child:0",], messages);
+    injector.abort();
+
+    Ok(())
+}

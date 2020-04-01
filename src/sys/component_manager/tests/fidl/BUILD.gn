@@ -24,7 +24,10 @@ fidl("events") {
 
   sources = [ "events.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.component" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//zircon/system/fidl/fuchsia-io",
+  ]
 }
 
 fidl("echofactory") {
