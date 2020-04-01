@@ -21,6 +21,7 @@ group("integration_tests") {
     "logs",
     "mock_runner",
     "outdir",
+    "policy",
     "sandbox",
     "util",
   ]

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/policy_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.echo.Echo",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
