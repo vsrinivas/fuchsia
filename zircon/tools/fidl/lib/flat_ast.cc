@@ -106,11 +106,12 @@ class Compiling {
 };
 
 template <typename T>
-bool ValidateUnknownConstraints(const Decl& decl, types::Strictness decl_strictness,
-                                const std::vector<const T*>* members, SourceSpan* out_source_span,
-                                std::string* out_error) {
+std::optional<Error<>> ValidateUnknownConstraints(const Decl& decl,
+                                                  types::Strictness decl_strictness,
+                                                  const std::vector<const T*>* members,
+                                                  SourceSpan* out_source_span) {
   if (!members)
-    return true;
+    return std::nullopt;
 
   const bool is_transitional = decl.HasAttribute("Transitional");
 
@@ -131,20 +132,18 @@ bool ValidateUnknownConstraints(const Decl& decl, types::Strictness decl_strictn
 
     if (is_strict && !is_transitional) {
       *out_source_span = member->name;
-      *out_error = "[Unknown] attribute can be only be used on flexible or [Transitional] types.";
-      return false;
+      return ErrUnknownAttributeOnInvalidType;
     }
 
     if (found_member) {
       *out_source_span = member->name;
-      *out_error = "[Unknown] attribute can be only applied to one member.";
-      return false;
+      return ErrUnknownAttributeOnMultipleMembers;
     }
 
     found_member = true;
   }
 
-  return true;
+  return std::nullopt;
 }
 
 }  // namespace
@@ -234,10 +233,8 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error
             LibraryName(identifier_type->name.library(), "."), identifier_type->name.decl_name());
         if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
           // Any unions not in the allow-list are treated as non-simple.
-          std::string message("union '");
-          message.append(identifier_type->name.decl_name());
-          message.append("' is not allowed to be simple");
-          error_reporter->ReportError(identifier_type->name.span(), message);
+          error_reporter->ReportError(ErrUnionCannotBeSimple, identifier_type->name.span(),
+                                      identifier_type->name);
           return false;
         }
       }
@@ -301,9 +298,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
 
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
-    std::string message("unknown type ");
-    message.append(name.full_name());
-    error_reporter_->ReportError(name.span(), message);
+    error_reporter_->ReportError(ErrUnknownTypeTemplate, name.span(), name);
     return false;
   }
   return type_template->Create({.span = name.span(),
@@ -332,11 +327,9 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-bool TypeTemplate::Fail(const std::optional<SourceSpan>& span, const std::string& content) const {
-  std::string message(NameFlatName(name_));
-  message.append(" ");
-  message.append(content);
-  error_reporter_->ReportError(span, message);
+bool TypeTemplate::Fail(const Error<const TypeTemplate*> err,
+                        const std::optional<SourceSpan>& span) const {
+  error_reporter_->ReportError(err, span, this);
   return false;
 }
 
@@ -352,11 +345,11 @@ class PrimitiveTypeTemplate : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (args.arg_type != nullptr)
-      return CannotBeParameterized(args.span);
+      return Fail(ErrCannotBeParameterized, args.span);
     if (args.size != nullptr)
-      return CannotHaveSize(args.span);
+      return Fail(ErrCannotHaveSize, args.span);
     if (args.nullability == types::Nullability::kNullable)
-      return CannotBeNullable(args.span);
+      return Fail(ErrCannotBeNullable, args.span);
 
     *out_type = std::make_unique<PrimitiveType>(name_, subtype_);
     return true;
@@ -378,7 +371,7 @@ class BytesTypeTemplate final : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (args.arg_type != nullptr)
-      return CannotBeParameterized(args.span);
+      return Fail(ErrCannotBeParameterized, args.span);
     const Size* size = args.size;
     if (size == nullptr)
       size = &max_size;
@@ -407,13 +400,13 @@ class ArrayTypeTemplate final : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (args.arg_type == nullptr)
-      return MustBeParameterized(args.span);
+      return Fail(ErrMustBeParameterized, args.span);
     if (args.size == nullptr)
-      return MustHaveSize(args.span);
+      return Fail(ErrMustHaveSize, args.span);
     if (args.size->value == 0)
-      return MustHaveNonZeroSize(args.span);
+      return Fail(ErrMustHaveNonZeroSize, args.span);
     if (args.nullability == types::Nullability::kNullable)
-      return CannotBeNullable(args.span);
+      return Fail(ErrCannotBeNullable, args.span);
 
     *out_type = std::make_unique<ArrayType>(name_, args.arg_type, args.size);
     return true;
@@ -431,7 +424,7 @@ class VectorTypeTemplate final : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (args.arg_type == nullptr)
-      return MustBeParameterized(args.span);
+      return Fail(ErrMustBeParameterized, args.span);
     const Size* size = args.size;
     if (size == nullptr)
       size = &max_size;
@@ -455,7 +448,7 @@ class StringTypeTemplate final : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (args.arg_type != nullptr)
-      return CannotBeParameterized(args.span);
+      return Fail(ErrCannotBeParameterized, args.span);
     const Size* size = args.size;
     if (size == nullptr)
       size = &max_size;
@@ -481,7 +474,7 @@ class HandleTypeTemplate final : public TypeTemplate {
     assert(args.arg_type == nullptr);
 
     if (args.size != nullptr)
-      return CannotHaveSize(args.span);
+      return Fail(ErrCannotHaveSize, args.span);
 
     auto handle_subtype = args.handle_subtype.value_or(types::HandleSubtype::kHandle);
     const Constant* handle_rights = args.handle_rights;
@@ -508,14 +501,14 @@ class RequestTypeTemplate final : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (args.arg_type == nullptr)
-      return MustBeParameterized(args.span);
+      return Fail(ErrMustBeParameterized, args.span);
     if (args.arg_type->kind != Type::Kind::kIdentifier)
-      return Fail(args.span, "must be a protocol");
+      return Fail(ErrMustBeAProtocol, args.span);
     auto protocol_type = static_cast<const IdentifierType*>(args.arg_type);
     if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(args.span, "must be a protocol");
+      return Fail(ErrMustBeAProtocol, args.span);
     if (args.size != nullptr)
-      return CannotHaveSize(args.span);
+      return Fail(ErrCannotHaveSize, args.span);
 
     *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, args.nullability);
     return true;
@@ -550,7 +543,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
     }
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
-        return Fail(args.span, "cannot use services in other declarations");
+        return Fail(ErrCannotUseServicesInOtherDeclarations, args.span);
 
       case Decl::Kind::kProtocol:
         break;
@@ -564,7 +557,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       case Decl::Kind::kEnum:
       case Decl::Kind::kTable:
         if (args.nullability == types::Nullability::kNullable)
-          return CannotBeNullable(args.span);
+          return Fail(ErrCannotBeNullable, args.span);
         break;
 
       default:
@@ -603,7 +596,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     const Type* arg_type = nullptr;
     if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
       if (args.arg_type) {
-        return Fail(args.span, "cannot parametrize twice");
+        return Fail(ErrCannotParametrizeTwice, args.span);
       }
       arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
     } else {
@@ -613,7 +606,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     const Size* size = nullptr;
     if (decl_->partial_type_ctor->maybe_size) {
       if (args.size) {
-        return Fail(args.span, "cannot bound twice");
+        return Fail(ErrCannotBoundTwice, args.span);
       }
       size = static_cast<const Size*>(&decl_->partial_type_ctor->maybe_size->Value());
     } else {
@@ -623,7 +616,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     types::Nullability nullability;
     if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
       if (args.nullability == types::Nullability::kNullable) {
-        return Fail(args.span, "cannot indicate nullability twice");
+        return Fail(ErrCannotIndicateNullabilityTwice, args.span);
       }
       nullability = types::Nullability::kNullable;
     } else {
@@ -707,10 +700,7 @@ void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
   auto iter = allowed_placements_.find(placement);
   if (iter != allowed_placements_.end())
     return;
-  std::string message("placement of attribute '");
-  message.append(attribute.name);
-  message.append("' disallowed here");
-  error_reporter->ReportError(attribute.span(), message);
+  error_reporter->ReportError(ErrInvalidAttributePlacement, attribute.span(), attribute);
 }
 
 void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
@@ -720,20 +710,8 @@ void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
   auto iter = allowed_values_.find(attribute.value);
   if (iter != allowed_values_.end())
     return;
-  std::string message("attribute '");
-  message.append(attribute.name);
-  message.append("' has invalid value '");
-  message.append(attribute.value);
-  message.append("', should be one of '");
-  bool first = true;
-  for (const auto& hint : allowed_values_) {
-    if (!first)
-      message.append(", ");
-    message.append(hint);
-    message.append("'");
-    first = false;
-  }
-  error_reporter->ReportError(attribute.span(), message);
+  error_reporter->ReportError(ErrInvalidAttributeValue, attribute.span(), attribute,
+                              attribute.value, allowed_values_);
 }
 
 void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
@@ -743,14 +721,10 @@ void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
   if (passed) {
     assert(check.NoNewErrors() && "cannot add errors and pass");
   } else if (check.NoNewErrors()) {
-    std::string message("declaration did not satisfy constraint of attribute '");
-    message.append(attribute.name);
-    message.append("' with value '");
-    message.append(attribute.value);
-    message.append("'");
     // TODO(pascallouis): It would be nicer to use the span of
     // the declaration, however we do not keep it around today.
-    error_reporter->ReportError(attribute.span(), message);
+    error_reporter->ReportError(ErrAttributeConstraintNotSatisfied, attribute.span(), attribute,
+                                attribute.value);
   }
 }
 
@@ -762,10 +736,8 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   for (const auto& member : struct_decl->members) {
     if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld),
                   error_reporter)) {
-      std::string message("member '");
-      message.append(member.name.data());
-      message.append("' is not simple");
-      error_reporter->ReportError(member.name, message);
+      error_reporter->ReportError(ErrStructMemberMustBeSimple, member.name,
+                                  std::string(member.name.data()));
       ok = false;
     }
   }
@@ -777,13 +749,10 @@ bool ParseBound(ErrorReporter* error_reporter, const SourceSpan& span, const std
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      error_reporter->ReportError(span, "bound is too big");
+      error_reporter->ReportError(ErrBoundIsTooBig, span);
       return false;
     case utils::ParseNumericResult::kMalformed: {
-      std::string message("unable to parse bound '");
-      message.append(input);
-      message.append("'");
-      error_reporter->ReportError(span, message);
+      error_reporter->ReportError(ErrUnableToParseBound, span, input);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -821,13 +790,7 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
       return false;
   }
   if (max_bytes > bound) {
-    std::ostringstream message;
-    message << "too large: only ";
-    message << bound;
-    message << " bytes allowed, but ";
-    message << max_bytes;
-    message << " bytes found";
-    error_reporter->ReportError(attribute.span(), message.str());
+    error_reporter->ReportError(ErrTooManyBytes, attribute.span(), bound, max_bytes);
     return false;
   }
   return true;
@@ -836,7 +799,7 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
 bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                           const Decl* decl) {
   uint32_t bound;
-  if (!ParseBound(error_reporter, attribute.span(), attribute.value.c_str(), &bound))
+  if (!ParseBound(error_reporter, attribute.span(), attribute.value, &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -860,13 +823,7 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& a
       return false;
   }
   if (max_handles > bound) {
-    std::ostringstream message;
-    message << "too many handles: only ";
-    message << bound;
-    message << " allowed, but ";
-    message << max_handles;
-    message << " found";
-    error_reporter->ReportError(attribute.span(), message.str());
+    error_reporter->ReportError(ErrTooManyHandles, attribute.span(), bound, max_handles);
     return false;
   }
   return true;
@@ -895,8 +852,7 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter, const raw::Attribute& 
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    error_reporter->ReportError(decl->name.span(),
-                                "invalid error type: must be int32, uint32 or an enum therof");
+    error_reporter->ReportError(ErrInvalidErrorType, decl->name.span());
     return false;
   }
 
@@ -937,17 +893,8 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& at
   };
   for (auto transport : transports) {
     if (kValidTransports->count(transport) == 0) {
-      std::ostringstream out;
-      out << "invalid transport type: got " << transport << " expected one of ";
-      bool first = true;
-      for (const auto& t : *kValidTransports) {
-        if (!first) {
-          out << ", ";
-        }
-        first = false;
-        out << t;
-      }
-      error_reporter->ReportError(decl->name.span(), out.str());
+      error_reporter->ReportError(ErrInvalidTransportType, decl->name.span(), transport,
+                                  *kValidTransports);
       return false;
     }
   }
@@ -1099,12 +1046,8 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
   for (const auto& name_and_schema : attribute_schemas_) {
     auto edit_distance = EditDistance(name_and_schema.first, attribute_name);
     if (0 < edit_distance && edit_distance < 2) {
-      std::string message("suspect attribute with name '");
-      message.append(attribute_name);
-      message.append("'; did you mean '");
-      message.append(name_and_schema.first);
-      message.append("'?");
-      error_reporter->ReportWarning(attribute.span(), message);
+      error_reporter->ReportWarning(WarnAttributeTypo, attribute.span(), attribute_name,
+                                    name_and_schema.first);
       return nullptr;
     }
   }
@@ -1186,14 +1129,8 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
       const auto& ref = name_to_ref.second;
       if (ref->used_)
         continue;
-      std::string message = "Library ";
-      message.append(NameLibrary(for_library.name()));
-      message.append(" imports ");
-      message.append(NameLibrary(ref->library_->name()));
-      message.append(" but does not use it. Either use ");
-      message.append(NameLibrary(ref->library_->name()));
-      message.append(", or remove import.");
-      error_reporter->ReportError(ref->span_, message);
+      error_reporter->ReportError(ErrUnusedImport, ref->span_, for_library.name(),
+                                  ref->library_->name(), ref->library_->name());
     }
   }
   return checkpoint.NoNewErrors();
@@ -1222,14 +1159,15 @@ bool Library::Fail(const std::optional<SourceSpan>& span, std::string_view messa
   return false;
 }
 
-template <typename ...Args>
-bool Library::Fail(const Error<Args...> err, const Args& ...args) {
+template <typename... Args>
+bool Library::Fail(const Error<Args...> err, const Args&... args) {
   error_reporter_->ReportError(err, args...);
   return false;
 }
 
-template <typename ...Args>
-bool Library::Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
+template <typename... Args>
+bool Library::Fail(const Error<Args...> err, const std::optional<SourceSpan>& span,
+                   const Args&... args) {
   error_reporter_->ReportError(err, span, args...);
   return false;
 }
@@ -1314,8 +1252,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
                                std::string(member_name.data()));
   }
 
-  Fail(ErrUnknownDependentLibrary, components[0]->span(),
-       NameLibrary(library_name), NameLibrary(member_library_name));
+  Fail(ErrUnknownDependentLibrary, components[0]->span(), library_name, member_library_name);
   return std::nullopt;
 }
 
@@ -1368,18 +1305,11 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   const Name& name = decl_ptr->name;
   auto iter = declarations_.emplace(name, decl_ptr);
   if (!iter.second) {
-    std::string message = "Name collision: ";
-    message.append(name.decl_name());
-    return Fail(name, message);
+    return Fail(ErrNameCollision, name);
   }
   if (name.span()) {
     if (dependencies_.Contains(name.span()->source_file().filename(), {name.span()->data()})) {
-      std::string message = "Declaration name '";
-      message.append(name.full_name());
-      message.append(
-          "' conflicts with a library import; consider using the "
-          "'as' keyword to import the library under a different name.");
-      return Fail(name, message);
+      return Fail(ErrDeclNameConflictsWithLibraryImport, name, name);
     }
   }
 
@@ -1488,17 +1418,8 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     return ConsumeTypeAlias(std::move(using_directive));
 
   if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
-    std::string attributes_found = "";
-    for (const auto& attribute : using_directive->attributes->attributes) {
-      if (attributes_found.size() != 0) {
-        attributes_found.append(", ");
-      }
-      attributes_found.append(attribute.name);
-    }
-    std::string message("no attributes allowed on library import, found: ");
-    message.append(attributes_found);
-    const auto& span = using_directive->span();
-    return Fail(span, message);
+    return Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
+                using_directive->attributes.get());
   }
 
   std::vector<std::string_view> library_name;
@@ -1508,17 +1429,14 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 
   Library* dep_library = nullptr;
   if (!all_libraries_->Lookup(library_name, &dep_library)) {
-    std::string message("Could not find library named ");
-    message += NameLibrary(library_name);
-    message += ". Did you include its sources with --files?";
-    const auto& span = using_directive->using_path->components[0]->span();
-    return Fail(span, message);
+    return Fail(ErrUnknownLibrary, using_directive->using_path->components[0]->span(),
+                library_name);
   }
 
   auto filename = using_directive->span().source_file().filename();
   if (!dependencies_.Register(using_directive->span(), filename, dep_library,
                               using_directive->maybe_alias)) {
-    return Fail(ErrDuplicateLibraryImport, NameLibrary(library_name));
+    return Fail(ErrDuplicateLibraryImport, library_name);
   }
 
   // Import declarations, and type aliases of dependent library.
@@ -1681,7 +1599,7 @@ bool Library::ConsumeProtocolDeclaration(
     if (!composed_protocol_name)
       return false;
     if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second)
-      return Fail(composed_protocol_name->span(), "protocol composed multiple times");
+      return Fail(ErrProtocolComposedMultipleTimes, composed_protocol_name->span());
   }
 
   std::vector<Protocol::Method> methods;
@@ -1818,11 +1736,10 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
       if (member->maybe_used->maybe_default_value) {
         // TODO(FIDL-609): Support defaults on tables.
         const auto default_value = member->maybe_used->maybe_default_value.get();
-        error_reporter_->ReportError(default_value->span(),
-                                     "Defaults on tables are not yet supported.");
+        error_reporter_->ReportError(ErrDefaultsOnTablesNotSupported, default_value->span());
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->span(), "Table members cannot be nullable");
+        return Fail(ErrNullableTableMember, member->span());
       }
       auto attributes = std::move(member->maybe_used->attributes);
       members.emplace_back(std::move(ordinal_literal), std::move(type_ctor),
@@ -1854,7 +1771,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         return false;
 
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->span(), "union members cannot be nullable");
+        return Fail(ErrNullableUnionMember, member->span());
       }
 
       members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor), span,
@@ -1893,8 +1810,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   }
   if (!library_name_.empty()) {
     if (new_name != library_name_) {
-      return Fail(file->library_name->components[0]->span(),
-                  "Two files in the library disagree about the name of the library");
+      return Fail(ErrFilesDisagreeOnLibraryName, file->library_name->components[0]->span());
     }
   } else {
     library_name_ = new_name;
@@ -2166,24 +2082,20 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
       }
 
-      auto fail_with_mismatched_type = [this, identifier_type](std::string_view type) {
-        std::ostringstream msg;
-        msg << "mismatched named type assignment: cannot define a constant or default value of "
-               "type "
-            << identifier_type->type_decl->name.full_name() << " using a value of type " << type;
-        return Fail(msg.str());
+      auto fail_with_mismatched_type = [this, identifier_type](const Name& type_name) {
+        return Fail(ErrMismatchedNameTypeAssignment, identifier_type->type_decl->name, type_name);
       };
 
       switch (decl->kind) {
         case Decl::Kind::kConst: {
           if (const_type_ctor->type->name != identifier_type->type_decl->name)
-            return fail_with_mismatched_type(const_type_ctor->type->name.full_name());
+            return fail_with_mismatched_type(const_type_ctor->type->name);
           break;
         }
         case Decl::Kind::kBits:
         case Decl::Kind::kEnum: {
           if (decl->name != identifier_type->type_decl->name)
-            return fail_with_mismatched_type(decl->name.full_name());
+            return fail_with_mismatched_type(decl->name);
           break;
         }
         default: {
@@ -2204,11 +2116,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   return true;
 
 fail_cannot_convert:
-  std::ostringstream msg_stream;
-  msg_stream << NameFlatConstant(identifier_constant) << ", of type ";
-  msg_stream << NameFlatTypeConstructor(const_type_ctor);
-  msg_stream << ", cannot be converted to type " << NameFlatType(type);
-  return Fail(msg_stream.str());
+  return Fail(ErrCannotConvertConstantToType, identifier_constant, const_type_ctor, type);
 }
 
 bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type) {
@@ -2226,10 +2134,8 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
       // literals properly, and take into account escaping.
       uint64_t string_size = string_data.size() - 2;
       if (string_type->max_size->value < string_size) {
-        std::ostringstream msg_stream;
-        msg_stream << NameFlatConstant(literal_constant) << " (string:" << string_size;
-        msg_stream << ") exceeds the size bound of type " << NameFlatType(type);
-        return Fail(literal_constant->literal->span(), msg_stream.str());
+        return Fail(ErrStringConstantExceedsSizeBound, literal_constant->literal->span(),
+                    literal_constant, string_size, type);
       }
 
       literal_constant->ResolveTo(
@@ -2345,10 +2251,8 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
       }
 
     return_fail:
-      std::ostringstream msg_stream;
-      msg_stream << NameFlatConstant(literal_constant) << " cannot be interpreted as type ";
-      msg_stream << NameFlatType(type);
-      return Fail(literal_constant->literal->span(), msg_stream.str());
+      return Fail(ErrConstantCannotBeInterpretedAsType, literal_constant->literal->span(),
+                  literal_constant, type);
     }
   }
 }
@@ -2360,7 +2264,7 @@ const Type* Library::TypeResolve(const Type* type) {
   auto identifier_type = static_cast<const IdentifierType*>(type);
   Decl* decl = LookupDeclByName(identifier_type->name);
   if (!decl) {
-    Fail("could not resolve identifier to a type");
+    Fail(ErrCouldNotResolveIdentifierToType);
     return nullptr;
   }
   if (!CompileDecl(decl))
@@ -2465,9 +2369,7 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<Decl*>*
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
       auto decl = LookupDeclByName(identifier->name.memberless_key());
       if (decl == nullptr) {
-        std::string message("Unable to find the constant named: ");
-        message += identifier->name.full_name();
-        return Fail(identifier->name, message.data());
+        return Fail(ErrFailedConstantLookup, identifier->name, identifier->name);
       }
       out_edges->insert(decl);
       break;
@@ -2686,7 +2588,7 @@ bool Library::SortDeclarations() {
 
   if (declaration_order_.size() != degrees.size()) {
     // We didn't visit all the edges! There was a cycle.
-    return Fail("There is an includes-cycle in declarations");
+    return Fail(ErrIncludeCycle);
   }
 
   return true;
@@ -2906,9 +2808,8 @@ bool Library::CompileBits(Bits* bits_declaration) {
     return false;
 
   if (bits_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    std::string message("bits may only be of unsigned integral primitive type, found ");
-    message.append(NameFlatType(bits_declaration->subtype_ctor->type));
-    return Fail(*bits_declaration, message);
+    return Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
+                bits_declaration->subtype_ctor->type);
   }
 
   // Validate constants.
@@ -2949,20 +2850,18 @@ bool Library::CompileBits(Bits* bits_declaration) {
     case types::PrimitiveSubtype::kInt64:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      std::string message("bits may only be of unsigned integral primitive type, found ");
-      message.append(NameFlatType(bits_declaration->subtype_ctor->type));
-      return Fail(*bits_declaration, message);
+      return Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
+                  bits_declaration->subtype_ctor->type);
   }
 
   {
     SourceSpan source_span;
-    std::string error;
-
     // In the line below, `nullptr` needs an explicit cast to the pointer type due to
     // C++ template mechanics.
-    if (!ValidateUnknownConstraints<const Bits::Member>(
-            *bits_declaration, bits_declaration->strictness, nullptr, &source_span, &error)) {
-      return Fail(source_span, error);
+    std::optional<Error<>> error = ValidateUnknownConstraints<const Bits::Member>(
+        *bits_declaration, bits_declaration->strictness, nullptr, &source_span);
+    if (error) {
+      return Fail(error.value(), source_span);
     }
   }
 
@@ -2974,12 +2873,10 @@ bool Library::CompileConst(Const* const_declaration) {
     return false;
   const auto* const_type = const_declaration->type_ctor.get()->type;
   if (!TypeCanBeConst(const_type)) {
-    std::ostringstream msg_stream;
-    msg_stream << "invalid constant type " << NameFlatType(const_type);
-    return Fail(*const_declaration, msg_stream.str());
+    return Fail(ErrInvalidConstantType, *const_declaration, const_type);
   }
   if (!ResolveConstant(const_declaration->value.get(), const_type))
-    return Fail(*const_declaration, "unable to resolve constant value");
+    return Fail(ErrCannotResolveConstantValue, *const_declaration);
 
   return true;
 }
@@ -2989,9 +2886,8 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     return false;
 
   if (enum_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    std::string message("enums may only be of integral primitive type, found ");
-    message.append(NameFlatType(enum_declaration->subtype_ctor->type));
-    return Fail(*enum_declaration, message);
+    return Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
+                enum_declaration->subtype_ctor->type);
   }
 
   // Validate constants.
@@ -3033,9 +2929,8 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      std::string message("enums may only be of integral primitive type, found ");
-      message.append(NameFlatType(enum_declaration->subtype_ctor->type));
-      return Fail(*enum_declaration, message);
+      return Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
+                  enum_declaration->subtype_ctor->type);
   }
 
   return true;
@@ -3053,12 +2948,10 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       // should first rely on creating the types representing composed
       // protocols.
       if (!decl) {
-        std::string message("unknown type ");
-        message.append(name.full_name());
-        return Fail(name, message);
+        return Fail(ErrUnknownType, name, name);
       }
       if (decl->kind != Decl::Kind::kProtocol)
-        return Fail(name, "This declaration is not a protocol");
+        return Fail(ErrComposingNonProtocol, name);
       auto composed_protocol = static_cast<const Protocol*>(decl);
       auto span = composed_protocol->name.span();
       assert(span);
@@ -3073,22 +2966,17 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
     for (const auto& method : protocol->methods) {
       auto name_result = method_scope.names.Insert(method.name.data(), method.name);
       if (!name_result.ok())
-        return Fail(method.name,
-                    "Multiple methods with the same name in a protocol; last occurrence was at " +
-                        name_result.previous_occurrence().position_str());
+        return Fail(ErrDuplicateMethodName, method.name, name_result.previous_occurrence());
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
       if (method.generated_ordinal32->value == 0)
-        return Fail(method.generated_ordinal32->span(), "Ordinal value 0 disallowed.");
+        return Fail(ErrZeroValueOrdinal, method.generated_ordinal32->span());
       if (!ordinal_result.ok()) {
         std::string replacement_method(
             fidl::ordinals::GetSelector(method.attributes.get(), method.name));
         replacement_method.push_back('_');
-        return Fail(method.generated_ordinal32->span(),
-                    "Multiple methods with the same ordinal in a protocol; previous was at " +
-                        ordinal_result.previous_occurrence().position_str() +
-                        ". Consider using attribute " + "[Selector=\"" + replacement_method +
-                        "\"] to change the " + "name used to calculate the ordinal.");
+        return Fail(ErrDuplicateMethodOrdinal, method.generated_ordinal32->span(),
+                    ordinal_result.previous_occurrence(), replacement_method);
       }
 
       // Add a pointer to this method to the protocol_declarations list.
@@ -3105,7 +2993,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       Scope<std::string_view> scope;
       for (auto& param : message->members) {
         if (!scope.Insert(param.name.data(), param.name).ok())
-          return Fail(param.name, "Multiple parameters with the same name in a method");
+          return Fail(ErrDuplicateMethodParameterName, param.name);
         if (!CompileTypeConstructor(param.type_ctor.get()))
           return false;
       }
@@ -3129,17 +3017,16 @@ bool Library::CompileService(Service* service_decl) {
   for (auto& member : service_decl->members) {
     auto name_result = scope.Insert(member.name.data(), member.name);
     if (!name_result.ok())
-      return Fail(member.name, "multiple service members with the same name; previous was at " +
-                                   name_result.previous_occurrence().position_str());
+      return Fail(ErrDuplicateServiceMemberName, member.name, name_result.previous_occurrence());
     if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     if (member.type_ctor->type->kind != Type::Kind::kIdentifier)
-      return Fail(member.name, "only protocol members are allowed");
+      return Fail(ErrNonProtocolServiceMember, member.name);
     auto member_identifier_type = static_cast<const IdentifierType*>(member.type_ctor->type);
     if (member_identifier_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(member.name, "only protocol members are allowed");
+      return Fail(ErrNonProtocolServiceMember, member.name);
     if (member.type_ctor->nullability != types::Nullability::kNonnullable)
-      return Fail(member.name, "service members cannot be nullable");
+      return Fail(ErrNullableServiceMember, member.name);
   }
   return true;
 }
@@ -3149,18 +3036,15 @@ bool Library::CompileStruct(Struct* struct_declaration) {
   for (auto& member : struct_declaration->members) {
     auto name_result = scope.Insert(member.name.data(), member.name);
     if (!name_result.ok())
-      return Fail(member.name, "Multiple struct fields with the same name; previous was at " +
-                                   name_result.previous_occurrence().position_str());
+      return Fail(ErrDuplicateStructMemberName, member.name, name_result.previous_occurrence());
 
     if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor.get()->type;
       if (!TypeCanBeConst(default_value_type)) {
-        std::ostringstream msg_stream;
-        msg_stream << "struct field  " << member.name.data() << " has an invalid default type"
-                   << NameFlatType(default_value_type);
-        return Fail(*struct_declaration, msg_stream.str());
+        return Fail(ErrInvalidStructMemberType, *struct_declaration, NameIdentifier(member.name),
+                    default_value_type);
       }
       if (!ResolveConstant(member.maybe_default_value.get(), default_value_type)) {
         return false;
@@ -3178,15 +3062,13 @@ bool Library::CompileTable(Table* table_declaration) {
   for (auto& member : table_declaration->members) {
     auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.ordinal->span(),
-                  "Multiple table fields with the same ordinal; previous was at " +
-                      ordinal_result.previous_occurrence().position_str());
+      return Fail(ErrDuplicateTableFieldOrdinal, member.ordinal->span(),
+                  ordinal_result.previous_occurrence());
     if (member.maybe_used) {
       auto name_result = name_scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
       if (!name_result.ok())
-        return Fail(member.maybe_used->name,
-                    "Multiple table fields with the same name; previous was at " +
-                        name_result.previous_occurrence().position_str());
+        return Fail(ErrDuplicateTableFieldName, member.maybe_used->name,
+                    name_result.previous_occurrence());
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
         return false;
     }
@@ -3194,10 +3076,7 @@ bool Library::CompileTable(Table* table_declaration) {
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
-    std::ostringstream msg_stream;
-    msg_stream << "missing ordinal " << ordinal;
-    msg_stream << " (ordinals must be dense); consider marking it reserved";
-    return Fail(span, msg_stream.str());
+    return Fail(ErrNonDenseOrdinalInTable, span, ordinal);
   }
 
   return true;
@@ -3210,15 +3089,13 @@ bool Library::CompileUnion(Union* union_declaration) {
   for (auto& member : union_declaration->members) {
     auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.ordinal->span(),
-                  "Multiple union fields with the same ordinal; previous was at " +
-                      ordinal_result.previous_occurrence().position_str());
+      return Fail(ErrDuplicateUnionMemberOrdinal, member.ordinal->span(),
+                  ordinal_result.previous_occurrence());
     if (member.maybe_used) {
       auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
       if (!name_result.ok())
-        return Fail(member.maybe_used->name,
-                    "Multiple union members with the same name; previous was at " +
-                        name_result.previous_occurrence().position_str());
+        return Fail(ErrDuplicateUnionMemberName, member.maybe_used->name,
+                    name_result.previous_occurrence());
 
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
         return false;
@@ -3227,10 +3104,7 @@ bool Library::CompileUnion(Union* union_declaration) {
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
-    std::ostringstream msg_stream;
-    msg_stream << "missing ordinal " << ordinal;
-    msg_stream << " (ordinals must be dense); consider marking it reserved";
-    return Fail(span, msg_stream.str());
+    return Fail(ErrNonDenseOrdinalInUnion, span, ordinal);
   }
 
   {
@@ -3241,10 +3115,10 @@ bool Library::CompileUnion(Union* union_declaration) {
     }
 
     SourceSpan source_span;
-    std::string error;
-    if (!ValidateUnknownConstraints(*union_declaration, union_declaration->strictness,
-                                    &used_members, &source_span, &error)) {
-      return Fail(source_span, error);
+    std::optional<Error<>> error = ValidateUnknownConstraints(
+        *union_declaration, union_declaration->strictness, &used_members, &source_span);
+    if (error) {
+      return Fail(error.value(), source_span);
     }
   }
 
@@ -3313,7 +3187,7 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
 
   if (type_ctor->handle_rights)
     if (!ResolveConstant(type_ctor->handle_rights.get(), &kRightsType))
-      return Fail("unable to resolve handle rights");
+      return Fail(ErrCouldNotResolveHandleRights);
 
   if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype,
                           type_ctor->handle_rights.get(), size, type_ctor->nullability,
@@ -3341,7 +3215,7 @@ bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size
     }
   }
   if (!size_constant->IsResolved()) {
-    return Fail(type_ctor->name.span(), "unable to parse size bound");
+    return Fail(ErrCouldNotParseSizeBound, type_ctor->name.span());
   }
   if (out_size) {
     *out_size = static_cast<const Size*>(&size_constant->Value());
@@ -3362,37 +3236,25 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
     assert(member.value != nullptr && "Compiler bug: member value is null!");
 
     if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
-      std::string failure_message = "unable to resolve ";
-      failure_message += decl_type;
-      failure_message += " member";
-      return Fail(member.name, failure_message);
+      return Fail(ErrCouldNotResolveMember, member.name, std::string(decl_type));
     }
 
     // Check that the member identifier hasn't been used yet
     std::string name = NameIdentifier(member.name);
     auto name_result = name_scope.Insert(name, member.name);
     if (!name_result.ok()) {
-      std::ostringstream msg_stream;
-      msg_stream << "name of member " << name;
-      msg_stream << " conflicts with previously declared member in the ";
-      msg_stream << decl_type << " " << decl->GetName();
-
       // We can log the error and then continue validating for other issues in the decl
-      success = Fail(member.name, msg_stream.str());
+      success = Fail(ErrDuplicateMemberName, member.name, name, std::string(decl_type), decl->name);
     }
 
     MemberType value =
         static_cast<const NumericConstantValue<MemberType>&>(member.value->Value()).value;
     auto value_result = value_scope.Insert(value, member.name);
     if (!value_result.ok()) {
-      std::ostringstream msg_stream;
-      msg_stream << "value of member " << name;
-      msg_stream << " conflicts with previously declared member ";
-      msg_stream << NameIdentifier(value_result.previous_occurrence()) << " in the ";
-      msg_stream << decl_type << " " << decl->GetName();
-
       // We can log the error and then continue validating other members for other bugs
-      success = Fail(member.name, msg_stream.str());
+      success = Fail(ErrDuplicateMemberValue, member.name, name,
+                     NameIdentifier(value_result.previous_occurrence()), std::string(decl_type),
+                     decl->name);
     }
 
     std::string validation_failure;
@@ -3485,10 +3347,10 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
     }
 
     SourceSpan source_span;
-    std::string error;
-    if (!ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members, &source_span,
-                                    &error)) {
-      return Fail(source_span, error);
+    std::optional<Error<>> error =
+        ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members, &source_span);
+    if (error) {
+      return Fail(error.value(), source_span);
     }
   }
 

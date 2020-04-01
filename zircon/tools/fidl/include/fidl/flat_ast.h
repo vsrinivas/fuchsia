@@ -1350,25 +1350,7 @@ class TypeTemplate {
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:
-  bool MustBeParameterized(const std::optional<SourceSpan>& span) const {
-    return Fail(span, "must be parametrized");
-  }
-  bool MustHaveSize(const std::optional<SourceSpan>& span) const {
-    return Fail(span, "must have size");
-  }
-  bool MustHaveNonZeroSize(const std::optional<SourceSpan>& span) const {
-    return Fail(span, "must have non-zero size");
-  }
-  bool CannotBeParameterized(const std::optional<SourceSpan>& span) const {
-    return Fail(span, "cannot be parametrized");
-  }
-  bool CannotHaveSize(const std::optional<SourceSpan>& span) const {
-    return Fail(span, "cannot have size");
-  }
-  bool CannotBeNullable(const std::optional<SourceSpan>& span) const {
-    return Fail(span, "cannot be nullable");
-  }
-  bool Fail(const std::optional<SourceSpan>& span, const std::string& content) const;
+  bool Fail(const Error<const TypeTemplate*> err, const std::optional<SourceSpan>& span) const;
 
   Typespace* typespace_;
 
@@ -1558,10 +1540,18 @@ class Library {
   const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
-  template <typename ...Args>
-  bool Fail(const Error<Args...> err, const Args& ...args);
-  template <typename ...Args>
-  bool Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args);
+  template <typename... Args>
+  bool Fail(const Error<Args...> err, const Args&... args);
+  template <typename... Args>
+  bool Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args&... args);
+  template <typename... Args>
+  bool Fail(const Error<Args...> err, const Name& name, const Args&... args) {
+    return Fail(err, name.span(), args...);
+  }
+  template <typename... Args>
+  bool Fail(const Error<Args...> err, const Decl& decl, const Args&... args) {
+    return Fail(err, decl.name, args...);
+  }
 
   bool Fail(std::string_view message);
   bool Fail(const std::optional<SourceSpan>& span, std::string_view message);

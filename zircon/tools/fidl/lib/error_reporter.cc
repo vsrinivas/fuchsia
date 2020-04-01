@@ -6,6 +6,9 @@
 
 #include <cassert>
 
+#include "fidl/flat_ast.h"
+#include "fidl/names.h"
+#include "fidl/raw_ast.h"
 #include "fidl/source_span.h"
 #include "fidl/token.h"
 
@@ -70,16 +73,52 @@ std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
   return error;
 }
 
-// Forward decl
-std::string NameFlatConstant(const flat::Constant* constant);
+namespace internal {
 
-std::string Display(std::string s) {
-  return s;
+std::string Display(const std::string& s) { return s; }
+
+// {'A', 'B', 'C'} -> "A, B, C"
+std::string Display(const std::set<std::string>& s) {
+  std::stringstream ss;
+  for (auto it = s.begin(); it != s.end(); it++) {
+    if (it != s.cbegin()) {
+      ss << ", ";
+    }
+    ss << *it;
+  }
+  return ss.str();
 }
 
-std::string Display(flat::Constant* c) {
-  return NameFlatConstant(c);
+std::string Display(const SourceSpan& s) { return s.position_str(); }
+
+std::string Display(const raw::Attribute& a) { return a.name; }
+
+std::string Display(raw::AttributeList* a) {
+  std::stringstream attributes_found;
+  for (auto it = a->attributes.begin(); it != a->attributes.end(); it++) {
+    if (it != a->attributes.cbegin()) {
+      attributes_found << ", ";
+    }
+    attributes_found << (*it).name;
+  }
+  return attributes_found.str();
 }
+
+std::string Display(const std::vector<std::string_view>& library_name) {
+  return NameLibrary(library_name);
+}
+
+std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
+
+std::string Display(const flat::TypeConstructor* tc) { return NameFlatTypeConstructor(tc); }
+
+std::string Display(const flat::Type* t) { return NameFlatType(t); }
+
+std::string Display(const flat::TypeTemplate* t) { return NameFlatName(t->name()); }
+
+std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
+
+}  // namespace internal
 
 void ErrorReporter::AddError(std::string formatted_message) {
   if (mode_ == ReportingMode::kDoNotReport)
