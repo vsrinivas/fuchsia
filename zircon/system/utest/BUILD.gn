@@ -23,13 +23,10 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/system/core/devmgr/fshost:block-watcher-test",
 #------------------
 #------------------
-      "$zx/system/core/devmgr/fshost:fshost-metrics-test",
 #------------------
 #------------------
-      "$zx/system/core/devmgr/fshost:fshost-test",
 #------------------
 #------------------
       "$zx/system/core/netsvc:netsvc-stress-test",

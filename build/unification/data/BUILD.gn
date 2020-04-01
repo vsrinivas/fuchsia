@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Exposes Zircon artifacts so that they may be used as data dependencies in the
+# GN build.
+template("zircon_data_dep") {
+  assert(defined(invoker.target), "Must provide a target")
+
+  target = "//build/unification/images:${invoker.target}"
+  name = get_label_info(target, "name")
+  out_dir = get_label_info(target, "target_out_dir")
+  manifest = "$out_dir/$name.unification.manifest"
+
+  group(target_name) {
+    deps = [ target ]
+
+    metadata = {
+      migrated_manifest_barrier = []
+      migrated_manifest_files = [ rebase_path(manifest, root_build_dir) ]
+    }
+  }
+}
+
+artifacts = [
+  "bin.fsck-msdosfs",
+  "hermetic.decompress-lz4f",
+  "hermetic.decompress-zstd",
+  "bin.mkfs-msdosfs",
+]
+
+foreach(artifact, artifacts) {
+  zircon_data_dep(artifact) {
+    target = artifact
+  }
+}
