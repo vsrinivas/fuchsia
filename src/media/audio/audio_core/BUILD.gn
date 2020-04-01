@@ -163,6 +163,7 @@ source_set("audio_core_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.thermal",
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/syslog/cpp",
@@ -171,7 +172,6 @@ source_set("audio_core_lib") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-cobalt",
-    "//zircon/system/fidl/fuchsia-thermal",
   ]
 
   deps = [

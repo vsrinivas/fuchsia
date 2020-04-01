@@ -14,6 +14,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
+    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -36,7 +37,6 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal-rustc",
     "//zircon/system/fidl/fuchsia-kernel:fuchsia-kernel-rustc",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
-    "//zircon/system/fidl/fuchsia-thermal:fuchsia-thermal-rustc",
   ]
 
   test_deps = [
