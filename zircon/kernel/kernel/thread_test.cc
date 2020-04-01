@@ -404,19 +404,16 @@ bool set_migrate_ready_threads_test() {
     }
 
     // Migrate the ready threads to a different CPU. BE CAREFUL not to do
-    // anything that would block until the workers are validated.
+    // anything that would block until the workers are migrated.
     for (Thread* worker : workers) {
       worker->SetCpuAffinity(cpu_num_to_mask(kTargetCpu));
 
       // Validate the thread state.
-      thread_state state;
       cpu_num_t curr_cpu;
       {
         Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-        state = worker->state_;
         curr_cpu = worker->curr_cpu_;
       }
-      ASSERT_EQ(state, THREAD_READY, "The worker was in the wrong state.");
       ASSERT_EQ(curr_cpu, kTargetCpu, "The worker was assigned to the wrong CPU.");
     }
 
