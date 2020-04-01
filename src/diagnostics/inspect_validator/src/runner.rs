@@ -41,19 +41,22 @@ async fn run_trial(
     results: &mut results::Results,
 ) -> Result<(), Error> {
     let trial_name = format!("{}:{}", puppet.name(), trial.name);
-    try_compare(data, puppet, &trial_name, -1, None, -1, results.diff_type)?;
+    // We have to give explicit type here because compiler can't deduce it from None option value.
+    try_compare::<validate::Action>(data, puppet, &trial_name, -1, None, -1, results.diff_type)
+        .await?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
-        let mut actions = match step {
-            Step::Actions(actions) => actions,
-            Step::WithMetrics(actions, _) => actions,
-        };
-        run_actions(&mut actions, data, puppet, &trial.name, step_index, results).await?;
         match step {
-            Step::WithMetrics(_, step_name) => {
-                results.remember_metrics(puppet.metrics()?, &trial.name, step_index, step_name)
+            Step::Actions(actions) => {
+                run_actions(actions, data, puppet, &trial.name, step_index, results).await?;
             }
-            _ => {}
-        }
+            Step::WithMetrics(actions, step_name) => {
+                run_actions(actions, data, puppet, &trial.name, step_index, results).await?;
+                results.remember_metrics(puppet.metrics()?, &trial.name, step_index, step_name);
+            }
+            Step::LazyActions(actions) => {
+                run_lazy_actions(actions, data, puppet, &trial.name, step_index, results).await?;
+            }
+        };
     }
     Ok(())
 }
@@ -109,21 +112,79 @@ async fn run_actions(
             Some(action),
             action_number as i32,
             results.diff_type,
-        )?;
+        )
+        .await?;
     }
     Ok(())
 }
 
-fn try_compare(
+async fn run_lazy_actions(
+    actions: &mut Vec<validate::LazyAction>,
+    data: &mut Data,
+    puppet: &mut puppet::Puppet,
+    trial_name: &str,
+    step_index: usize,
+    results: &mut results::Results,
+) -> Result<(), Error> {
+    for (action_number, action) in actions.iter_mut().enumerate() {
+        if let Err(e) = data.apply_lazy(action) {
+            bail!(
+                "Local-apply_lazy error in trial {}, step {}, action {}: {:?} ",
+                trial_name,
+                step_index,
+                action_number,
+                e
+            );
+        }
+        match puppet.apply_lazy(action).await {
+            Err(e) => {
+                bail!(
+                    "Puppet-apply_lazy error in trial {}, step {}, action {}: {:?} ",
+                    trial_name,
+                    step_index,
+                    action_number,
+                    e
+                );
+            }
+            Ok(validate::TestResult::Ok) => {}
+            Ok(validate::TestResult::Unimplemented) => {
+                results.unimplemented(puppet.name(), action);
+                return Ok(());
+            }
+            Ok(bad_result) => {
+                bail!(
+                    "In trial {}, puppet {} reported action {:?} was {:?}",
+                    trial_name,
+                    puppet.name(),
+                    action,
+                    bad_result
+                );
+            }
+        }
+        try_compare(
+            data,
+            puppet,
+            &trial_name,
+            step_index as i32,
+            Some(action),
+            action_number as i32,
+            results.diff_type,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+async fn try_compare<ActionType: std::fmt::Debug>(
     data: &Data,
     puppet: &puppet::Puppet,
     trial_name: &str,
     step_index: i32,
-    action: Option<&validate::Action>,
+    action: Option<&ActionType>,
     action_number: i32,
     diff_type: DiffType,
 ) -> Result<(), Error> {
-    match puppet.read_data() {
+    match puppet.read_data().await {
         Err(e) => {
             bail!(
                 "Puppet-read error in trial {}, step {}, action {} {:?}: {:?} ",

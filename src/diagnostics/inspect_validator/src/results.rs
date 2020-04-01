@@ -17,7 +17,7 @@ pub struct Results {
     pub diff_type: DiffType,
 }
 
-trait Summary {
+pub trait Summary {
     fn summary(&self) -> String;
 }
 
@@ -87,6 +87,17 @@ impl Summary for Action {
     }
 }
 
+impl Summary for LazyAction {
+    fn summary(&self) -> String {
+        match self {
+            LazyAction::CreateLazyNode(_) => "CreateLazyNode".to_string(),
+            LazyAction::ModifyLazyNode(_) => "ModifyLazyNode".to_string(),
+            LazyAction::DeleteLazyNode(_) => "DeleteLazyNode".to_string(),
+            _ => "Unknown".to_string(),
+        }
+    }
+}
+
 #[derive(Serialize, Debug)]
 struct TrialMetrics {
     step_index: usize,
@@ -115,7 +126,7 @@ impl Results {
         self.messages.push(message);
     }
 
-    pub fn unimplemented(&mut self, puppet_name: &str, action: &Action) {
+    pub fn unimplemented<T: Summary>(&mut self, puppet_name: &str, action: &T) {
         self.unimplemented.insert(format!("{}: {}", puppet_name, action.summary()));
     }
 

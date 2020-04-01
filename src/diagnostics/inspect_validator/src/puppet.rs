@@ -4,7 +4,7 @@
 
 use {
     super::{
-        data::{self, Data},
+        data::{self, Data, LazyNode},
         metrics::Metrics,
     },
     anyhow::{format_err, Context as _, Error},
@@ -30,6 +30,16 @@ impl Puppet {
         action: &mut validate::Action,
     ) -> Result<validate::TestResult, Error> {
         Ok(self.connection.fidl.act(action).await?)
+    }
+
+    pub async fn apply_lazy(
+        &mut self,
+        lazy_action: &mut validate::LazyAction,
+    ) -> Result<validate::TestResult, Error> {
+        match &self.connection.root_link_channel {
+            Some(_) => Ok(self.connection.fidl.act_lazy(lazy_action).await?),
+            None => Ok(validate::TestResult::Unimplemented),
+        }
     }
 
     pub fn name<'a>(&'a self) -> &'a str {
@@ -70,8 +80,14 @@ impl Puppet {
         Ok(Puppet { vmo: connection.initialize_vmo().await?, connection, name })
     }
 
-    pub fn read_data(&self) -> Result<Data, Error> {
-        Ok(data::Scanner::try_from(&self.vmo)?.data())
+    pub async fn read_data(&self) -> Result<Data, Error> {
+        Ok(match &self.connection.root_link_channel {
+            None => data::Scanner::try_from(&self.vmo)?.data(),
+            Some(root_link_channel) => {
+                let vmo_tree = LazyNode::new(root_link_channel.clone()).await?;
+                data::Scanner::try_from(vmo_tree)?.data()
+            }
+        })
     }
 
     pub fn metrics(&self) -> Result<Metrics, Error> {
@@ -79,7 +95,6 @@ impl Puppet {
     }
 }
 
-#[allow(dead_code)]
 struct Connection {
     fidl: validate::ValidateProxy,
     // Connection to Tree FIDL if Puppet supports it.
@@ -119,20 +134,31 @@ impl Connection {
         }
     }
 
+    async fn get_vmo_handle(channel: &fidl_inspect::TreeProxy) -> Result<Vmo, Error> {
+        let tree_content = channel.get_content().await?;
+        let buffer = tree_content.buffer.ok_or(format_err!("Buffer doesn't contain VMO"))?;
+        Ok(buffer.vmo)
+    }
+
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
         self.root_link_channel = Self::fetch_link_channel(&self.fidl).await;
-        let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
-        let out = self.fidl.initialize(params).await?;
-        let handle: Option<zx::Handle>;
-        if let (Some(out_handle), _) = out {
-            handle = Some(out_handle);
-        } else {
-            return Err(format_err!("Didn't get a VMO handle"));
-        }
-        match handle {
-            Some(unwrapped_handle) => Ok(Vmo::from(unwrapped_handle)),
+        match &self.root_link_channel {
+            Some(root_link_channel) => Self::get_vmo_handle(&root_link_channel).await,
             None => {
-                return Err(format_err!("Failed to unwrap handle"));
+                let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
+                let handle: Option<zx::Handle>;
+                let out = self.fidl.initialize(params).await?;
+                if let (Some(out_handle), _) = out {
+                    handle = Some(out_handle);
+                } else {
+                    return Err(format_err!("Didn't get a VMO handle"));
+                }
+                match handle {
+                    Some(unwrapped_handle) => Ok(Vmo::from(unwrapped_handle)),
+                    None => {
+                        return Err(format_err!("Failed to unwrap handle"));
+                    }
+                }
             }
         }
     }
@@ -167,7 +193,7 @@ pub(crate) mod tests {
     async fn test_fidl_loopback() -> Result<(), Error> {
         let mut puppet = local_incomplete_puppet().await?;
         assert_eq!(puppet.vmo.get_size().unwrap(), VMO_SIZE);
-        let tree = puppet.read_data()?;
+        let tree = puppet.read_data().await?;
         assert_eq!(tree.to_string(), " root ->\n\n\n".to_string());
         let mut data = Data::new();
         tree.compare(&data, DiffType::Full)?;

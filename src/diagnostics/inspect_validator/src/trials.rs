@@ -6,6 +6,7 @@ use super::validate::{self, Action, Number, NumberType, ROOT_ID};
 
 pub enum Step {
     Actions(Vec<validate::Action>),
+    LazyActions(Vec<validate::LazyAction>),
     WithMetrics(Vec<validate::Action>, String),
 }
 
@@ -30,6 +31,7 @@ pub fn real_trials() -> Vec<Trial> {
         uint_histogram_ops_trial(),
         double_histogram_ops_trial(),
         deletions_trial(),
+        lazy_nodes_trial(),
     ]
 }
 
@@ -555,6 +557,40 @@ fn deletions_trial() -> Trial {
     steps.push(Step::Actions(vec![x3(), d3(), d1(), x1(), d2(), x2()]));
     steps.push(Step::WithMetrics(vec![], "Everything should be gone".into()));
     Trial { name: "Delete With Metrics".into(), steps }
+}
+
+fn lazy_nodes_trial() -> Trial {
+    Trial {
+        name: "Lazy Nodes".into(),
+        steps: vec![Step::LazyActions(vec![
+            // Create sibling node with same name and same content
+            create_lazy_node!(
+                parent: ROOT_ID,
+                id: 1,
+                name: "child",
+                disposition: validate::LinkDisposition::Child,
+                actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "child_bytes",value: vec!(3u8, 4u8))]
+            ),
+            create_lazy_node!(
+                parent: ROOT_ID,
+                id: 2,
+                name: "child",
+                disposition: validate::LinkDisposition::Child,
+                actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "child_bytes",value: vec!(3u8, 4u8))]
+            ),
+            delete_lazy_node!(id: 1),
+            delete_lazy_node!(id: 2),
+            // Recreate child node with new values
+            create_lazy_node!(
+                parent: ROOT_ID,
+                id: 1,
+                name: "child",
+                disposition: validate::LinkDisposition::Child,
+                actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "child_bytes_new",value: vec!(1u8, 2u8))]
+            ),
+            delete_lazy_node!(id: 1),
+        ])],
+    }
 }
 
 #[cfg(test)]

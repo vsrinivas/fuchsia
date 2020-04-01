@@ -74,7 +74,6 @@ impl TryFrom<&Vmo> for Scanner {
     }
 }
 
-#[allow(dead_code)]
 impl TryFrom<LazyNode> for Scanner {
     type Error = Error;
 
@@ -208,6 +207,7 @@ impl Scanner {
     }
 
     fn scan(mut self, snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
+        let mut link_blocks: Vec<Block<&[u8]>> = Vec::new();
         for block in snapshot.scan() {
             match block.block_type_or() {
                 Ok(BlockType::Free) => self.process_free(block)?,
@@ -219,14 +219,19 @@ impl Scanner {
                 | Ok(BlockType::DoubleValue)
                 | Ok(BlockType::ArrayValue)
                 | Ok(BlockType::BufferValue)
-                | Ok(BlockType::BoolValue)
-                | Ok(BlockType::LinkValue) => self.process_property(block, buffer)?,
+                | Ok(BlockType::BoolValue) => self.process_property(block, buffer)?,
+                Ok(BlockType::LinkValue) => link_blocks.push(block),
                 Ok(BlockType::Extent) => self.process_extent(block, buffer)?,
                 Ok(BlockType::Name) => self.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => self.process_tombstone(block)?,
                 Err(error) => return Err(error),
             }
         }
+        // We defer processing LINK blocks after because the population of the ScannedPayload::Link depends on all NAME blocks having been read.
+        for block in link_blocks.into_iter() {
+            self.process_property(block, buffer)?
+        }
+
         let (mut new_nodes, mut new_properties) = self.make_valid_node_tree(ROOT_ID)?;
         for (node, id) in new_nodes.drain(..) {
             self.final_nodes.insert(id, node);
@@ -458,7 +463,7 @@ impl Scanner {
                     .ok_or(format_err!("LinkValue encountered without child tree."))?;
                 let child_name = &self
                     .names
-                    .get(&block.name_index()?)
+                    .get(&block.link_content_index()?)
                     .ok_or(format_err!(
                         "Child name not found for LinkValue block {}.",
                         block.index()
@@ -894,12 +899,12 @@ mod tests {
         let mut puppet2 = puppet::tests::local_incomplete_puppet().await?;
         puppet2.apply(&mut child2_action).await?;
         puppet2.apply(&mut child1_action).await?;
-        assert_eq!(puppet1.read_data()?.to_string(), puppet2.read_data()?.to_string());
+        assert_eq!(puppet1.read_data().await?.to_string(), puppet2.read_data().await?.to_string());
         puppet1.apply(&mut property1_action).await?;
         puppet1.apply(&mut property2_action).await?;
         puppet2.apply(&mut property2_action).await?;
         puppet2.apply(&mut property1_action).await?;
-        assert_eq!(puppet1.read_data()?.to_string(), puppet2.read_data()?.to_string());
+        assert_eq!(puppet1.read_data().await?.to_string(), puppet2.read_data().await?.to_string());
         // Make sure the tree distinguishes based on node position
         puppet1 = puppet::tests::local_incomplete_puppet().await?;
         puppet2 = puppet::tests::local_incomplete_puppet().await?;
@@ -908,7 +913,7 @@ mod tests {
         puppet2.apply(&mut child1_action).await?;
         puppet1.apply(&mut child2_action).await?;
         puppet2.apply(&mut subchild2_action).await?;
-        assert_ne!(puppet1.read_data()?.to_string(), puppet2.read_data()?.to_string());
+        assert_ne!(puppet1.read_data().await?.to_string(), puppet2.read_data().await?.to_string());
         // ... and property position
         let mut subproperty2_action =
             create_numeric_property!(parent:1, id:2, name:"prop2", value: Number::IntT(1));

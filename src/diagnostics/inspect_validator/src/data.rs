@@ -533,7 +533,6 @@ impl Data {
         }
     }
 
-    #[allow(dead_code)]
     pub fn apply_lazy(&mut self, lazy_action: &validate::LazyAction) -> Result<(), Error> {
         match lazy_action {
             validate::LazyAction::CreateLazyNode(validate::CreateLazyNode {

@@ -12,14 +12,12 @@ use {
 
 /// A tree representation of an Inspect-formatted VMO.
 /// It contains the root VMO and all loaded child VMOs.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct LazyNode {
     vmo: Vmo,
     children: Option<HashMap<String, LazyNode>>,
 }
 
-#[allow(dead_code)]
 impl LazyNode {
     /// Creates a VMO tree using the channel given as root and the children trees as read from `channel.open_child`.
     pub fn new(channel: TreeProxy) -> Pin<Box<dyn Future<Output = Result<LazyNode, Error>>>> {
