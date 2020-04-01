@@ -23,6 +23,11 @@ _environment_service_account =
 #   - Optional: OTA to recovery instead of rebooting to recovery. Default false.
 #   - Type: boolean
 #
+#   service_account
+#   - Optional: The service account that has permission to download the build
+#     artifacts.
+#   - Type: string
+#
 #   environments
 #   - Required: What environments this test should target.
 #   - Type: see //build/testing/test_spec.gni for more details. Note that
@@ -69,6 +74,13 @@ template("system_test_upgrade_suite") {
       "-downgrade-builder-name",
       invoker.release_builder,
     ]
+
+    _service_account = _environment_service_account
+    if (defined(invoker.service_account)) {
+      assert(invoker.service_account != "",
+             "'${_spec_target_name}' cannot have an empty service_account")
+      _service_account = invoker.service_account
+    }
 
     if (defined(invoker.timeout)) {
       assert(invoker.timeout != "",
@@ -119,7 +131,7 @@ template("system_test_upgrade_suite") {
 
       environments = []
       foreach(env, invoker.environments) {
-        env.service_account = _environment_service_account
+        env.service_account = _service_account
         environments += [ env ]
       }
     }
