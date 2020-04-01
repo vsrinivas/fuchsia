@@ -431,7 +431,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:19
+From //build/images/manifest.gni:18
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -903,7 +903,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:22
+From //build/images/manifest.gni:21
 
 ### extra_package_labels
 
@@ -2182,7 +2182,7 @@ Can be either // source paths or absolute system paths.
 
 **Current value (from the default):** `["/b/s/w/ir/k/prebuilt/third_party/clang/linux-x64/lib/aarch64-fuchsia.manifest"]`
 
-From //build/images/manifest.gni:11
+From //build/images/manifest.gni:10
 
 ### toolchain_variant
 *This should never be set as a build argument.*
