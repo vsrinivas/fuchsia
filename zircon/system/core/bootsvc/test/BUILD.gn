@@ -2,42 +2,72 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/package.gni")
-import("$zx/public/gn/test/zbi_test.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-group("test") {
-  testonly = true
-  deps = [
-    ":bootsvc-integration-tests",
-    ":bootsvc-root-job-test",
-    ":bootsvc-unit-test",
-  ]
-}
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
 
-zx_test("bootsvc-unit-test") {
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+import("//build/unification/zbi/migrated_zbi_test.gni")
+import("//build/unification/zbi/resource.gni")
+import("//build/unification/zbi/zbi_input.gni")
+import("//zircon/public/gn/test/zbi_test_success.gni")
+
+test("bootsvc-unit-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "bootsvc-unit-test"
   sources = [ "unit-test.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",
     "..:util",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/unittest",
   ]
 }
 
-zx_executable("bootsvc-integration-test") {
-  testonly = true
+executable("bootsvc-integration-test") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+
+  # TODO(44278): Revert to true when converting this file to proper GN build
+  # idioms.
+  testonly = false
   defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
   sources = [ "integration-test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-    "$zx/third_party/ulib/safemath",
     "..:util",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }
 
@@ -67,12 +97,13 @@ zbi_input("integration-test-deps") {
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
     # This could possibly be smaller, but seems pretty reasonable.
-    "$zx/system/core/devmgr/fragment",
-    "$zx/system/core/miscsvc",
-    "$zx/system/core/netsvc",
-    "$zx/system/core/netsvc:device-name-provider",
-    "$zx/system/core/pwrbtn-monitor",
-    "$zx/system/core/svchost",
+    "//build/unification/zbi:bin.device-name-provider-zbi",
+    "//build/unification/zbi:bin.miscsvc-zbi",
+    "//build/unification/zbi:bin.netsvc-zbi",
+    "//build/unification/zbi:bin.pwrbtn-monitor-zbi",
+    "//build/unification/zbi:bin.svchost-zbi",
+    "//build/unification/zbi:driver.fragment-zbi",
+    "//build/unification/zbi:driver.fragment.proxy-zbi",
   ]
 }
 
@@ -139,7 +170,7 @@ resource("fake-packaged-library") {
   visibility = [ ":*" ]
   deps = [ ":gen-dummy-file" ]
   sources = [ "$target_out_dir/gen-dummy-file" ]
-  outputs = [ "${bootfs_package_prefix}dummy_pkg/lib/dummy.so" ]
+  outputs = [ "pkg/dummy_pkg/lib/dummy.so" ]
 }
 
 resource("fake-unpackaged-library") {
@@ -149,7 +180,7 @@ resource("fake-unpackaged-library") {
   outputs = [ "lib/dummy.so" ]
 }
 
-zbi_test("bootsvc-integration-tests") {
+migrated_zbi_test("bootsvc-integration-tests") {
   assert(current_cpu != "")
 
   args = [
@@ -159,7 +190,7 @@ zbi_test("bootsvc-integration-tests") {
   ]
   deps = [
     # We need a zircon kernel to get off the ground at all.
-    "$zx/kernel",
+    "//build/unification/zbi:kernel",
 
     # Include bootsvc itself, since that's what we're testing here.  Note
     # that this uses the package() target for bootsvc, which comes with its
@@ -178,7 +209,7 @@ zbi_test("bootsvc-integration-tests") {
   output_name = "$target_name-$current_cpu"
 }
 
-zbi_test("bootsvc-root-job-test") {
+migrated_zbi_test("bootsvc-root-job-test") {
   args = [
     "userboot=bin/bootsvc",
     "bootsvc.next=test/core/zbi-child-test",
@@ -187,7 +218,7 @@ zbi_test("bootsvc-root-job-test") {
   ]
   deps = [
     # We need a zircon kernel to get off the ground at all.
-    "$zx/kernel",
+    "//build/unification/zbi:kernel",
 
     # Include bootsvc itself, since that's what we're testing here.  Note
     # that this uses the package() target for bootsvc, which comes with its
@@ -196,6 +227,10 @@ zbi_test("bootsvc-root-job-test") {
     "..",
 
     # Include the integration test binary, which bootsvc will launch.
-    "$zx/system/utest/mexec:zbi-child",
+    "//zircon/system/utest/mexec:zbi-child",
   ]
+}
+
+migrated_manifest("bootsvc-unit-test-manifest") {
+  deps = [ ":bootsvc-unit-test" ]
 }

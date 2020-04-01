@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
-import("//build/images/zircon/bootsvc.gni")
 
 declare_args() {
   # Manifest files describing target libraries from toolchains.
@@ -44,19 +43,6 @@ foreach(flavor,
   }
   zircon_boot_manifests += [ _image_flavor.file ]
   zircon_boot_manifests_deps += [ _image_flavor.target ]
-}
-
-foreach(flavor, bootsvc_flavors) {
-  legacy_bootsvc = {
-  }
-  legacy_bootsvc = {
-    target = "//build/images/zircon:${flavor.name}"
-    gen_dir = get_label_info(target, "target_gen_dir")
-    name = get_label_info(target, "name")
-    file = "$gen_dir/$name.rebased.manifest"
-  }
-  zircon_boot_manifests += [ legacy_bootsvc.file ]
-  zircon_boot_manifests_deps += [ legacy_bootsvc.target ]
 }
 
 foreach(flavor,

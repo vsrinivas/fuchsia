@@ -3,12 +3,7 @@
 # found in the LICENSE file.
 
 group("core") {
-  # bootsvc is the first real user process, and it launches everything else.
-  # So it's the only "core" direct dependency and it has data_deps for the
-  # other binaries it launches.
   deps = [
-    "bootsvc",
-
     # TODO(bwb): depend on these from GN when build systems are unified. These are
     # data dependencies of devcoordinator
     "$zx/system/core/devmgr/fragment",

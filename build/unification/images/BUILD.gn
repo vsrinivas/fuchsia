@@ -461,7 +461,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.bootsvc-unit-test",
 #------------------
 #------------------
 #------------------
@@ -1006,7 +1005,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.bootsvc-unit-test",
 #------------------
 #------------------
 #------------------
@@ -1189,6 +1187,7 @@ aggregate_manifest("legacy-tests") {
 
 aggregate_manifest("migrated-image") {
   deps = [
+    "//zircon/system/core/bootsvc:bin-manifest",
     "//src/connectivity/network/drivers/network-device:manifest",
     "//src/developer/cmd:bin-manifest",
     "//src/devices/serial/drivers/serial-async:serial-async-manifest",
@@ -2765,7 +2764,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
 #------------------
-    #":test.sys.bootsvc-unit-test",
+    "//zircon/system/core/bootsvc/test:bootsvc-unit-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/channel-fatal:channel-fatal-manifest",
@@ -3427,7 +3426,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
 #------------------
-    #":test.sys.bootsvc-unit-test",
+    "//zircon/system/core/bootsvc/test:bootsvc-unit-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/channel-fatal:channel-fatal-manifest",
