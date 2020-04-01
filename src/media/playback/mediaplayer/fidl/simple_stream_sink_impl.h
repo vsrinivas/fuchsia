@@ -46,7 +46,13 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
     return *output_stream_type_;
   }
 
-  void Close(zx_status_t epitaph) { binding_.Close(epitaph); }
+  void Close(zx_status_t epitaph) {
+    if (!binding_.is_bound() && request_) {
+      binding_.Bind(std::move(request_));
+    }
+
+    binding_.Close(epitaph);
+  }
 
   // Node implementation.
   const char* label() const override { return "simple stream sink"; }
@@ -54,6 +60,8 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   void Dump(std::ostream& os) const override;
 
   void ConfigureConnectors() override;
+
+  void OnOutputConnectionReady(size_t output_index) override;
 
   void FlushOutput(size_t output_index, fit::closure callback) override;
 
@@ -84,6 +92,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
 
   std::unique_ptr<StreamType> output_stream_type_;
   media::TimelineRate pts_rate_;
+  fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request_;
   fidl::Binding<fuchsia::media::SimpleStreamSink> binding_;
   fit::closure connection_failure_callback_;
   fit::closure discard_requested_callback_;

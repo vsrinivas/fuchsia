@@ -382,16 +382,20 @@ TEST_F(AudioConsumerTests, MultipleSinks) {
     audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
                            fuchsia::media::NO_TIMESTAMP);
 
-    audio_consumer_.events().WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
-      EXPECT_TRUE(status.has_presentation_timeline());
-      // test things are progressing
-      EXPECT_EQ(status.presentation_timeline().subject_delta, 1u);
-      got_status_ = true;
+    fuchsia::media::AudioConsumerStatus received_status;
+    audio_consumer_.events().WatchStatus(
+        [this, &received_status](fuchsia::media::AudioConsumerStatus status) {
+          received_status = std::move(status);
+          // test things are progressing
+          got_status_ = true;
+        });
+
+    RunLoopUntil([this, &received_status]() {
+      return got_status_ && received_status.has_presentation_timeline();
     });
 
-    RunLoopUntil([this]() { return got_status_; });
-
-    EXPECT_TRUE(got_status_);
+    // test things are progressing
+    EXPECT_EQ(received_status.presentation_timeline().subject_delta, 1u);
 
     got_status_ = false;
   }
@@ -416,14 +420,20 @@ TEST_F(AudioConsumerTests, MultipleSinks) {
     audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
                            fuchsia::media::NO_TIMESTAMP);
 
-    audio_consumer_.events().WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
-      EXPECT_TRUE(status.has_presentation_timeline());
-      // test things are progressing
-      EXPECT_EQ(status.presentation_timeline().subject_delta, 1u);
-      got_status_ = true;
+    fuchsia::media::AudioConsumerStatus received_status;
+    audio_consumer_.events().WatchStatus(
+        [this, &received_status](fuchsia::media::AudioConsumerStatus status) {
+          received_status = std::move(status);
+          // test things are progressing
+          got_status_ = true;
+        });
+
+    RunLoopUntil([this, &received_status]() {
+      return got_status_ && received_status.has_presentation_timeline();
     });
 
-    RunLoopUntil([this]() { return got_status_; });
+    // test things are progressing
+    EXPECT_EQ(received_status.presentation_timeline().subject_delta, 1u);
 
     EXPECT_TRUE(got_status_);
   }

@@ -539,5 +539,64 @@ TEST_F(MediaPlayerTests, RegressionTestQA539) {
   EXPECT_TRUE(fake_scenic_.session().expected());
 }
 
+// Play an LPCM elementary stream using |ElementarySource|. We delay calling SetSource to ensure
+// that the SimpleStreamSink defers taking any action until it's properly connected.
+TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
+  fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
+                                        {1024, 4096, 0xda25db3fa3bf0000},
+                                        {2048, 4096, 0xe227e0f6e3bf0000},
+                                        {3072, 4096, 0xe951e2dea3bf0000},
+                                        {4096, 4096, 0x37ebf7d3e3bf0000},
+                                        {5120, 4096, 0x3f15f9bba3bf0000},
+                                        {6144, 4096, 0x4717ff72e3bf0000},
+                                        {7168, 4096, 0x4e42015aa3bf0000},
+                                        {8192, 4096, 0xeabc5347e3bf0000},
+                                        {9216, 4096, 0xf1e6552fa3bf0000},
+                                        {10240, 4096, 0xf9e85ae6e3bf0000},
+                                        {11264, 4096, 0x01125ccea3bf0000},
+                                        {12288, 4096, 0x4fac71c3e3bf0000},
+                                        {13312, 4096, 0x56d673aba3bf0000},
+                                        {14336, 4096, 0x5ed87962e3bf0000},
+                                        {15360, 4096, 0x66027b4aa3bf0000}});
+
+  fuchsia::media::playback::ElementarySourcePtr elementary_source;
+  player_->CreateElementarySource(0, false, false, nullptr, elementary_source.NewRequest());
+
+  fuchsia::media::AudioStreamType audio_stream_type;
+  audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.channels = kSamplesPerFrame;
+  audio_stream_type.frames_per_second = kFramesPerSecond;
+  fuchsia::media::StreamType stream_type;
+  stream_type.medium_specific.set_audio(std::move(audio_stream_type));
+  stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
+
+  fuchsia::media::SimpleStreamSinkPtr sink;
+  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
+  sink.set_error_handler([this](zx_status_t status) {
+    FX_LOGS(ERROR) << "SimpleStreamSink connection closed.";
+    sink_connection_closed_ = true;
+    QuitLoop();
+  });
+
+  sink_feeder_.Init(std::move(sink), kSinkFeedSize, kSamplesPerFrame * sizeof(int16_t),
+                    kSinkFeedMaxPacketSize, kSinkFeedMaxPacketCount);
+
+  // Here we're upcasting from a
+  // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
+  // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
+  // currently can. The compiler has no way of knowing whether this is
+  // legit.
+  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
+      elementary_source.Unbind().TakeChannel()));
+
+  commands_.Play();
+  QuitOnEndOfStream();
+
+  Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_FALSE(sink_connection_closed_);
+}
+
 }  // namespace test
 }  // namespace media_player

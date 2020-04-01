@@ -44,17 +44,16 @@ SimpleStreamSinkImpl::SimpleStreamSinkImpl(
     fit::closure connection_failure_callback)
     : output_stream_type_(output_stream_type.Clone()),
       pts_rate_(pts_rate),
-      binding_(this, std::move(request)),
+      request_(std::move(request)),
+      binding_(this),
       connection_failure_callback_(std::move(connection_failure_callback)),
       discard_requested_callback_(std::move(discard_requested_callback)) {
   FX_DCHECK(output_stream_type_);
-  FX_DCHECK(binding_.is_bound());
+  FX_DCHECK(request_);
+  FX_DCHECK(!binding_.is_bound());
 
-  binding_.set_error_handler([&](zx_status_t status) {
-    if (connection_failure_callback_) {
-      connection_failure_callback_();
-    }
-  });
+  // We defer binding until the output connection is ready. This allows pipelined messages to be
+  // queued up in the channel until we're ready to process them.
 }
 
 SimpleStreamSinkImpl::~SimpleStreamSinkImpl() {
@@ -81,6 +80,23 @@ void SimpleStreamSinkImpl::Dump(std::ostream& os) const {
 void SimpleStreamSinkImpl::ConfigureConnectors() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   ConfigureOutputToProvideVmos(VmoAllocation::kUnrestricted);
+}
+
+void SimpleStreamSinkImpl::OnOutputConnectionReady(size_t output_index) {
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FX_DCHECK(output_index == 0);
+
+  if (binding_.is_bound() || !request_) {
+    return;
+  }
+
+  binding_.Bind(std::move(request_));
+
+  binding_.set_error_handler([this](zx_status_t status) {
+    if (connection_failure_callback_) {
+      connection_failure_callback_();
+    }
+  });
 }
 
 void SimpleStreamSinkImpl::FlushOutput(size_t output_index, fit::closure callback) {
