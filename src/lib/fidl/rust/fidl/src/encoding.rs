@@ -9,10 +9,9 @@ use {
     crate::handle::{Handle, HandleBased, MessageBuf},
     crate::{Error, Result},
     bitflags::bitflags,
-    byteorder::{ByteOrder, LittleEndian},
     fuchsia_zircon_status as zx_status,
     static_assertions::{assert_not_impl_any, assert_obj_safe},
-    std::{cell::RefCell, cmp, mem, ptr, str, u32, u64},
+    std::{cell::RefCell, cmp, convert::TryFrom, mem, ptr, str, u32, u64},
     zerocopy::AsBytes,
 };
 
@@ -767,7 +766,7 @@ macro_rules! impl_slice_encoding_by_copy {
     };
 }
 
-macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,)*) => { $(
+macro_rules! impl_codable_num { ($($prim_ty:ty,)*) => { $(
     impl Layout for $prim_ty {
         fn inline_size(_context: &Context) -> usize { mem::size_of::<$prim_ty>() }
         fn inline_align(_context: &Context) -> usize { mem::size_of::<$prim_ty>() }
@@ -776,7 +775,7 @@ macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,
     impl Encodable for $prim_ty {
         fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
             let slot = encoder.next_slice(mem::size_of::<Self>())?;
-            LittleEndian::$writer(slot, *self);
+            slot.copy_from_slice(&self.to_le_bytes());
             Ok(())
         }
     }
@@ -784,26 +783,22 @@ macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,
     impl Decodable for $prim_ty {
         fn new_empty() -> Self { 0 as $prim_ty }
         fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-            let end = mem::size_of::<Self>();
-            let range = split_off_front(&mut decoder.buf, end)?;
-            *self = LittleEndian::$reader(range);
-            Ok(())
+            const SIZE: usize = mem::size_of::<$prim_ty>();
+            let range = split_off_front(&mut decoder.buf, SIZE)?;
+            match <[u8; SIZE]>::try_from(range) {
+                Ok(array) => {
+                    *self = Self::from_le_bytes(array);
+                    Ok(())
+                }
+                Err(_) => Err(Error::OutOfRange),
+            }
         }
     }
 
     impl_slice_encoding_by_copy!($prim_ty);
 )* } }
 
-impl_codable_num!(
-    u16 => read_u16 + write_u16,
-    u32 => read_u32 + write_u32,
-    u64 => read_u64 + write_u64,
-    i16 => read_i16 + write_i16,
-    i32 => read_i32 + write_i32,
-    i64 => read_i64 + write_i64,
-    f32 => read_f32 + write_f32,
-    f64 => read_f64 + write_f64,
-);
+impl_codable_num!(u16, u32, u64, i16, i32, i64, f32, f64,);
 
 impl_layout!(bool, align: 1, size: 1);
 
@@ -1484,8 +1479,9 @@ impl Layout for zx_status::Status {
 
 impl Encodable for zx_status::Status {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let slot = encoder.next_slice(mem::size_of::<zx_status::zx_status_t>())?;
-        LittleEndian::write_i32(slot, self.into_raw());
+        type Raw = zx_status::zx_status_t;
+        let slot = encoder.next_slice(mem::size_of::<Raw>())?;
+        slot.copy_from_slice(&self.into_raw().to_le_bytes());
         Ok(())
     }
 }
@@ -1495,10 +1491,16 @@ impl Decodable for zx_status::Status {
         Self::from_raw(0)
     }
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        let end = mem::size_of::<zx_status::zx_status_t>();
-        let range = split_off_front(&mut decoder.buf, end)?;
-        *self = Self::from_raw(LittleEndian::read_i32(range));
-        Ok(())
+        type Raw = zx_status::zx_status_t;
+        const SIZE: usize = mem::size_of::<Raw>();
+        let range = split_off_front(&mut decoder.buf, SIZE)?;
+        match <[u8; SIZE]>::try_from(range) {
+            Ok(array) => {
+                *self = Self::from_raw(Raw::from_le_bytes(array));
+                Ok(())
+            }
+            Err(_) => Err(Error::OutOfRange),
+        }
     }
 }
 
@@ -2338,9 +2340,8 @@ bitflags! {
 
 impl Into<[u8; 3]> for HeaderFlags {
     fn into(self) -> [u8; 3] {
-        let mut bytes: [u8; 3] = [0; 3];
-        LittleEndian::write_u24(&mut bytes, self.bits);
-        bytes
+        let bytes = self.bits.to_le_bytes();
+        [bytes[0], bytes[1], bytes[2]]
     }
 }
 
@@ -2373,7 +2374,8 @@ impl TransactionHeader {
 
     /// Returns the header's flags as a `HeaderFlags` value.
     pub fn flags(&self) -> HeaderFlags {
-        HeaderFlags::from_bits_truncate(LittleEndian::read_u24(&self.flags))
+        let bytes = [self.flags[0], self.flags[1], self.flags[2], 0];
+        HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
     }
 
     /// Returns the context to use for decoding the message body associated with
