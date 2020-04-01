@@ -69,7 +69,6 @@ using stubs::UtcProvider;
 using testing::ByRef;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::Eq;
 using testing::IsEmpty;
 using testing::IsSupersetOf;
 using testing::Not;
@@ -242,7 +241,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
         {"version", Not(IsEmpty())},
         {"ptype", testing::StartsWith("crashing_program")},
         {"osName", "Fuchsia"},
-        {"osVersion", "0.0.0"},
+        {"osVersion", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"debug.guid.set", "true"},
         {"reportTimeMillis", Not(IsEmpty())},
@@ -262,6 +261,12 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
       EXPECT_THAT(crash_server_->latest_annotations(),
                   testing::Contains(testing::Pair(key, value)));
     }
+    ASSERT_NE(crash_server_->latest_annotations().find("version"),
+              crash_server_->latest_annotations().end());
+    ASSERT_NE(crash_server_->latest_annotations().find("osVersion"),
+              crash_server_->latest_annotations().end());
+    EXPECT_STREQ(crash_server_->latest_annotations().at("version").c_str(),
+                 crash_server_->latest_annotations().at("osVersion").c_str());
   }
 
   // Checks that on the crash server the keys for the attachments received match the

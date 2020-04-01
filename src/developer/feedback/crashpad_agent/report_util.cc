@@ -155,7 +155,7 @@ void AddCrashServerAnnotations(const std::string& program_name,
   // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
   (*annotations)["ptype"] = program_name;
   (*annotations)["osName"] = "Fuchsia";
-  (*annotations)["osVersion"] = "0.0.0";
+  (*annotations)["osVersion"] = build_version;
 
   // We set the device's global unique identifier only if the device has one.
   if (device_id.has_value()) {
