@@ -19,6 +19,10 @@
       "name": "font_provider",
       "url": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
     },
+    {
+      "name": "remote-control",
+      "url": "fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control.cm",
+    },
   ],
   "expose": [
     // Non-zircon services for svchost
@@ -99,6 +103,33 @@
       "dependency": "weak_for_migration",
     },
     {
+      "protocol": [
+        "/svc/fuchsia.logger.LogSink",
+        "/svc/fuchsia.net.stack.Stack",
+        "/svc/fuchsia.overnet.Overnet",
+        "/svc/fuchsia.overnet.ServicePublisher",
+        "/svc/fuchsia.sys.Launcher",
+      ],
+      "from": "#appmgr",
+      "to": [ "#remote-control" ],
+      "dependency": "weak_for_migration",
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.test.manager.Harness",
+      ],
+      "from": "#test_manager",
+      "to": [ "#remote-control" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.device.NameProvider",
+        "/svc/fuchsia.device.manager.Administrator",
+      ],
+      "from": "realm",
+      "to": [ "#remote-control" ],
+    },
+    {
       "directory": "/config/data",
       "subdir": "fonts",
       "from": "realm",
@@ -108,6 +139,11 @@
       "directory": "/config/data",
       "from": "realm",
       "to": [ "#test_manager" ],
+    },
+    {
+      "protocol": "/svc/fuchsia.developer.remotecontrol.RemoteControl",
+      "from": "#remote-control",
+      "to": [ "#appmgr" ],
     },
     {
       "protocol": "/svc/fuchsia.fonts.Provider",
@@ -175,6 +211,7 @@
         "#appmgr",
         "#test_manager",
         "#font_provider",
+        "#remote-control",
       ],
     },
   ],

@@ -44,6 +44,7 @@
 
     // From v2 components
     { "protocol": "/svc/fuchsia.fonts.Provider", "as": "/svc_for_sys/fuchsia.fonts.Provider" },
+    { "protocol": "/svc/fuchsia.developer.remotecontrol.RemoteControl", "as": "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl" },
 
     // From sysinfo
     { "protocol": "/svc/fuchsia.sysinfo.SysInfo", "as": "/svc_for_sys/fuchsia.sysinfo.SysInfo" },
@@ -69,6 +70,7 @@
     {
       "protocol": [
         "/svc/fuchsia.cobalt.LoggerFactory",
+        "/svc/fuchsia.device.manager.Administrator",
         "/svc/fuchsia.devicesettings.DeviceSettingsManager",
         "/svc/fuchsia.exception.Handler",
         "/svc/fuchsia.logger.Log",
@@ -77,6 +79,8 @@
         "/svc/fuchsia.net.stack.Log",
         "/svc/fuchsia.net.stack.Stack",
         "/svc/fuchsia.netstack.Netstack",
+        "/svc/fuchsia.overnet.Overnet",
+        "/svc/fuchsia.overnet.ServicePublisher",
         "/svc/fuchsia.pkg.FontResolver",
         "/svc/fuchsia.pkg.PackageResolver",
         "/svc/fuchsia.pkg.RepositoryManager",
