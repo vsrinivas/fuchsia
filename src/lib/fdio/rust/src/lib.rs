@@ -190,7 +190,7 @@ pub fn create_fd(handle: zx::Handle) -> Result<File, zx::Status> {
 
 /// Open a new connection to `file` by sending a request to open
 /// a new connection to the sever.
-pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
+pub fn clone_channel(file: &impl AsRawFd) -> Result<zx::Channel, zx::Status> {
     unsafe {
         // First, we must open a new connection to the handle, since
         // we must return a newly owned copy.

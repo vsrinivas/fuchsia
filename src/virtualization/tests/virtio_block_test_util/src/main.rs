@@ -46,7 +46,7 @@ fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, zx::Status> {
 }
 
 fn check(block_dev: &File, block_size: u32, block_count: u64) -> Result<(), zx::Status> {
-    let channel = clone_channel(&block_dev)?;
+    let channel = clone_channel(block_dev)?;
     let mut device = BlockSynchronousProxy::new(channel);
     let (status, maybe_block_info) =
         device.get_info(zx::Time::INFINITE).map_err(|_| zx::Status::IO)?;
