@@ -13,8 +13,6 @@ bootfs_only = false
 kernel_cmdline_args -= [ "kernel.oom.behavior=jobkill" ]
 kernel_cmdline_args += [ "kernel.oom.behavior=reboot" ]
 
-zircon_enable_netsvc_debugging_features = false
-
 meta_package_labels += [
   "//build/images:config-data",
   "//build/images:shell-commands",

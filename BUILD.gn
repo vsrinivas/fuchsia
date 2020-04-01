@@ -58,10 +58,6 @@ declare_args() {
   # Additional Zircon GN labels to include in the Zircon build.
   zircon_extra_deps = []
 
-  # Whether to include various features (non-shipping, insecure, etc.) in the
-  # netsvc build.
-  zircon_enable_netsvc_debugging_features = false
-
   # Where to emit a tracelog from Zircon's GN run. No trace will be produced if
   # given the empty string. Path can be source-absolute or system-absolute.
   zircon_tracelog = ""
@@ -112,7 +108,6 @@ declare_args() {
                      "//:legacy_unification-$target_cpu",
                      "//tools:all-hosts",
                    ] + zircon_extra_deps
-    enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
     forward_variables_from(zircon_extra_args, "*")
   }
 }

@@ -86,50 +86,42 @@ func randomTokenAsString() string {
 }
 
 func attemptNetruncmd(t *testing.T, i *qemu.Instance, shouldWork bool) {
-	// TODO(scottmg): fxb/37043.
-	t.Logf("disabled until enable_netsvc_debugging_features is removed")
-	/*
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-		name := toolPath(t, "netruncmd")
-		tokenFromNetruncmd := randomTokenAsString()
-		cmd := exec.CommandContext(ctx, name, defaultNodename, tokenFromNetruncmd)
+	name := toolPath(t, "netruncmd")
+	tokenFromNetruncmd := randomTokenAsString()
+	cmd := exec.CommandContext(ctx, name, defaultNodename, tokenFromNetruncmd)
 
-		err := cmd.Run()
-		if err != nil {
-			t.Errorf("%s failed to run? err=%s", name, err)
-		}
+	err := cmd.Run()
+	if err != nil {
+		t.Errorf("%s failed to run? err=%s", name, err)
+	}
 
-		time.Sleep(time.Second)
-		tokenFromSerial := randomTokenAsString()
-		i.RunCommand("echo '" + tokenFromSerial + "'")
+	time.Sleep(time.Second)
+	tokenFromSerial := randomTokenAsString()
+	i.RunCommand("echo '" + tokenFromSerial + "'")
 
-		if shouldWork {
-			// If netruncmd works, we should get the token echo'd by netruncmd first,
-			// then the terminator (which is sent over serial).
-			i.WaitForLogMessage(tokenFromNetruncmd)
-			i.WaitForLogMessage(tokenFromSerial)
-			t.Logf("%s succeeded as expected", name)
-		} else {
-			// If netruncmd isn't working, we must not see the netruncmd token, and
-			// should only get the serial token.
-			i.WaitForLogMessageAssertNotSeen(tokenFromSerial, tokenFromNetruncmd)
-			t.Logf("%s failed as expected", name)
-		}
-	*/
+	if shouldWork {
+		// If netruncmd works, we should get the token echo'd by netruncmd first,
+		// then the terminator (which is sent over serial).
+		i.WaitForLogMessage(tokenFromNetruncmd)
+		i.WaitForLogMessage(tokenFromSerial)
+		t.Logf("%s succeeded as expected", name)
+	} else {
+		// If netruncmd isn't working, we must not see the netruncmd token, and
+		// should only get the serial token.
+		i.WaitForLogMessageAssertNotSeen(tokenFromSerial, tokenFromNetruncmd)
+		t.Logf("%s failed as expected", name)
+	}
 }
 
 func attemptNetls(t *testing.T, i *qemu.Instance, shouldWork bool) {
-	cmdWithTimeout(
-		t, shouldWork,
-		toolPath(t, "netls"))
+	cmdWithTimeout(t, shouldWork, toolPath(t, "netls"))
 }
 
 func attemptNetaddr(t *testing.T, i *qemu.Instance, shouldWork bool) {
-	cmdWithTimeout(
-		t, shouldWork,
-		toolPath(t, "netaddr"))
+	cmdWithTimeout(t, shouldWork, toolPath(t, "netaddr"))
 }
 
 func attemptTftp(t *testing.T, i *qemu.Instance, shouldWork bool) {

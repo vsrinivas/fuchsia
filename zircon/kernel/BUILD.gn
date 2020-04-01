@@ -5,7 +5,6 @@
 # https://opensource.org/licenses/MIT
 
 import("$zx/public/gn/config/levels.gni")
-import("$zx/public/gn/config/product_parameters.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment.gni")

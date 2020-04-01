@@ -2,18 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/product_parameters.gni")
-
 zx_executable("netsvc") {
   sources = [
+    "debug-command.cc",
     "debuglog.cc",
     "netsvc.cc",
   ]
-  if (enable_netsvc_debugging_features) {
-    sources += [ "debug-command-enabled.cc" ]
-  } else {
-    sources += [ "debug-command-disabled.cc" ]
-  }
   deps = [
     ":args",
     ":netsvc_common",
