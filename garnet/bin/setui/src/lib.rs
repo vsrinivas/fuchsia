@@ -299,7 +299,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
-    let switchboard_handle = SwitchboardImpl::create(registry_messenger_factory.clone())
+    let switchboard_client = SwitchboardImpl::create(registry_messenger_factory.clone())
         .await
         .expect("could not create switchboard");
 
@@ -310,86 +310,86 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create registry");
     if components.contains(&SettingType::Accessibility) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
-            spawn_accessibility_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_accessibility_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::Audio) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: AudioRequestStream| {
-            spawn_audio_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_audio_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::Device) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: DeviceRequestStream| {
-            spawn_device_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_device_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::Display) || components.contains(&SettingType::LightSensor)
     {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
-            spawn_display_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_display_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::DoNotDisturb) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
-            spawn_do_not_disturb_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_do_not_disturb_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::Intl) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: IntlRequestStream| {
-            spawn_intl_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_intl_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::NightMode) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
-            spawn_night_mode_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_night_mode_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::Privacy) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
-            spawn_privacy_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_privacy_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     if components.contains(&SettingType::System) {
         {
-            let switchboard_handle_clone = switchboard_handle.clone();
+            let switchboard_client = switchboard_client.clone();
             service_dir.add_fidl_service(move |stream: SystemRequestStream| {
-                spawn_system_fidl_handler(switchboard_handle_clone.clone(), stream);
+                spawn_system_fidl_handler(switchboard_client.clone(), stream);
             });
         }
         {
-            let switchboard_handle_clone = switchboard_handle.clone();
+            let switchboard_client = switchboard_client.clone();
             service_dir.add_fidl_service(move |stream: SetUiServiceRequestStream| {
-                spawn_setui_fidl_handler(switchboard_handle_clone.clone(), stream);
+                spawn_setui_fidl_handler(switchboard_client.clone(), stream);
             });
         }
     }
 
     if components.contains(&SettingType::Setup) {
-        let switchboard_handle_clone = switchboard_handle.clone();
+        let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: SetupRequestStream| {
-            spawn_setup_fidl_handler(switchboard_handle_clone.clone(), stream);
+            spawn_setup_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<Result<(), Error>>();
-    let switchboard_handle_clone = switchboard_handle.clone();
+    let switchboard_client_clone = switchboard_client.clone();
     fasync::spawn(async move {
         // Register agents
         for agent in agents {
@@ -403,7 +403,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             .execute_lifespan(
                 Lifespan::Initialization,
                 components.clone(),
-                switchboard_handle_clone.clone(),
+                switchboard_client_clone.clone(),
                 service_context_handle.clone(),
                 true,
             )
@@ -419,7 +419,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             .execute_lifespan(
                 Lifespan::Service,
                 components.clone(),
-                switchboard_handle_clone.clone(),
+                switchboard_client_clone.clone(),
                 service_context_handle.clone(),
                 false,
             )

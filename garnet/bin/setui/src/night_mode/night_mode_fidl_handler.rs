@@ -45,12 +45,12 @@ impl From<NightModeSettings> for SettingRequest {
 }
 
 pub fn spawn_night_mode_fidl_handler(
-    switchboard: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     stream: NightModeRequestStream,
 ) {
     process_stream::<NightModeMarker, NightModeSettings, NightModeWatchResponder>(
         stream,
-        switchboard,
+        switchboard_client,
         SettingType::NightMode,
         Box::new(
             move |context,
@@ -60,7 +60,7 @@ pub fn spawn_night_mode_fidl_handler(
                     #[allow(unreachable_patterns)]
                     match req {
                         NightModeRequest::Set { settings, responder } => {
-                            set(context.switchboard, settings, responder).await;
+                            set(&context.switchboard_client, settings, responder).await;
                         }
                         NightModeRequest::Watch { responder } => {
                             context.watch(responder).await;
@@ -79,17 +79,12 @@ pub fn spawn_night_mode_fidl_handler(
 }
 
 async fn set(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: &SwitchboardClient,
     settings: NightModeSettings,
     responder: NightModeSetResponder,
 ) {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    match switchboard_handle.lock().await.request(
-        SettingType::NightMode,
-        settings.into(),
-        response_tx,
-    ) {
-        Ok(_) => {
+    match switchboard_client.request(SettingType::NightMode, settings.into()).await {
+        Ok(response_rx) => {
             fasync::spawn(async move {
                 let result = match response_rx.await {
                     Ok(Ok(_)) => responder.send(&mut Ok(())),

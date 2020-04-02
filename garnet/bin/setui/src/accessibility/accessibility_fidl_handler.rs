@@ -16,8 +16,7 @@ use crate::switchboard::accessibility_types::{
     AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
 };
 use crate::switchboard::base::{
-    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardHandle,
+    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -66,12 +65,12 @@ impl From<AccessibilitySettings> for SettingRequest {
 }
 
 pub fn spawn_accessibility_fidl_handler(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     stream: AccessibilityRequestStream,
 ) {
     process_stream::<AccessibilityMarker, AccessibilitySettings, AccessibilityWatchResponder>(
         stream,
-        switchboard_handle,
+        switchboard_client,
         SettingType::Accessibility,
         Box::new(
             move |context, req| -> LocalBoxFuture<'_, Result<Option<AccessibilityRequest>, anyhow::Error>> {
@@ -80,7 +79,7 @@ pub fn spawn_accessibility_fidl_handler(
                     #[allow(unreachable_patterns)]
                     match req {
                         AccessibilityRequest::Set { settings, responder } => {
-                            set_accessibility(context.switchboard.clone(), settings, responder).await;
+                            set_accessibility(&context.switchboard_client, settings, responder).await;
                         }
                         AccessibilityRequest::Watch { responder } => {
                             context.watch(responder).await;
@@ -101,18 +100,12 @@ pub fn spawn_accessibility_fidl_handler(
 /// Sends a request to set the accessibility settings through the switchboard and responds with an
 /// appropriate result to the given responder.
 async fn set_accessibility(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: &SwitchboardClient,
     settings: AccessibilitySettings,
     responder: AccessibilitySetResponder,
 ) {
-    let switchboard_handle = switchboard_handle.clone();
-
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    if switchboard_handle
-        .lock()
-        .await
-        .request(SettingType::Accessibility, settings.into(), response_tx)
-        .is_ok()
+    if let Ok(response_rx) =
+        switchboard_client.request(SettingType::Accessibility, settings.into()).await
     {
         fasync::spawn(async move {
             match response_rx.await {

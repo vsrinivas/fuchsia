@@ -10,10 +10,9 @@ use futures::future::LocalBoxFuture;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
 
-use crate::switchboard::base::{SettingResponse, SettingType, Switchboard};
+use crate::switchboard::base::{SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 
-pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 pub type RequestResultCreator<'a, S> = LocalBoxFuture<'a, Result<Option<Request<S>>, Error>>;
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -27,7 +26,7 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    pub switchboard: SwitchboardHandle,
+    pub switchboard_client: SwitchboardClient,
     hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST>>>,
 }
 
@@ -54,7 +53,7 @@ where
 {
     fn clone(&self) -> RequestContext<T, ST> {
         RequestContext {
-            switchboard: self.switchboard.clone(),
+            switchboard_client: self.switchboard_client.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
         }
     }
@@ -77,7 +76,7 @@ where
 {
     fn process(
         &self,
-        switchboard: SwitchboardHandle,
+        switchboard: SwitchboardClient,
         request: Request<S>,
     ) -> RequestResultCreator<'static, S>;
 }
@@ -104,12 +103,12 @@ where
 {
     async fn new(
         setting_type: SettingType,
-        switchboard: SwitchboardHandle,
+        switchboard_client: SwitchboardClient,
         callback: RequestCallback<S, T, ST>,
     ) -> Self {
         Self {
             callback: callback,
-            hanging_get_handler: HangingGetHandler::create(switchboard.clone(), setting_type).await,
+            hanging_get_handler: HangingGetHandler::create(switchboard_client, setting_type).await,
         }
     }
 }
@@ -136,11 +135,11 @@ where
 {
     fn process(
         &self,
-        switchboard: SwitchboardHandle,
+        switchboard_client: SwitchboardClient,
         request: Request<S>,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext {
-            switchboard: switchboard.clone(),
+            switchboard_client: switchboard_client.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
         };
 
@@ -155,7 +154,7 @@ where
     S: ServiceMarker,
 {
     request_stream: RequestStream<S>,
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     processing_units: Vec<Box<dyn ProcessingUnit<S>>>,
 }
 
@@ -163,10 +162,10 @@ impl<S> FidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    pub fn new(stream: RequestStream<S>, switchboard: SwitchboardHandle) -> Self {
+    pub fn new(stream: RequestStream<S>, switchboard_client: SwitchboardClient) -> Self {
         Self {
             request_stream: stream,
-            switchboard_handle: switchboard.clone(),
+            switchboard_client: switchboard_client,
             processing_units: Vec::new(),
         }
     }
@@ -182,7 +181,7 @@ where
         let processing_unit = Box::new(
             SettingProcessingUnit::<S, V, SV>::new(
                 setting_type,
-                self.switchboard_handle.clone(),
+                self.switchboard_client.clone(),
                 callback,
             )
             .await,
@@ -199,7 +198,7 @@ where
                 // result is returned) or an error occurs, exit processing this
                 // request. Otherwise, hand the request to the next processing
                 // unit
-                match processing_unit.process(self.switchboard_handle.clone(), req).await {
+                match processing_unit.process(self.switchboard_client.clone(), req).await {
                     Ok(Some(return_request)) => {
                         req = return_request;
                     }
@@ -214,7 +213,7 @@ where
 
 pub fn process_stream<S, T, ST>(
     stream: RequestStream<S>,
-    switchboard: SwitchboardHandle,
+    switchboard: SwitchboardClient,
     setting_type: SettingType,
     callback: RequestCallback<S, T, ST>,
 ) where
@@ -223,7 +222,7 @@ pub fn process_stream<S, T, ST>(
     ST: Sender<T> + Send + Sync + 'static,
 {
     fasync::spawn_local(async move {
-        let mut processor = FidlProcessor::<S>::new(stream, switchboard.clone());
+        let mut processor = FidlProcessor::<S>::new(stream, switchboard);
         processor.register::<T, ST>(setting_type, callback).await;
         processor.process().await;
     });

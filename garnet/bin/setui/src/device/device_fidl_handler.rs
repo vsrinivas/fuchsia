@@ -32,12 +32,12 @@ impl From<SettingResponse> for DeviceSettings {
 }
 
 pub fn spawn_device_fidl_handler(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     stream: DeviceRequestStream,
 ) {
     process_stream::<DeviceMarker, DeviceSettings, DeviceWatchResponder>(
         stream,
-        switchboard_handle,
+        switchboard_client,
         SettingType::Device,
         Box::new(
             move |context,

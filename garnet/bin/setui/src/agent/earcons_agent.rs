@@ -141,20 +141,23 @@ async fn listen_to_audio_events(
     volume_change_handler: VolumeChangeEarconsHandler,
     common_earcons_params: CommonEarconsParams,
 ) {
-    let switchboard = invocation.context.switchboard.clone();
+    let switchboard_client = invocation.context.switchboard_client.clone();
     let common_earcons_params_clone = common_earcons_params.clone();
-    let listen_result = switchboard.clone().lock().await.listen(
-        SettingType::Audio,
-        Arc::new(move |setting| {
-            // Connect to the SoundPlayer the first time an earcons event occurs.
-            connect_to_sound_player(
-                common_earcons_params.service_context.clone(),
-                common_earcons_params.sound_player_connection.clone(),
-            );
+    let listen_result = switchboard_client
+        .clone()
+        .listen(
+            SettingType::Audio,
+            Arc::new(move |setting| {
+                // Connect to the SoundPlayer the first time an earcons event occurs.
+                connect_to_sound_player(
+                    common_earcons_params.service_context.clone(),
+                    common_earcons_params.sound_player_connection.clone(),
+                );
 
-            volume_change_handler.get_volume_info(switchboard.clone(), setting);
-        }),
-    );
+                volume_change_handler.get_volume_info(switchboard_client.clone(), setting);
+            }),
+        )
+        .await;
     assert!(listen_result.is_ok());
 
     // Store the listen session so it doesn't get dropped and cancel the connection.

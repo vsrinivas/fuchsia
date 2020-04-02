@@ -32,12 +32,12 @@ impl From<SettingResponse> for SystemSettings {
 }
 
 pub fn spawn_system_fidl_handler(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     stream: SystemRequestStream,
 ) {
     process_stream::<SystemMarker, SystemSettings, SystemWatchResponder>(
         stream,
-        switchboard_handle,
+        switchboard_client,
         SettingType::System,
         Box::new(
             move |context,
@@ -80,7 +80,7 @@ fn change_login_override(
 ) {
     fasync::spawn(async move {
         let login_override_result = request(
-            context.switchboard.clone(),
+            &context.switchboard_client,
             SettingType::System,
             SettingRequest::SetLoginOverrideMode(mode),
             "set login override",
@@ -92,7 +92,7 @@ fn change_login_override(
         }
 
         let schedule_account_clear_result = request(
-            context.switchboard.clone(),
+            &context.switchboard_client,
             SettingType::Account,
             SettingRequest::ScheduleClearAccounts,
             "clear accounts",
@@ -105,7 +105,7 @@ fn change_login_override(
         }
 
         let restart_result = request(
-            context.switchboard.clone(),
+            &context.switchboard_client,
             SettingType::Power,
             SettingRequest::Reboot,
             "rebooting",
@@ -122,17 +122,13 @@ fn change_login_override(
 }
 
 async fn request(
-    switchboard: SwitchboardHandle,
+    switchboard_client: &SwitchboardClient,
     setting_type: SettingType,
     setting_request: SettingRequest,
     description: &str,
 ) -> Result<(), ()> {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    let result =
-        switchboard.clone().lock().await.request(setting_type, setting_request, response_tx);
-
-    match result {
-        Ok(()) => match response_rx.await {
+    match switchboard_client.request(setting_type, setting_request).await {
+        Ok(response_rx) => match response_rx.await {
             Ok(_) => {
                 return Ok(());
             }

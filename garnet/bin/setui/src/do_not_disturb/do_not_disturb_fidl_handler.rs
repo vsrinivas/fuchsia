@@ -39,10 +39,10 @@ fn to_request(settings: DoNotDisturbSettings) -> Option<SettingRequest> {
 }
 
 pub fn spawn_do_not_disturb_fidl_handler(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     stream: DoNotDisturbRequestStream,
 ) {
-    process_stream::<DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder>(stream, switchboard_handle, SettingType::DoNotDisturb, Box::new(
+    process_stream::<DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder>(stream, switchboard_client, SettingType::DoNotDisturb, Box::new(
                 move |context, req| -> LocalBoxFuture<'_, Result<Option<DoNotDisturbRequest>, anyhow::Error>> {
                     async move {
                         // Support future expansion of FIDL
@@ -50,15 +50,9 @@ pub fn spawn_do_not_disturb_fidl_handler(
                         match req {
                             DoNotDisturbRequest::Set { settings, responder } => {
                                 if let Some(request) = to_request(settings) {
-                                    let (response_tx, response_rx) =
-                                        futures::channel::oneshot::channel::<SettingResponseResult>(
-                                        );
-                                    if context
-                                        .switchboard
-                                        .lock()
+                                    if let Ok(response_rx) = context.switchboard_client
+                                        .request(SettingType::DoNotDisturb, request)
                                         .await
-                                        .request(SettingType::DoNotDisturb, request, response_tx)
-                                        .is_ok()
                                     {
                                         fasync::spawn(async move {
                                             match response_rx.await {

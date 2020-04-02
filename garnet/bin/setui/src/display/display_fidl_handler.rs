@@ -62,11 +62,11 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
 }
 
 pub fn spawn_display_fidl_handler(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     stream: DisplayRequestStream,
 ) {
     fasync::spawn_local(async move {
-        let mut processor = FidlProcessor::<DisplayMarker>::new(stream, switchboard_handle.clone());
+        let mut processor = FidlProcessor::<DisplayMarker>::new(stream, switchboard_client);
         processor.register::<DisplaySettings, DisplayWatchResponder>(
             SettingType::Display,
             Box::new(move |context, req| -> LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
@@ -76,12 +76,7 @@ pub fn spawn_display_fidl_handler(
                     match req {
                          DisplayRequest::Set { settings, responder } => {
                              if let Some(request) = to_request(settings) {
-                                let (response_tx, _response_rx) =
-                                    futures::channel::oneshot::channel::<SettingResponseResult>();
-                                let result =
-                                    context.switchboard.lock().await.request(SettingType::Display, request, response_tx);
-
-                                match result {
+                                match context.switchboard_client.request(SettingType::Display, request).await {
                                     Ok(_) => responder
                                         .send(&mut Ok(()))
                                         .log_fidl_response_error(DisplayMarker::DEBUG_NAME),

@@ -4,8 +4,8 @@
 
 use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
-    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingResponseResult,
-    SettingType, SetupInfo, SwitchboardHandle,
+    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
+    SwitchboardClient,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 use fidl_fuchsia_settings::{
@@ -92,26 +92,26 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
-async fn reboot(switchboard_handle: SwitchboardHandle, responder: SetupSetResponder) {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    let mut switchboard = switchboard_handle.lock().await;
-
-    if switchboard.request(SettingType::Power, SettingRequest::Reboot, response_tx).is_err() {
-        // Respond immediately with an error if request was not possible.
-        responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-        return;
-    }
-
-    fasync::spawn(async move {
-        // Return success if we get a Ok result from the
-        // switchboard.
-        if let Ok(Ok(_)) = response_rx.await {
-            responder.send(&mut Ok(())).ok();
+async fn reboot(switchboard_client: SwitchboardClient, responder: SetupSetResponder) {
+    match switchboard_client.request(SettingType::Power, SettingRequest::Reboot).await {
+        Err(_) => {
+            // Respond immediately with an error if request was not possible.
+            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
             return;
         }
+        Ok(response_rx) => {
+            fasync::spawn(async move {
+                // Return success if we get a Ok result from the
+                // switchboard.
+                if let Ok(Ok(_)) = response_rx.await {
+                    responder.send(&mut Ok(())).ok();
+                    return;
+                }
 
-        responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-    });
+                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            });
+        }
+    }
 }
 
 async fn set(
@@ -120,35 +120,33 @@ async fn set(
     responder: SetupSetResponder,
 ) {
     if let Ok(request) = SettingRequest::try_from(settings) {
-        let (response_tx, response_rx) =
-            futures::channel::oneshot::channel::<SettingResponseResult>();
-
-        let mut switchboard = context.switchboard.lock().await;
-
-        if switchboard.request(SettingType::Setup, request, response_tx).is_err() {
-            // Respond immediately with an error if request was not possible.
-            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-            return;
-        }
-
-        let switchboard_clone = context.switchboard.clone();
-        fasync::spawn(async move {
-            // Return success if we get a Ok result from the
-            // switchboard.
-            if let Ok(Ok(_)) = response_rx.await {
-                reboot(switchboard_clone, responder).await;
+        match context.switchboard_client.request(SettingType::Setup, request).await {
+            Err(_) => {
+                // Respond immediately with an error if request was not possible.
+                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
                 return;
             }
+            Ok(response_rx) => {
+                let switchboard_client = context.switchboard_client.clone();
+                fasync::spawn(async move {
+                    // Return success if we get a Ok result from the
+                    // switchboard.
+                    if let Ok(Ok(_)) = response_rx.await {
+                        reboot(switchboard_client, responder).await;
+                        return;
+                    }
 
-            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-        });
+                    responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+                });
+            }
+        }
     }
 }
 
-pub fn spawn_setup_fidl_handler(switchboard: SwitchboardHandle, stream: SetupRequestStream) {
+pub fn spawn_setup_fidl_handler(switchboard_client: SwitchboardClient, stream: SetupRequestStream) {
     process_stream::<SetupMarker, SetupSettings, SetupWatchResponder>(
         stream,
-        switchboard,
+        switchboard_client,
         SettingType::Setup,
         Box::new(
             move |context,

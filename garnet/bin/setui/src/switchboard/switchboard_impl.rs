@@ -97,7 +97,7 @@ impl SwitchboardImpl {
     /// a sender to provide events in response to the actions sent.
     pub async fn create(
         registry_messenger_factory: RegistryMessengerFactory,
-    ) -> Result<Arc<Mutex<SwitchboardImpl>>, Error> {
+    ) -> Result<SwitchboardClient, Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
         let messenger_result = registry_messenger_factory
@@ -139,7 +139,7 @@ impl SwitchboardImpl {
             });
         }
 
-        return Ok(switchboard);
+        return Ok(SwitchboardClient::new(&(switchboard as SwitchboardHandle)));
     }
 
     pub fn get_next_action_id(&mut self) -> u64 {
@@ -303,23 +303,41 @@ mod tests {
         panic!("expected Payload::Action");
     }
 
+    /// Exercises locking behavior around the Switchboard in the
+    /// SwitchboardClient. Consumers should be able to call client methods and
+    /// use the return values without holding onto the Switchboard.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_client_access() {
+        let messenger_factory = create_registry_hub();
+        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+
+        // Match holds the return value in a temporary location, preventing
+        // resources from going out of scope and being freed.
+        match switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await {
+            Ok(_) => {
+                switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await.ok();
+            }
+            Err(_) => {
+                switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await.ok();
+            }
+        }
+
+        // Resources should not be held beyond the above calls
+        switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await.ok();
+    }
+
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
         let messenger_factory = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
         // Create registry endpoint
         let (_, mut receptor) =
             messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
-        let (response_tx, response_rx) =
-            futures::channel::oneshot::channel::<SettingResponseResult>();
-
         // Send request
-        assert!(switchboard
-            .lock()
-            .await
-            .request(SettingType::Unknown, SettingRequest::Get, response_tx)
-            .is_ok());
+        let result = switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await;
+        assert!(result.is_ok());
+        let response_rx = result.unwrap();
 
         // Ensure request is received.
         let (client, action) = retrieve_and_verify_action(
@@ -339,7 +357,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
         let messenger_factory = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint
@@ -348,12 +366,14 @@ mod tests {
 
         // Register first listener and verify count.
         let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        let listen_result = switchboard.lock().await.listen(
-            setting_type,
-            Arc::new(move |setting| {
-                notify_tx1.unbounded_send(setting).ok();
-            }),
-        );
+        let listen_result = switchboard_client
+            .listen(
+                setting_type,
+                Arc::new(move |setting| {
+                    notify_tx1.unbounded_send(setting).ok();
+                }),
+            )
+            .await;
 
         assert!(listen_result.is_ok());
         let _ =
@@ -375,7 +395,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
         let messenger_factory = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint
@@ -384,12 +404,14 @@ mod tests {
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        let result_1 = switchboard.lock().await.listen(
-            setting_type,
-            Arc::new(move |setting_type| {
-                notify_tx1.unbounded_send(setting_type).ok();
-            }),
-        );
+        let result_1 = switchboard_client
+            .listen(
+                setting_type,
+                Arc::new(move |setting_type| {
+                    notify_tx1.unbounded_send(setting_type).ok();
+                }),
+            )
+            .await;
         assert!(result_1.is_ok());
 
         let _ =
@@ -398,12 +420,14 @@ mod tests {
 
         // Register second listener and verify count
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
-        let result_2 = switchboard.lock().await.listen(
-            setting_type,
-            Arc::new(move |setting_type| {
-                notify_tx2.unbounded_send(setting_type).ok();
-            }),
-        );
+        let result_2 = switchboard_client
+            .listen(
+                setting_type,
+                Arc::new(move |setting_type| {
+                    notify_tx2.unbounded_send(setting_type).ok();
+                }),
+            )
+            .await;
         assert!(result_2.is_ok());
 
         let _ =

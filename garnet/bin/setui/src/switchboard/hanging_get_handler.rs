@@ -70,7 +70,7 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     _listen_session: Box<dyn ListenSession + Send + Sync>,
     pending_responders: Vec<ST>,
     data_type: PhantomData<T>,
@@ -105,25 +105,22 @@ where
     ST: Sender<T> + Send + Sync + 'static,
 {
     pub async fn create(
-        switchboard_handle: SwitchboardHandle,
+        switchboard_client: SwitchboardClient,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST>>> {
         let (on_command_sender, mut on_command_receiver) =
             futures::channel::mpsc::unbounded::<ListenCommand>();
-
         let on_command_sender_clone = on_command_sender.clone();
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
-            switchboard_handle: switchboard_handle.clone(),
-            _listen_session: switchboard_handle
-                .clone()
-                .lock()
-                .await
+            switchboard_client: switchboard_client.clone(),
+            _listen_session: switchboard_client
                 .listen(
                     setting_type,
                     Arc::new(move |setting| {
                         on_command_sender_clone.unbounded_send(ListenCommand::Change(setting)).ok();
                     }),
                 )
+                .await
                 .expect("started listening successfully"),
             pending_responders: Vec::new(),
             data_type: PhantomData,
@@ -200,18 +197,16 @@ where
     }
 
     async fn get_response(&self) -> Result<SettingResponse, Error> {
-        let (response_tx, response_rx) =
-            futures::channel::oneshot::channel::<SettingResponseResult>();
+        if let Ok(response_rx) =
+            self.switchboard_client.request(self.setting_type, SettingRequest::Get).await
         {
-            let mut switchboard = self.switchboard_handle.lock().await;
-            switchboard
-                .request(self.setting_type, SettingRequest::Get, response_tx)
-                .expect("made request");
-        }
-        if let Ok(Some(setting_response)) = response_rx.await.expect("got result") {
-            Ok(setting_response)
+            if let Ok(Some(setting_response)) = response_rx.await.expect("got result") {
+                Ok(setting_response)
+            } else {
+                panic!("Couldn't get value");
+            }
         } else {
-            panic!("Couldn't get value");
+            panic!("made request");
         }
     }
 }
@@ -319,7 +314,11 @@ mod tests {
         }));
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
-            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display).await;
+            HangingGetHandler::create(
+                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                SettingType::Display,
+            )
+            .await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
             futures::channel::mpsc::unbounded::<TestStruct>();
@@ -362,7 +361,11 @@ mod tests {
         }));
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
-            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display).await;
+            HangingGetHandler::create(
+                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                SettingType::Display,
+            )
+            .await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
             futures::channel::mpsc::unbounded::<TestStruct>();
@@ -405,7 +408,11 @@ mod tests {
         }));
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
-            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display).await;
+            HangingGetHandler::create(
+                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                SettingType::Display,
+            )
+            .await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
             futures::channel::mpsc::unbounded::<TestStruct>();
