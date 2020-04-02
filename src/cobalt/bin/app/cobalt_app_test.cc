@@ -53,8 +53,9 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
     return CobaltApp::CreateCobaltConfig(
         dispatcher(), metrics_registry_path, configuration_data, &clock_,
         [this] {
-          return service_directory_provider_.service_directory()
-              ->Connect<fuchsia::net::http::Loader>();
+          fuchsia::net::http::LoaderSyncPtr loader_sync;
+          service_directory_provider_.service_directory()->Connect(loader_sync.NewRequest());
+          return loader_sync;
         },
         target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
         use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,

@@ -47,9 +47,10 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
   FuchsiaHTTPClientTest()
       : ::gtest::TestLoopFixture(),
         service_directory_provider_(new sys::testing::ServiceDirectoryProvider(dispatcher())),
-        http_client(new FuchsiaHTTPClient(dispatcher(), [this] {
-          return service_directory_provider_->service_directory()
-              ->Connect<fuchsia::net::http::Loader>();
+        http_client(new FuchsiaHTTPClient([this] {
+          fuchsia::net::http::LoaderSyncPtr loader;
+          service_directory_provider_->service_directory()->Connect(loader.NewRequest());
+          return loader;
         })) {}
 
   void SetUp() override {
@@ -69,7 +70,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
   }
 
   void SetHttpResponse(zx::socket body, uint32_t status_code,
-                       std::vector<fuchsia::net::http::Header> headers) {
+                       std::vector<fuchsia::net::http::Header> headers = {}) {
     fuchsia::net::http::Response response;
     response.set_body(std::move(body));
     response.set_status_code(status_code);
@@ -89,24 +90,23 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
   // Invokes Post() in another thread (because Post() is not allowed to be
   // invoked in the dispather's thread) and waits for Post() to complete and
   // returns the value of Post().
-  std::future<StatusOr<HTTPResponse>> PostString(const std::string& body) {
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+  std::future<StatusOr<HTTPResponse>> PostString(
+      const std::string& body, std::chrono::milliseconds duration = std::chrono::seconds(1)) {
+    auto deadline = std::chrono::steady_clock::now() + duration;
 
     return std::async(std::launch::async, [this, body, deadline]() mutable {
       return http_client->PostSync(HTTPRequest("http://www.test.com", body), deadline);
     });
   }
 
-  StatusOr<HTTPResponse> PostStringAndWait(std::string request, bool wait_in_seconds = false) {
-    auto response_future = PostString("Request");
+  StatusOr<HTTPResponse> PostStringAndWait(
+      std::string request, std::chrono::milliseconds duration = std::chrono::seconds(1)) {
+    auto response_future = PostString("Request", duration);
     auto start_time = std::chrono::steady_clock::now();
     while (response_future.wait_for(std::chrono::microseconds(1)) != std::future_status::ready) {
-      if (wait_in_seconds) {
-        RunLoopFor(zx::msec(1));
-      } else {
-        RunLoopUntilIdle();
-      }
-      if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds(1)) {
+      RunLoopUntilIdle();
+
+      if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds(5)) {
         return util::Status(util::StatusCode::DEADLINE_EXCEEDED, "Timed out while waiting!");
       }
     }
@@ -192,13 +192,11 @@ TEST_F(FuchsiaHTTPClientTest, TimeoutWithNoResponse) {
 
   auto response_future = PostString("Request");
 
-  RunLoopFor(zx::msec(100));
+  RunLoopUntilIdle();
   ASSERT_TRUE(response_future.valid());
 
-  EXPECT_EQ(std::future_status::timeout, response_future.wait_for(std::chrono::microseconds(1)));
-
   while (response_future.wait_for(std::chrono::microseconds(1)) != std::future_status::ready) {
-    RunLoopFor(zx::sec(1));
+    RunLoopUntilIdle();
   }
 
   ASSERT_EQ(std::future_status::ready, response_future.wait_for(std::chrono::microseconds(1)));
@@ -213,27 +211,27 @@ TEST_F(FuchsiaHTTPClientTest, MultipleSlowResponses) {
 
   // With a 10 second delay, requests should consistently time out.
   SetHttpResponse("Body1", 200);
-  auto response_or = PostStringAndWait("Request", true);
+  auto response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body2", 200);
-  response_or = PostStringAndWait("Request", true);
+  response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body3", 200);
-  response_or = PostStringAndWait("Request", true);
+  response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body4", 200);
-  response_or = PostStringAndWait("Request", true);
+  response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body5", 200);
-  response_or = PostStringAndWait("Request", true);
+  response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 
@@ -251,6 +249,38 @@ TEST_F(FuchsiaHTTPClientTest, HandlesServiceCrash) {
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::UNAVAILABLE);
   EXPECT_THAT(response_or.status().error_message(), HasSubstr("ZX_ERR_PEER_CLOSED"));
+}
+
+TEST_F(FuchsiaHTTPClientTest, SlowSocket) {
+  zx::socket tx, rx;
+  zx::socket::create(ZX_SOCKET_STREAM, &tx, &rx);
+  SetHttpResponse(std::move(rx), 200);
+
+  auto response_future = PostString("Test123", std::chrono::seconds(30));
+  RunLoopUntilIdle();
+
+  for (int i = 0; i < 100; i++) {
+    std::vector<char> buffer(1024);
+    tx.write(0, buffer.data(), buffer.size(), nullptr);
+    RunLoopUntilIdle();
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+  }
+  tx.reset();
+
+  auto response_or = response_future.get();
+  ASSERT_TRUE(response_or.ok());
+}
+
+TEST_F(FuchsiaHTTPClientTest, HungSocket) {
+  zx::socket tx, rx;
+  zx::socket::create(ZX_SOCKET_STREAM, &tx, &rx);
+  SetHttpResponse(std::move(rx), 200);
+
+  // This will hang forever if the socket read waits for zx::time::infinite().
+  auto response_or = PostStringAndWait("Test123", std::chrono::milliseconds(10));
+
+  ASSERT_FALSE(response_or.ok());
+  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 }
 
 }  // namespace utils

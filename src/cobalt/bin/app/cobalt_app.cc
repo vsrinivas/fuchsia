@@ -70,8 +70,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
     target_pipeline = std::make_unique<TargetPipeline>(
         backend_environment, ReadPublicKeyPem(configuration_data.ShufflerPublicKeyPath()),
         ReadPublicKeyPem(configuration_data.AnalyzerPublicKeyPath()),
-        std::make_unique<FuchsiaHTTPClient>(dispatcher, std::move(http_loader_factory)),
-        kClearcutMaxRetries);
+        std::make_unique<FuchsiaHTTPClient>(std::move(http_loader_factory)), kClearcutMaxRetries);
   }
 
   CobaltConfig cfg = {
@@ -125,7 +124,11 @@ CobaltApp CobaltApp::CreateCobaltApp(
 
   auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
       dispatcher, kMetricsRegistryPath, configuration_data, system_clock.get(),
-      [context_ptr]() { return context_ptr->svc()->Connect<fuchsia::net::http::Loader>(); },
+      [context_ptr]() {
+        fuchsia::net::http::LoaderSyncPtr loader_sync;
+        context_ptr->svc()->Connect(loader_sync.NewRequest());
+        return loader_sync;
+      },
       target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
       use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
       version));

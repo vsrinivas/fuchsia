@@ -23,7 +23,8 @@ using lib::statusor::StatusOr;
 
 namespace {
 
-fuchsia::net::http::Request MakeRequest(const lib::clearcut::HTTPRequest& request) {
+fuchsia::net::http::Request MakeRequest(const lib::clearcut::HTTPRequest& request,
+                                        zx::time deadline) {
   fuchsia::net::http::Request fx_request;
   fx_request.set_method("POST");
   fx_request.set_url(request.url);
@@ -43,97 +44,17 @@ fuchsia::net::http::Request MakeRequest(const lib::clearcut::HTTPRequest& reques
     hdr.value = value;
     fx_request.mutable_headers()->push_back(std::move(hdr));
   }
+
+  fx_request.set_deadline(deadline.get());
   return fx_request;
 }
 
-}  // namespace
+StatusOr<HTTPResponse> ReadResponse(fuchsia::net::http::Response fx_response, zx::time deadline) {
+  HTTPResponse response;
 
-FuchsiaHTTPClient::FuchsiaHTTPClient(
-    async_dispatcher_t* dispatcher, fit::function<::fuchsia::net::http::LoaderPtr()> loader_factory)
-    : dispatcher_(dispatcher),
-      loader_factory_(std::move(loader_factory)),
-      socket_drainer_(this, dispatcher_),
-      deadline_task_([this] {
-        SetValue(util::Status(util::StatusCode::DEADLINE_EXCEEDED,
-                              "Deadline exceeded while waiting for network request"));
-      }),
-      task_runner_(dispatcher_) {
-  FXL_CHECK(dispatcher_);
-  ConnectToLoader();
-}
-
-StatusOr<HTTPResponse> FuchsiaHTTPClient::PostSync(HTTPRequest request,
-                                                   std::chrono::steady_clock::time_point deadline) {
-  FXL_CHECK(async_get_default_dispatcher() != dispatcher_)
-      << "PostSync should not be called from the same thread as dispatcher_, as this will cause "
-         "deadlocks";
-
-  std::promise<lib::statusor::StatusOr<lib::clearcut::HTTPResponse>> promise;
-  auto result_future = promise.get_future();
-
-  task_runner_.PostTask(
-      [this, request = std::move(request), deadline, promise = std::move(promise)]() mutable {
-        Start(std::move(request), deadline, std::move(promise));
-      });
-
-  return result_future.get();
-}
-
-void FuchsiaHTTPClient::Start(
-    lib::clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline,
-    std::promise<lib::statusor::StatusOr<lib::clearcut::HTTPResponse>> promise) {
-  FXL_CHECK(async_get_default_dispatcher() == dispatcher_)
-      << "FuchsiaHTTPClient::Start must be run on the dispatcher_ thread.";
-
-  if (active_request_ != nullptr) {
-    promise.set_value(
-        util::Status(util::StatusCode::UNAVAILABLE, "A request is already in progress"));
-    return;
-  }
-
-  active_request_ =
-      std::make_unique<FuchsiaHTTPClient::ActiveRequest>(std::move(request), std::move(promise));
-
-  // Schedule the deadline
-  deadline_task_.PostDelayed(dispatcher_,
-                             zx::nsec(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                          deadline - std::chrono::steady_clock::now())
-                                          .count()));
-
-  ConnectToLoader();
-
-  loader_->Fetch(MakeRequest(active_request_->request),
-                 [this, request_id = ++current_request_](fuchsia::net::http::Response fx_response) {
-                   HandleResponse(request_id, std::move(fx_response));
-                 });
-}
-
-void FuchsiaHTTPClient::ConnectToLoader() {
-  if (!loader_.is_bound()) {
-    loader_ = loader_factory_();
-    loader_.set_error_handler([this](zx_status_t status) {
-      std::ostringstream ss;
-      ss << "Connection to HTTP Loader service lost, Perhaps it crashed? (ZX STATUS: "
-         << zx_status_get_string(status) << ")";
-      FX_LOGS(WARNING) << ss.str();
-
-      loader_.Unbind();
-      SetValue(util::Status(util::StatusCode::UNAVAILABLE, ss.str()));
-    });
-  }
-}
-
-void FuchsiaHTTPClient::HandleResponse(int request_id, fuchsia::net::http::Response fx_response) {
-  if (!active_request_ || current_request_ != request_id) {
-    FX_LOGS(WARNING) << "Got response for non-active request (For request = " << request_id
-                     << ", current_request = " << current_request_ << ")";
-    return;
-  }
-
-  CancelDeadline();
   if (fx_response.has_error()) {
     std::ostringstream ss;
-    ss << "Got error while making running_requestuest: ";
+    ss << "Got error while making HTTP request: ";
     auto status_code = util::StatusCode::INTERNAL;
     switch (fx_response.error()) {
       case fuchsia::net::http::Error::INTERNAL:
@@ -157,47 +78,93 @@ void FuchsiaHTTPClient::HandleResponse(int request_id, fuchsia::net::http::Respo
         status_code = util::StatusCode::DEADLINE_EXCEEDED;
         break;
     }
-    SetValue(util::Status(status_code, ss.str()));
-    return;
+    return util::Status(status_code, ss.str());
   }
-  active_request_->response.http_code = fx_response.status_code();
+
+  response.http_code = fx_response.status_code();
 
   if (fx_response.has_headers()) {
     for (auto& header : fx_response.headers()) {
       std::string name(header.name.begin(), header.name.end());
       std::string value(header.value.begin(), header.value.end());
-      active_request_->response.headers.emplace(name, value);
+      response.headers.emplace(name, value);
     }
   }
 
   if (fx_response.has_body()) {
-    socket_drainer_.Start(std::move(*fx_response.mutable_body()));
-  } else {
-    OnDataComplete();
+    std::vector<char> buffer(64 * 1024);
+    size_t num_bytes = 0;
+    bool more_data = true;
+    while (more_data) {
+      auto status = fx_response.mutable_body()->read(0, buffer.data(), buffer.size(), &num_bytes);
+      switch (status) {
+        case ZX_OK:
+          response.response.append(static_cast<const char*>(buffer.data()), num_bytes);
+          continue;
+        case ZX_ERR_SHOULD_WAIT:
+          // Wait until there is more to read.
+          status = fx_response.mutable_body()->wait_one(
+              ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED, deadline,
+              /*observed_signals=*/nullptr);
+          if (status != ZX_OK) {
+            switch (status) {
+              case ZX_ERR_TIMED_OUT:
+                FX_LOGS(ERROR) << "Exceeded deadline while waiting on the socket";
+                return util::Status(util::StatusCode::DEADLINE_EXCEEDED,
+                                    "Deadline exceeded while waiting on socket");
+              default:
+                FX_LOGS(ERROR) << "Unhandled zx_status_t: " << status;
+                return util::Status(util::StatusCode::UNAVAILABLE, "Unhandled zx error");
+            }
+          }
+          continue;
+        case ZX_ERR_PEER_CLOSED:
+          // The sending side of the channel has closed. There is no more data to read.
+          more_data = false;
+          break;
+        default:
+          FX_LOGS(ERROR) << "Unhandled zx_status_t: " << status;
+          return util::Status(util::StatusCode::UNAVAILABLE, "Unhandled zx error");
+      }
+    }
   }
+
+  return response;
 }
 
-void FuchsiaHTTPClient::SetValue(StatusOr<HTTPResponse> value) {
-  CancelDeadline();
+}  // namespace
 
-  if (active_request_) {
-    active_request_->promise.set_value(std::move(value));
-    active_request_ = nullptr;
-  }
-}
+FuchsiaHTTPClient::FuchsiaHTTPClient(
+    fit::function<::fuchsia::net::http::LoaderSyncPtr()> loader_factory)
+    : loader_factory_(std::move(loader_factory)) {}
 
-void FuchsiaHTTPClient::OnDataAvailable(const void* data, size_t num_bytes) {
-  if (active_request_) {
-    FX_VLOGS(6) << "FuchsiaHTTPClient::OnDataAvailable(" << num_bytes << ")";
-    active_request_->response.response.append(static_cast<const char*>(data), num_bytes);
+StatusOr<HTTPResponse> FuchsiaHTTPClient::PostSync(HTTPRequest request,
+                                                   std::chrono::steady_clock::time_point deadline) {
+  if (!loader_.is_bound()) {
+    loader_ = loader_factory_();
   }
-}
 
-void FuchsiaHTTPClient::OnDataComplete() {
-  if (active_request_) {
-    FX_VLOGS(6) << "FuchsiaHTTPClient::OnDataComplete()";
-    SetValue(std::move(active_request_->response));
+  auto zx_deadline =
+      zx::deadline_after(zx::duration(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                          deadline - std::chrono::steady_clock::now())
+                                          .count()));
+
+  fuchsia::net::http::Response fx_response;
+  auto status = loader_->Fetch(MakeRequest(std::move(request), zx_deadline), &fx_response);
+
+  if (status != ZX_OK) {
+    std::ostringstream ss;
+    ss << "Connection to HTTP Loader service lost, Perhaps it crashed? (ZX STATUS: "
+       << zx_status_get_string(status) << ")";
+
+    std::string s = ss.str();
+    FX_LOGS(WARNING) << s;
+
+    loader_.Unbind();
+    return util::Status(util::StatusCode::UNAVAILABLE, s);
   }
+
+  return ReadResponse(std::move(fx_response), zx_deadline);
 }
 
 }  // namespace utils

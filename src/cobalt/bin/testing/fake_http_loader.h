@@ -34,14 +34,20 @@ class FakeHTTPLoader : public fuchsia::net::http::Loader {
     if (has_response_) {
       has_response_ = false;
       if (response_delay_ > zx::sec(0)) {
-        task_runner_.PostDelayedTask(
-            [response = std::move(next_response_), callback = std::move(callback)]() mutable {
-              callback(std::move(response));
-            },
-            response_delay_);
+        if (zx::clock::get_monotonic() + response_delay_ > zx::time(request.deadline())) {
+          fuchsia::net::http::Response response;
+          response.set_error(fuchsia::net::http::Error::DEADLINE_EXCEEDED);
+          callback(std::move(response));
+        } else {
+          callback(std::move(next_response_));
+        }
       } else {
         callback(std::move(next_response_));
       }
+    } else if (request.has_deadline()) {
+      fuchsia::net::http::Response response;
+      response.set_error(fuchsia::net::http::Error::DEADLINE_EXCEEDED);
+      callback(std::move(response));
     }
   }
 
