@@ -119,6 +119,8 @@
 #define X86_AMD_LS_CFG_F15H_SSBD (1ull << 54)
 #define X86_AMD_LS_CFG_F16H_SSBD (1ull << 33)
 #define X86_AMD_LS_CFG_F17H_SSBD (1ull << 10)
+#define X86_MSR_K7_HWCR 0xc0010015                 /* AMD Hardware Configuration */
+#define X86_MSR_K7_HWCR_CPB_DISABLE (1ull << 25)   /* Set to disable turbo ('boost') */
 
 /* EFLAGS/RFLAGS */
 #define X86_FLAGS_CF (1 << 0)

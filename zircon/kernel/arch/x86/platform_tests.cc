@@ -803,6 +803,16 @@ static bool test_turbo_enable_disable() {
     x86_intel_cpu_set_turbo(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs, Turbostate::ENABLED);
   }
 
+  // Test an AMD Threadripper
+  {
+    FakeMsrAccess fake_msrs = {};
+    fake_msrs.msrs_[0] = {X86_MSR_K7_HWCR, 0xb000010};
+    x86_amd_cpu_set_turbo(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs, Turbostate::DISABLED);
+    EXPECT_TRUE(fake_msrs.read_msr(X86_MSR_K7_HWCR) & X86_MSR_K7_HWCR_CPB_DISABLE);
+    x86_amd_cpu_set_turbo(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs, Turbostate::ENABLED);
+    EXPECT_FALSE(fake_msrs.read_msr(X86_MSR_K7_HWCR) & X86_MSR_K7_HWCR_CPB_DISABLE);
+  }
+
   END_TEST;
 }
 
