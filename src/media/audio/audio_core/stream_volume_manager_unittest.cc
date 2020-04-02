@@ -13,8 +13,6 @@
 namespace media::audio {
 namespace {
 
-using namespace testing;
-
 class MockStreamVolume : public StreamVolume {
  public:
   bool GetStreamMute() const override { return mute_; }

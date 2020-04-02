@@ -11,7 +11,14 @@
 
 namespace media::audio::test {
 
-using namespace testing;
+using testing::CreateClockForSamenessTest;
+using testing::VerifyAppropriateRights;
+using testing::VerifyClockAdvances;
+using testing::VerifyClockCanBeRateAdjusted;
+using testing::VerifyClockCannotBeRateAdjusted;
+using testing::VerifyClockIsNotSystemMonotonic;
+using testing::VerifyClockIsSystemMonotonic;
+using testing::VerifySameClock;
 
 // Just an arbitrary |AudioStreamType| that is valid to be used. Intended for
 // tests that don't care about the specific audio frames being sent.

@@ -18,11 +18,11 @@
 #include "src/media/audio/audio_core/ultrasound_factory.h"
 #include "src/media/audio/lib/logging/logging.h"
 
-using namespace media::audio;
+namespace media::audio {
 
 constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
 
-int main(int argc, const char** argv) {
+static int StartAudioCore() {
   auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
 #ifndef NTRACE
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
@@ -68,3 +68,7 @@ int main(int argc, const char** argv) {
   context->threading_model().RunAndJoinAllThreads();
   return 0;
 }
+
+}  // namespace media::audio
+
+int main(int argc, const char** argv) { media::audio::StartAudioCore(); }
