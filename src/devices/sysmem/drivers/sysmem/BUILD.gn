@@ -24,7 +24,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/closure-queue",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -40,14 +39,15 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
   ]
 
   deps = [
-    "//zircon/public/lib/closure-queue",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/image-format",
     "//zircon/public/lib/region-alloc",
+    "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
   ]
 }
@@ -96,7 +96,6 @@ test("sysmem-unittest") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/closure-queue",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake-bti",
@@ -113,6 +112,7 @@ test("sysmem-unittest") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
   ]
 }

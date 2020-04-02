@@ -20,6 +20,6 @@ zx_library("thread-safe-deleter") {
   sdk = "source"
   sdk_headers = [ "lib/thread-safe-deleter/thread_safe_deleter.h" ]
   sources = [ "thread_safe_deleter.cc" ]
-  deps = [ "//zircon/public/lib/closure-queue" ]
-  public_deps = [ "//zircon/public/lib/closure-queue:closure-queue" ]
+  deps = [ "//zircon/system/ulib/closure-queue" ]
+  public_deps = [ "//zircon/system/ulib/closure-queue" ]
 }

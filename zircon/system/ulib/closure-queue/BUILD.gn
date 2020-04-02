@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("closure-queue") {
   # Note: The appearance of "sdk" does not mean this will or is intended to be
   # in the sdk. It's just the way we export from zircon for use elsewhere.
@@ -9,8 +21,8 @@ zx_library("closure-queue") {
   sdk_headers = [ "lib/closure-queue/closure_queue.h" ]
   sources = [ "closure_queue.cc" ]
   deps = [
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
   ]
-  public_deps = [ "$zx/system/ulib/async:async.headers" ]
+  public_deps = [ "//zircon/public/lib/async" ]
 }
