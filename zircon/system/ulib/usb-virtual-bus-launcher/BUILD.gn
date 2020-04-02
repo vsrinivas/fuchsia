@@ -2,11 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("usb-virtual-bus-launcher") {
   sdk = "shared"
   sdk_headers = [
-    "usb-virtual-bus-launcher/usb-virtual-bus-launcher.h",
-    "usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h",
+    "lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h",
+    "lib/usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h",
   ]
   testonly = true
   shared = true
@@ -15,25 +27,24 @@ zx_library("usb-virtual-bus-launcher") {
     "usb-virtual-bus-launcher.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp.headers",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp.headers",
-    "$zx/system/ulib/devmgr-integration-test:headers",
-    "$zx/system/ulib/driver-integration-test:headers",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest:headers",
+    "//zircon/public/lib/driver-integration-test",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/driver-integration-test",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/usb-peripheral-utils",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/driver-integration-test",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/usb-peripheral-utils",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
 }

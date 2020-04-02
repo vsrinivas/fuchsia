@@ -520,7 +520,6 @@ group("ulib") {
     "usb-peripheral-utils",
 #------------------
 #------------------
-    "usb-virtual-bus-launcher",
 #------------------
 #------------------
     "utf_conversion",

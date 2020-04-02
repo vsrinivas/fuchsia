@@ -709,7 +709,6 @@ aggregate_manifest("legacy-aux") {
     "usb-peripheral-utils",
 #------------------
 #------------------
-    "usb-virtual-bus-launcher",
 #------------------
 #------------------
     "zbi-bootfs",
