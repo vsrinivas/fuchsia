@@ -6,7 +6,7 @@ use {
     anyhow::format_err,
     bt_avctp::{
         AvcCommand, AvcCommandResponse, AvcCommandType, AvcOpCode, AvcPacketType, AvcPeer,
-        AvcResponseType, Error as AvctpError,
+        AvcResponseType, AvctpPeer, Error as AvctpError,
     },
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
@@ -78,6 +78,9 @@ struct RemotePeer {
     /// Control channel to the remote device.
     control_channel: PeerChannel<AvcPeer>,
 
+    /// Browse channel to the remote device.
+    browse_channel: PeerChannel<AvctpPeer>,
+
     /// Profile service. Used by RemotePeer to make outgoing L2CAP connections.
     profile_proxy: ProfileProxy,
 
@@ -114,6 +117,7 @@ impl RemotePeer {
             target_descriptor: None,
             controller_descriptor: None,
             control_channel: PeerChannel::Disconnected,
+            browse_channel: PeerChannel::Disconnected,
             controller_listeners: Vec::new(),
             profile_proxy,
             command_handler: ControlChannelHandler::new(&peer_id, target_delegate),
@@ -141,7 +145,7 @@ impl RemotePeer {
         }
     }
 
-    fn connected(&self) -> bool {
+    fn control_connected(&self) -> bool {
         match self.control_channel {
             PeerChannel::Connected(_) => true,
             _ => false,
@@ -160,6 +164,7 @@ impl RemotePeer {
     fn reset_connection(&mut self, attempt_reconnection: bool) {
         fx_vlog!(tag: "avrcp", 2, "reset_connection {:?}", self.peer_id);
         self.reset_peer_state();
+        self.browse_channel = PeerChannel::Disconnected;
         self.control_channel = PeerChannel::Disconnected;
         self.attempt_connection = attempt_reconnection;
         self.wake_state_watcher();
@@ -167,7 +172,7 @@ impl RemotePeer {
 
     fn control_connection(&mut self) -> Result<Arc<AvcPeer>, Error> {
         // if we are not connected, try to reconnect the next time we want to send a command.
-        if !self.connected() {
+        if !self.control_connected() {
             self.attempt_connection = true;
             self.wake_state_watcher();
         }
@@ -182,6 +187,13 @@ impl RemotePeer {
         fx_vlog!(tag: "avrcp", 2, "set_control_connection {:?}", self.peer_id);
         self.reset_peer_state();
         self.control_channel = PeerChannel::Connected(Arc::new(peer));
+        self.wake_state_watcher();
+    }
+
+    fn set_browse_connection(&mut self, peer: AvctpPeer) {
+        fx_vlog!(tag: "avrcp", 2, "set_browse_connection {:?}", self.peer_id);
+        let browse_peer = Arc::new(peer);
+        self.browse_channel = PeerChannel::Connected(browse_peer);
         self.wake_state_watcher();
     }
 
@@ -304,6 +316,10 @@ impl RemotePeerHandle {
         self.peer.write().set_control_connection(peer);
     }
 
+    pub fn set_browse_connection(&self, peer: AvctpPeer) {
+        self.peer.write().set_browse_connection(peer);
+    }
+
     pub fn set_target_descriptor(&self, service: AvrcpService) {
         self.peer.write().set_target_descriptor(service);
     }
@@ -313,7 +329,7 @@ impl RemotePeerHandle {
     }
 
     pub fn is_connected(&self) -> bool {
-        self.peer.read().connected()
+        self.peer.read().control_connected()
     }
 
     /// Sends a single passthrough keycode over the control channel.

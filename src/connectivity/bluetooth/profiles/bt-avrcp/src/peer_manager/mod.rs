@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error as FailureError,
-    bt_avctp::AvcPeer,
+    bt_avctp::{AvcPeer, AvctpPeer},
     fidl_fuchsia_bluetooth_avrcp::{
         AbsoluteVolumeHandlerProxy, AvcPanelCommand, TargetHandlerProxy,
     },
@@ -115,8 +115,22 @@ impl PeerManager {
         let peer_handle = self.get_remote_peer(peer_id);
         match AvcPeer::new(channel) {
             Ok(peer) => {
-                fx_vlog!(tag: "avrcp", 1, "new peer {:#?}", peer);
+                fx_vlog!(tag: "avrcp", 1, "new control peer {:#?}", peer);
                 peer_handle.set_control_connection(peer);
+            }
+            Err(e) => {
+                fx_log_err!("Unable to make peer from socket {}: {:?}", peer_id, e);
+            }
+        }
+    }
+
+    /// Handle a new incoming browse channel connection by a remote peer.
+    pub fn new_browse_connection(&mut self, peer_id: &PeerId, channel: zx::Socket) {
+        let peer_handle = self.get_remote_peer(peer_id);
+        match AvctpPeer::new(channel) {
+            Ok(peer) => {
+                fx_vlog!(tag: "avrcp", 1, "new browse peer {:#?}", peer);
+                peer_handle.set_browse_connection(peer);
             }
             Err(e) => {
                 fx_log_err!("Unable to make peer from socket {}: {:?}", peer_id, e);

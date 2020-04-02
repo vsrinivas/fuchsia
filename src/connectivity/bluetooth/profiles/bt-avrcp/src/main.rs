@@ -21,7 +21,10 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-use crate::{peer_manager::PeerManager, profile::AvrcpService};
+use crate::{
+    peer_manager::PeerManager,
+    profile::{protocol_to_channel_type, AvrcpService, ChannelType},
+};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -50,12 +53,24 @@ async fn main() -> Result<(), Error> {
                     Some(Err(e)) => return Err(format_err!("BR/EDR Profile connection target error: {}", e)),
                     Some(Ok(request)) => request,
                 };
-                let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
+                let ConnectionReceiverRequest::Connected { peer_id, channel, protocol, .. } = connected;
                 if channel.socket.is_none() {
                     fx_log_info!("BR/EDR connection target didn't provide socket?!");
                     continue;
                 }
-                peer_manager.new_control_connection(&peer_id.into(), channel.socket.unwrap());
+
+                match protocol_to_channel_type(&protocol) {
+                    Some(ChannelType::Control) => {
+                        peer_manager.new_control_connection(&peer_id.into(), channel.socket.unwrap());
+                    }
+                    Some(ChannelType::Browse) => {
+                        peer_manager.new_browse_connection(&peer_id.into(), channel.socket.unwrap());
+                    }
+                    None => {
+                        fx_log_info!("Received connection over non-AVRCP protocol: {:?}", protocol);
+                        continue
+                    }
+                }
             }
             result_request = search_result_requests.next() =>  {
                 let result = match result_request {

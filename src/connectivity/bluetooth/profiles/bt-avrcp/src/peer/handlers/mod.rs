@@ -4,14 +4,16 @@
 
 use super::*;
 
-use fidl_fuchsia_bluetooth_avrcp::{Notification, TargetPassthroughError};
-use fuchsia_async::Time;
-use fuchsia_zircon::Duration;
+use {
+    fidl_fuchsia_bluetooth_avrcp::{Notification, TargetPassthroughError},
+    fuchsia_async::Time,
+    fuchsia_zircon::Duration,
+    futures::future::Either,
+    parking_lot::Mutex,
+    std::collections::VecDeque,
+};
 
-use futures::future::Either;
-use parking_lot::Mutex;
-use std::collections::VecDeque;
-
+pub mod browse_channel;
 mod decoders;
 
 use decoders::*;

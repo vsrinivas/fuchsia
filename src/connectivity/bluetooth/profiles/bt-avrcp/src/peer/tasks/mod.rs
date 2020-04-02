@@ -5,13 +5,14 @@ use super::*;
 
 mod notification_stream;
 
+use crate::peer::handlers::browse_channel::handle_browse_channel_requests;
 use crate::types::PeerError;
-use notification_stream::NotificationStream;
 
 use fidl_fuchsia_bluetooth_bredr::ChannelParameters;
+use notification_stream::NotificationStream;
 
 /// Processes incoming commands from the control stream and dispatches them to the control command
-/// handler. This started only when we have connection and when we have either a target or
+/// handler. This is started only when we have a connection and when we have either a target or
 /// controller SDP profile record for the current peer.
 async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
     let connection = {
@@ -46,7 +47,25 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
     }
 }
 
-/// Handles received notifications from the peer from the subscribed notifications streams and  
+/// Processes incoming commands from the browse stream and dispatches them to a
+/// browse channel handler.
+async fn process_browse_stream(peer: Arc<RwLock<RemotePeer>>) {
+    let connection = {
+        let peer_guard = peer.read();
+
+        match peer_guard.browse_channel.connection() {
+            Some(connection) => connection.clone(),
+            None => return,
+        }
+    };
+
+    let browse_command_stream = connection.take_command_stream();
+    handle_browse_channel_requests(browse_command_stream).await;
+
+    // Browse channel closed or errored. Do nothing because the control channel can still exist.
+}
+
+/// Handles received notifications from the peer from the subscribed notifications streams and
 /// dispatches the notifications back to the controller listeners
 fn handle_notification(
     notif: &NotificationEventId,
@@ -258,6 +277,25 @@ fn start_control_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortH
     handle
 }
 
+/// Starts a task to poll browse messages from the peer.
+/// Started when we have a browse connection to the remote peer as well as an already
+/// established control connection.
+/// Aborted when the peer connection is reset.
+fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
+    let (handle, registration) = AbortHandle::new_pair();
+
+    fasync::spawn(
+        Abortable::new(
+            async move {
+                process_browse_stream(peer).await;
+            },
+            registration,
+        )
+        .map(|_| ()),
+    );
+    handle
+}
+
 /// State observer task around a remote peer. Takes a change stream from the remote peer that wakes
 /// the task whenever some state has changed on the peer. Swaps tasks such as making outgoing
 /// connections, processing the incoming control messages, and registering for notifications on the
@@ -268,7 +306,8 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
     let peer_weak = Arc::downgrade(&peer);
     drop(peer);
 
-    let mut channel_processor_abort_handle: Option<AbortHandle> = None;
+    let mut control_channel_abort_handle: Option<AbortHandle> = None;
+    let mut browse_channel_abort_handle: Option<AbortHandle> = None;
     let mut notification_poll_abort_handle: Option<AbortHandle> = None;
 
     while let Some(_) = change_stream.next().await {
@@ -280,9 +319,9 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             match peer_guard.control_channel {
                 PeerChannel::Connecting => {}
                 PeerChannel::Disconnected => {
-                    if let Some(ref abort_handle) = channel_processor_abort_handle {
+                    if let Some(ref abort_handle) = control_channel_abort_handle {
                         abort_handle.abort();
-                        channel_processor_abort_handle = None;
+                        control_channel_abort_handle = None;
                     }
 
                     if let Some(ref abort_handle) = notification_poll_abort_handle {
@@ -305,9 +344,9 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                     // Have we discovered service profile data on the peer?
                     if (peer_guard.target_descriptor.is_some()
                         || peer_guard.controller_descriptor.is_some())
-                        && channel_processor_abort_handle.is_none()
+                        && control_channel_abort_handle.is_none()
                     {
-                        channel_processor_abort_handle =
+                        control_channel_abort_handle =
                             Some(start_control_stream_processing_task(peer.clone()));
                     }
 
@@ -319,6 +358,27 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                     }
                 }
             }
+
+            match peer_guard.browse_channel {
+                PeerChannel::Connecting => {}
+                PeerChannel::Disconnected => {
+                    if let Some(ref abort_handle) = browse_channel_abort_handle {
+                        abort_handle.abort();
+                        browse_channel_abort_handle = None;
+                    }
+                }
+                PeerChannel::Connected(_) => {
+                    // The Browse channel must be established after the control channel.
+                    // Ensure that the control channel exists and the browse channel doesn't
+                    // before spawning the browse processing task.
+                    if control_channel_abort_handle.is_some()
+                        && browse_channel_abort_handle.is_none()
+                    {
+                        browse_channel_abort_handle =
+                            Some(start_browse_stream_processing_task(peer.clone()));
+                    }
+                }
+            }
         } else {
             break;
         }
@@ -326,8 +386,14 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
 
     fx_vlog!(tag: "avrcp", 2, "state_watcher shutting down. aborting processors");
 
-    // Stop processing state changes entirely on the peer.
-    if let Some(ref abort_handle) = channel_processor_abort_handle {
+    // Stop processing state changes on the browse channel.
+    // This needs to happen before stopping the control channel.
+    if let Some(ref abort_handle) = browse_channel_abort_handle {
+        abort_handle.abort();
+    }
+
+    // Stop processing state changes on the control channel.
+    if let Some(ref abort_handle) = control_channel_abort_handle {
         abort_handle.abort();
     }
 

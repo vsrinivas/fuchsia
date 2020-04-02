@@ -13,6 +13,31 @@ use {
     std::fmt::Debug,
 };
 
+#[derive(Debug, PartialEq)]
+pub(crate) enum ChannelType {
+    Control,
+    Browse,
+}
+
+/// Attempts to parse the PSM from the given protocol in |protocols|.
+/// Returns None if no PSM was extracted.
+pub(crate) fn protocol_to_channel_type(protocols: &Vec<ProtocolDescriptor>) -> Option<ChannelType> {
+    for protocol in protocols {
+        for param in &protocol.params {
+            if let DataElement::Uint16(psm) = param {
+                if psm == &PSM_AVCTP {
+                    return Some(ChannelType::Control);
+                } else if psm == &PSM_AVCTP_BROWSE {
+                    return Some(ChannelType::Browse);
+                } else {
+                    continue;
+                }
+            }
+        }
+    }
+    None
+}
+
 bitflags! {
     pub struct AvcrpTargetFeatures: u16 {
         const CATEGORY1         = 1 << 0;
@@ -103,9 +128,22 @@ fn make_target_service_definition() -> ServiceDefinition {
     service.additional_attributes = Some(vec![Attribute {
         id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
         element: DataElement::Uint16(
-            AvcrpTargetFeatures::CATEGORY1.bits() | AvcrpTargetFeatures::CATEGORY2.bits(),
+            AvcrpTargetFeatures::CATEGORY1.bits()
+                | AvcrpTargetFeatures::CATEGORY2.bits()
+                | AvcrpTargetFeatures::SUPPORTSBROWSING.bits(),
         ),
     }]);
+
+    service.additional_protocol_descriptor_lists = Some(vec![vec![
+        ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(PSM_AVCTP_BROWSE as u16)],
+        },
+        ProtocolDescriptor {
+            protocol: ProtocolIdentifier::Avctp,
+            params: vec![DataElement::Uint16(0x0103)],
+        },
+    ]]);
 
     service
 }
@@ -234,11 +272,44 @@ pub fn connect_and_advertise(
     profile_svc.advertise(
         &mut service_defs.into_iter(),
         SecurityRequirements::new_empty(),
-        ChannelParameters::new_empty(),
+        ChannelParameters {
+            channel_mode: Some(ChannelMode::EnhancedRetransmission),
+            ..ChannelParameters::new_empty()
+        },
         connection_client,
     )?;
 
     fx_log_info!("Advertised Service");
 
     Ok((profile_svc, connection_requests, search_results_requests))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Tests parsing the PSM from the ProtocolDescriptor works as expected.
+    #[test]
+    fn test_protocol_to_channel_type() {
+        let empty = ProtocolDescriptor { protocol: ProtocolIdentifier::L2Cap, params: vec![] };
+        assert_eq!(None, protocol_to_channel_type(&vec![empty]));
+
+        let descriptor = ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(PSM_AVCTP), DataElement::Uint16(99)],
+        };
+        assert_eq!(Some(ChannelType::Control), protocol_to_channel_type(&vec![descriptor]));
+
+        let descriptor = ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(10), DataElement::Uint16(PSM_AVCTP_BROWSE)],
+        };
+        assert_eq!(Some(ChannelType::Browse), protocol_to_channel_type(&vec![descriptor]));
+
+        let not_avrcp_descriptor = ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(10), DataElement::Uint16(8)],
+        };
+        assert_eq!(None, protocol_to_channel_type(&vec![not_avrcp_descriptor]));
+    }
 }
