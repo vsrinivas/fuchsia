@@ -18,11 +18,13 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 )
 
@@ -72,30 +74,10 @@ type binaryRef struct {
 	breakpad string
 }
 
-// createFile creates a write only file and all required directories.
-func createFile(file string, flags ...int) (*os.File, error) {
-	if err := os.MkdirAll(filepath.Dir(file), os.ModePerm); err != nil {
-		return nil, err
-	}
-	flagSet := os.O_WRONLY | os.O_CREATE
-	for _, flag := range flags {
-		flagSet = flagSet | flag
-	}
-	return os.OpenFile(file, flagSet, 0755)
-}
-
-var buildIDFileRE = regexp.MustCompile("^([0-9a-f][0-9a-f])/([0-9a-f]+).debug$")
-
-func archiveExists(debugArchive string) (bool, error) {
-	info, err := os.Stat(debugArchive)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return true, err
-	}
-	return !info.IsDir(), nil
-}
+// We don't want extensions to be matched when we look for substring matches, so
+// convenient just to drop it from consideration when validating the directory
+// layout.
+var buildIDFileNoExtRE = regexp.MustCompile("^([0-9a-f][0-9a-f])/([0-9a-f]+)$")
 
 func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool {
 	for _, info := range contents {
@@ -134,9 +116,7 @@ func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool 
 				logger.Tracef(ctx, "%s was a directory, not a file", path)
 				return false
 			}
-			// For the time being everything should match this regex. This regex can be extended for
-			// other extensions as well, even arbitrary extensions. Right now its just .debug.
-			if !buildIDFileRE.MatchString(path) {
+			if !buildIDFileNoExtRE.MatchString(trimExt(path)) {
 				logger.Tracef(ctx, "%s didn't match", path)
 				return false
 			}
@@ -145,10 +125,17 @@ func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool 
 	return true
 }
 
+func trimExt(p string) string {
+	return strings.TrimSuffix(p, filepath.Ext(p))
+}
+
 // getStartDir allows us to be flexible in what we accept for debugArchive.
 // This lets us use both a directory and a file for the time being allowing
 // for an easy soft transistion as needed.
 func getStartDir() string {
+	if debugArchive == "" {
+		return buildIDDir
+	}
 	info, err := os.Stat(debugArchive)
 	if err != nil {
 		return filepath.Dir(debugArchive)
@@ -165,7 +152,7 @@ func getStartDir() string {
 // directory the debugArchive will remain the same and this allows the code
 // to still work.
 func findBuildIDDir(ctx context.Context, startDir string) (string, error) {
-	if startDir == "" {
+	if startDir == "" || startDir == "/" {
 		return "", fmt.Errorf("Could not find a .build-id directory")
 	}
 	logger.Tracef(ctx, "checking %s", startDir)
@@ -186,7 +173,7 @@ func findBuildIDDir(ctx context.Context, startDir string) (string, error) {
 // run at the same time without duplicating work. Note that creating a file with
 // O_EXCL is atomic.
 func runDumpSyms(ctx context.Context, br *runner.BatchRunner, in, out string) error {
-	file, err := createFile(out, os.O_EXCL)
+	file, err := osmisc.CreateFile(out, os.O_WRONLY|os.O_EXCL)
 	// If the file already exists, don't bother recreating it. This saves a massive
 	// amount of computation and is atomic.
 	if os.IsExist(err) {
@@ -246,7 +233,7 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 			continue
 		}
 
-		matches := buildIDFileRE.FindStringSubmatch(hdr.Name)
+		matches := buildIDFileNoExtRE.FindStringSubmatch(trimExt(hdr.Name))
 		if matches == nil {
 			logger.Warningf(ctx, "%s in %s was not a debug binary", hdr.Name, debugArchive)
 			continue
@@ -257,7 +244,7 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 		}
 		buildID := matches[1] + matches[2]
 		unpackFilePath := filepath.Join(buildIDDir, hdr.Name)
-		outFile, err := createFile(unpackFilePath)
+		outFile, err := osmisc.CreateFile(unpackFilePath, os.O_WRONLY)
 		if err != nil {
 			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %w", hdr.Name, debugArchive, unpackFilePath, err)
 		}
@@ -291,7 +278,7 @@ func writeManifest(bfrs []binaryRef) error {
 			OS:       osName,
 		})
 	}
-	file, err := createFile(outputManifest)
+	file, err := osmisc.CreateFile(outputManifest, os.O_WRONLY)
 	if err != nil {
 		return fmt.Errorf("while writing json to %s: %w", outputManifest, err)
 	}
@@ -307,11 +294,9 @@ func writeManifest(bfrs []binaryRef) error {
 func main() {
 	flag.Parse()
 	log := logger.NewLogger(level, color.NewColor(colors), os.Stderr, os.Stderr, "")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.WithLogger(ctx, log)
-	if debugArchive == "" {
-		log.Fatalf("-debug-archive is required.")
-	}
 	if buildIDDir == "" {
 		log.Fatalf("-build-id-dir is required.")
 	}
@@ -328,9 +313,22 @@ func main() {
 		log.Fatalf("failed to write depfile: %v", err)
 	}
 
+	// If the .build-id directory is empty and no debug archive is provided,
+	// then there is no work to do: bail.
+	if debugArchive == "" {
+		empty, err := osmisc.DirIsEmpty(buildIDDir)
+		if err != nil {
+			log.Fatalf("error in checking state of build-id dir: %v", err)
+		}
+		if empty {
+			log.Infof("build-id directory is empty; no work to do")
+			return
+		}
+	}
+
 	br := runner.NewBatchRunner(ctx, &runner.SubprocessRunner{}, tasks)
 
-	exists, err := archiveExists(debugArchive)
+	exists, err := osmisc.FileExists(debugArchive)
 	if err != nil {
 		log.Fatalf("while checking if archive existed: %v", err)
 	}
