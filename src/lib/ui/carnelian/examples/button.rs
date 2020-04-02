@@ -4,19 +4,18 @@
 
 use anyhow::Error;
 use carnelian::{
-    make_app_assistant, make_message, set_node_color, App, AppAssistant, Color, Label, Message,
-    Paint, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-    ViewMessages,
+    color::Color,
+    drawing::{path_for_rectangle, GlyphMap, Paint, Text},
+    make_app_assistant, make_font_description, make_message,
+    render::{
+        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
+        RenderExt, Style,
+    },
+    App, AppAssistant, Message, Point, Rect, RenderOptions, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
 };
 use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
-use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::{ClockId, Time};
-
-const BACKGROUND_Z: f32 = 0.0;
-const INDICATOR_Z: f32 = BACKGROUND_Z - 0.01;
-const BUTTON_Z: f32 = BACKGROUND_Z - 0.01;
-const BUTTON_BACKGROUND_Z: f32 = BUTTON_Z - 0.01;
-const BUTTON_LABEL_Z: f32 = BUTTON_BACKGROUND_Z - 0.01;
+use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
 
 /// enum that defines all messages sent with `App::queue_message` that
 /// the button view assistant will understand and process.
@@ -32,19 +31,22 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(
-        &mut self,
-        _: ViewKey,
-        session: &SessionPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(ButtonViewAssistant::new(session)?))
+    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(ButtonViewAssistant::new()?))
+    }
+
+    fn get_mode(&self) -> ViewMode {
+        ViewMode::Render(RenderOptions::default())
     }
 }
 
+fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Raster {
+    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+    raster_builder.add(&path_for_rectangle(bounds, render_context), None);
+    raster_builder.build()
+}
+
 struct Button {
-    label: Label,
-    background_node: ShapeNode,
-    container: EntityNode,
     bounds: Rect,
     bg_color: Color,
     bg_color_active: Color,
@@ -54,14 +56,14 @@ struct Button {
     tracking: bool,
     active: bool,
     focused: bool,
+    glyphs: GlyphMap,
+    label_text: String,
+    label: Option<Text>,
 }
 
 impl Button {
-    pub fn new(session: &SessionPtr, text: &str) -> Result<Button, Error> {
-        let mut button = Button {
-            label: Label::new(session, text)?,
-            background_node: ShapeNode::new(session.clone()),
-            container: EntityNode::new(session.clone()),
+    pub fn new(text: &str) -> Result<Button, Error> {
+        let button = Button {
             bounds: Rect::zero(),
             fg_color: Color::white(),
             bg_color: Color::from_hash_code("#B7410E")?,
@@ -71,14 +73,11 @@ impl Button {
             tracking: false,
             active: false,
             focused: false,
+            glyphs: GlyphMap::new(),
+            label_text: text.to_string(),
+            label: None,
         };
 
-        // set up the button background
-        button.container.add_child(&button.background_node);
-        set_node_color(session, &button.background_node, &button.bg_color);
-
-        // Add the label
-        button.container.add_child(button.label.node());
         Ok(button)
     }
 
@@ -90,7 +89,11 @@ impl Button {
         }
     }
 
-    pub fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(Layer, Layer), Error> {
         // set up paint with different backgrounds depending on whether the button
         // is active. The active state is true when a pointer has gone down in the
         // button's bounds and the pointer has not moved outside the bounds since.
@@ -106,20 +109,29 @@ impl Button {
         // center the button in the Scenic view by translating the
         // container node. All child nodes will be positioned relative
         // to this container
-        let center_x = context.size.width * 0.5;
-        let center_y = context.size.height * 0.5;
+        let center_x = context.logical_size.width * 0.5;
+        let center_y = context.logical_size.height * 0.5;
 
         // pick font size and padding based on the available space
-        let min_dimension = context.size.width.min(context.size.height);
+        let min_dimension = context.logical_size.width.min(context.logical_size.height);
         let font_size = (min_dimension / 5.0).ceil().min(64.0) as u32;
         let padding = (min_dimension / 20.0).ceil().max(8.0);
-        self.container.set_translation(center_x, center_y, BUTTON_Z);
 
-        set_node_color(context.session(), &self.background_node, &paint.bg);
+        let font_description = make_font_description(font_size, 0);
+        self.label = Some(Text::new(
+            render_context,
+            &self.label_text,
+            font_size as f32,
+            100,
+            font_description.face,
+            &mut self.glyphs,
+        ));
+
+        let label = self.label.as_ref().expect("label");
 
         // calculate button size based on label's text size
         // plus padding.
-        let button_size = self.label.dimensions(font_size);
+        let button_size = label.bounding_box.size;
         let button_w = button_size.width + 2.0 * padding;
         let button_h = button_size.height + 2.0 * padding;
 
@@ -130,21 +142,29 @@ impl Button {
         )
         .round_out();
 
-        self.background_node.set_shape(&Rectangle::new(
-            context.session().clone(),
-            self.bounds.size.width,
-            self.bounds.size.height,
-        ));
-        self.background_node.set_translation(0.0, 0.0, BUTTON_BACKGROUND_Z);
+        let center = self.bounds.center();
 
-        self.label.update(font_size, &paint)?;
-        self.label.node().set_translation(0.0, 0.0, BUTTON_LABEL_Z);
+        let label_offet =
+            (center - (label.bounding_box.size / 2.0).to_vector()).to_vector().to_i32();
 
-        Ok(())
-    }
-
-    pub fn node(&mut self) -> &EntityNode {
-        &self.container
+        let raster = raster_for_rectangle(&self.bounds, render_context);
+        let button_layer = Layer {
+            raster,
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(paint.bg),
+                blend_mode: BlendMode::Over,
+            },
+        };
+        let label_layer = Layer {
+            raster: label.raster.clone().translate(label_offet),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(paint.fg),
+                blend_mode: BlendMode::Over,
+            },
+        };
+        Ok((button_layer, label_layer))
     }
 
     pub fn handle_pointer_event(
@@ -155,18 +175,19 @@ impl Button {
         if !self.focused {
             return;
         }
+        let pointer_location =
+            context.physical_to_logical(&Point::new(pointer_event.x, pointer_event.y));
         // TODO: extend this to support multiple pointers
         match pointer_event.phase {
             PointerEventPhase::Down => {
-                self.active = self.bounds.contains(Point::new(pointer_event.x, pointer_event.y));
+                self.active = self.bounds.contains(pointer_location);
                 self.tracking = self.active;
             }
             PointerEventPhase::Add => {}
             PointerEventPhase::Hover => {}
             PointerEventPhase::Move => {
                 if self.tracking {
-                    self.active =
-                        self.bounds.contains(Point::new(pointer_event.x, pointer_event.y));
+                    self.active = self.bounds.contains(pointer_location);
                 }
             }
             PointerEventPhase::Up => {
@@ -191,19 +212,21 @@ impl Button {
 }
 
 struct ButtonViewAssistant {
-    background_node: ShapeNode,
-    indicator: ShapeNode,
+    bg_color: Color,
     button: Button,
     red_light: bool,
+    composition: Composition,
 }
 
 impl ButtonViewAssistant {
-    fn new(session: &SessionPtr) -> Result<ButtonViewAssistant, Error> {
+    fn new() -> Result<ButtonViewAssistant, Error> {
+        let bg_color = Color::from_hash_code("#EBD5B3")?;
+        let composition = Composition::new(bg_color);
         Ok(ButtonViewAssistant {
-            background_node: ShapeNode::new(session.clone()),
-            indicator: ShapeNode::new(session.clone()),
-            button: Button::new(&session, "Touch Me")?,
+            bg_color,
+            button: Button::new("Touch Me")?,
             red_light: false,
+            composition,
         })
     }
 }
@@ -211,41 +234,31 @@ impl ButtonViewAssistant {
 impl ViewAssistant for ButtonViewAssistant {
     // Called once by Carnelian when the view is first created. Good for setup
     // that isn't concerned with the size of the view.
-    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        set_node_color(
-            context.session(),
-            &self.background_node,
-            &Color::from_hash_code("#EBD5B3")?,
-        );
-        context.root_node().add_child(&self.background_node);
-        context.root_node().add_child(&self.indicator);
-        context.root_node().add_child(self.button.node());
-
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    // Called  by Carnelian when the view is resized, after input events are processed
-    // or if sent an explicit Update message.
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
         // Position and size the background
-        let center_x = context.size.width * 0.5;
-        let center_y = context.size.height * 0.5;
-        self.background_node.set_shape(&Rectangle::new(
-            context.session().clone(),
-            context.size.width,
-            context.size.height,
-        ));
-        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
+        let center_x = context.logical_size.width * 0.5;
+        let _center_y = context.logical_size.height * 0.5;
 
         // Position and size the indicator
-        let indicator_y = context.size.height / 5.0;
-        let indicator_size = context.size.height.min(context.size.width) / 8.0;
-        self.indicator.set_shape(&Rectangle::new(
-            context.session().clone(),
-            indicator_size,
-            indicator_size,
-        ));
-        self.indicator.set_translation(center_x, indicator_y, INDICATOR_Z);
+        let indicator_y = context.logical_size.height / 5.0;
+        let indicator_size = context.logical_size.height.min(context.logical_size.width) / 8.0;
+        let indicator_bounds = Rect::new(
+            Point::new(center_x - indicator_size / 2.0, indicator_y - indicator_size / 2.0),
+            Size::new(indicator_size, indicator_size),
+        );
 
         let indicator_color = if self.red_light {
             Color::from_hash_code("#ff0000")?
@@ -253,11 +266,29 @@ impl ViewAssistant for ButtonViewAssistant {
             Color::from_hash_code("#00ff00")?
         };
 
-        set_node_color(context.session(), &self.indicator, &indicator_color);
+        let indicator_layer = Layer {
+            raster: raster_for_rectangle(&indicator_bounds, render_context),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(indicator_color),
+                blend_mode: BlendMode::Over,
+            },
+        };
 
         // Update and position the button
-        self.button.update(context)?;
-        self.button.node().set_translation(center_x, center_y, BUTTON_Z);
+        let (button_layer, label_layer) = self.button.render(render_context, context)?;
+        self.composition.replace(
+            ..,
+            std::iter::once(label_layer)
+                .chain(std::iter::once(button_layer))
+                .chain(std::iter::once(indicator_layer)),
+        );
+
+        let image = render_context.get_current_image(context);
+        let ext =
+            RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
+        render_context.render(&self.composition, None, image, &ext);
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
         Ok(())
     }

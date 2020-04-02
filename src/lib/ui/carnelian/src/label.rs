@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::{
-    canvas::{measure_text, Canvas, FontDescription, FontFace, MappingPixelSink, Paint},
+    canvas::{measure_text, Canvas, MappingPixelSink},
+    drawing::Paint,
+    drawing::{FontDescription, FontFace},
     geometry::{Coord, IntSize, Point, Rect, Size},
 };
 use anyhow::{Context as _, Error};

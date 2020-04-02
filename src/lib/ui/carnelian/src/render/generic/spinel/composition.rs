@@ -8,11 +8,11 @@ use euclid::default::Rect;
 use spinel_rs_sys::*;
 
 use crate::{
+    color::Color,
     render::generic::{
         spinel::{init, InnerContext, Spinel},
         BlendMode, Composition, Fill, FillRule, Layer, Style,
     },
-    Color,
 };
 
 fn group_layers(

@@ -4,7 +4,9 @@
 
 use {
     carnelian::{
-        Canvas, Color, Coord, FontDescription, FontFace, MappingPixelSink, Paint, Point, Rect, Size,
+        color::Color,
+        drawing::{FontDescription, FontFace, Paint},
+        Canvas, Coord, MappingPixelSink, Point, Rect, Size,
     },
     fuchsia_trace as ftrace,
     term_model::{

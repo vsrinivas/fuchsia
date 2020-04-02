@@ -4,8 +4,8 @@
 
 use anyhow::Error;
 use carnelian::{
-    AnimationMode, App, AppAssistant, Color, Point, Rect, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMode,
+    color::Color, AnimationMode, App, AppAssistant, Point, Rect, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use fuchsia_zircon::Duration;
 

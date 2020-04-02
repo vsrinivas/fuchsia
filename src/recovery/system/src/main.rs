@@ -4,8 +4,9 @@
 
 use anyhow::{format_err, Context as _, Error};
 use carnelian::{
-    measure_text, Canvas, Color, FontDescription, FontFace, IntSize, MappingPixelSink, Paint,
-    PixelSink, Point, Rect, Size,
+    color::Color,
+    drawing::{FontDescription, FontFace, Paint},
+    measure_text, Canvas, IntSize, MappingPixelSink, PixelSink, Point, Rect, Size,
 };
 use fuchsia_async as fasync;
 use fuchsia_framebuffer::{Config, FrameBuffer, FrameUsage, PixelFormat};
@@ -151,7 +152,7 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::{Flusher, RecoveryUI, FONT_DATA};
-    use carnelian::{Canvas, FontFace, IntSize, PixelSink};
+    use carnelian::{drawing::FontFace, Canvas, IntSize, PixelSink};
     use fuchsia_framebuffer::{Config, PixelFormat};
 
     #[derive(Clone)]

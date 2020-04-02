@@ -5,6 +5,7 @@
 use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
+    color::Color,
     drawing::{path_for_circle, path_for_polygon, path_for_rectangle, path_for_rounded_rectangle},
     geometry::Corners,
     make_app_assistant,
@@ -12,8 +13,8 @@ use carnelian::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
         RenderExt, Style,
     },
-    AnimationMode, App, AppAssistant, Color, Coord, Point, Rect, RenderOptions, Size,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    AnimationMode, App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use euclid::default::Vector2D;
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};

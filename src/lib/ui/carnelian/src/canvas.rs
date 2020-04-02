@@ -2,117 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size};
-use anyhow::Error;
+use crate::{
+    color::Color,
+    drawing::{FontDescription, Paint},
+    geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
+};
 use core::ops::Range;
 use euclid::rect;
-use fidl_fuchsia_ui_gfx::ColorRgba;
 use mapped_vmo::Mapping;
-use rusttype::{Font, FontCollection, Scale};
+use rusttype::Scale;
 use std::sync::Arc;
 
-/// Struct representing an RGBA color value in un-premultiplied non-linear sRGB space
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-pub struct Color {
-    /// Red
-    pub r: u8,
-    /// Green
-    pub g: u8,
-    /// Blue
-    pub b: u8,
-    /// Alpha
-    pub a: u8,
-}
-
-pub fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
+fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
     let red = pixel[0] >> 3;
     let green = pixel[1] >> 2;
     let blue = pixel[2] >> 3;
     let b1 = (red << 3) | ((green & 0b11_1000) >> 3);
     let b2 = ((green & 0b111) << 5) | blue;
     [b2, b1]
-}
-
-fn srgb_to_linear(l: u8) -> f32 {
-    let l = l as f32 * 255.0f32.recip();
-
-    if l <= 0.04045 {
-        l * 12.92f32.recip()
-    } else {
-        ((l + 0.055) * 1.055f32.recip()).powf(2.4)
-    }
-}
-
-impl Color {
-    /// Create a new color set to black with full alpha
-    pub const fn new() -> Color {
-        Color { r: 0, g: 0, b: 0, a: 255 }
-    }
-
-    /// Create a new color set to white with full alpha
-    pub const fn white() -> Color {
-        Color { r: 255, g: 255, b: 255, a: 255 }
-    }
-
-    fn extract_hex_slice(hash_code: &str, start_index: usize) -> Result<u8, Error> {
-        Ok(u8::from_str_radix(&hash_code[start_index..start_index + 2], 16)?)
-    }
-
-    /// Create a color from a six hexadecimal digit string like '#EBD5B3'
-    pub fn from_hash_code(hash_code: &str) -> Result<Color, Error> {
-        let mut new_color = Color::new();
-        new_color.r = Color::extract_hex_slice(&hash_code, 1)?;
-        new_color.g = Color::extract_hex_slice(&hash_code, 3)?;
-        new_color.b = Color::extract_hex_slice(&hash_code, 5)?;
-        Ok(new_color)
-    }
-
-    /// Create a Scenic-compatible [`ColorRgba`]
-    pub fn make_color_rgba(&self) -> ColorRgba {
-        ColorRgba { red: self.r, green: self.g, blue: self.b, alpha: self.a }
-    }
-
-    /// Create a 565 array for this color
-    pub fn to_565(&self) -> [u8; 2] {
-        let pixel = [self.r, self.g, self.b, self.a];
-        to_565(&pixel)
-    }
-
-    pub fn to_linear_premult_rgba(&self) -> [f32; 4] {
-        let alpha = self.a as f32 * 255.0f32.recip();
-
-        [
-            srgb_to_linear(self.r) * alpha,
-            srgb_to_linear(self.g) * alpha,
-            srgb_to_linear(self.b) * alpha,
-            alpha,
-        ]
-    }
-
-    pub fn to_linear_brga(&self) -> [f32; 4] {
-        [
-            srgb_to_linear(self.b),
-            srgb_to_linear(self.g),
-            srgb_to_linear(self.r),
-            self.a as f32 * 255.0f32.recip(),
-        ]
-    }
-}
-
-/// Struct combining a foreground and background color.
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-pub struct Paint {
-    /// Color for foreground painting
-    pub fg: Color,
-    /// Color for background painting
-    pub bg: Color,
-}
-
-impl Paint {
-    /// Create a paint from a pair of hash codes
-    pub fn from_hash_codes(fg: &str, bg: &str) -> Result<Paint, Error> {
-        Ok(Paint { fg: Color::from_hash_code(fg)?, bg: Color::from_hash_code(bg)? })
-    }
 }
 
 /// Opaque type representing a glyph ID.
@@ -124,29 +31,6 @@ struct Glyph(u16);
 struct GlyphDescriptor {
     size: u32,
     glyph: Glyph,
-}
-
-/// Struct containing a font and a cache of rendered glyphs.
-pub struct FontFace<'a> {
-    /// Font.
-    pub font: Font<'a>,
-}
-
-/// Struct containing font, size and baseline.
-#[allow(missing_docs)]
-pub struct FontDescription<'a, 'b> {
-    pub face: &'a FontFace<'b>,
-    pub size: u32,
-    pub baseline: i32,
-}
-
-#[allow(missing_docs)]
-impl<'a> FontFace<'a> {
-    pub fn new(data: &'a [u8]) -> Result<FontFace<'a>, Error> {
-        let collection = FontCollection::from_bytes(data as &[u8])?;
-        let font = collection.into_font()?;
-        Ok(FontFace { font: font })
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -468,14 +352,8 @@ impl<T: PixelSink> Canvas<T> {
     /// Update the pixel at a particular byte offset with a particular
     /// color.
     fn write_color_at_offset(&mut self, offset: usize, color: Color) {
-        if self.col_stride == 2 {
-            let pixel = color.to_565();
-            self.pixel_sink.write_pixel_at_offset(offset, &pixel);
-        } else {
-            let pixel = [color.b, color.g, color.r, color.a];
-
-            self.pixel_sink.write_pixel_at_offset(offset, &pixel);
-        };
+        let pixel = [color.b, color.g, color.r, color.a];
+        self.pixel_sink.write_pixel_at_offset(offset, &pixel);
     }
 
     #[inline]
@@ -745,8 +623,8 @@ pub fn measure_text(text: &str, font: &FontDescription<'_, '_>) -> Size {
 #[cfg(test)]
 mod tests {
     use crate::{
-        label::make_font_description, measure_text, Canvas, Color, Coord, IntSize, PixelSink,
-        Point, Rect, Size,
+        color::Color, label::make_font_description, measure_text, Canvas, Coord, IntSize,
+        PixelSink, Point, Rect, Size,
     };
     use fuchsia_framebuffer::{Config, PixelFormat};
     use std::collections::HashSet;

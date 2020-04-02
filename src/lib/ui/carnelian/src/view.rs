@@ -8,7 +8,6 @@ use crate::{
     geometry::{IntSize, Point, Size},
     message::Message,
     render::Context,
-    scenic_utils::PresentationTime,
     view::strategies::{
         base::ViewStrategyPtr, framebuffer::FrameBufferViewStrategy,
         framebuffer_render::FrameBufferRenderViewStrategy, scenic::ScenicViewStrategy,
@@ -61,7 +60,7 @@ pub struct ViewAssistantContext<'a> {
     /// The factor between logical size and size.
     pub metrics: Size,
     /// For update, the time this will be presented.
-    pub presentation_time: PresentationTime,
+    pub presentation_time: Time,
     /// For views in Scenic mode, this will contain resources for
     /// interacting with Scenic.
     pub scenic_resources: Option<&'a ScenicResources>,

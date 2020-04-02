@@ -7,18 +7,17 @@
         }
     },
     "program": {
-        "binary": "test/carnelian_lib_test"
+        "binary": "bin/app"
     },
     "sandbox": {
-        "features": [
-            "vulkan"
+        "dev": [
+            "class/display-controller"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

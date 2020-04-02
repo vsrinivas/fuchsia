@@ -14,7 +14,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;
 
-use crate::{Color, Point, ViewAssistantContext};
+use crate::{color::Color, Point, ViewAssistantContext};
 
 pub mod mold;
 pub mod spinel;

@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point,
+        color::Color, make_app_assistant, render::*, AnimationMode, App, AppAssistant, Point,
         RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
         ViewMode,
     },

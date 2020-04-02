@@ -6,13 +6,14 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
+        color::Color,
         drawing::path_for_rectangle,
         make_app_assistant,
         render::{
             BlendMode, Composition, Context, Fill, FillRule, Layer, Path, PreClear, RenderExt,
             Style,
         },
-        AnimationMode, App, AppAssistant, Color, Point, Rect, RenderOptions, Size, ViewAssistant,
+        AnimationMode, App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant,
         ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::{Transform2D, Vector2D},

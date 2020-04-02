@@ -1,9 +1,10 @@
 pub use crate::render::generic::{BlendMode, Fill, FillRule, Style};
 use crate::{
+    color::Color,
     render::generic::{
         self, mold::*, spinel::*, Context as _, PathBuilder as _, Raster as _, RasterBuilder as _,
     },
-    Color, Point, ViewAssistantContext,
+    Point, ViewAssistantContext,
 };
 use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fuchsia_framebuffer::PixelFormat;

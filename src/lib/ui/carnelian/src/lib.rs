@@ -11,12 +11,12 @@
 
 mod app;
 mod canvas;
+pub mod color;
 pub mod drawing;
 pub mod geometry;
 mod label;
 mod message;
 pub mod render;
-mod scenic_utils;
 mod view;
 
 pub use crate::{
@@ -24,13 +24,10 @@ pub use crate::{
         make_app_assistant, App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreator,
         AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, RenderOptions, ViewMode,
     },
-    canvas::{
-        measure_text, Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, PixelSink,
-    },
+    canvas::{measure_text, Canvas, MappingPixelSink, PixelSink},
     geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
     label::{make_font_description, Label},
     message::{make_message, Message},
-    scenic_utils::set_node_color,
     view::{
         AnimationMode, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController,
         ViewKey, ViewMessages,

@@ -5,7 +5,9 @@
 #![allow(dead_code)]
 use {
     crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar},
-    carnelian::{Canvas, Color, Coord, MappingPixelSink, Point, Rect, Size, ViewAssistantContext},
+    carnelian::{
+        color::Color, Canvas, Coord, MappingPixelSink, Point, Rect, Size, ViewAssistantContext,
+    },
     fidl_fuchsia_ui_input::{PointerEvent, PointerEventPhase, PointerEventType},
     fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,

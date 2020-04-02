@@ -86,7 +86,10 @@ rustc_binary("button_example") {
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rusttype",
+    "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:thiserror",
   ]
 }
@@ -404,7 +407,7 @@ test_package("carnelian-render-tests") {
   resources = vulkan_validation_layers.resources
 }
 
-unittest_package("carnelian-tests") {
+test_package("carnelian-tests") {
   deps = [ ":carnelian_test" ]
 
   tests = [

@@ -5,8 +5,8 @@
 use std::ops::RangeBounds;
 
 use crate::{
+    color::Color,
     render::generic::{mold::Mold, Composition, Layer},
-    Color,
 };
 
 #[derive(Clone, Debug)]

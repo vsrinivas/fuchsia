@@ -4,14 +4,15 @@
 
 use anyhow::{Context as _, Error};
 use carnelian::{
+    color::Color,
     geometry::Corners,
     make_app_assistant, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,
         Raster, RenderExt, Style,
     },
-    AnimationMode, App, AppAssistant, Color, Coord, Point, Rect, RenderOptions, Size,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
+    AnimationMode, App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
 };
 use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};

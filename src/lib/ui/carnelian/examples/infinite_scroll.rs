@@ -6,9 +6,13 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        geometry::Corners, make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color,
-        FontFace, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey, ViewMode,
+        color::Color,
+        drawing::{FontFace, GlyphMap, Text},
+        geometry::Corners,
+        make_app_assistant,
+        render::*,
+        AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
+        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::default::{Point2D, Rect, Size2D, Vector2D},
     fidl_fuchsia_input_report as hid_input_report, fuchsia_async as fasync,
@@ -19,12 +23,10 @@ use {
     lazy_static::lazy_static,
     lipsum::{lipsum_title, lipsum_words},
     rand::{thread_rng, Rng},
-    rusttype::{GlyphId, Scale, Segment},
     std::{
         collections::{BTreeMap, VecDeque},
         f32, fs,
     },
-    textwrap::wrap_iter,
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
@@ -208,124 +210,6 @@ fn cubic(
     *bounding_box = bounding_box.union(&p3);
 }
 
-struct Glyph {
-    raster: Raster,
-    bounding_box: Rect<f32>,
-}
-
-impl Glyph {
-    fn new(context: &mut Context, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
-        duration!("gfx", "Glyph::new");
-
-        let mut path_builder = context.path_builder().unwrap();
-        let mut bounding_box = Box2D::new();
-        let scale = Scale::uniform(size);
-
-        macro_rules! flip_y {
-            ( $p:expr ) => {
-                Point::new($p.x, -$p.y)
-            };
-        }
-
-        let glyph = face.font.glyph(id).scaled(scale);
-        if let Some(glyph_box) = glyph.exact_bounding_box() {
-            let contours = glyph.shape().unwrap();
-            for contour in contours {
-                for segment in &contour.segments {
-                    match segment {
-                        Segment::Line(line) => {
-                            path_builder.move_to(flip_y!(line.p[0]));
-                            path_builder.line_to(flip_y!(line.p[1]));
-                        }
-                        Segment::Curve(curve) => {
-                            let p0 = flip_y!(curve.p[0]);
-                            let p1 = flip_y!(curve.p[1]);
-                            let p2 = flip_y!(curve.p[2]);
-
-                            path_builder.move_to(p0);
-                            path_builder.quad_to(p1, p2);
-                        }
-                    }
-                }
-            }
-
-            bounding_box = bounding_box.union(&Point::new(glyph_box.min.x, glyph_box.min.y));
-            bounding_box = bounding_box.union(&Point::new(glyph_box.max.x, glyph_box.max.y));
-        }
-
-        let path = path_builder.build();
-        let mut raster_builder = context.raster_builder().unwrap();
-        raster_builder.add(&path, None);
-
-        Self { raster: raster_builder.build(), bounding_box: bounding_box.to_rect() }
-    }
-}
-
-struct Text {
-    raster: Raster,
-    bounding_box: Rect<f32>,
-}
-
-impl Text {
-    fn new(
-        context: &mut Context,
-        text: &str,
-        size: f32,
-        wrap: usize,
-        face: &FontFace<'_>,
-        glyphs: &mut BTreeMap<GlyphId, Glyph>,
-    ) -> Self {
-        duration!("gfx", "Text::new");
-
-        let mut bounding_box = Rect::zero();
-        let scale = Scale::uniform(size);
-        let v_metrics = face.font.v_metrics(scale);
-        let mut ascent = v_metrics.ascent;
-        let mut raster_union = None;
-
-        for line in wrap_iter(text, wrap) {
-            // TODO: adjust vertical alignment of glyphs to match first glyph.
-            let y_offset = Vector2D::new(0, ascent as i32);
-            let chars = line.chars();
-            let mut x: f32 = 0.0;
-            let mut last = None;
-            for g in face.font.glyphs_for(chars) {
-                let g = g.scaled(scale);
-                let id = g.id();
-                let w = g.h_metrics().advance_width
-                    + last.map(|last| face.font.pair_kerning(scale, last, id)).unwrap_or(0.0);
-
-                // Lookup glyph entry in cache.
-                // TODO: improve sub pixel placement using a larger cache.
-                let position = y_offset + Vector2D::new(x as i32, 0);
-                let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
-
-                // Clone and translate raster.
-                let raster = glyph.raster.clone().translate(position);
-                raster_union = if let Some(raster_union) = raster_union {
-                    Some(raster_union + raster)
-                } else {
-                    Some(raster)
-                };
-
-                // Expand bounding box.
-                let glyph_bounding_box = glyph.bounding_box.translate(position.to_f32());
-                if bounding_box.is_empty() {
-                    bounding_box = glyph_bounding_box;
-                } else {
-                    bounding_box = bounding_box.union(&glyph_bounding_box);
-                }
-
-                x += w;
-                last = Some(id);
-            }
-            ascent += size;
-        }
-
-        Self { raster: raster_union.unwrap(), bounding_box }
-    }
-}
-
 struct Flower {
     raster: Raster,
     bounding_box: Rect<f32>,
@@ -409,8 +293,8 @@ struct Scene {
     text_disabled: bool,
     scroll_offset_y: u32,
     last_scroll_offset_y: u32,
-    title_glyphs: BTreeMap<GlyphId, Glyph>,
-    body_glyphs: BTreeMap<GlyphId, Glyph>,
+    title_glyphs: GlyphMap,
+    body_glyphs: GlyphMap,
     columns: Vec<VecDeque<Item>>,
     total_items: usize,
 }
@@ -439,8 +323,8 @@ impl Scene {
         offset: Vector2D<i32>,
         align_bottom: bool,
         scale: f32,
-        title_glyphs: &mut BTreeMap<GlyphId, Glyph>,
-        body_glyphs: &mut BTreeMap<GlyphId, Glyph>,
+        title_glyphs: &mut GlyphMap,
+        body_glyphs: &mut GlyphMap,
         id: i32,
         column_width: f32,
         text_disabled: bool,
