@@ -350,7 +350,7 @@ class FakeTransaction : public PendingWork {
     metadata_operations_.Add(std::move(unbuffered_operation));
   }
 
-  void EnqueueData(WriteData source, storage::Operation operation) final {}
+  void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) final {}
 
   size_t BlockCount() { return metadata_operations_.BlockCount(); }
 

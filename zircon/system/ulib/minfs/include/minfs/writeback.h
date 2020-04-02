@@ -61,7 +61,7 @@ class Transaction final : public PendingWork {
   // PendingWork interface.
 
   void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final;
-  void EnqueueData(WriteData source, storage::Operation operation) final;
+  void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) final;
 
   ////////////////
   // Other methods.

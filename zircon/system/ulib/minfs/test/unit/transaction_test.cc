@@ -319,7 +319,8 @@ TEST_F(TransactionTest, EnqueueAndVerifyDataWork) {
       .dev_offset = 3,
       .length = 4,
   };
-  transaction.EnqueueData(1, std::move(op));
+  UnownedVmoBuffer buffer(zx::unowned_vmo(1));
+  transaction.EnqueueData(op, &buffer);
 
   fbl::Vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
   ASSERT_EQ(1, data_operations.size());

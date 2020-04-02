@@ -32,7 +32,7 @@ class PendingWork {
   // Enqueues a data-write operation.
   // Write to data blocks must be done in a separate transaction from metadata updates to ensure
   // that all user data goes out to disk before associated metadata.
-  virtual void EnqueueData(WriteData source, storage::Operation operation) = 0;
+  virtual void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) = 0;
 };
 }  // namespace minfs
 

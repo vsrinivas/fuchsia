@@ -81,8 +81,8 @@ void Transaction::EnqueueMetadata(storage::Operation operation, storage::BlockBu
   metadata_operations_.Add(std::move(unbuffered_operation));
 }
 
-void Transaction::EnqueueData(WriteData source, storage::Operation operation) {
-  storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(source),
+void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) {
+  storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(buffer->Vmo()),
                                                        .op = operation};
   data_operations_.Add(std::move(unbuffered_operation));
 }
@@ -106,8 +106,8 @@ void Transaction::EnqueueMetadata(storage::Operation operation, storage::BlockBu
   builder_.Add(operation, buffer);
 }
 
-void Transaction::EnqueueData(WriteData source, storage::Operation operation) {
-  transaction_.Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
+void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) {
+  builder_.Add(operation, buffer);
 }
 
 // No-op - don't need to pin vnodes on host.

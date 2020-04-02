@@ -34,6 +34,7 @@
 #endif
 
 #include "minfs_private.h"
+#include "unowned_vmo_buffer.h"
 #include "vnode.h"
 
 namespace minfs {
@@ -98,14 +99,15 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
     ZX_ASSERT(BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0]) == ZX_OK);
 
     // Enqueue each data block one at a time, as they may not be contiguous on disk.
+    UnownedVmoBuffer buffer(zx::unowned_vmo(vmo_.get()));
     for (blk_t i = 0; i < bno_count; i++) {
-      storage::Operation op = {
+      storage::Operation operation = {
           .type = storage::OperationType::kWrite,
           .vmo_offset = bno_start + i,
           .dev_offset = allocated_blocks[i] + fs_->Info().dat_block,
           .length = 1,
       };
-      transaction->EnqueueData(vmo_.get(), std::move(op));
+      transaction->EnqueueData(operation, &buffer);
     }
 
     // Since we are updating the file in "chunks", only update the on-disk inode size
