@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    cobalt_sw_delivery_registry as metrics,
     fuchsia_url::pkg_url::PkgUrl,
     std::{
         collections::BTreeSet,
@@ -196,6 +197,20 @@ impl fmt::Display for LoadError {
                 ),
                 None => write!(f, "invalid font package URL: {}", bad_url),
             },
+        }
+    }
+}
+
+impl From<&LoadError> for metrics::FontManagerLoadStaticRegistryMetricDimensionResult {
+    fn from(error: &LoadError) -> Self {
+        match error {
+            LoadError::Io { .. } => metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Io,
+            LoadError::Parse { .. } => {
+                metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Parse
+            }
+            LoadError::PkgUrl { .. } => {
+                metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl
+            }
         }
     }
 }

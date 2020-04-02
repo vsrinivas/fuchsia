@@ -4,10 +4,10 @@
 
 /// This module tests the Cobalt metrics reporting.
 use {
-    cobalt_client::traits::AsEventCode as _,
+    cobalt_client::traits::AsEventCode,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::create_endpoints,
-    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, Event, EventPayload},
+    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_pkg::UpdatePolicy,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
@@ -17,6 +17,7 @@ use {
     fuchsia_zircon::Status,
     lib::{make_repo, make_repo_config, MountsBuilder, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
+    serde_json::json,
     std::sync::Arc,
 };
 
@@ -45,24 +46,28 @@ async fn pkg_resolver_startup_duration() {
     env.stop().await;
 }
 
-async fn assert_repository_manager_load_static_configs_result(
+async fn assert_count_events(
     env: &TestEnv,
-    result: metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult,
+    metric_id: u32,
+    expected_results: Vec<impl AsEventCode>,
 ) {
     assert_eq!(
         env.mocks
             .logger_factory
-            .wait_for_at_least_n_events_with_metric_id(
-                1,
-                metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-            )
+            .wait_for_at_least_n_events_with_metric_id(expected_results.len(), metric_id)
             .await,
-        vec![CobaltEvent {
-            metric_id: metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-            event_codes: vec![result.as_event_code()],
-            component: None,
-            payload: EventPayload::Event(Event {})
-        }]
+        expected_results
+            .into_iter()
+            .map(|res| CobaltEvent {
+                metric_id,
+                event_codes: vec![res.as_event_code()],
+                component: None,
+                payload: EventPayload::EventCount(CountEvent {
+                    period_duration_micros: 0,
+                    count: 1
+                })
+            })
+            .collect::<Vec<CobaltEvent>>()
     );
 }
 
@@ -72,9 +77,10 @@ async fn repository_manager_load_static_configs_success() {
         .mounts(lib::MountsBuilder::new().static_repository(make_repo()).build())
         .build();
 
-    assert_repository_manager_load_static_configs_result(
+    assert_count_events(
         &env,
-        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success,
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success],
     )
     .await;
 
@@ -85,9 +91,10 @@ async fn repository_manager_load_static_configs_success() {
 async fn repository_manager_load_static_configs_io() {
     let env = TestEnvBuilder::new().build();
 
-    assert_repository_manager_load_static_configs_result(
+    assert_count_events(
         &env,
-        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io,
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io],
     )
     .await;
 
@@ -104,9 +111,10 @@ async fn repository_manager_load_static_configs_parse() {
         )
         .build();
 
-    assert_repository_manager_load_static_configs_result(
+    assert_count_events(
         &env,
-        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse,
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse],
     )
     .await;
 
@@ -125,9 +133,10 @@ async fn repository_manager_load_static_configs_overridden() {
         )
         .build();
 
-    assert_repository_manager_load_static_configs_result(
+    assert_count_events(
         &env,
-        metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden,
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden],
     )
     .await;
 
@@ -139,7 +148,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
     handler: Option<impl UriPathHandler>,
     expected_resolve_result: Result<(), Status>,
     metric_id: u32,
-    expected_events: Vec<CobaltEvent>,
+    expected_events: Vec<impl AsEventCode>,
 ) {
     let env = TestEnvBuilder::new().build();
     let repo = Arc::new(
@@ -162,13 +171,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
         env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
         expected_resolve_result
     );
-
-    let received_events = env
-        .mocks
-        .logger_factory
-        .wait_for_at_least_n_events_with_metric_id(expected_events.len(), metric_id)
-        .await;
-    assert_eq!(received_events, expected_events);
+    assert_count_events(&env, metric_id, expected_events).await;
     env.stop().await;
 }
 
@@ -180,12 +183,7 @@ async fn pkg_resolver_fetch_blob_success() {
         Option::<handler::StaticResponseCode>::None,
         Ok(()),
         metrics::FETCH_BLOB_METRIC_ID,
-        vec![CobaltEvent {
-            metric_id: metrics::FETCH_BLOB_METRIC_ID,
-            event_codes: vec![metrics::FetchBlobMetricDimensionResult::Success.as_event_code()],
-            component: None,
-            payload: EventPayload::EventCount(CountEvent { period_duration_micros: 0, count: 1 }),
-        }],
+        vec![metrics::FetchBlobMetricDimensionResult::Success],
     )
     .await;
 }
@@ -198,19 +196,16 @@ async fn pkg_resolver_fetch_blob_failure() {
         format!("/blobs/{}", pkg.meta_far_merkle_root()),
         handler::StaticResponseCode::not_found(),
     );
-    let expected_event = CobaltEvent {
-        metric_id: metrics::FETCH_BLOB_METRIC_ID,
-        event_codes: vec![metrics::FetchBlobMetricDimensionResult::BadHttpStatus.as_event_code()],
-        component: None,
-        payload: EventPayload::EventCount(CountEvent { period_duration_micros: 0, count: 1 }),
-    };
 
     verify_resolve_emits_cobalt_events_with_metric_id(
         pkg,
         Some(handler),
         Err(Status::UNAVAILABLE),
         metrics::FETCH_BLOB_METRIC_ID,
-        vec![expected_event.clone(), expected_event],
+        vec![
+            metrics::FetchBlobMetricDimensionResult::BadHttpStatus,
+            metrics::FetchBlobMetricDimensionResult::BadHttpStatus,
+        ],
     )
     .await;
 }
@@ -247,21 +242,85 @@ async fn font_resolver_is_font_package_check_not_font() {
         Status::NOT_FOUND
     );
 
-    let received_events = env
-        .mocks
-        .logger_factory
-        .wait_for_at_least_n_events_with_metric_id(1, metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID)
-        .await;
-    assert_eq!(
-        received_events,
-        vec![CobaltEvent {
-            metric_id: metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
-            event_codes: vec![
-                metrics::IsFontPackageCheckMetricDimensionResult::NotFont.as_event_code(),
-            ],
-            component: None,
-            payload: EventPayload::EventCount(CountEvent { period_duration_micros: 0, count: 1 }),
-        }]
-    );
+    assert_count_events(
+        &env,
+        metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
+        vec![metrics::IsFontPackageCheckMetricDimensionResult::NotFont],
+    )
+    .await;
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn font_manager_load_static_registry_success() {
+    let json = serde_json::to_string(&json!(["fuchsia-pkg://fuchsia.com/font1"])).unwrap();
+    let env = TestEnvBuilder::new()
+        .mounts(MountsBuilder::new().custom_config_data("font_packages.json", json).build())
+        .build();
+
+    assert_count_events(
+        &env,
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Success],
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn font_manager_load_static_registry_failure_io() {
+    let env = TestEnvBuilder::new().build();
+
+    assert_count_events(
+        &env,
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Io],
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn font_manager_load_static_registry_failure_parse() {
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new().custom_config_data("font_packages.json", "invalid-json").build(),
+        )
+        .build();
+
+    assert_count_events(
+        &env,
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Parse],
+    )
+    .await;
+
+    env.stop().await;
+}
+
+// We should get a cobalt event for each pkg-url error.
+#[fasync::run_singlethreaded(test)]
+async fn font_manager_load_static_registry_failure_pkg_url() {
+    let json = serde_json::to_string(&json!([
+        "fuchsia-pkg://missing-pkg-name.com/",
+        "fuchsia-pkg://includes-resource.com/foo#meta/resource.cmx"
+    ]))
+    .unwrap();
+    let env = TestEnvBuilder::new()
+        .mounts(MountsBuilder::new().custom_config_data("font_packages.json", json).build())
+        .build();
+
+    assert_count_events(
+        &env,
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+        vec![
+            metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl,
+            metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl,
+        ],
+    )
+    .await;
+
     env.stop().await;
 }

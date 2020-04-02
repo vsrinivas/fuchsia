@@ -108,7 +108,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
             .serve(ConnectionType::project_id(metrics::PROJECT_ID));
     futures.push(cobalt_fut.boxed_local());
 
-    let font_package_manager = Arc::new(load_font_package_manager());
+    let font_package_manager = Arc::new(load_font_package_manager(cobalt_sender.clone()));
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(
         inspector.root().create_child("repository_manager"),
         experiments,
@@ -261,10 +261,12 @@ fn load_repo_manager(
         .load_static_configs_dir(STATIC_REPO_DIR)
     {
         Ok(builder) => {
-            cobalt_sender.log_event(
+            cobalt_sender.log_event_count(
                 metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
                 metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success
                     .as_event_code(),
+                0,
+                1
             );
             builder
         }
@@ -281,9 +283,11 @@ fn load_repo_manager(
 
                 let dimension_result: metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult
                     = err.into();
-                cobalt_sender.log_event(
+                cobalt_sender.log_event_count(
                     metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
                     dimension_result.as_event_code(),
+                    0,
+                    1
                 );
             }
             builder
@@ -342,13 +346,29 @@ async fn load_rewrite_manager(
     }
 }
 
-fn load_font_package_manager() -> FontPackageManager {
-    FontPackageManagerBuilder::new()
-        .add_registry_file(STATIC_FONT_REGISTRY_PATH)
-        .unwrap_or_else(|(builder, errs)| {
+fn load_font_package_manager(mut cobalt_sender: CobaltSender) -> FontPackageManager {
+    match FontPackageManagerBuilder::new().add_registry_file(STATIC_FONT_REGISTRY_PATH) {
+        Ok(builder) => {
+            cobalt_sender.log_event_count(
+                metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+                metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Success
+                    .as_event_code(),
+                0,
+                1
+            );
+            builder
+        }
+        Err((builder, errs)) => {
             let errors = errs
                 .iter()
                 .filter(|err| {
+                    let dimension_result: metrics::FontManagerLoadStaticRegistryMetricDimensionResult = (*err).into();
+                    cobalt_sender.log_event_count(
+                        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+                        dimension_result.as_event_code(),
+                        0,
+                        1
+                    );
                     if err.is_not_found() {
                         fx_log_info!("no font package registry present");
                         false
@@ -361,8 +381,9 @@ fn load_font_package_manager() -> FontPackageManager {
                 fx_log_err!("error(s) loading font package registry:{}", errors);
             }
             builder
-        })
-        .build()
+        }
+    }
+    .build()
 }
 
 // Read in the list of cache_packages from /system/data/cache_packages.

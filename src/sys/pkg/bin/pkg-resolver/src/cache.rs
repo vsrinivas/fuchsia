@@ -496,7 +496,7 @@ async fn fetch_blob(
         .inspect(move |res| {
             let event_code = match res {
                 Ok(()) => metrics::FetchBlobMetricDimensionResult::Success,
-                Err(e) => e.fetch_blob_metric_event_code(),
+                Err(e) => e.into(),
             }
             .as_event_code();
             cobalt_sender.log_event_count(metrics::FETCH_BLOB_METRIC_ID, event_code, 0, 1);
@@ -679,21 +679,9 @@ impl From<BlobUrlError> for FetchError {
     }
 }
 
-impl FetchError {
-    fn kind(&self) -> FetchErrorKind {
-        match self {
-            FetchError::BadHttpStatus { code: StatusCode::TOO_MANY_REQUESTS, uri: _ } => {
-                FetchErrorKind::NetworkRateLimit
-            }
-            FetchError::Hyper { .. }
-            | FetchError::Http { .. }
-            | FetchError::BadHttpStatus { .. } => FetchErrorKind::Network,
-            _ => FetchErrorKind::Other,
-        }
-    }
-
-    fn fetch_blob_metric_event_code(&self) -> metrics::FetchBlobMetricDimensionResult {
-        match self {
+impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
+    fn from(error: &FetchError) -> Self {
+        match error {
             FetchError::CreateBlob(_) => metrics::FetchBlobMetricDimensionResult::CreateBlob,
             FetchError::BadHttpStatus { .. } => {
                 metrics::FetchBlobMetricDimensionResult::BadHttpStatus
@@ -716,6 +704,20 @@ impl FetchError {
             FetchError::Hyper { .. } => metrics::FetchBlobMetricDimensionResult::Hyper,
             FetchError::Http { .. } => metrics::FetchBlobMetricDimensionResult::Http,
             FetchError::BlobUrl(_) => metrics::FetchBlobMetricDimensionResult::BlobUrl,
+        }
+    }
+}
+
+impl FetchError {
+    fn kind(&self) -> FetchErrorKind {
+        match self {
+            FetchError::BadHttpStatus { code: StatusCode::TOO_MANY_REQUESTS, uri: _ } => {
+                FetchErrorKind::NetworkRateLimit
+            }
+            FetchError::Hyper { .. }
+            | FetchError::Http { .. }
+            | FetchError::BadHttpStatus { .. } => FetchErrorKind::Network,
+            _ => FetchErrorKind::Other,
         }
     }
 }
