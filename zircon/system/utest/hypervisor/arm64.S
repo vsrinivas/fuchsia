@@ -18,8 +18,7 @@
 .set FIQ_EXC_OFFSET,         0x100
 .set SERROR_EXC_OFFSET,      0x180
 
-.set SPSR_DAIF_AARCH64,      0x3c0
-.set SPSR_AIFM_AARCH32,      0x1d0
+.set SPSR_M_BIT_ARCH32,      0x010
 
 .set GICC_BASE,              0x800001000
 .set GICC_IAR_OFFSET,        0xc
@@ -60,7 +59,7 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
         .err
     .endif
 
-    .ifc \arch, aarch64
+    .ifeqs "\arch", "aarch64"
         mov x0, EXIT_TEST_ADDR
         .if \value == 0
             str xzr, [x0]
@@ -69,7 +68,7 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
             str x1, [x0]
         .endif
     .else
-        .ifc \arch, aarch32
+        .ifeqs "\arch", "aarch32"
             .word 0xE3A01000 + \value  // aarch32: movw r1, \value
             .word 0xE30F0000           // aarch32: movw r0, [lower]EXIT_TEST_ADDR
             .word 0xE34000FF           // aarch32: movw r0, [upper]EXIT_TEST_ADDR
@@ -83,23 +82,20 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 // Drop exception level from EL1 to EL0 and, if requested, switch execution
 // state.
 .macro drop_to_el0 arch=aarch64
-    .ifc \arch, aarch64
-        mov x0, SPSR_DAIF_AARCH64
+    .ifeqs "\arch", "aarch32"
+        mov x0, SPSR_M_BIT_ARCH32  // for aarch32, set PSTATE to AARCH32
+        msr spsr_el1, x0           // and clear everything else upon eret.
     .else
-        .ifc \arch, aarch32
-            mov x0, SPSR_AIFM_AARCH32
-        .else
+        .ifnes "\arch", "aarch64"  // accept default architecture, do nothing.
             .error "Unsupported architecture"
         .endif
     .endif
-    msr spsr_el1, x0
-    isb
 
-    mov x0, xzr
-    add x0, x0, 2f - 1b // resume execution at label '2' ahead
-    msr elr_el1, x0     // store exception link register
-    eret                // resume at el0 using specified arch.
+    ldr w0, 2f               // resume execution at label '2' ahead
+    msr elr_el1, x0          // store exception link register
+    eret                     // resume at el0 using specified arch.
     2:
+    .word 2b - 1b + 4
 .endm
 
 .text

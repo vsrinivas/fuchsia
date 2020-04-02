@@ -195,6 +195,8 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
   Thread* thread = Thread::Current::Get();
   thread->flags_ |= THREAD_FLAG_VCPU;
+  // TODO(fxb/49107): Temporary fix while we find the root cause.
+  thread->SetSoftCpuAffinity(cpu_num_to_mask(vpid % arch_max_num_cpus()));
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
