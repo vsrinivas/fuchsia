@@ -185,7 +185,7 @@ mod tests {
 
     use bt_avdtp as avdtp;
     use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode};
-    use fuchsia_async::{self as fasync, TimeoutExt};
+    use fuchsia_async::{self as fasync};
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::FutureExt;
     use std::convert::TryFrom;
@@ -280,8 +280,6 @@ mod tests {
         }
     }
 
-    const TIMEOUT: zx::Duration = zx::Duration::from_millis(5000);
-
     fn pcm_format() -> PcmFormat {
         PcmFormat {
             pcm_mode: AudioPcmMode::Linear,
@@ -307,9 +305,7 @@ mod tests {
         let silence_source = SilenceStream::build(pcm_format());
         let mut encoder = EncodedStream::build(pcm_format(), silence_source.boxed(), &sbc_config)
             .expect("building Stream works");
-        let mut next_frame_fut = encoder
-            .next()
-            .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder took too long"));
+        let mut next_frame_fut = encoder.next();
 
         match exec.run_singlethreaded(&mut next_frame_fut) {
             Some(Ok(enc_frame)) => {
@@ -336,9 +332,7 @@ mod tests {
         let silence_source = SilenceStream::build(pcm_format());
         let mut encoder = EncodedStream::build(pcm_format(), silence_source.boxed(), &aac_config)
             .expect("building Stream works");
-        let mut next_frame_fut = encoder
-            .next()
-            .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder took too long"));
+        let mut next_frame_fut = encoder.next();
 
         match exec.run_singlethreaded(&mut next_frame_fut) {
             Some(Ok(enc_frame)) => {
