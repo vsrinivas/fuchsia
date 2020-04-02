@@ -61,7 +61,6 @@ executable("bin") {
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/loader-service",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/memfs-cpp",
@@ -71,6 +70,7 @@ executable("bin") {
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-kernel:llcpp",
+    "//zircon/system/ulib/launchpad",
   ]
 }
 

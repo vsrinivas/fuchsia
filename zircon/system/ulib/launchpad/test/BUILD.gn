@@ -30,10 +30,10 @@ test("launchpad") {
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/launchpad",
   ]
 }
 
