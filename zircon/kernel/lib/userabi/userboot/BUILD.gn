@@ -96,6 +96,7 @@ if (current_toolchain == default_toolchain) {
     libs = [ vdso_syms_ld ]
     deps = [
       ":gen-vdso-syms-ld",
+      "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/userabi:headers",
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/elfload",

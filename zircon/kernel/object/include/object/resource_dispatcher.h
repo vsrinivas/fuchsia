@@ -38,7 +38,7 @@ class ResourceDispatcher final
 
   struct ResourceStorage {
     ResourceList resource_list;
-    std::array<RegionAllocator, ZX_RSRC_KIND_COUNT> rallocs;
+    ktl::array<RegionAllocator, ZX_RSRC_KIND_COUNT> rallocs;
   };
 
   // Creates ResourceDispatcher object representing access rights to a

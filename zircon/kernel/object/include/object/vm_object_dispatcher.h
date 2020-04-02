@@ -25,7 +25,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   static zx_status_t Create(fbl::RefPtr<VmObject> vmo, KernelHandle<VmObjectDispatcher>* handle,
                             zx_rights_t* rights) {
-    return Create(std::move(vmo), ZX_KOID_INVALID, handle, rights);
+    return Create(ktl::move(vmo), ZX_KOID_INVALID, handle, rights);
   }
 
   static zx_status_t Create(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid,

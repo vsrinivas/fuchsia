@@ -42,7 +42,7 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
     return st;
   }
 
-  std::array<char, ZX_MAX_NAME_LEN> name;
+  ktl::array<char, ZX_MAX_NAME_LEN> name;
   if (block.num_irq == 1) {
     snprintf(name.data(), name.max_size(), "MSI vector %u", block.base_irq_id);
   } else {

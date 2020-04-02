@@ -286,8 +286,8 @@ class SoloDispatcher : public Dispatcher {
 //     auto holder0 = AdoptRef(new PeerHolder<Foo>(...));
 //     auto holder1 = peer_holder0;
 //     // Create the opposing sides.
-//     auto foo0 = AdoptRef(new Foo(std::move(holder0, ...));
-//     auto foo1 = AdoptRef(new Foo(std::move(holder1, ...));
+//     auto foo0 = AdoptRef(new Foo(ktl::move(holder0, ...));
+//     auto foo1 = AdoptRef(new Foo(ktl::move(holder1, ...));
 //     // Initialize the opposing sides, teaching them about each other.
 //     foo0->Init(&foo1);
 //     foo1->Init(&foo0);

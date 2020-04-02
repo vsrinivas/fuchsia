@@ -8,11 +8,10 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <type_traits>
-
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
+#include <ktl/type_traits.h>
 
 #define LOCAL_TRACE 0
 
@@ -66,7 +65,7 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
 
     pos += copy_len;
 
-    if constexpr (std::is_const<T>::value) {
+    if constexpr (ktl::is_const<T>::value) {
       ++iter;
     } else {
       // TODO(ZX-4366): Note, we're advancing (consuming data) after each copy.  This means
@@ -89,7 +88,7 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
   }
 
   // Drain any leftover mbufs in the datagram packet if we're consuming data.
-  if constexpr (!std::is_const<T>::value) {
+  if constexpr (!ktl::is_const<T>::value) {
     if (datagram) {
       while (!chain->tail_.is_empty() && chain->tail_.front().pkt_len_ == 0) {
         MBuf* cur = chain->tail_.pop_front();

@@ -68,7 +68,7 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
   }
 
   uint32_t vector = base_irq_id + msi_id;
-  std::array<char, ZX_MAX_NAME_LEN> name{};
+  ktl::array<char, ZX_MAX_NAME_LEN> name{};
   snprintf(name.data(), name.max_size(), "msi id %u (vector %u)", msi_id, vector);
   fbl::RefPtr<VmMapping> mapping;
   auto size = vmo->size();

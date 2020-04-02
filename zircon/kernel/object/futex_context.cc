@@ -165,7 +165,7 @@ class DeferredFutexOwnerValidator {
       }
       return status_;
     }
-    *thread_dispatcher = std::move(dispatcher_);
+    *thread_dispatcher = ktl::move(dispatcher_);
     return ZX_OK;
   }
 

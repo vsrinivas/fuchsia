@@ -693,7 +693,7 @@ void Thread::Current::MigrateToCpu(const cpu_num_t target_cpu) {
 void Thread::SetMigrateFn(MigrateFn migrate_fn) {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  migrate_fn_ = std::move(migrate_fn);
+  migrate_fn_ = ktl::move(migrate_fn);
 }
 
 // Returns true if it decides to kill the thread. The thread_lock must be held

@@ -606,5 +606,5 @@ zx_status_t sys_job_set_critical(zx_handle_t job_handle, uint32_t options,
     return status;
   }
 
-  return process->SetCriticalToJob(std::move(job), retcode_nonzero);
+  return process->SetCriticalToJob(ktl::move(job), retcode_nonzero);
 }

@@ -99,7 +99,7 @@ zx_status_t MapStructs2_1(const smbios::EntryPoint2_1* ep, fbl::RefPtr<VmMapping
 zx_status_t SmbiosWalkStructs(smbios::StructWalkCallback cb) {
   switch (kEpVersion) {
     case smbios::EntryPointVersion::V2_1: {
-      return kEntryPoint.ep2_1->WalkStructs(kStructBase, std::move(cb));
+      return kEntryPoint.ep2_1->WalkStructs(kStructBase, ktl::move(cb));
     }
     case smbios::EntryPointVersion::V3_0:
       return ZX_ERR_NOT_SUPPORTED;

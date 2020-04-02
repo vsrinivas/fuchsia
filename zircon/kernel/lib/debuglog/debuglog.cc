@@ -412,7 +412,7 @@ void dlog_bluescreen_init(void) {
 void dlog_force_panic(void) { dlog_bypass_ = true; }
 
 static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
-                                        std::atomic<bool>* shutdown_requested, event_t* event,
+                                        ktl::atomic<bool>* shutdown_requested, event_t* event,
                                         zx_time_t deadline) {
   shutdown_requested->store(true);
   event_signal(event, false);

@@ -31,7 +31,7 @@
 // {
 //   AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
 //   Guard<Mutex> guard{&lock_};
-//   list_.push_back(std::move(element_uptr));
+//   list_.push_back(ktl::move(element_uptr));
 // }
 //
 // /* Reserve the option to disable preemption, but do not do so right now.  If

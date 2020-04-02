@@ -213,7 +213,7 @@ void PagerSource::Free(PortPacket* packet) {
       // If the source is closed, we need to do delayed cleanup. If the dispatcher
       // has already been torn down, then there's a self-reference we need to clean
       // up. Otherwise, clean up the dispatcher's reference to us.
-      self = std::move(self_ref_);
+      self = ktl::move(self_ref_);
       if (!self) {
         self = pager_->ReleaseSource(this);
       }

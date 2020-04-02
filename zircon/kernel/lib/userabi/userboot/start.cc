@@ -24,6 +24,9 @@
 #include <climits>
 #include <cstring>
 
+#include <ktl/array.h>
+#include <ktl/move.h>
+
 #include "bootdata.h"
 #include "bootfs.h"
 #include "loader-service.h"
@@ -119,7 +122,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   // We pass all the same handles the kernel gives us along to the child,
   // except replacing our own process/root-VMAR handles with its, and
   // passing along the two extra handles (BOOTFS and thread-self).
-  std::array<zx_handle_t, kChildHandleCount> handles;
+  ktl::array<zx_handle_t, kChildHandleCount> handles;
 
   // Read the command line and the essential handles from the kernel.
   uint32_t cmdline_len, nhandles;
@@ -292,7 +295,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   to_child.reset();
 
   // Start the process going.
-  status = proc.start(thread, entry, sp, std::move(child_start_handle), vdso_base);
+  status = proc.start(thread, entry, sp, ktl::move(child_start_handle), vdso_base);
   check(log.get(), status, "zx_process_start failed");
   thread.reset();
 
@@ -301,7 +304,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   // Now become the loader service for as long as that's needed.
   if (loader_service_channel) {
     LoaderService ldsvc(log.get(), &bootfs, root_prefix);
-    ldsvc.Serve(std::move(loader_service_channel));
+    ldsvc.Serve(ktl::move(loader_service_channel));
   }
 
   // All done with bootfs!
