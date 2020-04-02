@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include <clocale>
+#include <cstring>
 #include <set>
 #include <string>
 

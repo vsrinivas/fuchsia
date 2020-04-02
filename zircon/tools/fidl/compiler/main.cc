@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <cstdarg>
 #include <fstream>
 #include <iostream>
 #include <map>
