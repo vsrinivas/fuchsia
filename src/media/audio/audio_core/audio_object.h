@@ -74,14 +74,11 @@ class AudioObject {
   // thread. Outputs which are running on mixer threads should never access format() directly
   // from a mix thread. Instead, they should use the format which was assigned to the AudioLink
   // at the time the link was created.
-  virtual const std::shared_ptr<Format>& format() const {
-    static std::shared_ptr<Format> null_info;
-    return null_info;
-  }
+  virtual std::optional<Format> format() const { return std::nullopt; }
 
   virtual std::optional<StreamUsage> usage() const { return std::nullopt; }
 
-  bool format_valid() const { return format() != nullptr; }
+  bool format_valid() const { return format().has_value(); }
 
   Type type() const { return type_; }
   bool is_output() const { return type() == Type::Output; }

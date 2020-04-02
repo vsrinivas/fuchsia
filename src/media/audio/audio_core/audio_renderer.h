@@ -23,7 +23,7 @@ class AudioRenderer : public BaseRenderer,
 
  private:
   // |media::audio::AudioObject|
-  const std::shared_ptr<Format>& format() const final { return format_; }
+  std::optional<Format> format() const final { return format_; }
   std::optional<StreamUsage> usage() const override {
     return {StreamUsage::WithRenderUsage(usage_)};
   }
@@ -55,7 +55,7 @@ class AudioRenderer : public BaseRenderer,
   // TODO(mpuryear): consider EnableGainChangeEvents(bool), like MinLeadTime.
 
   bool mute_ = false;
-  std::shared_ptr<Format> format_;
+  std::optional<Format> format_;
 
   fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
 

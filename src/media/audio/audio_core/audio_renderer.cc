@@ -87,7 +87,7 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
     FX_LOGS(ERROR) << "AudioRenderer: PcmStreamType is invalid";
     return;
   }
-  format_ = std::make_shared<Format>(format_result.take_value());
+  format_ = {format_result.take_value()};
 
   REP(SettingRendererStreamType(*this, stream_type));
 

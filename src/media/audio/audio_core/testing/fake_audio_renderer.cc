@@ -26,11 +26,11 @@ std::shared_ptr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInf
     async_dispatcher_t* dispatcher, LinkMatrix* link_matrix) {
   auto format_result = Format::Create(kDefaultStreamType);
   FX_CHECK(format_result.is_ok());
-  return FakeAudioRenderer::Create(dispatcher, std::make_shared<Format>(format_result.value()),
+  return FakeAudioRenderer::Create(dispatcher, {format_result.value()},
                                    fuchsia::media::AudioRenderUsage::MEDIA, link_matrix);
 }
 
-FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::shared_ptr<Format> format,
+FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::optional<Format> format,
                                      fuchsia::media::AudioRenderUsage usage,
                                      LinkMatrix* link_matrix)
     : AudioObject(AudioObject::Type::AudioRenderer),

@@ -46,17 +46,17 @@ class FakeAudioObject : public AudioObject {
       });
       FX_CHECK(format_result.is_ok());
 
-      format_ = std::make_shared<Format>(format_result.take_value());
+      format_ = {format_result.take_value()};
     }
     usage_ = std::move(usage);
   }
 
-  const std::shared_ptr<Format>& format() const override { return format_; }
+  std::optional<Format> format() const override { return format_; }
 
   std::optional<StreamUsage> usage() const override { return {usage_}; }
 
  private:
-  std::shared_ptr<Format> format_ = nullptr;
+  std::optional<Format> format_;
   StreamUsage usage_;
 };
 
