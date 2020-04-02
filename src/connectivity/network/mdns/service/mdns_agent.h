@@ -70,7 +70,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
   // Presents a received question. This agent must not call |RemoveSelf| during
   // a call to this method.
-  virtual void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address){};
+  virtual void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
+                               const ReplyAddress& sender_address){};
 
   // Presents a received resource. This agent must not call |RemoveSelf| during
   // a call to this method.

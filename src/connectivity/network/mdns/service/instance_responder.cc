@@ -32,9 +32,12 @@ void InstanceResponder::Start(const std::string& host_full_name, const MdnsAddre
 }
 
 void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
-                                        const ReplyAddress& reply_address) {
+                                        const ReplyAddress& reply_address,
+                                        const ReplyAddress& sender_address) {
   std::string name = question.name_.dotted_string_;
   std::string subtype;
+
+  sender_addresses_.push_back(sender_address.socket_address());
 
   switch (question.type_) {
     case DnsType::kPtr:
@@ -177,7 +180,7 @@ void InstanceResponder::GetAndSendPublication(bool query, const std::string& sub
   }
 
   publisher_->GetPublication(
-      query, subtype,
+      query, subtype, sender_addresses_,
       [this, query, subtype, reply_address](std::unique_ptr<Mdns::Publication> publication) {
         if (publication) {
           SendPublication(*publication, subtype, reply_address);
@@ -189,6 +192,8 @@ void InstanceResponder::GetAndSendPublication(bool query, const std::string& sub
           }
         }
       });
+
+  sender_addresses_.clear();
 }
 
 void InstanceResponder::SendPublication(const Mdns::Publication& publication,

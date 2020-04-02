@@ -7,9 +7,12 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.mdns") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
+    # Some protocols are implemented by the client, so they have client-initiated events that
+    # should not be prefixed by 'On'.
     "event-names-must-start-with-on",
+
+    # 'Service' is used in this context to refer to DNS-SD services, not FIDL services.
     "protocol-name-includes-service",
-    "vector-bounds-not-specified",
   ]
 
   sdk_category = "partner"

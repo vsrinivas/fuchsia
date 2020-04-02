@@ -79,10 +79,12 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
         for (auto& question : message->questions_) {
           // We reply to questions using unicast if specifically requested in
           // the question or if the sender's port isn't 5353.
-          ReceiveQuestion(*question, (question->unicast_response_ ||
-                                      reply_address.socket_address().port() != addresses_->port())
-                                         ? reply_address
-                                         : addresses_->multicast_reply());
+          ReceiveQuestion(*question,
+                          (question->unicast_response_ ||
+                           reply_address.socket_address().port() != addresses_->port())
+                              ? reply_address
+                              : addresses_->multicast_reply(),
+                          reply_address);
         }
 
         for (auto& resource : message->answers_) {
@@ -139,14 +141,17 @@ void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subsc
   auto iter = instance_subscribers_by_service_name_.find(service_name);
   if (iter == instance_subscribers_by_service_name_.end()) {
     agent = std::make_shared<InstanceRequestor>(this, service_name);
+    subscriber->Connect(agent);
+    // Add the subscriber before calling AddAgent (which starts the agent), so the subscriber will
+    // be notified of the first query.
+    agent->AddSubscriber(subscriber);
     instance_subscribers_by_service_name_.emplace(service_name, agent);
     AddAgent(agent);
   } else {
     agent = iter->second;
+    subscriber->Connect(agent);
+    agent->AddSubscriber(subscriber);
   }
-
-  subscriber->Connect(agent);
-  agent->AddSubscriber(subscriber);
 }
 
 bool Mdns::PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
@@ -398,11 +403,12 @@ void Mdns::SendMessages() {
   outbound_messages_by_reply_address_.clear();
 }
 
-void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address) {
+void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
+                           const ReplyAddress& sender_address) {
   // Renewer doesn't need questions.
   DPROHIBIT_AGENT_REMOVAL();
   for (auto& pair : agents_) {
-    pair.second->ReceiveQuestion(question, reply_address);
+    pair.second->ReceiveQuestion(question, reply_address, sender_address);
   }
 
   DALLOW_AGENT_REMOVAL();

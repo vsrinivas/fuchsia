@@ -31,7 +31,8 @@ class InstanceResponder : public MdnsAgent {
   // MdnsAgent overrides.
   void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
 
-  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address) override;
+  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
+                       const ReplyAddress& sender_address) override;
 
   void Quit() override;
 
@@ -92,6 +93,7 @@ class InstanceResponder : public MdnsAgent {
   std::vector<std::string> subtypes_;
   zx::duration announcement_interval_ = kInitialAnnouncementInterval;
   std::unordered_map<std::string, zx::time> throttle_state_by_subtype_;
+  std::vector<inet::SocketAddress> sender_addresses_;
 
  public:
   // Disallow copy, assign and move.

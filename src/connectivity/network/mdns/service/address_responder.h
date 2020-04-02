@@ -25,7 +25,8 @@ class AddressResponder : public MdnsAgent {
   // MdnsAgent overrides.
   void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
 
-  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address) override;
+  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
+                       const ReplyAddress& sender_address) override;
 
  private:
   std::string host_full_name_;

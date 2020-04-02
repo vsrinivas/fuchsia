@@ -21,7 +21,8 @@ void AddressResponder::Start(const std::string& host_full_name, const MdnsAddres
 }
 
 void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
-                                       const ReplyAddress& reply_address) {
+                                       const ReplyAddress& reply_address,
+                                       const ReplyAddress& sender_address) {
   if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa ||
        question.type_ == DnsType::kAny) &&
       question.name_.dotted_string_ == host_full_name_) {

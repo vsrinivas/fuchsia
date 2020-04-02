@@ -37,7 +37,8 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   // Expects that the agent has called |GetPublication| with the given parameters. Returns the
   // callback passed to |GetPublication|.
   fit::function<void(std::unique_ptr<Mdns::Publication>)> ExpectGetPublicationCall(
-      bool query, const std::string& subtype);
+      bool query, const std::string& subtype,
+      const std::vector<inet::SocketAddress>& source_addresses);
 
   // Expects that nothing else has happened.
   void ExpectNoOther() override;
@@ -55,18 +56,20 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   struct GetPublicationCall {
     bool query_;
     const std::string subtype_;
+    std::vector<inet::SocketAddress> source_addresses_;
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback_;
   };
 
   // |Mdns::Publisher| implementation.
-  void ReportSuccess(bool success) override {
-    report_success_parameter_.emplace(success);
-  }
+  void ReportSuccess(bool success) override { report_success_parameter_.emplace(success); }
 
   void GetPublication(bool query, const std::string& subtype,
+                      const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
-    get_publication_calls_.push(
-        GetPublicationCall{.query_ = query, .subtype_ = subtype, .callback_ = std::move(callback)});
+    get_publication_calls_.push(GetPublicationCall{.query_ = query,
+                                                   .subtype_ = subtype,
+                                                   .source_addresses_ = source_addresses,
+                                                   .callback_ = std::move(callback)});
   }
 
   std::optional<bool> report_success_parameter_;
@@ -78,11 +81,14 @@ const std::string InstanceResponderTest::kServiceName = "_test._tcp.";
 const std::string InstanceResponderTest::kInstanceName = "testinstance";
 
 fit::function<void(std::unique_ptr<Mdns::Publication>)>
-InstanceResponderTest::ExpectGetPublicationCall(bool query, const std::string& subtype) {
+InstanceResponderTest::ExpectGetPublicationCall(
+    bool query, const std::string& subtype,
+    const std::vector<inet::SocketAddress>& source_addresses) {
   EXPECT_FALSE(get_publication_calls_.empty());
   EXPECT_EQ(query, get_publication_calls_.front().query_);
   EXPECT_EQ(subtype, get_publication_calls_.front().subtype_);
   auto callback = std::move(get_publication_calls_.front().callback_);
+  EXPECT_EQ(source_addresses, get_publication_calls_.front().source_addresses_);
   EXPECT_NE(nullptr, callback);
   get_publication_calls_.pop();
   return callback;
@@ -106,7 +112,7 @@ void InstanceResponderTest::ExpectAnnouncements() {
 }
 
 void InstanceResponderTest::ExpectAnnouncement() {
-  ExpectGetPublicationCall(false, "")(Mdns::Publication::Create(kPort));
+  ExpectGetPublicationCall(false, "", {})(Mdns::Publication::Create(kPort));
   ExpectPublication();
 }
 
@@ -151,40 +157,52 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   under_test.Start(kHostFullName, addresses());
   ExpectAnnouncements();
 
+  ReplyAddress sender_address0(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100));
+  ReplyAddress sender_address1(
+      inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100));
+
   // First question.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply());
-  ExpectGetPublicationCall(true, "")(Mdns::Publication::Create(kPort));
+                             addresses().multicast_reply(), sender_address0);
+  ExpectGetPublicationCall(true, "",
+                           {sender_address0.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
-  ExpectPostTaskForTime(zx::sec(60), zx::sec(60)); // idle cleanup
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 
   // Second question - answer should be delayed 1s.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply());
+                             addresses().multicast_reply(), sender_address0);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
-  ExpectGetPublicationCall(true, "")(Mdns::Publication::Create(kPort));
+  ExpectGetPublicationCall(true, "",
+                           {sender_address0.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
-  ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60)); // idle cleanup
+  ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 
   // Third question - no delay.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply());
-  ExpectGetPublicationCall(true, "")(Mdns::Publication::Create(kPort));
+                             addresses().multicast_reply(), sender_address0);
+  ExpectGetPublicationCall(true, "",
+                           {sender_address0.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
-  ExpectPostTaskForTime(zx::sec(60), zx::sec(60)); // idle cleanup
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 
   // Fourth and fifth questions - one answer, delayed 1s.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply());
+                             addresses().multicast_reply(), sender_address0);
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
-                             addresses().multicast_reply());
+                             addresses().multicast_reply(), sender_address1);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
-  ExpectGetPublicationCall(true, "")(Mdns::Publication::Create(kPort));
+  ExpectGetPublicationCall(true, "",
+                           {sender_address0.socket_address(), sender_address1.socket_address()})(
+      Mdns::Publication::Create(kPort));
   ExpectPublication();
-  ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60)); // idle cleanup
+  ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 }
 

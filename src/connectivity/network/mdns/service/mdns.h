@@ -74,6 +74,9 @@ class Mdns : public MdnsAgent::Host {
     // Called when an instance is lost.
     virtual void InstanceLost(const std::string& service, const std::string& instance) = 0;
 
+    // Called when a query is sent.
+    virtual void Query(DnsType type_queried) = 0;
+
    protected:
     Subscriber() {}
 
@@ -112,9 +115,11 @@ class Mdns : public MdnsAgent::Host {
     // |query| indicates whether data is requested for an initial announcement
     // (false) or in response to a query (true). If the publication relates to
     // a subtype of the service, |subtype| contains the subtype, otherwise it is
-    // empty. If the publication provided by the callback is null, no
+    // empty. |source_addresses| supplies the source addresses of the queries that
+    // caused this publication. If the publication provided by the callback is null, no
     // announcement or response is transmitted.
     virtual void GetPublication(bool query, const std::string& subtype,
+                                const std::vector<inet::SocketAddress>& source_addresses,
                                 fit::function<void(std::unique_ptr<Publication>)> callback) = 0;
 
    protected:
@@ -256,7 +261,8 @@ class Mdns : public MdnsAgent::Host {
   void SendMessages();
 
   // Distributes questions to all the agents except the resource renewer.
-  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address);
+  void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
+                       const ReplyAddress& sender_address);
 
   // Distributes resources to all the agents, starting with the resource
   // renewer.

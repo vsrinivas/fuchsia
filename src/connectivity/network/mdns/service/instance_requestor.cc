@@ -27,7 +27,9 @@ InstanceRequestor::~InstanceRequestor() {}
 
 void InstanceRequestor::AddSubscriber(Mdns::Subscriber* subscriber) {
   subscribers_.insert(subscriber);
-  ReportAllDiscoveries(subscriber);
+  if (started()) {
+    ReportAllDiscoveries(subscriber);
+  }
 }
 
 void InstanceRequestor::RemoveSubscriber(Mdns::Subscriber* subscriber) {
@@ -172,6 +174,9 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
 
 void InstanceRequestor::SendQuery() {
   SendQuestion(question_);
+  for (auto& subscriber : subscribers_) {
+    subscriber->Query(question_->type_);
+  }
 
   if (query_delay_ == zx::sec(0)) {
     query_delay_ = zx::sec(1);

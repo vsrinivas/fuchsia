@@ -160,6 +160,23 @@ void MdnsServiceImpl::SubscribeToService(
   subscribers_by_id_.emplace(id, std::move(subscriber));
 }
 
+void MdnsServiceImpl::SubscribeToService2(
+    std::string service,
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> subscriber_handle) {
+  if (!MdnsNames::IsValidServiceName(service)) {
+    FX_LOGS(ERROR) << "ResolveHostName called with invalid service name " << service;
+    return;
+  }
+
+  size_t id = next_subscriber_id_++;
+  auto subscriber = std::make_unique<Subscriber>(std::move(subscriber_handle),
+                                                 [this, id]() { subscribers_by_id_.erase(id); });
+
+  mdns_.SubscribeToService(service, subscriber.get());
+
+  subscribers_by_id_.emplace(id, std::move(subscriber));
+}
+
 void MdnsServiceImpl::PublishServiceInstance(
     std::string service, std::string instance, bool perform_probe,
     fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle,
@@ -193,9 +210,62 @@ void MdnsServiceImpl::PublishServiceInstance(
       });
 
   if (!mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get())) {
-    fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
+    if (publisher->callback_) {
+      fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
+      result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
+      publisher->callback_(std::move(result));
+    } else {
+      fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
+      result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
+      publisher->callback2_(std::move(result));
+    }
+    return;
+  }
+
+  // |Mdns| told us our instance is unique locally, so the full name should
+  // not appear in our collection.
+  FX_DCHECK(publishers_by_instance_full_name_.find(instance_full_name) ==
+            publishers_by_instance_full_name_.end());
+
+  publishers_by_instance_full_name_.emplace(instance_full_name, std::move(publisher));
+}
+
+void MdnsServiceImpl::PublishServiceInstance2(
+    std::string service, std::string instance, bool perform_probe,
+    fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder2> responder_handle,
+    PublishServiceInstance2Callback callback) {
+  FX_DCHECK(responder_handle);
+
+  if (!MdnsNames::IsValidServiceName(service)) {
+    FX_LOGS(ERROR) << "PublishServiceInstance2 called with invalid service name " << service;
+    fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
+    result.set_err(fuchsia::net::mdns::Error::INVALID_SERVICE_NAME);
+    callback(std::move(result));
+    return;
+  }
+
+  if (!MdnsNames::IsValidInstanceName(instance)) {
+    FX_LOGS(ERROR) << "PublishServiceInstance2 called with invalid instance name " << instance;
+    fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
+    result.set_err(fuchsia::net::mdns::Error::INVALID_INSTANCE_NAME);
+    callback(std::move(result));
+    return;
+  }
+
+  auto responder_ptr = responder_handle.Bind();
+  FX_DCHECK(responder_ptr);
+
+  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
+
+  auto publisher = std::make_unique<ResponderPublisher>(
+      std::move(responder_ptr), std::move(callback), [this, instance_full_name]() {
+        publishers_by_instance_full_name_.erase(instance_full_name);
+      });
+
+  if (!mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get())) {
+    fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
     result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
-    publisher->callback_(std::move(result));
+    publisher->callback2_(std::move(result));
     return;
   }
 
@@ -222,10 +292,26 @@ MdnsServiceImpl::Subscriber::Subscriber(
   });
 }
 
+MdnsServiceImpl::Subscriber::Subscriber(
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> handle, fit::closure deleter) {
+  client2_.Bind(std::move(handle));
+  client2_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
+    // Clearing the error handler frees the capture list, so we need to save |deleter|.
+    auto save_deleter = std::move(deleter);
+    client2_.set_error_handler(nullptr);
+    client2_.Unbind();
+    save_deleter();
+  });
+}
+
 MdnsServiceImpl::Subscriber::~Subscriber() {
   client_.set_error_handler(nullptr);
   if (client_.is_bound()) {
     client_.Unbind();
+  }
+  client2_.set_error_handler(nullptr);
+  if (client2_.is_bound()) {
+    client2_.Unbind();
   }
 }
 
@@ -285,6 +371,11 @@ void MdnsServiceImpl::Subscriber::InstanceLost(const std::string& service,
   MaybeSendNextEntry();
 }
 
+void MdnsServiceImpl::Subscriber::Query(DnsType type_queried) {
+  entries_.push({.type = EntryType::kQuery, .type_queried = type_queried});
+  MaybeSendNextEntry();
+}
+
 void MdnsServiceImpl::Subscriber::MaybeSendNextEntry() {
   FX_DCHECK(pipeline_depth_ <= kMaxPipelineDepth);
   if (pipeline_depth_ == kMaxPipelineDepth || entries_.empty()) {
@@ -294,17 +385,38 @@ void MdnsServiceImpl::Subscriber::MaybeSendNextEntry() {
   Entry& entry = entries_.front();
   auto on_reply = fit::bind_member(this, &MdnsServiceImpl::Subscriber::ReplyReceived);
 
-  switch (entry.type) {
-    case EntryType::kInstanceDiscovered:
-      client_->OnInstanceDiscovered(std::move(entry.service_instance), std::move(on_reply));
-      break;
-    case EntryType::kInstanceChanged:
-      client_->OnInstanceChanged(std::move(entry.service_instance), std::move(on_reply));
-      break;
-    case EntryType::kInstanceLost:
-      client_->OnInstanceLost(entry.service_instance.service, entry.service_instance.instance,
-                              std::move(on_reply));
-      break;
+  if (client_) {
+    switch (entry.type) {
+      case EntryType::kInstanceDiscovered:
+        client_->OnInstanceDiscovered(std::move(entry.service_instance), std::move(on_reply));
+        break;
+      case EntryType::kInstanceChanged:
+        client_->OnInstanceChanged(std::move(entry.service_instance), std::move(on_reply));
+        break;
+      case EntryType::kInstanceLost:
+        client_->OnInstanceLost(entry.service_instance.service, entry.service_instance.instance,
+                                std::move(on_reply));
+        break;
+      case EntryType::kQuery:
+        break;
+    }
+  } else {
+    FX_DCHECK(client2_);
+    switch (entry.type) {
+      case EntryType::kInstanceDiscovered:
+        client2_->OnInstanceDiscovered(std::move(entry.service_instance), std::move(on_reply));
+        break;
+      case EntryType::kInstanceChanged:
+        client2_->OnInstanceChanged(std::move(entry.service_instance), std::move(on_reply));
+        break;
+      case EntryType::kInstanceLost:
+        client2_->OnInstanceLost(entry.service_instance.service, entry.service_instance.instance,
+                                 std::move(on_reply));
+        break;
+      case EntryType::kQuery:
+        client2_->OnQuery(MdnsFidlUtil::Convert(entry.type_queried), std::move(on_reply));
+        break;
+    }
   }
 
   ++pipeline_depth_;
@@ -337,6 +449,7 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
     bool query, const std::string& subtype,
+    const std::vector<inet::SocketAddress>& source_addresses,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
   callback(publication_->Clone());
@@ -375,36 +488,93 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
   responder_.events().Reannounce = [this]() { Reannounce(); };
 }
 
+MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
+    fuchsia::net::mdns::PublicationResponder2Ptr responder,
+    PublishServiceInstance2Callback callback, fit::closure deleter)
+    : responder2_(std::move(responder)), callback2_(std::move(callback)) {
+  FX_DCHECK(responder2_);
+
+  responder2_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
+    // Clearing the error handler frees the capture list, so we need to save |deleter|.
+    auto save_deleter = std::move(deleter);
+    responder2_.set_error_handler(nullptr);
+    save_deleter();
+  });
+
+  responder2_.events().SetSubtypes = [this](std::vector<std::string> subtypes) {
+    for (auto& subtype : subtypes) {
+      if (!MdnsNames::IsValidSubtypeName(subtype)) {
+        FX_LOGS(ERROR) << "Invalid subtype " << subtype
+                       << " passed in SetSubtypes event, closing connection.";
+        responder2_ = nullptr;
+        Unpublish();
+        return;
+      }
+    }
+
+    SetSubtypes(std::move(subtypes));
+  };
+
+  responder2_.events().Reannounce = [this]() { Reannounce(); };
+}
+
 MdnsServiceImpl::ResponderPublisher::~ResponderPublisher() {
   responder_.set_error_handler(nullptr);
   if (responder_.is_bound()) {
     responder_.Unbind();
   }
+
+  responder2_.set_error_handler(nullptr);
+  if (responder2_.is_bound()) {
+    responder2_.Unbind();
+  }
 }
 
 void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
-  fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
-  if (success) {
-    result.set_response(fuchsia::net::mdns::Publisher_PublishServiceInstance_Response());
-  } else {
-    result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_ON_SUBNET);
-  }
+  if (callback_) {
+    fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
+    if (success) {
+      result.set_response(fuchsia::net::mdns::Publisher_PublishServiceInstance_Response());
+    } else {
+      result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_ON_SUBNET);
+    }
 
-  callback_(std::move(result));
+    callback_(std::move(result));
+  } else {
+    fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result;
+    if (success) {
+      result.set_response(fuchsia::net::mdns::Publisher_PublishServiceInstance2_Response());
+    } else {
+      result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_ON_SUBNET);
+    }
+
+    callback2_(std::move(result));
+  }
 }
 
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
     bool query, const std::string& subtype,
+    const std::vector<inet::SocketAddress>& source_addresses,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
-  FX_DCHECK(responder_);
-  responder_->OnPublication(
-      query, subtype,
-      [this, callback = std::move(callback)](fuchsia::net::mdns::PublicationPtr publication_ptr) {
-        if (publication_ptr) {
-          for (auto& text : publication_ptr->text) {
-            if (!MdnsNames::IsValidTextString(text)) {
-              FX_LOGS(ERROR) << "Invalid text string returned by "
+  if (responder_) {
+    responder_->OnPublication(
+        query, subtype,
+        [this, callback = std::move(callback)](fuchsia::net::mdns::PublicationPtr publication_ptr) {
+          if (publication_ptr) {
+            for (auto& text : publication_ptr->text) {
+              if (!MdnsNames::IsValidTextString(text)) {
+                FX_LOGS(ERROR) << "Invalid text string returned by "
+                                  "Responder.GetPublication, closing connection.";
+                responder_ = nullptr;
+                Unpublish();
+                return;
+              }
+            }
+
+            if (publication_ptr->ptr_ttl < ZX_SEC(1) || publication_ptr->srv_ttl < ZX_SEC(1) ||
+                publication_ptr->txt_ttl < ZX_SEC(1)) {
+              FX_LOGS(ERROR) << "TTL less than one second returned by "
                                 "Responder.GetPublication, closing connection.";
               responder_ = nullptr;
               Unpublish();
@@ -412,18 +582,37 @@ void MdnsServiceImpl::ResponderPublisher::GetPublication(
             }
           }
 
-          if (publication_ptr->ptr_ttl < ZX_SEC(1) || publication_ptr->srv_ttl < ZX_SEC(1) ||
-              publication_ptr->txt_ttl < ZX_SEC(1)) {
-            FX_LOGS(ERROR) << "TTL less than one second returned by "
-                              "Responder.GetPublication, closing connection.";
-            responder_ = nullptr;
-            Unpublish();
-            return;
-          }
-        }
+          callback(MdnsFidlUtil::Convert(publication_ptr));
+        });
+  } else {
+    FX_DCHECK(responder2_);
+    responder2_->OnPublication(
+        query, subtype, MdnsFidlUtil::Convert(source_addresses),
+        [this, callback = std::move(callback)](fuchsia::net::mdns::PublicationPtr publication_ptr) {
+          if (publication_ptr) {
+            for (auto& text : publication_ptr->text) {
+              if (!MdnsNames::IsValidTextString(text)) {
+                FX_LOGS(ERROR) << "Invalid text string returned by "
+                                  "Responder.GetPublication, closing connection.";
+                responder2_ = nullptr;
+                Unpublish();
+                return;
+              }
+            }
 
-        callback(MdnsFidlUtil::Convert(publication_ptr));
-      });
+            if (publication_ptr->ptr_ttl < ZX_SEC(1) || publication_ptr->srv_ttl < ZX_SEC(1) ||
+                publication_ptr->txt_ttl < ZX_SEC(1)) {
+              FX_LOGS(ERROR) << "TTL less than one second returned by "
+                                "Responder.GetPublication, closing connection.";
+              responder2_ = nullptr;
+              Unpublish();
+              return;
+            }
+          }
+
+          callback(MdnsFidlUtil::Convert(publication_ptr));
+        });
+  }
 }
 
 }  // namespace mdns

@@ -31,6 +31,8 @@ class MdnsFidlUtil {
 
   static fuchsia::net::Ipv6Address CreateIpv6Address(const inet::IpAddress& ip_address);
 
+  static fuchsia::net::IpAddress CreateIpAddress(const inet::IpAddress& ip_address);
+
   static fuchsia::net::Endpoint CreateEndpointV4(const inet::SocketAddress& socket_address);
 
   static fuchsia::net::Endpoint CreateEndpointV6(const inet::SocketAddress& socket_address);
@@ -39,6 +41,11 @@ class MdnsFidlUtil {
 
   static std::unique_ptr<Mdns::Publication> Convert(
       const fuchsia::net::mdns::PublicationPtr& publication_ptr);
+
+  static std::vector<fuchsia::net::IpAddress> Convert(
+      const std::vector<inet::SocketAddress>& addresses);
+
+  static fuchsia::net::mdns::ResourceType Convert(DnsType type);
 };
 
 }  // namespace mdns

@@ -7,35 +7,46 @@ library fuchsia.net.mdns;
 using fuchsia.net;
 using zx;
 
+// TODO(dalesat): Soft transition in progress.
+// 1) Add the following definitions:
+//    Subscriber.SubscribeToService2
+//    ServiceSubscriber2
+//    Publisher.PublishServiceInstance2
+//    PublicationResponder2
+// 2) Transition all clients to the '2' versions.
+// 3) Change the originals to be identical to the '2' versions.
+// 4) Transition all clients to the original names.
+// 5) Remove the '2' versions.
+
 // TODO(FIDL-580): Make these alias comments doc comments.
 
-// Identifies a host. Host names consist of one or more labels separated by
-// '.'s. A host name must not end with a '.'. Labels must each be 63 characters
-// or less (not including the separator) and are UTF-8-encoded. A complete host
-// name, including separators, must be 255 characters or less.
+/// Identifies a host. Host names consist of one or more labels separated by
+/// '.'s. A host name must not end with a '.'. Labels must each be 63 characters
+/// or less (not including the separator) and are UTF-8-encoded. A complete host
+/// name, including separators, must be 255 characters or less.
 using host_name = string:255;
 
-// Identifies a (type of) service being published. Service names consist of
-// two labels, both terminated with a '.'. The first label must start with an
-// underscore and be 16 characters or less, including the underscore. The
-// second label must be either '_tcp' or '_udp'. Labels do not contain '.'s.
-// With underscores and terminators, that makes for a maximum of 22 characters.
-// Service names are UTF-8-encoded.
+/// Identifies a (type of) service being published. Service names consist of
+/// two labels, both terminated with a '.'. The first label must start with an
+/// underscore and be 16 characters or less, including the underscore. The
+/// second label must be either '_tcp' or '_udp'. Labels do not contain '.'s.
+/// With underscores and terminators, that makes for a maximum of 22 characters.
+/// Service names are UTF-8-encoded.
 using service_name = string:22;
 
-// Identifies a specific instance of a service being published. Instance names
-// consist of a single label, which is at most 63 characters long and which
-// contains no '.'s. Instance names are UTF-8-encoded.
+/// Identifies a specific instance of a service being published. Instance names
+/// consist of a single label, which is at most 63 characters long and which
+/// contains no '.'s. Instance names are UTF-8-encoded.
 using instance_name = string:63;
 
-// Identifies a subtype of a service. Subtype names consist of a single label,
-// which is at most 63 characters long and which contains no '.'s. Subtype
-// names are UTF-8-encoded.
+/// Identifies a subtype of a service. Subtype names consist of a single label,
+/// which is at most 63 characters long and which contains no '.'s. Subtype
+/// names are UTF-8-encoded.
 using subtype_name = string:63;
 
-// Provides description relating to a service instance. In typical use, TXT
-// strings consist of a key and value separated by '='. TXT strings must be
-// at most 255 characters long and are UTF-8-encoded.
+/// Provides description relating to a service instance. In typical use, TXT
+/// strings consist of a key and value separated by '='. TXT strings must be
+/// at most 255 characters long and are UTF-8-encoded.
 using txt_string = string:255;
 
 /// Discoverable protocol for resolving host names to IP addresses.
@@ -59,6 +70,10 @@ protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
     SubscribeToService(service_name service, ServiceSubscriber subscriber);
+
+    /// Subscribes to a service. The subscription lasts until `subscriber` is
+    /// unbound.
+    SubscribeToService2(service_name service, ServiceSubscriber2 subscriber);
 };
 
 /// Discoverable protocol for publishing service instances.
@@ -76,6 +91,19 @@ protocol Publisher {
                            instance_name instance,
                            bool perform_probe,
                            PublicationResponder publication_responder) -> () error Error;
+
+    /// Publishes a service instance. `publication_responder` is consulted via its
+    /// `OnPublication` method for initial announcements and to answer queries.
+    /// The service is published until the `publication_responder` channel closes. In
+    /// addition to announcements and queries for the service type, all queries
+    /// for subtypes are answered subject to filtering through the responder.
+    /// `perform_probe` indicates whether a probe for a conflicting instance
+    /// should be performed before publishing the instance. This value should
+    /// be `true` unless the instance name is known to be unique.
+    PublishServiceInstance2(service_name service,
+                            instance_name instance,
+                            bool perform_probe,
+                            PublicationResponder2 publication_responder) -> () error Error;
 };
 
 /// Error values for instance publishing.
@@ -111,6 +139,32 @@ protocol ServiceSubscriber {
     OnInstanceLost(service_name service, instance_name instance) -> ();
 };
 
+/// Client-implemented interface for subscribers. Method replies are used to
+/// throttle traffic. The service won't necessarily wait for a reply before
+/// calling another method.
+protocol ServiceSubscriber2 {
+    /// Notifies the subscriber that a service instance has been discovered.
+    OnInstanceDiscovered(ServiceInstance instance) -> ();
+
+    /// Notifies the subscriber that addresses or text for a known service
+    /// instance have changed.
+    OnInstanceChanged(ServiceInstance instance) -> ();
+
+    /// Notifies the subscriber that a known service instance has been lost.
+    OnInstanceLost(service_name service, instance_name instance) -> ();
+
+    /// Notifies the subscriber that a PTR query has been sent.
+    OnQuery(ResourceType resource_type) -> ();
+};
+
+/// DNS resource types.
+enum ResourceType {
+    /// Domain name pointer.
+    PTR = 12;
+    /// Any (wildcard) type.
+    ANY = 255;
+};
+
 /// Describes a service instance.
 struct ServiceInstance {
     /// The name of the service.
@@ -124,7 +178,7 @@ struct ServiceInstance {
     vector<fuchsia.net.Endpoint>:2 endpoints;
 
     /// Text strings describing the instance.
-    vector<txt_string> text;
+    vector<txt_string>:MAX_TEXT_STRINGS text;
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
@@ -145,13 +199,38 @@ protocol PublicationResponder {
     /// `subtype` contains the subtype, otherwise it is null. If `publication`
     /// is null, no announcement or response is transmitted. Strings in `text`
     /// are transmitted in the TXT record.
-    OnPublication(bool query, subtype_name? subtype)
+    OnPublication(bool query, subtype_name? subtype) -> (Publication? publication);
+
+    /// Sets the subtypes for the service instance. The specified subtypes will
+    /// be announced subject to filtering through the responder. The initial
+    /// subtype collection is empty.
+    -> SetSubtypes(vector<subtype_name>:MAX_SUBTYPES subtypes);
+
+    /// Initiates reannouncement of the service instance due to a change in the
+    /// instance's port number or text strings. All announcements are filtered
+    /// through `OnPublication`, which replies with the new port and text
+    /// values.
+    -> Reannounce();
+};
+
+/// Client-supplied publication responder interface.
+protocol PublicationResponder2 {
+    /// Provides instance information for initial announcements and query
+    /// responses relating to the service instance specified in
+    /// `Publisher.PublishServiceInstance`. `query` indicates whether data is
+    /// requested for an initial announcement (false) or in response to a query
+    /// (true). If the publication relates to a subtype of the service,
+    /// `subtype` contains the subtype, otherwise it is null. If `publication`
+    /// is null, no announcement or response is transmitted. Strings in `text`
+    /// are transmitted in the TXT record.
+    OnPublication(
+        bool query, subtype_name? subtype, vector<fuchsia.net.IpAddress>:64 source_addresses)
         -> (Publication? publication);
 
     /// Sets the subtypes for the service instance. The specified subtypes will
     /// be announced subject to filtering through the responder. The initial
     /// subtype collection is empty.
-    -> SetSubtypes(vector<subtype_name> subtypes);
+    -> SetSubtypes(vector<subtype_name>:MAX_SUBTYPES subtypes);
 
     /// Initiates reannouncement of the service instance due to a change in the
     /// instance's port number or text strings. All announcements are filtered
@@ -170,7 +249,7 @@ struct Publication {
     uint16 port;
 
     /// Text strings describing the instance.
-    vector<txt_string> text;
+    vector<txt_string>:MAX_TEXT_STRINGS text;
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
@@ -195,3 +274,5 @@ const uint16 DEFAULT_SRV_WEIGHT = 0;
 const zx.duration DEFAULT_PTR_TTL = 4500000000000; // 75 minutes
 const zx.duration DEFAULT_SRV_TTL = 120000000000; // 2 minutes
 const zx.duration DEFAULT_TXT_TTL = 4500000000000; // 75 minutes
+const uint32 MAX_TEXT_STRINGS = 256;
+const uint32 MAX_SUBTYPES = 256;

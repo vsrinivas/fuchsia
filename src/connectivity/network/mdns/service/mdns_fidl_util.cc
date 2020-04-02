@@ -80,6 +80,20 @@ fuchsia::net::Ipv6Address MdnsFidlUtil::CreateIpv6Address(const inet::IpAddress&
 }
 
 // static
+fuchsia::net::IpAddress MdnsFidlUtil::CreateIpAddress(const inet::IpAddress& ip_address) {
+  FX_DCHECK(ip_address);
+  fuchsia::net::IpAddress result;
+
+  if (ip_address.is_v4()) {
+    result.set_ipv4(CreateIpv4Address(ip_address));
+  } else {
+    result.set_ipv6(CreateIpv6Address(ip_address));
+  }
+
+  return result;
+}
+
+// static
 fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV4(const inet::SocketAddress& socket_address) {
   FX_DCHECK(socket_address);
   FX_DCHECK(socket_address.is_v4());
@@ -143,6 +157,30 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
   publication->txt_ttl_seconds_ = zx::nsec(publication_ptr->txt_ttl).to_secs();
 
   return publication;
+}
+
+// static
+std::vector<fuchsia::net::IpAddress> MdnsFidlUtil::Convert(
+    const std::vector<inet::SocketAddress>& addresses) {
+  std::vector<fuchsia::net::IpAddress> result;
+  for (auto& address : addresses) {
+    result.push_back(MdnsFidlUtil::CreateIpAddress(address.address()));
+  }
+
+  return result;
+}
+
+// static
+fuchsia::net::mdns::ResourceType MdnsFidlUtil::Convert(DnsType type) {
+  switch (type) {
+    case DnsType::kPtr:
+      return fuchsia::net::mdns::ResourceType::PTR;
+    case DnsType::kAny:
+      return fuchsia::net::mdns::ResourceType::ANY;
+    default:
+      FX_DCHECK(false) << "Asked to convert unexpected DnsType " << static_cast<uint32_t>(type);
+      return fuchsia::net::mdns::ResourceType::ANY;
+  }
 }
 
 }  // namespace mdns

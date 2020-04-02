@@ -36,16 +36,28 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
       std::string service,
       fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber) override;
 
+  void SubscribeToService2(
+      std::string service,
+      fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> subscriber) override;
+
   // fuchsia::net::mdns::Publisher implementation.
   void PublishServiceInstance(
       std::string service, std::string instance, bool perform_probe,
       fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle,
       PublishServiceInstanceCallback callback) override;
 
+  void PublishServiceInstance2(
+      std::string service, std::string instance, bool perform_probe,
+      fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder2> responder_handle,
+      PublishServiceInstance2Callback callback) override;
+
  private:
   class Subscriber : public Mdns::Subscriber {
    public:
     Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle,
+               fit::closure deleter);
+
+    Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> handle,
                fit::closure deleter);
 
     ~Subscriber() override;
@@ -65,6 +77,8 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
 
     void InstanceLost(const std::string& service, const std::string& instance) override;
 
+    void Query(DnsType type_queried) override;
+
    private:
     static constexpr size_t kMaxPipelineDepth = 16;
 
@@ -72,11 +86,13 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
       kInstanceDiscovered,
       kInstanceChanged,
       kInstanceLost,
+      kQuery,
     };
 
     struct Entry {
       EntryType type;
       fuchsia::net::mdns::ServiceInstance service_instance;
+      DnsType type_queried;
     };
 
     // Sends the entry at the head of the queue, if there is one and if
@@ -87,6 +103,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     void ReplyReceived();
 
     fuchsia::net::mdns::ServiceSubscriberPtr client_;
+    fuchsia::net::mdns::ServiceSubscriber2Ptr client2_;
     std::queue<Entry> entries_;
     size_t pipeline_depth_ = 0;
 
@@ -108,6 +125,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     void ReportSuccess(bool success) override;
 
     void GetPublication(bool query, const std::string& subtype,
+                        const std::vector<inet::SocketAddress>& source_addresses,
                         fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override;
 
     std::unique_ptr<Mdns::Publication> publication_;
@@ -126,16 +144,22 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     ResponderPublisher(fuchsia::net::mdns::PublicationResponderPtr responder,
                        PublishServiceInstanceCallback callback, fit::closure deleter);
 
+    ResponderPublisher(fuchsia::net::mdns::PublicationResponder2Ptr responder,
+                       PublishServiceInstance2Callback callback, fit::closure deleter);
+
     ~ResponderPublisher() override;
 
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
     void GetPublication(bool query, const std::string& subtype,
+                        const std::vector<inet::SocketAddress>& source_addresses,
                         fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override;
 
     fuchsia::net::mdns::PublicationResponderPtr responder_;
     PublishServiceInstanceCallback callback_;
+    fuchsia::net::mdns::PublicationResponder2Ptr responder2_;
+    PublishServiceInstance2Callback callback2_;
 
     // Disallow copy, assign and move.
     ResponderPublisher(const ResponderPublisher&) = delete;
