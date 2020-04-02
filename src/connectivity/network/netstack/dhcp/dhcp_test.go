@@ -779,7 +779,7 @@ func TestStateTransition(t *testing.T) {
 		// acquireTimeout is the default acquisition timeout to use in tests.
 		// It is small enough to make sure the client doesn't get stuck in retransmission
 		// when it should transition to the next state.
-		acquireTimeout = 100 * time.Millisecond
+		acquireTimeout = 400 * time.Millisecond
 		// The following 3 durations are included in DHCP responses.
 		// They are multiples of a second because that's the smallest time granularity
 		// DHCP messages support.
@@ -978,7 +978,7 @@ func TestStateTransition(t *testing.T) {
 // and keeps retrying when previous acquisition fails.
 func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	const (
-		acquireTimeout         = 100 * time.Millisecond
+		acquireTimeout         = 400 * time.Millisecond
 		leaseLength    Seconds = 1
 	)
 	testTimeout := stateTransitionTestTimeout(leaseLength)
