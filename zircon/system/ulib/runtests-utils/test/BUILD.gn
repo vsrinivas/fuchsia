@@ -44,10 +44,10 @@ test("service-proxy-dir") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/runtests-utils",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/runtests-utils",
   ]
 }
 

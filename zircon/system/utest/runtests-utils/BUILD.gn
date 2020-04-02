@@ -33,12 +33,12 @@ test("runtests-utils") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/memfs",
-    "//zircon/public/lib/runtests-utils",
     "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/runtests-utils",
   ]
   data_deps = [
-    ":packaged-publish-data-helper",
     ":packaged-profile-helper",
+    ":packaged-publish-data-helper",
     ":packaged-raw-profile",
     ":test-data",
     ":test-scripts",

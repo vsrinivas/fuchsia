@@ -27,10 +27,10 @@ executable("runtests") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/loader-service",
-    "//zircon/public/lib/runtests-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger:c",
+    "//zircon/system/ulib/runtests-utils",
   ]
 
   # TODO(45181): Fix the leaks and remove this.

@@ -2,7 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/clang.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
+import("//zircon/public/gn/toolchain/clang.gni")
 
 zx_library("runtests-utils") {
   testonly = true
@@ -21,12 +33,12 @@ zx_library("runtests-utils") {
   ]
   public_deps = [
     # <runtests-utils/runtests-utils.h> has #include <lib/zircon-internal/fnv1hash.h>.
-    "$zx/system/ulib/zircon-internal:headers",
+    "//zircon/public/lib/zircon-internal",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zircon-internal",
   ]
   if (is_fuchsia) {
     sources += [
@@ -37,34 +49,33 @@ zx_library("runtests-utils") {
     ]
     public_deps += [
       # <runtests-utils/log-exporter.h> has #include <lib/fidl/cpp/message_buffer.h>.
-      "$zx/system/ulib/fidl:headers",
+      "//zircon/public/lib/fidl",
 
       # <runtests-utils/log-exporter.h> has #include <fuchsia/logger/c/fidl.h>.
-      "$zx/system/fidl/fuchsia-logger:c.headers",
+      "//zircon/system/fidl/fuchsia-logger:c",
 
       # <runtests-utils/log-exporter.h> has #include <lib/async-loop/cpp/loop.h>.
-      "$zx/system/ulib/async-loop:async-loop-cpp.headers",
+      "//zircon/public/lib/async-loop-cpp",
     ]
     deps += [
-      "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/fidl/fuchsia-logger:c",
-      "$zx/system/ulib/async",
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/async-loop",
-      "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/async-loop:async-loop-default.static",
-      "$zx/system/ulib/debugdata",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/fidl-async:fidl-async-cpp",
-      "$zx/system/ulib/fs",
-      "$zx/system/ulib/fzl",
-      "$zx/system/ulib/loader-service",
-      "$zx/system/ulib/unittest",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/async-loop",
+      "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/async-loop-default",
+      "//zircon/public/lib/debugdata",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fidl-async-cpp",
+      "//zircon/public/lib/fs",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/loader-service",
+      "//zircon/public/lib/unittest",
+      "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-io:llcpp",
+      "//zircon/system/fidl/fuchsia-logger:c",
     ]
-    if (is_gcc) {
+    if (false) { # is_gcc
       if (clang_tool_dir == "") {
         clang_exec = "clang"
       } else {
@@ -78,9 +89,10 @@ zx_library("runtests-utils") {
                                              "trim string"),
                                  "",
                                  root_build_dir)
-      write_file("$target_gen_dir/profile/InstrProfData.inc",
-                 [ "#include \"$resource_dir/include/profile/InstrProfData.inc\"" ],
-                 "list lines")
+      write_file(
+          "$target_gen_dir/profile/InstrProfData.inc",
+          [ "#include \"$resource_dir/include/profile/InstrProfData.inc\"" ],
+          "list lines")
       include_dirs = [ target_gen_dir ]
     }
   } else {
