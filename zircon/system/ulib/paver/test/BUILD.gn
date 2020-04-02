@@ -49,7 +49,7 @@ test("paver-test") {
     "validation-test.cc",
   ]
   include_dirs = [
-    "//zircon/public/lib/paver",
+    "//zircon/system/ulib/paver",
     "..",
   ]
   deps = [
@@ -71,7 +71,6 @@ test("paver-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/libabr",
-    "//zircon/public/lib/paver",
     "//zircon/public/lib/ramdevice-client-static",
     "//zircon/public/lib/svc",
     "//zircon/public/lib/sysconfig-sync-client",
@@ -83,6 +82,7 @@ test("paver-test") {
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "//zircon/system/fidl/fuchsia-paver:llcpp",
+    "//zircon/system/ulib/paver",
   ]
 }
 
@@ -98,7 +98,6 @@ fuzzer("paver-validation-fuzzer") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/gpt",
-    "//zircon/public/lib/paver",
     "//zircon/public/lib/svc",
     "//zircon/public/lib/sysconfig-sync-client",
     "//zircon/system/fidl/fuchsia-boot:llcpp.headers",
@@ -106,10 +105,11 @@ fuzzer("paver-validation-fuzzer") {
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp.headers",
     "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp.headers",
     "//zircon/system/fidl/fuchsia-paver:llcpp.headers",
+    "//zircon/system/ulib/paver",
   ]
 
   include_dirs = [
-    "//zircon/public/lib/paver",
+    "//zircon/system/ulib/paver",
     "..",
   ]
 }

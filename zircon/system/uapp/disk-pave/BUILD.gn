@@ -41,9 +41,9 @@ executable("install-disk-image") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/paver",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-paver:llcpp",
+    "//zircon/system/ulib/paver",
   ]
 }
 
