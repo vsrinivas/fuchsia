@@ -127,6 +127,9 @@ table SurfaceInfo2 {
     ///
     /// The `Annotation.value` field of each `Annotation` is always set.
     5: vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE annotations;
+
+    /// The view ref associated with the surface, if one is present.
+    6: fuchsia.ui.views.ViewRef view_ref;
 };
 
 /// This interface provides the StoryShell instance with everything it needs to
