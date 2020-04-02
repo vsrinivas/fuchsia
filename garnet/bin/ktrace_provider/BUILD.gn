@@ -88,7 +88,7 @@ executable("importer_test_app") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/trace-test-utils",
+    "//zircon/system/ulib/trace-test-utils",
   ]
 }
 
