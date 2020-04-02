@@ -11,17 +11,25 @@
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <mock/ddktl/protocol/sdhci.h>
 #include <zxtest/zxtest.h>
+
+namespace {
+
+constexpr zx_paddr_t kPageMask = PAGE_SIZE - 1;
+
+}  // namespace
 
 namespace sdhci {
 
 class TestSdhci : public Sdhci {
  public:
   TestSdhci(zx_device_t* parent, ddk::MmioBuffer regs_mmio_buffer, zx::bti bti,
-            const ddk::SdhciProtocolClient sdhci)
-      : Sdhci(parent, std::move(regs_mmio_buffer), std::move(bti), {}, sdhci) {}
+            const ddk::SdhciProtocolClient sdhci, uint64_t quirks, uint64_t dma_boundary_alignment)
+      : Sdhci(parent, std::move(regs_mmio_buffer), std::move(bti), {}, sdhci, quirks,
+              dma_boundary_alignment) {}
 
   zx_status_t SdmmcRequest(sdmmc_req_t* req) {
     blocks_remaining_ = req->blockcount;
@@ -43,6 +51,8 @@ class TestSdhci : public Sdhci {
   void* iobuf_virt() const { return iobuf_.virt(); }
 
   void TriggerCardInterrupt() { card_interrupt_ = true; }
+
+  void set_dma_paddrs(const std::vector<zx_paddr_t>& paddrs) { dma_paddrs_ = paddrs; }
 
  protected:
   zx_status_t WaitForReset(const SoftwareReset mask) override {
@@ -88,12 +98,26 @@ class TestSdhci : public Sdhci {
     return ZX_ERR_CANCELED;
   }
 
+  zx_status_t PinRequestPages(sdmmc_req_t* req, zx_paddr_t* phys, size_t pagecount) override {
+    if (dma_paddrs_.size() == 0) {
+      return Sdhci::PinRequestPages(req, phys, pagecount);
+    }
+    if (dma_paddrs_.size() < pagecount) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    req->pmt = ZX_HANDLE_INVALID;
+    memcpy(phys, dma_paddrs_.data(), pagecount * sizeof(phys[0]));
+    return ZX_OK;
+  }
+
  private:
   uint8_t reset_mask_ = 0;
   std::atomic<bool> run_thread_ = true;
   std::atomic<uint16_t> blocks_remaining_ = 0;
   std::atomic<uint16_t> current_block_ = 0;
   std::atomic<bool> card_interrupt_ = false;
+  std::vector<zx_paddr_t> dma_paddrs_;
 };
 
 class SdhciTest : public zxtest::Test {
@@ -115,11 +139,11 @@ class SdhciTest : public zxtest::Test {
   }
 
  protected:
-  void CreateDut() {
+  void CreateDut(uint64_t quirks = 0, uint64_t dma_boundary_alignment = 0) {
     memset(registers_.get(), 0, kRegisterSetSize);
 
     dut_.emplace(fake_ddk::kFakeParent, ddk::MmioView(mmio_), std::move(fake_bti_),
-                 ddk::SdhciProtocolClient(mock_sdhci_.GetProto()));
+                 ddk::SdhciProtocolClient(mock_sdhci_.GetProto()), quirks, dma_boundary_alignment);
 
     HostControllerVersion::Get()
         .FromValue(0)
@@ -137,7 +161,6 @@ class SdhciTest : public zxtest::Test {
 };
 
 TEST_F(SdhciTest, DdkLifecycle) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -151,7 +174,6 @@ TEST_F(SdhciTest, DdkLifecycle) {
 }
 
 TEST_F(SdhciTest, BaseClockZero) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(0);
@@ -159,7 +181,6 @@ TEST_F(SdhciTest, BaseClockZero) {
 }
 
 TEST_F(SdhciTest, BaseClockFromDriver) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(0xabcdef);
@@ -170,7 +191,6 @@ TEST_F(SdhciTest, BaseClockFromDriver) {
 }
 
 TEST_F(SdhciTest, BaseClockFromHardware) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(104).WriteTo(&mmio_);
@@ -181,7 +201,6 @@ TEST_F(SdhciTest, BaseClockFromHardware) {
 }
 
 TEST_F(SdhciTest, HostInfo) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   Capabilities1::Get()
@@ -209,8 +228,7 @@ TEST_F(SdhciTest, HostInfo) {
 }
 
 TEST_F(SdhciTest, HostInfoNoDma) {
-  mock_sdhci_.ExpectGetQuirks(SDHCI_QUIRK_NO_DMA);
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_NO_DMA));
 
   Capabilities1::Get().FromValue(0).set_sdr50_support(1).set_ddr50_support(1).WriteTo(&mmio_);
   Capabilities0::Get()
@@ -232,8 +250,7 @@ TEST_F(SdhciTest, HostInfoNoDma) {
 }
 
 TEST_F(SdhciTest, HostInfoNoTuning) {
-  mock_sdhci_.ExpectGetQuirks(SDHCI_QUIRK_NON_STANDARD_TUNING);
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_NON_STANDARD_TUNING));
 
   Capabilities1::Get().FromValue(0).WriteTo(&mmio_);
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(1).WriteTo(&mmio_);
@@ -247,7 +264,6 @@ TEST_F(SdhciTest, HostInfoNoTuning) {
 }
 
 TEST_F(SdhciTest, SetSignalVoltage) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -276,14 +292,12 @@ TEST_F(SdhciTest, SetSignalVoltage) {
 }
 
 TEST_F(SdhciTest, SetSignalVoltageUnsupported) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   EXPECT_NOT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V330));
 }
 
 TEST_F(SdhciTest, SetBusWidth) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -307,14 +321,12 @@ TEST_F(SdhciTest, SetBusWidth) {
 }
 
 TEST_F(SdhciTest, SetBusWidthNotSupported) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   EXPECT_NOT_OK(dut_->SdmmcSetBusWidth(SDMMC_BUS_WIDTH_EIGHT));
 }
 
 TEST_F(SdhciTest, SetBusFreq) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -344,7 +356,6 @@ TEST_F(SdhciTest, SetBusFreq) {
 }
 
 TEST_F(SdhciTest, SetBusFreqTimeout) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -359,7 +370,6 @@ TEST_F(SdhciTest, SetBusFreqTimeout) {
 }
 
 TEST_F(SdhciTest, SetBusFreqInternalClockEnable) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -376,7 +386,6 @@ TEST_F(SdhciTest, SetBusFreqInternalClockEnable) {
 }
 
 TEST_F(SdhciTest, SetTiming) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HS));
@@ -405,7 +414,6 @@ TEST_F(SdhciTest, SetTiming) {
 }
 
 TEST_F(SdhciTest, HwReset) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectHwReset();
@@ -414,7 +422,6 @@ TEST_F(SdhciTest, HwReset) {
 }
 
 TEST_F(SdhciTest, RequestCommandOnly) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -493,7 +500,6 @@ TEST_F(SdhciTest, RequestCommandOnly) {
 }
 
 TEST_F(SdhciTest, RequestWithData) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -602,7 +608,6 @@ TEST_F(SdhciTest, RequestWithData) {
 }
 
 TEST_F(SdhciTest, RequestAbort) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -645,7 +650,6 @@ TEST_F(SdhciTest, RequestAbort) {
 }
 
 TEST_F(SdhciTest, DmaRequest64Bit) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -706,7 +710,6 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
 }
 
 TEST_F(SdhciTest, DmaRequest32Bit) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -764,7 +767,6 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
 }
 
 TEST_F(SdhciTest, SdioInBandInterrupt) {
-  mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
@@ -786,6 +788,180 @@ TEST_F(SdhciTest, SdioInBandInterrupt) {
 
   dut_->TriggerCardInterrupt();
   sync_completion_wait(&callback_called, ZX_TIME_INFINITE);
+
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(SdhciTest, DmaSplitOneBoundary) {
+  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT, 0x0800'0000));
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  Capabilities0::Get()
+      .FromValue(0)
+      .set_adma2_support(1)
+      .set_v3_64_bit_system_address_support(0)
+      .WriteTo(&mmio_);
+  EXPECT_OK(dut_->Init());
+
+  constexpr zx_paddr_t kStartAddress = 0xa7ff'ffff & ~kPageMask;
+
+  dut_->set_dma_paddrs(std::vector<zx_paddr_t>{
+      kStartAddress,
+      kStartAddress + PAGE_SIZE,
+      kStartAddress + (PAGE_SIZE * 2),
+      0xb000'0000,
+  });
+
+  sdmmc_req_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0,
+      .blockcount = (PAGE_SIZE / 8) + 16,  // Two pages plus 256 bytes.
+      .blocksize = 16,
+      .use_dma = true,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = nullptr,
+      .virt_size = 0,
+      .buf_offset = PAGE_SIZE - 4,  // The first buffer should be split across the 128M boundary.
+      .pmt = ZX_HANDLE_INVALID,
+      .probe_tuning_cmd = 0,
+      .response = {},
+      .status = ZX_ERR_BAD_STATE,
+  };
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
+
+  const Sdhci::AdmaDescriptor64* const descriptors =
+      reinterpret_cast<Sdhci::AdmaDescriptor64*>(dut_->iobuf_virt());
+
+  EXPECT_EQ(descriptors[0].attr, 0b100'001);
+  EXPECT_EQ(descriptors[0].address, 0xa7ff'fffc);
+  EXPECT_EQ(descriptors[0].length, 4);
+
+  EXPECT_EQ(descriptors[1].attr, 0b100'001);
+  EXPECT_EQ(descriptors[1].address, 0xa800'0000);
+  EXPECT_EQ(descriptors[1].length, PAGE_SIZE * 2);
+
+  EXPECT_EQ(descriptors[2].attr, 0b100'011);
+  EXPECT_EQ(descriptors[2].address, 0xb000'0000);
+  EXPECT_EQ(descriptors[2].length, 256 - 4);
+
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(SdhciTest, DmaSplitManyBoundaries) {
+  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT, 0x100));
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  Capabilities0::Get()
+      .FromValue(0)
+      .set_adma2_support(1)
+      .set_v3_64_bit_system_address_support(0)
+      .WriteTo(&mmio_);
+  EXPECT_OK(dut_->Init());
+
+  dut_->set_dma_paddrs(std::vector<zx_paddr_t>{0xabcd'0000});
+
+  sdmmc_req_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0,
+      .blockcount = 64,
+      .blocksize = 16,
+      .use_dma = true,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = nullptr,
+      .virt_size = 0,
+      .buf_offset = 128,
+      .pmt = ZX_HANDLE_INVALID,
+      .probe_tuning_cmd = 0,
+      .response = {},
+      .status = ZX_ERR_BAD_STATE,
+  };
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
+
+  const Sdhci::AdmaDescriptor64* const descriptors =
+      reinterpret_cast<Sdhci::AdmaDescriptor64*>(dut_->iobuf_virt());
+
+  EXPECT_EQ(descriptors[0].attr, 0b100'001);
+  EXPECT_EQ(descriptors[0].address, 0xabcd'0080);
+  EXPECT_EQ(descriptors[0].length, 128);
+
+  EXPECT_EQ(descriptors[1].attr, 0b100'001);
+  EXPECT_EQ(descriptors[1].address, 0xabcd'0100);
+  EXPECT_EQ(descriptors[1].length, 256);
+
+  EXPECT_EQ(descriptors[2].attr, 0b100'001);
+  EXPECT_EQ(descriptors[2].address, 0xabcd'0200);
+  EXPECT_EQ(descriptors[2].length, 256);
+
+  EXPECT_EQ(descriptors[3].attr, 0b100'001);
+  EXPECT_EQ(descriptors[3].address, 0xabcd'0300);
+  EXPECT_EQ(descriptors[3].length, 256);
+
+  EXPECT_EQ(descriptors[4].attr, 0b100'011);
+  EXPECT_EQ(descriptors[4].address, 0xabcd'0400);
+  EXPECT_EQ(descriptors[4].length, 128);
+
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(SdhciTest, DmaNoBoundaries) {
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  Capabilities0::Get()
+      .FromValue(0)
+      .set_adma2_support(1)
+      .set_v3_64_bit_system_address_support(0)
+      .WriteTo(&mmio_);
+  EXPECT_OK(dut_->Init());
+
+  constexpr zx_paddr_t kStartAddress = 0xa7ff'ffff & ~kPageMask;
+
+  dut_->set_dma_paddrs(std::vector<zx_paddr_t>{
+      kStartAddress,
+      kStartAddress + PAGE_SIZE,
+      kStartAddress + (PAGE_SIZE * 2),
+      0xb000'0000,
+  });
+
+  sdmmc_req_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0,
+      .blockcount = (PAGE_SIZE / 8) + 16,
+      .blocksize = 16,
+      .use_dma = true,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = nullptr,
+      .virt_size = 0,
+      .buf_offset = PAGE_SIZE - 4,
+      .pmt = ZX_HANDLE_INVALID,
+      .probe_tuning_cmd = 0,
+      .response = {},
+      .status = ZX_ERR_BAD_STATE,
+  };
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
+
+  const Sdhci::AdmaDescriptor64* const descriptors =
+      reinterpret_cast<Sdhci::AdmaDescriptor64*>(dut_->iobuf_virt());
+
+  EXPECT_EQ(descriptors[0].attr, 0b100'001);
+  EXPECT_EQ(descriptors[0].address, 0xa7ff'fffc);
+  EXPECT_EQ(descriptors[0].length, (PAGE_SIZE * 2) + 4);
+
+  EXPECT_EQ(descriptors[1].attr, 0b100'011);
+  EXPECT_EQ(descriptors[1].address, 0xb000'0000);
+  EXPECT_EQ(descriptors[1].length, 256 - 4);
 
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }

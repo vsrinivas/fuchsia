@@ -79,7 +79,8 @@ static zx_status_t pci_sdhci_get_bti(void* ctx, uint32_t index, zx_handle_t* out
 
 static uint32_t pci_sdhci_get_base_clock(void* ctx) { return 0; }
 
-static uint64_t pci_sdhci_get_quirks(void* ctx) {
+static uint64_t pci_sdhci_get_quirks(void* ctx, uint64_t* out_dma_boundary_alignment) {
+  *out_dma_boundary_alignment = 0;
   return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
 }
 

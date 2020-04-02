@@ -45,13 +45,14 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   static_assert(sizeof(AdmaDescriptor64) == 8, "unexpected ADMA2 descriptor size");
 
   Sdhci(zx_device_t* parent, ddk::MmioBuffer regs_mmio_buffer, zx::bti bti, zx::interrupt irq,
-        const ddk::SdhciProtocolClient sdhci)
+        const ddk::SdhciProtocolClient sdhci, uint64_t quirks, uint64_t dma_boundary_alignment)
       : DeviceType(parent),
         regs_mmio_buffer_(std::move(regs_mmio_buffer)),
         irq_(std::move(irq)),
         sdhci_(sdhci),
         bti_(std::move(bti)),
-        quirks_(sdhci_.GetQuirks()) {}
+        quirks_(quirks),
+        dma_boundary_alignment_(dma_boundary_alignment) {}
 
   virtual ~Sdhci() = default;
 
@@ -90,6 +91,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   virtual zx_status_t WaitForReset(const SoftwareReset mask);
   virtual zx_status_t WaitForInterrupt() { return irq_.wait(nullptr); }
+  virtual zx_status_t PinRequestPages(sdmmc_req_t* req, zx_paddr_t* phys, size_t pagecount);
 
   RequestStatus GetRequestStatus() TA_EXCL(mtx_) {
     fbl::AutoLock lock(&mtx_);
@@ -163,6 +165,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   // Controller specific quirks
   const uint64_t quirks_;
+  const uint64_t dma_boundary_alignment_;
 
   // Base clock rate
   uint32_t base_clock_ = 0;

@@ -29,7 +29,7 @@ class As370Sdhci : public DeviceType, public ddk::SdhciProtocol<As370Sdhci, ddk:
   zx_status_t SdhciGetMmio(zx::vmo* out_mmio, zx_off_t* out_offset);
   zx_status_t SdhciGetBti(uint32_t index, zx::bti* out_bti);
   uint32_t SdhciGetBaseClock();
-  uint64_t SdhciGetQuirks();
+  uint64_t SdhciGetQuirks(uint64_t* out_dma_boundary_alignment);
   void SdhciHwReset();
 
  private:

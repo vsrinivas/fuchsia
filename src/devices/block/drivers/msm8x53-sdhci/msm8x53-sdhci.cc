@@ -105,7 +105,8 @@ zx_status_t Msm8x53Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
 
 uint32_t Msm8x53Sdhci::SdhciGetBaseClock() { return 0; }
 
-uint64_t Msm8x53Sdhci::SdhciGetQuirks() {
+uint64_t Msm8x53Sdhci::SdhciGetQuirks(uint64_t* out_dma_boundary_alignment) {
+  *out_dma_boundary_alignment = 0;
   return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER | SDHCI_QUIRK_NO_DMA |
          SDHCI_QUIRK_NON_STANDARD_TUNING;
 }

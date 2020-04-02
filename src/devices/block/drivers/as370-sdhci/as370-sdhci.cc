@@ -27,6 +27,8 @@ enum {
   FRAGMENT_COUNT,
 };
 
+constexpr uint64_t kDmaBoundaryAlignment128M = 0x0800'0000;
+
 constexpr uint32_t kPerifStickyResetNAddress = 0x688;
 constexpr uint32_t kSdioPhyRstNBit = 5;
 
@@ -201,9 +203,11 @@ zx_status_t As370Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
 //                   expects, as the bus frequency is half of what it should be.
 uint32_t As370Sdhci::SdhciGetBaseClock() { return 0; }
 
-uint64_t As370Sdhci::SdhciGetQuirks() {
+uint64_t As370Sdhci::SdhciGetQuirks(uint64_t* out_dma_boundary_alignment) {
+  *out_dma_boundary_alignment = kDmaBoundaryAlignment128M;
   uint64_t quirks = SDHCI_QUIRK_NO_DMA | SDHCI_QUIRK_NON_STANDARD_TUNING |
-                    SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
+                    SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER |
+                    SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT;
 
   // Tuning currently doesn't work on AS370/VS680 so HS200/HS400/SDR104 can't be used. VS680 has
   // eMMC for which the next fallback is HSDDR, however this also doesn't work on the board we have.

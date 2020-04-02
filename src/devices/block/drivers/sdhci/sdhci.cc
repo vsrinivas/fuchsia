@@ -336,23 +336,12 @@ int Sdhci::IrqThread() {
   return thrd_success;
 }
 
-template <typename DescriptorType>
-zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
-  constexpr zx_paddr_t kPhysAddrMask =
-      sizeof(descs->address) == sizeof(uint32_t) ? 0x0000'0000'ffff'ffff : 0xffff'ffff'ffff'ffff;
-
+zx_status_t Sdhci::PinRequestPages(sdmmc_req_t* req, zx_paddr_t* phys, size_t pagecount) {
   const uint64_t req_len = req->blockcount * req->blocksize;
   const bool is_read = req->cmd_flags & SDMMC_CMD_READ;
 
-  const uint64_t pagecount = ((req->buf_offset & kPageMask) + req_len + kPageMask) / PAGE_SIZE;
-  if (pagecount > SDMMC_PAGES_COUNT) {
-    zxlogf(ERROR, "sdhci: too many pages %lu vs %lu\n", pagecount, SDMMC_PAGES_COUNT);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   // pin the vmo
   zx::unowned_vmo dma_vmo(req->dma_vmo);
-  zx_paddr_t phys[SDMMC_PAGES_COUNT];
   zx::pmt pmt;
   // offset_vmo is converted to bytes by the sdmmc layer
   const uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
@@ -374,6 +363,27 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
   // cache this for zx_pmt_unpin() later
   req->pmt = pmt.release();
 
+  return ZX_OK;
+}
+
+template <typename DescriptorType>
+zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
+  constexpr zx_paddr_t kPhysAddrMask =
+      sizeof(descs->address) == sizeof(uint32_t) ? 0x0000'0000'ffff'ffff : 0xffff'ffff'ffff'ffff;
+
+  const uint64_t req_len = req->blockcount * req->blocksize;
+  const size_t pagecount = ((req->buf_offset & kPageMask) + req_len + kPageMask) / PAGE_SIZE;
+  if (pagecount > SDMMC_PAGES_COUNT) {
+    zxlogf(ERROR, "sdhci: too many pages %lu vs %lu\n", pagecount, SDMMC_PAGES_COUNT);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_paddr_t phys[SDMMC_PAGES_COUNT];
+  zx_status_t st = PinRequestPages(req, phys, pagecount);
+  if (st != ZX_OK) {
+    return st;
+  }
+
   phys_iter_buffer_t buf = {
       .phys = phys,
       .phys_count = pagecount,
@@ -386,9 +396,13 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
   phys_iter_init(&iter, &buf, kMaxDescriptorLength);
 
   int count = 0;
+  size_t length = 0;
+  zx_paddr_t paddr;
   for (DescriptorType* desc = descs;; desc++) {
-    zx_paddr_t paddr;
-    size_t length = phys_iter_next(&iter, &paddr);
+    if (length == 0) {
+      length = phys_iter_next(&iter, &paddr);
+    }
+
     if (length == 0) {
       if (desc != descs) {
         desc -= 1;
@@ -412,6 +426,21 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
+    size_t next_length = 0;
+    zx_paddr_t next_paddr = 0;
+
+    if (quirks_ & SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT) {
+      const zx_paddr_t aligned_start = fbl::round_down(paddr, dma_boundary_alignment_);
+      const zx_paddr_t aligned_end = fbl::round_down(paddr + length - 1, dma_boundary_alignment_);
+      if (aligned_start != aligned_end) {
+        // Crossing a boundary, split the DMA buffer in two.
+        const size_t first_length = aligned_start + dma_boundary_alignment_ - paddr;
+        next_length = length - first_length;
+        next_paddr = paddr + first_length;
+        length = first_length;
+      }
+    }
+
     if constexpr (sizeof(desc->address) == sizeof(uint32_t)) {
       desc->address = static_cast<uint32_t>(paddr);
     } else {
@@ -422,6 +451,9 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
                      .set_valid(1)
                      .set_type(Adma2DescriptorAttributes::kTypeData)
                      .reg_value();
+
+    length = next_length;
+    paddr = next_paddr;
   }
 
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
@@ -631,10 +663,6 @@ zx_status_t Sdhci::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
 
   if ((bus_width == SDMMC_BUS_WIDTH_EIGHT) && !(info_.caps & SDMMC_HOST_CAP_BUS_WIDTH_8)) {
     zxlogf(TRACE, "sdhci: 8-bit bus width not supported\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  if ((quirks_ & SDHCI_QUIRK_BUS_WIDTH_1) && (bus_width != SDMMC_BUS_WIDTH_ONE)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1040,9 +1068,18 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  uint64_t dma_boundary_alignment = 0;
+  uint64_t quirks = sdhci.GetQuirks(&dma_boundary_alignment);
+
+  if ((quirks & SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT) && dma_boundary_alignment == 0) {
+    zxlogf(ERROR, "sdhci: DMA boundary alignment is zero\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<Sdhci>(&ac, parent, *std::move(regs_mmio_buffer),
-                                             std::move(bti), std::move(irq), sdhci);
+  auto dev =
+      fbl::make_unique_checked<Sdhci>(&ac, parent, *std::move(regs_mmio_buffer), std::move(bti),
+                                      std::move(irq), sdhci, quirks, dma_boundary_alignment);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

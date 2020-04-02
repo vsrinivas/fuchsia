@@ -26,10 +26,12 @@ enum SdhciQuirk : uint64 {
     STRIP_RESPONSE_CRC_PRESERVE_ORDER = 0x4;
     /// The controller uses a tuning process that does not follow the SDHCI specification.
     NON_STANDARD_TUNING = 0x8;
-    /// Force 1-bit bus, disallow 4- and 8-bit modes.
-    BUS_WIDTH_1 = 0x10;
     /// Don't use DDR modes even if the SDHCI capabilites register indicates it is supported.
-    NO_DDR = 0x20;
+    NO_DDR = 0x10;
+    /// Prevent DMA buffers from crossing boundaries specified by dma_boundary_alignment. For
+    /// example, a boundary alignment of 0x10000 will cause buffers crossing 64K boundaries to be
+    /// split across multiple descriptors.
+    USE_DMA_BOUNDARY_ALIGNMENT = 0x20;
 };
 
 [Layout = "ddk-protocol"]
@@ -45,7 +47,7 @@ protocol Sdhci {
     GetBaseClock() -> (uint32 clock);
 
     /// returns device quirks
-    GetQuirks() -> (uint64 clock);
+    GetQuirks() -> (uint64 quirks, uint64 dma_boundary_alignment);
     /// platform specific HW reset
     HwReset() -> ();
 };
