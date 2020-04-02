@@ -4,18 +4,21 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:ermine/src/models/app_model.dart' show AppModel;
+import 'package:ermine/src/utils/crash.dart';
+import 'package:ermine/src/widgets/app.dart' show App;
 import 'package:fuchsia_logger/logger.dart';
 
-import 'src/models/app_model.dart' show AppModel;
-import 'src/widgets/app.dart' show App;
-
 Future<void> main() async {
-  setupLogger(name: 'ermine');
+  final runner = CrashReportingRunner();
+  await runner.run(() async {
+    setupLogger(name: 'ermine');
 
-  final model = AppModel();
-  final app = App(model: model);
+    final model = AppModel();
+    final app = App(model: model);
 
-  runApp(app);
+    runApp(app);
 
-  await model.onStarted();
+    await model.onStarted();
+  });
 }

@@ -45,6 +45,7 @@ flutter_app("ermine") {
     "src/models/ermine_story.dart",
     "src/models/status_model.dart",
     "src/models/topbar_model.dart",
+    "src/utils/crash.dart",
     "src/utils/elevations.dart",
     "src/utils/styles.dart",
     "src/utils/presenter.dart",
@@ -86,6 +87,7 @@ flutter_app("ermine") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.control",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.power",
@@ -170,6 +172,7 @@ flutter_test("ermine_unittests") {
     "app_widget_test.dart",
     "ask_model_test.dart",
     "ask_widget_test.dart",
+    "crash_test.dart",
     "ermine_story_test.dart",
     "ermine_test.dart",
   ]
