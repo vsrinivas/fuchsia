@@ -13,6 +13,7 @@ export 'output_buffer.dart';
 export 'output_formatter.dart';
 export 'package_url.dart';
 export 'rebuilder.dart';
+export 'test_arguments.dart';
 export 'test_bundle.dart';
 export 'test_definition.dart';
 export 'test_event.dart';

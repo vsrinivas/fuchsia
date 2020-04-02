@@ -152,7 +152,6 @@ void main() {
       var cmdCli = FuchsiaTestCommandCli([''], usage: (parser) {});
       expect(
         () => cmdCli.preRunChecks(
-          cmdCli.parsedArgs,
           '/fake/fx',
           (Object obj) => logged = true,
         ),
@@ -168,7 +167,6 @@ void main() {
         calledUsage = true;
       });
       bool shouldRun = await cmdCli.preRunChecks(
-        cmdCli.parsedArgs,
         '/fake/fx',
         (Object obj) => logged = true,
       );
@@ -212,12 +210,7 @@ void main() {
         analyticsReporter: AnalyticsFaker(),
         fuchsiaLocator: fuchsiaLocator,
         outputFormatter: null,
-        testsConfig: TestsConfig(
-          flags: Flags(dryRun: false),
-          passThroughTokens: [],
-          runnerTokens: [],
-          testNameGroups: [],
-        ),
+        testsConfig: TestsConfig.fromRawArgs(rawArgs: []),
       );
       await cmd.runTests(testBundles).forEach((event) {});
       await cmd.cleanUp();
@@ -234,12 +227,7 @@ void main() {
         analyticsReporter: AnalyticsFaker(),
         fuchsiaLocator: fuchsiaLocator,
         outputFormatter: null,
-        testsConfig: TestsConfig(
-          flags: Flags(dryRun: true),
-          passThroughTokens: [],
-          runnerTokens: [],
-          testNameGroups: [],
-        ),
+        testsConfig: TestsConfig.fromRawArgs(rawArgs: ['--dry']),
       );
       await cmd.runTests(testBundles).forEach((event) {});
       await cmd.cleanUp();

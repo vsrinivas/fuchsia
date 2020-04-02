@@ -66,7 +66,7 @@ class TestBundle {
   }) =>
       TestBundle(
         testDefinition,
-        extraFlags: testsConfig.passThroughTokens,
+        extraFlags: testsConfig.testArguments.passThroughArgs,
         isDryRun: testsConfig.flags.dryRun,
         raiseOnFailure: testsConfig.flags.shouldFailFast,
         runnerFlags: testsConfig.runnerTokens,

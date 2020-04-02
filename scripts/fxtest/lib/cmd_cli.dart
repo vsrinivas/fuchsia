@@ -12,69 +12,39 @@ import 'package:pedantic/pedantic.dart';
 
 /// Translator for command line arguments into [FuchsiaTestCommand] primitives.
 class FuchsiaTestCommandCli {
-  /// Raw string arguments received from the command line.
-  final List<String> rawArgs;
-
-  /// Arguments hydrated into their respective data type representations
-  /// ([bool], [String], [int], etc).
-  final ArgResults parsedArgs;
-
-  /// Raw string arguments to be forwarded down to each executed test.
-  ///
-  /// These tokens have no impact whatsoever on how `fx test` finds, filters,
-  /// and invokes tests. They are exclusively used by the underlying tests.
-  final List<String> passThroughTokens;
-
   /// Callable that prints help/usage information for when the user passes
   /// invalid arguments or "--help".
   final Function(ArgParser) usage;
 
+  /// Fully-hydrated object containing answers to every runtime question.
+  /// Derivable from the set of raw arguments passed in by the user.
+  TestsConfig _testsConfig;
+
   /// The underlying class which does all the work.
   FuchsiaTestCommand _cmd;
 
+  final FuchsiaLocator _fuchsiaLocator;
+
   FuchsiaTestCommandCli(
-    this.rawArgs, {
+    List<String> rawArgs, {
     @required this.usage,
-  })  : passThroughTokens = FuchsiaTestCommandCli.extractPassThroughTokens(
-          rawArgs,
-        ),
-        parsedArgs = FuchsiaTestCommandCli.parseArgs(rawArgs, usage);
-
-  /// Splits a list of command line arguments into the half intended for
-  /// local use and the half intended to be passed through to sub-commands.
-  static List<List<String>> splitArgs(List<String> rawArgs) {
-    var dashDashIndex = rawArgs.indexOf('--');
-    if (dashDashIndex == -1) {
-      dashDashIndex = rawArgs.length;
-    }
-    return [
-      rawArgs.take(dashDashIndex).toList(),
-      rawArgs.skip(dashDashIndex + 1).toList(),
-    ];
-  }
-
-  static List<String> extractPassThroughTokens(List<String> rawArgs) {
-    return FuchsiaTestCommandCli.splitArgs(rawArgs)[1];
-  }
-
-  static ArgResults parseArgs(
-    List<String> rawArgs,
-    Function(ArgParser) usage,
-  ) {
-    var localArgs = FuchsiaTestCommandCli.splitArgs(rawArgs)[0];
-    return fxTestArgParser.parse(localArgs);
+    FuchsiaLocator fuchsiaLocator,
+  }) : _fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared {
+    _testsConfig = TestsConfig.fromRawArgs(
+      rawArgs: rawArgs,
+      fuchsiaLocator: _fuchsiaLocator,
+    );
   }
 
   Future<bool> preRunChecks(
-    ArgResults parsedArgs,
     String fxLocation,
     Function(Object) stdoutWriter,
   ) async {
-    if (parsedArgs['help']) {
+    if (_testsConfig.testArguments.parsedArgs['help']) {
       usage(fxTestArgParser);
       return false;
     }
-    if (parsedArgs['printtests']) {
+    if (_testsConfig.testArguments.parsedArgs['printtests']) {
       ProcessResult result = await Process.run('cat', ['tests.json'],
           workingDirectory: FuchsiaLocator.shared.buildDir);
       stdoutWriter(result.stdout);
@@ -92,20 +62,9 @@ class FuchsiaTestCommandCli {
   }
 
   Future<void> run() async {
-    var testNamesCollector = TestNamesCollector(
-      rawTestNames: parsedArgs.rest,
-      rawArgs: parsedArgs.arguments,
-    );
+    _cmd = buildCommand(_testsConfig);
 
-    var testsConfig = TestsConfig.fromArgResults(
-      results: parsedArgs,
-      passThroughTokens: passThroughTokens,
-      testNameGroups: testNamesCollector.collect(),
-    );
-
-    _cmd = buildCommand(testsConfig);
-
-    if (testsConfig.flags.shouldRebuild) {
+    if (_testsConfig.flags.shouldRebuild) {
       _cmd.outputFormatter.update(
         TestInfo(wrapWith('> fx build', [green, styleBold])),
       );

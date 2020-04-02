@@ -69,7 +69,6 @@ Future<void> main(List<String> args) async {
     // command, make sure everything is valid and that the user doesn't want
     // some simple debug output.
     bool shouldRun = await cmdCli.preRunChecks(
-      cmdCli.parsedArgs,
       FuchsiaLocator.shared.fx,
       stdout.write,
     );

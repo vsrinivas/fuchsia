@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:args/args.dart';
 import 'package:async/async.dart';
 import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
@@ -122,20 +121,16 @@ void main() {
       TestDefinition(
         buildDir: fuchsiaLocator.buildDir,
         fx: fuchsiaLocator.fx,
-        name: 'example test',
+        name: 'example-test',
         os: 'linux',
         path: '/asdf',
       ),
     ];
 
     test('when there are pass-thru commands', () async {
-      var testsConfig = TestsConfig(
-        flags: Flags(),
-        runnerTokens: const [],
-        testNameGroups: [
-          ['example test']
-        ],
-        passThroughTokens: ['--xyz'],
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['example-test', '--', '--xyz'],
+        fuchsiaLocator: fuchsiaLocator,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -162,13 +157,9 @@ void main() {
     });
 
     test('when there are no pass-thru commands', () async {
-      var testsConfig = TestsConfig(
-        flags: Flags(),
-        passThroughTokens: [''],
-        runnerTokens: const [],
-        testNameGroups: [
-          ['example test']
-        ],
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['example-test'],
+        fuchsiaLocator: fuchsiaLocator,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -195,7 +186,7 @@ void main() {
     });
 
     test('after parsing with "--" in middle', () {
-      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+      List<List<String>> splitArgs = TestArguments.splitArgs(
         ['asdf', 'ASDF', '--', 'some', 'flag'],
       );
       expect(splitArgs, hasLength(2));
@@ -203,7 +194,7 @@ void main() {
       expect(splitArgs[1], ['some', 'flag']);
     });
     test('after parsing with "--" at end', () {
-      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+      List<List<String>> splitArgs = TestArguments.splitArgs(
         ['asdf', 'ASDF', '--'],
       );
       expect(splitArgs, hasLength(2));
@@ -212,7 +203,7 @@ void main() {
     });
 
     test('after parsing with "--" at beginning', () {
-      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+      List<List<String>> splitArgs = TestArguments.splitArgs(
         ['--', 'asdf', 'ASDF'],
       );
       expect(splitArgs, hasLength(2));
@@ -221,7 +212,7 @@ void main() {
     });
 
     test('after parsing with no "--"', () {
-      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+      List<List<String>> splitArgs = TestArguments.splitArgs(
         ['asdf', 'ASDF'],
       );
       expect(splitArgs, hasLength(2));
@@ -232,36 +223,31 @@ void main() {
 
   group('flags are parsed correctly', () {
     test('with --info', () {
-      ArgResults results = fxTestArgParser.parse(['--info']);
-      var testsConfig = TestsConfig.fromArgResults(results: results);
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--info']);
       expect(testsConfig.flags.infoOnly, true);
       expect(testsConfig.flags.dryRun, true);
       expect(testsConfig.flags.shouldRebuild, false);
     });
 
     test('with --dry', () {
-      ArgResults results = fxTestArgParser.parse(['--dry']);
-      var testsConfig = TestsConfig.fromArgResults(results: results);
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--dry']);
       expect(testsConfig.flags.infoOnly, false);
       expect(testsConfig.flags.dryRun, true);
       expect(testsConfig.flags.shouldRebuild, false);
     });
 
     test('with --no-build', () {
-      ArgResults results = fxTestArgParser.parse(['--no-build']);
-      var testsConfig = TestsConfig.fromArgResults(results: results);
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--no-build']);
       expect(testsConfig.flags.shouldRebuild, false);
     });
 
     test('with no --no-build', () {
-      ArgResults results = fxTestArgParser.parse(['']);
-      var testsConfig = TestsConfig.fromArgResults(results: results);
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['']);
       expect(testsConfig.flags.shouldRebuild, true);
     });
 
     test('with --realm', () {
-      ArgResults results = fxTestArgParser.parse(['--realm=foo']);
-      var testsConfig = TestsConfig.fromArgResults(results: results);
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--realm=foo']);
       expect(testsConfig.flags.realm, 'foo');
     });
   });

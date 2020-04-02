@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:args/args.dart';
+import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
 
 /// Simple class to hold shared parameters.
@@ -119,65 +120,33 @@ class Flags {
 class TestsConfig {
   final Flags flags;
   final List<String> runnerTokens;
-  final List<String> passThroughTokens;
+  final TestArguments testArguments;
   final List<List<String>> testNameGroups;
   TestsConfig({
     @required this.flags,
     @required this.runnerTokens,
-    @required this.passThroughTokens,
+    @required this.testArguments,
     @required this.testNameGroups,
   });
 
-  factory TestsConfig.fromArgResults({
-    ArgResults results,
-    List<String> passThroughTokens,
-    List<List<String>> testNameGroups,
+  factory TestsConfig.fromRawArgs({
+    @required List<String> rawArgs,
+    FuchsiaLocator fuchsiaLocator,
   }) {
-    Flags flags = Flags.fromArgResults(results);
+    var _testArguments = TestArguments(rawArgs: rawArgs);
+    var _testNamesCollector = TestNamesCollector(
+      rawArgs: _testArguments.parsedArgs.arguments,
+      rawTestNames: _testArguments.parsedArgs.rest,
+      fuchsiaLocator: fuchsiaLocator,
+    );
+
+    Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
     return TestsConfig(
       flags: flags,
       runnerTokens:
           flags.realm != null ? ['--realm-label=${flags.realm}'] : const [],
-      passThroughTokens: passThroughTokens,
-      testNameGroups: testNameGroups,
-    );
-  }
-
-  factory TestsConfig.all({
-    List<List<String>> testNameGroups,
-    Flags flags,
-  }) {
-    return TestsConfig(
-      runnerTokens: const [],
-      passThroughTokens: const [],
-      testNameGroups: testNameGroups ?? [],
-      flags: flags ?? Flags(),
-    );
-  }
-
-  factory TestsConfig.host({
-    List<List<String>> testNameGroups,
-  }) {
-    return TestsConfig(
-      runnerTokens: const [],
-      passThroughTokens: const [],
-      testNameGroups: testNameGroups,
-      flags: Flags(
-        shouldOnlyRunDeviceTests: false,
-        shouldOnlyRunHostTests: true,
-      ),
-    );
-  }
-
-  factory TestsConfig.device(List<List<String>> testNameGroups) {
-    return TestsConfig(
-      testNameGroups: testNameGroups,
-      runnerTokens: const [],
-      passThroughTokens: const [],
-      flags: Flags(
-        shouldOnlyRunDeviceTests: true,
-        shouldOnlyRunHostTests: false,
-      ),
+      testArguments: _testArguments,
+      testNameGroups: _testNamesCollector.collect(),
     );
   }
 

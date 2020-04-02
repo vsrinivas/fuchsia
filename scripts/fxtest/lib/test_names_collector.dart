@@ -45,7 +45,7 @@ class TestNamesCollector {
 
     /// The extracted test names from all arguments passed to `fx test`.
     @required List<String> rawTestNames,
-    fuchsiaLocator,
+    FuchsiaLocator fuchsiaLocator,
   })  : testNames = TestNamesCollector._processTestList(
           rawTestNames,
           fuchsiaLocator ?? FuchsiaLocator.shared,

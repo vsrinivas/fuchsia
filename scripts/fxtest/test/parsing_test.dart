@@ -135,6 +135,7 @@ void main() {
 
   group('tests are aggregated correctly', () {
     var envReader = MockEnvReader();
+    when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
     when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
     when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
         .thenReturn('/root/path/fuchsia/out/default');
@@ -166,16 +167,7 @@ void main() {
       List<String> args = const [],
       List<TestDefinition> testDefs,
     }) {
-      TestsConfig testsConfig;
-      var parsedArgs = fxTestArgParser.parse(args);
-      var testNamesCollector = TestNamesCollector(
-        rawTestNames: parsedArgs.rest,
-        rawArgs: parsedArgs.arguments,
-      );
-      testsConfig = TestsConfig.fromArgResults(
-        results: parsedArgs,
-        testNameGroups: testNamesCollector.collect(),
-      );
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: args);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunner: TestRunner(),
@@ -279,9 +271,7 @@ void main() {
     });
 
     test('when packageUrl.packageName is matched', () {
-      TestsConfig testsConfig = TestsConfig.all(testNameGroups: [
-        ['fancy']
-      ]);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['fancy']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunner: testRunner,
@@ -299,9 +289,8 @@ void main() {
     test(
         'when packageUrl.packageName is matched but discriminating '
         'flag prevents', () {
-      TestsConfig testsConfig = TestsConfig.host(testNameGroups: [
-        ['fancy']
-      ]);
+      TestsConfig testsConfig =
+          TestsConfig.fromRawArgs(rawArgs: ['fancy', '--host']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunner: testRunner,
@@ -316,9 +305,10 @@ void main() {
     });
 
     test('when . is passed from the build dir', () {
-      TestsConfig testsConfig = TestsConfig.host(testNameGroups: [
-        ['.']
-      ]);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['.', '--host'],
+        fuchsiaLocator: fuchsiaLocator,
+      );
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -349,9 +339,10 @@ void main() {
     });
 
     test('when . is passed from the build dir and there\'s device tests', () {
-      TestsConfig testsConfig = TestsConfig.all(testNameGroups: [
-        ['.']
-      ]);
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['.'],
+        fuchsiaLocator: fuchsiaLocator,
+      );
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -421,12 +412,8 @@ void main() {
     ];
 
     test('specifies an impossible combination of two valid filters', () {
-      var collector = TestNamesCollector(
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['pkg1', '-a', '//host/test'],
-        rawTestNames: ['pkg1'],
-      );
-      TestsConfig testsConfig = TestsConfig.all(
-        testNameGroups: collector.collect(),
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
@@ -443,13 +430,7 @@ void main() {
     });
 
     test('is not present to remove other pkg matches', () {
-      var collector = TestNamesCollector(
-        rawArgs: ['pkg1'],
-        rawTestNames: ['pkg1'],
-      );
-      TestsConfig testsConfig = TestsConfig.all(
-        testNameGroups: collector.collect(),
-      );
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['pkg1']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunner: TestRunner(),
@@ -468,13 +449,8 @@ void main() {
     });
 
     test('combines filters from different fields', () {
-      var collector = TestNamesCollector(
-        rawArgs: ['//gnsubtree', '-a', 'test1'],
-        rawTestNames: ['//gnsubtree'],
-      );
-      TestsConfig testsConfig = TestsConfig.all(
-        testNameGroups: collector.collect(),
-      );
+      TestsConfig testsConfig =
+          TestsConfig.fromRawArgs(rawArgs: ['//gnsubtree', '-a', 'test1']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunner: TestRunner(),
@@ -492,13 +468,7 @@ void main() {
     });
 
     test('is not present to remove other component matches', () {
-      var collector = TestNamesCollector(
-        rawArgs: ['test1'],
-        rawTestNames: ['test1'],
-      );
-      TestsConfig testsConfig = TestsConfig.all(
-        testNameGroups: collector.collect(),
-      );
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['test1']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunner: TestRunner(),
@@ -517,13 +487,9 @@ void main() {
     });
 
     test('when it removes other matches', () {
-      var collector = TestNamesCollector(
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
         // `-a` flag will filter out `test1`
         rawArgs: ['pkg1', '-a', 'test2', '//host/test'],
-        rawTestNames: ['pkg1', '//host/test'],
-      );
-      TestsConfig testsConfig = TestsConfig.all(
-        testNameGroups: collector.collect(),
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
