@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S912_S912_HW_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S912_S912_HW_H_
 
 // Display Related Registers
 #define S912_PRESET_BASE 0xC1104000
@@ -106,9 +107,6 @@
 #define S912_M_I2C_1_IRQ 246
 #define S912_M_I2C_2_IRQ 247
 #define S912_SD_EMMC_B_IRQ 249
-
-// DMC registers
-#define DMC_REG_BASE 0xc8838000
 
 #define PERIPHS_REG_BASE (0xc8834000)
 #define PERIPHS_REG_SIZE (0x2000)
@@ -414,3 +412,5 @@
 #define S912_SPDIF_AO9_OUT_FN (2u)
 #define S912_SPDIF_Z14 S912_GPIOZ14(14)
 #define S912_SPDIF_Z14_IN_FN (2u)
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S912_S912_HW_H_

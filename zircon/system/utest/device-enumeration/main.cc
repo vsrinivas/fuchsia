@@ -213,6 +213,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "class/cpu-ctrl/000",
       // LED.
       "class/light/000",
+      // RAM (DDR) control.
+      "sys/platform/05:03:24/ram",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

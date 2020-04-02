@@ -1308,6 +1308,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-manifest",
     "//src/graphics/display/drivers/aml-canvas:aml-canvas-manifest",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-manifest",
+    "//src/devices/ram/drivers/aml-ram:aml-ram-manifest",
     "//src/connectivity/ethernet/drivers/aml-ethernet-s912:aml-ethernet-s912-manifest",
     "//src/graphics/drivers/aml-gpu:aml-gpu-manifest",
     "//src/devices/i2c/drivers/aml-i2c:aml-i2c-manifest",
