@@ -6,6 +6,7 @@ package osmisc
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -36,9 +37,43 @@ func FileIsOpen(f *os.File) bool {
 }
 
 // CreateFile creates the file specified by the given path and all parent directories if they don't exist.
-func CreateFile(path string) (*os.File, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+// If flags are provided, they will be passed to open() with os.O_CREATE.
+func CreateFile(path string, flags ...int) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to make parent dirs of %s: %w", path, err)
 	}
-	return os.Create(path)
+	if len(flags) == 0 {
+		return os.Create(path)
+	}
+	flagSet := os.O_CREATE
+	for _, flag := range flags {
+		flagSet = flagSet | flag
+	}
+	return os.OpenFile(path, flagSet, os.ModePerm)
+}
+
+// FileExists returns whether a given file exists.
+func FileExists(name string) (bool, error) {
+	fi, err := os.Stat(name)
+	if os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	if fi.IsDir() {
+		return false, fmt.Errorf("%s is directory, not a file", name)
+	}
+	return true, nil
+}
+
+// DirIsEmpty returns whether a given directory is empty.
+// By convention, we say that a directory is empty if it does not exist.
+func DirIsEmpty(dir string) (bool, error) {
+	entries, err := ioutil.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+	return len(entries) == 0, nil
 }
