@@ -60,28 +60,24 @@ static_assert(std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::err
 #if 0 || TEST_DOES_NOT_COMPILE
 static_assert(fitx::result<fitx::success<>>{});
 static_assert(fitx::result<int, fitx::failed>{});
-static_assert(fitx::result<int, int, fitx::failed>{});
-static_assert(fitx::result<int, int, fitx::failed, int>{});
-static_assert(fitx::result<int, int, int, fitx::failed>{});
-static_assert(fitx::result<int, int, int, fitx::failed, int>{});
 #endif
 
-static_assert(fitx::result<fitx::failed>{fitx::ok()}.has_value() == true);
-static_assert(fitx::result<fitx::failed>{fitx::ok()}.has_error() == false);
-static_assert(fitx::result<fitx::failed>{fitx::failed()}.has_value() == false);
-static_assert(fitx::result<fitx::failed>{fitx::failed()}.has_error() == true);
+static_assert(fitx::result<fitx::failed>{fitx::ok()}.is_ok() == true);
+static_assert(fitx::result<fitx::failed>{fitx::ok()}.is_error() == false);
+static_assert(fitx::result<fitx::failed>{fitx::failed()}.is_ok() == false);
+static_assert(fitx::result<fitx::failed>{fitx::failed()}.is_error() == true);
 
-static_assert(fitx::result<int>{fitx::ok()}.has_value() == true);
-static_assert(fitx::result<int>{fitx::ok()}.has_error() == false);
-static_assert(fitx::result<int>{fitx::error(0)}.has_value() == false);
-static_assert(fitx::result<int>{fitx::error(0)}.has_error() == true);
+static_assert(fitx::result<int>{fitx::ok()}.is_ok() == true);
+static_assert(fitx::result<int>{fitx::ok()}.is_error() == false);
+static_assert(fitx::result<int>{fitx::error(0)}.is_ok() == false);
+static_assert(fitx::result<int>{fitx::error(0)}.is_error() == true);
 
-static_assert(fitx::result<int, int>{fitx::ok(10)}.has_value() == true);
-static_assert(fitx::result<int, int>{fitx::ok(10)}.has_error() == false);
+static_assert(fitx::result<int, int>{fitx::ok(10)}.is_ok() == true);
+static_assert(fitx::result<int, int>{fitx::ok(10)}.is_error() == false);
 static_assert(fitx::result<int, int>{fitx::ok(10)}.value() == 10);
 static_assert(fitx::result<int, int>{fitx::ok(10)}.value_or(20) == 10);
-static_assert(fitx::result<int, int>{fitx::error(10)}.has_value() == false);
-static_assert(fitx::result<int, int>{fitx::error(10)}.has_error() == true);
+static_assert(fitx::result<int, int>{fitx::error(10)}.is_ok() == false);
+static_assert(fitx::result<int, int>{fitx::error(10)}.is_error() == true);
 static_assert(fitx::result<int, int>{fitx::error(10)}.error_value() == 10);
 static_assert(fitx::result<int, int>{fitx::error(10)}.value_or(20) == 20);
 
@@ -101,34 +97,34 @@ static_assert(fitx::result<fitx::failed, std::optional<test_members>> {
 }->b == 20);
 
 // Status-only, no value.
-static_assert(zx::status<>{zx::ok()}.has_value() == true);
-static_assert(zx::status<>{zx::ok()}.has_error() == false);
+static_assert(zx::status<>{zx::ok()}.is_ok() == true);
+static_assert(zx::status<>{zx::ok()}.is_error() == false);
 static_assert(zx::status<>{zx::ok()}.status_value() == ZX_OK);
 
-static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.has_value() == false);
-static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.has_error() == true);
+static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
+static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
 static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
 static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() == ZX_ERR_INVALID_ARGS);
 
-static_assert(zx::status<>{zx::make_status(ZX_OK)}.has_value() == true);
-static_assert(zx::status<>{zx::make_status(ZX_OK)}.has_error() == false);
+static_assert(zx::status<>{zx::make_status(ZX_OK)}.is_ok() == true);
+static_assert(zx::status<>{zx::make_status(ZX_OK)}.is_error() == false);
 static_assert(zx::status<>{zx::make_status(ZX_OK)}.status_value() == ZX_OK);
 
-static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.has_value() == false);
-static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.has_error() == true);
+static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.is_ok() == false);
+static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.is_error() == true);
 static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.error_value() ==
               ZX_ERR_INVALID_ARGS);
 static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.status_value() ==
               ZX_ERR_INVALID_ARGS);
 
 // Status or value.
-static_assert(zx::status<int>{zx::ok(10)}.has_value() == true);
-static_assert(zx::status<int>{zx::ok(10)}.has_error() == false);
+static_assert(zx::status<int>{zx::ok(10)}.is_ok() == true);
+static_assert(zx::status<int>{zx::ok(10)}.is_error() == false);
 static_assert(zx::status<int>{zx::ok(10)}.status_value() == ZX_OK);
 static_assert(zx::status<int>{zx::ok(10)}.value() == 10);
 
-static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.has_value() == false);
-static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.has_error() == true);
+static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
+static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
 static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
 static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() ==
               ZX_ERR_INVALID_ARGS);
@@ -439,70 +435,70 @@ TEST(LibZxCommon, Abort) {
   // Validate that accessing the error of a non-error result aborts.
   ASSERT_DEATH(([] {
     fitx::result<nothing, int> result{fitx::ok(10)};
-    EXPECT_FALSE(result.has_error());
-    EXPECT_TRUE(result.has_value());
+    EXPECT_FALSE(result.is_error());
+    EXPECT_TRUE(result.is_ok());
     result.error_value();
   }));
   ASSERT_DEATH(([] {
     const fitx::result<nothing, int> result{fitx::ok(10)};
-    EXPECT_FALSE(result.has_error());
-    EXPECT_TRUE(result.has_value());
+    EXPECT_FALSE(result.is_error());
+    EXPECT_TRUE(result.is_ok());
     result.error_value();
   }));
   ASSERT_DEATH(([] {
     fitx::result<nothing, int> result{fitx::ok(10)};
-    EXPECT_FALSE(result.has_error());
-    EXPECT_TRUE(result.has_value());
+    EXPECT_FALSE(result.is_error());
+    EXPECT_TRUE(result.is_ok());
     result.take_error();
   }));
 
   // Validate that accessing the value of an error result aborts.
   ASSERT_DEATH(([] {
     fitx::result<nothing, int> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     result.value();
   }));
   ASSERT_DEATH(([] {
     const fitx::result<nothing, int> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     result.value();
   }));
   ASSERT_DEATH(([] {
     fitx::result<nothing, int> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     std::move(result).value();
   }));
   ASSERT_DEATH(([] {
     const fitx::result<nothing, int> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     std::move(result).value();
   }));
   ASSERT_DEATH(([] {
     fitx::result<nothing, test_members> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
   ASSERT_DEATH(([] {
     const fitx::result<nothing, test_members> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
   ASSERT_DEATH(([] {
     fitx::result<nothing, std::optional<test_members>> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
   ASSERT_DEATH(([] {
     const fitx::result<nothing, std::optional<test_members>> result{fitx::error(nothing{})};
-    EXPECT_TRUE(result.has_error());
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.is_error());
+    EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
 
@@ -515,42 +511,42 @@ TEST(LibZxCommon, Abort) {
   // Validate that forwarding ZX_OK does not abort.
   ASSERT_NO_DEATH(([] {
     zx::status<> status{zx::make_status(ZX_OK)};
-    EXPECT_FALSE(status.has_error());
-    EXPECT_TRUE(status.has_value());
+    EXPECT_FALSE(status.is_error());
+    EXPECT_TRUE(status.is_ok());
   }));
 
   // Validate that accessing the error of a non-error zx::status through
   // status_value() does not abort.
   ASSERT_NO_DEATH(([] {
     zx::status<int> status{zx::ok(10)};
-    EXPECT_FALSE(status.has_error());
-    EXPECT_TRUE(status.has_value());
+    EXPECT_FALSE(status.is_error());
+    EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.status_value());
   }));
   ASSERT_NO_DEATH(([] {
     const zx::status<int> status{zx::ok(10)};
-    EXPECT_FALSE(status.has_error());
-    EXPECT_TRUE(status.has_value());
+    EXPECT_FALSE(status.is_error());
+    EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.status_value());
   }));
 
   // Validate the other error accessors abort.
   ASSERT_DEATH(([] {
     zx::status<int> status{zx::ok(10)};
-    EXPECT_FALSE(status.has_error());
-    EXPECT_TRUE(status.has_value());
+    EXPECT_FALSE(status.is_error());
+    EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.error_value());
   }));
   ASSERT_DEATH(([] {
     const zx::status<int> status{zx::ok(10)};
-    EXPECT_FALSE(status.has_error());
-    EXPECT_TRUE(status.has_value());
+    EXPECT_FALSE(status.is_error());
+    EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.error_value());
   }));
   ASSERT_DEATH(([] {
     zx::status<int> status{zx::ok(10)};
-    EXPECT_FALSE(status.has_error());
-    EXPECT_TRUE(status.has_value());
+    EXPECT_FALSE(status.is_error());
+    EXPECT_TRUE(status.is_ok());
     status.take_error();
   }));
 }

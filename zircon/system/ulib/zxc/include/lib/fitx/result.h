@@ -241,24 +241,20 @@ class result<E, T> {
   // Predicates indicating whether the result contains a value or an error.
   // The positive values are mutually exclusive, however, both predicates are
   // negative when the result is default constructed to the empty state.
-  constexpr bool has_value() const {
-    return storage_.state == ::fitx::internal::state_e::has_value;
-  }
-  constexpr bool has_error() const {
-    return storage_.state == ::fitx::internal::state_e::has_error;
-  }
+  constexpr bool is_ok() const { return storage_.state == ::fitx::internal::state_e::has_value; }
+  constexpr bool is_error() const { return storage_.state == ::fitx::internal::state_e::has_error; }
 
   // Accessors for the underlying error.
   //
   // May only be called when the result contains an error.
   constexpr E& error_value() {
-    if (has_error()) {
+    if (is_error()) {
       return storage_.error_or_value.error;
     }
     __builtin_abort();
   }
   constexpr const E& error_value() const {
-    if (has_error()) {
+    if (is_error()) {
       return storage_.error_or_value.error;
     }
     __builtin_abort();
@@ -269,7 +265,7 @@ class result<E, T> {
   //
   // May only be called when the result contains an error.
   constexpr error<E> take_error() {
-    if (has_error()) {
+    if (is_error()) {
       return error<E>(std::move(storage_.error_or_value.error));
     }
     __builtin_abort();
@@ -279,25 +275,25 @@ class result<E, T> {
   //
   // May only be called when the result contains a value.
   constexpr T& value() & {
-    if (has_value()) {
+    if (is_ok()) {
       return storage_.error_or_value.value;
     }
     __builtin_abort();
   }
   constexpr const T& value() const& {
-    if (has_value()) {
+    if (is_ok()) {
       return storage_.error_or_value.value;
     }
     __builtin_abort();
   }
   constexpr T&& value() && {
-    if (has_value()) {
+    if (is_ok()) {
       return std::move(storage_.error_or_value.value);
     }
     __builtin_abort();
   }
   constexpr const T&& value() const&& {
-    if (has_value()) {
+    if (is_ok()) {
       return std::move(storage_.error_or_value.value);
     }
     __builtin_abort();
@@ -308,7 +304,7 @@ class result<E, T> {
   //
   // May only be called when the result contains a value.
   constexpr success<T> take_value() {
-    if (has_value()) {
+    if (is_ok()) {
       return success<T>(std::move(storage_.error_or_value.value));
     }
     __builtin_abort();
@@ -320,14 +316,14 @@ class result<E, T> {
   // default value.
   template <typename U, ::fitx::internal::requires_conditions<std::is_constructible<T, U>> = true>
   constexpr T value_or(U&& default_value) const& {
-    if (has_value()) {
+    if (is_ok()) {
       return storage_.error_or_value.value;
     }
     return static_cast<T>(std::forward<U>(default_value));
   }
   template <typename U, ::fitx::internal::requires_conditions<std::is_constructible<T, U>> = true>
   constexpr T value_or(U&& default_value) && {
-    if (has_value()) {
+    if (is_ok()) {
       return std::move(storage_.error_or_value.value);
     }
     return static_cast<T>(std::forward<U>(default_value));
@@ -338,13 +334,13 @@ class result<E, T> {
   //
   // May only be called when the result contains a value.
   constexpr decltype(auto) operator->() {
-    if (has_value()) {
+    if (is_ok()) {
       return ::fitx::internal::arrow_operator<T>::forward(storage_.error_or_value.value);
     }
     __builtin_abort();
   }
   constexpr decltype(auto) operator->() const {
-    if (has_value()) {
+    if (is_ok()) {
       return ::fitx::internal::arrow_operator<T>::forward(storage_.error_or_value.value);
     }
     __builtin_abort();
@@ -403,24 +399,20 @@ class result<E> {
   constexpr result(result<F> other) : storage_{std::move(other.storage_)} {}
 
   // Predicates indicating whether the result contains a value or an error.
-  constexpr bool has_value() const {
-    return storage_.state == ::fitx::internal::state_e::has_value;
-  }
-  constexpr bool has_error() const {
-    return storage_.state == ::fitx::internal::state_e::has_error;
-  }
+  constexpr bool is_ok() const { return storage_.state == ::fitx::internal::state_e::has_value; }
+  constexpr bool is_error() const { return storage_.state == ::fitx::internal::state_e::has_error; }
 
   // Accessors for the underlying error.
   //
   // May only be called when the result contains an error.
   constexpr E& error_value() {
-    if (has_error()) {
+    if (is_error()) {
       return storage_.error_or_value.error;
     }
     __builtin_abort();
   }
   constexpr const E& error_value() const {
-    if (has_error()) {
+    if (is_error()) {
       return storage_.error_or_value.error;
     }
     __builtin_abort();
@@ -431,7 +423,7 @@ class result<E> {
   //
   // May only be called when the result contains an error.
   constexpr error<E> take_error() {
-    if (has_error()) {
+    if (is_error()) {
       return error<E>(std::move(storage_.error_or_value.error));
     }
     __builtin_abort();
@@ -463,160 +455,160 @@ class result<E> {
 // Result comparisons behave similarly to std::optional<T>, having the same
 // empty and non-empty lexicographic ordering. A non-value result behaves like
 // an empty std::optional, regardless of the value of the actual error. Error
-// values are never compared, only the has_value() predicate and result values
+// values are never compared, only the is_ok() predicate and result values
 // are considered in comparisons.
 //
 
 // Equal/not equal to fitx::success.
 template <typename E, typename... Ts>
 constexpr bool operator==(const result<E, Ts...>& lhs, const success<>&) {
-  return lhs.has_value();
+  return lhs.is_ok();
 }
 template <typename E, typename... Ts>
 constexpr bool operator!=(const result<E, Ts...>& lhs, const success<>&) {
-  return !lhs.has_value();
+  return !lhs.is_ok();
 }
 
 template <typename E, typename... Ts>
 constexpr bool operator==(const success<>&, const result<E, Ts...>& rhs) {
-  return rhs.has_value();
+  return rhs.is_ok();
 }
 template <typename E, typename... Ts>
 constexpr bool operator!=(const success<>&, const result<E, Ts...>& rhs) {
-  return !rhs.has_value();
+  return !rhs.is_ok();
 }
 
 // Equal/not equal to fitx::failed.
 template <typename E, typename... Ts>
 constexpr bool operator==(const result<E, Ts...>& lhs, failed) {
-  return lhs.has_error();
+  return lhs.is_error();
 }
 template <typename E, typename... Ts>
 constexpr bool operator!=(const result<E, Ts...>& lhs, failed) {
-  return !lhs.has_error();
+  return !lhs.is_error();
 }
 
 template <typename E, typename... Ts>
 constexpr bool operator==(failed, const result<E, Ts...>& rhs) {
-  return rhs.has_error();
+  return rhs.is_error();
 }
 template <typename E, typename... Ts>
 constexpr bool operator!=(failed, const result<E, Ts...>& rhs) {
-  return !rhs.has_error();
+  return !rhs.is_error();
 }
 
 // Equal/not equal.
 template <typename E, typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>())> = true>
 constexpr bool operator==(const result<E, T>& lhs, const result<F, U>& rhs) {
-  return (lhs.has_value() == rhs.has_value()) && (!lhs.has_value() || lhs.value() == rhs.value());
+  return (lhs.is_ok() == rhs.is_ok()) && (!lhs.is_ok() || lhs.value() == rhs.value());
 }
 template <typename E, typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() != std::declval<U>())> = true>
 constexpr bool operator!=(const result<E, T>& lhs, const result<F, U>& rhs) {
-  return (lhs.has_value() != rhs.has_value()) || (lhs.has_value() && lhs.value() != rhs.value());
+  return (lhs.is_ok() != rhs.is_ok()) || (lhs.is_ok() && lhs.value() != rhs.value());
 }
 
 template <typename E, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>()),
                                           ::fitx::internal::not_result_type<U>> = true>
 constexpr bool operator==(const result<E, T>& lhs, const U& rhs) {
-  return lhs.has_value() && lhs.value() == rhs;
+  return lhs.is_ok() && lhs.value() == rhs;
 }
 template <typename E, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() != std::declval<U>()),
                                           ::fitx::internal::not_result_type<U>> = true>
 constexpr bool operator!=(const result<E, T>& lhs, const U& rhs) {
-  return !lhs.has_value() || lhs.value() != rhs;
+  return !lhs.is_ok() || lhs.value() != rhs;
 }
 
 template <typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>()),
                                           ::fitx::internal::not_result_type<T>> = true>
 constexpr bool operator==(const T& lhs, const result<F, U>& rhs) {
-  return rhs.has_value() && lhs == rhs.value();
+  return rhs.is_ok() && lhs == rhs.value();
 }
 template <typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() != std::declval<U>()),
                                           ::fitx::internal::not_result_type<T>> = true>
 constexpr bool operator!=(const T& lhs, const result<F, U>& rhs) {
-  return !rhs.has_value() || lhs != rhs.value();
+  return !rhs.is_ok() || lhs != rhs.value();
 }
 
 // Less than/greater than.
 template <typename E, typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>())> = true>
 constexpr bool operator<(const result<E, T>& lhs, const result<F, U>& rhs) {
-  return rhs.has_value() && (!lhs.has_value() || lhs.value() < rhs.value());
+  return rhs.is_ok() && (!lhs.is_ok() || lhs.value() < rhs.value());
 }
 template <typename E, typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() > std::declval<U>())> = true>
 constexpr bool operator>(const result<E, T>& lhs, const result<F, U>& rhs) {
-  return lhs.has_value() && (!rhs.has_value() || lhs.value() > rhs.value());
+  return lhs.is_ok() && (!rhs.is_ok() || lhs.value() > rhs.value());
 }
 
 template <typename E, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>()),
                                           ::fitx::internal::not_result_type<U>> = true>
 constexpr bool operator<(const result<E, T>& lhs, const U& rhs) {
-  return !lhs.has_value() || lhs.value() < rhs;
+  return !lhs.is_ok() || lhs.value() < rhs;
 }
 template <typename E, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() > std::declval<U>()),
                                           ::fitx::internal::not_result_type<U>> = true>
 constexpr bool operator>(const result<E, T>& lhs, const U& rhs) {
-  return lhs.has_value() && lhs.value() > rhs;
+  return lhs.is_ok() && lhs.value() > rhs;
 }
 
 template <typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>()),
                                           ::fitx::internal::not_result_type<T>> = true>
 constexpr bool operator<(const T& lhs, const result<F, U>& rhs) {
-  return rhs.has_value() && lhs < rhs.value();
+  return rhs.is_ok() && lhs < rhs.value();
 }
 template <typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() > std::declval<U>()),
                                           ::fitx::internal::not_result_type<T>> = true>
 constexpr bool operator>(const T& lhs, const result<F, U>& rhs) {
-  return !rhs.has_value() || lhs > rhs.value();
+  return !rhs.is_ok() || lhs > rhs.value();
 }
 
 // Less than or equal/greater than or equal.
 template <typename E, typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() <= std::declval<U>())> = true>
 constexpr bool operator<=(const result<E, T>& lhs, const result<F, U>& rhs) {
-  return !lhs.has_value() || (rhs.has_value() && lhs.value() <= rhs.value());
+  return !lhs.is_ok() || (rhs.is_ok() && lhs.value() <= rhs.value());
 }
 template <typename E, typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() >= std::declval<U>())> = true>
 constexpr bool operator>=(const result<E, T>& lhs, const result<F, U>& rhs) {
-  return !rhs.has_value() || (lhs.has_value() && lhs.value() >= rhs.value());
+  return !rhs.is_ok() || (lhs.is_ok() && lhs.value() >= rhs.value());
 }
 
 template <typename E, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() <= std::declval<U>()),
                                           ::fitx::internal::not_result_type<U>> = true>
 constexpr bool operator<=(const result<E, T>& lhs, const U& rhs) {
-  return !lhs.has_value() || lhs.value() <= rhs;
+  return !lhs.is_ok() || lhs.value() <= rhs;
 }
 template <typename E, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() >= std::declval<U>()),
                                           ::fitx::internal::not_result_type<U>> = true>
 constexpr bool operator>=(const result<E, T>& lhs, const U& rhs) {
-  return lhs.has_value() && lhs.value() >= rhs;
+  return lhs.is_ok() && lhs.value() >= rhs;
 }
 
 template <typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() <= std::declval<U>()),
                                           ::fitx::internal::not_result_type<T>> = true>
 constexpr bool operator<=(const T& lhs, const result<F, U>& rhs) {
-  return rhs.has_value() && lhs <= rhs.value();
+  return rhs.is_ok() && lhs <= rhs.value();
 }
 template <typename F, typename T, typename U,
           ::fitx::internal::enable_rel_op<decltype(std::declval<T>() >= std::declval<U>()),
                                           ::fitx::internal::not_result_type<T>> = true>
 constexpr bool operator>=(const T& lhs, const result<F, U>& rhs) {
-  return !rhs.has_value() || lhs >= rhs.value();
+  return !rhs.is_ok() || lhs >= rhs.value();
 }
 
 }  // namespace fitx

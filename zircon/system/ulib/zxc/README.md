@@ -8,11 +8,13 @@ that promote ergonomics, safety, and consistency.
 ## Vocabulary Types
 
 ZXC provides the following vocabulary types:
+* fitx::result: An efficient value-or-error result type.
+* zx::status: A specialization of `fitx::result` for `zx_status_t` errors.
 
-### zxc::result<E, Ts...>
+### fitx::result<E, Ts...>
 
-`zxc::result` is an efficient implementation of the general value-or-error result
-type pattern. The type supports returning either an error, or zero or one
+`fitx::result` is an efficient implementation of the general value-or-error
+result type pattern. The type supports returning either an error, or zero or one
 values from a function or method.
 
 This type is designed to address the following goals:
@@ -22,17 +24,17 @@ This type is designed to address the following goals:
 
 #### Basic Usage
 
-`zxc::result<E, T?>` may be used as the return type of a function or method.
+`fitx::result<E, T?>` may be used as the return type of a function or method.
 The first template parameter `E` is the type to represent the error value. The
 optional template parameter `T` is zero or one types to represent the value to
 return on success. The value type may be empty, however, an error type is
 required.
 
 ```C++
-#include <lib/zxc/result.h>
+#include <lib/fitx/result.h>
 
 // Define an error type and set of distinct error values. A success value is not
-// necessary as the error and value spaces of zxc::result are separate.
+// necessary as the error and value spaces of fitx::result are separate.
 enum class Error {
   InvalidArgs,
   BufferNotAvailable,
@@ -45,21 +47,21 @@ struct BufferResult {
   uint8_t* const buffer;
   const size_t buffer_size;
 };
-zxc::result<Error, BufferResult> GetBuffer();
+fitx::result<Error, BufferResult> GetBuffer();
 
-zxc::result<Error> FillBuffer(uint8_t* data, size_t size) {
+fitx::result<Error> FillBuffer(uint8_t* data, size_t size) {
   if (data == nullptr || size == 0) {
-    return zxc::as_error(Error::InvalidArgs);
+    return fitx::as_error(Error::InvalidArgs);
   }
   
   auto result = GetBuffer()
-  if (result.has_value()) {
+  if (result.is_ok()) {
     auto [buffer, buffer_size] = result.value();
     if (size > buffer_size) {
-      return zxc::as_error(Error::RequestTooLarge);
+      return fitx::as_error(Error::RequestTooLarge);
     }
     std::memcpy(buffer, data, size);
-    return zxc::ok();
+    return fitx::ok();
   } else {
     return result.take_error();
   }
@@ -68,7 +70,7 @@ zxc::result<Error> FillBuffer(uint8_t* data, size_t size) {
 
 #### Returning Values
 
-`zxc::result` emphasizes ease of use when returning values or otherwise
+`fitx::result` emphasizes ease of use when returning values or otherwise
 signaling success. The result type provides a number of constructors, most of
 which are implicit, to make returning values simple and terse.
 
@@ -86,98 +88,88 @@ when all of the supplied types are copy constructible.
 The result type is only copy/move assignable when the types `E` and `T` are
 *trivially* copy/move assignable, otherwise the result is not assignable.
 
-##### zxc::success
+##### fitx::success
 
-`zxc::result<E, T?>` is implicitly constructible from `zxc::success<U?>`, when
+`fitx::result<E, T?>` is implicitly constructible from `fitx::success<U?>`, when
 `T` is constructible from `U` or both are emtpy.
 
-`zx::ok(U?)` is a utility function that deduces `U` from the given argument, if
+`fitx::ok(U?)` is a utility function that deduces `U` from the given argument, if
 any.
 
-`zxc::success` is not permitted as the error type of `zxc::result`.
+`fitx::success` is not permitted as the error type of `fitx::result`.
 
 ```C++
-zxc::result<Error> CheckBounds(size_t size) {
+fitx::result<Error> CheckBounds(size_t size) {
   if (size > kSizeLimit) {
-    return zxc::as_error(Error::TooBig);
+    return fitx::as_error(Error::TooBig);
   }
-  return zxc::ok();
+  return fitx::ok();
 }
 ```
 
-##### zxc::failed
+##### fitx::failed
 
-The special sentinel type `zxc::failed` may be used as the error type when an
-elaborated (enumerated) error is not necessary. When `zxc::failed` is used as
-the error type, the result type is implicitly constructible from `zxc::failed`.
+The special sentinel type `fitx::failed` may be used as the error type when an
+elaborated (enumerated) error is not necessary. When `fitx::failed` is used as
+the error type, the result type is implicitly constructible from `fitx::failed`.
 
-`zxc::failed` is not permitted as a value type of `zxc::result`.
+`fitx::failed` is not permitted as a value type of `fitx::result`.
 
 ```C++
-zxc::result<zxc::failed> CheckBounds(size_t size) {
+fitx::result<fitx::failed> CheckBounds(size_t size) {
   if (size > kSizeLimit) {
-    return zxc::failed();
+    return fitx::failed();
   }
-  return zxc::ok();
+  return fitx::ok();
 }
 ```
 
-##### zxc::error<F>
+##### fitx::error<F>
 
-The result type is implicitly constructible from any instance of `zxc::error<F>`,
-where `E` is constructible from `F`. Using `zxc::error` is the only way to
-return an error result. This prevents ambiguity between the value space and the
+The result type is implicitly constructible from any instance of
 error space of the result, regardless of which types are used.
 
 ```C++
-zxc::result<std::string, size_t> StringLength(const char* string) {
+fitx::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    // Uses the deduction guide to deduce zxc::error<const char*>. The zxc::result
-    // error constructor is permitted because std::string is constructible from
-    // const char*.
-    return zxc::error("String may not be nullptr!");
+    // Uses the deduction guide to deduce fitx::error<const char*>. The
+    // fitx::result error constructor is permitted because std::string is
+    // constructible from const char*.
+    return fitx::error("String may not be nullptr!");
   }
-  return zxc::ok(strlen(string));
+  return fitx::ok(strlen(string));
 }
 ```
 
-##### zxc::result<F, U?> with Compatible Error and Value
+##### fitx::result<F, U?> with Compatible Error and Value
 
-The result `zxc::result<E, T?>` type is implicitly constructible from any other
-`zxc::result<F, U?>`, where the error type `E` is constructible from the error
+The result `fitx::result<E, T?>` type is implicitly constructible from any other
+`fitx::result<F, U?>`, where the error type `E` is constructible from the error
 type `F` and `T` is constructible from `U`, if any.
 
 ```C++
-zxc::result<const char*, const char*> GetMessageString();
+fitx::result<const char*, const char*> GetMessageString();
 
-zxc::result<std::string, std::string> GetMessage() {
+fitx::result<std::string, std::string> GetMessage() {
   return GetMessageString();
 }
 ```
 
 #### Discriminating Errors from Values
 
-`zxc::result` has two predicate methods, `has_value()` and `has_error()`, that
+`fitx::result` has two predicate methods, `is_ok()` and `is_error()`, that
 determine whether a result represents success and contains zero or one values,
 or represents an error and contains an error value, respectively.
 
 ```C++
-zxc::result<const char*, size_t> GetSize();
+fitx::result<const char*, size_t> GetSize();
 
-void Example1() {
+void Example() {
   auto result = GetSize();
-  if (result.has_value()) {
+  if (result.is_ok()) {
     printf("size=%zu\n", result.value());
   }
-  if (result.has_error()) {
-    printf("error=%s\n", result.error_value());
-  }
-}
-
-void Example2() {
-  if (auto result = GetSize()) {
-    printf("size=%zu\n", result.value());
-  } else {
+  if (result.is_error()) {
     printf("error=%s\n", result.error_value());
   }
 }
@@ -185,106 +177,146 @@ void Example2() {
 
 #### Accessing Values
 
-`zxc::result` supports several methods to access the value from a successful
+`fitx::result` supports several methods to access the value from a successful
 result.
 
-##### zxc:result::value() Accessor Methods
+##### fitx:result::value() Accessor Methods
 
 The value of a successful result may be accessed using the `value()` methods of
-`zxc::result`.
+`fitx::result`.
 
 ```C++
-zxc::result<Error, A> GetValues();
+fitx::result<Error, A> GetValues();
 
 void Example() {
   auto result = GetValues();
-  if (result.has_value()) {
+  if (result.is_ok()) {
     A a = result.value();
   }
 }
 ```
 
-##### zxc::result::take_value() Accessor Method
+##### fitx::result::take_value() Accessor Method
 
 The value of a successful result may be propagated to another result using the
-`take_value()` method of `zxc::result`.
+`take_value()` method of `fitx::result`.
 
 ```C++
-zxc::result<Error, A> GetValues();
+fitx::result<Error, A> GetValues();
 
-zxc::result<Error, A> Example() {
+fitx::result<Error, A> Example() {
   auto result = GetValues();
-  if (result.has_value()) {
+  if (result.is_ok()) {
     return result.take_value();
   } else {
     ConsumeError(result.take_error());
-    return zxc::ok();
+    return fitx::ok();
+  }
+}
+```
+
+##### fitx::result::operator->() Accessor Method
+
+The members of the underlying value of a successful result may be accessed using
+the `operator->()` overloads of `fitx::result`.
+
+```C++
+struct FooBarResult {
+  Foo foo;
+  Bar bar;
+};
+fitx::result<Error, FooBarResult> GetFooBar();
+
+void Example() {
+  auto result = GetFooBar();
+  if (result.is_ok()) {
+    ConsumeFoo(std::move(result->foo));
+    ConsumeBar(std::move(result->bar));
+  }
+}
+```
+
+`fitx::result` forwards to the underlying value's `operator->()` overload when
+one is defined.
+
+```C++
+struct FooBarResult {
+  Foo foo;
+  Bar bar;
+};
+fitx::result<Error, std::unique_ptr<FooBarResult>> GetFooBar();
+
+void Example() {
+  auto result = GetFooBar();
+  if (result.is_ok()) {
+    ConsumeFoo(std::move(result->foo));
+    ConsumeBar(std::move(result->bar));
   }
 }
 ```
 
 #### Returning Errors
 
-Returning errors with `zxc::result<E, T?>` always involves wrapping the error
-value in an instance of `zxc::error<F>`, where `E` is constructible from `F`.
+Returning errors with `fitx::result<E, T?>` always involves wrapping the error
+value in an instance of `fitx::error<F>`, where `E` is constructible from `F`.
 This ensures that error values are never ambiguous, even when `E` and `T` are
 compatible types.
 
 There are a variety ways to return errors:
 
-##### Direct zxc::error
+##### Direct fitx::error
 
-The most direct way to return an error is to use `zxc::error` directly.
+The most direct way to return an error is to use `fitx::error` directly.
 
-`zxc::error` has a single argument deduction guide
-`zxc::error(T) -> zxc::error<T>` when compiling for C++17 and above to simplify
-simple error return values.
+`fitx::error` has a single argument deduction guide
+`fitx::error(T) -> fitx::error<T>` when compiling for C++17 and above to
+simplify basic error return values.
 
 ```C++
-zxc::result<std::string, size_t> StringLength(const char* string) {
+fitx::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return zxc::error<std::string>("String is nullptr!");
+    return fitx::error<std::string>("String is nullptr!");
   }
-  return zxc::ok(strlen(string));
+  return fitx::ok(strlen(string));
 }
 
-zxc::result<std::string, size_t> StringLength(const char* string) {
+fitx::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return zxc::error("String is nullptr!");
+    return fitx::error("String is nullptr!");
   }
-  return zxc::ok(strlen(string));
+  return fitx::ok(strlen(string));
 }
 
 // Error with multiple values.
 using Error = std::pair<std::string, Backtrace>;
 
-zxc::result<Error, size_t> StringLength(const char* string) {
+fitx::result<Error, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return zxc::error<Error>("String is nullptr!", Backtrace::Get());
+    return fitx::error<Error>("String is nullptr!", Backtrace::Get());
   }
-  return zxc::ok(strlen(nullptr));
+  return fitx::ok(strlen(nullptr));
 }
 ```
 
-##### zxc::as_error Utility Function
+##### fitx::as_error Utility Function
 
-The single-argument utility function `zxc::as_error` may be used to simplify
-returning a `zxc::error<F>` by deducting `F` from the argument type.
+The single-argument utility function `fitx::as_error` may be used to simplify
+returning a `fitx::error<F>` by deducting `F` from the argument type.
 
 This function is a C++14 compatible alternative to the deduction guide.
 
 ```C++
-zxc::result<std::string, size_t> StringLength(const char* string) {
+fitx::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return zxc::as_error("String is nullptr!"); // Deduces zxc::error<const char*>.
+    return fitx::as_error("String is nullptr!"); // Deduces fitx::error<const char*>.
   }
-  return zxc::ok(strlen(string));
+  return fitx::ok(strlen(string));
 }
 ```
 
 #### Handling Errors
 
-`zxc::result` supports ergonomic error handling and propagation.
+`fitx::result` supports ergonomic error handling and propagation.
 
 ##### error_value() and take_error() Access Methods
 
@@ -292,14 +324,14 @@ The error value of a result may be accessed by reference using the
 `error_value()` methods.
 
 The error may be propagated using the `take_error()` method, which returns the
-error value as an instance of `zxc::error<E>`, as required to pass the error to
-`zxc::result`.
+error value as an instance of `fitx::error<E>`, as required to pass the error to
+`fitx::result`.
 
 ```C++
-zxc::result<const char*> Example() {
+fitx::result<const char*> Example() {
   if (auto result = GetValues()) {
     // Use values ...
-    return zxc::ok();
+    return fitx::ok();
   } else {
     LOG_ERROR("Failed to get values: %s\n", result.error_value());
     return result.take_error();
@@ -309,40 +341,40 @@ zxc::result<const char*> Example() {
 
 #### Relational Operators
 
-`zxc::result` supports a variety of relational operator variants.
+`fitx::result` supports a variety of relational operator variants.
 
-##### zxc::success and zxc::failure
+##### fitx::success and fitx::failure
 
-`zxc::result` is always equal/not equal comparable to instances of
-`zxc::success<>` and `zxc::failed`.
+`fitx::result` is always equal/not equal comparable to instances of
+`fitx::success<>` and `fitx::failed`.
 
-Comparing to `zxc::success<>` is equivalent to comparing to `has_value()`.
-Comparing to `zxc::failed` is equivalent to comparing to `has_error()`.
+Comparing to `fitx::success<>` is equivalent to comparing to `is_ok()`.
+Comparing to `fitx::failed` is equivalent to comparing to `is_error()`.
 
 ```C++
-zxc::result<Error, A> GetValues();
+fitx::result<Error, A> GetValues();
 
-zxc::result<Error> Example() {
+fitx::result<Error> Example() {
   auto result = GetValues();
-  if (result == zx::ok()) {
-    return zx::ok();
+  if (result == fitx::ok()) {
+    return fitx::ok();
   }
   return result.take_error();
 }
 ```
 
-##### Any zxc::result with Compatible Value Types
+##### Any fitx::result with Compatible Value Types
 
-`zxc::result<E, T?>` and `zxc::result<F, U?>` are comparable when `T` is
+`fitx::result<E, T?>` and `fitx::result<F, U?>` are comparable when `T` is
 comparable to `U`, if any. The error types are not compared, only the
-`has_value()` predicate and values are compared.
+`is_ok()` predicate and values are compared.
 
 Comparing two result types has the same empty and lexicographic ordering as
 comparing `std::optional<T>`.
 
 ```C++
-zxc::result<Error, int> GetMin();
-zxc::result<Error, int> GetMax();
+fitx::result<Error, int> GetMin();
+fitx::result<Error, int> GetMax();
 
 bool TestEqual() {
   // Returns true when both results have values and the values are the same.
@@ -352,11 +384,11 @@ bool TestEqual() {
 
 ##### Any Type U Comparable to T
 
-When `zxc::result<E, T>` has a single value type `T`, the result is comparable
+When `fitx::result<E, T>` has a single value type `T`, the result is comparable
 to any type `U` that is comparable to `T`.
 
 ```C++
-zxc::result<Error, std::string> GetMessage();
+fitx::result<Error, std::string> GetMessage();
 
 bool TestMessage() {
   // Returns true if there is a message and it matches the string literal.
@@ -364,43 +396,53 @@ bool TestMessage() {
 }
 ```
 
-### zxc::status<T?>
+### zx::status<T?>
 
-`zxc::status<T?>` is a specialization for Zircon `zx_status_t` error, based
-on `zxc::result<zx_status_t, T?>`, to make inter-op safer and more natural.
+`zx::status<T?>` is a specialization for Zircon `zx_status_t` errors, based on
+`fitx::result<zx_status_t, T?>`, to make inter-op safer and more natural.
+
+The namespace `zx` has aliases of the support types and functions in `fitx`:
+* `zx::ok`
+* `zx::error`
+* `zx::failed`
+* `zx::success`
+* `zx::as_error`
 
 #### Returning and Using Values
 
-Returning values with `zxc::status` is the same as returning values with the
-base `zxc::result`. The status type supports the same value constructors,
+Returning values with `zx::status` is the same as returning values with the
+base `fitx::result`. The status type supports the same value constructors,
 conversions, and accessors as the base result type.
 
 #### Returning Errors
 
-`zxc::status` enforces the convention that errors are distinct from values by
+`zx::status` enforces the convention that errors are distinct from values by
 disallowing the value `ZX_OK` as an error value with a runtime assertion.
 
 Instead of using `ZX_OK` to signal success, simply return a value or values.
-When the value set is empty, return `zxc::ok()` to signal success, just as with
+When the value set is empty, return `zx::ok()` to signal success, just as with
 the base result type.
 
-##### zxc::error_status Utility
+##### zx::error_status Utility
 
 `zx::error_status` is a simple alias of `zx::error<zx_status_t>` for
 convenience.
 
 #### Handling Errors
 
-Handling errors with `zxc::status` is the same as handling errors with
-`zxc::result`. All of the same constructs and accessors are available.
+Handling errors with `zx::status` is the same as handling errors with
+`fitx::result`. All of the same constructs and accessors are available.
 
 The `status_value()` accessor returns `ZX_OK` when the status is in the value
 state. It is still invalid to call `error_value()` or `take_error()` in the
 value state.
 
+The `status_string()` accessor returns a string constant representing the value
+returned by `status_value()`.
+
 ```C++
-zxc::status<> CheckValues(const foo&);
-zxc::status<foo> GetValues();
+zx::status<> CheckValues(const foo&);
+zx::status<foo> GetValues();
 
 // Simple pass through.
 zx_status_t check_foo_and_bar(const foo& foo_in) {
@@ -415,19 +457,20 @@ zx_status_t get_foo_and_bar(foo* foo_out) {
   }
 
   auto result = GetValues();
-  if (result.has_value()) {
+  if (result.is_ok()) {
     *foo_out = result.value();
     return ZX_OK; // Could return result.status_value() but this is more explicit.
   } else {
+    LOG(ERROR, "Call to GetValues failed: %s\n", result.status_string());
     return result.error_value();
   }
 }
 ```
 
-#### Propagating Errors with zxc::make_status(zx_status_t)
+#### Propagating Errors with zx::make_status(zx_status_t)
 
 `zx::make_status` is a utility function to simplify forwarding `zx_status_t`
-values through functions returning `zxc::status<>` with an empty value set.
+values through functions returning `zx::status<>` with an empty value set.
 
 This is primarily to simplify interfacing with FFIs.
 
@@ -447,5 +490,150 @@ zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
 // With using zx::forward_status.
 zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
   return zx::make_status(check_foo_and_bar(foo_in, bar_in));
+}
+```
+
+## Guidelines
+
+Use the following guidelines to make the most of the result type's ergonomic and
+safety features.
+
+### Return Multiple Values Using Aggregates
+
+Define an aggregate structure to return multiple values. Use meaningful names
+for each aggregate member to improve readability.
+
+```C++
+struct CreateFooBarResult {
+  Foo foo;
+  Bar bar;
+};
+fitx::<Error, CreateFooBarResult> CreateFooBar(Baz baz);
+```
+
+### Use Named Constructors for Complex Initialization
+
+For types that require complex initialization that could fail, use a static
+method (i.e. a named constructor) to perform the initialization. Make the
+constructor private and only perform member initialization using values passed
+in from the named constructor.
+
+```C++
+class Foo {
+ public:
+  fitx::result<Error, Foo> Create(size_t size) {
+    auto buffer_result = AllocateBuffer(size);
+    if (buffer_result.is_error()) {
+      return buffer_result.take_error();
+    }
+    auto bar_result = Bar::Create(size);
+    if (bar_result.is_error()) {
+      return bar_result.take_error());
+    }
+    return fitx::ok(Foo{std::move(buffer_result.value()), size, std::move(bar_result.value())});
+  }
+
+ private:
+  Foo(std::unique_ptr<uint8_t[]> buffer, size_t size, Bar bar)
+    : buffer_{std::move(buffer)}, size_{size}, bar_{std::move(bar)} {}
+  
+  std::unique_ptr<uint8_t[]> buffer_;
+  size_t size_;
+  Bar bar_;
+};
+```
+
+### Prefer Result Types to Output Parameters
+
+Output parameters are often used when an operation might fail. Typically, the
+return value is used to indicate success or (possibly enumerated) failure, while
+other values are returned using the output parameters. 
+
+Output parameters introduce ambiguities that should be avoided:
+* Are parameters pure outputs or mutable inputs?
+* Is nullptr permitted or will it cause a CHECK-fail?
+* What are the pre-conditions of the output states?
+* What happens to the pre-existing states of the outputs on success?
+* What states are the outputs left in on failure?
+* What are the lifetime requirements of the output variables?
+
+These ambiguities are often the source of subtle bugs. The result pattern avoids
+ambiguity by construction: returning a value or an error is mutally exclusive.
+
+Consider the following example using output parameters. It is difficult to infer
+the answers to the questions above without referring to documentation. Even with
+documentation, there is non-trivial cognitive load to check that the
+implementation is correct, that callers follow the rules, and that the
+documentation is consistent.
+
+```C++
+enum class Status {
+  Ok,
+  InvalidArgs,
+  NoMemory,
+  Clamped,
+};
+
+Status AllocateBuffer(size_t size, std::unique_ptr<uint8_t[]>* buffer_out, size_t* size_out) {
+  if (size == 0) {
+    buffer_out->reset(nullptr);
+    size_out = 0; // Forgot to dereference size_out!
+  }
+  if (buffer_out == nullptr) {
+    return Status::InvalidArgs;
+  }
+
+  // What about size_out == nullptr?
+
+  if (size > kMaxSize) {
+    size = kMaxSize;
+  }
+
+  fbl::AllocChecker checker;
+  std::unique_ptr<uint8_t[]> buffer{new (&checker) uint8_t[size]};
+  if (!checker.check()) {
+    *size_out = 0; // What state should buffer_out be left in?
+    return Status::NoMemory;
+  }
+
+  *buffer_out = std::move(buffer);
+  *size_out = size;
+
+  // Was size really clamped or just concidently the max?
+  return size == kMaxSize ? Status::Clamped : Status::Ok;
+}
+```
+
+Compare the previous example with the following example using the result type.
+The `Status` type only enumerates the two possible reasons for failure, there is
+no need to enumerate success states. The output states are well-defined and
+there is very little cognitive load to validate the implementation and callers.
+
+```C++
+enum class Status {
+  InvalidArgs,
+  NoMemory,
+};
+
+struct AllocateResult {
+  std::unique_ptr<uint8_t[]> buffer;
+  size_t size;
+};
+
+fitx::result<Status, AllocateResult> AllocateBuffer(size_t size) {
+  if (size == 0) {
+    return fitx::error(Status::InvalidArgs);
+  }
+  if (size > kMaxSize) {
+    size = kMaxSize;
+  }
+
+  fbl::AllocChecker checker;
+  std::unique_ptr<uint8_t[]> buffer{new (&checker) uint8_t[size]};
+  if (!checker.check()) {
+    return fitx::error(Status::NoMemory);
+  }
+
+  return fitx::ok(AllocateResult{std::move(buffer), size});
 }
 ```

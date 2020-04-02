@@ -7,6 +7,7 @@
 
 #include <lib/fitx/result.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 namespace zx {
@@ -27,7 +28,7 @@ namespace zx {
 //
 //   zx::status<> AddNewNode(Tree* tree, Args...) {
 //     auto status = MakeNode(Args...));
-//     if (status.has_value() {
+//     if (status.is_ok() {
 //       tree->AddNode(std::move(node_ref));
 //       return zx::ok();
 //     }
@@ -36,11 +37,11 @@ namespace zx {
 //
 
 // Import supporting types and functions from fitx.
-using fitx::ok;
+using fitx::as_error;
 using fitx::error;
 using fitx::failed;
+using fitx::ok;
 using fitx::success;
-using fitx::as_error;
 
 // Base type.
 template <typename... Ts>
@@ -67,7 +68,7 @@ class status<T> : public ::fitx::result<zx_status_t, T> {
   // Returns the underlying error or ZX_OK if not in the error state. This
   // accessor simplifies interfacing with code that uses zx_status_t directly.
   constexpr zx_status_t status_value() const {
-    return this->has_error() ? base::error_value() : ZX_OK;
+    return this->is_error() ? base::error_value() : ZX_OK;
   }
 };
 
@@ -92,8 +93,11 @@ class status<> : public ::fitx::result<zx_status_t> {
   // Returns the underlying error or ZX_OK if not in the error state. This
   // accessor simplifies interfacing with code that uses zx_status_t directly.
   constexpr zx_status_t status_value() const {
-    return this->has_error() ? base::error_value() : ZX_OK;
+    return this->is_error() ? base::error_value() : ZX_OK;
   }
+
+  // Returns the string representation of the status value.
+  const char* status_string() const { return zx_status_get_string(status_value()); }
 };
 
 // Simplified alias of zx::error<zx_status_t>.
