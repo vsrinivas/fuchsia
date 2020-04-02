@@ -37,7 +37,6 @@ group("common") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/image-format",
     "//zircon/public/lib/image-format-llcpp",
-    "//zircon/public/lib/statusor",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.display.controller",
@@ -48,6 +47,7 @@ group("common") {
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/fidl/fuchsia-virtualconsole:c",
+    "//zircon/system/ulib/statusor",
   ]
 }
 
