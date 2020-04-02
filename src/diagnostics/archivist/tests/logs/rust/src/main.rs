@@ -8,7 +8,9 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
+    use fidl_test_log_stdio::StdioPuppetMarker;
     use fuchsia_async as fasync;
+    use fuchsia_component::client as fclient;
     use fuchsia_syslog::{self as syslog, fx_log_info};
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
     use fuchsia_zircon as zx;
@@ -84,5 +86,39 @@ mod tests {
         debuglog.write(msg.as_bytes()).unwrap();
 
         logs.filter(|m| futures::future::ready(m.msg == msg)).next().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn listen_for_klog_routed_stdio() {
+        let mut logs = run_listener("klog");
+
+        let app_builder = fclient::AppBuilder::new(
+            "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/stdio_puppet.cmx",
+        );
+
+        let stdout_resource = zx::Resource::from(zx::Handle::invalid());
+        let stdout_debuglog =
+            zx::DebugLog::create(&stdout_resource, zx::DebugLogOpts::empty()).unwrap();
+        let stderr_resource = zx::Resource::from(zx::Handle::invalid());
+        let stderr_debuglog =
+            zx::DebugLog::create(&stderr_resource, zx::DebugLogOpts::empty()).unwrap();
+
+        let app = app_builder
+            .stdout(stdout_debuglog)
+            .stderr(stderr_debuglog)
+            .spawn(&fclient::launcher().unwrap())
+            .unwrap();
+
+        let puppet = app.connect_to_service::<StdioPuppetMarker>().unwrap();
+
+        let msg = format!("logger_integration_rust test_klog stdout {}", rand::random::<u64>());
+        puppet.writeln_stdout(&msg).unwrap();
+        logs.by_ref().filter(|m| futures::future::ready(m.msg == msg)).next().await;
+
+        let msg = format!("logger_integration_rust test_klog stderr {}", rand::random::<u64>());
+        puppet.writeln_stderr(&msg).unwrap();
+        logs.filter(|m| futures::future::ready(m.msg == msg)).next().await;
+
+        // TODO(49357): add test for multiline log once behavior is defined.
     }
 }

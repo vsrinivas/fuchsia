@@ -31,6 +31,9 @@ test_package("archivist_integration_tests") {
     {
       name = "archivist"
     },
+    {
+      name = "stdio_puppet"
+    },
   ]
 
   meta = [
@@ -51,6 +54,10 @@ test_package("archivist_integration_tests") {
       path =
           rebase_path("unified_reader/meta/unified_reader_test_archivist.cmx")
       dest = "unified_reader_test_archivist.cmx"
+    },
+    {
+      path = rebase_path("logs/rust/puppet/meta/stdio_puppet.cmx")
+      dest = "stdio_puppet.cmx"
     },
   ]
 
