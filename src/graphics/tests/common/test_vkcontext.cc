@@ -54,7 +54,7 @@ TEST(VkContext, Unique) {
 
   std::unique_ptr<VulkanContext> ctx =
       VulkanContext::Builder{}.set_instance_info(instance_info).Unique();
-  EXPECT_NE(ctx, nullptr);
+  ASSERT_NE(ctx, nullptr);
 
   // Shallow copy.
   EXPECT_EQ(ctx->instance_info_.pApplicationInfo->pApplicationName, app_name);
@@ -71,10 +71,30 @@ TEST(VkContext, Allocator) {
   allocator.pfnReallocation = &vkreallocate;
   allocator.pfnFree = &vkfree;
   std::unique_ptr<VulkanContext> ctx = VulkanContext::Builder{}.set_allocator(allocator).Unique();
-  EXPECT_NE(ctx, nullptr);
+  ASSERT_NE(ctx, nullptr);
   EXPECT_GT(allocations, 0);
   ctx.reset();
   EXPECT_EQ(allocations, 0);
+}
+
+TEST(VkContext, Queue) {
+  vk::QueueFlagBits queue_flag_bits = vk::QueueFlagBits::eCompute;
+  std::unique_ptr<VulkanContext> ctx =
+      VulkanContext::Builder{}.set_queue_flag_bits(queue_flag_bits).Unique();
+
+  // Failed to find a compute queue, use graphics instead.
+  if (!ctx) {
+    printf("VulkanContext: No compute queue found.\n");
+    fflush(stdout);
+    queue_flag_bits = vk::QueueFlagBits::eGraphics;
+    ctx = VulkanContext::Builder{}.set_queue_flag_bits(queue_flag_bits).Unique();
+  }
+  ASSERT_NE(ctx, nullptr);
+
+  EXPECT_EQ(queue_flag_bits, ctx->queue_flag_bits());
+
+  int queue_family_index = ctx->queue_family_index();
+  EXPECT_GT(queue_family_index, VulkanContext::kInvalidQueueFamily);
 }
 
 int main(int argc, char **argv) {

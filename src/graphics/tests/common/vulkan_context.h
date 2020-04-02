@@ -18,6 +18,7 @@ class VulkanContext {
   VulkanContext(const vk::InstanceCreateInfo &instance_info, size_t physical_device_index,
                 const vk::DeviceCreateInfo &device_info,
                 const vk::DeviceQueueCreateInfo &queue_info,
+                const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
                 vk::Optional<const vk::AllocationCallbacks> allocator = nullptr);
 
   bool Init();
@@ -27,6 +28,7 @@ class VulkanContext {
   const vk::UniqueDevice &device() const { return device_; }
   const vk::Queue &queue() const { return queue_; }
   int queue_family_index() const { return queue_family_index_; }
+  const vk::QueueFlagBits &queue_flag_bits() const { return queue_flag_bits_; }
 
  private:
   FRIEND_TEST(VkContext, Unique);
@@ -45,6 +47,7 @@ class VulkanContext {
   vk::Queue queue_;
   vk::DeviceQueueCreateInfo queue_info_;
 
+  vk::QueueFlagBits queue_flag_bits_;
   int queue_family_index_;
 
   vk::Optional<const vk::AllocationCallbacks> allocator_;
@@ -73,6 +76,7 @@ class VulkanContext::Builder {
   Builder &set_physical_device_index(size_t physical_device_index);
   Builder &set_queue_info(const vk::DeviceQueueCreateInfo &queue_info);
   Builder &set_device_info(const vk::DeviceCreateInfo &device_info);
+  Builder &set_queue_flag_bits(const vk::QueueFlagBits &queue_flag_bits);
 
  private:
   vk::InstanceCreateInfo instance_info_;
@@ -80,6 +84,7 @@ class VulkanContext::Builder {
   float queue_priority_;
   vk::DeviceQueueCreateInfo queue_info_;
   vk::DeviceCreateInfo device_info_;
+  vk::QueueFlagBits queue_flag_bits_;
   vk::Optional<const vk::AllocationCallbacks> allocator_;
 };
 

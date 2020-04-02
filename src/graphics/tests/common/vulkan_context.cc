@@ -12,12 +12,14 @@
 VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
                              size_t physical_device_index, const vk::DeviceCreateInfo &device_info,
                              const vk::DeviceQueueCreateInfo &queue_info,
+                             const vk::QueueFlagBits &queue_flag_bits,
                              vk::Optional<const vk::AllocationCallbacks> allocator)
     : initialized_(false),
       instance_info_(instance_info),
       physical_device_index_(physical_device_index),
       device_info_(device_info),
       queue_info_(queue_info),
+      queue_flag_bits_(queue_flag_bits),
       queue_family_index_(kInvalidQueueFamily),
       allocator_(allocator) {}
 
@@ -56,11 +58,12 @@ bool VulkanContext::Init() {
   const auto queue_families = physical_device_.getQueueFamilyProperties();
   queue_family_index_ = queue_families.size();
   for (size_t i = 0; i < queue_families.size(); ++i) {
-    if (queue_families[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+    if (queue_families[i].queueFlags & queue_flag_bits_) {
       queue_family_index_ = i;
       break;
     }
   }
+
   if (static_cast<size_t>(queue_family_index_) == queue_families.size()) {
     queue_family_index_ = kInvalidQueueFamily;
     RTN_MSG(false, "Couldn't find an appropriate queue.\n");
@@ -89,6 +92,7 @@ VulkanContext::Builder::Builder()
       queue_info_(vk::DeviceQueueCreateFlags(), physical_device_index_, 1 /* queueCount */,
                   &queue_priority_),
       device_info_(vk::DeviceCreateFlags(), 1 /* queueCreateInfoCount */, &queue_info_),
+      queue_flag_bits_(vk::QueueFlagBits::eGraphics),
       allocator_(nullptr) {}
 
 VulkanContext::Builder &VulkanContext::Builder::set_allocator(
@@ -121,11 +125,18 @@ VulkanContext::Builder &VulkanContext::Builder::set_queue_info(
   return *this;
 }
 
+VulkanContext::Builder &VulkanContext::Builder::set_queue_flag_bits(
+    const vk::QueueFlagBits &queue_flag_bits) {
+  queue_flag_bits_ = queue_flag_bits;
+  return *this;
+}
+
 std::unique_ptr<VulkanContext> VulkanContext::Builder::Unique() const {
-  auto context = std::make_unique<VulkanContext>(instance_info_, physical_device_index_,
-                                                 device_info_, queue_info_, allocator_);
+  auto context =
+      std::make_unique<VulkanContext>(instance_info_, physical_device_index_, device_info_,
+                                      queue_info_, queue_flag_bits_, allocator_);
   if (!context->Init()) {
-    return nullptr;
+    RTN_MSG(nullptr, "Failed to initialize VulkanContext.\n")
   }
   return context;
 }
