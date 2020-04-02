@@ -79,6 +79,14 @@ void AudioDevice::EstablishReferenceClock() {
 
 AudioDevice::~AudioDevice() = default;
 
+std::optional<Format> AudioDevice::format() const {
+  auto _driver = driver();
+  if (!_driver) {
+    return std::nullopt;
+  }
+  return _driver->GetFormat();
+}
+
 void AudioDevice::Wakeup() {
   TRACE_DURATION("audio", "AudioDevice::Wakeup");
   mix_wakeup_.Signal();

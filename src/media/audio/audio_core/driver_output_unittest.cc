@@ -12,6 +12,7 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/driver_utils.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
@@ -106,11 +107,15 @@ TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
 
   // Verify the DriverOutput has requested a ring buffer with the correct format type. Since we only
   // published support for a single format above, there's only one possible solution here.
-  auto selected_format = driver_->selected_format();
+  auto selected_format = output_->format();
   EXPECT_TRUE(selected_format);
-  EXPECT_EQ(kSupportedSampleRate, selected_format->frames_per_second);
-  EXPECT_EQ(kSupportedSampleFormat, selected_format->sample_format);
-  EXPECT_EQ(kSupportedChannels, selected_format->channels);
+  EXPECT_EQ(kSupportedSampleRate, selected_format->frames_per_second());
+  EXPECT_EQ(kSupportedChannels, selected_format->channels());
+
+  audio_sample_format_t selected_sample_format;
+  ASSERT_TRUE(driver_utils::AudioSampleFormatToDriverSampleFormat(selected_format->sample_format(),
+                                                                  &selected_sample_format));
+  EXPECT_EQ(kSupportedSampleFormat, selected_sample_format);
 
   // We expect the driver has filled the buffer with silence. For 16-bit/2-channel audio, we can
   // represent each frame as a single uint32_t.

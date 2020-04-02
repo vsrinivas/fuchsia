@@ -41,6 +41,9 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
 
   ~AudioDevice() override;
 
+  // |media::audio::AudioObject|
+  std::optional<Format> format() const override;
+
   // Accessors for the current plug state of the device.
   //
   // In addition to publishing and unpublishing streams when codecs are attached to or removed from
