@@ -83,17 +83,17 @@ resolved.
 - No component has been started.
 - Component manager’s outgoing directory is serving:
   - The hub of the root component at `$out/hub`.
-  - The `EventSourceSync` FIDL service at
-    `$out/svc/fuchsia.test.events.EventSourceSync`.
+  - The `BlockingEventSource` FIDL service at
+    `$out/svc/fuchsia.sys2.BlockingEventSource`.
 - The state of the hub reflects the following:
   - Static children of the root component should be visible.
   - Grandchildren of the root component should not be visible (because they
   haven't been resolved yet).
   - There should be no `exec` directories for any component.
 
-Use the `EventSourceSync` FIDL service to subscribe to events and unblock
+Use the `BlockingEventSource` FIDL service to subscribe to events and unblock
 the component manager. The following example shows you how to use the
-`EventSourceSync` service:
+`BlockingEventSource` service:
 
 ```rust
 let event_source = test.connect_to_event_source().await?;
@@ -188,7 +188,7 @@ The `EventSource` can be requested by any component instance within the
 component topology served by the component manager. The component manager only
 delivers system events within the realm of the requesting component instance.
 
-A component instance can request a scoped `EventSourceSync` in its manifest
+A component instance can request a scoped `BlockingEventSource` in its manifest
 file as follows:
 
 ```
@@ -199,7 +199,7 @@ file as follows:
     "use": [
         {
             "protocol": [
-                "/svc/fuchsia.test.events.EventSourceSync",
+                "/svc/fuchsia.sys2.BlockingEventSource",
             ],
             "from": "framework"
         },
@@ -208,10 +208,10 @@ file as follows:
 ```
 
 Another component can pass along its scope of system events by passing along the
-`EventSourceSync` capability through the conventional routing operations `offer`,
+`BlockingEventSource` capability through the conventional routing operations `offer`,
 `expose` and `use`.
 
-If a component requests a `EventSourceSync` then its children cannot start until it explicitly
+If a component requests a `BlockingEventSource` then its children cannot start until it explicitly
 calls `start_component_tree`.
 
 ### Additional functionality
@@ -327,7 +327,7 @@ event.inject(echo_capability).await?;
 event.resume().await?;
 ```
 
-Alternatively, the `EventSourceSync` can automatically install an injector
+Alternatively, the `BlockingEventSource` can automatically install an injector
 matching the capability requested by any component in the test.
 
 ```rust
@@ -396,7 +396,7 @@ event.interpose(interposer).await?;
 event.resume().await?;
 ```
 
-Alternatively, the `EventSourceSync` can automatically install an interposer
+Alternatively, the `BlockingEventSource` can automatically install an interposer
 matching the capability requested by any component in the test.
 
 ```rust
@@ -463,9 +463,9 @@ When component manager is in debug mode, it does the following:
 
    - The hub of the root component at `$out/hub`.
 
-   - The `EventSourceSync` FIDL service at
-   `$out/svc/fuchsia.test.events.EventSourceSync`.
+   - The `BlockingEventSource` FIDL service at
+   `$out/svc/fuchsia.sys2.BlockingEventSource`.
 
-1. Waits to be unblocked by the `EventSourceSync` FIDL service.
+1. Waits to be unblocked by the `BlockingEventSource` FIDL service.
 
 1. Starts up the root component (including any eager children).

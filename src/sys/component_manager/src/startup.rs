@@ -40,9 +40,9 @@ pub struct Arguments {
     // has to use the fuchsia.process.Launcher service provided through its namespace instead.
     pub use_builtin_process_launcher: bool,
 
-    /// If true, component manager will be in debug mode. In this mode, the EventSourceSync FIDL
+    /// If true, component manager will be in debug mode. In this mode, the BlockingEventSource FIDL
     /// service will be exposed via the ServiceFs directory (usually the out dir). ComponentManager
-    /// will not start until it is resumed by the EventSourceSync FIDL API.
+    /// will not start until it is resumed by the BlockingEventSource FIDL API.
     ///
     /// This is done so that an external component (say an integration test) can subscribe to
     /// events before the root component has started.

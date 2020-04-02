@@ -21,7 +21,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityName, CapabilityPath, ComponentDecl, UseDecl, UseEventDecl},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
     lazy_static::lazy_static,
     log::*,
@@ -37,9 +37,9 @@ use {
 
 lazy_static! {
     pub static ref EVENT_SOURCE_SERVICE_PATH: CapabilityPath =
-        "/svc/fuchsia.test.events.EventSource".try_into().unwrap();
+        "/svc/fuchsia.sys2.EventSource".try_into().unwrap();
     pub static ref EVENT_SOURCE_SYNC_SERVICE_PATH: CapabilityPath =
-        "/svc/fuchsia.test.events.EventSourceSync".try_into().unwrap();
+        "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap();
 }
 
 /// Allows to create `EventSource`s and tracks all the created ones.
@@ -209,7 +209,7 @@ pub struct EventSource {
     /// A shared reference to the event registry used to subscribe and dispatche events.
     registry: Weak<EventRegistry>,
 
-    /// Used for `EventSourceSync.StartComponentTree`.
+    /// Used for `BlockingEventSource.StartComponentTree`.
     // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
     resolve_instance_event_stream: Arc<Mutex<Option<EventStream>>>,
 
@@ -318,7 +318,7 @@ impl EventSource {
     }
 
     /// Serves a `EventSource` FIDL protocol.
-    pub fn serve(self, stream: fevents::EventSourceSyncRequestStream) {
+    pub fn serve(self, stream: fsys::BlockingEventSourceRequestStream) {
         fasync::spawn(async move {
             serve_event_source_sync(self, stream).await;
         });
@@ -388,7 +388,7 @@ impl CapabilityProvider for EventSource {
         _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let stream = ServerEnd::<fevents::EventSourceSyncMarker>::new(server_end)
+        let stream = ServerEnd::<fsys::BlockingEventSourceMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
         self.serve(stream);

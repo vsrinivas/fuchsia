@@ -205,7 +205,7 @@ impl BuiltinEnvironment {
         })
     }
 
-    /// Setup a ServiceFs that contains the Hub and (optionally) the `EventSourceSync` service.
+    /// Setup a ServiceFs that contains the Hub and (optionally) the `BlockingEventSource` service.
     async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
         // Create the ServiceFs
         let mut service_fs = ServiceFs::new();

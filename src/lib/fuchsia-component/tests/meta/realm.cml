@@ -12,7 +12,7 @@
         },
         {
             // Needed to use test events, so we can wait on destroy.
-            "protocol": "/svc/fuchsia.test.events.EventSourceSync",
+            "protocol": "/svc/fuchsia.sys2.BlockingEventSource",
             "from": "framework"
         },
         { "event": "destroyed", "from": "framework" }

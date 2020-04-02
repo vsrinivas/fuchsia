@@ -14,7 +14,7 @@ use {
     async_trait::async_trait,
     cm_rust::ComponentDecl,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
-    fidl_fuchsia_test_events as fevents, fuchsia_trace as trace,
+    fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
     io_util,
     rand::random,
@@ -64,21 +64,21 @@ macro_rules! events {
             }
         }
 
-        impl Into<fevents::EventType> for EventType {
-            fn into(self) -> fevents::EventType {
+        impl Into<fsys::EventType> for EventType {
+            fn into(self) -> fsys::EventType {
                 match self {
                     $(
-                        EventType::$name => fevents::EventType::$name,
+                        EventType::$name => fsys::EventType::$name,
                     )*
                 }
             }
         }
 
-        impl From<fevents::EventType> for EventType {
-            fn from(fidl_event_type: fevents::EventType) -> Self {
+        impl From<fsys::EventType> for EventType {
+            fn from(fidl_event_type: fsys::EventType) -> Self {
                 match fidl_event_type {
                     $(
-                        fevents::EventType::$name => EventType::$name,
+                        fsys::EventType::$name => EventType::$name,
                     )*
                 }
             }

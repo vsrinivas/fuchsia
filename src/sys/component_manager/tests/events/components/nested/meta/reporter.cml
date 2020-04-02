@@ -7,7 +7,7 @@
       { "runner": "elf" },
       {
           "protocol": [
-              "/svc/fuchsia.test.events.EventSourceSync",
+              "/svc/fuchsia.sys2.BlockingEventSource",
               "/svc/fidl.examples.routing.echo.Echo"
           ],
           "from": "framework"

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_test_events::EventType,
+    fidl_fuchsia_sys2::EventType,
     fuchsia_async as fasync,
     fuchsia_component::client::create_scoped_dynamic_instance,
     fuchsia_syslog::{self as fxlog},

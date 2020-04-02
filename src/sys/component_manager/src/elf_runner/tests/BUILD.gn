@@ -25,7 +25,6 @@ rustc_test("lifecycle") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:events-rustc",
     "//third_party/rust_crates:futures-util",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -45,7 +44,6 @@ rustc_test("lifecycle_timeout") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:events-rustc",
     "//third_party/rust_crates:futures-util",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -65,7 +63,6 @@ rustc_test("lifecycle_timeout_unresponsive") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:events-rustc",
     "//third_party/rust_crates:futures-util",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

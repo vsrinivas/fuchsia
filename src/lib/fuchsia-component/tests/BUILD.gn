@@ -33,10 +33,10 @@ rustc_test("fuchsia-component-v2-test") {
   edition = "2018"
   source_root = "components_v2/lib.rs"
   deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:events-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

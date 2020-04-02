@@ -17,7 +17,7 @@ use {
     fidl::endpoints::{create_request_stream, ClientEnd},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{self as fio, NodeProxy},
-    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_trace as trace,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     log::{debug, error, warn},
@@ -26,14 +26,14 @@ use {
 
 pub async fn serve_event_source_sync(
     event_source: EventSource,
-    stream: fevents::EventSourceSyncRequestStream,
+    stream: fsys::BlockingEventSourceRequestStream,
 ) {
     let result = stream
         .try_for_each_concurrent(None, move |request| {
             let mut event_source = event_source.clone();
             async move {
                 match request {
-                    fevents::EventSourceSyncRequest::Subscribe {
+                    fsys::BlockingEventSourceRequest::Subscribe {
                         event_types,
                         stream,
                         responder,
@@ -59,7 +59,7 @@ pub async fn serve_event_source_sync(
                             }
                         };
                     }
-                    fevents::EventSourceSyncRequest::StartComponentTree { responder } => {
+                    fsys::BlockingEventSourceRequest::StartComponentTree { responder } => {
                         event_source.start_component_tree().await;
                         responder.send()?;
                     }
@@ -69,14 +69,14 @@ pub async fn serve_event_source_sync(
         })
         .await;
     if let Err(e) = result {
-        error!("Error serving EventSourceSync: {}", e);
+        error!("Error serving BlockingEventSource: {}", e);
     }
 }
 
 /// Serves EventStream FIDL requests received over the provided stream.
 async fn serve_event_stream(
     mut event_stream: EventStream,
-    client_end: ClientEnd<fevents::EventStreamMarker>,
+    client_end: ClientEnd<fsys::EventStreamMarker>,
 ) -> Result<(), fidl::Error> {
     let listener = client_end.into_proxy().expect("cannot create proxy from client_end");
     while let Some(event) = event_stream.next().await {
@@ -99,7 +99,7 @@ async fn serve_event_stream(
 fn maybe_create_event_payload(
     scope: &AbsoluteMoniker,
     event_payload: &EventPayload,
-) -> Result<Option<fevents::EventPayload>, fidl::Error> {
+) -> Result<Option<fsys::EventPayload>, fidl::Error> {
     match event_payload {
         EventPayload::CapabilityReady { path, node } => {
             maybe_create_capability_ready_payload(path.to_string(), node)
@@ -114,7 +114,7 @@ fn maybe_create_event_payload(
 fn maybe_create_capability_ready_payload(
     path: String,
     node: &NodeProxy,
-) -> Result<Option<fevents::EventPayload>, fidl::Error> {
+) -> Result<Option<fsys::EventPayload>, fidl::Error> {
     let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
     node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
     let node_client_end = node_clone
@@ -122,18 +122,15 @@ fn maybe_create_capability_ready_payload(
         .expect("could not convert directory to channel")
         .into_zx_channel()
         .into();
-    let payload = fevents::CapabilityReadyPayload { path: Some(path), node: Some(node_client_end) };
-    Ok(Some(fevents::EventPayload {
-        capability_ready: Some(payload),
-        ..fevents::EventPayload::empty()
-    }))
+    let payload = fsys::CapabilityReadyPayload { path: Some(path), node: Some(node_client_end) };
+    Ok(Some(fsys::EventPayload { capability_ready: Some(payload), ..fsys::EventPayload::empty() }))
 }
 
 fn maybe_create_capability_routed_payload(
     scope: &AbsoluteMoniker,
     source: &CapabilitySource,
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-) -> Option<fevents::EventPayload> {
+) -> Option<fsys::EventPayload> {
     let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
 
     // Runners are special. They do not have a path, so their name is the capability ID.
@@ -154,43 +151,43 @@ fn maybe_create_capability_routed_payload(
         CapabilitySource::Framework { scope_moniker, .. } => {
             let scope_moniker =
                 scope_moniker.as_ref().map(|a| RelativeMoniker::from_absolute(scope, &a));
-            fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
+            fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
                 scope_moniker: scope_moniker.as_ref().map(|m| m.to_string()),
-                ..fevents::FrameworkCapability::empty()
+                ..fsys::FrameworkCapability::empty()
             })
         }
         CapabilitySource::Component { realm, .. } => {
             let realm = realm.upgrade().ok()?;
             let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
-            fevents::CapabilitySource::Component(fevents::ComponentCapability {
+            fsys::CapabilitySource::Component(fsys::ComponentCapability {
                 source_moniker: Some(source_moniker.to_string()),
-                ..fevents::ComponentCapability::empty()
+                ..fsys::ComponentCapability::empty()
             })
         }
         _ => return None,
     });
 
-    let routing_payload = Some(fevents::RoutingPayload { routing_protocol, capability_id, source });
-    Some(fevents::EventPayload { routing_payload, ..fevents::EventPayload::empty() })
+    let routing_payload = Some(fsys::RoutingPayload { routing_protocol, capability_id, source });
+    Some(fsys::EventPayload { routing_payload, ..fsys::EventPayload::empty() })
 }
 
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_event_fidl_object(event: Event) -> Result<fevents::Event, fidl::Error> {
+fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
     let event_type = Some(event.event.payload.type_().into());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
     let event_payload = maybe_create_event_payload(&event.scope_moniker, &event.event.payload)?;
     let handler = maybe_serve_handler_async(event);
-    Ok(fevents::Event { event_type, target_moniker, handler, event_payload })
+    Ok(fsys::Event { event_type, target_moniker, handler, event_payload })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.
 fn serve_routing_protocol_async(
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-) -> ClientEnd<fevents::RoutingProtocolMarker> {
-    let (client_end, stream) = create_request_stream::<fevents::RoutingProtocolMarker>()
+) -> ClientEnd<fsys::RoutingProtocolMarker> {
+    let (client_end, stream) = create_request_stream::<fsys::RoutingProtocolMarker>()
         .expect("failed to create request stream for RoutingProtocol");
     fasync::spawn(async move {
         serve_routing_protocol(capability_provider, stream).await;
@@ -201,11 +198,11 @@ fn serve_routing_protocol_async(
 /// Connects the component manager capability provider to
 /// an external provider over FIDL
 struct ExternalCapabilityProvider {
-    proxy: fevents::CapabilityProviderProxy,
+    proxy: fsys::CapabilityProviderProxy,
 }
 
 impl ExternalCapabilityProvider {
-    pub fn new(client_end: ClientEnd<fevents::CapabilityProviderMarker>) -> Self {
+    pub fn new(client_end: ClientEnd<fsys::CapabilityProviderMarker>) -> Self {
         Self { proxy: client_end.into_proxy().expect("cannot create proxy from client_end") }
     }
 }
@@ -230,11 +227,11 @@ impl CapabilityProvider for ExternalCapabilityProvider {
 /// Serves RoutingProtocol FIDL requests received over the provided stream.
 async fn serve_routing_protocol(
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-    mut stream: fevents::RoutingProtocolRequestStream,
+    mut stream: fsys::RoutingProtocolRequestStream,
 ) {
     while let Some(Ok(request)) = stream.next().await {
         match request {
-            fevents::RoutingProtocolRequest::SetProvider { client_end, responder } => {
+            fsys::RoutingProtocolRequest::SetProvider { client_end, responder } => {
                 // Lock on the provider
                 let mut capability_provider = capability_provider.lock().await;
 
@@ -244,11 +241,7 @@ async fn serve_routing_protocol(
 
                 responder.send().unwrap();
             }
-            fevents::RoutingProtocolRequest::ReplaceAndOpen {
-                client_end,
-                server_end,
-                responder,
-            } => {
+            fsys::RoutingProtocolRequest::ReplaceAndOpen { client_end, server_end, responder } => {
                 // Lock on the provider
                 let mut capability_provider = capability_provider.lock().await;
 
@@ -281,15 +274,15 @@ async fn serve_routing_protocol(
 }
 
 /// Serves the server end of Handler FIDL protocol asynchronously
-fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fevents::HandlerMarker>> {
+fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMarker>> {
     if event.sync_mode() == SyncMode::Async {
         return None;
     }
-    let (client_end, mut stream) = create_request_stream::<fevents::HandlerMarker>()
+    let (client_end, mut stream) = create_request_stream::<fsys::HandlerMarker>()
         .expect("could not create request stream for handler protocol");
     fasync::spawn(async move {
         // Expect exactly one call to Resume
-        if let Some(Ok(fevents::HandlerRequest::Resume { responder })) = stream.next().await {
+        if let Some(Ok(fsys::HandlerRequest::Resume { responder })) = stream.next().await {
             event.resume();
             responder.send().unwrap();
         }

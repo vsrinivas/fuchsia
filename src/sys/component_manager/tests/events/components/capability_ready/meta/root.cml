@@ -7,7 +7,7 @@
       {
         "protocol": [
           "/svc/fidl.examples.routing.echo.Echo",
-          "/svc/fuchsia.test.events.EventSourceSync",
+          "/svc/fuchsia.sys2.BlockingEventSource",
         ],
         "from": "framework",
       },

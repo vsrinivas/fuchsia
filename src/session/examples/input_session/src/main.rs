@@ -63,7 +63,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use {
-        fidl_fuchsia_test_events::EventType,
+        fidl_fuchsia_sys2::EventType,
         fuchsia_async as fasync, session_manager_lib,
         test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
     };

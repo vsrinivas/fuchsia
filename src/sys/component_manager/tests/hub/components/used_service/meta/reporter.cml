@@ -13,7 +13,7 @@
         {
             "protocol": [
                 "/svc/fuchsia.test.hub.HubReport",
-                "/svc/fuchsia.test.events.EventSourceSync",
+                "/svc/fuchsia.sys2.BlockingEventSource",
             ],
             "from": "framework"
         },

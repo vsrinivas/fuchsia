@@ -5,7 +5,7 @@
     "use": [
       { "runner": "elf" },
       {
-        "protocol": [ "/svc/fuchsia.test.events.EventSourceSync" ],
+        "protocol": [ "/svc/fuchsia.sys2.BlockingEventSource" ],
         "from": "framework"
       },
       {

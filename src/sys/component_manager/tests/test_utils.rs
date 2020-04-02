@@ -10,8 +10,7 @@ use {
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
         EnvironmentMarker, EnvironmentOptions, FileDescriptor, LauncherProxy,
     },
-    fidl_fuchsia_test_events::*,
-    files_async,
+    fidl_fuchsia_sys2 as fsys, files_async,
     fuchsia_component::client::*,
     fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
@@ -283,8 +282,8 @@ async fn launch_component_manager(
 async fn connect_to_event_source(component_manager_path: &PathBuf) -> Result<EventSource, Error> {
     let path_to_svc = component_manager_path.join("out/svc");
     let path_to_svc = path_to_svc.to_str().expect("found invalid chars");
-    let proxy = connect_to_service_at::<EventSourceSyncMarker>(path_to_svc)
-        .context("could not connect to EventSourceSync service")?;
+    let proxy = connect_to_service_at::<fsys::BlockingEventSourceMarker>(path_to_svc)
+        .context("could not connect to BlockingEventSource service")?;
     Ok(EventSource::from_proxy(proxy))
 }
 

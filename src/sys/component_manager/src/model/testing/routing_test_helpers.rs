@@ -27,7 +27,7 @@ use {
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_events as fevents, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -641,7 +641,7 @@ pub mod capability_util {
     use {
         super::*, crate::model::events::core::EVENT_SOURCE_SYNC_SERVICE_PATH,
         cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
-        fidl_fuchsia_test_events::EventSourceSyncMarker, std::path::PathBuf,
+        fidl_fuchsia_sys2::BlockingEventSourceMarker, std::path::PathBuf,
     };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
@@ -763,7 +763,7 @@ pub mod capability_util {
     }
 
     /// Verifies that it's possible to subscribe to the given `events` by connecting to an
-    /// `EventSourceSync` on the given `namespace`. Used to test eventcapability routing.
+    /// `BlockingEventSource` on the given `namespace`. Used to test eventcapability routing.
     /// Testing of usage of the stream lives in the integration tests in:
     /// //src/sys/component_manager/tests/events/integration_test.rs
     pub async fn subscribe_to_event_stream(
@@ -771,7 +771,7 @@ pub mod capability_util {
         should_succeed: bool,
         events: Vec<CapabilityName>,
     ) {
-        let event_source_proxy = connect_to_svc_in_namespace::<EventSourceSyncMarker>(
+        let event_source_proxy = connect_to_svc_in_namespace::<BlockingEventSourceMarker>(
             namespace,
             &*EVENT_SOURCE_SYNC_SERVICE_PATH,
         )
@@ -779,7 +779,7 @@ pub mod capability_util {
         let mut event_types =
             events.into_iter().map(|event| EventType::try_from(event.to_string()).unwrap().into());
         let (client_end, _stream) =
-            fidl::endpoints::create_request_stream::<fevents::EventStreamMarker>()
+            fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()
                 .expect("create client");
         let res = event_source_proxy
             .subscribe(&mut event_types, client_end)

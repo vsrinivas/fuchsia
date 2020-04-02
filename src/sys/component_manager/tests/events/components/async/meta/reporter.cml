@@ -7,7 +7,7 @@
       {
           "protocol": [
               "/svc/fuchsia.sys2.Realm",
-              "/svc/fuchsia.test.events.EventSource",
+              "/svc/fuchsia.sys2.EventSource",
               "/svc/fidl.examples.routing.echo.Echo"
           ],
           "from": "framework"

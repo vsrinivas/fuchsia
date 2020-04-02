@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.test.events;
+library fuchsia.sys2;
 
 using fuchsia.component;
 using fuchsia.io;
@@ -98,6 +98,7 @@ table CapabilityReadyPayload {
 table RoutingPayload {
     /// Allows setting a capability provider for
     /// CapabilityRouted events
+    /// This will not be available with an async event.
     1: RoutingProtocol routing_protocol;
 
     /// Identifier of capability being requested.
@@ -118,6 +119,7 @@ table Event {
     2: string:fuchsia.component.MAX_MONIKER_LENGTH target_moniker;
 
     /// Handler for resuming from event
+    /// This will not be available if this is an async event.
     3: Handler handler;
 
     /// Optional payload for some event types
@@ -141,11 +143,11 @@ protocol EventSource {
 
 /// Subscribe to events in component manager.
 [Discoverable]
-protocol EventSourceSync {
+protocol BlockingEventSource {
     compose EventSource;
 
     /// Resume the execution of components within the realm using a scoped
-    /// EventSourceSync.  This method is idempotent.
+    /// BlockingEventSource.  This method is idempotent.
     StartComponentTree() -> ();
 };
 

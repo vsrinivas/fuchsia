@@ -9,7 +9,7 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.test.events.EventSourceSync",
+                "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.Realm",
             ],
             from: "framework"

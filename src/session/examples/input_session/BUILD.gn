@@ -24,13 +24,13 @@ rustc_binary("input_session_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/session/bin/session_manager:lib",
     "//src/session/lib/input",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//src/sys/component_manager/tests/fidl:events-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
