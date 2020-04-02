@@ -101,6 +101,31 @@ bool ReferencesMainFunction(const InputLocation& loc) {
   return loc.name.components()[0].special() == SpecialIdentifier::kMain;
 }
 
+// Returns true if any component of this identifier isn't supported via lookup in the
+// ModuleSymbolsImpl.
+bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
+  for (const auto& comp : ident.components()) {
+    switch (comp.special()) {
+      case SpecialIdentifier::kNone:
+      case SpecialIdentifier::kPlt:
+      case SpecialIdentifier::kAnon:
+        break;  // Normal boring component.
+      case SpecialIdentifier::kEscaped:
+        FXL_NOTREACHED();  // "Escaped" annotations shouldn't appear in identifiers.
+        break;
+      case SpecialIdentifier::kMain:
+        // "$main" is supported only when it's the only component ("foo::$main" is invalid).
+        return ident.components().size() == 1;
+      case SpecialIdentifier::kRegister:
+        return false;  // Can't look up registers in the symbols.
+      case SpecialIdentifier::kLast:
+        FXL_NOTREACHED();  // Not supposed to be a valid value.
+        return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, bool create_index)
@@ -284,6 +309,10 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
+  FXL_DCHECK(input_location.type == InputLocation::Type::kName);
+  if (!HasOnlySupportedSpecialIdentifierTypes(input_location.name))
+    return {};  // Unsupported symbol type.
+
   // Special-case for PLT functions.
   if (auto plt_name = GetPLTInputLocation(input_location))
     return ResolvePltName(symbol_context, *plt_name);
@@ -374,7 +403,7 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
 std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address, const ResolveOptions& options,
     const Function* optional_func) const {
-  // TODO(DX-695) handle addresses that aren't code like global variables.
+  // TODO(bug 5544) handle addresses that aren't code like global variables.
   uint64_t relative_address = symbol_context.AbsoluteToRelative(absolute_address);
   fxl::RefPtr<DwarfUnit> unit = binary_->UnitForRelativeAddress(relative_address);
   if (!unit)  // No DWARF symbol.

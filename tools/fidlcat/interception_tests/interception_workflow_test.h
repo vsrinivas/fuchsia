@@ -444,6 +444,7 @@ class ProcessController {
 
   void InjectProcesses(zxdb::Session& session);
 
+  // The syscall_name can be the empty string if no mock syscall is needed.
   void Initialize(zxdb::Session& session, std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                   const char* syscall_name);
   void Detach();

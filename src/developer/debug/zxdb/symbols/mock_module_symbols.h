@@ -19,10 +19,14 @@ class MockModuleSymbols : public ModuleSymbols {
   // Adds a mock mapping from the given name/address to the list of locations. The addresses are
   // mapped exactly to queries, we don't do anything fancy with ranges.
   //
-  // The input name will be matched against both the globally qualified (including leading "::" if
-  // present) and unqualified names which matches the implementation behavior of ignoring the
-  // qualification when doing an index search. As a result, the input name should not have a
-  // leading "::".
+  // The names here should be non-globally qualified (no leading "::"). This is because when the
+  // list is queried against, input Identifiers will be looked up as normal and non-globally
+  // qualified (if different). So to match everything, the underlying data needs to be
+  // non-qualified.
+  //
+  // The String variant does simple parsing based on "::" and is not template-aware. So anything
+  // complex should use the Identifier variant.
+  void AddSymbolLocations(const Identifier& name, std::vector<Location> locs);
   void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
   void AddSymbolLocations(uint64_t address, std::vector<Location> locs);
 
@@ -72,7 +76,7 @@ class MockModuleSymbols : public ModuleSymbols {
   std::size_t modification_time_ = 0;
 
   // Maps manually-added symbols to their locations.
-  std::map<std::string, std::vector<Location>> named_symbols_;
+  std::map<Identifier, std::vector<Location>> named_symbols_;
   std::map<uint64_t, std::vector<Location>> addr_symbols_;
 
   // Maps manually-added addresses to line details.

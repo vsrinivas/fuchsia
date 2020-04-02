@@ -10,11 +10,6 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
-class DWARFContext;
-class DWARFDie;
-}  // namespace llvm
-
 namespace zxdb {
 
 class DwarfSymbolFactory;
@@ -54,9 +49,6 @@ class IndexNode {
 
     bool is_declaration() const { return is_declaration_; }
     uint32_t offset() const { return offset_; }
-
-    // For use by ModuleSymbols. Other callers read the DieRef comments above.
-    llvm::DWARFDie ToDie(llvm::DWARFContext* context) const;
 
    private:
     bool is_declaration_ = false;

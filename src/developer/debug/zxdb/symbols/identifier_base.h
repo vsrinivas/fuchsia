@@ -63,6 +63,7 @@ extern const char kAnonIdentifierComponentName[];
 //  - Comparison:
 //      operator==
 //      operator!=
+//      operator<
 //
 // TODO(brettw) there is currently an annoying amount of duplicating between Identifier[Base] and
 // ParsedIdentifier, and also a fair bit of converting back-and-forth. We should consider moving
@@ -101,6 +102,13 @@ class IdentifierBase {
     return qualification_ == other.qualification_ && EqualsIgnoringQualification(other);
   }
   bool operator!=(const IdentifierBase<ComponentType>& other) const { return !operator==(other); }
+
+  // For map/set lookups.
+  bool operator<(const IdentifierBase<ComponentType>& other) const {
+    if (qualification_ == other.qualification_)
+      return components_ < other.components_;
+    return qualification_ == IdentifierQualification::kGlobal;
+  }
 
   std::vector<ComponentType>& components() { return components_; }
   const std::vector<ComponentType>& components() const { return components_; }

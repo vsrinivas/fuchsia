@@ -6,8 +6,6 @@
 
 #include <sstream>
 
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/lib/fxl/logging.h"
@@ -27,10 +25,6 @@ void DumpMap(const IndexNode::Map& map, int indent, const char* heading,
 }
 
 }  // namespace
-
-llvm::DWARFDie IndexNode::DieRef::ToDie(llvm::DWARFContext* context) const {
-  return context->getDIEForOffset(offset_);
-}
 
 IndexNode* IndexNode::AddChild(Kind kind, const char* name) {
   FXL_DCHECK(name);

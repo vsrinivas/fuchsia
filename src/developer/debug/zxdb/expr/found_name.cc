@@ -22,6 +22,19 @@ FoundName::FoundName(const Variable* variable) : kind_(kVariable), variable_(Ref
 
 FoundName::FoundName(const Function* function) : kind_(kFunction), function_(RefPtrTo(function)) {}
 
+FoundName::FoundName(const Symbol* sym) {
+  if (const Function* fn = sym->AsFunction()) {
+    kind_ = kFunction;
+    function_ = RefPtrTo(fn);
+  } else if (const Variable* var = sym->AsVariable()) {
+    kind_ = kVariable;
+    variable_ = RefPtrTo(var);
+  } else {
+    kind_ = kOtherSymbol;
+    other_symbol_ = RefPtrTo(sym);
+  }
+}
+
 FoundName::FoundName(const Variable* object_ptr, FoundMember member)
     : kind_(kMemberVariable), object_ptr_(RefPtrTo(object_ptr)), member_(std::move(member)) {}
 
@@ -50,6 +63,8 @@ ParsedIdentifier FoundName::GetName() const {
       return ToParsedIdentifier(type_->GetIdentifier());
     case kFunction:
       return ToParsedIdentifier(function_->GetIdentifier());
+    case kOtherSymbol:
+      return ToParsedIdentifier(other_symbol_->GetIdentifier());
   }
   return ParsedIdentifier();
 }

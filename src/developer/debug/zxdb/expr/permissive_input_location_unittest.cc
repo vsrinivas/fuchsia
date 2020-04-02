@@ -37,7 +37,8 @@ TEST(PermissiveInputLocation, ExpandAndResolve) {
 
   Location foo_location(ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1234,
                         FileLine("file.cc", 34), 3, symbol_context, foo);
-  module_symbols->AddSymbolLocations("::Foo", {foo_location});
+  module_symbols->AddSymbolLocations(
+      Identifier(IdentifierQualification::kGlobal, IdentifierComponent("Foo")), {foo_location});
 
   // "std" namespace.
   const char kStdName[] = "std";
@@ -52,7 +53,9 @@ TEST(PermissiveInputLocation, ExpandAndResolve) {
 
   Location std_foo_location(ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x5678,
                             FileLine("other.cc", 12), 4, symbol_context, std_foo);
-  module_symbols->AddSymbolLocations("std::Foo", {std_foo_location});
+  Identifier std_foo_name(IdentifierQualification::kGlobal, IdentifierComponent("std"));
+  std_foo_name.AppendComponent(IdentifierComponent("Foo"));
+  module_symbols->AddSymbolLocations(std_foo_name, {std_foo_location});
 
   // Test ExpandPermissiveInputLocationNames().
   InputLocation foo_input(Identifier(IdentifierComponent("Foo")));

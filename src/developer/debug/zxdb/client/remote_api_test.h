@@ -14,11 +14,14 @@
 #include "src/developer/debug/shared/test_stream_buffer.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
 class Frame;
+class MockModuleSymbols;
 class MockRemoteAPI;
+class ModuleSymbols;
 class Process;
 class Session;
 class Thread;
@@ -45,6 +48,14 @@ class RemoteAPITest : public TestWithLoop {
   // If a derived implementation overrides GetRemoteAPIImpl(), this will return null. Such tests
   // should provide their own getter for their specific implementation.
   MockRemoteAPI* mock_remote_api() const { return mock_remote_api_; }
+
+  // Injects the given module into the process. Most callers will want InjectMockModule() below.
+  void InjectModule(Process* process, fxl::RefPtr<ModuleSymbols> mod_sym, const std::string& name,
+                    uint64_t load_address, const std::string& build_id);
+
+  // Creates a MockModuleSymbols with a random name and build ID and reports it as loaded at the
+  // given address. If the load address is 0, an arbitrary one will be generated.
+  fxl::RefPtr<MockModuleSymbols> InjectMockModule(Process* process, uint64_t load_address = 0);
 
   // Makes the target have a fake running process with the given KOID. This assumes there is only
   // one target in the system and that it is not currently running.

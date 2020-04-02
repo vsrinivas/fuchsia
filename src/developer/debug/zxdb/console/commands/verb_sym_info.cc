@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
@@ -17,6 +18,7 @@
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
@@ -139,6 +141,33 @@ void DumpFunctionInfo(const ProcessSymbols* process_symbols, const Function* fun
     out->Append("  Code ranges [begin, end-non-inclusive):\n");
     for (const auto& range : ranges)
       out->Append("    " + range.ToString() + "\n");
+  }
+}
+
+void DumpOtherSymbol(const ProcessSymbols* process_symbols, const Symbol* symbol,
+                     OutputBuffer* out) {
+  SymbolContext symbol_context = symbol->GetSymbolContext(process_symbols);
+
+  if (const ElfSymbol* elf_symbol = symbol->AsElfSymbol()) {
+    switch (elf_symbol->elf_type()) {
+      case ElfSymbolType::kNormal:
+        out->Append(Syntax::kHeading, "ELF symbol: ");
+        break;
+      case ElfSymbolType::kPlt:
+        out->Append(Syntax::kHeading, "ELF PLT symbol: ");
+        break;
+    }
+    out->Append(elf_symbol->linkage_name() + "\n");
+
+    out->Append("  Address: " +
+                to_hex_string(symbol_context.RelativeToAbsolute(elf_symbol->relative_address())) +
+                "\n");
+    out->Append("  Size: " + to_hex_string(elf_symbol->size()) + "\n");
+  } else {
+    // Everything else. Currently there aren't other sources of this type of symbol so display
+    // something generic.
+    out->Append(Syntax::kHeading, "Other symbol: ");
+    out->Append(symbol->GetFullName() + "\n");
   }
 }
 
@@ -267,6 +296,10 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
         break;
       case FoundName::kFunction:
         DumpFunctionInfo(process_symbols, found.function().get(), &out);
+        found_item = true;
+        break;
+      case FoundName::kOtherSymbol:
+        DumpOtherSymbol(process_symbols, found.other_symbol().get(), &out);
         found_item = true;
         break;
     }

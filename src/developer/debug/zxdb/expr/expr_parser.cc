@@ -351,6 +351,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
             case FoundName::kVariable:
             case FoundName::kMemberVariable:
             case FoundName::kFunction:
+            case FoundName::kOtherSymbol:
             case FoundName::kNone:
               mode = kOtherName;
               break;
@@ -397,6 +398,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
             case FoundName::kVariable:
             case FoundName::kMemberVariable:
             case FoundName::kFunction:
+            case FoundName::kOtherSymbol:
             case FoundName::kNone:
               mode = kOtherName;
               break;

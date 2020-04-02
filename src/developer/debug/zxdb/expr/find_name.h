@@ -27,6 +27,17 @@ class SymbolContext;
 class TargetSymbols;
 class Variable;
 
+// ==========
+//  OVERVIEW
+// ==========
+//
+// FindName is the general lookup for names of things. It understands the hierarchy of naming of the
+// current context and follows C++ rules for resolving names. It can also do prefix searches for
+// autocompletion.
+//
+// It provides a superset of the symbol lookup functionality of the symbol system's
+// ResolveInputLocation() functions. The symbol system provides only exact matching.
+
 // FindName can search for different levels of things depending on how much context it's given. This
 // class encapsulates all of these variants.
 struct FindNameContext {
@@ -88,7 +99,7 @@ struct FindNameOptions {
     // functions for breakpoints, but this search will never find local or class variables.
     //
     // Fully qualified identifiers ("::Foo") will not get implicit namespace searching, even when
-    // requested. Then will only match the toplevel.
+    // requested. They will only match the toplevel.
     //
     // This mode is only valid for full index searches via FindName() and FindIndexedName().
     // The local searching variants like FindLocalVariable() and FindMember() do not support it.
@@ -185,11 +196,10 @@ VisitResult FindIndexedName(const FindNameContext& context, const FindNameOption
 
 // Searches a specific index and current namespace for a global variable or type of the given name.
 // The current_scope would be the current namespace + class from where to start the search.
-VisitResult FindIndexedNameInModule(const FindNameOptions& options,
-                                    const ModuleSymbols* module_symbols,
-                                    const ParsedIdentifier& current_scope,
-                                    const ParsedIdentifier& looking_for, bool search_containing,
-                                    std::vector<FoundName>* results);
+void FindIndexedNameInModule(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+                             const ParsedIdentifier& current_scope,
+                             const ParsedIdentifier& looking_for, bool search_containing,
+                             std::vector<FoundName>* results);
 
 // In many contexts (like function parameters and local variables) an identifier name can't have any
 // :: or template parameters and can have only one component. If this identifier satisfies this

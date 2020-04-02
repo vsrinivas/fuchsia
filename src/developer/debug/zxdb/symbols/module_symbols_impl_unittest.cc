@@ -241,9 +241,9 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   std::vector<Location> addrs;
 
   // Look up "kGlobal" which should be a variable of type "int" at some nonzero location.
-  addrs = setup.symbols()->ResolveInputLocation(
-      symbol_context, InputLocation(TestSymbolModule::SplitName(TestSymbolModule::kGlobalName)),
-      options);
+  Identifier global_name = TestSymbolModule::SplitName(TestSymbolModule::kGlobalName);
+  addrs =
+      setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(global_name), options);
   ASSERT_LE(1u, addrs.size());
   EXPECT_TRUE(addrs[0].symbol());
   const Variable* var = addrs[0].symbol().Get()->AsVariable();
@@ -273,6 +273,16 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
   // with the relative address from symbol dump.
   EXPECT_EQ(0x3004u, addrs[0].address());
+
+  // Annotate the global variable as a register. This lookup should fail since registers can't be
+  // looked up in the symbols (this tests that ModuleSymbolsImpl filters out bad special component
+  // types).
+  Identifier register_name;
+  register_name.AppendComponent(
+      IdentifierComponent(SpecialIdentifier::kRegister, TestSymbolModule::kGlobalName));
+  addrs =
+      setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(register_name), options);
+  ASSERT_TRUE(addrs.empty());
 }
 
 TEST(ModuleSymbols, ResolvePLTEntry) {

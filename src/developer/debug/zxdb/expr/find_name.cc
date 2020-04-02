@@ -28,6 +28,38 @@ namespace zxdb {
 
 namespace {
 
+// FindName doesn't support every type of input name.
+enum class FindNameSupported {
+  // Normal symbol completely supported by FindName.
+  kFully,
+
+  // Query the module symbols for this name. Used for names not in the index like ELF symbols.
+  kModuleSymbolsOnly,
+
+  // This name can't use FindName. For example, registers can't be looked up.
+  kNo,
+};
+FindNameSupported GetSupported(const ParsedIdentifier& identifier) {
+  for (const auto& comp : identifier.components()) {
+    switch (comp.special()) {
+      case SpecialIdentifier::kNone:
+      case SpecialIdentifier::kAnon:
+        break;  // Normal boring component.
+      case SpecialIdentifier::kEscaped:
+      case SpecialIdentifier::kLast:
+        FXL_NOTREACHED();  // These annotations shouldn't appear in identifiers.
+        break;
+      case SpecialIdentifier::kMain:
+      case SpecialIdentifier::kPlt:
+        // These symbols are queried directly from ModuleSymbols.
+        return FindNameSupported::kModuleSymbolsOnly;
+      case SpecialIdentifier::kRegister:
+        return FindNameSupported::kNo;  // Can't look up registers in the symbols.
+    }
+  }
+  return FindNameSupported::kFully;
+}
+
 // Returns true if an index search is required for the options. Everything but local variables
 // requires the index.
 bool OptionsRequiresIndex(const FindNameOptions& options) {
@@ -435,7 +467,14 @@ FoundName FindName(const FindNameContext& context, const FindNameOptions& option
 
 void FindName(const FindNameContext& context, const FindNameOptions& options,
               const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
-  if (options.search_mode == FindNameOptions::kLexical && options.find_vars && context.block &&
+  FindNameSupported supported = GetSupported(looking_for);
+  if (supported == FindNameSupported::kNo)
+    return;  // Nothing to do for these symbols.
+
+  // This only works for fully-supported identifier types. Some work only with the module-specific
+  // symbol query we do below.
+  if (supported == FindNameSupported::kFully && options.search_mode == FindNameOptions::kLexical &&
+      options.find_vars && context.block &&
       looking_for.qualification() == IdentifierQualification::kRelative) {
     // Search for local variables and function parameters.
     FindLocalVariable(options, context.block, looking_for, results);
@@ -566,11 +605,20 @@ VisitResult FindIndexedName(const FindNameContext& context, const FindNameOption
   });
 }
 
-VisitResult FindIndexedNameInModule(const FindNameOptions& options,
-                                    const ModuleSymbols* module_symbols,
-                                    const ParsedIdentifier& current_scope,
-                                    const ParsedIdentifier& looking_for, bool search_containing,
-                                    std::vector<FoundName>* results) {
+void FindIndexedNameInModule(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+                             const ParsedIdentifier& current_scope,
+                             const ParsedIdentifier& looking_for, bool search_containing,
+                             std::vector<FoundName>* results) {
+  if (GetSupported(looking_for) == FindNameSupported::kModuleSymbolsOnly) {
+    // These symbols can only be looked up by ModuleSymbols and aren't in the normal index. Defer
+    // to the symbol system for these lookups.
+    for (const Location& loc : module_symbols->ResolveInputLocation(
+             SymbolContext::ForRelativeAddresses(), InputLocation(ToIdentifier(looking_for)))) {
+      results->emplace_back(loc.symbol().Get());
+    }
+    return;
+  }
+
   IndexWalker walker(&module_symbols->GetIndex());
   if (options.search_mode == FindNameOptions::kLexical && !current_scope.empty() &&
       looking_for.qualification() == IdentifierQualification::kRelative) {
@@ -590,15 +638,12 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
       vr = FindInIndexLevel(options, module_symbols, walker, looking_for, results);
     }
     if (vr != VisitResult::kContinue)
-      return vr;
+      return;
     if (!search_containing)
       break;
 
     // Keep looking up one more level in the containing namespace.
   } while (walker.WalkUp());
-
-  // Current search is done, but there still may be stuff left to find.
-  return VisitResult::kContinue;
 }
 
 const std::string* GetSingleComponentIdentifierName(const ParsedIdentifier& ident) {

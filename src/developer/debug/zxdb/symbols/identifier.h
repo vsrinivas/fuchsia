@@ -31,6 +31,11 @@ class IdentifierComponent {
     return special_ == other.special_ && name_ == other.name_;
   }
   bool operator!=(const IdentifierComponent& other) const { return !operator==(other); }
+  bool operator<(const IdentifierComponent& other) const {
+    if (special_ != other.special_)
+      return static_cast<int>(special_) < static_cast<int>(other.special_);
+    return name_ < other.name_;
+  }
 
   SpecialIdentifier special() const { return special_; }
   const std::string& name() const { return name_; }

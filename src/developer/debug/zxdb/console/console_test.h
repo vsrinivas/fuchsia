@@ -35,6 +35,10 @@ class Thread;
 //    EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
 //    EXPECT_EQ("Some output", event.output.AsString());
 //
+// Most of the ability to set up the process environment is on the RemoteAPITest base class. To get
+// a mock module symbols for symbol tests, do:
+//
+//    auto mock_module = InjectMockModule(process(), 0x12345000);  // Address is optional.
 class ConsoleTest : public RemoteAPITest {
  public:
   // The IDs associated with the process/thread that are set up by default.

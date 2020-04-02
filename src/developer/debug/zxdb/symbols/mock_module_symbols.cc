@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 
 namespace zxdb {
 
@@ -17,8 +18,12 @@ MockModuleSymbols::MockModuleSymbols(const std::string& local_file_name)
     : local_file_name_(local_file_name) {}
 MockModuleSymbols::~MockModuleSymbols() = default;
 
-void MockModuleSymbols::AddSymbolLocations(const std::string& name, std::vector<Location> locs) {
+void MockModuleSymbols::AddSymbolLocations(const Identifier& name, std::vector<Location> locs) {
   named_symbols_[name] = std::move(locs);
+}
+
+void MockModuleSymbols::AddSymbolLocations(const std::string& name, std::vector<Location> locs) {
+  named_symbols_[TestSymbolModule::SplitName(name)] = std::move(locs);
 }
 
 void MockModuleSymbols::AddSymbolLocations(uint64_t address, std::vector<Location> locs) {
@@ -59,12 +64,13 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
     case InputLocation::Type::kName: {
       // The input may be qualified or unqualified globally. Allow either to match an unqualified
       // expected value.
-      auto found = named_symbols_.find(input_location.name.GetFullName());
-      if (found != named_symbols_.end()) {
+      if (auto found = named_symbols_.find(input_location.name); found != named_symbols_.end()) {
         result = found->second;
-      } else {
-        found = named_symbols_.find(input_location.name.GetFullNameNoQual());
-        if (found != named_symbols_.end())
+      } else if (input_location.name.qualification() == IdentifierQualification::kGlobal) {
+        // Try looking up after removing the global qualifier.
+        Identifier unqualified = input_location.name;
+        unqualified.set_qualification(IdentifierQualification::kRelative);
+        if (auto found = named_symbols_.find(unqualified); found != named_symbols_.end())
           result = found->second;
       }
       break;

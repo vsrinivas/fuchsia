@@ -27,7 +27,8 @@ class FoundName {
     kNamespace,       // Namespace name like "std".
     kTemplate,        // Template name without parameters like "std::vector".
     kType,            // Full type name like "std::string" or "int".
-    kFunction,
+    kFunction,        // Normal DWARF functions, including inlines.
+    kOtherSymbol,     // Any other symbol, including ELF symbols.
   };
 
   // Default constructor for a "not found" name.
@@ -39,6 +40,10 @@ class FoundName {
   // Takes a reference to the object.
   explicit FoundName(const Variable* variable);
   explicit FoundName(const Function* function);
+
+  // Takes a reference to the object. This will forward to variable/function if the Symbol is of
+  // that type, otherwise it will be an "other symbol".
+  explicit FoundName(const Symbol* symbol);
 
   // Constructor for data member variables. The object_ptr may be null if this represents a query on
   // a type with no corresponding variable).
@@ -80,6 +85,10 @@ class FoundName {
   fxl::RefPtr<Function>& function() { return function_; }
   const fxl::RefPtr<Function>& function() const { return function_; }
 
+  // Valid when kind == kOtherSymbol.
+  fxl::RefPtr<Symbol>& other_symbol() { return other_symbol_; }
+  const fxl::RefPtr<Symbol>& other_symbol() const { return other_symbol_; }
+
  private:
   Kind kind_ = kNone;
 
@@ -100,6 +109,7 @@ class FoundName {
 
   fxl::RefPtr<Type> type_;
   fxl::RefPtr<Function> function_;
+  fxl::RefPtr<Symbol> other_symbol_;
 
   // Valid only when there's no object to hold the intrinsic name. This is for templates and
   // namespaces.

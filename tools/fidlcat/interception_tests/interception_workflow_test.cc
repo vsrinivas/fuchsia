@@ -5,6 +5,7 @@
 #include "interception_workflow_test.h"
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 
 namespace fidlcat {
 
@@ -456,10 +457,18 @@ void ProcessController::Initialize(zxdb::Session& session,
 
   // Load modules into program (including the one with the |syscall_name| symbol)
   auto module_symbols = fxl::MakeRefCounted<zxdb::MockModuleSymbols>("zx.so");
-  module_symbols->AddSymbolLocations(
-      syscall_name, {zxdb::Location(zxdb::Location::State::kSymbolized, kSyscallAddress)});
   session.system().GetSymbols()->InjectModuleForTesting(DataForSyscallTest::kElfSymbolBuildID,
                                                         module_symbols.get());
+
+  // Inject the syscall symbol if requested. Use the full parser to parse the input identifier to
+  // handle all possible cases.
+  if (strlen(syscall_name) > 0) {
+    zxdb::Identifier syscall_identifier;
+    zxdb::Err err = zxdb::ExprParser::ParseIdentifier(syscall_name, &syscall_identifier);
+    EXPECT_TRUE(err.ok()) << err.msg();
+    module_symbols->AddSymbolLocations(
+        syscall_identifier, {zxdb::Location(zxdb::Location::State::kSymbolized, kSyscallAddress)});
+  }
 
   for (zxdb::Target* target : session.system().GetTargets()) {
     zxdb::Err err;

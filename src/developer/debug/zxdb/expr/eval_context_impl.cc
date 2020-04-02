@@ -149,6 +149,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCall
         cb(Err("Can not evaluate a type."));
         return;
       case FoundName::kFunction:
+      case FoundName::kOtherSymbol:
         break;  // Function pointers not supported yet.
       case FoundName::kNone:
         break;  // Fall through to checking other stuff.

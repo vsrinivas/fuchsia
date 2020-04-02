@@ -124,6 +124,9 @@ ELF PLT breakpoints for system calls
   This will apply the breakpoint to every library's PLT entry for
   "zx_debug_write".
 
+  The supplied string must be the exact name in the ELF binary. This means C++
+  symbols must be mangled.
+
 Breakpoints on overloaded functions
 
   If a named function has multiple overloads, the debugger will set a breakpoint

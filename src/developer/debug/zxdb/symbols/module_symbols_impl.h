@@ -149,6 +149,18 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // one entry for a name.
   //
   // This structure is also the canonical storage for ElfSymbolRecords used by elf_addresses_.
+  //
+  // We could potentially store this in the Index instead of in this separate location. This will be
+  // required if we need to support unmangled PLT names. A plan:
+  //
+  //  - Declare that PLT symbols are encoded as "ns::ClassName::$plt(name)" since special
+  //    annotations are per-component.
+  //  - Make an "elf" type of IndexNode that the $plt component will match.
+  //  - Rename IndexNode::DieRef to IndexNode::SymbolRef and convert the is_declaration flag to an
+  //    enum. Add an enum value "ELF symbol".
+  //  - Store the ELFSymbolRecords here in a vector that can be indexed into. Use the offset ot the
+  //    IndexNode::SymbolRef to mean this index when it's an ELF type of SymbolRef. Hook this up to
+  //    IndexDieRefToSymbol.
   using ElfSymbolMap = std::multimap<std::string, const ElfSymbolRecord>;
   ElfSymbolMap mangled_elf_symbols_;
 
