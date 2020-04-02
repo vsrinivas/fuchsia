@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_cobalt::{
         self as cobalt, CobaltEvent, LoggerFactoryRequest::CreateLoggerFromProjectId,
+        LoggerFactoryRequest::CreateLoggerFromProjectSpec,
     },
     fidl_fuchsia_cobalt_test as cobalt_test, fuchsia_async as fasync,
     fuchsia_cobalt::CobaltEventExt,
@@ -61,7 +62,7 @@ type EventsLogHandle = Arc<Mutex<EventsLog>>;
 // looked up by run_cobalt_query_service.
 type LoggersHandle = Arc<Mutex<HashMap<u32, EventsLogHandle>>>;
 
-/// Create a new Logger. Accepts all `project_id` values.
+/// Create a new Logger. Accepts all `project_id` values and `customer_id` values.
 async fn run_cobalt_service(
     stream: cobalt::LoggerFactoryRequestStream,
     loggers: LoggersHandle,
@@ -69,6 +70,13 @@ async fn run_cobalt_service(
     stream
         .try_for_each_concurrent(None, |event| async {
             if let CreateLoggerFromProjectId { project_id, logger, responder } = event {
+                let log =
+                    loggers.lock().await.entry(project_id).or_insert_with(Default::default).clone();
+                let handler = handle_cobalt_logger(logger.into_stream()?, log);
+                let () = responder.send(cobalt::Status::Ok)?;
+                handler.await
+            } else if let CreateLoggerFromProjectSpec { project_id, logger, responder, .. } = event
+            {
                 let log =
                     loggers.lock().await.entry(project_id).or_insert_with(Default::default).clone();
                 let handler = handle_cobalt_logger(logger.into_stream()?, log);
