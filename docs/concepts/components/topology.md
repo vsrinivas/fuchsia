@@ -10,9 +10,6 @@ It is made of the following:
 - Capability routing graph: Describes how component instances gain access to
   use capabilities exposed by other component instances (their
   provider-consumer relationships).
-- Compartment layout: Describes how component instances are
-  isolated from one another and the resources their sandboxes may share at
-  runtime (their isolation relationships).
 
 The structure of the component topology greatly influences how components
 run and obtain capabilities.
@@ -110,54 +107,12 @@ for more information.
 
 ![Diagram of component instance realms](images/topology_capability_routing.png)
 
-## Compartments {#compartments}
-
-A compartment is an isolation boundary for component instances. It is an
-essential mechanism for preserving the
-[confidentiality, integrity, and availability][wiki-infosec]{:.external} of components.
-
-Physical hardware can act as a compartment. Components running on the
-same physical hardware share CPU, memory, persistent storage, and peripherals.
-They may be vulnerable to side-channels, privilege elevation, physical attacks,
-and other threats that are different from those faced by components running
-on different physical hardware. System security relies on making effective
-decisions about what capabilities to entrust to components.
-
-A [job][glossary-job] can act as a compartment. Running a component in its
-own job ensures that the component's [processes][glossary-process] cannot
-access the memory or capabilities of processes belonging to other components
-in other jobs. The component framework can also kill the job to kill all of
-the component's processes (assuming the component could not create processes
-in other jobs). The kernel strongly enforces this isolation boundary.
-
-A [runner][doc-runners] provides a compartment for each component that it runs.
-The runner is responsible for protecting itself and its runnees from each
-other, particularly if they share a runtime environment (such as a process)
-that limits the kernel's ability to enforce isolation.
-
-Compartments nest: runner provided compartments reside in job compartments
-which themselves reside in hardware compartments. This encapsulation clarifies
-the responsibilities of each compartment: the kernel is responsible for
-enforcing job isolation guarantees so a runner doesn't have to.
-
-Some compartments offer weaker isolation guarantees than others. A job offers
-stronger guarantees than a runner so sometimes it makes sense to run multiple
-instances of the same runner in different job compartments to obtain those
-stronger guarantees on behalf of runnees. Similarly, running each component
-on separate hardware might offer the strongest guarantees but would be
-impractical. There are trade-offs.
-
-![Diagram of compartment layouts](images/topology_compartments.png)
-
 [doc-collections]: /docs/concepts/components/realms.md#collections
 [doc-manifests]: /docs/concepts/components/component_manifests.md
 [doc-realms]: /docs/concepts/components/realms.md
 [doc-monikers]: /docs/concepts/components/monikers.md
 [doc-capability-routing]: /docs/concepts/components/component_manifests.md#capability-routing
 [doc-component-declaration]: /docs/concepts/components/declarations.md
-[glossary-job]: /docs/glossary.md#job
-[glossary-process]: /docs/glossary.md#process
 [glossary-component-instance-tree]: /docs/glossary.md#component-instance-tree
-[wiki-infosec]: https://en.wikipedia.org/wiki/Information_security
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [wiki-object-composition]: https://en.wikipedia.org/wiki/Object_composition
