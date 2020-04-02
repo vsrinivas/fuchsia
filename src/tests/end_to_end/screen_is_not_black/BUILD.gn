@@ -60,3 +60,8 @@ group("test") {
 
   deps = [ ":screen_is_not_black_test($host_toolchain)" ]
 }
+
+group("config") {
+  testonly = true
+  deps = [ "config" ]
+}
