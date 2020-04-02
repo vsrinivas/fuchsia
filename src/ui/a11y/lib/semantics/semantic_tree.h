@@ -80,11 +80,12 @@ class SemanticTree {
 
   // Returns the next leaf node (in level-order) from the node with |node_id|, or nullptr if none
   // exists.
-  const fuchsia::accessibility::semantics::Node* GetNextNode(const uint32_t node_id) const;
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(const uint32_t node_id) const;
 
   // Returns the previous leaf node (in level-order) from the node with |node_id|, or nullptr if
   // none exists.
-  const fuchsia::accessibility::semantics::Node* GetPreviousNode(const uint32_t node_id) const;
+  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      const uint32_t node_id) const;
 
   // Returns the parent node of the node with |node_id| if found, nullptr otherwise.
   virtual const fuchsia::accessibility::semantics::Node* GetParentNode(

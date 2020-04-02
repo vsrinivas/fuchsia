@@ -8,6 +8,7 @@ source_set("mocks") {
   public = [
     "mock_semantic_listener.h",
     "mock_semantic_provider.h",
+    "mock_semantic_tree.h",
     "mock_semantics_source.h",
   ]
 
@@ -16,6 +17,8 @@ source_set("mocks") {
     "mock_semantic_listener.h",
     "mock_semantic_provider.cc",
     "mock_semantic_provider.h",
+    "mock_semantic_tree.cc",
+    "mock_semantic_tree.h",
     "mock_semantics_source.cc",
     "mock_semantics_source.h",
   ]

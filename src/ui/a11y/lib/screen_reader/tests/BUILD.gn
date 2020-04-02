@@ -15,6 +15,7 @@ executable("screen_reader_tests") {
     "explore_action_unittest.cc",
     "screen_reader_context_unittest.cc",
     "screen_reader_unittest.cc",
+    "swipe_action_unittest.cc",
   ]
 
   deps = [
@@ -28,6 +29,8 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/lib/screen_reader",
     "//src/ui/a11y/lib/screen_reader/focus/tests/mocks",
     "//src/ui/a11y/lib/screen_reader/tests/mocks",
+    "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/semantics/tests:semantics_tests",
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/testing:input",
     "//src/ui/a11y/lib/tts",

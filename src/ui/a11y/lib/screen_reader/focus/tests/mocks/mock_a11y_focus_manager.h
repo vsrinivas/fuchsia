@@ -27,6 +27,9 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   // Returns true if IsSetA11yFocusCalled was called.
   bool IsSetA11yFocusCalled() const;
 
+  // Updates A11yFocusInfo with the given values.
+  void UpdateA11yFocus(zx_koid_t koid, uint32_t node_id);
+
   void set_should_get_a11y_focus_fail(bool value);
   void set_should_set_a11y_focus_fail(bool value);
 

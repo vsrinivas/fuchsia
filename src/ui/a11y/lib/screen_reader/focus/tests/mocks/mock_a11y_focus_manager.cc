@@ -49,4 +49,9 @@ void MockA11yFocusManager::set_should_set_a11y_focus_fail(bool value) {
   should_set_a11y_focus_fail_ = value;
 }
 
+void MockA11yFocusManager::UpdateA11yFocus(zx_koid_t koid, uint32_t node_id) {
+  a11y_focus_info_.view_ref_koid = koid;
+  a11y_focus_info_.node_id = node_id;
+}
+
 }  // namespace accessibility_test

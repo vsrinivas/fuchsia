@@ -25,7 +25,7 @@
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
-
+namespace {
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 using ::testing::ElementsAre;
@@ -247,4 +247,5 @@ TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
 
   EXPECT_EQ(expected_semantic_tree_odd, buffer);
 }
+}  // namespace
 }  // namespace accessibility_test
