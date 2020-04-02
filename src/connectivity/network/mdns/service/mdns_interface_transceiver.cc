@@ -113,8 +113,8 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   bytes_sent_ += packet_size;
 
   if (result < 0) {
-    FX_LOGS(ERROR) << "Failed to sendto " << address << ", size " << packet_size << ", "
-                   << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to sendto " << address << " from " << name_ << " (" << address_
+                   << "), size " << packet_size << ", " << strerror(errno);
     return;
   }
 }
