@@ -103,27 +103,24 @@ class TestConnection {
   void Connection() { ASSERT_NE(connection_, nullptr); }
 
   void Context() {
-    if (is_virtmagma())
-      GTEST_SKIP();
-
     ASSERT_NE(connection_, nullptr);
 
     uint32_t context_id[2];
 
     magma_create_context(connection_, &context_id[0]);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_create_context(connection_, &context_id[1]);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_context(connection_, context_id[0]);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_context(connection_, context_id[1]);
-    EXPECT_EQ(magma_get_error(connection_), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_context(connection_, context_id[1]);
-    EXPECT_NE(magma_get_error(connection_), 0);
+    EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection_));
   }
 
   void NotificationChannelHandle() {
