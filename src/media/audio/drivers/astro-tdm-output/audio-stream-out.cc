@@ -232,10 +232,25 @@ void AstroAudioStreamOut::ProcessRingNotification() {
 
 zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = aml_audio_->fifo_depth();
-  external_delay_nsec_ = 0;
 
-  if (req.frames_per_second != 48000 && req.frames_per_second != 96000) {
-    return ZX_ERR_INVALID_ARGS;
+  // Report our external delay based on the chosen frame rate.  Note that these
+  // delays were measured on Astro hardware, and should be pretty good, but they
+  // will not be perfect.  One reason for this is that we are not taking any
+  // steps to align our start time with start of a TDM frame, which will cause
+  // up to 1 frame worth of startup error ever time that the output starts.
+  // Also note that this is really nothing to worry about.  Hitting our target
+  // to within 20.8uSec (for 48k) is pretty good.
+  switch (req.frames_per_second) {
+    case 48000:
+      external_delay_nsec_ = ZX_USEC(125);
+      break;
+
+    case 96000:
+      external_delay_nsec_ = ZX_NSEC(83333);
+      break;
+
+    default:
+      return ZX_ERR_INVALID_ARGS;
   }
 
   if (req.frames_per_second != frames_per_second_) {
