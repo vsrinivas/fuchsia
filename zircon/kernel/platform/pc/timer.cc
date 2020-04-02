@@ -335,6 +335,12 @@ outer:
          apic_divisor);
 }
 
+static inline void serialize_instructions(void) {
+  // Executing a cpuid instruction serializes the instruction stream. Use inline
+  // assembly to force the compiler to include it, unlike the builtins.
+  __asm__ __volatile__("cpuid" : : "rax"(0) : "rax", "rbx", "rcx", "rdx", "memory");
+}
+
 static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
   zx_ticks_t best_time = ktl::numeric_limits<zx_ticks_t>::max();
 
@@ -350,11 +356,9 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
         PANIC_UNIMPLEMENTED;
     }
 
-    // Use CPUID to serialize the instruction stream
-    uint32_t _ignored;
-    cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+    serialize_instructions();
     uint64_t start = rdtsc();
-    cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+    serialize_instructions();
 
     switch (calibration_clock) {
       case CLOCK_HPET:
@@ -367,9 +371,9 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
         PANIC_UNIMPLEMENTED;
     }
 
-    cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+    serialize_instructions();
     zx_ticks_t end = rdtsc();
-    cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+    serialize_instructions();
 
     zx_ticks_t tsc_ticks = end - start;
     if (tsc_ticks < best_time) {
