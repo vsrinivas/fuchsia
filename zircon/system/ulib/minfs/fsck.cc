@@ -21,7 +21,7 @@
 #endif
 
 #include "lib/fit/string_view.h"
-#include "minfs-private.h"
+#include "minfs_private.h"
 
 namespace minfs {
 

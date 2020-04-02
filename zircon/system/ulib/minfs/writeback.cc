@@ -25,7 +25,7 @@
 #include <fs/vfs.h>
 #include <minfs/writeback.h>
 
-#include "minfs-private.h"
+#include "minfs_private.h"
 
 namespace minfs {
 

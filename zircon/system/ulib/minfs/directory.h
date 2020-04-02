@@ -12,7 +12,7 @@
 #include <minfs/format.h>
 #include <minfs/minfs.h>
 #include <minfs/superblock.h>
-#include <minfs/transaction-limits.h>
+#include <minfs/transaction_limits.h>
 #include <minfs/writeback.h>
 
 #include "vnode.h"

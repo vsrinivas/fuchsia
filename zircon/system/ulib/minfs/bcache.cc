@@ -24,7 +24,7 @@
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
-#include "minfs-private.h"
+#include "minfs_private.h"
 
 namespace minfs {
 

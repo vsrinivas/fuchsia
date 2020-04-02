@@ -9,41 +9,41 @@ zx_library("minfs") {
     "minfs/superblock.h",
     "minfs/inspector.h",
     "minfs/writeback.h",
-    "minfs/transaction-limits.h",
-    "minfs/allocator-reservation.h",
+    "minfs/transaction_limits.h",
+    "minfs/allocator_reservation.h",
     "minfs/format.h",
     "minfs/mutex.h",
     "minfs/minfs.h",
     "minfs/host.h",
     "minfs/metrics.h",
-    "minfs/pending-work.h",
-    "minfs/command-handler.h",
-    "minfs/minfs-inspector.h",
+    "minfs/pending_work.h",
+    "minfs/command_handler.h",
+    "minfs/minfs_inspector.h",
   ]
   host = true
   static = true
   sources = [
-    "allocator/allocator-common.cc",
-    "allocator/allocator-reservation.cc",
+    "allocator/allocator_common.cc",
+    "allocator/allocator_reservation.cc",
     "allocator/metadata.cc",
-    "allocator/storage-common.cc",
+    "allocator/storage_common.cc",
     "directory.cc",
     "file.cc",
     "fsck.cc",
     "metrics.cc",
     "minfs.cc",
-    "transaction-limits.cc",
+    "transaction_limits.cc",
     "vnode.cc",
     "writeback.cc",
   ]
   if (!is_fuchsia) {
     sources += [
-      "allocator/allocator-host.cc",
-      "allocator/inode-manager-host.cc",
-      "allocator/storage-host.cc",
-      "bcache-host.cc",
+      "allocator/allocator_host.cc",
+      "allocator/inode_manager_host.cc",
+      "allocator/storage_host.cc",
+      "bcache_host.cc",
       "host.cc",
-      "superblock-host.cc",
+      "superblock_host.cc",
     ]
   }
   public_deps = [
@@ -110,20 +110,20 @@ zx_library("minfs") {
     ]
     sources += [
       "allocator/allocator.cc",
-      "allocator/inode-manager.cc",
+      "allocator/inode_manager.cc",
       "allocator/storage.cc",
       "bcache.cc",
-      "inspector-inode-table.cc",
-      "inspector-inode.cc",
-      "inspector-superblock.cc",
       "inspector.cc",
-      "inspector/command-handler.cc",
-      "inspector/disk-struct.cc",
+      "inspector/command_handler.cc",
+      "inspector/disk_struct.cc",
       "inspector/loader.cc",
-      "inspector/minfs-inspector.cc",
+      "inspector/minfs_inspector.cc",
       "inspector/parser.cc",
+      "inspector_inode.cc",
+      "inspector_inode_table.cc",
+      "inspector_superblock.cc",
       "superblock.cc",
-      "vnode-allocation.cc",
+      "vnode_allocation.cc",
     ]
   }
   include_dirs = [ "." ]

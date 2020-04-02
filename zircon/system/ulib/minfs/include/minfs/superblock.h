@@ -11,7 +11,7 @@
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
-#include <minfs/pending-work.h>
+#include <minfs/pending_work.h>
 
 #ifdef __Fuchsia__
 #include <lib/fzl/owned-vmo-mapper.h>

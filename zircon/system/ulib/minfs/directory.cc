@@ -32,7 +32,7 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include "minfs-private.h"
+#include "minfs_private.h"
 #include "unowned_vmo_buffer.h"
 #include "vnode.h"
 

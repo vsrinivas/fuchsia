@@ -26,7 +26,7 @@
 #include <minfs/host.h>
 #include <minfs/minfs.h>
 
-#include "minfs-private.h"
+#include "minfs_private.h"
 
 namespace {
 

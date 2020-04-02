@@ -32,7 +32,7 @@
 
 #include "directory.h"
 #include "file.h"
-#include "minfs-private.h"
+#include "minfs_private.h"
 #include "unowned_vmo_buffer.h"
 #include "vnode.h"
 

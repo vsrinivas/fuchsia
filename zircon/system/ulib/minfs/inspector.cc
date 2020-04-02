@@ -11,9 +11,9 @@
 #include <minfs/bcache.h>
 #include <minfs/inspector.h>
 
-#include "inspector-inode-table.h"
-#include "inspector-private.h"
-#include "inspector-superblock.h"
+#include "inspector_inode_table.h"
+#include "inspector_private.h"
+#include "inspector_superblock.h"
 
 namespace minfs {
 

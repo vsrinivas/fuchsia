@@ -8,7 +8,7 @@
 
 #include <fvm/fvm-sparse.h>
 #include <minfs/minfs.h>
-#include <minfs/transaction-limits.h>
+#include <minfs/transaction_limits.h>
 #include <safemath/checked_math.h>
 
 #include "fvm-host/format.h"

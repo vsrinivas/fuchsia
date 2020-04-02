@@ -17,7 +17,7 @@
 #include <fbl/macros.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/transaction/buffered_operations_builder.h>
-#include <minfs/allocator-reservation.h>
+#include <minfs/allocator_reservation.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>
 #include <minfs/superblock.h>

@@ -20,7 +20,7 @@
 #include <fs/remote.h>
 #include <fs/watcher.h>
 
-#include "vnode-allocation.h"
+#include "vnode_allocation.h"
 #endif
 
 #include <lib/zircon-internal/fnv1hash.h>
@@ -36,7 +36,7 @@
 #include <fs/vnode.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>
-#include <minfs/transaction-limits.h>
+#include <minfs/transaction_limits.h>
 #include <minfs/writeback.h>
 
 namespace minfs {

@@ -33,7 +33,7 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include "minfs-private.h"
+#include "minfs_private.h"
 #include "vnode.h"
 
 namespace minfs {

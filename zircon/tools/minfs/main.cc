@@ -15,7 +15,7 @@
 #include <minfs/fsck.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
-#include <minfs/transaction-limits.h>
+#include <minfs/transaction_limits.h>
 
 #include "minfs.h"
 

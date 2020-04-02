@@ -41,22 +41,22 @@ test("minfs-unit") {
   }
   test_group = "fs"
   sources = [
-    "unit/bcache-test.cc",
-    "unit/command-handler-test.cc",
-    "unit/disk-struct-test.cc",
-    "unit/format-test.cc",
-    "unit/fsck-test.cc",
-    "unit/inspector-test.cc",
-    "unit/journal-integration-fixture.cc",
-    "unit/journal-test.cc",
-    "unit/loader-test.cc",
-    "unit/minfs-inspector-test.cc",
-    "unit/mkfs-test.cc",
-    "unit/mount-test.cc",
-    "unit/parser-test.cc",
-    "unit/superblock-test.cc",
-    "unit/transaction-test.cc",
-    "unit/vnode-test.cc",
+    "unit/bcache_test.cc",
+    "unit/command_handler_test.cc",
+    "unit/disk_struct_test.cc",
+    "unit/format_test.cc",
+    "unit/fsck_test.cc",
+    "unit/inspector_test.cc",
+    "unit/journal_integration_fixture.cc",
+    "unit/journal_test.cc",
+    "unit/loader_test.cc",
+    "unit/minfs_inspector_test.cc",
+    "unit/mkfs_test.cc",
+    "unit/mount_test.cc",
+    "unit/parser_test.cc",
+    "unit/superblock_test.cc",
+    "unit/transaction_test.cc",
+    "unit/vnode_test.cc",
   ]
   deps = [
     "//zircon/public/lib/block-client",
@@ -115,7 +115,7 @@ test("minfs-integration") {
   }
   test_group = "fs"
   sources = [
-    "integration/backup-superblock.cc",
+    "integration/backup_superblock.cc",
     "integration/integration_main.cc",
     "integration/mount_test.cc",
     "integration/power_test.cc",
@@ -199,7 +199,7 @@ test("minfs-host") {
       configs -= fdio_config
     }
   }
-  sources = [ "host/bcache-test.cc" ]
+  sources = [ "host/bcache_test.cc" ]
   deps = [
     "//zircon/public/lib/minfs",
     "//zircon/public/lib/zxtest",

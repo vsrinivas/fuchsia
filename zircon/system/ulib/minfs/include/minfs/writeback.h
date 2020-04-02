@@ -26,10 +26,10 @@
 #include <fs/queue.h>
 #include <fs/transaction/buffered_operations_builder.h>
 #include <fs/vfs.h>
-#include <minfs/allocator-reservation.h>
+#include <minfs/allocator_reservation.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>
-#include <minfs/pending-work.h>
+#include <minfs/pending_work.h>
 
 namespace minfs {
 

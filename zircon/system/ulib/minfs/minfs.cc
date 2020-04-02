@@ -44,7 +44,7 @@
 #include <minfs/fsck.h>
 
 #include "file.h"
-#include "minfs-private.h"
+#include "minfs_private.h"
 
 namespace minfs {
 namespace {
