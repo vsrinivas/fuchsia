@@ -45,7 +45,6 @@ config("compiler") {
   cflags_c = []
   cflags_cc = []
   ldflags = [
-    "-Wl,--threads",
     "-Wl,--pack-dyn-relocs=relr",
 
     # TODO(41982): drop this when it becomes the default in Clang.
@@ -70,7 +69,6 @@ config("compiler") {
     "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",
     "-Clink-arg=--pack-dyn-relocs=relr",
     "-Clink-arg=-dynamic-linker=ld.so.1",
-    "-Clink-arg=--threads",
     "-Clink-arg=--icf=all",
   ]
 
