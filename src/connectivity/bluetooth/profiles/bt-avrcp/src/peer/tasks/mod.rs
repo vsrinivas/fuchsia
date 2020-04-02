@@ -5,7 +5,6 @@ use super::*;
 
 mod notification_stream;
 
-use crate::peer::handlers::browse_channel::handle_browse_channel_requests;
 use crate::types::PeerError;
 
 use fidl_fuchsia_bluetooth_bredr::ChannelParameters;
@@ -31,7 +30,7 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
     match command_stream
         .map(Ok)
         .try_for_each_concurrent(16, |command| async {
-            let fut = peer.read().command_handler.handle_command(command.unwrap());
+            let fut = peer.read().control_command_handler.handle_command(command.unwrap());
             let result: Result<(), PeerError> = fut.await;
             result
         })
@@ -60,7 +59,21 @@ async fn process_browse_stream(peer: Arc<RwLock<RemotePeer>>) {
     };
 
     let browse_command_stream = connection.take_command_stream();
-    handle_browse_channel_requests(browse_command_stream).await;
+
+    // Limit to 16 since that is the max number of transactions we can process at any one time per
+    // AVCTP.
+    match browse_command_stream
+        .map(Ok)
+        .try_for_each_concurrent(16, |command| async {
+            let fut = peer.read().browse_command_handler.handle_command(command.unwrap());
+            let result: Result<(), PeerError> = fut.await;
+            result
+        })
+        .await
+    {
+        Ok(_) => fx_log_info!("Peer command stream closed"),
+        Err(e) => fx_log_err!("Peer command returned error {:?}", e),
+    }
 
     // Browse channel closed or errored. Do nothing because the control channel can still exist.
 }

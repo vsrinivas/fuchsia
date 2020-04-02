@@ -10,8 +10,8 @@ mod avc;
 mod avctp;
 
 pub use crate::avctp::{
-    Command as AvctpCommand, CommandStream as AvctpCommandStream, PacketType as AvctpPacketType,
-    Peer as AvctpPeer,
+    Command as AvctpCommand, CommandStream as AvctpCommandStream, MessageType as AvctpMessageType,
+    PacketType as AvctpPacketType, Peer as AvctpPeer,
 };
 
 pub use crate::avc::{

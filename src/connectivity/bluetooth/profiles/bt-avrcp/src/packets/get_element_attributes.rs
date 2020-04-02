@@ -12,8 +12,6 @@ const IDENTIFIER_LEN: usize = 8;
 const ATTRIBUTE_COUNT_LEN: usize = 1;
 // Attribute count follows immediately after the identifier
 const ATTRIBUTE_COUNT_OFFSET: usize = 8;
-// Attributes ids are 4 bytes long and they immediately follow the count.
-const ATTRIBUTE_ID_LEN: usize = 4;
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.6 Media Information PDUs - GetElementAttributes

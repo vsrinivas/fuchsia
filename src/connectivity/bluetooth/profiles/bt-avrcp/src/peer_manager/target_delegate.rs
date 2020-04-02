@@ -305,6 +305,20 @@ impl TargetDelegate {
 
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
     }
+
+    pub async fn send_get_media_player_items_command(
+        &self,
+    ) -> Result<Vec<fidl_avrcp::MediaPlayerItem>, TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.target_handler {
+                Some(target_handler) => target_handler.get_media_player_items(),
+                None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+            }
+        };
+
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+    }
 }
 
 #[cfg(test)]
@@ -498,6 +512,45 @@ mod tests {
         match exec.run_until_stalled(&mut set_pas_fut) {
             Poll::Ready(attr) => {
                 assert_eq!(attr, Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()));
+            }
+            _ => assert!(false, "unexpected state"),
+        }
+    }
+
+    #[test]
+    // Test getting correct response from a get_media_player_items request.
+    fn test_get_media_player_items() {
+        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let target_delegate = TargetDelegate::new();
+
+        let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+        assert_matches!(target_delegate.set_target_handler(target_proxy), Ok(()));
+
+        let get_media_fut = target_delegate.send_get_media_player_items_command();
+        pin_utils::pin_mut!(get_media_fut);
+        assert!(exec.run_until_stalled(&mut get_media_fut).is_pending());
+
+        let select_next_some_fut = target_stream.select_next_some();
+        pin_utils::pin_mut!(select_next_some_fut);
+        match exec.run_until_stalled(&mut select_next_some_fut) {
+            Poll::Ready(Ok(TargetHandlerRequest::GetMediaPlayerItems { responder, .. })) => {
+                assert!(responder
+                    .send(&mut Ok(vec![fidl_avrcp::MediaPlayerItem {
+                        player_id: Some(1),
+                        ..fidl_avrcp::MediaPlayerItem::new_empty()
+                    }]))
+                    .is_ok());
+            }
+            _ => assert!(false, "unexpected stream state"),
+        };
+
+        match exec.run_until_stalled(&mut get_media_fut) {
+            Poll::Ready(items) => {
+                assert!(items.is_ok());
+                let items = items.expect("Just checked");
+                assert_eq!(items.len(), 1);
+                assert_eq!(items[0].player_id, Some(1));
             }
             _ => assert!(false, "unexpected state"),
         }

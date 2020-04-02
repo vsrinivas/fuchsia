@@ -46,7 +46,7 @@ use crate::{
 };
 
 pub use controller::{Controller, ControllerEvent, ControllerEventStream};
-use handlers::ControlChannelHandler;
+use handlers::{browse_channel::BrowseChannelHandler, ControlChannelHandler};
 
 #[derive(Debug, PartialEq)]
 pub enum PeerChannel<T> {
@@ -90,7 +90,10 @@ struct RemotePeer {
 
     /// Processes commands received as AVRCP target and holds state for continuations and requested
     /// notifications for the control channel.
-    command_handler: ControlChannelHandler,
+    control_command_handler: ControlChannelHandler,
+
+    /// Processes commands received as AVRCP target over the browse channel.
+    browse_command_handler: BrowseChannelHandler,
 
     /// Used to signal state changes and to notify and wake the state change observer currently
     /// processing this peer.
@@ -120,7 +123,8 @@ impl RemotePeer {
             browse_channel: PeerChannel::Disconnected,
             controller_listeners: Vec::new(),
             profile_proxy,
-            command_handler: ControlChannelHandler::new(&peer_id, target_delegate),
+            control_command_handler: ControlChannelHandler::new(&peer_id, target_delegate.clone()),
+            browse_command_handler: BrowseChannelHandler::new(target_delegate),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
             notification_cache: HashMap::new(),
@@ -156,7 +160,8 @@ impl RemotePeer {
     fn reset_peer_state(&mut self) {
         fx_vlog!(tag: "avrcp", 2, "reset_peer_state {:?}", self.peer_id);
         self.notification_cache.clear();
-        self.command_handler.reset();
+        self.browse_command_handler.reset();
+        self.control_command_handler.reset();
     }
 
     /// `attempt_reconnection` will cause state_watcher to attempt to make an outgoing connection when

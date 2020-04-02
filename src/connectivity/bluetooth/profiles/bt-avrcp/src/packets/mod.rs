@@ -8,6 +8,7 @@ use {
     thiserror::Error,
 };
 
+mod browsing;
 mod continuation;
 mod get_capabilities;
 mod get_element_attributes;
@@ -18,9 +19,9 @@ mod rejected;
 mod set_absolute_volume;
 
 pub use {
-    self::continuation::*, self::get_capabilities::*, self::get_element_attributes::*,
-    self::get_play_status::*, self::notification::*, self::player_application_settings::*,
-    self::rejected::*, self::set_absolute_volume::*,
+    self::browsing::*, self::continuation::*, self::get_capabilities::*,
+    self::get_element_attributes::*, self::get_play_status::*, self::notification::*,
+    self::player_application_settings::*, self::rejected::*, self::set_absolute_volume::*,
 };
 
 /// The error types for packet parsing.
@@ -74,6 +75,9 @@ pub_decodable_enum! {
     }
 }
 
+/// The size, in bytes, of an attributes id.
+pub const ATTRIBUTE_ID_LEN: usize = 4;
+
 pub_decodable_enum! {
     MediaAttributeId<u8, Error, OutOfRange> {
         Title => 0x1,
@@ -105,8 +109,10 @@ pub_decodable_enum! {
         AbortContinuingResponse => 0x41,
         SetAbsoluteVolume => 0x50,
         SetAddressedPlayer => 0x60,
+        GetFolderItems => 0x71,
         PlayItem => 0x74,
         AddToNowPlaying => 0x90,
+        GeneralReject => 0xa0,
     }
 }
 
@@ -119,7 +125,6 @@ pub_decodable_enum! {
     }
 }
 
-// TODO(BT-2221): Missing browsing channel specific status codes. Add when we add browse channel.
 pub_decodable_enum! {
     StatusCode<u8, Error, OutOfRange> {
         InvalidCommand => 0x00,
@@ -128,7 +133,10 @@ pub_decodable_enum! {
         InternalError => 0x03,
         Success => 0x04,
         UidChanged => 0x05,
+        InvalidScope => 0x0a,
+        RangeOutOfBounds => 0x0b,
         InvalidPlayerId => 0x11,
+        NoValidSearchResults => 0x14,
         NoAvailablePlayers => 0x15,
         AddressedPlayerChanged => 0x16,
     }
