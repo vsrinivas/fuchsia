@@ -57,6 +57,24 @@ static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
 
 static constexpr uint64_t kKvmFeatureNoIoDelay = 1u << 1;
 
+static void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) {
+  dprintf(CRITICAL, " RAX: %#18lx  RCX: %#18lx  RDX: %#18lx  RBX: %#18lx\n", guest_state.rax,
+          guest_state.rcx, guest_state.rdx, guest_state.rbx);
+  dprintf(CRITICAL, " RBP: %#18lx  RSI: %#18lx  RDI: %#18lx\n", guest_state.rbp, guest_state.rsi,
+          guest_state.rdi);
+  dprintf(CRITICAL, "  R8: %#18lx   R9: %#18lx  R10: %#18lx  R11: %#18lx\n", guest_state.r8,
+          guest_state.r9, guest_state.r10, guest_state.r11);
+  dprintf(CRITICAL, " R12: %#18lx  R13: %#18lx  R14: %#18lx  R15: %#18lx\n", guest_state.r12,
+          guest_state.r13, guest_state.r14, guest_state.r15);
+  dprintf(CRITICAL, " RIP: %#18lx  CR2: %#18lx XCR0: %#18lx\n", exit_info.guest_rip,
+          guest_state.cr2, guest_state.xcr0);
+
+  dprintf(CRITICAL, "entry failure: %d\n", exit_info.entry_failure);
+  dprintf(CRITICAL, "exit qualification: %#lx\n", exit_info.exit_qualification);
+  dprintf(CRITICAL, "exit instruction length: %#x\n", exit_info.exit_instruction_length);
+  dprintf(CRITICAL, "guest physical address: %#lx\n", exit_info.guest_physical_address);
+}
+
 extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
 
 ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
@@ -1167,9 +1185,10 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       break;
   }
   if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_CANCELED) {
-    dprintf(CRITICAL, "VM exit handler for %u (%s) at RIP %#lx returned %d\n",
-            static_cast<uint32_t>(exit_info.exit_reason), exit_reason_name(exit_info.exit_reason),
-            exit_info.guest_rip, status);
+    dprintf(CRITICAL, "VM exit handler for %s (%u) returned %d\n",
+            exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
+            status);
+    dump_guest_state(*guest_state, exit_info);
   }
   return status;
 }
