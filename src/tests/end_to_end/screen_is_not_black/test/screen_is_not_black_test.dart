@@ -25,6 +25,16 @@ const _delay = Duration(seconds: 10);
 /// The path to the catapult converter binary.  It must exist in the package.
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 
+/// We don't know if the system's clock is restarted from zero at reboot.  So
+/// we try to estimate.  We assume that if the clock shows more than this long
+/// since power-on, that reboot does not reset the clock.  If it shows less
+/// than this, we assume that reboot resets the clock.
+const _maxElapsedSincePowerOn = Duration(minutes: 3);
+
+/// An estimate of how long it took between reboot and timekeeper.cmx startup.
+/// Used if the device's real time clock is not reset to zero on reboot.
+const _rebootToTimekeeper = Duration(seconds: 15);
+
 /// Collects uptime information.
 class Uptime {
   // Elapsed time since last reboot.
@@ -92,10 +102,10 @@ void main() {
   // fairly early in a device's lifetime, we try to detect how long ago
   // timekeeper was started with reference to the zero point of the monotonic
   // clock.  If this time was too far in the past, assume that the duration
-  // timer was not reset.  If this was within ~1 minute of zero reference
-  // point, assume that the clock was indeed starting at zero.  Otherwise adopt
-  // an arbitrary reference point which places startup of timekeeper.cmx about
-  // 15 seconds after reboot.
+  // timer was not reset.  If it was reasonably recently with respect to the
+  // zero reference point (see _maxElapsedSincePowerOn), assume that the clock
+  // was indeed starting at zero.  Otherwise adopt an arbitrary reference point
+  // which places startup of timekeeper.cmx about 15 seconds after reboot.
   //
   // While this makes relative time measurements meaningless, we can still
   // compare successive runs and measure absolute time changes.
@@ -114,12 +124,12 @@ void main() {
           healthRoot['current']['system_uptime_monotonic_nanos'];
       final uptime = Duration(microseconds: uptimeNanos ~/ 1e3);
       var sinceReboot = uptime;
-      if (sinceReboot > Duration(minutes: 1)) {
+      if (sinceReboot > _maxElapsedSincePowerOn) {
         // If the system monotonic clock measures duration since power-on,
         // instead of duration since reboot, compute the adjusted uptime.
         final start = Duration(
             microseconds: healthRoot['start_time_monotonic_nanos'] ~/ 1e3);
-        sinceReboot = sinceReboot - start + Duration(seconds: 15);
+        sinceReboot = sinceReboot - start + _rebootToTimekeeper;
       }
       return Uptime(
           lowRebootWallClock, sinceReboot, highRebootWallClock, uptime);
