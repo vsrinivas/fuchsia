@@ -51,7 +51,10 @@ extern struct __libc __libc ATTR_LIBC_VISIBILITY;
 #define libc __libc
 
 extern size_t __hwcap ATTR_LIBC_VISIBILITY;
-extern char *__progname, *__progname_full;
+
+// TODO(49419) These exist for legacy err.h support, which we will be removing.
+extern char* __progname ATTR_LIBC_VISIBILITY;
+extern char* __progname_full ATTR_LIBC_VISIBILITY;
 
 void __libc_start_init(void) ATTR_LIBC_VISIBILITY;
 
