@@ -23,7 +23,7 @@ if (use_thinlto) {
 }
 _args += [
   "--memory-per-job",
-  "rust=4GB",
+  "rust=2GB",
   "--memory-per-job",
   "dart=1GB",
   "--memory-per-job",
