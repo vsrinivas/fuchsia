@@ -8,6 +8,14 @@ import("//build/toolchain/ccache.gni")
 
 assert(current_os == "fuchsia")
 
+declare_args() {
+  # Build ID algorithm to use for Fuchsia-target code.  This does not apply
+  # to host or guest code.  The value is the argument to the linker's
+  # `--build-id=...` switch.  If left empty (the default), the linker's
+  # default format is used.
+  build_id_format = ""
+}
+
 # Deprecated.
 # TODO(44795): Remove once none of the petals depend on this.
 config("werror") {
@@ -79,6 +87,10 @@ config("compiler") {
     "$root_build_dir/gen/zircon/public/lib/trace-engine",
     "$root_build_dir/gen/zircon/public/lib/syslog",
   ]
+
+  if (build_id_format != "") {
+    ldflags += [ "-Wl,--build-id=$build_id_format" ]
+  }
 }
 
 config("compiler_sysroot") {

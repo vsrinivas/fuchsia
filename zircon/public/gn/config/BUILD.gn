@@ -16,6 +16,12 @@ declare_args() {
   # Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
   # The empty list (or empty string) means don't use `--sysroot` at all.
   sysroot = standard_sysroot
+
+  # Build ID algorithm to use for Fuchsia-target code.  This does not apply
+  # to host or guest code.  The value is the argument to the linker's
+  # `--build-id=...` switch.  If left empty (the default), the linker's
+  # default format is used.
+  build_id_format = ""
 }
 
 # Convert a string to a list.
@@ -164,6 +170,10 @@ config("compiler") {
   asmflags = compiler_flags
   cflags += compiler_flags
   ldflags += compiler_flags
+
+  if (is_fuchsia && build_id_format != "") {
+    ldflags += [ "-Wl,--build-id=$build_id_format" ]
+  }
 }
 
 config("language") {
