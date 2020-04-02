@@ -202,9 +202,16 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
     for (final uiThread in uiThreads) {
       final appName =
           flutterAppName ?? uiThread.name.split(RegExp(r'.ui$')).first;
+      // Note: Around March 2020, Flutter renamed the GPU thread the
+      // Rasterizer thread instead.  In the far out future it might make sense
+      // to only accept ".raster" here, but for now accept both names.
       final gpuThreads = process.threads
           .where((thread) =>
               thread.name.startsWith(appName) && thread.name.endsWith('.gpu'))
+          .followedBy(process.threads
+            ..where((thread) =>
+                thread.name.startsWith(appName) &&
+                thread.name.endsWith('.raster')))
           .toList();
       if (gpuThreads.isEmpty) {
         print('Warning, found ui thread but no gpu thread for app $appName');
