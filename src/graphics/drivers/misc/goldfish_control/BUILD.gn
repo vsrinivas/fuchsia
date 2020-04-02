@@ -21,7 +21,6 @@ driver_module("control_driver") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-async-2",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace",
@@ -29,6 +28,7 @@ driver_module("control_driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/fidl-async-2",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
