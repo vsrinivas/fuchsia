@@ -39,9 +39,9 @@ mod expectation {
     };
 
     pub fn peripheral_received_connection() -> Predicate<PeripheralState> {
-        Predicate::new(
+        Predicate::predicate(
             move |state: &PeripheralState| -> bool { !state.connections.is_empty() },
-            Some("le.Peripheral notified a connection"),
+            "le.Peripheral notified a connection",
         )
     }
 }

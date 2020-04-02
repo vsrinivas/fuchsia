@@ -84,7 +84,7 @@ use {
 
 /// Used to maintain the state transitions that are observed from the emulator. This type can be
 /// used in test harness auxiliary types.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EmulatorState {
     /// Most recently observed controller parameters.
     pub controller_parameters: Option<ControllerParameters>,
@@ -291,54 +291,33 @@ pub mod expectation {
     where
         S: 'static + EmulatorHarnessState,
     {
-        let descr = format!("local name is \"{}\"", name);
-        Predicate::new(
-            move |state: &S| -> bool {
-                state
-                    .as_ref()
-                    .controller_parameters
-                    .as_ref()
-                    .map(move |cp| cp.local_name == Some(name.to_string()))
-                    .unwrap_or(false)
-            },
-            Some(&descr),
-        )
+        Predicate::equal(Some(name.to_string()))
+            .over_value(
+            |state: &S| state.as_ref().controller_parameters.as_ref().and_then(|p| p.local_name.as_ref().map(|o| o.to_string())),
+            "controller_parameters.local_name",
+            )
     }
 
     pub fn device_class_is<S>(device_class: DeviceClass) -> Predicate<S>
     where
         S: 'static + EmulatorHarnessState,
     {
-        let descr = format!("device class is \"{:#?}\"", device_class);
-        Predicate::new(
-            move |state: &S| -> bool {
-                state
-                    .as_ref()
-                    .controller_parameters
-                    .as_ref()
-                    .map(|s| s.device_class == Some(device_class))
-                    .unwrap_or(false)
-            },
-            Some(&descr),
-        )
+        Predicate::equal(Some(device_class))
+            .over_value(
+            |state: &S| state.as_ref().controller_parameters.as_ref().and_then(|p| p.device_class),
+            "controller_parameters.device_class",
+            )
     }
 
     pub fn advertising_is_enabled<S>(enabled: bool) -> Predicate<S>
     where
         S: 'static + EmulatorHarnessState,
     {
-        let descr = format!("advertising is (enabled: {})", enabled);
-        Predicate::new(
-            move |state: &S| -> bool {
-                state
-                    .as_ref()
-                    .advertising_state_changes
-                    .last()
-                    .map(|s| s.enabled == enabled)
-                    .unwrap_or(false)
-            },
-            Some(&descr),
-        )
+        Predicate::equal(Some(enabled))
+            .over_value(
+            |state: &S| state.as_ref().advertising_state_changes.last().map(|s| s.enabled),
+            "controller_parameters.device_class",
+            )
     }
 
     pub fn advertising_was_enabled<S>(enabled: bool) -> Predicate<S>
@@ -346,11 +325,11 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("advertising was (enabled: {})", enabled);
-        Predicate::new(
+        Predicate::predicate(
             move |state: &S| -> bool {
                 state.as_ref().advertising_state_changes.iter().any(|s| s.enabled == enabled)
             },
-            Some(&descr),
+            &descr,
         )
     }
 
@@ -359,7 +338,7 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("advertising type is: {:#?}", type_);
-        Predicate::new(
+        Predicate::predicate(
             move |state: &S| -> bool {
                 state
                     .as_ref()
@@ -368,7 +347,7 @@ pub mod expectation {
                     .and_then(|s| s.type_)
                     .map_or(false, |t| t == type_)
             },
-            Some(&descr),
+            &descr,
         )
     }
 
@@ -377,7 +356,7 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("advertising data is: {:#?}", data);
-        Predicate::new(
+        Predicate::predicate(
             move |state: &S| -> bool {
                 state
                     .as_ref()
@@ -386,7 +365,7 @@ pub mod expectation {
                     .and_then(|s| s.advertising_data.as_ref())
                     .map_or(false, |a| *a == data)
             },
-            Some(&descr),
+            &descr,
         )
     }
 
@@ -395,7 +374,7 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("scan response data is: {:#?}", data);
-        Predicate::new(
+        Predicate::predicate(
             move |state: &S| -> bool {
                 state
                     .as_ref()
@@ -404,7 +383,7 @@ pub mod expectation {
                     .and_then(|s| s.scan_response.as_ref())
                     .map_or(false, |s| *s == data)
             },
-            Some(&descr),
+            &descr,
         )
     }
 
@@ -418,7 +397,7 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("advertising max interval is: {:#?} ms", interval_ms);
-        Predicate::new(
+        Predicate::predicate(
             move |state: &S| -> bool {
                 state
                     .as_ref()
@@ -427,7 +406,7 @@ pub mod expectation {
                     .and_then(|s| s.interval_max)
                     .map_or(false, |i| i == to_slices(interval_ms))
             },
-            Some(&descr),
+            &descr,
         )
     }
 
@@ -436,11 +415,11 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("emulated peer connection state was: {:?}", state);
-        Predicate::new(
+        Predicate::predicate(
             move |s: &S| -> bool {
                 s.as_ref().connection_states.get(&address).map_or(false, |s| s.contains(&state))
             },
-            Some(&descr),
+            &descr,
         )
     }
 
@@ -449,14 +428,14 @@ pub mod expectation {
         S: 'static + EmulatorHarnessState,
     {
         let descr = format!("emulated peer connection state is: {:?}", state);
-        Predicate::new(
+        Predicate::predicate(
             move |s: &S| -> bool {
                 s.as_ref()
                     .connection_states
                     .get(&address)
                     .map_or(false, |s| s.last() == Some(&state))
             },
-            Some(&descr),
+            &descr,
         )
     }
 }

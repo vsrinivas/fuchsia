@@ -25,7 +25,7 @@ use crate::harness::{
 };
 
 /// A snapshot of the current LE peripheral procedure states of the controller.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct PeripheralState {
     emulator_state: EmulatorState,
 

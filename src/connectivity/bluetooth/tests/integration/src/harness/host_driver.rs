@@ -40,42 +40,44 @@ use crate::{
     tests::timeout_duration,
 };
 
-// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
+/// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
 pub async fn expect_peer(
     host: &HostDriverHarness,
     target: Predicate<Peer>,
 ) -> Result<HostState, Error> {
-    let fut = host.when_satisfied(
-        Predicate::<HostState>::new(
-            move |host| host.peers.iter().any(|(_, p)| target.satisfied(&p)),
-            None,
-        ),
+    host.when_satisfied(
+        Predicate::any(target).over_value(|host: &HostState| host.peers.values().cloned().collect::<Vec<_>>(), ".peers.values()"),
         timeout_duration(),
-    );
-    fut.await
+    ).await
 }
 
+/// Returns a Future that resolves when the HostInfo matches `target`.
 pub async fn expect_host_state(
     host: &HostDriverHarness,
     target: Predicate<HostInfo>,
 ) -> Result<HostState, Error> {
-    let fut = host.when_satisfied(
-        Predicate::<HostState>::new(move |host| target.satisfied(&host.host_info), None),
+    host.when_satisfied(
+        target.over(|host: &HostState| &host.host_info, ".host_info"),
         timeout_duration(),
-    );
-    fut.await
+    ).await
 }
 
 // Returns a future that resolves when a peer matching `id` is not present on the host.
 pub async fn expect_no_peer(host: &HostDriverHarness, id: PeerId) -> Result<(), Error> {
     let fut = host.when_satisfied(
-        Predicate::<HostState>::new(move |host| host.peers.iter().all(|(i, _)| i != &id), None),
+        Predicate::all(Predicate::not_equal( id ))
+            .over_value(|host: &HostState| {
+                    host.peers.keys().cloned().collect::<Vec<_>>()
+                },
+                ".peers.keys()"
+            ),
         timeout_duration(),
     );
     fut.await?;
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct HostState {
     emulator_state: EmulatorState,
 

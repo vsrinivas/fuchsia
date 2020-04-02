@@ -31,9 +31,9 @@ pub async fn expect_hierarchies(
 ) -> Result<InspectState, Error> {
     harness
         .when_satisfied(
-            Predicate::<InspectState>::new(
+            Predicate::<InspectState>::predicate(
                 move |state| state.hierarchies.len() >= min_num,
-                Some("Expected number of hierarchies received"),
+                "Expected number of hierarchies received",
             ),
             timeout_duration(),
         )

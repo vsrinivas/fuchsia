@@ -44,7 +44,7 @@ async fn create_le_peer(hci: &Emulator, address: Address) -> Result<PeerProxy, E
 
 async fn start_discovery(access: &AccessHarness) -> Result<ProcedureTokenProxy, Error> {
     // We create a capability to capture the discovery token, and pass it to the access provider
-    // Discovery will drop once we drop this token
+    // Discovery will stop once we drop this token
     let (token, token_server) = fidl::endpoints::create_proxy()?;
     let fidl_response = access.aux().start_discovery(token_server);
     fidl_response
@@ -55,7 +55,7 @@ async fn start_discovery(access: &AccessHarness) -> Result<ProcedureTokenProxy, 
 
 async fn make_discoverable(access: &AccessHarness) -> Result<ProcedureTokenProxy, Error> {
     // We create a capability to capture the discoverable token, and pass it to the access provider
-    // Discoverable will drop once we drop this token
+    // Discoverable will stop once we drop this token
     let (token, token_server) = fidl::endpoints::create_proxy()?;
     let fidl_response = access.aux().make_discoverable(token_server);
     fidl_response
@@ -223,28 +223,28 @@ pub mod expectation {
         use super::*;
 
         pub(crate) fn exists(p: Predicate<Peer>) -> Predicate<AccessState> {
-            let msg = format!("peer exists satisfying {}", p.describe());
-            Predicate::new(
+            let msg = format!("peer exists satisfying {:?}", p);
+            Predicate::predicate(
                 move |state: &AccessState| state.peers.iter().any(|(_, d)| p.satisfied(d)),
-                Some(&msg),
+                &msg,
             )
         }
 
         pub(crate) fn with_identifier(id: PeerId) -> Predicate<Peer> {
-            Predicate::<Peer>::new(move |d| d.id == id, Some(&format!("identifier == {}", id)))
+            Predicate::<Peer>::predicate(move |d| d.id == id, &format!("identifier == {}", id))
         }
 
         pub(crate) fn with_address(address: Address) -> Predicate<Peer> {
-            Predicate::<Peer>::new(
+            Predicate::<Peer>::predicate(
                 move |d| d.address == address,
-                Some(&format!("address == {}", address)),
+                &format!("address == {}", address),
             )
         }
 
         pub(crate) fn connected(connected: bool) -> Predicate<Peer> {
-            Predicate::<Peer>::new(
+            Predicate::<Peer>::predicate(
                 move |d| d.connected == connected,
-                Some(&format!("connected == {}", connected)),
+                &format!("connected == {}", connected),
             )
         }
     }
@@ -255,29 +255,29 @@ pub mod expectation {
         pub(crate) fn with_name<S: ToString>(name: S) -> Predicate<HostInfo> {
             let name = name.to_string();
             let msg = format!("name == {}", name);
-            Predicate::<HostInfo>::new(move |h| h.local_name.as_ref() == Some(&name), Some(&msg))
+            Predicate::<HostInfo>::predicate(move |h| h.local_name.as_ref() == Some(&name), &msg)
         }
 
         pub(crate) fn with_id(id: HostId) -> Predicate<HostInfo> {
             let msg = format!("id == {}", id);
-            Predicate::<HostInfo>::new(move |h| h.id == id, Some(&msg))
+            Predicate::<HostInfo>::predicate(move |h| h.id == id, &msg)
         }
 
         pub(crate) fn discovering(is_discovering: bool) -> Predicate<HostInfo> {
             let msg = format!("discovering == {}", is_discovering);
-            Predicate::<HostInfo>::new(move |h| h.discovering == is_discovering, Some(&msg))
+            Predicate::<HostInfo>::predicate(move |h| h.discovering == is_discovering, &msg)
         }
 
         pub(crate) fn discoverable(is_discoverable: bool) -> Predicate<HostInfo> {
             let msg = format!("discoverable == {}", is_discoverable);
-            Predicate::<HostInfo>::new(move |h| h.discoverable == is_discoverable, Some(&msg))
+            Predicate::<HostInfo>::predicate(move |h| h.discoverable == is_discoverable, &msg)
         }
 
         pub(crate) fn exists(p: Predicate<HostInfo>) -> Predicate<HostWatcherState> {
-            let msg = format!("Host exists satisfying {}", p.describe());
-            Predicate::new(
+            let msg = format!("Host exists satisfying {:?}", p);
+            Predicate::predicate(
                 move |state: &HostWatcherState| state.hosts.values().any(|h| p.satisfied(h)),
-                Some(&msg),
+                &msg,
             )
         }
     }

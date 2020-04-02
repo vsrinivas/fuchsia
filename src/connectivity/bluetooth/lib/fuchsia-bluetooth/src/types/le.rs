@@ -30,7 +30,7 @@ use {
     },
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RemoteDevice {
     pub identifier: String,
     pub connectable: bool,

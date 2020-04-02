@@ -25,7 +25,7 @@ use {
 
 use crate::{harness::TestHarness, tests::timeout_duration};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ControlState {
     /// Current hosts
     pub hosts: HashMap<String, AdapterInfo>,
@@ -116,48 +116,48 @@ pub mod expectation {
     pub fn active_host_is(id: String) -> Predicate<ControlState> {
         let msg = format!("active bt-host is {}", id);
         let expected_host = Some(id);
-        Predicate::new(
+        Predicate::predicate(
             move |state: &ControlState| -> bool { state.active_host == expected_host },
-            Some(&msg),
+            msg,
         )
     }
 
     pub fn host_not_present(id: String) -> Predicate<ControlState> {
         let msg = format!("bt-host {} is no longer present", id);
-        Predicate::new(move |state: &ControlState| !state.hosts.contains_key(&id), Some(&msg))
+        Predicate::predicate(move |state: &ControlState| !state.hosts.contains_key(&id), msg)
     }
 
     mod peer {
         use super::*;
 
         pub(crate) fn exists(p: Predicate<RemoteDevice>) -> Predicate<ControlState> {
-            let msg = format!("peer exists satisfying {}", p.describe());
-            Predicate::new(
+            let msg = format!("peer exists satisfying {:?}", p);
+            Predicate::predicate(
                 move |state: &ControlState| state.peers.iter().any(|(_, d)| p.satisfied(d)),
-                Some(&msg),
+                &msg,
             )
         }
 
         pub(crate) fn with_identifier(id: &str) -> Predicate<RemoteDevice> {
             let id_owned = id.to_string();
-            Predicate::<RemoteDevice>::new(
+            Predicate::<RemoteDevice>::predicate(
                 move |d| d.identifier == id_owned,
-                Some(&format!("identifier == {}", id)),
+                &format!("identifier == {}", id),
             )
         }
 
         pub(crate) fn with_address(address: &str) -> Predicate<RemoteDevice> {
             let addr_owned = address.to_string();
-            Predicate::<RemoteDevice>::new(
+            Predicate::<RemoteDevice>::predicate(
                 move |d| d.address == addr_owned,
-                Some(&format!("address == {}", address)),
+                &format!("address == {}", address),
             )
         }
 
         pub(crate) fn connected(connected: bool) -> Predicate<RemoteDevice> {
-            Predicate::<RemoteDevice>::new(
+            Predicate::<RemoteDevice>::predicate(
                 move |d| d.connected == connected,
-                Some(&format!("connected == {}", connected)),
+                &format!("connected == {}", connected),
             )
         }
     }
@@ -193,22 +193,20 @@ pub async fn activate_fake_host(
 
     let hci = Emulator::create_and_publish(name).await?;
 
-    let state = control
-        .when_satisfied(
-            Predicate::<ControlState>::new(
-                move |control| {
-                    let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
-                        host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
-                    });
-                    added_fake_hosts.count() > 0
-                },
-                Some("Fake Host Added"),
+        let control_state = control.when_satisfied(
+            Predicate::<ControlState>::predicate(
+                move |control| control
+                    .hosts
+                    .iter()
+                    .any(|(id, host)| host.address == FAKE_HCI_ADDRESS
+                        && !initial_hosts_.contains(id)),
+                "At least one fake bt-host device added",
             ),
             timeout_duration(),
         )
         .await?;
 
-    let host = state
+    let host = control_state
         .hosts
         .iter()
         .find(|(id, host)| host.address == FAKE_HCI_ADDRESS && !initial_hosts.contains(id))

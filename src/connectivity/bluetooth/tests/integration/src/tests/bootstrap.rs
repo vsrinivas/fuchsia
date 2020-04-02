@@ -78,9 +78,9 @@ async fn test_add_and_commit_identities(
     bootstrap.add_identities(&mut identities.into_iter()).context("Error adding identities")?;
     bootstrap.commit().await?.map_err(|e| format_err!("Error committing bonds: {:?}", e))?;
 
-    let pred = P::<ControlState>::new(
+    let pred = P::<ControlState>::predicate(
         move |control| expected_devices == control.peers.keys().cloned().collect(),
-        Some("known device identifiers == expected device identifiers"),
+        "known device identifiers == expected device identifiers",
     );
     control.when_satisfied(pred, timeout_duration()).await?;
 
