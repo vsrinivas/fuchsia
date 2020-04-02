@@ -67,12 +67,9 @@ TEST_femu_noargs() {
   echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
     >"${BT_TEMP_DIR}/scripts/sdk/gn/base/authkeys.txt"
 
-
-  # Create fake "curl" command to that creates a simulated zip file based on the mocked emulator script
-  # femu.sh calls curl like this, so use $4 to write output: curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
-  cat >"${PATH_DIR_FOR_TEST}/curl.mock_side_effects" <<INPUT
-zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator"
-INPUT
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}.zip"
 
   export DISPLAY="fakedisplay"
 
@@ -118,11 +115,9 @@ TEST_femu_networking() {
 echo "qemu: tap persist user 238107"
 INPUT
 
-  # Create fake "curl" command to that creates a simulated zip file based on the mocked emulator script
-  # femu.sh calls curl like this, so use $4 to write output: curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
-  cat >"${PATH_DIR_FOR_TEST}/curl.mock_side_effects" <<INPUT
-zip "\$4" "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator"
-INPUT
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}.zip"
 
   if is-mac; then
     expected_result=BT_EXPECT_FAIL
@@ -196,7 +191,6 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/zbi
   scripts/sdk/gn/base/tools/fvm
   _isolated_path_for/ip
-  _isolated_path_for/curl
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty
 )
