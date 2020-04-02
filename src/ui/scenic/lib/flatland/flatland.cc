@@ -63,6 +63,11 @@ void Flatland::Present(PresentCallback callback) {
   if (success) {
     FXL_DCHECK(data.sorted_transforms[0].handle == root_handle);
 
+    // Cleanup released resources.
+    for (const auto& dead_handle : data.dead_transforms) {
+      matrices_.erase(dead_handle);
+    }
+
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = std::move(data.sorted_transforms);
 
@@ -352,10 +357,18 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
 
   if (!properties.has_logical_size()) {
     pending_operations_.push_back([]() {
-      FXL_LOG(ERROR) << "CreateLink must be provided with LinkProperties with a logical size.";
+      FXL_LOG(ERROR) << "CreateLink must be provided a LinkProperties with a logical size.";
       return false;
     });
     return;
+  }
+
+  auto logical_size = properties.logical_size();
+  if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
+    pending_operations_.push_back([]() {
+      FXL_LOG(ERROR) << "CreateLink must be provided a logical size with positive X and Y values.";
+      return false;
+    });
   }
 
   FXL_DCHECK(link_system_);
@@ -387,7 +400,12 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
         bool child_added = transform_graph_.AddChild(link.graph_handle, link.link_handle);
         FXL_DCHECK(child_added);
 
-        child_links_[link_id] = {.link = std::move(link), .properties = std::move(properties)};
+        // Default the link size to the logical size, which is just an identity scale matrix, so
+        // that future logical size changes will result in the correct scale matrix.
+        Vec2 size = properties.logical_size();
+
+        child_links_[link_id] = {
+            .link = std::move(link), .properties = std::move(properties), .size = std::move(size)};
 
         return true;
       });
@@ -403,7 +421,7 @@ void Flatland::SetLinkOnTransform(LinkId link_id, TransformId transform_id) {
     auto transform_kv = transforms_.find(transform_id);
 
     if (transform_kv == transforms_.end()) {
-      FXL_LOG(ERROR) << "ReleaseTransform failed, transform_id " << transform_id << " not found";
+      FXL_LOG(ERROR) << "SetLinkOnTransform failed, transform_id " << transform_id << " not found";
       return false;
     }
 
@@ -436,9 +454,49 @@ void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
       return false;
     }
 
+    // Callers do not have to provide a new logical size on every call to SetLinkProperties, but if
+    // they do, it must have positive X and Y values.
+    if (properties.has_logical_size()) {
+      auto logical_size = properties.logical_size();
+      if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
+        return false;
+      }
+    } else {
+      // Preserve the old logical size if no logical size was passed as an argument. The
+      // HangingGetHelper no-ops if no data changes, so if logical size is empty and no other
+      // properties changed, the hanging get won't fire.
+      properties.set_logical_size(link_kv->second.properties.logical_size());
+    }
+
     FXL_DCHECK(link_kv->second.link.importer.valid());
 
     link_kv->second.properties = std::move(properties);
+    UpdateLinkScale(link_kv->second);
+
+    return true;
+  });
+}
+
+void Flatland::SetLinkSize(LinkId id, Vec2 size) {
+  pending_operations_.push_back([=, size = std::move(size)]() {
+    if (id == 0) {
+      return false;
+    }
+
+    if (size.x <= 0.f || size.y <= 0.f) {
+      return false;
+    }
+
+    auto link_kv = child_links_.find(id);
+
+    if (link_kv == child_links_.end()) {
+      return false;
+    }
+
+    FXL_DCHECK(link_kv->second.link.importer.valid());
+
+    link_kv->second.size = std::move(size);
+    UpdateLinkScale(link_kv->second);
 
     return true;
   });
@@ -451,16 +509,16 @@ void Flatland::ReleaseTransform(TransformId transform_id) {
       return false;
     }
 
-    auto iter = transforms_.find(transform_id);
+    auto transform_kv = transforms_.find(transform_id);
 
-    if (iter == transforms_.end()) {
+    if (transform_kv == transforms_.end()) {
       FXL_LOG(ERROR) << "ReleaseTransform failed, transform_id " << transform_id << " not found";
       return false;
     }
 
-    bool erased_from_graph = transform_graph_.ReleaseTransform(iter->second);
+    bool erased_from_graph = transform_graph_.ReleaseTransform(transform_kv->second);
     FXL_DCHECK(erased_from_graph);
-    transforms_.erase(iter);
+    transforms_.erase(transform_kv);
 
     return true;
   });
@@ -511,6 +569,14 @@ void Flatland::ReleaseLink(LinkId link_id,
 
 TransformHandle Flatland::GetRoot() const {
   return parent_link_ ? parent_link_->link_origin : local_root_;
+}
+
+void Flatland::UpdateLinkScale(const ChildLinkData& link_data) {
+  FXL_DCHECK(link_data.properties.has_logical_size());
+
+  auto logical_size = link_data.properties.logical_size();
+  matrices_[link_data.link.graph_handle].SetScale(
+      {link_data.size.x / logical_size.x, link_data.size.y / logical_size.y});
 }
 
 // MatrixData function implementations

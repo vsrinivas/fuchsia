@@ -12,6 +12,8 @@ source_set("flatland") {
   sources = [
     "flatland.cc",
     "flatland.h",
+    "global_matrix_data.cc",
+    "global_matrix_data.h",
     "global_topology_data.cc",
     "global_topology_data.h",
     "hanging_get_helper.h",

@@ -8,7 +8,6 @@
 #include <unordered_set>
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
-#include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 
@@ -56,14 +55,6 @@ struct GlobalTopologyData {
                                                       const LinkSystem::LinkTopologyMap& links,
                                                       TransformHandle::InstanceId link_instance_id,
                                                       TransformHandle root);
-
-  // Computes the global transform matrix for each transform in |global_topology| using the local
-  // matrices in the |uber_structs|. If a transform doesn't have a local matrix present in the
-  // appropriate UberStruct, this function assumes that transform's local matrix is the identity
-  // matrix.
-  static std::vector<glm::mat3> ComputeGlobalMatrices(const TopologyVector& topology_vector,
-                                                      const ParentIndexVector& parent_indices,
-                                                      const UberStruct::InstanceMap& uber_structs);
 };
 
 }  // namespace flatland

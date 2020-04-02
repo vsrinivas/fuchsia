@@ -138,46 +138,4 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
           .live_handles = std::move(live_transforms)};
 }
 
-// static
-std::vector<glm::mat3> GlobalTopologyData::ComputeGlobalMatrices(
-    const TopologyVector& topology_vector, const ParentIndexVector& parent_indices,
-    const UberStruct::InstanceMap& uber_structs) {
-  std::vector<glm::mat3> global_matrices;
-  global_matrices.reserve(topology_vector.size());
-
-  if (topology_vector.empty()) {
-    return global_matrices;
-  }
-
-  // The root entry's parent pointer points to itself, so special case it.
-  const auto& root_handle = topology_vector.front();
-  const auto root_uber_struct_kv = uber_structs.find(root_handle.GetInstanceId());
-  FXL_DCHECK(root_uber_struct_kv != uber_structs.end());
-
-  const auto root_matrix_kv = root_uber_struct_kv->second->local_matrices.find(root_handle);
-  if (root_matrix_kv == root_uber_struct_kv->second->local_matrices.end()) {
-    global_matrices.emplace_back(glm::mat3());
-  } else {
-    global_matrices.emplace_back(root_matrix_kv->second);
-  }
-
-  for (size_t i = 1; i < topology_vector.size(); ++i) {
-    const TransformHandle& handle = topology_vector[i];
-    const size_t parent_index = parent_indices[i];
-
-    // Every entry in the global topology comes from an UberStruct.
-    const auto uber_stuct_kv = uber_structs.find(handle.GetInstanceId());
-    FXL_DCHECK(uber_stuct_kv != uber_structs.end());
-
-    const auto matrix_kv = uber_stuct_kv->second->local_matrices.find(handle);
-    if (matrix_kv == uber_stuct_kv->second->local_matrices.end()) {
-      global_matrices.emplace_back(global_matrices[parent_index]);
-    } else {
-      global_matrices.emplace_back(global_matrices[parent_index] * matrix_kv->second);
-    }
-  }
-
-  return global_matrices;
-}
-
 }  // namespace flatland

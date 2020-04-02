@@ -89,6 +89,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void SetLinkProperties(LinkId id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void SetLinkSize(LinkId id, fuchsia::ui::scenic::internal::Vec2 size) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseLink(LinkId link_id,
@@ -140,11 +142,16 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // it a fixed attachment point for cross-instance Links.
   const TransformHandle local_root_;
 
-  // Wraps a LinkSystem::ChildLink and the LinkProperties currently associated with that link.
+  // Wraps a LinkSystem::ChildLink and the properties currently associated with that link.
   struct ChildLinkData {
     LinkSystem::ChildLink link;
     fuchsia::ui::scenic::internal::LinkProperties properties;
+    fuchsia::ui::scenic::internal::Vec2 size;
   };
+
+  // Recomputes the scale matrix responsible for fitting a Link's logical size into the actual size
+  // designated for it.
+  void UpdateLinkScale(const ChildLinkData& link_data);
 
   // A mapping from user-generated id to ChildLinkData.
   std::unordered_map<LinkId, ChildLinkData> child_links_;

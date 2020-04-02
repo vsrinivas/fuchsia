@@ -267,7 +267,10 @@ protocol Flatland {
     /// into their Graph through this Link object, and the object's associated Link properties.
     ///
     /// `LinkProperties` must have logical_size set. This is the initial size that will drive the
-    /// layout of the child.
+    /// layout of the child. The logical_size is also used as the default Content size, but
+    /// subsequent changes to the logical_size will have no effect on the Content size.
+    ///
+    /// The logical_size must have positive X and Y components.
     CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);
 
@@ -284,7 +287,16 @@ protocol Flatland {
     /// Transforms are usually sufficient to change how content is presented. Links, however, have
     /// special properties that are not part of the Transform hierarchy. Those properties can be set
     /// using this function.
+    ///
+    /// The logical_size must have positive X and Y components.
     SetLinkProperties(LinkId link_id, LinkProperties properties);
+
+    /// The Content size for a Link is the size of the rectangle in the parent's space that the
+    /// Link occupies. This effectively applies a scale to the Link Content equal to the ratio from
+    /// its Content size to its logical_size.
+    ///
+    /// The Link Content size must have positive X and Y components.
+    SetLinkSize(LinkId link_id, Vec2 size);
 
     // ***** Cleanup operations *****
 

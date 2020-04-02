@@ -12,6 +12,7 @@
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
 #include <glm/gtc/epsilon.hpp>
@@ -19,6 +20,7 @@
 
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
+using flatland::GlobalMatrixVector;
 using flatland::GlobalTopologyData;
 using flatland::LinkSystem;
 using flatland::TransformGraph;
@@ -55,26 +57,27 @@ using fuchsia::ui::scenic::internal::Vec2;
     EXPECT_TRUE(processed_callback);                                                  \
   }
 
-// |global_topology_data| is a GlobalTopologyData object. |global_matrices| is a vector of
-// glm::mat3's generated from the same set of UberStructs and topology data. |target_handle| is the
-// TransformHandle of the matrix to compare. |expected_matrix| is the expected value of that matrix.
-#define EXPECT_MATRIX(global_topology_data, global_matrices, target_handle, expected_matrix)     \
-  {                                                                                              \
-    ASSERT_EQ(global_topology_data.live_handles.count(target_handle), 1u);                       \
-    int index = -1;                                                                              \
-    for (size_t i = 0; i < global_topology_data.topology_vector.size(); ++i) {                   \
-      if (global_topology_data.topology_vector[i] == target_handle) {                            \
-        index = i;                                                                               \
-        break;                                                                                   \
-      }                                                                                          \
-    }                                                                                            \
-    ASSERT_NE(index, -1);                                                                        \
-    const glm::mat3& matrix = global_matrices[index];                                            \
-    for (size_t i = 0; i < 3; ++i) {                                                             \
-      for (size_t j = 0; j < 3; ++j) {                                                           \
-        EXPECT_FLOAT_EQ(matrix[i][j], expected_matrix[i][j]) << " row " << j << " column " << i; \
-      }                                                                                          \
-    }                                                                                            \
+// |global_topology_data| is a GlobalTopologyData object. |global_matrix_vector| is a
+// GlobalMatrixVector generated from the same set of UberStructs and topology data. |target_handle|
+// is the TransformHandle of the matrix to compare. |expected_matrix| is the expected value of
+// that matrix.
+#define EXPECT_MATRIX(global_topology_data, global_matrix_vector, target_handle, expected_matrix) \
+  {                                                                                               \
+    ASSERT_EQ(global_topology_data.live_handles.count(target_handle), 1u);                        \
+    int index = -1;                                                                               \
+    for (size_t i = 0; i < global_topology_data.topology_vector.size(); ++i) {                    \
+      if (global_topology_data.topology_vector[i] == target_handle) {                             \
+        index = i;                                                                                \
+        break;                                                                                    \
+      }                                                                                           \
+    }                                                                                             \
+    ASSERT_NE(index, -1);                                                                         \
+    const glm::mat3& matrix = global_matrix_vector[index];                                        \
+    for (size_t i = 0; i < 3; ++i) {                                                              \
+      for (size_t j = 0; j < 3; ++j) {                                                            \
+        EXPECT_FLOAT_EQ(matrix[i][j], expected_matrix[i][j]) << " row " << j << " column " << i;  \
+      }                                                                                           \
+    }                                                                                             \
   }
 
 namespace {
@@ -136,7 +139,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
   struct GlobalFlatlandData {
     GlobalTopologyData topology_data;
-    std::vector<glm::mat3> global_matrices;
+    GlobalMatrixVector matrix_vector;
   };
 
   // Processing the main loop involves generating a global topology. For testing, the root transform
@@ -150,15 +153,14 @@ class FlatlandTest : public gtest::TestLoopFixture {
     auto links = link_system_->GetResolvedTopologyLinks();
     auto data = GlobalTopologyData::ComputeGlobalTopologyData(
         snapshot, links, link_system_->GetInstanceId(), root_transform);
-    auto matrices = GlobalTopologyData::ComputeGlobalMatrices(data.topology_vector,
-                                                              data.parent_indices, snapshot);
+    auto matrices = ComputeGlobalMatrixData(data.topology_vector, data.parent_indices, snapshot);
 
     link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, snapshot);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
 
-    return {.topology_data = data, .global_matrices = matrices};
+    return {.topology_data = std::move(data), .matrix_vector = std::move(matrices)};
   }
 
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
@@ -537,7 +539,7 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
 
   // With no properties set, the child root has an identity transform.
   auto data = ProcessMainLoop(parent.GetRoot());
-  EXPECT_MATRIX(data.topology_data, data.global_matrices, child.GetRoot(), glm::mat3());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), glm::mat3());
 
   // Set up one property per transform. Set up kId2 before kId1 to ensure the hierarchy is used.
   parent.SetScale(kId2, {2.f, 3.f});
@@ -552,7 +554,7 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   expected_matrix = glm::scale(expected_matrix, {2.f, 3.f});
 
   data = ProcessMainLoop(parent.GetRoot());
-  EXPECT_MATRIX(data.topology_data, data.global_matrices, child.GetRoot(), expected_matrix);
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_matrix);
 
   // Fill out the remaining properties on both transforms.
   parent.SetOrientation(kId1, Orientation::CCW_90_DEGREES);
@@ -577,7 +579,15 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   expected_matrix = glm::scale(expected_matrix, {2.f, 3.f});
 
   data = ProcessMainLoop(parent.GetRoot());
-  EXPECT_MATRIX(data.topology_data, data.global_matrices, child.GetRoot(), expected_matrix);
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_matrix);
+
+  // Ensure releasing one of the intermediate transforms does not clean up the matrix data since
+  // it is still referenced in an active chain of Transforms.
+  parent.ReleaseTransform(kId2);
+  PRESENT(parent, true);
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_matrix);
 }
 
 TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
@@ -823,6 +833,47 @@ TEST_F(FlatlandTest, ContentLinkIdIsZero) {
   ProcessMainLoop(flatland.GetRoot());
 }
 
+TEST_F(FlatlandTest, ContentLinkNoLogicalSize) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  flatland.CreateLink(0, std::move(parent_token), std::move(properties), content_link.NewRequest());
+  ProcessMainLoop(flatland.GetRoot());
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, ContentLinkInvalidLogicalSize) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  fidl::InterfacePtr<ContentLink> content_link;
+
+  // The X value must be positive.
+  LinkProperties properties;
+  properties.set_logical_size({0.f, kDefaultSize});
+  flatland.CreateLink(0, std::move(parent_token), std::move(properties), content_link.NewRequest());
+  ProcessMainLoop(flatland.GetRoot());
+  PRESENT(flatland, false);
+
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // The Y value must be positive.
+  LinkProperties properties2;
+  properties2.set_logical_size({kDefaultSize, 0.f});
+  flatland.CreateLink(0, std::move(parent_token), std::move(properties2),
+                      content_link.NewRequest());
+  ProcessMainLoop(flatland.GetRoot());
+  PRESENT(flatland, false);
+}
+
 TEST_F(FlatlandTest, ContentLinkIdCollision) {
   Flatland flatland = CreateFlatland();
 
@@ -965,7 +1016,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     PRESENT(parent, true);
   }
 
-  // Confirm that the new logical size is accessable.
+  // Confirm that the new logical size is accessible.
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
@@ -1545,6 +1596,151 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
+TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  const uint64_t kIdNotCreated = 1;
+
+  // Zero is not a valid transform ID.
+  flatland.SetLinkSize(0, {1.f, 2.f});
+  PRESENT(flatland, false);
+
+  // Size contains non-positive components.
+  flatland.SetLinkSize(0, {-1.f, 2.f});
+  PRESENT(flatland, false);
+
+  flatland.SetLinkSize(0, {1.f, 0.f});
+  PRESENT(flatland, false);
+
+  // Link does not exist.
+  flatland.SetLinkSize(kIdNotCreated, {1.f, 2.f});
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, LinkSizeRatiosCreateScaleMatrix) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  const uint64_t kId1 = 1;
+
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+  parent.SetLinkOnTransform(kLinkId1, kId1);
+
+  PRESENT(parent, true);
+
+  // The default size is the same as the logical size, so the child root has an identity matrix.
+  // With no properties set, the child root has an identity transform.
+  auto data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), glm::mat3());
+
+  // Change the link size to half the width and a quarter the height.
+  const float kNewLinkWidth = 0.5f * kDefaultSize;
+  const float kNewLinkHeight = 0.25f * kDefaultSize;
+  parent.SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
+
+  PRESENT(parent, true);
+
+  // This should change the expected matrix to apply the same scales.
+  const glm::mat3 expected_scale_matrix = glm::scale(glm::mat3(), {kNewLinkWidth, kNewLinkHeight});
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_scale_matrix);
+
+  // Changing the logical size to the same values returns the matrix to the identity matrix.
+  LinkProperties properties;
+  properties.set_logical_size({kNewLinkWidth, kNewLinkHeight});
+  parent.SetLinkProperties(kLinkId1, std::move(properties));
+
+  PRESENT(parent, true);
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), glm::mat3());
+
+  // Change the logical size back to the default size.
+  LinkProperties properties2;
+  properties2.set_logical_size({kDefaultSize, kDefaultSize});
+  parent.SetLinkProperties(kLinkId1, std::move(properties2));
+
+  PRESENT(parent, true);
+
+  // This should change the expected matrix back to applying the scales.
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_scale_matrix);
+}
+
+TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  const uint64_t kId1 = 1;
+
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+  parent.SetLinkOnTransform(kLinkId1, kId1);
+
+  PRESENT(parent, true);
+
+  // Set the link size and logical size to new values
+  const float kNewLinkWidth = 2.f * kDefaultSize;
+  const float kNewLinkHeight = 3.f * kDefaultSize;
+  parent.SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
+
+  const float kNewLinkLogicalWidth = 5.f * kDefaultSize;
+  const float kNewLinkLogicalHeight = 7.f * kDefaultSize;
+  LinkProperties properties;
+  properties.set_logical_size({kNewLinkLogicalWidth, kNewLinkLogicalHeight});
+  parent.SetLinkProperties(kLinkId1, std::move(properties));
+
+  PRESENT(parent, true);
+
+  // This should result in an expected matrix that applies the ratio of the scales.
+  glm::mat3 expected_scale_matrix = glm::scale(
+      glm::mat3(), {kNewLinkWidth / kNewLinkLogicalWidth, kNewLinkHeight / kNewLinkLogicalHeight});
+
+  auto data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_scale_matrix);
+
+  // Setting a new LinkProperties with no logical size shouldn't change the matrix.
+  LinkProperties properties2;
+  parent.SetLinkProperties(kLinkId1, std::move(properties2));
+
+  PRESENT(parent, true);
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_scale_matrix);
+
+  // But it should still preserve the old logical size so that a subsequent link size update uses
+  // the old logical size.
+  const float kNewLinkWidth2 = 11.f * kDefaultSize;
+  const float kNewLinkHeight2 = 13.f * kDefaultSize;
+  parent.SetLinkSize(kLinkId1, {kNewLinkWidth2, kNewLinkHeight2});
+
+  PRESENT(parent, true);
+
+  // This should result in an expected matrix that applies the ratio of the scales.
+  expected_scale_matrix = glm::scale(glm::mat3(), {kNewLinkWidth2 / kNewLinkLogicalWidth,
+                                                   kNewLinkHeight2 / kNewLinkLogicalHeight});
+
+  data = ProcessMainLoop(parent.GetRoot());
+  EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_scale_matrix);
+}
+
+#undef EXPECT_MATRIX
 #undef PRESENT
 
 }  // namespace test
