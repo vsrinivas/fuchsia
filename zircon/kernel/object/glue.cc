@@ -62,6 +62,12 @@ static Event mem_state_signal(EVENT_FLAG_AUTOUNSIGNAL);
 static ktl::atomic<PressureLevel> mem_event_idx = PressureLevel::kNormal;
 static PressureLevel prev_mem_event_idx = mem_event_idx;
 
+// Used to delay signaling memory level transitions in the case of rapid changes.
+static constexpr zx_time_t kHysteresisSeconds = ZX_SEC(10);
+
+// Tracks last time the memory state was evaluated (and signaled if required).
+static zx_time_t prev_mem_state_eval_time = ZX_TIME_INFINITE_PAST;
+
 fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
   switch (kind) {
     case ZX_SYSTEM_EVENT_OUT_OF_MEMORY:
@@ -143,30 +149,49 @@ static int oom_thread(void* unused) {
     // exited the last observed state, but that's fine as we don't necessarily need to signal every
     // transient state.
     PressureLevel idx = mem_event_idx;
-    printf("OOM: memory availability state %s\n", PressureLevelToString(idx));
 
-    // Unsignal the last event that was signaled.
-    zx_status_t status =
-        mem_pressure_events[prev_mem_event_idx]->user_signal_self(ZX_EVENT_SIGNALED, 0);
-    if (status != ZX_OK) {
-      panic("OOM: unsignal memory event %s failed: %d\n", PressureLevelToString(prev_mem_event_idx),
-            status);
+    auto time_now = current_time();
+
+    // We signal a memory state change immediately if:
+    // 1) The current index is lower than the previous one signaled (i.e. available memory is lower
+    // now), so that clients can act on the signal quickly.
+    // 2) |kHysteresisSeconds| have elapsed since the last time we examined the state.
+    if (idx < prev_mem_event_idx ||
+        zx_time_sub_time(time_now, prev_mem_state_eval_time) >= kHysteresisSeconds) {
+      printf("OOM: memory availability state %s\n", PressureLevelToString(idx));
+
+      // Unsignal the last event that was signaled.
+      zx_status_t status =
+          mem_pressure_events[prev_mem_event_idx]->user_signal_self(ZX_EVENT_SIGNALED, 0);
+      if (status != ZX_OK) {
+        panic("OOM: unsignal memory event %s failed: %d\n",
+              PressureLevelToString(prev_mem_event_idx), status);
+      }
+
+      // Signal event corresponding to the new memory state.
+      status = mem_pressure_events[idx]->user_signal_self(0, ZX_EVENT_SIGNALED);
+      if (status != ZX_OK) {
+        panic("OOM: signal memory event %s failed: %d\n", PressureLevelToString(idx), status);
+      }
+      prev_mem_event_idx = idx;
+      prev_mem_state_eval_time = time_now;
+
+      // If we're below the out-of-memory watermark, trigger OOM behavior.
+      if (idx == 0) {
+        on_oom();
+      }
+
+      // Wait for the memory state to change again.
+      mem_state_signal.Wait(Deadline::infinite());
+
+    } else {
+      prev_mem_state_eval_time = time_now;
+
+      // We are ignoring this memory state transition. Wait for only |kHysteresisSeconds|, and then
+      // re-evaluate the memory state. Otherwise we could remain stuck at the lower memory state if
+      // mem_avail_state_updated_cb() is not invoked.
+      mem_state_signal.Wait(Deadline::no_slack(zx_time_add_duration(time_now, kHysteresisSeconds)));
     }
-
-    // Signal event corresponding to the new memory state.
-    status = mem_pressure_events[idx]->user_signal_self(0, ZX_EVENT_SIGNALED);
-    if (status != ZX_OK) {
-      panic("OOM: signal memory event %s failed: %d\n", PressureLevelToString(idx), status);
-    }
-    prev_mem_event_idx = idx;
-
-    // If we're below the out-of-memory watermark, trigger OOM behavior.
-    if (idx == 0) {
-      on_oom();
-    }
-
-    // Wait for the memory state to change again.
-    mem_state_signal.Wait(Deadline::infinite());
   }
 }
 
