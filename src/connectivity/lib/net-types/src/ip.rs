@@ -237,7 +237,8 @@ impl Ip for Ipv4 {
     const VERSION: IpVersion = IpVersion::V4;
     const UNSPECIFIED_ADDRESS: Ipv4Addr = Ipv4Addr::new([0, 0, 0, 0]);
     // https://tools.ietf.org/html/rfc5735#section-3
-    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv4Addr> = SpecifiedAddr(Ipv4Addr::new([127, 0, 0, 1]));
+    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv4Addr> =
+        unsafe { SpecifiedAddr::new_unchecked(Ipv4Addr::new([127, 0, 0, 1])) };
     const LOOPBACK_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
     const MULTICAST_SUBNET: Subnet<Ipv4Addr> =
@@ -259,7 +260,7 @@ impl Ipv4 {
     /// regardless of subnet address. This is distinct from the subnet-specific
     /// broadcast address (e.g., 192.168.255.255 on the subnet 192.168.0.0/16).
     pub const GLOBAL_BROADCAST_ADDRESS: SpecifiedAddr<Ipv4Addr> =
-        SpecifiedAddr(Ipv4Addr::new([255, 255, 255, 255]));
+        unsafe { SpecifiedAddr::new_unchecked(Ipv4Addr::new([255, 255, 255, 255])) };
 
     /// The Class E subnet.
     ///
@@ -276,8 +277,12 @@ impl Ipv4 {
     /// Section 4].
     ///
     /// [RFC 5771 Section 4]: https://tools.ietf.org/html/rfc5771#section-4
-    const LINK_LOCAL_MULTICAST_SUBNET: Subnet<Ipv4Addr> =
+    pub const LINK_LOCAL_MULTICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
+
+    /// The multicast address subscribed to by all routers on the local network.
+    pub const ALL_ROUTERS_MULTICAST_ADDRESS: MulticastAddr<Ipv4Addr> =
+        unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 2])) };
 }
 
 /// IPv6.
@@ -300,8 +305,11 @@ impl sealed::Sealed for Ipv6 {}
 impl Ip for Ipv6 {
     const VERSION: IpVersion = IpVersion::V6;
     const UNSPECIFIED_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 16]);
-    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv6Addr> =
-        SpecifiedAddr(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
+    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv6Addr> = unsafe {
+        SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ]))
+    };
     const LOOPBACK_SUBNET: Subnet<Ipv6Addr> = Subnet {
         network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
         prefix: 128,
@@ -332,15 +340,21 @@ impl Ipv6 {
     /// [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
-    pub const ALL_NODES_LINK_LOCAL_ADDRESS: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    pub const ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> = unsafe {
+        MulticastAddr::new_unchecked(Ipv6Addr::new([
+            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ]))
+    };
 
     /// The IPv6 All Routers multicast address in link-local scope, as defined
     /// in [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
-    pub const ALL_ROUTERS_LINK_LOCAL_ADDRESS: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+    pub const ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> = unsafe {
+        MulticastAddr::new_unchecked(Ipv6Addr::new([
+            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        ]))
+    };
 
     /// The length, in bits, of the interface identifier portion of unicast IPv6
     /// addresses *except* for addresses which start with the binary value 000.
@@ -1699,5 +1713,17 @@ mod tests {
             Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0]);
         assert!(multi.is_multicast());
         assert!(!multi.is_valid_unicast());
+    }
+
+    #[test]
+    fn test_const_witness() {
+        // Test that all of the addresses that we initialize at compile time
+        // using `new_unchecked` constructors are valid for their witness types.
+        assert!(Ipv4::LOOPBACK_ADDRESS.0.is_specified());
+        assert!(Ipv6::LOOPBACK_ADDRESS.0.is_specified());
+        assert!(Ipv4::GLOBAL_BROADCAST_ADDRESS.0.is_specified());
+        assert!(Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS.0.is_multicast());
+        assert!(Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.0.is_multicast());
+        assert!(Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.0.is_multicast());
     }
 }

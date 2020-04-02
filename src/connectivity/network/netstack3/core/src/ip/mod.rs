@@ -23,7 +23,6 @@ pub use self::types::*;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
 use core::num::NonZeroU8;
-use core::ops::Deref;
 
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
@@ -61,12 +60,6 @@ const DEFAULT_TTL: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
 
 /// Minimum MTU required by all IPv6 devices.
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
-
-// The ipv4 multicast address for all routers.
-const IPV4_ALL_ROUTERS: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 2]);
-// The ipv6 multicast address for all routers.
-const IPV6_ALL_ROUTERS: Ipv6Addr =
-    Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
 
 /// The metadata for sending an IP packet from a particular source address.
 ///
@@ -1428,7 +1421,7 @@ fn deliver_ipv6<D: EventDispatcher>(
     // Along with the host model described above, we need to be able to have
     // multiple IPs per interface, it becomes imperative for IPv6.
     crate::device::get_ip_addr_state(ctx, device, &dst_ip).is_some()
-        || dst_ip.deref() == &Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS
+        || dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified()
         || MulticastAddr::new(dst_ip.get())
             .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
 }

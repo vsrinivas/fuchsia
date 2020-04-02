@@ -12,7 +12,7 @@ use core::fmt::{Debug, Display};
 use core::time::Duration;
 
 use log::{debug, error};
-use net_types::ip::{AddrSubnet, Ipv4Addr};
+use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr};
 use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
 use thiserror::Error;
@@ -378,7 +378,7 @@ fn run_action<C: IgmpContext>(
                 ctx,
                 device,
                 group_addr,
-                MulticastAddr::new(crate::ip::IPV4_ALL_ROUTERS).unwrap(),
+                Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS,
                 (),
             )?;
         }

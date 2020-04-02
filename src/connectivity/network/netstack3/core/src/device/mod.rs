@@ -803,7 +803,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
     }
 
     // All nodes should join the all-nodes multicast group.
-    join_ip_multicast(ctx, device, MulticastAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap());
+    join_ip_multicast(ctx, device, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
 
     if self::is_router_device::<_, Ipv6>(ctx, device) {
         // If the device is operating as a router, and it is configured to be an advertising
@@ -1340,11 +1340,7 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
         // device a router and starting periodic router advertisements.
         if ip_routing {
             // Now that `device` is a router, join the all-routers multicast group.
-            join_ip_multicast(
-                ctx,
-                device,
-                MulticastAddr::new(Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS).unwrap(),
-            );
+            join_ip_multicast(ctx, device, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
 
             // If `device` has a link-local address, and is configured to be an advertising
             // interface, start advertising.
@@ -1389,11 +1385,7 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
             }
 
             // Now that `device` is a host, leave the all-routers multicast group.
-            leave_ip_multicast(
-                ctx,
-                device,
-                MulticastAddr::new(Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS).unwrap(),
-            );
+            leave_ip_multicast(ctx, device, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
         }
 
         // Actually update the routing flag.

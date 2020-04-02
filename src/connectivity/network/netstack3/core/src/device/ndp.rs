@@ -1558,7 +1558,11 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
         }
         InnerNdpTimerId::RouterAdvertisementTransmit => {
             // Send the router advertisement to the IPv6 all-nodes multicast address.
-            send_router_advertisement(ctx, id.device_id, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+            send_router_advertisement(
+                ctx,
+                id.device_id,
+                Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            );
 
             // Schedule the next Router Advertisement if `id.device_id` is an
             // advertising interface or it is sending its final Router
@@ -2218,7 +2222,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
             ctx,
             device_id,
             src_ip,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get(),
             RouterSolicitation::default(),
             &[],
         );
@@ -2229,7 +2233,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
             ctx,
             device_id,
             src_ip,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get(),
             RouterSolicitation::default(),
             &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
         );
@@ -2460,7 +2464,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
 
     // If `dst_ip` is the IPv6 all-nodes multicast address, increment the counter for number of
     // Router Advertisements sent to the IPv6 all-nodes multicast address.
-    if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
+    if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get() {
         ndp_state.all_nodes_transmited_router_advertisements += 1;
     }
 
@@ -2475,7 +2479,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     )
     .is_ok()
     {
-        if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
+        if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get() {
             let now = ctx.now();
             let ndp_state = ctx.get_state_mut_with(device_id);
 
@@ -3256,7 +3260,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     device_id,
                     false,
                     *target_address,
-                    Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
                 )
             }
         }
@@ -3724,7 +3728,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().addr().get());
-        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get());
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(64, false, false, lifetime, 0, 0));
     }
@@ -5926,7 +5930,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         );
     }
 
@@ -5962,7 +5966,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         );
     }
 
@@ -5993,7 +5997,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         );
     }
 
@@ -6084,7 +6088,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         let (_, _, src_ip, dst_ip, _, message, code) =
@@ -6100,7 +6104,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().addr().get());
-        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get());
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(64, false, false, 1800, 0, 0));
 
@@ -6138,7 +6142,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         let (_, _, src_ip, dst_ip, _, message, code) =
@@ -6159,7 +6163,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().addr().get());
-        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get());
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(75, true, false, 2000, 50, 200));
     }
@@ -6892,7 +6896,7 @@ mod tests {
 
         let neighbor_mac = config.remote_mac;
         let neighbor_ip = neighbor_mac.to_ipv6_link_local().addr().get();
-        let all_nodes_addr = SpecifiedAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap();
+        let all_nodes_addr = Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
 
         // Should not know about the neighbor yet.
         assert!(StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(

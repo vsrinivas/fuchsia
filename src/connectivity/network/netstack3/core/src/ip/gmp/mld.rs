@@ -335,7 +335,7 @@ fn run_action<C: MldContext>(
         Action::Generic(GmpAction::SendLeave) => send_mld_packet::<_, &[u8], _>(
             ctx,
             device,
-            MulticastAddr::new(crate::ip::IPV6_ALL_ROUTERS).unwrap(),
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
             MulticastListenerDone,
             group_addr,
             (),
@@ -406,7 +406,7 @@ mod tests {
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
     use crate::context::DualStateContext;
     use crate::ip::gmp::{Action, GmpAction, MemberState};
-    use crate::ip::{DummyDeviceId, IPV6_ALL_ROUTERS};
+    use crate::ip::DummyDeviceId;
     use crate::testutil;
     use crate::testutil::{new_rng, FakeCryptoRng};
     use crate::wire::icmp::mld::MulticastListenerQuery;
@@ -735,7 +735,12 @@ mod tests {
         ensure_frame(&ctx.frames()[1].1, 131, GROUP_ADDR, GROUP_ADDR);
         ensure_slice_addr(&ctx.frames()[1].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
         // The last one should be the done message whose destination is all routers.
-        ensure_frame(&ctx.frames()[2].1, 132, IPV6_ALL_ROUTERS, GROUP_ADDR);
+        ensure_frame(
+            &ctx.frames()[2].1,
+            132,
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            GROUP_ADDR,
+        );
         ensure_slice_addr(&ctx.frames()[2].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
     }
 
