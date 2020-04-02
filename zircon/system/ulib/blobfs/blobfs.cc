@@ -772,6 +772,7 @@ zx_status_t Blobfs::InitializeVnodes() {
       return status;
     }
     metrics_.UpdateLookup(vnode->SizeData());
+    metrics_.IncrementCompressionFormatMetric(inode);
   }
 
   if (total_allocated != info_.alloc_inode_count) {

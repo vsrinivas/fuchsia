@@ -29,11 +29,25 @@ enum class Event : uint32_t {
 
   // Fs Manager Level operation.
   kDataCorruption = 14,
+
+  // Distribution of compression formats. Only used by blobfs.
+  kCompression = 16,
 };
 
 enum class CorruptionSource { kUnknown = 0, kFvm = 1, kBlobfs = 2, kMinfs = 3 };
 
 enum class CorruptionType { kUnknown = 0, kMetadata = 1, kData = 2 };
+
+enum class CompressionSource { kUnknown = 0, kBlobfs = 1 };
+
+enum class CompressionFormat {
+  kUnknown = 0,
+  kUncompressed = 1,
+  kCompressedLZ4 = 2,
+  kCompressedZSTD = 3,
+  kCompressedZSTDSeekable = 4,
+  kNumFormats = 5
+};
 
 // Collection of Vnode Events.
 constexpr Event kVnodeEvents[] = {

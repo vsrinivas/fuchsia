@@ -6,13 +6,20 @@
 
 #include <cstdint>
 #include <memory>
+#include <unordered_map>
 #include <utility>
 
 #include <cobalt-client/cpp/collector.h>
+#include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
 #include <fbl/string.h>
+#include <fs/metrics/events.h>
 
 namespace fs_metrics {
+
+using CompressionFormatCounter =
+    std::unordered_map<fs_metrics::CompressionFormat, std::unique_ptr<cobalt_client::Counter>>;
+
 // Vnode related histograms.
 struct VnodeMetrics {
   // Number of buckets used for the vnode metrics.
@@ -39,6 +46,29 @@ struct VnodeMetrics {
   bool metrics_enabled = false;
 };
 
+// Tracks distribution across the various compression formats supported by a filesystem. Keeps a
+// counter of total file sizes (in bytes) for each format type.
+//
+// Currently used by blobfs. The sizes tracked are uncompressed sizes (the inode's blob_size) for a
+// fair comparison between the different compressed and uncompressed formats.
+struct CompressionFormatMetrics {
+  CompressionFormatMetrics(cobalt_client::Collector* collector,
+                           fs_metrics::CompressionSource compression_source);
+
+  // Increments the counter for |format| by |size|.
+  void IncrementCounter(fs_metrics::CompressionFormat format, uint64_t size);
+
+  // For testing.
+  static cobalt_client::MetricOptions MakeCompressionMetricOptions(
+      fs_metrics::CompressionSource source, fs_metrics::CompressionFormat format);
+
+  // Maps compression format to |cobalt_client::Counter|.
+  CompressionFormatCounter counters;
+
+  // Filesystem source the metrics are associated with.
+  fs_metrics::CompressionSource source = fs_metrics::CompressionSource::kUnknown;
+};
+
 // Provides a base class for collecting metrics in FS implementations. This is optional, but
 // provides a source of truth of how data is collected for filesystems. Specific filesystem
 // implementations with custom APIs can extend and collect more data, but for basic operations, this
@@ -48,7 +78,8 @@ struct VnodeMetrics {
 class Metrics {
  public:
   Metrics() = delete;
-  Metrics(std::unique_ptr<cobalt_client::Collector> collector, const fbl::String& fs_name);
+  Metrics(std::unique_ptr<cobalt_client::Collector> collector, const fbl::String& fs_name,
+          fs_metrics::CompressionSource source = fs_metrics::CompressionSource::kUnknown);
   Metrics(const Metrics&) = delete;
   Metrics(Metrics&&) = delete;
   Metrics& operator=(const Metrics&) = delete;
@@ -70,10 +101,15 @@ class Metrics {
   const VnodeMetrics& vnode_metrics() const;
   VnodeMetrics* mutable_vnode_metrics();
 
- protected:
+  const CompressionFormatMetrics& compression_format_metrics() const;
+  CompressionFormatMetrics* mutable_compression_format_metrics();
+
+ private:
   std::unique_ptr<cobalt_client::Collector> collector_;
 
   VnodeMetrics vnode_metrics_;
+
+  CompressionFormatMetrics compression_format_metrics_;
 
   bool is_enabled_ = false;
 };

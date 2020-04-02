@@ -10,6 +10,7 @@
 #include <lib/fzl/time.h>
 #include <lib/zx/time.h>
 
+#include <fs/metrics/events.h>
 #include <fs/trace.h>
 
 namespace blobfs {
@@ -127,6 +128,32 @@ void BlobfsMetrics::UpdateMerkleVerify(uint64_t size_data, uint64_t size_merkle,
     blobs_verified_total_size_merkle_ += size_merkle;
     total_verification_time_ticks_ += duration;
   }
+}
+
+void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode* inode) {
+  if (!Collecting()) {
+    return;
+  }
+  fs_metrics::CompressionFormat format;
+  if (inode->IsCompressed()) {
+    auto compression = inode->header.flags & kBlobFlagMaskAnyCompression;
+    switch (compression) {
+      case kBlobFlagLZ4Compressed:
+        format = fs_metrics::CompressionFormat::kCompressedLZ4;
+        break;
+      case kBlobFlagZSTDCompressed:
+        format = fs_metrics::CompressionFormat::kCompressedZSTD;
+        break;
+      case kBlobFlagZSTDSeekableCompressed:
+        format = fs_metrics::CompressionFormat::kCompressedZSTDSeekable;
+        break;
+      default:
+        format = fs_metrics::CompressionFormat::kUnknown;
+    }
+  } else {
+    format = fs_metrics::CompressionFormat::kUncompressed;
+  }
+  cobalt_metrics_.mutable_compression_format_metrics()->IncrementCounter(format, inode->blob_size);
 }
 
 }  // namespace blobfs

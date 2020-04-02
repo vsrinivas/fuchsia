@@ -16,6 +16,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 
+#include <blobfs/format.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fs/metrics/cobalt_metrics.h>
 #include <fs/metrics/composite_latency_event.h>
@@ -81,6 +82,10 @@ class BlobfsMetrics {
     return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_vnode_metrics());
   }
 
+  // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
+  // the |inode| header, and increments the counter for that format with the inode's |blob_size|.
+  void IncrementCompressionFormatMetric(const Inode* inode);
+
  private:
   // Returns the underlying collector of cobalt metrics.
   cobalt_client::Collector* mutable_collector() { return cobalt_metrics_.mutable_collector(); }
@@ -142,7 +147,8 @@ class BlobfsMetrics {
   static constexpr uint32_t kCobaltProjectId = 3676913920;
   // Cobalt metrics.
   fs_metrics::Metrics cobalt_metrics_ =
-      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId), "blobfs");
+      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId), "blobfs",
+                          fs_metrics::CompressionSource::kBlobfs);
 
   // Loop for flushing the collector periodically.
   async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
