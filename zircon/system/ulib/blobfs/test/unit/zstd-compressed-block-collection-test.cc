@@ -12,7 +12,6 @@
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <string.h>
-#include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -58,17 +57,20 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
   }
 
   void InitCollection(const BlobInfo& blob_info, uint64_t num_vmo_bytes,
-                      std::unique_ptr<ZSTDCompressedBlockCollection>* out_coll) {
+                      std::unique_ptr<ZSTDCompressedBlockCollectionImpl>* out_coll) {
     ASSERT_EQ(0, blob_info.size_merkle % kBlobfsBlockSize);
     uint64_t num_merkle_blocks64 = blob_info.size_merkle / kBlobfsBlockSize;
     ASSERT_LE(num_merkle_blocks64, std::numeric_limits<uint32_t>::max());
     uint32_t num_merkle_blocks = static_cast<uint32_t>(num_merkle_blocks64);
     zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+    uint64_t num_vmo_blocks64 = num_vmo_bytes / kBlobfsBlockSize;
+    ASSERT_LE(num_vmo_blocks64, std::numeric_limits<uint32_t>::max());
+    uint32_t num_vmo_blocks = static_cast<uint32_t>(num_vmo_blocks64);
     ASSERT_OK(mapper_.CreateAndMap(num_vmo_bytes, map_options, nullptr, &vmo_));
     ASSERT_OK(fs_->BlockAttachVmo(vmo_, &vmoid_.GetReference(fs_.get())));
 
-    *out_coll = std::make_unique<ZSTDCompressedBlockCollection>(
-        vmoid_.get(), &mapper_, SpaceManager(), TransactionHandler(), NodeFinder(),
+    *out_coll = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
+        &vmoid_, num_vmo_blocks, SpaceManager(), TransactionHandler(), NodeFinder(),
         LookupInode(blob_info), num_merkle_blocks);
   }
 
@@ -131,16 +133,16 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobRead) {
   ASSERT_EQ(false, blob_info->size_merkle > 0);
 
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Read only data block in blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  std::vector<uint8_t> buf(kNumVMOBlocks * kBlobfsBlockSize);
-  ASSERT_OK(coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
-  EXPECT_EQ(0, memcmp(buf.data(), blob_info->data.get() + (kDataBlockOffset * kBlobfsBlockSize),
-                      kNumReadDataBlocks * kBlobfsBlockSize));
+  ASSERT_OK(coll->Read(kDataBlockOffset, kNumReadDataBlocks));
+  EXPECT_EQ(0,
+            memcmp(mapper_.start(), blob_info->data.get() + (kDataBlockOffset * kBlobfsBlockSize),
+                   kNumReadDataBlocks * kBlobfsBlockSize));
 }
 
 TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadOffset) {
@@ -150,14 +152,13 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadOffset) {
   ASSERT_EQ(false, blob_info->size_merkle > 0);
 
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Attempt to read second data block of one-data-block blob.
   constexpr uint32_t kDataBlockOffset = 1;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  std::vector<uint8_t> buf(kNumVMOBlocks * kBlobfsBlockSize);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(kDataBlockOffset, kNumReadDataBlocks));
 }
 
 TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadNumDataBlocks) {
@@ -168,14 +169,13 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadNumDataBlocks) {
 
   // Make VMO large enough for two-block read (even though blob is not large enough).
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks + 1;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Attempt to read two data blocks of one-data-block-blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumVMOBlocks;
-  std::vector<uint8_t> buf(kNumVMOBlocks * kBlobfsBlockSize);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(kDataBlockOffset, kNumReadDataBlocks));
 }
 
 TEST_F(ZSTDCompressedBlockCollectionTest, BlobRead) {
@@ -185,16 +185,16 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BlobRead) {
   ASSERT_EQ(true, blob_info->size_merkle > 0);
 
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Read only data block in blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  std::vector<uint8_t> buf(kNumVMOBlocks * kBlobfsBlockSize);
-  ASSERT_OK(coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
-  EXPECT_EQ(0, memcmp(buf.data(), blob_info->data.get() + (kDataBlockOffset * kBlobfsBlockSize),
-                      kNumReadDataBlocks * kBlobfsBlockSize));
+  ASSERT_OK(coll->Read(kDataBlockOffset, kNumReadDataBlocks));
+  EXPECT_EQ(0,
+            memcmp(mapper_.start(), blob_info->data.get() + (kDataBlockOffset * kBlobfsBlockSize),
+                   kNumReadDataBlocks * kBlobfsBlockSize));
 }
 
 TEST_F(ZSTDCompressedBlockCollectionTest, BadOffset) {
@@ -204,14 +204,13 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BadOffset) {
   ASSERT_EQ(true, blob_info->size_merkle > 0);
 
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Attempt to read second data block of one-data-block blob.
   constexpr uint32_t kDataBlockOffset = 4;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  std::vector<uint8_t> buf(kNumVMOBlocks * kBlobfsBlockSize);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(kDataBlockOffset, kNumReadDataBlocks));
 }
 
 TEST_F(ZSTDCompressedBlockCollectionTest, BadNumDataBlocks) {
@@ -222,14 +221,13 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BadNumDataBlocks) {
 
   // Make VMO large enough for two-block read (even though blob is not large enough).
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks + 1;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Attempt to read two data blocks of one-data-block-blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumVMOBlocks;
-  std::vector<uint8_t> buf(kNumVMOBlocks * kBlobfsBlockSize);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, coll->Read(kDataBlockOffset, kNumReadDataBlocks));
 }
 
 TEST_F(ZSTDCompressedBlockCollectionTest, VMOTooSmall) {
@@ -240,14 +238,13 @@ TEST_F(ZSTDCompressedBlockCollectionTest, VMOTooSmall) {
 
   // Make VMO too small for read.
   constexpr uint32_t kNumVMOBlocks = kNumDataBlocks - 1;
-  std::unique_ptr<ZSTDCompressedBlockCollection> coll;
+  std::unique_ptr<ZSTDCompressedBlockCollectionImpl> coll;
   InitCollection(*blob_info, kNumVMOBlocks * kBlobfsBlockSize, &coll);
 
   // Attempt to read two data blocks of one-data-block-blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  std::vector<uint8_t> buf(kNumDataBlocks * kBlobfsBlockSize);
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, coll->Read(buf.data(), kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, coll->Read(kDataBlockOffset, kNumReadDataBlocks));
 }
 
 }  // namespace
