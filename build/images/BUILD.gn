@@ -1391,6 +1391,7 @@ paver_targets = [
 
 foreach(format,
         [
+          "tar",
           "tgz",
           "zip",
           "nil",

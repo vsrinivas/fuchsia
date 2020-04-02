@@ -44,11 +44,17 @@ set -x
 
 
 # Produces a gzip compressed tarball archive.
-class TGZArchiver(object):
+class TarArchiver(object):
     """Public interface needs to match {Nil,Zip}Archiver."""
 
-    def __init__(self, outfile):
-        self._archive = tarfile.open(outfile, 'w:gz', dereference=True)
+    def __init__(self, outfile, compress=True):
+        mode = 'w'
+        # If compression is requested, use the mode 'w:gz', which adds gzip
+        # compression to the output file.
+        if compress:
+            mode += ':gz'
+
+        self._archive = tarfile.open(outfile, mode, dereference=True)
 
     def __enter__(self):
         return self
@@ -81,7 +87,7 @@ class TGZArchiver(object):
 
 # Produces a deflated zip archive.
 class ZipArchiver(object):
-    """Public interface needs to match {TGZ,Nil}Archiver."""
+    """Public interface needs to match {Tar,Nil}Archiver."""
 
     def __init__(self, outfile):
         self._archive = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED)
@@ -102,7 +108,7 @@ class ZipArchiver(object):
 
 # Does not produce an archive but validates that all input paths are valid.
 class NilArchiver(object):
-    """ Public interface needs to match {TGZ,Nil}Archive."""
+    """ Public interface needs to match {Tar,Nil}Archive."""
 
     def __init__(self, outfile):
         self._outfile = outfile
@@ -125,8 +131,11 @@ class NilArchiver(object):
 
 
 def format_archiver(outfile, format):
+    if format == 'tar':
+        return TarArchiver(outfile, compress=False)
+    if format == 'tgz':
+        return TarArchiver(outfile, compress=True)
     return {
-        'tgz': TGZArchiver,
         'zip': ZipArchiver,
         'nil': NilArchiver
     }[format](outfile)
@@ -221,6 +230,8 @@ def archive_format(args, outfile):
         return args.format
     if outfile.endswith('.zip'):
         return 'zip'
+    if outfile.endswith('.tar'):
+        return 'tar'
     if outfile.endswith('.tgz') or outfile.endswith('.tar.gz'):
         return 'tgz'
     if outfile.endswith('.nil'):
@@ -257,7 +268,7 @@ def main():
         '--symbol-archive', metavar='FILE', help='Write symbol archive to FILE')
     parser.add_argument(
         '--format',
-        choices=['tgz', 'zip', 'nil'],
+        choices=['tar', 'tgz', 'zip', 'nil'],
         help='Archive format (default: from FILE suffix)')
     parser.add_argument('--board_name', help='Board name images were built for')
     parser.add_argument(

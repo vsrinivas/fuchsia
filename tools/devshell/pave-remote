@@ -72,13 +72,13 @@ if [[ -z "${dir}" ]]; then
   fi
 fi
 
-ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx build build-archive.tgz" || exit $?
+ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx build build-archive.tar" || exit $?
 build_dir=$(ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx get-build-dir")
 
-rsync -P "${host}":"${build_dir}/build-archive.tgz" out/build-archive.tgz
+rsync -z -P "${host}":"${build_dir}/build-archive.tar" out/build-archive.tar
 
 mkdir -p out/fetched
-tar zxf out/build-archive.tgz -C out/fetched
+tar xf out/build-archive.tar -C out/fetched
 echo >&2 "Build archive expanded into out/fetched"
 
 if "${pave}"; then
