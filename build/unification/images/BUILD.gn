@@ -675,7 +675,6 @@ aggregate_manifest("legacy-aux") {
     "log-writer-logger",
 #------------------
 #------------------
-    "log-writer-textfile",
 #------------------
 #------------------
     "memfs",

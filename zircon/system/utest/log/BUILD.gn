@@ -37,9 +37,9 @@ test("log") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/log",
     "//zircon/public/lib/log-writer-logger",
-    "//zircon/public/lib/log-writer-textfile",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/log-writer-textfile",
   ]
 }
 
