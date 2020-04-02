@@ -2,12 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("thread-safe-deleter") {
   # Note: The appearance of "sdk" does not mean this will or is intended to be
   # in the sdk. It's just the way we export from zircon for use elsewhere.
   sdk = "source"
   sdk_headers = [ "lib/thread-safe-deleter/thread_safe_deleter.h" ]
   sources = [ "thread_safe_deleter.cc" ]
-  deps = [ "$zx/system/ulib/closure-queue" ]
-  public_deps = [ "$zx/system/ulib/closure-queue:closure-queue.headers" ]
+  deps = [ "//zircon/public/lib/closure-queue" ]
+  public_deps = [ "//zircon/public/lib/closure-queue:closure-queue" ]
 }

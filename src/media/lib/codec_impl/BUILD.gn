@@ -49,7 +49,7 @@ source_set("codec_impl") {
     "//zircon/public/lib/closure-queue",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/thread-safe-deleter",
+    "//zircon/system/ulib/thread-safe-deleter",
   ]
   public_configs = [ ":codec_impl_include_config" ]
   deps = [
