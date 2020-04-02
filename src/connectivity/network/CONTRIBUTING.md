@@ -34,6 +34,9 @@ Prefer type safety over runtime invariant checking. In other words, arrange your
 abstractions such that they cannot express invalid conditions rather than
 relying on assertions at runtime.
 
+Write testable code; testable code is modular and its dependencies are easily
+injected.
+
 Avoid [magic numbers][magic_number].
 
 ### Comments
@@ -73,6 +76,59 @@ value; another example is "expected <variable> to be empty, was non-empty" -
 this message would be much more useful if it included the unexpected elements.
 
 Always consider: what will the reader do with this message?
+
+### Tests
+
+Consult the [testability rubrics][testability_rubrics] for general guidelines on
+test-writing and testability reviews on Fuchsia. In Fuchsia Networking, we
+define the following test classes:
+
+- **Unit tests** are fully local to a piece of code and all their external
+  dependencies are faked or mocked.
+- **Integration tests** validate behavior between two or more different
+  components.
+- **End-to-end tests** are driven by an external host machine and use the public
+  APIs and bytes written to the network to perform behavior validation. Can be
+  performed over a physical network or by virtualization of the DUT (`qemu`).
+
+Consider the following guidelines considering test-writing:
+
+1. Always add tests for new features or bug fixes.
+1. Consider the guidelines in [Error Messages](#Error-Messages) when writing
+   test assertions.
+1. Tests must be deterministic. Threaded or time-dependent code, Random Number
+   Generators (RNGs), and cross-component communication are common sources of
+   nondeterminism.
+     + Don't use `sleep` in tests as a means of weak synchronization. Only
+       `sleep` when strictly necessary (e.g. when polling is required).
+     + Time-dependent tests can use fake or mocked clocks to provide
+       determinism. See [`fuchsia_async::Executor::new_with_fake_time`] and
+       [fake-clock].
+     + Threaded code must always use the proper synchronization primitives to
+       avoid flakes. Whenever possible, prefer single-threaded tests.
+     + Always provide a mechanism to inject seeds for RNGs and use them in
+       tests.
+     + Test for flakes locally whenever possible; use repeat flags in test
+       binaries ([`-count`][go_test_flags] in Go,
+       [`--gtest_repeat`][gtest_test_flags] for googletest) and aim for at least
+       100-1000 runs locally if your test is prone to flakes before merging.
+         > Rust test binaries currently don't have an equivalent flag, you may
+         need to resort to a bash loop or equivalent to get repeated runs. See
+         [#65218][rust_65218].
+1. Avoid tests with hard-coded timeouts. Prefer relying on the framework/fixture
+   to time out tests.
+1. Prefer hermetic tests; test set-up routines should be explicit and
+   deterministic. Be mindful of test fixtures that run cases in parallel (such
+   as Rust's) when using "ambient" services. Prefer explicitly injecting
+   component dependencies that are vital to the test.
+1. [Tests should always be components][tests_as_components].
+1. Prefer virtual devices and networks for non-end-to-end tests. See [netemul]
+   for guidance on virtual network environments.
+1. Avoid [change detector tests][change_detector_tests]; tests that are
+   unnecessarily sensitive to changes, especially ones external to the code
+   under test, can hamper feature development and refactoring.
+1. Do not encode implementation details in tests, prefer testing through a
+   module's public API.
 
 ### Source Control Best Practices
 
@@ -128,6 +184,13 @@ Commit messages should never contain references to any of:
       https://fuchsia.googlesource.com/fuchsia/+/67fec6d)
 1. Other entities which may not make sense to arbitrary future readers
 
+Adding a `Test:` line to the commit message is encouraged. A `Test:` line
+should:
+1. Justify that any behavior changes or additions are thoroughly tested.
+1. Describe how to run new/affected test cases.
+
+For example: ``Test: Added new unit tests. `fx test netstack_gotests` ``.
+
 ### Philosohpy
 
 This section is inspired by [Flutter's style guide][flutter_philosophy], which
@@ -178,3 +241,12 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [commit_guidelines]: https://www.git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project#_commit_guidelines
 [commit_log-message-integration]: https://chromium.googlesource.com/infra/infra/+/master/appengine/monorail/doc/userguide/power-users.md#commit_log-message-integration
 [flutter_philosophy]: https://github.com/flutter/flutter/wiki/Style-guide-for-Flutter-repo#philosophy
+[testability_rubrics]: /docs/concepts/testing/testability_rubric.md
+[tests_as_components]: /docs/development/testing/running_tests_as_components.md
+[netemul]: /src/connectivity/network/testing/netemul/README.md
+[change_detector_tests]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
+[rust_65218]: https://github.com/rust-lang/rust/issues/65218
+[go_test_flags]: https://golang.org/cmd/go/#hdr-Testing_flags
+[gtest_test_flags]: https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#repeating-the-tests
+[`fuchsia_async::Executor::new_with_fake_time`]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#345
+[fake-clock]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fake-clock
