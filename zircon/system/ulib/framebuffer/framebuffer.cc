@@ -55,12 +55,6 @@ static bool in_single_buffer_mode;
 
 static zx_status_t fb_import_image(uint64_t collection_id, uint32_t index, uint32_t type,
                                    uint64_t* id_out);
-static void fb_release_image(uint64_t id);
-
-// Imports an event handle to use for image synchronization. This function
-// always consumes |handle|. Id must be unique and not equal to FB_INVALID_ID.
-static zx_status_t fb_import_event(zx_handle_t handle, uint64_t id);
-static void fb_release_event(uint64_t id);
 
 // Always import to collection id 1.
 static const uint32_t kCollectionId = 1;
@@ -456,24 +450,6 @@ zx_status_t fb_import_image(uint64_t collection_id, uint32_t index, uint32_t typ
 
   *id_out = import_rsp->image_id;
   return ZX_OK;
-}
-
-void fb_release_image(uint64_t image_id) {
-  ZX_ASSERT(inited && !in_single_buffer_mode);
-
-  // There's nothing meaningful we can do if this call fails
-  dc_client->ReleaseImage(image_id);
-}
-
-zx_status_t fb_import_event(zx_handle_t handle, uint64_t id) {
-  ZX_ASSERT(inited && !in_single_buffer_mode);
-  return dc_client->ImportEvent(zx::event(handle), id).status();
-}
-
-void fb_release_event(uint64_t id) {
-  ZX_ASSERT(inited && !in_single_buffer_mode);
-  // There's nothing meaningful we can do if this call fails
-  dc_client->ReleaseEvent(id);
 }
 
 zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id) {
