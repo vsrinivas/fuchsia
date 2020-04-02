@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include <ktl/type_traits.h>
+#include <sys/types.h>
 
 namespace internal {
 
@@ -29,6 +30,9 @@ template <typename T>
 struct is_copy_allowed
     : ktl::disjunction<ktl::conjunction<ktl::is_trivial<T>, ktl::is_standard_layout<T>,
                                         ktl::has_unique_object_representations<T>>> {};
+
+// Confine a |vaddr, len| pair to [0, top]; if either vaddr or vaddr+len cross top, fills in {0,0}
+void confine_user_address_range(vaddr_t* vaddr, size_t* len, const uintptr_t top);
 
 }  // namespace internal
 

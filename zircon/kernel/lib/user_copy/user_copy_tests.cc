@@ -134,7 +134,7 @@ bool capture_faults_test_capture() {
   END_TEST;
 }
 
-bool capture_faults_test_out_of_user_range() {
+bool test_out_of_user_range(bool capture_faults) {
   BEGIN_TEST;
 
   // If a user copy routine is asked to copy data to/from addresses which cannot
@@ -165,22 +165,35 @@ bool capture_faults_test_out_of_user_range() {
     {
       user_in_ptr<const uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
-      auto ret = user.copy_array_from_user_capture_faults(test_buffer, countof(test_buffer), 0);
-      ASSERT_FALSE(ret.fault_info.has_value(), "");
-      EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+      if (capture_faults) {
+        auto ret = user.copy_array_from_user_capture_faults(test_buffer, countof(test_buffer), 0);
+        ASSERT_FALSE(ret.fault_info.has_value(), "");
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+      } else {
+        auto ret = user.copy_array_from_user(test_buffer, countof(test_buffer));
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret);
+      }
     }
 
     {
       user_out_ptr<uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
-      auto ret = user.copy_array_to_user_capture_faults(test_buffer, countof(test_buffer), 0);
-      ASSERT_FALSE(ret.fault_info.has_value(), "");
-      EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+      if (capture_faults) {
+        auto ret = user.copy_array_to_user_capture_faults(test_buffer, countof(test_buffer), 0);
+        ASSERT_FALSE(ret.fault_info.has_value(), "");
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+      } else {
+        auto ret = user.copy_array_to_user(test_buffer, countof(test_buffer));
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret);
+      }
     }
   }
 
   END_TEST;
 }
+
+bool user_copy_test_out_of_user_range() { return test_out_of_user_range(false); }
+bool capture_faults_test_out_of_user_range() { return test_out_of_user_range(true); }
 
 // Verify is_copy_allowed<T>::value is true when T contains no implicit padding.
 struct SomeTypeWithNoPadding {
@@ -279,6 +292,70 @@ bool test_iovec_foreach() {
   END_TEST;
 }
 
+bool test_confine_user_address_range() {
+  BEGIN_TEST;
+  vaddr_t va;
+  size_t len;
+
+  // Test that accessing the last byte of an address space is allowed.
+  va = 0xfffu;
+  len = 1;
+  internal::confine_user_address_range(&va, &len, 4 * KB);
+  EXPECT_EQ(0xfffu, va);
+  EXPECT_EQ(1u, len);
+
+  // Check that the last byte of an address space plus first outside don't work.
+  va = 0xfff;
+  len = 2;
+  internal::confine_user_address_range(&va, &len, 4 * KB);
+  EXPECT_EQ(0u, va);
+  EXPECT_EQ(0u, len);
+
+  // Test that a vaddr that starts outside the address space doesn't work.
+  va = 0x1fffu;
+  len = 1024u;
+  internal::confine_user_address_range(&va, &len, 4 * KB);
+  EXPECT_EQ(0u, va);
+  EXPECT_EQ(0u, len);
+
+  // Test that accessing an entire small space works.
+  va = 0u;
+  len = 4 * KB;
+  internal::confine_user_address_range(&va, &len, 4 * KB);
+  EXPECT_EQ(0u, va);
+  EXPECT_EQ(4 * KB, len);
+
+  // Test that a 4 GB (full width of uint32_t) range is allowed.
+  va = 0x10000u;
+  len = 4 * MB;
+  internal::confine_user_address_range(&va, &len, 4 * GB);
+  EXPECT_EQ(0x10000u, va);
+  EXPECT_EQ(4 * MB, len);
+
+  // Test that length > top doesn't allow work.
+  va = 0x10000u;
+  len = 4 * GB * GB;
+  internal::confine_user_address_range(&va, &len, 4 * GB);
+  EXPECT_EQ(0u, va);
+  EXPECT_EQ(0u, len);
+
+  // Test that uint64_t wraparound for address doesn't allow access.
+  va = -1ul;
+  len = 2;
+  internal::confine_user_address_range(&va, &len, 4 * GB);
+  EXPECT_EQ(0u, va);
+  EXPECT_EQ(0u, len);
+
+  // Test that uint64_t wraparound for len doesn't allow access.
+  va = 0;
+  len = -1;
+  internal::confine_user_address_range(&va, &len, 4 * GB);
+  EXPECT_EQ(0u, va);
+  EXPECT_EQ(0u, len);
+
+  END_TEST;
+}
+
 }  // namespace
 
 #define USER_COPY_UNITTEST(fname) UNITTEST(#fname, fname)
@@ -288,10 +365,12 @@ USER_COPY_UNITTEST(pre_map_copy_out)
 USER_COPY_UNITTEST(fault_copy_out)
 USER_COPY_UNITTEST(pre_map_copy_in)
 USER_COPY_UNITTEST(fault_copy_in)
+USER_COPY_UNITTEST(user_copy_test_out_of_user_range)
 USER_COPY_UNITTEST(capture_faults_copy_out_success)
 USER_COPY_UNITTEST(capture_faults_copy_in_success)
 USER_COPY_UNITTEST(capture_faults_test_capture)
 USER_COPY_UNITTEST(capture_faults_test_out_of_user_range)
 USER_COPY_UNITTEST(test_get_total_capacity)
 USER_COPY_UNITTEST(test_iovec_foreach)
+USER_COPY_UNITTEST(test_confine_user_address_range)
 UNITTEST_END_TESTCASE(user_copy_tests, "user_copy_tests", "User Copy test")

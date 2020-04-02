@@ -6,9 +6,12 @@
 
 #include <arch/user_copy.h>
 #include <kernel/thread.h>
+#include <lib/user_copy/internal.h>
 #include <vm/vm.h>
 
 #include "arch/arm64/user_copy.h"
+
+static constexpr size_t kUserAspaceTop = (USER_ASPACE_BASE + USER_ASPACE_SIZE);
 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
   // The assembly code just does memcpy with fault handling.  This is
@@ -17,6 +20,9 @@ zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
   if (!is_user_address_range(reinterpret_cast<vaddr_t>(src), len)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  // Spectre V1: Confine {src, len} to user addresses to prevent the kernel from speculatively
+  // reading user-controlled addresses.
+  internal::confine_user_address_range(reinterpret_cast<vaddr_t*>(&src), &len, kUserAspaceTop);
 
   return _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch_.data_fault_resume,
                           ARM64_USER_COPY_DO_FAULTS)
@@ -41,6 +47,9 @@ UserCopyCaptureFaultsResult arch_copy_from_user_capture_faults(void* dst, const 
   if (!is_user_address_range(reinterpret_cast<vaddr_t>(src), len)) {
     return UserCopyCaptureFaultsResult{ZX_ERR_INVALID_ARGS};
   }
+  // Spectre V1: Confine {src, len} to user addresses to prevent the kernel from speculatively
+  // reading user-controlled addresses.
+  internal::confine_user_address_range(reinterpret_cast<vaddr_t*>(&src), &len, kUserAspaceTop);
 
   Arm64UserCopyRet ret =
       _arm64_user_copy(dst, src, len, &Thread::Current::Get()->arch_.data_fault_resume,
