@@ -78,7 +78,6 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   void NetworkDeviceImplGetStatus(status_t* out_status);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
-  void NetworkDeviceImplGetBti(zx::bti* out_bti);
   void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo);
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id);
 

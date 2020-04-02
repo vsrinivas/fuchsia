@@ -128,7 +128,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   buffer_descriptor_t* descriptor(uint16_t index);
   const buffer_descriptor_t* descriptor(uint16_t index) const;
   fbl::Span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
-  zx_status_t BuildPhysicalBuffer(uint64_t offset, uint64_t len, physical_memory_buffer_t* out);
   // Loads a completed rx buffer information back into the descriptor with the provided index.
   zx_status_t LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* buff);
   // Loads all rx descriptors that are already available into the given transaction.
@@ -147,10 +146,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // the `binding_` BindingRef.
   fit::optional<zx::channel> control_channel_;
   fzl::VmoMapper mapped_data_;
-  fzl::PinnedVmo pinned_data_;
-  // A helper that keeps the pinned data region offsets to allow faster search. The allocate array's
-  // length matches pinned_data_'s region_count.
-  std::unique_ptr<uint64_t[]> pinned_data_offsets_;
   zx::vmo vmo_descriptors_;
   fzl::VmoMapper descriptors_;
   fbl::RefPtr<RefCountedFifo> fifo_rx_;

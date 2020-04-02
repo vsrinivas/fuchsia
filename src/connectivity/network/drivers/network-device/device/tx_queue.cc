@@ -69,32 +69,12 @@ zx_status_t TxQueue::Create(DeviceInterface* parent, std::unique_ptr<TxQueue>* o
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (parent->info().device_features & FEATURE_TX_VIRTUAL_MEMORY_BUFFER) {
-    queue->virtual_mem_parts_.reset(new (&ac) VirtualMemParts[capacity]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    for (uint32_t i = 0; i < capacity; i++) {
-      queue->tx_buffers_[i].virtual_mem.parts_list = queue->virtual_mem_parts_[i].data();
-    }
-  } else {
-    for (uint32_t i = 0; i < capacity; i++) {
-      queue->tx_buffers_[i].virtual_mem.parts_list = nullptr;
-    }
+  queue->buffer_parts_.reset(new (&ac) BufferParts[capacity]);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
   }
-
-  if (parent->info().device_features & FEATURE_TX_PHYSICAL_MEMORY_BUFFER) {
-    queue->physical_mem_parts_.reset(new (&ac) PhysicalMemParts[capacity]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    for (uint32_t i = 0; i < capacity; i++) {
-      queue->tx_buffers_[i].physical_mem.parts_list = queue->physical_mem_parts_[i].data();
-    }
-  } else {
-    for (uint32_t i = 0; i < capacity; i++) {
-      queue->tx_buffers_[i].physical_mem.parts_list = nullptr;
-    }
+  for (uint32_t i = 0; i < capacity; i++) {
+    queue->tx_buffers_[i].data.parts_list = queue->buffer_parts_[i].data();
   }
 
   *out = std::move(queue);

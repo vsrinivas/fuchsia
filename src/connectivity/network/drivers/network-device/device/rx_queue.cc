@@ -52,32 +52,12 @@ zx_status_t RxQueue::Create(DeviceInterface* parent, std::unique_ptr<RxQueue>* o
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (parent->info().device_features & FEATURE_RX_VIRTUAL_MEMORY_BUFFER) {
-    queue->virtual_mem_parts_.reset(new (&ac) VirtualMemParts[device_depth]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    for (uint32_t i = 0; i < device_depth; i++) {
-      queue->space_buffers_[i].virtual_mem.parts_list = queue->virtual_mem_parts_[i].data();
-    }
-  } else {
-    for (uint32_t i = 0; i < device_depth; i++) {
-      queue->space_buffers_[i].virtual_mem.parts_list = nullptr;
-    }
+  queue->buffer_parts_.reset(new (&ac) BufferParts[device_depth]);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
   }
-
-  if (parent->info().device_features & FEATURE_RX_PHYSICAL_MEMORY_BUFFER) {
-    queue->physical_mem_parts_.reset(new (&ac) PhysicalMemParts[device_depth]);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    for (uint32_t i = 0; i < device_depth; i++) {
-      queue->space_buffers_[i].physical_mem.parts_list = queue->physical_mem_parts_[i].data();
-    }
-  } else {
-    for (uint32_t i = 0; i < device_depth; i++) {
-      queue->space_buffers_[i].physical_mem.parts_list = nullptr;
-    }
+  for (uint32_t i = 0; i < device_depth; i++) {
+    queue->space_buffers_[i].data.parts_list = queue->buffer_parts_[i].data();
   }
 
   if ((status = zx::port::create(0, &queue->rx_watch_port_)) != ZX_OK) {

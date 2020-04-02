@@ -14,14 +14,14 @@ zx_status_t TxBuffer::GetData(std::vector<uint8_t>* copy,
   if (!vmo_provider) {
     return ZX_ERR_INTERNAL;
   }
-  auto vmo = vmo_provider(buffer_.virtual_mem.vmo_id);
+  auto vmo = vmo_provider(buffer_.data.vmo_id);
   // can't use this with the current test set up, return internal error
-  if (buffer_.virtual_mem.parts_count != 1 || !vmo->is_valid()) {
+  if (buffer_.data.parts_count != 1 || !vmo->is_valid()) {
     return ZX_ERR_INTERNAL;
   }
-  copy->resize(buffer_.virtual_mem.parts_list[0].length);
-  return vmo->read(&copy->at(0), buffer_.virtual_mem.parts_list[0].offset,
-                   buffer_.virtual_mem.parts_list[0].length);
+  copy->resize(buffer_.data.parts_list[0].length);
+  return vmo->read(&copy->at(0), buffer_.data.parts_list[0].offset,
+                   buffer_.data.parts_list[0].length);
 }
 
 zx_status_t RxBuffer::WriteData(const uint8_t* data, size_t len,
@@ -29,16 +29,16 @@ zx_status_t RxBuffer::WriteData(const uint8_t* data, size_t len,
   if (!vmo_provider) {
     return ZX_ERR_INTERNAL;
   }
-  auto vmo = vmo_provider(buffer_.virtual_mem.vmo_id);
+  auto vmo = vmo_provider(buffer_.data.vmo_id);
   // we only support simple buffers here for testing
-  if (buffer_.virtual_mem.parts_count != 1 || !vmo->is_valid()) {
+  if (buffer_.data.parts_count != 1 || !vmo->is_valid()) {
     return ZX_ERR_INTERNAL;
   }
-  if (buffer_.virtual_mem.parts_list[0].length < len) {
+  if (buffer_.data.parts_list[0].length < len) {
     return ZX_ERR_INVALID_ARGS;
   }
   return_.total_length = len;
-  return vmo->write(data, buffer_.virtual_mem.parts_list[0].offset, len);
+  return vmo->write(data, buffer_.data.parts_list[0].offset, len);
 }
 
 void RxBuffer::FillReturn() {
@@ -52,7 +52,7 @@ void RxBuffer::FillReturn() {
 FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
     : ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl>() {
   // setup default info
-  info_.device_features = FEATURE_RX_VIRTUAL_MEMORY_BUFFER | FEATURE_TX_VIRTUAL_MEMORY_BUFFER;
+  info_.device_features = 0;
   info_.device_class = static_cast<uint8_t>(netdev::DeviceClass::ETHERNET);
   info_.rx_depth = kRxDepth;
   info_.tx_depth = kTxDepth;
@@ -155,14 +155,6 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_
   event_.signal(0, kEventRxAvailable);
 }
 
-void FakeNetworkDeviceImpl::NetworkDeviceImplGetBti(zx::bti* out_bti) {
-  if (fake_bti_) {
-    fake_bti_create(out_bti->reset_and_get_address());
-  } else {
-    out_bti->reset();
-  }
-}
-
 fit::function<zx::unowned_vmo(uint8_t)> FakeNetworkDeviceImpl::VmoGetter() {
   return [this](uint8_t id) { return zx::unowned_vmo(vmos_[id]); };
 }
@@ -225,8 +217,6 @@ zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
   }
   return status;
 }
-
-void FakeNetworkDeviceImpl::set_fake_bti(bool fake_bti) { fake_bti_ = fake_bti; }
 
 zx_status_t TestSession::Open(zx::unowned_channel netdevice, const char* name,
                               netdev::SessionFlags flags, uint16_t num_descriptors,

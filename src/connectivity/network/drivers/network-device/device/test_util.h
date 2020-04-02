@@ -5,13 +5,12 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_TEST_UTIL_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_TEST_UTIL_H_
 
-#include <lib/fake-bti/bti.h>
-
 #include <memory>
 #include <vector>
 
 #include <fbl/intrusive_double_list.h>
 
+#include "definitions.h"
 #include "device_interface.h"
 
 namespace network {
@@ -32,28 +31,22 @@ class AnyBuffer {
 
   AnyBuffer() {
     memset(&buffer_, 0x00, sizeof(T));
-    buffer_.physical_mem.parts_list = physical_;
-    buffer_.virtual_mem.parts_list = virtual_;
+    buffer_.data.parts_list = parts_.data();
   }
 
   explicit AnyBuffer(const T* buff) {
     buffer_ = *buff;
-    for (size_t i = 0; i < buffer_.virtual_mem.parts_count; i++) {
-      virtual_[i] = buffer_.virtual_mem.parts_list[i];
+    for (size_t i = 0; i < buffer_.data.parts_count; i++) {
+      parts_[i] = buffer_.data.parts_list[i];
     }
-    for (size_t i = 0; i < buffer_.physical_mem.parts_count; i++) {
-      physical_[i] = buffer_.physical_mem.parts_list[i];
-    }
-    buffer_.physical_mem.parts_list = physical_.data();
-    buffer_.virtual_mem.parts_list = virtual_.data();
+    buffer_.data.parts_list = parts_.data();
   }
 
   const T& buff() const { return buffer_; }
 
  protected:
   T buffer_{};
-  std::array<buffer_region_t, MAX_VIRTUAL_PARTS> virtual_{};
-  std::array<phys_entry_t, MAX_PHYSICAL_PARTS> physical_{};
+  internal::BufferParts parts_{};
 };
 
 class TxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<TxBuffer>>,
@@ -118,7 +111,6 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   void NetworkDeviceImplGetStatus(status_t* out_status);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
-  void NetworkDeviceImplGetBti(zx::bti* out_bti);
   void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) { vmos_[vmo_id] = std::move(vmo); }
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id) { vmos_[vmo_id].reset(); }
   void NetworkDeviceImplSetSnoop(bool snoop) { /* do nothing , only auto-snooping is allowed */
@@ -136,8 +128,6 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>>& rx_buffers() { return rx_buffers_; }
 
   fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>>& tx_buffers() { return tx_buffers_; }
-
-  void set_fake_bti(bool fake_bti);
 
   void set_auto_start(bool auto_start) { auto_start_ = auto_start; }
 
@@ -158,7 +148,6 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   ddk::NetworkDeviceIfcProtocolClient& client() { return device_client_; }
 
  private:
-  bool fake_bti_;
   device_info_t info_{};
   std::array<zx::vmo, MAX_VMOS> vmos_;
   std::array<uint8_t, netdev::MAX_FRAME_TYPES> rx_types_;

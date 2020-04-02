@@ -128,28 +128,6 @@ zx_status_t Session::Init(netdev::Fifos* out) {
 
   fbl::AllocChecker ac;
 
-  if (parent_->info().device_features &
-      (FEATURE_TX_PHYSICAL_MEMORY_BUFFER | FEATURE_RX_PHYSICAL_MEMORY_BUFFER)) {
-    // Pin the data VMO if the device requires physical buffers.
-    if ((status = pinned_data_.Pin(vmo_data_, parent_->bti(),
-                                   ZX_BTI_PERM_WRITE | ZX_BTI_PERM_READ)) != ZX_OK) {
-      LOGF_ERROR("network-device(%s): failed to pin data VMO: %s", name(),
-                 zx_status_get_string(status));
-      return status;
-    }
-
-    pinned_data_offsets_.reset(new (&ac) uint64_t[pinned_data_.region_count()]);
-    if (!ac.check()) {
-      LOGF_ERROR("network-device(%s): failed to allocate pinned data offsets", name());
-      return ZX_ERR_NO_MEMORY;
-    }
-    uint64_t offset = 0;
-    for (uint32_t i = 0; i < pinned_data_.region_count(); i++) {
-      pinned_data_offsets_[i] = offset;
-      offset += pinned_data_.region(i).size;
-    }
-  }
-
   if ((status = descriptors_.Map(vmo_descriptors_, 0, descriptor_count_ * descriptor_length_,
                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                  nullptr)) != ZX_OK) {
@@ -338,46 +316,6 @@ int Session::Thread() {
   return 0;
 }
 
-zx_status_t Session::BuildPhysicalBuffer(uint64_t offset, uint64_t len,
-                                         physical_memory_buffer_t* out) {
-  // Binary search the region where offset will start.
-  auto* first = &pinned_data_offsets_[0];
-  auto* last = &pinned_data_offsets_[pinned_data_.region_count()];
-  // std::upper_bound will find the first iterator position that is larger than `offset` or `last`
-  // if none is found.
-  auto upper = std::upper_bound(first, last, offset);
-  // This shouldn't happen since we know the first position of the array always has offset 0, it
-  // can't be greater than any unsigned offset.
-  ZX_ASSERT(first != upper);
-  upper--;
-  ZX_ASSERT(*upper <= offset);
-  uint64_t region_offset = offset - *upper;
-  uint32_t region_index = (upper - first);
-  while (len != 0 && out->parts_count < MAX_PHYSICAL_PARTS &&
-         region_index < pinned_data_.region_count()) {
-    auto& region = pinned_data_.region(region_index);
-    ZX_ASSERT(region.size > region_offset);
-    uint64_t use_len = std::min(region.size - region_offset, len);
-    // We have to remove the const classifier that is present from the banjo code generation.
-    auto* part = const_cast<phys_entry_t*>(&out->parts_list[out->parts_count++]);
-    part->addr = region.phys_addr + region_offset;
-    part->length = use_len;
-    len -= use_len;
-
-    // After the first region is evaluated, the region offset becomes zero. It's only needed for the
-    // very first region.
-    region_offset = 0;
-    region_index++;
-  }
-  if (len == 0) {
-    return ZX_OK;
-  } else {
-    // Unable to build buffer, meaning that the provided offset and length fall out of bounds of our
-    // pinned VMO.
-    return ZX_ERR_INVALID_ARGS;
-  }
-}
-
 Session::FetchResult Session::FetchTx() {
   TxQueue::SessionTransaction transaction(&parent_->tx_queue(), this);
 
@@ -402,8 +340,6 @@ Session::FetchResult Session::FetchTx() {
   uint16_t* desc_idx = fetch_buffer;
   auto req_header_length = parent_->info().tx_head_length;
   auto req_tail_length = parent_->info().tx_tail_length;
-  bool build_virtual = parent_->info().device_features & FEATURE_TX_VIRTUAL_MEMORY_BUFFER;
-  bool build_physical = parent_->info().device_features & FEATURE_TX_PHYSICAL_MEMORY_BUFFER;
 
   bool notify_listeners = false;
 
@@ -430,14 +366,8 @@ Session::FetchResult Session::FetchTx() {
                 buffer->meta.info_type);
     }
 
-    buffer->physical_mem.parts_count = 0;
-    if (build_virtual) {
-      buffer->virtual_mem.vmo_id = vmo_id_;
-    } else {
-      buffer->virtual_mem.vmo_id = MAX_VMOS;
-    }
-    buffer->virtual_mem.parts_count = 0;
-    buffer->physical_mem.parts_count = 0;
+    buffer->data.vmo_id = vmo_id_;
+    buffer->data.parts_count = 0;
 
     // check header space:
     if (desc->head_length < req_header_length) {
@@ -468,42 +398,18 @@ Session::FetchResult Session::FetchTx() {
     bool add_head_space = buffer->head_length != 0;
     uint16_t didx = *desc_idx;
     for (;;) {
-      if (build_virtual) {
-        auto* cur = const_cast<buffer_region_t*>(
-            &buffer->virtual_mem.parts_list[buffer->virtual_mem.parts_count]);
-        if (add_head_space) {
-          cur->offset = desc->offset + skip_front;
-          cur->length = desc->data_length + buffer->head_length;
-        } else {
-          cur->offset = desc->offset + desc->head_length;
-          cur->length = desc->data_length;
-        }
-        if (expect_chain == 0 && buffer->tail_length) {
-          cur->length += buffer->tail_length;
-        }
-        buffer->virtual_mem.parts_count++;
+      auto* cur = const_cast<buffer_region_t*>(&buffer->data.parts_list[buffer->data.parts_count]);
+      if (add_head_space) {
+        cur->offset = desc->offset + skip_front;
+        cur->length = desc->data_length + buffer->head_length;
+      } else {
+        cur->offset = desc->offset + desc->head_length;
+        cur->length = desc->data_length;
       }
-      if (build_physical) {
-        uint64_t vmo_offset = desc->offset;
-        uint64_t vmo_len;
-        if (add_head_space) {
-          vmo_offset += skip_front;
-          vmo_len = desc->data_length + buffer->head_length;
-        } else {
-          vmo_offset += desc->head_length;
-          vmo_len = desc->data_length;
-        }
-        if (expect_chain == 0 && buffer->tail_length) {
-          vmo_len += req_tail_length;
-        }
-
-        status = BuildPhysicalBuffer(vmo_offset, vmo_len, &buffer->physical_mem);
-        if (status != ZX_OK) {
-          LOGF_ERROR("network-device(%s): failed to map descriptor %d: %s", name(), didx,
-                     zx_status_get_string(status));
-          return FetchResult::FAILED;
-        }
+      if (expect_chain == 0 && buffer->tail_length) {
+        cur->length += buffer->tail_length;
       }
+      buffer->data.parts_count++;
 
       add_head_space = false;
       if (expect_chain == 0) {
@@ -679,10 +585,7 @@ void Session::Kill() {
 zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* buff) {
   auto* desc = descriptor(descriptor_index);
   ZX_ASSERT(desc != nullptr);
-  bool build_virtual = parent_->info().device_features & FEATURE_RX_VIRTUAL_MEMORY_BUFFER;
-  bool build_physical = parent_->info().device_features & FEATURE_RX_PHYSICAL_MEMORY_BUFFER;
-  ZX_ASSERT((!build_virtual) || buff->virtual_mem.parts_list != nullptr);
-  ZX_ASSERT((!build_physical) || buff->physical_mem.parts_list != nullptr);
+  ZX_ASSERT(buff->data.parts_list != nullptr);
 
   // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
   // descriptor chain value.
@@ -690,38 +593,19 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
     LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(), desc->chain_length);
     return ZX_ERR_INVALID_ARGS;
   }
-  buff->virtual_mem.parts_count = 0;
-  buff->physical_mem.parts_count = 0;
+  buff->data.parts_count = 0;
 
-  // we need the const cast here to go around banjo code generation. It looks very ugly, though.
-  auto* virtual_parts = const_cast<buffer_region_t*>(buff->virtual_mem.parts_list);
-
-  if (build_virtual) {
-    buff->virtual_mem.vmo_id = vmo_id_;
-  } else {
-    buff->virtual_mem.vmo_id = MAX_VMOS;
-  }
+  // We need the const cast here to go around banjo code generation. It looks very ugly, though.
+  auto* buffer_parts = const_cast<buffer_region_t*>(buff->data.parts_list);
+  buff->data.vmo_id = vmo_id_;
 
   auto expect_chain = desc->chain_length;
   uint16_t didx = descriptor_index;
   for (;;) {
-    if (build_virtual) {
-      virtual_parts->offset = desc->offset + desc->head_length;
-      virtual_parts->length = desc->data_length;
-      buff->virtual_mem.parts_count++;
-      virtual_parts++;
-    }
-    if (build_physical) {
-      uint64_t vmo_offset = desc->offset + desc->head_length;
-      uint64_t vmo_len = desc->data_length;
-
-      zx_status_t status = BuildPhysicalBuffer(vmo_offset, vmo_len, &buff->physical_mem);
-      if (status != ZX_OK) {
-        LOGF_ERROR("network-device(%s): failed to map descriptor %d: %s", name(), didx,
-                   zx_status_get_string(status));
-        return status;
-      }
-    }
+    buffer_parts->offset = desc->offset + desc->head_length;
+    buffer_parts->length = desc->data_length;
+    buff->data.parts_count++;
+    buffer_parts++;
     if (expect_chain == 0) {
       break;
     } else {

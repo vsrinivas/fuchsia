@@ -94,8 +94,7 @@ class TxQueue {
   // to the device at once.
   fbl::Mutex buffers_lock_ __TA_ACQUIRED_AFTER(lock_);
   std::unique_ptr<tx_buffer_t[]> tx_buffers_ __TA_GUARDED(buffers_lock_);
-  std::unique_ptr<VirtualMemParts[]> virtual_mem_parts_ __TA_GUARDED(buffers_lock_);
-  std::unique_ptr<PhysicalMemParts[]> physical_mem_parts_ __TA_GUARDED(buffers_lock_);
+  std::unique_ptr<BufferParts[]> buffer_parts_ __TA_GUARDED(buffers_lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(TxQueue);
 };

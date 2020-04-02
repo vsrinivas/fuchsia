@@ -79,12 +79,12 @@ Buffer VmoStore::MakeRxSpaceBuffer(const rx_space_buffer_t* space) { return Buff
 Buffer::Buffer(const tx_buffer_t* tx, bool get_meta, VmoStore* vmo_store)
     : id_(tx->id),
       vmo_store_(vmo_store),
-      vmo_id_(tx->virtual_mem.vmo_id),
-      parts_count_(tx->virtual_mem.parts_count),
+      vmo_id_(tx->data.vmo_id),
+      parts_count_(tx->data.parts_count),
       frame_type_(static_cast<fuchsia::hardware::network::FrameType>(tx->meta.frame_type)) {
   // Enforce the banjo contract.
-  ZX_ASSERT(tx->virtual_mem.parts_count <= MAX_VIRTUAL_PARTS);
-  std::copy_n(tx->virtual_mem.parts_list, parts_count_, parts_.begin());
+  ZX_ASSERT(tx->data.parts_count <= MAX_BUFFER_PARTS);
+  std::copy_n(tx->data.parts_list, parts_count_, parts_.begin());
   if (get_meta) {
     meta_ = fuchsia::net::tun::FrameMetadata::New();
     meta_->flags = tx->meta.flags;
@@ -98,11 +98,11 @@ Buffer::Buffer(const tx_buffer_t* tx, bool get_meta, VmoStore* vmo_store)
 Buffer::Buffer(const rx_space_buffer_t* space, VmoStore* vmo_store)
     : id_(space->id),
       vmo_store_(vmo_store),
-      vmo_id_(space->virtual_mem.vmo_id),
-      parts_count_(space->virtual_mem.parts_count) {
+      vmo_id_(space->data.vmo_id),
+      parts_count_(space->data.parts_count) {
   // Enforce the banjo contract.
-  ZX_ASSERT(space->virtual_mem.parts_count <= MAX_VIRTUAL_PARTS);
-  std::copy_n(space->virtual_mem.parts_list, parts_count_, parts_.begin());
+  ZX_ASSERT(space->data.parts_count <= MAX_BUFFER_PARTS);
+  std::copy_n(space->data.parts_list, parts_count_, parts_.begin());
 }
 
 zx_status_t Buffer::Read(std::vector<uint8_t>* vec) {

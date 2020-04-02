@@ -9,13 +9,14 @@
 
 #include <array>
 
+#include <ddk/protocol/network/device.h>
+
 namespace network {
 namespace netdev = llcpp::fuchsia::hardware::network;
 constexpr uint32_t kMaxFifoDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
 
 namespace internal {
-using VirtualMemParts = std::array<buffer_region_t, MAX_VIRTUAL_PARTS>;
-using PhysicalMemParts = std::array<phys_entry_t, MAX_PHYSICAL_PARTS>;
+using BufferParts = std::array<buffer_region_t, MAX_BUFFER_PARTS>;
 }  // namespace internal
 
 }  // namespace network

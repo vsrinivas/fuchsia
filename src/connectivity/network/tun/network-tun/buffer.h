@@ -133,7 +133,7 @@ class Buffer {
   // Pointer to parent VMO store, not owned.
   VmoStore* const vmo_store_;
   const uint8_t vmo_id_;
-  std::array<buffer_region_t, MAX_VIRTUAL_PARTS> parts_{};
+  std::array<buffer_region_t, MAX_BUFFER_PARTS> parts_{};
   const size_t parts_count_{};
   std::unique_ptr<fuchsia::net::tun::FrameMetadata> meta_;
   const fit::optional<fuchsia::hardware::network::FrameType> frame_type_;

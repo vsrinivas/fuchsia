@@ -49,11 +49,10 @@ class DeviceInterface : public netdev::Device::Interface,
   // the number of buffers on device is less than or equal to the threshold, we should attempt to
   // fetch more buffers.
   uint32_t rx_notify_threshold() const {
-    // TODO(fxb/44835) This threshold should be negotiated as part of the device info in the banjo
+    // TODO(44835): This threshold should be negotiated as part of the device info in the banjo
     // protocol.
     return device_info_.rx_depth / 2;
   }
-  const zx::bti& bti() const;
 
   TxQueue& tx_queue() { return *tx_queue_; }
 
@@ -205,7 +204,6 @@ class DeviceInterface : public netdev::Device::Interface,
   fit::callback<void()> teardown_callback_ __TA_GUARDED(teardown_lock_);
 
   PendingDeviceOperation pending_device_op_ = PendingDeviceOperation::NONE;
-  zx::bti bti_;
   std::atomic_bool has_listen_sessions_ = false;
 
   // NOTE: when locking the queues explicitly, the tx_queue_->Lock should ALWAYS be acquired before

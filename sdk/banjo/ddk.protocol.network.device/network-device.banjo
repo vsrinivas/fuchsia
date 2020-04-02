@@ -17,7 +17,7 @@ using zx;
 /// The API contract is based on three key concepts:
 /// - Frame Types
 /// - Receive and Transmit buffers
-/// - Virtual and Physical memory buffers
+/// - `BufferData` memory layout
 ///
 /// Frame Types are the defined contract that is exposed to applications, which convey the data type
 /// contained in a tx or rx buffer. The supported frame types are defined in
@@ -71,33 +71,6 @@ using zx;
 ///  (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks the transmission as
 ///  complete referencing the buffer's identifier to
 ///  [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteTx`].
-///
-/// Virtual and Physical memory buffers are different representations of the same frame data. A
-/// virtual memory buffer is software-addressable: it represents a region (possibly noncontiguous)
-/// in a VMO that a device can read from or write into. A physical memory buffer is
-/// hardware-addressable: it's a physical address representation of that same data, pinned with the
-/// BTI (a Bus Transaction Initiator that represent the DMA capability of a device) provided by the
-/// device implementation, and can be used to perform DMA operations with hardware.
-
-/// Devices with [`ddk.protocol.network.device/FEATURE_RX_PHYSICAL_MEMORY_BUFFER`] will receive
-/// [`ddk.protocol.network.device/PhysicalMemoryBuffer`] instances on Rx operations. Devices with
-/// [`ddk.protocol.network.device/FEATURE_RX_VIRTUAL_MEMORY_BUFFER`] will receive
-/// [`ddk.protocol.network.device/VirtualMemoryBuffer`] instances on Rx operations. Implementers are
-/// encouraged to only set the flags for the buffer versions they will actually access during
-/// operation. Devices that request `PhysicalMemoryBuffer` instances must provide a valid `Bti` in
-/// their [`ddk.protocol.network.device/NetworkDeviceImpl.GetBti`] implementation.
-const uint32 FEATURE_RX_PHYSICAL_MEMORY_BUFFER = 0x01;
-const uint32 FEATURE_RX_VIRTUAL_MEMORY_BUFFER = 0x02;
-
-/// Devices with [`ddk.protocol.network.device/FEATURE_TX_PHYSICAL_MEMORY_BUFFER`] will receive
-/// [`ddk.protocol.network.device/PhysicalMemoryBuffer`] instances on Tx operations. Devices with
-/// [`ddk.protocol.network.device/FEATURE_TX_VIRTUAL_MEMORY_BUFFER`] will receive
-/// [`ddk.protocol.network.device/VirtualMemoryBuffer`] instances on Tx operations. Implementers are
-/// encouraged to only set the flags for the buffer versions they'll actually access during
-/// operation. Devices that request `PhysicalMemoryBuffer` instances must provide a valid `Bti` in
-/// their [`ddk.protocol.network.device/NetworkDeviceImpl.GetBti`] implementation.
-const uint32 FEATURE_TX_PHYSICAL_MEMORY_BUFFER = 0x04;
-const uint32 FEATURE_TX_VIRTUAL_MEMORY_BUFFER = 0x08;
 
 /// Disables automatic snooping for the device. The generic NetworkDevice layer typically
 /// automatically copies all tx traffic to any snooping clients. Devices may turn off that behavior
@@ -105,20 +78,14 @@ const uint32 FEATURE_TX_VIRTUAL_MEMORY_BUFFER = 0x08;
 /// Devices that disable auto-snooping SHOULD use the
 /// [`ddk.protocol.network.device/NetworkDeviceIfc.Snoop`] interface method to expose any Tx frames
 /// they receive.
-const uint32 FEATURE_NO_AUTO_SNOOP = 0x10;
+const uint32 FEATURE_NO_AUTO_SNOOP = 0x01;
 
 /// Maximum number of [`ddk.protocol.network.device/BufferRegion`] parts in a
-/// [`ddk.protocol.network.device/VirtualMemoryBuffer`].
+/// [`ddk.protocol.network.device/BufferData`].
 // NOTE: the number 4 should cover the most common use case for split buffers: 1 contiguous buffer
 // for header, 1 contiguous buffer for data, 0 or 1 contiguous buffer for trailer. Rounded up to
 // nearest power of two.
-const uint32 MAX_VIRTUAL_PARTS = 4;
-
-/// Maximum number of [`ddk.protocol.network.device/PhysEntry`] parts in a
-/// [`ddk.protocol.network.device/PhysicalMemoryBuffer`].
-// NOTE: 16 buffer parts so that 4 pages (4KB) per virtual part will give us up to 16KB per virtual
-// part, which allows a single contiguous virtual memory buffer to hold a 9KB jumbo frame.
-const uint32 MAX_PHYSICAL_PARTS = 16;
+const uint32 MAX_BUFFER_PARTS = 4;
 
 /// The maximum number of concurrent shared VMOs that may exist.
 /// Every vmo_id is guaranteed to exist in the range `[0, MAX_VMOS)`
@@ -128,7 +95,10 @@ const uint32 MAX_PHYSICAL_PARTS = 16;
 // not limit too harshly the number of clients.
 const uint8 MAX_VMOS = 32;
 
-/// A virtually contiguous region of a Buffer.
+/// A contiguous memory region in [`ddk.protocol.network.device/BufferData`].
+///
+/// Note that a `BufferRegion` is only contiguous in terms of the VMO it references, it does not
+/// necessarily translate into contiguous physical memory.
 struct BufferRegion {
    /// Offset, in bytes, of data chunk in VMO.
   uint64 offset;
@@ -137,27 +107,15 @@ struct BufferRegion {
 };
 
 /// A buffer representation that references the data inside a VMO.
-struct VirtualMemoryBuffer {
+struct BufferData {
   /// Identifier of VMO backing the data in this buffer.
   /// The VMO identifier matches the one reported to devices through
   /// [`ddk.protocol.network.device/NetworkDeviceImpl.PrepareVmo`].
   uint8 vmo_id;
   /// Regions of VMO holding frame data.
-  vector<BufferRegion>:MAX_VIRTUAL_PARTS parts;
+  vector<BufferRegion>:MAX_BUFFER_PARTS parts;
 };
 
-/// A physically contiguous region in a [`ddk.protocol.network.device/PhysicalMemoryBuffer`].
-struct PhysEntry {
-  /// Physical address of data.
-  zx.paddr addr;
-  /// Total length of data in `addr`, in bytes.
-  uint64 length;
-};
-
-/// A buffer representation backed by physical memory that can be used by DMA engines.
-struct PhysicalMemoryBuffer {
-  vector<PhysEntry>:MAX_PHYSICAL_PARTS parts;
-};
 
 /// No extra frame metadata, [`ddk.protocol.network.device/FrameInfo.info_type`] must be
 /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
@@ -192,15 +150,9 @@ struct BufferMetadata {
 struct TxBuffer {
   /// Unique buffer identifier.
   uint32 id;
-  /// `VirtualMemoryBuffer` description of data in buffer.
-  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_TX_VIRTUAL_MEMORY_BUFFER`].
-  /// `virtual_mem` always contains the entire buffer, including `head` and `tail`.
-  VirtualMemoryBuffer virtual_mem;
-  /// `PhysicalMemoryBuffer` description of data in buffer.
-  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_TX_PHYSICAL_MEMORY_BUFFER`].
-  /// `physical_mem` always contains the entire buffer, including `head` and `tail`.
-  PhysicalMemoryBuffer physical_mem;
-  /// Metadata associated with buffer.
+  /// Description of data in this buffer.
+  BufferData data;
+  /// Metadata associated with this buffer.
   BufferMetadata meta;
   /// Length of header bytes in the data contained in this buffer. Will always be either 0 or the
   /// requested [`ddk.protocol.network.device/DeviceInfo.tx_head_length`] value. The head bytes are
@@ -218,12 +170,8 @@ struct TxBuffer {
 struct RxSpaceBuffer {
   /// Unique buffer identifier.
   uint32 id;
-  /// `VirtualMemoryBuffer` description of buffer.
-  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_RX_VIRTUAL_MEMORY_BUFFER`].
-  VirtualMemoryBuffer virtual_mem;
-  /// `PhysicalMemoryBuffer` description of buffer.
-  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_RX_PHYSICAL_MEMORY_BUFFER`].
-  PhysicalMemoryBuffer physical_mem;
+  /// Description of data in this buffer.
+  BufferData data;
 };
 
 /// A buffer containing a single frame received by the device.
@@ -403,9 +351,6 @@ protocol NetworkDeviceImpl {
   /// [`ddk.protocol.network.device/DeviceInfo.rx_depth`] value. Which also means that no more than
   /// `rx_depth` buffers are going to be informed at once in a single call to `QueueRxSpace`.
   QueueRxSpace(vector<RxSpaceBuffer> buffers);
-  /// Get the BTI handle (needed to pin DMA memory) for this device.
-  /// The caller takes ownership of the BTI handle.
-  GetBti() -> (handle<bti> bti);
   /// Informs device that a new VMO is being used to store frame data.
   /// Implementers must store the VMO handle referenced by `vmo_id` until
   /// [`ddk.protocol.network.device/NetworkDeviceImpl.ReleaseVmo`] is called with the same `vmo_id`.

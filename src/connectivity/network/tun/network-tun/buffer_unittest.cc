@@ -55,9 +55,9 @@ TEST_F(BufferTest, TestBufferBuildTx) {
   MintVmo(regions[1]);
   tx_buffer_t tx;
   tx.id = 1;
-  tx.virtual_mem.vmo_id = kVmoId;
-  tx.virtual_mem.parts_count = 2;
-  tx.virtual_mem.parts_list = regions;
+  tx.data.vmo_id = kVmoId;
+  tx.data.parts_count = 2;
+  tx.data.parts_list = regions;
   tx.head_length = 0;
   tx.tail_length = 0;
   tx.meta.frame_type = static_cast<uint8_t>(fuchsia::hardware::network::FrameType::ETHERNET);
@@ -79,9 +79,9 @@ TEST_F(BufferTest, TestBufferBuildRx) {
   buffer_region_t parts[2];
   rx_space_buffer_t space;
   space.id = 1;
-  space.virtual_mem.vmo_id = kVmoId;
-  space.virtual_mem.parts_count = 2;
-  space.virtual_mem.parts_list = parts;
+  space.data.vmo_id = kVmoId;
+  space.data.parts_count = 2;
+  space.data.parts_list = parts;
 
   parts[0].offset = 10;
   parts[0].length = 5;
@@ -111,18 +111,18 @@ TEST_F(BufferTest, CopyBuffer) {
   MintVmo(tx_parts[2]);
   tx_buffer_t tx;
   tx.id = 1;
-  tx.virtual_mem.vmo_id = kVmoId;
-  tx.virtual_mem.parts_count = 3;
-  tx.virtual_mem.parts_list = tx_parts;
+  tx.data.vmo_id = kVmoId;
+  tx.data.parts_count = 3;
+  tx.data.parts_list = tx_parts;
 
   auto b_tx = vmos_.MakeTxBuffer(&tx, false);
 
   buffer_region_t rx_parts[3];
   rx_space_buffer_t space;
   space.id = 1;
-  space.virtual_mem.vmo_id = kVmoId;
-  space.virtual_mem.parts_count = 3;
-  space.virtual_mem.parts_list = rx_parts;
+  space.data.vmo_id = kVmoId;
+  space.data.parts_count = 3;
+  space.data.parts_list = rx_parts;
 
   rx_parts[0].offset = 100;
   rx_parts[0].length = 3;
@@ -147,9 +147,9 @@ TEST_F(BufferTest, WriteFailure) {
   buffer_region_t parts;
   rx_space_buffer_t space;
   space.id = 1;
-  space.virtual_mem.vmo_id = kVmoId;
-  space.virtual_mem.parts_count = 1;
-  space.virtual_mem.parts_list = &parts;
+  space.data.vmo_id = kVmoId;
+  space.data.parts_count = 1;
+  space.data.parts_list = &parts;
 
   parts.offset = 10;
   parts.length = 3;
@@ -167,7 +167,7 @@ TEST_F(BufferTest, WriteFailure) {
   }
   {
     // A buffer with an invalid vmo_id is invalid.
-    space.virtual_mem.vmo_id = kVmoId + 1;
+    space.data.vmo_id = kVmoId + 1;
     auto b = vmos_.MakeRxSpaceBuffer(&space);
     ASSERT_EQ(b.Write({0x01}), ZX_ERR_NOT_FOUND);
   }
@@ -177,9 +177,9 @@ TEST_F(BufferTest, ReadFailure) {
   buffer_region_t parts;
   tx_buffer_t tx_buffer;
   tx_buffer.id = 1;
-  tx_buffer.virtual_mem.vmo_id = kVmoId;
-  tx_buffer.virtual_mem.parts_count = 1;
-  tx_buffer.virtual_mem.parts_list = &parts;
+  tx_buffer.data.vmo_id = kVmoId;
+  tx_buffer.data.parts_count = 1;
+  tx_buffer.data.parts_list = &parts;
 
   parts.length = 3;
   std::vector<uint8_t> data;
@@ -192,7 +192,7 @@ TEST_F(BufferTest, ReadFailure) {
   }
   {
     // A buffer with an invalid vmo_id is invalid.
-    tx_buffer.virtual_mem.vmo_id = kVmoId + 1;
+    tx_buffer.data.vmo_id = kVmoId + 1;
     auto b = vmos_.MakeTxBuffer(&tx_buffer, false);
     ASSERT_EQ(b.Read(&data), ZX_ERR_NOT_FOUND);
   }

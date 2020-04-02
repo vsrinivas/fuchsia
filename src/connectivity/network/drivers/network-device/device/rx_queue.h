@@ -93,8 +93,7 @@ class RxQueue {
 
   // there are pre-allocated buffers that are only used by the rx watch thread.
   std::unique_ptr<rx_space_buffer_t[]> space_buffers_;
-  std::unique_ptr<VirtualMemParts[]> virtual_mem_parts_;
-  std::unique_ptr<PhysicalMemParts[]> physical_mem_parts_;
+  std::unique_ptr<BufferParts[]> buffer_parts_;
 
   zx::port rx_watch_port_;
   fit::optional<thrd_t> rx_watch_thread_{};

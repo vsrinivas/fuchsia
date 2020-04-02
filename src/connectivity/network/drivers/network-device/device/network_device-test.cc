@@ -24,12 +24,6 @@
 namespace network {
 namespace testing {
 
-inline zx_paddr_t fake_bti_addr(uint16_t didx, uint64_t buff_size = kDefaultBufferLength) {
-  uint64_t vmo_offest = didx * buff_size;
-  vmo_offest -= vmo_offest & ~(PAGE_SIZE - 1);
-  return FAKE_BTI_PHYS_ADDR + vmo_offest;
-}
-
 class NetworkDeviceTest : public zxtest::Test {
  public:
   void SetUp() override {
@@ -129,11 +123,6 @@ void PrintVec(const std::string& name, const std::vector<uint8_t>& vec) {
 
 TEST_F(NetworkDeviceTest, CanCreate) { ASSERT_OK(CreateDevice()); }
 
-TEST_F(NetworkDeviceTest, CantCreateInvalidBti) {
-  impl_.info().device_features |= FEATURE_RX_PHYSICAL_MEMORY_BUFFER;
-  ASSERT_NOT_OK(CreateDevice());
-}
-
 TEST_F(NetworkDeviceTest, GetInfo) {
   ASSERT_OK(CreateDevice());
   auto connection = OpenConnection();
@@ -147,8 +136,9 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.min_tx_buffer_tail, impl_.info().tx_tail_length);
   EXPECT_EQ(info.min_tx_buffer_head, impl_.info().tx_head_length);
   EXPECT_EQ(info.descriptor_version, NETWORK_DEVICE_DESCRIPTOR_VERSION);
-  // The device doesn't require physical buffers, alignment requirement is byte-alignment.
-  EXPECT_EQ(info.buffer_alignment, 1);
+  // TODO(44604): Buffer alignment is currently hard-coded in DeviceInterface, it must be properly
+  // negotiated.
+  EXPECT_EQ(info.buffer_alignment, ZX_PAGE_SIZE / 2);
   static_assert(sizeof(buffer_descriptor_t) % 8 == 0);
   EXPECT_EQ(info.min_descriptor_length, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
   EXPECT_EQ(info.class_, netdev::DeviceClass::ETHERNET);
@@ -181,7 +171,7 @@ TEST_F(NetworkDeviceTest, OpenSession) {
   ASSERT_OK(WaitRxAvailable());
 }
 
-TEST_F(NetworkDeviceTest, VirtualRxBuild) {
+TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_OK(CreateDevice());
   auto connection = OpenConnection();
   TestSession session;
@@ -220,39 +210,36 @@ TEST_F(NetworkDeviceTest, VirtualRxBuild) {
   // check first descriptor:
   auto rx = impl_.rx_buffers().pop_back();
   ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_count, 1);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[0].offset, session.descriptor(0)->offset);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[0].length, kDefaultBufferLength);
-  ASSERT_EQ(rx->buff().physical_mem.parts_count, 0);
+  ASSERT_EQ(rx->buff().data.parts_count, 1);
+  ASSERT_EQ(rx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
+  ASSERT_EQ(rx->buff().data.parts_list[0].length, kDefaultBufferLength);
   rx->return_buffer().total_length = 64;
   rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_0);
   return_session.Enqueue(std::move(rx));
   // check second descriptor:
   rx = impl_.rx_buffers().pop_back();
   ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_count, 1);
+  ASSERT_EQ(rx->buff().data.parts_count, 1);
   desc = session.descriptor(1);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[0].offset, desc->offset + desc->head_length);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[0].length,
+  ASSERT_EQ(rx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
+  ASSERT_EQ(rx->buff().data.parts_list[0].length,
             kDefaultBufferLength - desc->head_length - desc->tail_length);
-  ASSERT_EQ(rx->buff().physical_mem.parts_count, 0);
   rx->return_buffer().total_length = 15;
   rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_1);
   return_session.Enqueue(std::move(rx));
   // check third descriptor:
   rx = impl_.rx_buffers().pop_back();
   ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_count, 3);
+  ASSERT_EQ(rx->buff().data.parts_count, 3);
   auto* d0 = session.descriptor(2);
   auto* d1 = session.descriptor(3);
   auto* d2 = session.descriptor(4);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[0].offset, d0->offset);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[0].length, d0->data_length);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[1].offset, d1->offset);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[1].length, d1->data_length);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[2].offset, d2->offset);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_list[2].length, d2->data_length);
-  ASSERT_EQ(rx->buff().physical_mem.parts_count, 0);
+  ASSERT_EQ(rx->buff().data.parts_list[0].offset, d0->offset);
+  ASSERT_EQ(rx->buff().data.parts_list[0].length, d0->data_length);
+  ASSERT_EQ(rx->buff().data.parts_list[1].offset, d1->offset);
+  ASSERT_EQ(rx->buff().data.parts_list[1].length, d1->data_length);
+  ASSERT_EQ(rx->buff().data.parts_list[2].offset, d2->offset);
+  ASSERT_EQ(rx->buff().data.parts_list[2].length, d2->data_length);
   // set the total length up to a part of the middle buffer:
   rx->return_buffer().total_length = 25;
   rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_2);
@@ -311,142 +298,7 @@ TEST_F(NetworkDeviceTest, VirtualRxBuild) {
   EXPECT_EQ(desc->tail_length, 0);
 }
 
-TEST_F(NetworkDeviceTest, PhysicalRxBuild) {
-  impl_.info().device_features &= ~(FEATURE_RX_VIRTUAL_MEMORY_BUFFER);
-  impl_.info().device_features |= (FEATURE_RX_PHYSICAL_MEMORY_BUFFER);
-  impl_.set_fake_bti(true);
-  ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
-  TestSession session;
-  ASSERT_OK(OpenSession(&session));
-  session.SetPaused(false);
-  ASSERT_OK(WaitStart());
-
-  constexpr size_t kDescTests = 3;
-  // send three Rx descriptors:
-  // - A simple descriptor with just data length
-  // - A descriptor with head and tail removed
-  // - A chained descriptor with simple data lengths.
-  uint16_t all_descs[kDescTests + 1] = {0, 1, 2};
-  session.ResetDescriptor(0);
-  auto* desc = session.ResetDescriptor(1);
-  desc->head_length = 16;
-  desc->tail_length = 32;
-  desc->data_length -= desc->head_length + desc->tail_length;
-  desc = session.ResetDescriptor(2);
-  desc->data_length = 10;
-  desc->chain_length = 2;
-  desc->nxt = 3;
-  desc = session.ResetDescriptor(3);
-  desc->data_length = 20;
-  desc->chain_length = 1;
-  desc->nxt = 4;
-  desc = session.ResetDescriptor(4);
-  desc->data_length = 30;
-  desc->chain_length = 0;
-  size_t sent;
-  ASSERT_OK(session.SendRx(all_descs, kDescTests, &sent));
-  ASSERT_EQ(sent, kDescTests);
-  ASSERT_OK(WaitRxAvailable());
-
-  RxReturnTransaction return_session(&impl_);
-  // load the buffers from the fake device implementation and check them.
-  // We call "pop_back" on the buffer list because network_device feeds Rx buffers in a LIFO order.
-  // check first descriptor:
-  auto rx = impl_.rx_buffers().pop_back();
-  ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().physical_mem.parts_count, 1);
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[0].addr, fake_bti_addr(0));
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[0].length, kDefaultBufferLength);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_count, 0);
-  rx->return_buffer().total_length = 64;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_0);
-  return_session.Enqueue(std::move(rx));
-  // check second descriptor:
-  rx = impl_.rx_buffers().pop_back();
-  ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().physical_mem.parts_count, 1);
-  desc = session.descriptor(1);
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[0].addr, fake_bti_addr(1) + desc->head_length);
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[0].length,
-            kDefaultBufferLength - desc->head_length - desc->tail_length);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_count, 0);
-  rx->return_buffer().total_length = 15;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_1);
-  return_session.Enqueue(std::move(rx));
-  // check third descriptor:
-  rx = impl_.rx_buffers().pop_back();
-  ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().physical_mem.parts_count, 3);
-  auto* d0 = session.descriptor(2);
-  auto* d1 = session.descriptor(3);
-  auto* d2 = session.descriptor(4);
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[0].addr, fake_bti_addr(2));
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[0].length, d0->data_length);
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[1].addr, fake_bti_addr(3));
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[1].length, d1->data_length);
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[2].addr, fake_bti_addr(4));
-  ASSERT_EQ(rx->buff().physical_mem.parts_list[2].length, d2->data_length);
-  ASSERT_EQ(rx->buff().virtual_mem.parts_count, 0);
-  // set the total length up to a part of the middle buffer:
-  rx->return_buffer().total_length = 25;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_2);
-  return_session.Enqueue(std::move(rx));
-  // ensure no more rx buffers were actually returned:
-  ASSERT_TRUE(impl_.rx_buffers().is_empty());
-  // commit the returned buffers
-  return_session.Commit();
-  // check that all descriptors were returned to the queue:
-  size_t read_back;
-  ASSERT_OK(session.FetchRx(all_descs, kDescTests + 1, &read_back));
-  ASSERT_EQ(read_back, kDescTests);
-  EXPECT_EQ(all_descs[0], 0);
-  EXPECT_EQ(all_descs[1], 1);
-  EXPECT_EQ(all_descs[2], 2);
-  // finally check all the stuff that was returned:
-  // check returned first descriptor:
-  desc = session.descriptor(0);
-  EXPECT_EQ(desc->offset, session.canonical_offset(0));
-  EXPECT_EQ(desc->chain_length, 0);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_0));
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 64);
-  EXPECT_EQ(desc->tail_length, 0);
-  // check returned second descriptor:
-  desc = session.descriptor(1);
-  EXPECT_EQ(desc->offset, session.canonical_offset(1));
-  EXPECT_EQ(desc->chain_length, 0);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_1));
-  EXPECT_EQ(desc->head_length, 16);
-  EXPECT_EQ(desc->data_length, 15);
-  EXPECT_EQ(desc->tail_length, 32);
-  // check returned third descriptor and the chained ones:
-  desc = session.descriptor(2);
-  EXPECT_EQ(desc->offset, session.canonical_offset(2));
-  EXPECT_EQ(desc->chain_length, 2);
-  EXPECT_EQ(desc->nxt, 3);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(netdev::RxFlags::RX_ACCEL_2));
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 10);
-  EXPECT_EQ(desc->tail_length, 0);
-  desc = session.descriptor(3);
-  EXPECT_EQ(desc->offset, session.canonical_offset(3));
-  EXPECT_EQ(desc->chain_length, 1);
-  EXPECT_EQ(desc->nxt, 4);
-  EXPECT_EQ(desc->inbound_flags, 0);
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 15);
-  EXPECT_EQ(desc->tail_length, 0);
-  desc = session.descriptor(4);
-  EXPECT_EQ(desc->offset, session.canonical_offset(4));
-  EXPECT_EQ(desc->chain_length, 0);
-  EXPECT_EQ(desc->inbound_flags, 0);
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 0);
-  EXPECT_EQ(desc->tail_length, 0);
-}
-
-TEST_F(NetworkDeviceTest, VirtualTxBuild) {
+TEST_F(NetworkDeviceTest, TxBufferBuild) {
   ASSERT_OK(CreateDevice());
   auto connection = OpenConnection();
   TestSession session;
@@ -483,131 +335,33 @@ TEST_F(NetworkDeviceTest, VirtualTxBuild) {
   // load the buffers from the fake device implementation and check them.
   auto tx = impl_.tx_buffers().pop_front();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_count, 1);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[0].offset, session.descriptor(0)->offset);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[0].length, kDefaultBufferLength);
-  ASSERT_EQ(tx->buff().physical_mem.parts_count, 0);
+  ASSERT_EQ(tx->buff().data.parts_count, 1);
+  ASSERT_EQ(tx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
+  ASSERT_EQ(tx->buff().data.parts_list[0].length, kDefaultBufferLength);
   return_session.Enqueue(std::move(tx));
   // check second descriptor:
   tx = impl_.tx_buffers().pop_front();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_count, 1);
+  ASSERT_EQ(tx->buff().data.parts_count, 1);
   desc = session.descriptor(1);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[0].offset, desc->offset + desc->head_length);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[0].length,
+  ASSERT_EQ(tx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
+  ASSERT_EQ(tx->buff().data.parts_list[0].length,
             kDefaultBufferLength - desc->head_length - desc->tail_length);
-  ASSERT_EQ(tx->buff().physical_mem.parts_count, 0);
   tx->set_status(ZX_ERR_UNAVAILABLE);
   return_session.Enqueue(std::move(tx));
   // check third descriptor:
   tx = impl_.tx_buffers().pop_front();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_count, 3);
+  ASSERT_EQ(tx->buff().data.parts_count, 3);
   auto* d0 = session.descriptor(2);
   auto* d1 = session.descriptor(3);
   auto* d2 = session.descriptor(4);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[0].offset, d0->offset);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[0].length, d0->data_length);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[1].offset, d1->offset);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[1].length, d1->data_length);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[2].offset, d2->offset);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_list[2].length, d2->data_length);
-  ASSERT_EQ(tx->buff().physical_mem.parts_count, 0);
-  tx->set_status(ZX_ERR_NOT_SUPPORTED);
-  return_session.Enqueue(std::move(tx));
-  // ensure no more tx buffers were actually enqueued:
-  ASSERT_TRUE(impl_.tx_buffers().is_empty());
-  // commit the returned buffers
-  return_session.Commit();
-  // check that all descriptors were returned to the queue:
-  size_t read_back;
-
-  ASSERT_OK(session.FetchTx(all_descs, kDescTests + 1, &read_back));
-  ASSERT_EQ(read_back, kDescTests);
-  EXPECT_EQ(all_descs[0], 0);
-  EXPECT_EQ(all_descs[1], 1);
-  EXPECT_EQ(all_descs[2], 2);
-  // check the status of the returned descriptors
-  desc = session.descriptor(0);
-  EXPECT_EQ(desc->return_flags, 0);
-  desc = session.descriptor(1);
-  EXPECT_EQ(desc->return_flags, static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR |
-                                                      netdev::TxReturnFlags::TX_RET_NOT_AVAILABLE));
-  desc = session.descriptor(2);
-  EXPECT_EQ(desc->return_flags, static_cast<uint32_t>(netdev::TxReturnFlags::TX_RET_ERROR |
-                                                      netdev::TxReturnFlags::TX_RET_NOT_SUPPORTED));
-}
-
-TEST_F(NetworkDeviceTest, PhysicalTxBuild) {
-  impl_.info().device_features &= ~(FEATURE_TX_VIRTUAL_MEMORY_BUFFER);
-  impl_.info().device_features |= (FEATURE_TX_PHYSICAL_MEMORY_BUFFER);
-  impl_.set_fake_bti(true);
-  ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
-  TestSession session;
-  ASSERT_OK(OpenSession(&session));
-  session.SetPaused(false);
-  ASSERT_OK(WaitStart());
-  constexpr size_t kDescTests = 3;
-  // send three Rx descriptors:
-  // - A simple descriptor with just data length
-  // - A descriptor with head and tail removed
-  // - A chained descriptor with simple data lengths.
-  uint16_t all_descs[kDescTests + 1] = {0, 1, 2};
-  session.ResetDescriptor(0);
-  auto* desc = session.ResetDescriptor(1);
-  desc->head_length = 16;
-  desc->tail_length = 32;
-  desc->data_length -= desc->head_length + desc->tail_length;
-  desc = session.ResetDescriptor(2);
-  desc->data_length = 10;
-  desc->chain_length = 2;
-  desc->nxt = 3;
-  desc = session.ResetDescriptor(3);
-  desc->data_length = 20;
-  desc->chain_length = 1;
-  desc->nxt = 4;
-  desc = session.ResetDescriptor(4);
-  desc->data_length = 30;
-  desc->chain_length = 0;
-  size_t sent;
-  ASSERT_OK(session.SendTx(all_descs, kDescTests, &sent));
-  ASSERT_EQ(sent, kDescTests);
-  ASSERT_OK(WaitTx());
-  TxReturnTransaction return_session(&impl_);
-  // load the buffers from the fake device implementation and check them.
-  auto tx = impl_.tx_buffers().pop_front();
-  ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().physical_mem.parts_count, 1);
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[0].addr, fake_bti_addr(0));
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[0].length, kDefaultBufferLength);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_count, 0);
-  return_session.Enqueue(std::move(tx));
-  // check second descriptor:
-  tx = impl_.tx_buffers().pop_front();
-  ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().physical_mem.parts_count, 1);
-  desc = session.descriptor(1);
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[0].addr, fake_bti_addr(1) + desc->head_length);
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[0].length,
-            kDefaultBufferLength - desc->head_length - desc->tail_length);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_count, 0);
-  tx->set_status(ZX_ERR_UNAVAILABLE);
-  return_session.Enqueue(std::move(tx));
-  // check third descriptor:
-  tx = impl_.tx_buffers().pop_front();
-  ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().physical_mem.parts_count, 3);
-  auto* d0 = session.descriptor(2);
-  auto* d1 = session.descriptor(3);
-  auto* d2 = session.descriptor(4);
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[0].addr, fake_bti_addr(2));
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[0].length, d0->data_length);
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[1].addr, fake_bti_addr(3));
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[1].length, d1->data_length);
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[2].addr, fake_bti_addr(4));
-  ASSERT_EQ(tx->buff().physical_mem.parts_list[2].length, d2->data_length);
-  ASSERT_EQ(tx->buff().virtual_mem.parts_count, 0);
+  ASSERT_EQ(tx->buff().data.parts_list[0].offset, d0->offset);
+  ASSERT_EQ(tx->buff().data.parts_list[0].length, d0->data_length);
+  ASSERT_EQ(tx->buff().data.parts_list[1].offset, d1->offset);
+  ASSERT_EQ(tx->buff().data.parts_list[1].length, d1->data_length);
+  ASSERT_EQ(tx->buff().data.parts_list[2].offset, d2->offset);
+  ASSERT_EQ(tx->buff().data.parts_list[2].length, d2->data_length);
   tx->set_status(ZX_ERR_NOT_SUPPORTED);
   return_session.Enqueue(std::move(tx));
   // ensure no more tx buffers were actually enqueued:
@@ -829,7 +583,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_OK(WaitRxAvailable());
   // impl_ now owns session_a's RxBuffer
   auto rx_buff = impl_.rx_buffers().pop_front();
-  ASSERT_EQ(rx_buff->buff().virtual_mem.parts_list[0].length, kDefaultBufferLength / 2);
+  ASSERT_EQ(rx_buff->buff().data.parts_list[0].length, kDefaultBufferLength / 2);
   // let's close session_a, it should not be closed until we return the buffers
   ASSERT_OK(session_a.Close());
   ASSERT_EQ(session_a.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::msec(20)),

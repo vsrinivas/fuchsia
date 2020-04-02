@@ -104,36 +104,6 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if ((device_info_.device_features &
-       (FEATURE_RX_VIRTUAL_MEMORY_BUFFER | FEATURE_RX_PHYSICAL_MEMORY_BUFFER)) == 0 ||
-      (device_info_.device_features &
-       (FEATURE_TX_VIRTUAL_MEMORY_BUFFER | FEATURE_TX_PHYSICAL_MEMORY_BUFFER)) == 0) {
-    LOGF_ERROR(
-        "network-device: bind: device '%s' hasn't requested any buffer flags in device_features",
-        parent_name);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  if ((device_info_.device_features &
-       (FEATURE_RX_PHYSICAL_MEMORY_BUFFER | FEATURE_TX_PHYSICAL_MEMORY_BUFFER))) {
-    if (ops->get_bti == nullptr) {
-      LOGF_ERROR("network-device: bind: device '%s': does not implement ops->get_bti()",
-                 parent_name);
-      return ZX_ERR_NOT_SUPPORTED;
-    } else {
-      device_.GetBti(&bti_);
-      if (!bti_.is_valid()) {
-        LOGF_ERROR("network-device: bind: device '%s': returned invalid BTI", parent_name);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-    }
-  }
-
-  if (device_info_.max_buffer_length > (MAX_PHYSICAL_PARTS * ZX_PAGE_SIZE)) {
-    LOGF_ERROR("network-device: bind: device '%s': does not implement ops->get_bti()", parent_name);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   zx_status_t status;
   if ((status = TxQueue::Create(this, &tx_queue_)) != ZX_OK) {
     LOGF_ERROR("network-device: bind: device failed to start Tx Queue: %s",
@@ -205,7 +175,7 @@ void DeviceInterface::NetworkDeviceIfcCompleteTx(const tx_result_t* tx_list, siz
 }
 
 void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t rx_count) {
-  // TODO fxb/43028 implement real version. Current implementation acts as if no LISTEN is ever in
+  // TODO(43028): Implement real version. Current implementation acts as if no LISTEN is ever in
   // place.
 }
 
@@ -217,16 +187,10 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
   info.descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
   info.rx_depth = rx_fifo_depth();
   info.tx_depth = tx_fifo_depth();
-  if (device_info_.device_features &
-      (FEATURE_RX_PHYSICAL_MEMORY_BUFFER | FEATURE_TX_PHYSICAL_MEMORY_BUFFER)) {
-    // TODO(fxb/44604) We're missing a way to negotiate the buffer alignment with the device
-    // implementation. We're using a sufficiently large alignment for now for typical requirements
-    // we see in drivers, but this needs to be fixed.
-    info.buffer_alignment = ZX_PAGE_SIZE / 2;
-  } else {
-    // Buffer can be byte-aligned if we're not creating physical memory buffers.
-    info.buffer_alignment = 1;
-  }
+  // TODO(44604): We're missing a way to negotiate the buffer alignment with the device
+  // implementation. We're using a sufficiently large alignment for now for typical requirements we
+  // see in drivers, but this needs to be fixed.
+  info.buffer_alignment = ZX_PAGE_SIZE / 2;
   info.max_buffer_length = device_info_.max_buffer_length;
   info.min_rx_buffer_length = device_info_.min_rx_buffer_length;
   info.min_tx_buffer_head = device_info_.tx_head_length;
@@ -369,10 +333,7 @@ zx_status_t DeviceInterface::OpenSession(const char* name, netdev::SessionInfo s
 
   session->SetVmoId(vmo_id);
 
-  if (device_info_.device_features &
-      (FEATURE_TX_VIRTUAL_MEMORY_BUFFER | FEATURE_RX_VIRTUAL_MEMORY_BUFFER)) {
-    device_.PrepareVmo(vmo_id, std::move(device_vmo));
-  }
+  device_.PrepareVmo(vmo_id, std::move(device_vmo));
 
   if (session->ShouldTakeOverPrimary(primary_session_.get())) {
     // Set this new session as the primary session.
@@ -399,8 +360,6 @@ uint32_t DeviceInterface::tx_fifo_depth() const {
   // buffers, as long as it doesn't go over the maximum fifo depth;
   return std::min(kMaxFifoDepth, device_info_.tx_depth * 2);
 }
-
-const zx::bti& DeviceInterface::bti() const { return bti_; }
 
 void DeviceInterface::SessionStarted(Session* session) {
   bool should_start = false;
@@ -731,10 +690,7 @@ void DeviceInterface::ReleaseVmo(Session* session) {
     session->SetVmoId(MAX_VMOS);
     vmo_ids_->Free(vmo);
   }
-  if (device_info_.device_features &
-      (FEATURE_TX_VIRTUAL_MEMORY_BUFFER | FEATURE_RX_VIRTUAL_MEMORY_BUFFER)) {
-    device_.ReleaseVmo(vmo);
-  }
+  device_.ReleaseVmo(vmo);
 }
 
 fbl::RefPtr<RefCountedFifo> DeviceInterface::primary_rx_fifo() {

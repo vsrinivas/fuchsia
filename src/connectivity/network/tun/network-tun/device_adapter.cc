@@ -118,8 +118,6 @@ void DeviceAdapter::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_l
   }
 }
 
-void DeviceAdapter::NetworkDeviceImplGetBti(zx::bti* out_bti) { out_bti->reset(); }
-
 void DeviceAdapter::NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {
   zx_status_t status = vmos_.RegisterVmo(vmo_id, std::move(vmo));
   if (status != ZX_OK) {
@@ -312,9 +310,9 @@ DeviceAdapter::DeviceAdapter(async_dispatcher_t* dispatcher, DeviceAdapterParent
       has_sessions_(false),
       online_(online),
       device_info_(device_info_t{
-          FEATURE_RX_VIRTUAL_MEMORY_BUFFER | FEATURE_TX_VIRTUAL_MEMORY_BUFFER,  // device_features
-          kFifoDepth,                                                           // rx_depth
-          kFifoDepth,                                                           // tx_depth
+          0,           // device_features
+          kFifoDepth,  // rx_depth
+          kFifoDepth,  // tx_depth
           static_cast<uint8_t>(fuchsia::hardware::network::DeviceClass::UNKNOWN),  // device_class
           rx_types_.data(),                                                        // rx_types_list
           parent->config().rx_types().size(),                                      // rx_types_count
