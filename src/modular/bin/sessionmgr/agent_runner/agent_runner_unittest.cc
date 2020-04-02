@@ -119,11 +119,14 @@ class TestAgent : fuchsia::modular::Agent,
   }
 
  private:
-  std::unique_ptr<modular::PseudoDirServer> outgoing_dir_server_;
   fidl::Binding<fuchsia::sys::ComponentController> controller_;
   fidl::Binding<fuchsia::modular::Agent> agent_binding_;
-
   std::unique_ptr<component::ServiceNamespace> services_ptr_;
+
+  // `outgoing_dir_server_` must be initialized after `agent_binding_` (which itself serves
+  // `services_ptr_`) so that it is guaranteed to be destroyed *before* `agent_binding_` to protect
+  // access to `services_ptr_`. See fxb/49304.
+  std::unique_ptr<modular::PseudoDirServer> outgoing_dir_server_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestAgent);
 };
