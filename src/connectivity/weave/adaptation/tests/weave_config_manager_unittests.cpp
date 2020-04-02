@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/connectivity/weave/adaptation/weave_config_manager.h"
+#include "src/connectivity/weave/adaptation/weave_device_platform_error.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
@@ -292,15 +293,15 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
   size_t read_string_value_size = 0;
   // Every key is mapped to an incompatible type.
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_uint_value),
-            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+            WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint, &read_bool_value),
-            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+            WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
   EXPECT_EQ(
       weave_config_manager_.ReadConfigValueStr(kTestKeyUint64, read_string_value,
                                                sizeof(read_string_value), &read_string_value_size),
-      WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+      WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyString, &read_uint64_value),
-            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+            WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
 }
 
 TEST_F(WeaveConfigManagerTest, OverwriteKeys) {

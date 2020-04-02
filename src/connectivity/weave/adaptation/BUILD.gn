@@ -28,6 +28,7 @@ openweave_adaptation_layer("adaptation") {
     "weave_config_manager.cpp",
     "weave_config_manager.h",
     "weave_device_platform_config.h",
+    "weave_device_platform_error.h",
     "weave_device_platform_event.h",
   ]
   deps = [ "//src/lib/syslog/cpp" ]

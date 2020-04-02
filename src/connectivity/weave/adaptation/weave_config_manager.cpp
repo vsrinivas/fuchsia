@@ -9,6 +9,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "third_party/modp_b64/modp_b64.h"
+#include "weave_device_platform_error.h"
 
 namespace nl {
 namespace Weave {
@@ -43,7 +44,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* va
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
   } else if (!config_value.IsBool()) {
-    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   *value = config_value.GetBool();
   return WEAVE_NO_ERROR;
@@ -67,7 +68,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint32_t
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
   } else if (!config_value.IsUint()) {
-    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   *value = config_value.GetUint();
   return WEAVE_NO_ERROR;
@@ -79,7 +80,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint64_t
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
   } else if (!config_value.IsUint64()) {
-    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   *value = config_value.GetUint64();
   return WEAVE_NO_ERROR;
@@ -92,7 +93,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueStr(const std::string& key, char*
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
   } else if (!config_value.IsString()) {
-    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   const std::string string_value(config_value.GetString());
   *out_size = string_value.size() + 1;
@@ -112,7 +113,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
   } else if (!config_value.IsString()) {
-    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   std::string string_value(config_value.GetString());
   const std::string decoded_value(modp_b64_decode(string_value));
