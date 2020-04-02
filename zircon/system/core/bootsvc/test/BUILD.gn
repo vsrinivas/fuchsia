@@ -97,9 +97,9 @@ zbi_input("integration-test-deps") {
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
     # This could possibly be smaller, but seems pretty reasonable.
-    "//zircon/system/core/netsvc:device-name-provider",
+    "//build/unification/zbi:bin.device-name-provider-zbi",
     "//zircon/system/core/miscsvc",
-    "//zircon/system/core/netsvc",
+    "//build/unification/zbi:bin.netsvc-zbi",
     "//build/unification/zbi:bin.pwrbtn-monitor-zbi",
     "//build/unification/zbi:bin.svchost-zbi",
     "//build/unification/zbi:driver.fragment-zbi",

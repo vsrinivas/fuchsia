@@ -65,6 +65,7 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
+    ":bin.device-name-provider",
 #------------------
 #------------------
     ":bin.fsck-msdosfs",
@@ -81,6 +82,7 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
+    ":bin.netsvc",
 #------------------
 #------------------
 #------------------
@@ -266,11 +268,13 @@ aggregate_manifest("legacy-aux") {
     ":bin.mkfs-msdosfs",
 #------------------
 #------------------
+    ":bin.netsvc",
 #------------------
 #------------------
     ":bin.null-namespace-child",
 #------------------
 #------------------
+    ":bin.sh",
 #------------------
 #------------------
 #------------------
@@ -530,8 +534,10 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
+    ":test.sys.netsvc-stress-test",
 #------------------
 #------------------
+    ":test.sys.netsvc-test",
 #------------------
 #------------------
     ":test.sys.noop-test",
@@ -1072,8 +1078,10 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
+    ":test.sys.netsvc-stress-test",
 #------------------
 #------------------
+    ":test.sys.netsvc-test",
 #------------------
 #------------------
     ":test.sys.noop-test",
@@ -1201,7 +1209,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/cpu/bin/cpuctl:cpuctl-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
 #------------------
-    "//zircon/system/core/netsvc:device-name-provider-manifest",
+    #":bin.device-name-provider",
 #------------------
     "//src/devices/block/bin/disk-inspect:disk-inspect-manifest",
     "//zircon/system/uapp/dlog:dlog-manifest",
@@ -1254,7 +1262,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/nand/bin/nand-loader:nand-loader-manifest",
     "//src/devices/nand/bin/nand-util:nand-util-manifest",
 #------------------
-    "//zircon/system/core/netsvc:netsvc-manifest",
+    #":bin.netsvc",
 #------------------
     "//zircon/system/uapp/ping:ping-manifest",
     "//zircon/system/uapp/psutils:ps-manifest",
@@ -1738,12 +1746,13 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/msd:msd-manifest",
 #------------------
-    "//zircon/system/core/netsvc:netsvc-manifest",
+    #":bin.netsvc",
 #------------------
 #------------------
     #":bin.null-namespace-child",
 #------------------
 #------------------
+    #":bin.sh",
 #------------------
 #------------------
     #":bin.vdso-variant-helper",
@@ -2943,10 +2952,10 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
 #------------------
-    "//zircon/system/core/netsvc:netsvc-stress-test-manifest",
+    #":test.sys.netsvc-stress-test",
 #------------------
 #------------------
-    "//zircon/system/core/netsvc:netsvc-test-manifest",
+    #":test.sys.netsvc-test",
 #------------------
 #------------------
     #":test.sys.noop-test",
@@ -3606,10 +3615,10 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
 #------------------
-    "//zircon/system/core/netsvc:netsvc-stress-test-manifest",
+    #":test.sys.netsvc-stress-test",
 #------------------
 #------------------
-    "//zircon/system/core/netsvc:netsvc-test-manifest",
+    #":test.sys.netsvc-test",
 #------------------
 #------------------
     #":test.sys.noop-test",
