@@ -53,9 +53,9 @@ DECLARE_TEST_FUNCTION(guest_set_trap)
 DECLARE_TEST_FUNCTION(vcpu_wfi)
 DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv2)
 DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv3)
-DECLARE_TEST_FUNCTION(vcpu_aarch32_wfi)
+DECLARE_TEST_FUNCTION(vcpu_wfi_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_fp)
-DECLARE_TEST_FUNCTION(vcpu_aarch32_fp)
+DECLARE_TEST_FUNCTION(vcpu_fp_aarch32)
 #elif __x86_64__
 DECLARE_TEST_FUNCTION(vcpu_hlt)
 DECLARE_TEST_FUNCTION(vcpu_pause)
@@ -637,7 +637,7 @@ static bool vcpu_wfi_aarch32() {
   BEGIN_TEST;
 
   test_t test;
-  ASSERT_TRUE(setup(&test, vcpu_aarch32_wfi_start, vcpu_aarch32_wfi_end));
+  ASSERT_TRUE(setup(&test, vcpu_wfi_aarch32_start, vcpu_wfi_aarch32_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return true;
@@ -672,7 +672,7 @@ static bool vcpu_fp_aarch32() {
   BEGIN_TEST;
 
   test_t test;
-  ASSERT_TRUE(setup(&test, vcpu_aarch32_fp_start, vcpu_aarch32_fp_end));
+  ASSERT_TRUE(setup(&test, vcpu_fp_aarch32_start, vcpu_fp_aarch32_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return true;

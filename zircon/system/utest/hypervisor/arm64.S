@@ -202,7 +202,7 @@ FUNCTION vcpu_wfi_pending_interrupt_gicv3_end
 
 // Test wfi instruction handling.
 // Execution of WFI at EL0 on AARCH32 is propagated to EL1 / AARCH64.
-FUNCTION vcpu_aarch32_wfi_start
+FUNCTION vcpu_wfi_aarch32_start
     drop_to_el0 aarch32
     .word 0xE320F003         // aarch32: wfi
     test_complete 1 aarch32  // Fail, if instruction was executed
@@ -210,7 +210,7 @@ FUNCTION vcpu_aarch32_wfi_start
 
     exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
     test_complete
-FUNCTION vcpu_aarch32_wfi_end
+FUNCTION vcpu_wfi_aarch32_end
 
 // Test floating-point instruction handling with trapping between levels.
 FUNCTION vcpu_fp_start
@@ -231,7 +231,7 @@ FUNCTION vcpu_fp_start
 FUNCTION vcpu_fp_end
 
 // Test wfi instruction handling.
-FUNCTION vcpu_aarch32_fp_start
+FUNCTION vcpu_fp_aarch32_start
     drop_to_el0 aarch32
     // Load double precision register d0 from address 0.
     // This should trigger floating point exception.
@@ -243,4 +243,4 @@ FUNCTION vcpu_aarch32_fp_start
     mov x0, CPACR_EL1_FPEN_NO_TRAP
     msr cpacr_el1, x0
     eret
-FUNCTION vcpu_aarch32_fp_end
+FUNCTION vcpu_fp_aarch32_end
