@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            },
             "system-services": [
                 "fuchsia.net.NameLookup",
                 "fuchsia.posix.socket.Provider"
@@ -11,9 +14,6 @@
         "binary": "test/fuchsia-pkg-testing-tests"
     },
     "sandbox": {
-        "dev": [
-            "misc/ramctl"
-        ],
         "features": [
             "isolated-temp"
         ],
@@ -22,6 +22,7 @@
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
+            "fuchsia.test.IsolatedDevmgr",
             "fuchsia.tracing.provider.Registry"
         ]
     }

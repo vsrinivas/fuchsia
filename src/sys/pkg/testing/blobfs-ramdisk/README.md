@@ -4,8 +4,9 @@ A test helper that manages memory-backed blobfs instances.
 ## Usage
 
 As this test helper is intended to be included within a test package, all tests
-utilizing this helper will need a few extra blobs included in their test package
-and access to some non-standard sandbox features.
+utilizing this helper will need a few extra blobs included in their test
+package, access to some non-standard sandbox features, and an injected isolated
+devmgr component.
 
 ### BUILD.gn
 
@@ -17,7 +18,7 @@ that utilize this crate.
 generate_manifest("blobfs.manifest") {
   visibility = [ ":*" ]
   args = []
-  foreach(pattern, [ "bin/blobfs", ]) {
+  foreach(pattern, [ "bin/blobfs" ]) {
     args += [ "--binary=" + pattern ]
   }
 }
@@ -25,33 +26,59 @@ blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
 blobfs_manifest = blobfs_manifest_outputs[0]
 ```
 
-Then, in each `test_package` that utilizes this crate, add a dependency on the
-manifest and add it to the extra set of manifests to include in the package.
+In each `test_package` that utilizes this crate, add a dependency on the
+manifest and add it to the extra set of manifests to include in the package. Add
+the `blobfs-corrupt` binary if tests will want to corrupt blobs.
 
 ```
 test_package("example-test-package") {
   extra = [ blobfs_manifest ]
   deps = [
     ":blobfs.manifest",
+    "//src/storage/blobfs-corrupt",
     ...
   ]
+  binaries = [
+    {
+      name = "blobfs-corrupt"
+    },
+    ...
   ...
 }
 ```
 
-### Sandbox
+For the `tests` group, ensure the isolated devmgr package is included in the
+build:
 
-In the sandbox section of tests that utilize this crate, add access to the
-ramctl device and "fuchsia.process.Launcher" service:
+```
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":example-test-package",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+    ...
+  ]
+}
+```
+
+### Component Manifest
+
+In the component manifest tests that utilize this crate, add the isolated devmgr
+service and access to the "fuchsia.process.Launcher" service:
 
 ```json
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            }
+        }
+    },
     "sandbox": {
-        "dev": [
-            "misc/ramctl"
-        ],
         "services": [
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.test.IsolatedDevmgr"
         ]
     }
 }

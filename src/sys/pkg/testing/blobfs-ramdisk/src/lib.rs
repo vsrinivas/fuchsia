@@ -245,7 +245,7 @@ impl Ramdisk {
     /// Starts a new ramdisk with 1024 * 1024 blocks and a block size of 512 bytes, or a drive with
     /// 512MiB capacity.
     pub fn start() -> Result<Self, Error> {
-        let client = RamdiskClient::create(512, 1 << 20)?;
+        let client = RamdiskClient::builder(512, 1 << 20).isolated_dev_root().build()?;
         let proxy = NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
         Ok(Ramdisk { proxy, client })
     }

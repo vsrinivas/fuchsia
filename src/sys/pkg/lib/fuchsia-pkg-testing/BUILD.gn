@@ -121,6 +121,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":fuchsia-pkg-testing-tests",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/bin/pm:pm",
   ]
 }

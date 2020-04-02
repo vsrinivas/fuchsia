@@ -71,5 +71,8 @@ test_package("blobfs-ramdisk-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":blobfs-ramdisk-tests" ]
+  public_deps = [
+    ":blobfs-ramdisk-tests",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+  ]
 }
