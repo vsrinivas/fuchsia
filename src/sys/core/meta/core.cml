@@ -109,17 +109,11 @@
         "/svc/fuchsia.overnet.Overnet",
         "/svc/fuchsia.overnet.ServicePublisher",
         "/svc/fuchsia.sys.Launcher",
+        "/svc/fuchsia.test.manager.Harness",
       ],
       "from": "#appmgr",
       "to": [ "#remote-control" ],
       "dependency": "weak_for_migration",
-    },
-    {
-      "protocol": [
-        "/svc/fuchsia.test.manager.Harness",
-      ],
-      "from": "#test_manager",
-      "to": [ "#remote-control" ],
     },
     {
       "protocol": [
@@ -148,13 +142,6 @@
     {
       "protocol": "/svc/fuchsia.fonts.Provider",
       "from": "#font_provider",
-      "to": [ "#appmgr" ],
-    },
-    {
-      "protocol": [
-        "/svc/fuchsia.test.manager.Harness",
-      ],
-      "from": "#test_manager",
       "to": [ "#appmgr" ],
     },
     {
