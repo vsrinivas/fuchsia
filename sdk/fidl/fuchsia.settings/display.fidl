@@ -25,6 +25,7 @@ protocol Display {
     Watch2() -> (DisplaySettings settings);
 
     /// DEPRECATED: new watches should use WatchLightSensor2.
+    [Transitional = "Deprecated in favor of WatchLightSensor2"]
     WatchLightSensor(float32 delta) -> (LightSensorData light_sensor_data) error Error;
 
     /// Obtains the current data from the light sensor. Returns immediately on
@@ -33,6 +34,7 @@ protocol Display {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
+    [Transitional = "Replacement for WatchLightSensor"]
     WatchLightSensor2(float32 delta) -> (LightSensorData light_sensor_data);
 
     /// Sets display settings. Any field not explicitly set in the table performs a
