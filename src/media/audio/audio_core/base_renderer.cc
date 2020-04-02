@@ -50,7 +50,7 @@ BaseRenderer::BaseRenderer(
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "BaseRenderer::audio_renderer_binding_.error_handler", "zx_status",
                    status);
-    FX_PLOGS(INFO, status) << "Client disconnected";
+    AUD_VLOG(TRACE) << "Client disconnected";
     context_.route_graph().RemoveRenderer(*this);
   });
 }

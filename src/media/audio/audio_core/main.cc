@@ -4,6 +4,8 @@
 
 #include <lib/sys/cpp/component_context.h>
 
+#include "lib/syslog/logger.h"
+
 #ifndef NTRACE
 #include <trace-provider/provider.h>
 #endif
@@ -28,12 +30,8 @@ static int StartAudioCore() {
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
 #endif
 
-#ifdef NDEBUG
-  Logging::Init(FX_LOG_WARNING, {"audio_core"});
-#else
   // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
   Logging::Init(FX_LOG_INFO, {"audio_core"});
-#endif
 
   FX_LOGS(INFO) << "AudioCore starting up";
 
