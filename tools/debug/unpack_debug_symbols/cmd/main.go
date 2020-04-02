@@ -32,6 +32,7 @@ var (
 	outputManifest string
 	cpu            string
 	osName         string
+	depfile        string
 	dumpSyms       string
 	colors         color.EnableColor
 	level          logger.LogLevel
@@ -48,6 +49,7 @@ func init() {
 	flag.StringVar(&outputManifest, "output-manifest", "", "path to output a json manifest of debug binaries to")
 	flag.StringVar(&cpu, "cpu", "", "the architecture of the binaries in the archive")
 	flag.StringVar(&osName, "os", "", "the os of the binaries in the archive")
+	flag.StringVar(&depfile, "depfile", "", "the depfile to emit")
 	flag.StringVar(&dumpSyms, "dump-syms", "", "the path to the dump_syms tool")
 	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
 	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
@@ -315,6 +317,15 @@ func main() {
 	}
 	if outputManifest == "" {
 		log.Fatalf("-output-manifest is required.")
+	}
+	if depfile == "" {
+		log.Fatalf("-depfile is required.")
+	}
+
+	// This action should rerun if the .build-id directory or debug archive change.
+	depfileContents := fmt.Sprintf("%s: %s %s", outputManifest, buildIDDir, debugArchive)
+	if err := ioutil.WriteFile(depfile, []byte(depfileContents), os.ModePerm); err != nil {
+		log.Fatalf("failed to write depfile: %v", err)
 	}
 
 	br := runner.NewBatchRunner(ctx, &runner.SubprocessRunner{}, tasks)

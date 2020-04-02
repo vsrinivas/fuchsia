@@ -55,11 +55,8 @@ template("prebuilt_package") {
       manifest = "$target_gen_dir/${target_name}_binaries.json"
       outputs = [ manifest ]
 
-      # Ideally we'd have the input be invoker.debug_archive but because
-      # we want to transisition away from such archives that won't work.
-      # Instead we assume that jiri keeps everything in sync and if
-      # the package is updated then we should re-run.
-      inputs = [ invoker.archive ]
+      depfile = "$target_gen_dir/$target_name.d"
+
       args = [
         "-build-id-dir",
         ".build-id",
@@ -67,6 +64,8 @@ template("prebuilt_package") {
         target_cpu,
         "-os",
         target_os,
+        "-depfile",
+        rebase_path(depfile),
         "-debug-archive",
         rebase_path(invoker.debug_archive, root_build_dir),
         "-output-manifest",
