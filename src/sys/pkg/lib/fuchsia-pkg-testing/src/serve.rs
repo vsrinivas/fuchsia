@@ -342,6 +342,7 @@ mod tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // FIXME(49247)
     async fn test_serve_empty() {
         let repo = Arc::new(RepositoryBuilder::new().build().await.unwrap());
         let served_repo = repo.server().start().unwrap();
