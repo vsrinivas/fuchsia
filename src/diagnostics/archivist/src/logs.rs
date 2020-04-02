@@ -198,7 +198,6 @@ mod tests {
         },
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_zircon as zx,
-        std::collections::HashSet,
         validating_log_listener::{validate_log_dump, validate_log_stream},
     };
 
@@ -210,6 +209,61 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_log_manager_dump() {
         TestHarness::new().manager_test(true).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn unfiltered_stats() {
+        let first_packet = setup_default_packet();
+        let first_message = LogMessage {
+            pid: first_packet.metadata.pid,
+            tid: first_packet.metadata.tid,
+            time: first_packet.metadata.time,
+            dropped_logs: first_packet.metadata.dropped_logs,
+            severity: first_packet.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+
+        let (mut second_packet, mut second_message) = (first_packet.clone(), first_message.clone());
+        second_packet.metadata.pid = 0;
+        second_message.pid = second_packet.metadata.pid;
+
+        let (mut third_packet, mut third_message) = (second_packet.clone(), second_message.clone());
+        third_packet.metadata.severity = LogLevelFilter::Info.into_primitive().into();
+        third_message.severity = third_packet.metadata.severity;
+
+        let (fourth_packet, fourth_message) = (third_packet.clone(), third_message.clone());
+
+        let (mut fifth_packet, mut fifth_message) = (fourth_packet.clone(), fourth_message.clone());
+        fifth_packet.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+        fifth_message.severity = fifth_packet.metadata.severity;
+
+        let log_stats_tree = TestHarness::new()
+            .filter_test(
+                vec![first_message, second_message, third_message, fourth_message, fifth_message],
+                vec![first_packet, second_packet, third_packet, fourth_packet, fifth_packet],
+                None,
+            )
+            .await;
+
+        assert_inspect_tree!(
+            log_stats_tree,
+            root: {
+                log_stats: {
+                    total_logs: 5u64,
+                    kernel_logs: 0u64,
+                    logsink_logs: 5u64,
+                    verbose_logs: 0u64,
+                    info_logs: 2u64,
+                    warning_logs: 2u64,
+                    error_logs: 1u64,
+                    fatal_logs: 0u64,
+                    buffer_stats: {
+                        rolled_out_entries: 0u64,
+                    }
+                },
+            }
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -236,26 +290,7 @@ mod tests {
             tags: vec![],
         };
 
-        let log_stats_tree = TestHarness::new()
-            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
-            .await;
-
-        assert_inspect_tree!(log_stats_tree,
-        root: {
-            log_stats: {
-                total_logs: 2u64,
-                kernel_logs: 0u64,
-                logsink_logs: 2u64,
-                verbose_logs: 0u64,
-                info_logs: 0u64,
-                warning_logs: 2u64,
-                error_logs: 0u64,
-                fatal_logs: 0u64,
-                buffer_stats: {
-                    rolled_out_entries: 0u64,
-                }
-            },
-        });
+        TestHarness::new().filter_test(vec![lm], vec![p, p2], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -283,9 +318,7 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new()
-            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
-            .await;
+        TestHarness::new().filter_test(vec![lm], vec![p, p2], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -320,25 +353,7 @@ mod tests {
             tags: vec![],
         };
 
-        let log_stats_tree = TestHarness::new()
-            .filter_test(vec![lm].into_iter().collect(), vec![p, p2, p3, p4, p5], Some(options))
-            .await;
-        assert_inspect_tree!(log_stats_tree,
-        root: {
-            log_stats: contains {
-                total_logs: 5u64,
-                kernel_logs: 0u64,
-                logsink_logs: 5u64,
-                verbose_logs: 1u64,
-                info_logs: 1u64,
-                warning_logs: 1u64,
-                error_logs: 1u64,
-                fatal_logs: 1u64,
-                buffer_stats: {
-                    rolled_out_entries: 0u64,
-                }
-            },
-        });
+        TestHarness::new().filter_test(vec![lm], vec![p, p2, p3, p4, p5], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -369,9 +384,7 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new()
-            .filter_test(vec![lm].into_iter().collect(), vec![p, p2, p3], Some(options))
-            .await;
+        TestHarness::new().filter_test(vec![lm], vec![p, p2, p3], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -416,9 +429,7 @@ mod tests {
             tags: vec![String::from("BBBBB"), String::from("DDDDD")],
         };
 
-        TestHarness::new()
-            .filter_test(vec![lm1, lm2].into_iter().collect(), vec![p, p2], Some(options))
-            .await;
+        TestHarness::new().filter_test(vec![lm1, lm2], vec![p, p2], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -463,23 +474,24 @@ mod tests {
                 msg: String::from("log3"),
                 tags: vec![String::from("klog")],
             },
-        ]
-        .into_iter()
-        .collect();
+        ];
+
+        let klog_stats_tree = debuglog_test(expected_logs, klog_reader).await;
         assert_inspect_tree!(
-        debuglog_test(expected_logs, klog_reader).await,
-        root: {
-            log_stats: contains {
-                total_logs: 3u64,
-                kernel_logs: 3u64,
-                logsink_logs: 0u64,
-                verbose_logs: 0u64,
-                info_logs: 3u64,
-                warning_logs: 0u64,
-                error_logs: 0u64,
-                fatal_logs: 0u64,
+            klog_stats_tree,
+            root: {
+                log_stats: contains {
+                    total_logs: 3u64,
+                    kernel_logs: 3u64,
+                    logsink_logs: 0u64,
+                    verbose_logs: 0u64,
+                    info_logs: 3u64,
+                    warning_logs: 0u64,
+                    error_logs: 0u64,
+                    fatal_logs: 0u64,
+                }
             }
-        });
+        );
     }
 
     struct TestHarness {
@@ -519,7 +531,7 @@ mod tests {
         /// Run a filter test, returning the Inspector to check Inspect output.
         async fn filter_test(
             self,
-            expected: HashSet<LogMessage>,
+            expected: impl IntoIterator<Item = LogMessage>,
             packets: Vec<fx_log_packet_t>,
             filter_options: Option<LogFilterOptions>,
         ) -> inspect::Inspector {
@@ -565,7 +577,7 @@ mod tests {
 
     /// Run a test on logs from klog, returning the inspector object.
     async fn debuglog_test(
-        expected: HashSet<LogMessage>,
+        expected: impl IntoIterator<Item = LogMessage>,
         debug_log: TestDebugLog,
     ) -> inspect::Inspector {
         let inspector = inspect::Inspector::new();
