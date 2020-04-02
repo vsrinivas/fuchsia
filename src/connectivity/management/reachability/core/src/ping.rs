@@ -26,11 +26,6 @@ impl Pinger for IcmpPinger {
         unsafe {
             ret = c_ping(c_str.as_ptr());
         }
-        if ret == 0 {
-            debug!("ping {:#?} succeeded!", url);
-        } else {
-            info!("ping {:#?} failed (err={:#?})!", url, ret);
-        }
         ret == 0
     }
 }
