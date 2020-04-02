@@ -138,9 +138,10 @@ static constexpr zx_driver_ops_t virtualbustest_driver_ops = []() {
 }  // namespace
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(virtualbustest, virtualbustest_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(virtualbustest, virtualbustest_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
-    BI_MATCH_IF(EQ, BIND_USB_VID, virtualbus::kVid),
-    BI_MATCH_IF(EQ, BIND_USB_PID, virtualbus::kDid),
+    BI_ABORT_IF(NE, BIND_USB_VID, virtualbus::kVid),
+    BI_ABORT_IF(NE, BIND_USB_PID, virtualbus::kDid),
+    BI_MATCH()
 ZIRCON_DRIVER_END(virtualbustest)
     // clang-format on
