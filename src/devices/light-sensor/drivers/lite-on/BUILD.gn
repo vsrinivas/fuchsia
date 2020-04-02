@@ -25,12 +25,12 @@ driver_module("lite-on") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/simplehid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
+    "//zircon/system/ulib/simplehid",
   ]
 }
 
@@ -58,7 +58,6 @@ test("ltr-578als-test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/simplehid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
@@ -67,6 +66,7 @@ test("ltr-578als-test") {
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/mock-hidbus-ifc",
     "//zircon/system/dev/lib/mock-i2c",
+    "//zircon/system/ulib/simplehid",
   ]
 }
 
