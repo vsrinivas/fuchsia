@@ -5,14 +5,17 @@
 #include <zircon/compiler.h>
 
 #include "amlogic-video.h"
+#include "bear_h264_hashes.h"
 #include "gtest/gtest.h"
 #include "h264_decoder.h"
 #include "h264_utils.h"
 #include "macros.h"
 #include "pts_manager.h"
+#include "test_25fps_h264_hashes.h"
 #include "test_frame_allocator.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
+#include "video_frame_helpers.h"
 
 static void ValidateInputRegisters(AmlogicVideo* video) {
   // Check that input is the correct endianness.
@@ -63,6 +66,16 @@ class TestH264 {
 #if DUMP_VIDEO_TO_FILE
         DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
+        bool in_bear_video = frame_count <= std::size(bear_h264_hashes);
+        auto hashes = in_bear_video ? bear_h264_hashes : test_25fps_h264_hashes;
+        uint32_t frame_in_video =
+            in_bear_video ? frame_count - 1 : frame_count - 1 - std::size(bear_h264_hashes);
+
+        uint8_t md[SHA256_DIGEST_LENGTH];
+        HashFrame(frame.get(), md);
+        EXPECT_EQ(0, memcmp(md, hashes[frame_in_video], sizeof(md)))
+            << "Incorrect hash for frame " << frame_in_video << " of " << in_bear_video << " : "
+            << StringifyHash(md);
         if (frame_count == kFirstVideoFrameCount)
           first_wait_valid.set_value();
         if (frame_count == kFirstVideoFrameCount + kSecondVideoFrameCount)

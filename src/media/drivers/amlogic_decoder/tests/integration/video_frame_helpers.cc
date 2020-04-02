@@ -35,3 +35,15 @@ std::string StringifyHash(uint8_t digest[SHA256_DIGEST_LENGTH]) {
   }
   return std::string(actual_sha256);
 }
+
+std::string CppStringifyHash(uint8_t digest[SHA256_DIGEST_LENGTH]) {
+  char actual_sha256[SHA256_DIGEST_LENGTH * 6 + 4];
+  char* actual_sha256_ptr = actual_sha256;
+  actual_sha256_ptr += snprintf(actual_sha256_ptr, 2, "{");
+  for (uint32_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+    // Writes the terminating 0 each time, returns 2 each time.
+    actual_sha256_ptr += snprintf(actual_sha256_ptr, 7, "0x%02x, ", digest[i]);
+  }
+  actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "},");
+  return std::string(actual_sha256);
+}
