@@ -75,8 +75,17 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
   }
 
   void DdkUnbindDeprecated() {
+    // ShutDown() assigns nullptr to the function_ pointers.  Normally, the structures being pointed
+    // at would be freed by the real DDK as a consequence of unbinding them.  However, in the test,
+    // they need to be freed manually (necessitating a copy of the pointer).
+    HidButtonsHidBusFunction* hidbus_function_copy_ = hidbus_function_;
+    HidButtonsButtonsFunction* buttons_function_copy_ = buttons_function_;
+
     HidButtonsDevice::ShutDown();
     DdkRemoveDeprecated();
+
+    delete hidbus_function_copy_;
+    delete buttons_function_copy_;
   }
   void DdkRelease() { delete this; }
 

@@ -115,10 +115,10 @@ class HidButtonsDevice : public DeviceType {
   std::list<ButtonsNotifyInterface> interfaces_ TA_GUARDED(channels_lock_);  // owns the channels
   std::map<uint8_t, uint32_t> button_map_;  // Button ID to Button Number
 
- private:
   HidButtonsHidBusFunction* hidbus_function_;
   HidButtonsButtonsFunction* buttons_function_;
 
+ private:
   int Thread();
   uint8_t ReconfigurePolarity(uint32_t idx, uint64_t int_port);
   zx_status_t ConfigureInterrupt(uint32_t idx, uint64_t int_port);
