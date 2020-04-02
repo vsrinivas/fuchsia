@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
@@ -81,6 +82,11 @@ class TestDeviceBase {
     return false;
   }
 
+  void Unbind() {
+    auto res = llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(channel());
+    fprintf(stderr, "Result: %d\n", res.status());
+  }
+
   zx::unowned_channel channel() { return zx::unowned_channel(channel_); }
   ~TestDeviceBase() {}
 
@@ -99,13 +105,27 @@ TEST(TestRunner, RunTests) {
   bool success =
       TestDeviceBase::BindDriver(parent_device, "/system/driver/amlogic_video_decoder_test.so");
   EXPECT_TRUE(success);
+  auto test_device2 = std::make_unique<TestDeviceBase>();
+  test_device2->InitializeFromFileName("/dev/aml-video/test_amlogic_video");
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  ASSERT_OK(fdio_service_connect("/tmp", remote.release()));
+
+  auto set_output_res =
+      llcpp::fuchsia::hardware::mediacodec::Tester::Call::SetOutputDirectoryHandle(
+          test_device2->channel(), std::move(local));
+  EXPECT_OK(set_output_res.status());
+  auto res = llcpp::fuchsia::hardware::mediacodec::Tester::Call::RunTests(test_device2->channel());
+  EXPECT_OK(res.status());
+  if (res.ok())
+    EXPECT_OK(res->result);
+
+  // UnbindChildren seems to block for some reason.
+  test_device2->Unbind();
+  test_device2.reset();
 
   // Try to rebind the correct driver.
-  if (success) {
-    // Don't do UnbindChildren unless there are actually children, or else it
-    // hangs
-    TestDeviceBase::UnbindChildren(parent_device);
-  }
   TestDeviceBase::BindDriver(parent_device, "/system/driver/amlogic_video_decoder.so");
 }
 }  // namespace

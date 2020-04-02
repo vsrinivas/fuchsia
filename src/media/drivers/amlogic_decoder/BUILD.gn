@@ -56,8 +56,14 @@ if (target_cpu == "arm64") {
     deps = [
       ":sources",
       ":test_sources",
+      ":test_support",
+      "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
+      "//zircon/public/lib/fdio",
     ]
-    sources = [ "test_binding.c" ]
+    sources = [
+      "test_binding.c",
+      "test_device_ctx.cc",
+    ]
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

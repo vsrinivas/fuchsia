@@ -11,7 +11,6 @@
 
 #include "amlogic-video.h"
 #include "macros.h"
-#include "tests/test_support.h"
 
 namespace {
 
@@ -28,13 +27,6 @@ extern zx_status_t amlogic_video_init(void** out_ctx) {
 
 // ctx is the driver ctx (not device ctx)
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
-  // These calls don't do anything on a production build.
-  TestSupport::set_parent_device(parent);
-  if (!TestSupport::RunAllTests()) {
-    DECODE_ERROR("Tests failed, failing to initialize");
-    return ZX_ERR_INTERNAL;
-  }
-
   DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
   std::unique_ptr<DeviceCtx> device = std::make_unique<DeviceCtx>(driver);
 
