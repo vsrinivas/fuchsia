@@ -47,7 +47,7 @@ group("base_packages") {
   visibility = [ ":*" ]
   public_deps = [ "//:additional_base_packages" ]
   if (check_production_eligibility) {
-    assert_no_deps = [ ":non_production_tag" ]
+    assert_no_deps = [ "//build/validate:non_production_tag" ]
   }
 }
 
@@ -56,7 +56,7 @@ group("cache_packages") {
   visibility = [ ":*" ]
   public_deps = [ "//:additional_cache_packages" ]
   if (check_production_eligibility) {
-    assert_no_deps = [ ":non_production_tag" ]
+    assert_no_deps = [ "//build/validate:non_production_tag" ]
   }
 }
 
@@ -2108,5 +2108,8 @@ generated_file("image_paths") {
 # Add this tag to deps of non_production GN labels (packages/configs).
 # If check_production_eligibility = true, including such GN labels will cause
 # build to fail.
+# TODO(quanwanandy): Remove after all other references are migrated to use
+# //build/validate:non_production_tag.
 group("non_production_tag") {
+  deps = [ "//build/validate:non_production_tag" ]
 }

@@ -32,7 +32,7 @@ driver_package("input-report-inject") {
     ":driver",
 
     # Injection driver should NOT be in production builds.
-    "//build/images:non_production_tag",
+    "//build/validate:non_production_tag",
   ]
 
   drivers = [

@@ -84,8 +84,8 @@ declare_args() {
 
   # Whether to perform check on the build's eligibility for production.
   # If true, base_packages and cache_packages are checked against dependencies
-  # on :non_production_tag, which is used to tag any non-production GN labels.
-  # Build will fail if such dependency is found.
+  # on //build/validate:non_production_tag, which is used to tag any
+  # non-production GN labels. Build will fail if such dependency is found.
   check_production_eligibility = false
 
   # Whether to compress the blobfs image.

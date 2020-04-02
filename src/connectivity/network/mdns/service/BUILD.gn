@@ -169,7 +169,7 @@ config_data("mdns_fuchsia_udp_config") {
   sources = [ rebase_path("config/fuchsia_udp.config") ]
 
   # Ensure exclusion from production builds.
-  deps = [ "//build/images:non_production_tag" ]
+  deps = [ "//build/validate:non_production_tag" ]
 }
 
 test_package("mdns_tests") {

@@ -1,0 +1,9 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Add this tag to deps of non_production GN labels (packages/configs).
+# If check_production_eligibility = true, including such GN labels will cause
+# build to fail.
+group("non_production_tag") {
+}
