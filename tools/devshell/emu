@@ -358,7 +358,7 @@ else
 fi
 
 # Check for X11 on Linux
-if [[ "$(uname -s)" == "Linux" ]]; then
+if [[ "$(uname -s)" == "Linux" ]] && (( ! HEADLESS )); then
   if [[ -z "$DISPLAY" ]]; then
     echo "To use emulator on Linux, start X, or use a virtual framebuffer:"
     echo
