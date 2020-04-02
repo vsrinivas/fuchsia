@@ -1090,7 +1090,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
   switch (data[offset]) {
     case WPA_CIPHER_NONE:
       BRCMF_DBG(CONN, "MCAST WPA CIPHER NONE\n");
-      gval = 0;
+      gval = WSEC_NONE;
       break;
     case WPA_CIPHER_WEP_40:
     case WPA_CIPHER_WEP_104:
@@ -1441,7 +1441,6 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
 
   if (ie_len > 0) {
     struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)ie;
-
     err = brcmf_configure_wpaie(ifp, tmp_ie, is_rsn_ie, false);
     if (err != ZX_OK) {
       BRCMF_ERR("Failed to install RSNE: %s\n", zx_status_get_string(err));

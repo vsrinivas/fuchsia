@@ -191,7 +191,7 @@ static inline bool ac_bitmap_tst(uint8_t bitmap, int prec) { return (bitmap & (1
 // clang-format off
 
 /* wireless security bitvec */
-
+#define WSEC_NONE  0x0000
 #define WEP_ENABLED  0x0001
 #define TKIP_ENABLED 0x0002
 #define AES_ENABLED  0x0004

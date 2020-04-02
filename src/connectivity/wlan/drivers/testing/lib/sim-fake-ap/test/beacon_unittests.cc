@@ -128,7 +128,7 @@ void BeaconTest::ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t
 void BeaconTest::ScheduleSetSecurityCall(
     void (BeaconTest::*fn)(wlan::simulation::FakeAp::Security sec), zx::duration when,
     ieee80211_cipher_suite cipher) {
-  simulation::FakeAp::Security sec = {.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN,
+  simulation::FakeAp::Security sec = {.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                                       .cipher_suite = cipher};
   auto cb_fn = new std::function<void()>;
   *cb_fn = std::bind(fn, this, sec);

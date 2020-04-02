@@ -145,6 +145,7 @@ class SimFirmware {
     uint16_t auth_type;
 
     uint64_t auth_timer_id;
+    enum simulation::SimSecProtoType sec_type = simulation::SEC_PROTO_TYPE_OPEN;
   };
 
   struct PacketBuf {

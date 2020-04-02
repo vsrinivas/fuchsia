@@ -29,7 +29,13 @@ class AuthTest : public SimTest {
  public:
   AuthTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel){};
   // This enum is to trigger different workflow
-  enum SecurityType { SEC_TYPE_WEP_SHARED40, SEC_TYPE_WEP_SHARED104, SEC_TYPE_WEP_OPEN };
+  enum SecurityType {
+    SEC_TYPE_WEP_SHARED40,
+    SEC_TYPE_WEP_SHARED104,
+    SEC_TYPE_WEP_OPEN,
+    SEC_TYPE_WPA1,
+    SEC_TYPE_WPA2
+  };
   struct AuthFrameContent {
     AuthFrameContent(uint16_t seq_num, simulation::SimAuthType type, uint16_t status)
         : seq_num_(seq_num), type_(type), status_(status) {}
@@ -231,6 +237,14 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
       client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
       break;
     }
+
+    case SEC_TYPE_WPA1:
+    case SEC_TYPE_WPA2: {
+      auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+      client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+      break;
+    }
+
     default:;
   }
 }
@@ -240,8 +254,10 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   sim_fw_->IovarsGet(client_ifc_->iface_id_, "auth", &auth_, sizeof(auth_));
   sim_fw_->IovarsGet(client_ifc_->iface_id_, "wsec", &wsec_, sizeof(wsec_));
 
-  EXPECT_EQ(wsec_key_.flags, (uint32_t)BRCMF_PRIMARY_KEY);
-  EXPECT_EQ(wsec_key_.index, kDefaultKeyIndex);
+  if (sec_type_ != SEC_TYPE_WPA1 && sec_type_ != SEC_TYPE_WPA2) {
+    EXPECT_EQ(wsec_key_.flags, (uint32_t)BRCMF_PRIMARY_KEY);
+    EXPECT_EQ(wsec_key_.index, kDefaultKeyIndex);
+  }
 
   switch (sec_type_) {
     case SEC_TYPE_WEP_SHARED104:
@@ -265,20 +281,118 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
       EXPECT_EQ(wsec_key_.len, kWEP40KeyLen);
       EXPECT_EQ(memcmp(test_key5, wsec_key_.data, kWEP40KeyLen), 0);
       break;
-
+    case SEC_TYPE_WPA1:
+    case SEC_TYPE_WPA2:
+      // wsec iovar is not set before assoc_req sending to driver, now it should be default value.
+      EXPECT_EQ(wsec_, (uint32_t)WSEC_NONE);
+      EXPECT_EQ(auth_, (uint16_t)BRCMF_AUTH_MODE_OPEN);
+      break;
     default:;
   }
 
+  wlanif_assoc_req_t assoc_req = {.rsne_len = 0};
+
   if (sec_type_ == SEC_TYPE_WEP_SHARED104 || sec_type_ == SEC_TYPE_WEP_SHARED40 ||
       sec_type_ == SEC_TYPE_WEP_OPEN) {
-    wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-    memcpy(assoc_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-    client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+    assoc_req.vendor_ie_len = 0;
+  } else if (sec_type_ == SEC_TYPE_WPA1) {
+    // construct a fake vendor ie in wlanif_assoc_req.
+    uint16_t offset = 0;
+    uint8_t* ie = (uint8_t*)assoc_req.vendor_ie;
+
+    ie[offset++] = WLAN_IE_TYPE_VENDOR_SPECIFIC;
+    ie[offset++] = 22;  // The length of following content.
+
+    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);  // WPA OUI for multicast cipher suite.
+    offset += TLV_OUI_LEN;
+    ie[offset++] = 1;  // Set oui type.
+
+    // These two bytes are 16-bit version number.
+    ie[offset++] = 1;  // Lower byte
+    ie[offset++] = 0;  // Higher byte
+
+    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);  // WPA OUI for multicast cipher suite.
+    offset += TLV_OUI_LEN;
+    ie[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
+
+    // These two bytes indicate the length of unicast cipher list, in this case is 1.
+    ie[offset++] = 1;  // Lower byte
+    ie[offset++] = 0;  // Higher byte
+
+    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);
+    offset += TLV_OUI_LEN;               // The second WPA OUI.
+    ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
+
+    // These two bytes indicate the length of auth management suite list, in this case is 1.
+    ie[offset++] = 1;  // Lower byte
+    ie[offset++] = 0;  // Higher byte
+
+    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);  // WPA OUI for auth management suite.
+    offset += TLV_OUI_LEN;
+    ie[offset++] = RSN_AKM_PSK;  // Set auth management suite.
+
+    assoc_req.vendor_ie_len = offset;
+    ASSERT_EQ(assoc_req.vendor_ie_len, (const uint32_t)(ie[TLV_LEN_OFF] + TLV_HDR_LEN));
+  } else if (sec_type_ == SEC_TYPE_WPA2) {
+    // construct a fake rsne ie in wlanif_assoc_req.
+    uint16_t offset = 0;
+    uint8_t* ie = (uint8_t*)assoc_req.rsne;
+
+    ie[offset++] = WLAN_IE_TYPE_RSNE;
+    ie[offset++] = 20;  // The length of following content.
+
+    // These two bytes are 16-bit version number.
+    ie[offset++] = 1;  // Lower byte
+    ie[offset++] = 0;  // Higher byte
+
+    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for multicast cipher suite.
+    offset += TLV_OUI_LEN;
+    ie[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
+
+    // These two bytes indicate the length of unicast cipher list, in this case is 1.
+    ie[offset++] = 1;  // Lower byte
+    ie[offset++] = 0;  // Higher byte
+
+    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for unicast cipher suite.
+    offset += TLV_OUI_LEN;
+    ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
+
+    // These two bytes indicate the length of auth management suite list, in this case is 1.
+    ie[offset++] = 1;  // Lower byte
+    ie[offset++] = 0;  // Higher byte
+
+    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for auth management suite.
+    offset += TLV_OUI_LEN;
+    ie[offset++] = RSN_AKM_PSK;  // Set auth management suite.
+
+    // These two bytes indicate RSN capabilities, in this case is \x0c\x00.
+    ie[offset++] = 12;  // Lower byte
+    ie[offset++] = 0;   // Higher byte
+
+    assoc_req.rsne_len = offset;
+    ASSERT_EQ(assoc_req.rsne_len, (const uint32_t)(ie[TLV_LEN_OFF] + TLV_HDR_LEN));
   }
+
+  memcpy(assoc_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
+  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
 }
 
 void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   assoc_status_ = resp->result_code;
+
+  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wsec", &wsec_, sizeof(wsec_));
+  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
+
+  if (sec_type_ == SEC_TYPE_WPA1) {
+    // The wsec iovar is set after sending assoc_req to driver.
+    EXPECT_EQ(wsec_, (uint32_t)(TKIP_ENABLED | AES_ENABLED));
+    EXPECT_EQ(wpa_auth_, (uint32_t)WPA_AUTH_PSK);
+  }
+
+  if (sec_type_ == SEC_TYPE_WPA2) {
+    EXPECT_EQ(wsec_, (uint32_t)(TKIP_ENABLED | AES_ENABLED));
+    EXPECT_EQ(wpa_auth_, (uint32_t)WPA2_AUTH_PSK);
+  }
 }
 
 /*In the test part, we are actually testing two stages independently in each test case, for example
@@ -290,7 +404,8 @@ void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
 TEST_F(AuthTest, WEP104) {
   Init();
   sec_type_ = SEC_TYPE_WEP_SHARED104;
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -306,7 +421,8 @@ TEST_F(AuthTest, WEP104) {
 TEST_F(AuthTest, WEP40) {
   Init();
   sec_type_ = SEC_TYPE_WEP_SHARED40;
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -321,7 +437,8 @@ TEST_F(AuthTest, WEP40) {
 TEST_F(AuthTest, WEPOPEN) {
   Init();
   sec_type_ = SEC_TYPE_WEP_OPEN;
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -334,7 +451,8 @@ TEST_F(AuthTest, WEPOPEN) {
 TEST_F(AuthTest, IgnoreTest) {
   Init();
   sec_type_ = SEC_TYPE_WEP_OPEN;
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
@@ -353,6 +471,65 @@ TEST_F(AuthTest, IgnoreTest) {
   for (uint32_t i = 0; i < max_retries + 1; i++) {
     expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
   }
+  VerifyAuthFrames();
+  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+}
+
+TEST_F(AuthTest, WPA1Test) {
+  Init();
+  sec_type_ = SEC_TYPE_WPA1;
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
+  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+
+  env_->Run();
+
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  VerifyAuthFrames();
+  // Make sure that OnAssocConf is called, so the check inside is called.
+  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+}
+
+TEST_F(AuthTest, WPA2Test) {
+  Init();
+  sec_type_ = SEC_TYPE_WPA2;
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
+  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+
+  env_->Run();
+
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  VerifyAuthFrames();
+  // Make sure that OnAssocConf is called, so the check inside is called.
+  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+}
+
+// This test case verifies that auth req will be refused when security types of client and AP are
+// not matched.
+TEST_F(AuthTest, WrongSecTypeAuthFail) {
+  Init();
+  // Client sec type is WPA1 while AP's is WEP.
+  sec_type_ = SEC_TYPE_WPA1;
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WEP});
+  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+
+  env_->Run();
+
+  uint32_t max_retries = 0;
+
+  brcmf_simdev* sim = device_->GetSim();
+  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &max_retries,
+                                          sizeof(max_retries)));
+
+  for (uint32_t i = 0; i < max_retries + 1; i++) {
+    expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+    expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_REFUSED);
+  }
+
   VerifyAuthFrames();
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 }

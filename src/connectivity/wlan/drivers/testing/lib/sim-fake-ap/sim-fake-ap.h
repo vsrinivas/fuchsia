@@ -29,12 +29,13 @@ class FakeAp : public StationIfc {
   enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED };
 
   struct Security {
-    enum SimAuthType auth_handling_mode_ = AUTH_TYPE_OPEN;
+    enum SimAuthType auth_handling_mode = AUTH_TYPE_OPEN;
     enum ieee80211_cipher_suite cipher_suite;
 
     static constexpr size_t kMaxKeyLen = 32;
     size_t key_len;
     std::array<uint8_t, kMaxKeyLen> key;
+    enum SimSecProtoType sec_type = SEC_PROTO_TYPE_OPEN;
   };
 
   struct Client {

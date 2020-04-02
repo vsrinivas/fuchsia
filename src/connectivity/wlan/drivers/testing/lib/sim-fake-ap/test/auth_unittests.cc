@@ -84,8 +84,6 @@ void AuthTest::ReceiveNotification(void* payload) {
 }
 
 TEST_F(AuthTest, OpenSystemBasicUse) {
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
-
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                           WLAN_STATUS_CODE_SUCCESS);
@@ -100,7 +98,7 @@ TEST_F(AuthTest, OpenSystemBasicUse) {
 }
 
 TEST_F(AuthTest, SharedKeyBasicUse) {
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame auth_req_frame1(
@@ -123,7 +121,7 @@ TEST_F(AuthTest, SharedKeyBasicUse) {
 }
 
 TEST_F(AuthTest, OpenSystemIgnoreTest) {
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame auth_req_frame1(kClientMacAddr, kApBssid, 3, simulation::AUTH_TYPE_OPEN,
@@ -156,7 +154,7 @@ TEST_F(AuthTest, OpenSystemIgnoreTest) {
 }
 
 TEST_F(AuthTest, SharedKeyIgnoreTest) {
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY});
   // Wrong bssid frame should be ignore
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame wrong_bssid_frame(
@@ -201,8 +199,6 @@ TEST_F(AuthTest, SharedKeyIgnoreTest) {
 }
 
 TEST_F(AuthTest, OpenSystemRefuseTest) {
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
-
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame wrong_type_frame(
       kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
@@ -211,14 +207,14 @@ TEST_F(AuthTest, OpenSystemRefuseTest) {
   env_.ScheduleNotification(this, zx::sec(3), static_cast<void*>(handler));
   env_.Run();
   // The auth type in frame is the same as that in auth req frame, and if auth type in quth req is
-  // different from that in AP's auth_handling_mode_, it will reply a refuse auth resp frame.
+  // different from that in AP's auth_handling_mode, it will reply a refuse auth resp frame.
   ValidateAuthResp(2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_REFUSED);
 
   EXPECT_EQ(auth_resps_received_.empty(), true);
 }
 
 TEST_F(AuthTest, SharedKeyRefuseTest) {
-  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame wrong_type_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,

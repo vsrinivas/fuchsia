@@ -554,6 +554,7 @@ void SimFirmware::AssocScanDone() {
 void SimFirmware::AssocClearContext() {
   assoc_state_.state = AssocState::NOT_ASSOCIATED;
   auth_state_.state = AuthState::NOT_AUTHENTICATED;
+  auth_state_.sec_type = simulation::SEC_PROTO_TYPE_OPEN;
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
@@ -590,6 +591,23 @@ void SimFirmware::AuthStart() {
   }
 
   simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, auth_type, WLAN_AUTH_RESULT_SUCCESS);
+
+  if (wsec_ == WEP_ENABLED) {
+    ZX_ASSERT(wpa_auth_ == WPA_AUTH_DISABLED);
+    auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WEP;
+  }
+
+  if (wpa_auth_ == WPA_AUTH_PSK) {
+    ZX_ASSERT((wsec_ & (uint32_t)WSEC_NONE) == 0U);
+    auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA1;
+  }
+
+  if (wpa_auth_ == WPA2_AUTH_PSK) {
+    ZX_ASSERT((wsec_ & (uint32_t)WSEC_NONE) == 0U);
+    auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA2;
+  }
+
+  auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
   auth_state_.state = AuthState::EXPECTING_SECOND;
   hw_.Tx(&auth_req_frame);
 }
@@ -650,6 +668,7 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
       simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, frame->seq_num_ + 1,
                                               simulation::AUTH_TYPE_SHARED_KEY,
                                               WLAN_AUTH_RESULT_SUCCESS);
+      auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
       hw_.Tx(&auth_req_frame);
     } else if (auth_state_.state == AuthState::EXPECTING_FOURTH && frame->seq_num_ == 4) {
       // If we receive the fourth auth frame when we are expecting it, start association

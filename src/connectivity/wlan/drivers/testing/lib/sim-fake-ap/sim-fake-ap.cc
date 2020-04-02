@@ -288,6 +288,20 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
         return;
       }
 
+      if (security_.sec_type != auth_req_frame->sec_proto_type_) {
+        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
+                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+        return;
+      }
+
+      if ((security_.sec_type == SEC_PROTO_TYPE_WPA1 ||
+           security_.sec_type == SEC_PROTO_TYPE_WPA2) &&
+          auth_req_frame->auth_type_ == AUTH_TYPE_SHARED_KEY) {
+        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
+                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+        return;
+      }
+
       // Filt out invalid authentication request frames.
       if (auth_req_frame->seq_num_ != 1 &&
           (auth_req_frame->seq_num_ != 3 || auth_req_frame->auth_type_ == AUTH_TYPE_OPEN)) {
@@ -302,7 +316,7 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
       }
 
       // If it's not matching AP's authentication handling mode, just reply a refuse.
-      if (auth_req_frame->auth_type_ != security_.auth_handling_mode_) {
+      if (auth_req_frame->auth_type_ != security_.auth_handling_mode) {
         RemoveClient(auth_req_frame->src_addr_);
         ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
                          auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
@@ -322,11 +336,11 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
         client = AddClient(auth_req_frame->src_addr_);
       }
 
-      if (security_.auth_handling_mode_ == AUTH_TYPE_OPEN) {
+      if (security_.auth_handling_mode == AUTH_TYPE_OPEN) {
         // Even when the client status is AUTHENTICATED, we will send out a auth resp frame to let
         // client's status catch up in a same pace as AP.
         client->status_ = Client::AUTHENTICATED;
-      } else if (security_.auth_handling_mode_ == AUTH_TYPE_SHARED_KEY) {
+      } else if (security_.auth_handling_mode == AUTH_TYPE_SHARED_KEY) {
         if (client->status_ == Client::NOT_AUTHENTICATED) {
           // We've already checked whether the seq_num is 1.
           client->status_ = Client::AUTHENTICATING;

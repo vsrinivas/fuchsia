@@ -25,6 +25,17 @@ typedef struct WlanTxInfo {
   wlan_channel_t channel;
 } WlanTxInfo;
 
+// Representative for security protocol, we don't have this field in real situation.
+enum SimSecProtoType {
+  SEC_PROTO_TYPE_OPEN,
+  SEC_PROTO_TYPE_WEP,
+  SEC_PROTO_TYPE_WPA1,
+  SEC_PROTO_TYPE_WPA2
+};
+
+// AUTH_TYPE used by AP and authentication frame
+enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
+
 class InformationElement {
  public:
   enum SimIEType { IE_TYPE_CSA = 37, IE_TYPE_WPA1 = 221, IE_TYPE_WPA2 = 48 };
@@ -89,6 +100,9 @@ class SimManagementFrame : public SimFrame {
   void RemoveIE(InformationElement::SimIEType);
 
   std::list<std::shared_ptr<InformationElement>> IEs_;
+  // This is a brief alternative for security related IEs since we don't include entire IE for
+  // security protocol such as WPA IE or RSNE IE.
+  enum SimSecProtoType sec_proto_type_ = SEC_PROTO_TYPE_OPEN;
 
  private:
   void AddIE(InformationElement::SimIEType ie_type, std::shared_ptr<InformationElement> ie);
@@ -183,9 +197,6 @@ class SimDisassocReqFrame : public SimManagementFrame {
   common::MacAddr dst_addr_;
   uint16_t reason_;
 };
-
-// AUTH_TYPE used by AP and authentication frame
-enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
 
 // Only one type of authentication frame for request and response
 class SimAuthFrame : public SimManagementFrame {
