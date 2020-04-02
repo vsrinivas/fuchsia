@@ -223,6 +223,8 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arch_clean_cache_range((vaddr_t)&secondaries_released, sizeof(secondaries_released));
 }
 
+void arch_cpu_late_init(void) { }
+
 __NO_RETURN int arch_idle_thread_routine(void*) {
   for (;;) {
     __asm__ volatile("wfi");

@@ -63,6 +63,10 @@ void arch_init(void) {
   x86_processor_trace_init();
 }
 
+void arch_cpu_late_init(void) {
+  x86_cpu_feature_late_init();
+}
+
 void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uintptr_t arg1,
                               uintptr_t arg2) {
   /* default user space flags:

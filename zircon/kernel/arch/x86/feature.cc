@@ -222,6 +222,16 @@ void x86_feature_init(void) {
   g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
 }
 
+// Invoked on each CPU during boot, after platform is available.
+void x86_cpu_feature_late_init(void) {
+  cpu_id::CpuId cpuid;
+  MsrAccess msr;
+
+  if (!gCmdline.GetBool("kernel.x86.turbo", /*default_value=*/true)) {
+    x86_cpu_set_turbo(&cpuid, &msr, Turbostate::DISABLED);
+  }
+}
+
 static enum x86_hypervisor_list get_hypervisor() {
   if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {
     return X86_HYPERVISOR_NONE;
@@ -997,10 +1007,10 @@ void x86_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate stat
   auto vendor = cpu->ReadManufacturerInfo().manufacturer();
   switch (vendor) {
     case cpu_id::ManufacturerInfo::AMD:
-      x86_amd_cpus_set_turbo(cpu, msr, state);
+      x86_amd_cpu_set_turbo(cpu, msr, state);
       break;
     case cpu_id::ManufacturerInfo::INTEL:
-      x86_intel_cpus_set_turbo(cpu, msr, state);
+      x86_intel_cpu_set_turbo(cpu, msr, state);
     default:
       break;
   }

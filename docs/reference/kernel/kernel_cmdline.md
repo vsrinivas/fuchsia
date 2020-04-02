@@ -480,6 +480,19 @@ impact.
 
 This option only affects x86 systems.
 
+## kernel.x86.turbo=\<bool>
+
+Turbo Boost or Core Performance Boost are mechanisms that allow processors to
+dynamically vary their performance at runtime based on available thermal and
+electrical budget. This may provide improved interactive performance at the cost
+of performance variability. Some workloads may benefit from disabling Turbo; if
+this command line flag is set to false, turbo is disabled for all CPUs in the
+system.
+
+Defaults on.
+
+This option only affects x86 systems.
+
 ## kernel.mexec-pci-shutdown=\<bool>
 
 If false, this option leaves PCI devices running when calling mexec. Defaults

@@ -17,6 +17,7 @@ struct iframe_t;
 
 void arch_early_init(void);
 void arch_init(void);
+void arch_cpu_late_init(void);
 
 // Called just before initiating a system suspend to give the arch layer a
 // chance to save state.  Must be called with interrupts disabled.

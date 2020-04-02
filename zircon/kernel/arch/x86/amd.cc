@@ -136,7 +136,7 @@ void x86_amd_init_percpu_17h_zen1_quirks(cpu_id::CpuId* cpuid, MsrAccess* msr) {
   msr->write_msr(0xC001'1020, value);
 }
 
-void x86_amd_cpus_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
+void x86_amd_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
   // TODO(fxr/369679): Implement; see Patch 1 for the implementation.
 }
 

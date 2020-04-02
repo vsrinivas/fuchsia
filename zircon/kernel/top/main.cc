@@ -114,6 +114,9 @@ static int bootstrap2(void*) {
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH, LK_INIT_LEVEL_PLATFORM - 1);
   platform_init();
 
+  // late CPU initialization, after platform is available
+  arch_cpu_late_init();
+
   // initialize the target
   dprintf(SPEW, "initializing target\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_TARGET - 1);
@@ -135,6 +138,9 @@ void lk_secondary_cpu_entry() {
             SMP_MAX_CPUS, secondary_idle_thread_count);
     return;
   }
+
+  // late CPU initialization for secondary CPUs
+  arch_cpu_late_init();
 
   // secondary cpu initialize from threading level up. 0 to threading was handled in arch
   lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_LAST);

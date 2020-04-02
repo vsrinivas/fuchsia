@@ -220,15 +220,17 @@ bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr)
   return false;
 }
 
-struct x86_intel_cpu_set_turbo_task_context {
-  MsrAccess* msr;
-  Turbostate state;
-};
-static void x86_intel_cpu_set_turbo_task(void* raw_context) {
-  auto* const context = reinterpret_cast<x86_intel_cpu_set_turbo_task_context*>(raw_context);
-  uint64_t value = context->msr->read_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE);
+void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
+  if (cpu->ReadFeatures().HasFeature(cpu_id::Features::HYPERVISOR)) {
+    return;
+  }
+  if (!cpu->ReadFeatures().HasFeature(cpu_id::Features::TURBO)) {
+    return;
+  }
+
+  uint64_t value = msr->read_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE);
   uint64_t new_value = value;
-  switch (context->state) {
+  switch (state) {
     case Turbostate::ENABLED:
       new_value &= ~(X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
       break;
@@ -237,23 +239,8 @@ static void x86_intel_cpu_set_turbo_task(void* raw_context) {
       break;
   }
   if (new_value != value) {
-    context->msr->write_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE, /*value=*/new_value);
+    msr->write_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE, /*value=*/new_value);
   }
-}
-void x86_intel_cpus_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
-  if (cpu->ReadFeatures().HasFeature(cpu_id::Features::HYPERVISOR)) {
-    return;
-  }
-  if (!cpu->ReadFeatures().HasFeature(cpu_id::Features::TURBO)) {
-    return;
-  }
-
-  x86_intel_cpu_set_turbo_task_context context = {
-    .msr = msr,
-    .state = state
-  };
-  mp_sync_exec(MP_IPI_TARGET_ALL, /*mask=*/0, x86_intel_cpu_set_turbo_task,
-               reinterpret_cast<void*>(&context));
 }
 
 // Disable TSX if possible.
