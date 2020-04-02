@@ -250,6 +250,24 @@ constexpr size_t CountOperationParameters(const TEEC_Operation& operation) {
   return 0;
 }
 
+zx_status_t CreateVmoWithName(uint64_t size, uint32_t options, std::string_view name,
+                              zx::vmo* result) {
+  ZX_DEBUG_ASSERT(result);
+
+  zx::vmo vmo;
+  zx_status_t s = zx::vmo::create(size, options, &vmo);
+  if (s != ZX_OK) {
+    return s;
+  }
+
+  s = vmo.set_property(ZX_PROP_NAME, name.data(), name.size());
+  if (s != ZX_OK) {
+    return s;
+  }
+  *result = std::move(vmo);
+  return s;
+}
+
 void PreprocessValue(uint32_t param_type, const TEEC_Value& teec_value, Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
 
@@ -304,7 +322,7 @@ TEEC_Result PreprocessTemporaryMemref(uint32_t param_type,
 
   if (temp_memory_ref.buffer) {
     // We either have data to input or have a buffer to output data to, so create a VMO for it.
-    zx_status_t status = zx::vmo::create(temp_memory_ref.size, 0, &vmo);
+    zx_status_t status = CreateVmoWithName(temp_memory_ref.size, 0, "teec_temp_memory", &vmo);
     if (status != ZX_OK) {
       return ConvertStatusToResult(status);
     }
@@ -828,7 +846,7 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context* context, TEEC_SharedMemory* 
   size_t size = sharedMem->size;
 
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, 0, &vmo);
+  zx_status_t status = CreateVmoWithName(size, 0, "teec_shared_memory", &vmo);
   if (status != ZX_OK) {
     return ConvertStatusToResult(status);
   }
