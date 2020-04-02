@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus},
-    crate::font_package_manager::FontPackageManager,
-    crate::queue,
-    crate::repository_manager::GetPackageError,
-    crate::repository_manager::RepositoryManager,
-    crate::rewrite_manager::RewriteManager,
+    crate::{
+        cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus as _},
+        font_package_manager::FontPackageManager,
+        queue,
+        repository_manager::GetPackageError,
+        repository_manager::RepositoryManager,
+        rewrite_manager::RewriteManager,
+    },
     anyhow::Error,
+    cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
     fidl_fuchsia_pkg::{
@@ -17,12 +20,13 @@ use {
         PackageResolverRequestStream,
     },
     fidl_fuchsia_pkg_ext::BlobId,
+    fuchsia_cobalt::CobaltSender,
     fuchsia_pkg::PackagePath,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::{ParseError, PkgUrl},
     fuchsia_zircon::Status,
-    futures::prelude::*,
+    futures::{future::Future, stream::TryStreamExt as _},
     parking_lot::RwLock,
     std::sync::Arc,
     system_image::CachePackages,
@@ -284,6 +288,7 @@ pub async fn run_font_resolver_service(
     cache: PackageCache,
     package_fetcher: Arc<PackageFetcher>,
     stream: FontResolverRequestStream,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
@@ -301,6 +306,7 @@ pub async fn run_font_resolver_service(
                 &package_fetcher,
                 package_url,
                 directory_request,
+                cobalt_sender.clone(),
             )
             .await;
             responder.send(Status::from(status).into_raw())?;
@@ -317,17 +323,29 @@ async fn resolve_font<'a>(
     package_fetcher: &'a Arc<PackageFetcher>,
     package_url: String,
     directory_request: ServerEnd<DirectoryMarker>,
+    mut cobalt_sender: CobaltSender,
 ) -> Result<(), Status>
 where
 {
     match PkgUrl::parse(&package_url) {
         Err(err) => Err(handle_bad_package_url(err, &package_url)),
         Ok(parsed_package_url) => {
-            if !font_package_manager.is_font_package(&parsed_package_url) {
-                fx_log_err!("tried to resolve unknown font package: {}", package_url);
-                Err(Status::NOT_FOUND)
-            } else {
+            let is_font_package = font_package_manager.is_font_package(&parsed_package_url);
+            cobalt_sender.log_event_count(
+                metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
+                if is_font_package {
+                    metrics::IsFontPackageCheckMetricDimensionResult::Font
+                } else {
+                    metrics::IsFontPackageCheckMetricDimensionResult::NotFont
+                },
+                0,
+                1,
+            );
+            if is_font_package {
                 resolve(&cache, &package_fetcher, package_url, directory_request).await
+            } else {
+                fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
+                Err(Status::NOT_FOUND)
             }
         }
     }

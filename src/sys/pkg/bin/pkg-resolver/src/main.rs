@@ -9,8 +9,7 @@ use {
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
-    fuchsia_component::client::connect_to_service,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     fuchsia_trace as trace,
@@ -169,6 +168,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
     let font_resolver_fb = {
         let cache = cache.clone();
         let package_fetcher = Arc::clone(&package_fetcher);
+        let cobalt_sender = cobalt_sender.clone();
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_font_resolver_service(
@@ -176,6 +176,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     cache.clone(),
                     Arc::clone(&package_fetcher),
                     stream,
+                    cobalt_sender.clone(),
                 )
                 .unwrap_or_else(|e| {
                     fx_log_err!("Failed to spawn_local font_resolver_service {:?}", e)

@@ -10,9 +10,9 @@ use {
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_pkg::{
-        ExperimentToggle as Experiment, PackageCacheMarker, PackageResolverAdminMarker,
-        PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
-        RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
+        ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
+        PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
+        PackageResolverProxy, RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_rewrite::{
@@ -308,6 +308,7 @@ pub struct Proxies {
     pub resolver: PackageResolverProxy,
     pub repo_manager: RepositoryManagerProxy,
     pub rewrite_engine: RewriteEngineProxy,
+    pub font_resolver: FontResolverProxy,
 }
 
 impl Proxies {
@@ -325,6 +326,9 @@ impl Proxies {
             rewrite_engine: app
                 .connect_to_service::<RewriteEngineMarker>()
                 .expect("connect to rewrite engine"),
+            font_resolver: app
+                .connect_to_service::<FontResolverMarker>()
+                .expect("connect to font resolver"),
         }
     }
 }
@@ -494,22 +498,20 @@ impl MockLoggerFactory {
         }
     }
 
-    pub fn events(&self) -> Vec<CobaltEvent> {
-        self.loggers
-            .lock()
-            .iter()
-            .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
-            .collect()
-    }
-
-    pub async fn wait_for_at_least_one_event_with_metric_id(&self, id: u32) -> Vec<CobaltEvent> {
+    pub async fn wait_for_at_least_n_events_with_metric_id(
+        &self,
+        n: usize,
+        id: u32,
+    ) -> Vec<CobaltEvent> {
         loop {
             let events: Vec<CobaltEvent> = self
-                .events()
-                .into_iter()
+                .loggers
+                .lock()
+                .iter()
+                .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
                 .filter(|CobaltEvent { metric_id, .. }| *metric_id == id)
                 .collect();
-            if !events.is_empty() {
+            if events.len() >= n {
                 return events;
             }
             fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
