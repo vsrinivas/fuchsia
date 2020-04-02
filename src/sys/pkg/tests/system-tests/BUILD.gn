@@ -5,18 +5,19 @@
 import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/host.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 
 copy("copy") {
   testonly = true
   sources = [
-    "$zircon_tools_dir/netaddr",
+    "$host_tools_dir/device-finder",
     "//prebuilt/tools/artifacts/artifacts",
     "//prebuilt/tools/lkgb/lkgb",
   ]
   outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-  deps = [ "//zircon/public/tool/netaddr($host_toolchain)" ]
+  public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]
 }
 
 go_library("system_tests_lib") {
