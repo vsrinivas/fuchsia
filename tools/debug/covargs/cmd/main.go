@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/lib"
 	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/cache"
@@ -28,6 +29,7 @@ import (
 )
 
 const (
+	shardSize         = 1000
 	symbolCacheSize   = 100
 	cloudFetchTimeout = 5 * time.Second
 )
@@ -48,7 +50,10 @@ var (
 	llvmProfdata      string
 	outputFormat      string
 	jsonOutput        string
+	reportDir         string
 	saveTemps         string
+	basePath          string
+	diffMappingFile   string
 )
 
 func init() {
@@ -70,6 +75,9 @@ func init() {
 	flag.StringVar(&outputFormat, "format", "html", "the output format used for llvm-cov")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs profile information to the specified file")
 	flag.StringVar(&saveTemps, "save-temps", "", "save temporary artifacts in a directory")
+	flag.StringVar(&reportDir, "report-dir", "", "the directory to save the report to")
+	flag.StringVar(&basePath, "base", "", "base path for source tree")
+	flag.StringVar(&diffMappingFile, "diff-mapping", "", "path to diff mapping file")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -197,12 +205,6 @@ func isInstrumented(filepath string) bool {
 }
 
 func process(ctx context.Context, repo symbolize.Repository) error {
-	// Make the output directory
-	err := os.MkdirAll(outputDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("creating output dir %s: %w", outputDir, err)
-	}
-
 	// Read in all the data
 	info, err := readInfo(symbolizeDumpFile, summaryFile)
 	if err != nil {
@@ -291,18 +293,76 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	}
 	covFile.Close()
 
-	// Produce output
-	showCmd := Action{Path: llvmCov, Args: []string{
-		"show",
-		"-format", outputFormat,
-		"-instr-profile", mergedFile,
-		"-output-dir", outputDir,
-		"@" + covFile.Name(),
-	}}
-	data, err = showCmd.Run(ctx)
-	if err != nil {
-		return fmt.Errorf("%v:\n%s", err, string(data))
+	if outputDir != "" {
+		// Make the output directory
+		err := os.MkdirAll(outputDir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("creating output dir %s: %w", outputDir, err)
+		}
+
+		// Produce HTML report
+		showCmd := Action{Path: llvmCov, Args: []string{
+			"show",
+			"-format", outputFormat,
+			"-instr-profile", mergedFile,
+			"-output-dir", outputDir,
+			"@" + covFile.Name(),
+		}}
+		data, err = showCmd.Run(ctx)
+		if err != nil {
+			return fmt.Errorf("%v:\n%s", err, string(data))
+		}
 	}
+
+	if reportDir != "" {
+		// Make the export directory
+		err := os.MkdirAll(reportDir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("creating export dir %s: %w", reportDir, err)
+		}
+
+		// Export data in machine readable format.
+		var b bytes.Buffer
+		cmd := exec.Command(llvmCov, []string{
+			"export",
+			"-instr-profile", mergedFile,
+			"-skip-expansions",
+			"-skip-functions",
+			"@" + covFile.Name(),
+		}...)
+		cmd.Stdout = &b
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to export: %w", err)
+		}
+
+		var export llvm.Export
+		if err := json.NewDecoder(&b).Decode(&export); err != nil {
+			return fmt.Errorf("failed to load the exported file: %w", err)
+		}
+
+		var mapping *covargs.DiffMapping
+		if diffMappingFile != "" {
+			file, err := os.Open(diffMappingFile)
+			if err != nil {
+				return fmt.Errorf("cannot open %q: %w", diffMappingFile, err)
+			}
+			defer file.Close()
+
+			if err := json.NewDecoder(file).Decode(mapping); err != nil {
+				return fmt.Errorf("failed to load the diff mapping file: %w", err)
+			}
+		}
+
+		report, err := covargs.GenerateReport(&export, basePath, mapping)
+		if err != nil {
+			return fmt.Errorf("failed to generate coverage report: %w", err)
+		}
+
+		if err := covargs.SaveReport(report, shardSize, reportDir); err != nil {
+			return fmt.Errorf("failed to save report: %w", err)
+		}
+	}
+
 	return nil
 }
 

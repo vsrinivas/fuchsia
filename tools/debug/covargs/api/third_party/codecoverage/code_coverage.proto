@@ -1,0 +1,275 @@
+// Copyright 2018 The Chromium Authors. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+//    * Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+//    * Neither the name of Google Inc. nor the names of its
+// contributors may be used to endorse or promote products derived from
+// this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+syntax = "proto3";
+
+package codecoverage;
+
+// This proto defines a compressed format for code coverage info by merging as
+// much info as possible.
+
+
+// Represents the code coverage for multiple full lines in the file.
+message LineRange {
+  // The first line in the range. Inclusive.
+  int32 first = 1;
+
+  // The last line in the range. Inclusive.
+  // If not set, it is the same as `first` above.
+  int32 last = 2;
+
+  // Meaning of values:
+  // * positive: the lines are covered.
+  // * zero: the lines are instrumented but not covered by tests.
+  // * negative: if the lines are uncoverable or uninstrumented
+  //
+  // If the coverage tool doesn't support counting how many times a line was
+  // executed, the value could only be 1 or 0; otherwise the value could be
+  // larger than 1. If the values are the exactly the same for a few consecutive
+  // lines, they could be merged into one bigger line range.
+  // For example, four small ranges in the middle are merged into a bigger one.
+  // |line number|actual count|
+  // |28         |1           |   --->  LineRange(?, 28, 1)
+  // |29         |10          |   --->  LineRange(29, 32, 10)
+  // |30         |10          |
+  // |31         |10          |
+  // |32         |10          |
+  // |33         |1           |   --->  LineRange(33, ?, 1)
+  //
+  // TODO(crbug.com/925886): As of Jan 28th, 2019, there could be negative
+  // |count| in the metadata.
+  int64 count = 3;
+}
+
+
+// Represents column range within the same line.
+message ColumnRange {
+  // The first column of the code block. Inclusive.
+  int32 first = 1;
+
+  // The last column of the code block. Inclusive.
+  // If not set, it is the same as `first` above.
+  int32 last = 2;
+}
+
+
+// Represents multiple column ranges of a line.
+message ColumnRanges {
+  // The line number of the code block.
+  int32 line = 1;
+
+  // The column ranges within the line.
+  repeated ColumnRange ranges = 2;
+}
+
+
+// Represents the code coverage of code branches at a line.
+message Branch {
+  // The line number which the branch info belongs to.
+  int32 line = 1;
+
+  // The total number of branches.
+  int32 total = 2;
+
+  // The number of covered branches.
+  int32 covered = 3;
+}
+
+
+// Represents a code coverage metric of a file or a directory.
+message Metric {
+  // The name of the metric, e.g. "line", "function", "region", etc.
+  string name = 1;
+
+  // The total number of coverable ones.
+  int32 total = 2;
+
+  // The number of covered ones.
+  int32 covered = 3;
+}
+
+
+// Represents the code coverage info of a single source file.
+message File {
+  // Source absolute path to the file, e.g. '//base/file.cc'.
+  string path = 1;
+
+  // The total number of lines in the file.
+  int32 total_lines = 2;
+
+  // The code coverage info of the lines in the file.
+  // If a line is not executable or not instrumented to collect coverage info,
+  // it is not coverable and won't be included here.
+  repeated LineRange lines = 3;
+
+  // The uncovered code blocks in the file.
+  repeated ColumnRanges uncovered_blocks = 4;
+
+  // The code branch info for if/else/etc.
+  repeated Branch branches = 5;
+
+  // Code coverage summary for the file.
+  repeated Metric summaries = 6;
+
+  // The git hash (up to the revision in the checkout) of the commit in Gitiles
+  // when the file was most recently changed.
+  // E.g. fc7b1de555d4b1fe5b7ff2e4c99662a10cf4ddd6.
+  // Empty if the file not tracked by gitiles, such as generated source files.
+  string revision = 7;
+
+  // The UNIX timestamp of the committer date for the revision above.
+  int64 timestamp = 8;
+}
+
+
+// Represents the summary metrics for a given file or a directory.
+message CoverageSummary {
+  // The name of the file, directory, or crbug component.
+  // For a directory, it should end with a "/", e.g. "base/".
+  // For a file, it should be the file name.
+  // For a crbug component, it should be the full path.
+  string name = 1;
+
+  // The full path to the file, directory, or crbug component.
+  string path = 2;
+
+  // The metrics for the file or directory.
+  repeated Metric summaries = 3;
+}
+
+
+// Represents the summary metrics for:
+// * A single directory and its immediate children.
+// * All directories mapping to a single crbug component.
+message GroupCoverageSummary {
+  // Two cases:
+  // * The full path of the directory relative to the root of the code base.
+  //   For a directory, this should end with a "/", e.g. "//base/".
+  //   For the root directory, this should be "//".
+  // * The full path of the crbug component like "Blink>Storage>AppCache".
+  string path = 1;
+
+  // The coverage metrics for its sub directories.
+  repeated CoverageSummary dirs = 2;
+
+  // The coverage metrics for all the files within the directory.
+  repeated CoverageSummary files = 3;
+
+  // Code coverage summary for the group.
+  repeated Metric summaries = 6;
+}
+
+
+// Represents a commit in a Gitiles repository.
+message GitilesCommit {
+  // Hostname of the Gitiles server, e.g. chromium.googlesource.com.
+  string host = 1;
+
+  // Project name in the Gitiles, e.g. chromium/src.
+  string project = 2;
+
+  // The git hash of the commit in Gitiles, e.g.
+  // fc7b1de555d4b1fe5b7ff2e4c99662a10cf4ddd6.
+  string revision = 3;
+
+  // The commit position of the commit in Gitiles, e.g. 606065.
+  // since not every repository has commit position.
+  int32 commit_position = 4;
+}
+
+
+// Represents a patch of a CL in a Gerrit project.
+message GerritPatch {
+  // Hostname of the Gerrit server, e.g. chromium-review.googlesource.com.
+  string host = 1;
+
+  // The id of the CL, e.g. 1296501.
+  int32 cl = 2;
+
+  // The id of the patch in the CL, e.g. 43.
+  int32 patch = 3;
+
+  // Project name of the CL, e.g. chromium/src.
+  // Optional, since the cl number is unique in a Gerrit server.
+  string project = 4;
+}
+
+
+// Represents a configuration category that is related to the coverage data.
+enum ConfigCategory {
+  // Related to produce the test binary and data.
+  BUILD = 0;
+
+  // Related to run the tests.
+  TEST = 1;
+
+  // Related to the test itself.
+  TESTHARNESS = 2;
+
+  // Related to the coverage tool.
+  COVERAGE_TOOL = 3;
+}
+
+
+// Represents a config setting.
+message ConfigSetting {
+  // The category of the setting.
+  ConfigCategory category = 1;
+
+  // Name of the key, e.g. "builder".
+  string name = 2;
+
+  // Value for the key, e.g. "Linux Builder".
+  string value = 3;
+}
+
+
+// Represents a code coverage report.
+message CoverageReport {
+  // Either a Gitiles commit or a Gerrit patch must be provided.
+  GitilesCommit commit = 1;
+  GerritPatch patch = 2;
+
+  // The build/test/etc configurations that were used to generate coverage data.
+  repeated ConfigSetting build_configs = 3;
+
+  // Code coverage info of individual source files.
+  repeated File files = 4;
+
+  // Code coverage info of individual source files saved in separate files.
+  repeated string file_shards = 5;
+
+  // Code coverage summary for all directories.
+  repeated GroupCoverageSummary dirs = 6;
+
+  // Code coverage summary for all crbug components.
+  repeated GroupCoverageSummary components = 7;
+
+  // Code coverage summary for the root directory.
+  repeated Metric summaries = 8;
+}

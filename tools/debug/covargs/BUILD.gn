@@ -6,9 +6,24 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
+go_library("codecoverage_api") {
+  name =
+      "go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage"
+  source_dir = "api/third_party/codecoverage"
+  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+}
+
+go_library("llvm_api") {
+  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
+  source_dir = "api/llvm"
+}
+
 go_library("covargs_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/lib"
   deps = [
+    ":codecoverage_api",
+    ":llvm_api",
+    "//third_party/golibs:github.com/golang/protobuf",
     "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/logger",
     "//tools/testing/runtests",
@@ -20,6 +35,7 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     ":covargs_lib",
+    ":llvm_api",
     "//tools/debug/elflib",
     "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/cache",
@@ -38,7 +54,9 @@ go_binary("covargs") {
 go_test("covargs_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs/lib" ]
   deps = [
+    ":codecoverage_api",
     ":covargs_lib",
+    ":llvm_api",
     "//tools/debug/elflib",
     "//tools/debug/symbolize:symbolize_lib",
   ]
