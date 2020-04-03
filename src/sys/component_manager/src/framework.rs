@@ -336,7 +336,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                events::{core::EventSource, registry::EventStream},
+                events::{source::EventSource, stream::EventStream},
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,

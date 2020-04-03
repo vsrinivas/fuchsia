@@ -7,8 +7,11 @@ use {
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             error::ModelError,
-            events::core::EventSource,
-            events::registry::{Event, EventStream, SyncMode},
+            events::{
+                event::{Event, SyncMode},
+                source::EventSource,
+                stream::EventStream,
+            },
             hooks::EventPayload,
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },

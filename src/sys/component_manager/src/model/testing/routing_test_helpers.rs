@@ -639,7 +639,7 @@ impl RoutingTest {
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
     use {
-        super::*, crate::model::events::core::EVENT_SOURCE_SYNC_SERVICE_PATH,
+        super::*, crate::model::events::source_factory::EVENT_SOURCE_SYNC_SERVICE_PATH,
         cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
         fidl_fuchsia_sys2::BlockingEventSourceMarker, std::path::PathBuf,
     };

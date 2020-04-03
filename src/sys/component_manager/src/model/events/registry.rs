@@ -5,184 +5,19 @@
 use {
     crate::model::{
         error::ModelError,
+        events::{dispatcher::EventDispatcher, event::SyncMode, stream::EventStream},
         hooks::{Event as ComponentEvent, EventType, Hook, HooksRegistration},
         moniker::AbsoluteMoniker,
     },
-    anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fuchsia_trace as trace,
-    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
+    futures::lock::Mutex,
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},
     },
 };
-
-#[derive(PartialEq, Clone)]
-pub enum SyncMode {
-    Sync,
-    Async,
-}
-
-/// Created for a particular component event.
-/// Contains the Event that occurred along with a means to resume/unblock the component manager.
-#[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
-pub struct Event {
-    /// The event itself.
-    pub event: ComponentEvent,
-
-    /// The scope where this event comes from. This can be seen as a superset of the
-    /// `event.target_moniker` itself given that the events might have been offered from an
-    /// ancestor realm.
-    pub scope_moniker: AbsoluteMoniker,
-
-    /// This Sender is used to unblock the component manager if available.
-    /// If a Sender is unspecified then that indicates that this event is asynchronous and
-    /// non-blocking.
-    responder: Option<oneshot::Sender<()>>,
-}
-
-impl Event {
-    pub fn sync_mode(&self) -> SyncMode {
-        if self.responder.is_none() {
-            SyncMode::Async
-        } else {
-            SyncMode::Sync
-        }
-    }
-
-    pub fn resume(self) {
-        trace::duration!("component_manager", "events:resume");
-        trace::flow_step!("component_manager", "event", self.event.id);
-        if let Some(responder) = self.responder {
-            responder.send(()).unwrap()
-        }
-    }
-}
-
-/// EventDispatcher and EventStream are two ends of a channel.
-///
-/// An EventDispatcher is owned by the EventRegistry. It sends an
-/// Event to the EventStream.
-///
-/// An EventStream is owned by the client - usually a test harness or a
-/// EventSource. It receives a Event from an EventDispatcher and propagates it
-/// to the client.
-#[derive(Clone)]
-pub struct EventDispatcher {
-    /// Whether or not this EventDispatcher dispatches events asynchronously.
-    sync_mode: SyncMode,
-    /// Specifies the realms that this EventDispatcher can dispatch events from.
-    scope_monikers: HashSet<AbsoluteMoniker>,
-    /// An `mpsc::Sender` used to dispatch an event. Note that this
-    /// `mpsc::Sender` is wrapped in an Arc<Mutex<..>> to allow it to be cloneable
-    /// and passed along to other tasks for dispatch.
-    tx: Arc<Mutex<mpsc::Sender<Event>>>,
-}
-
-impl EventDispatcher {
-    /// Creates a new event dispatcher. This dispatcher will only dispatch events that arrive from
-    /// the given scopes and dispatch them under the given name for that scope.
-    fn new(
-        sync_mode: SyncMode,
-        scope_monikers: HashSet<AbsoluteMoniker>,
-        tx: mpsc::Sender<Event>,
-    ) -> Self {
-        // TODO(fxb/48360): flatten scope_monikers. There might be monikers that are
-        // contained within another moniker in the list.
-        Self { sync_mode, scope_monikers, tx: Arc::new(Mutex::new(tx)) }
-    }
-
-    /// Sends the event to an event stream, if fired in the scope of `scope_moniker`. Returns
-    /// a responder which can be blocked on.
-    async fn send(&self, event: ComponentEvent) -> Result<Option<oneshot::Receiver<()>>, Error> {
-        // TODO(fxb/48360): once flattening of monikers is done, we would expect to have a single
-        // moniker here. For now taking the first one and ignoring the rest.
-        // Ensure that the event is coming from a realm within the scope of this dispatcher.
-        let maybe_scope_moniker = self
-            .scope_monikers
-            .iter()
-            .filter(|moniker| moniker.contains_in_realm(&event.target_moniker))
-            .next();
-        if maybe_scope_moniker.is_none() {
-            return Ok(None);
-        }
-
-        let scope_moniker = maybe_scope_moniker.unwrap().clone();
-
-        trace::duration!("component_manager", "events:send");
-        let event_type = format!("{:?}", event.payload.type_());
-        let target_moniker = event.target_moniker.to_string();
-        trace::flow_begin!(
-            "component_manager",
-            "event",
-            event.id,
-            "event_type" => event_type.as_str(),
-            "target_moniker" => target_moniker.as_str()
-        );
-        let (maybe_responder_tx, maybe_responder_rx) = if self.sync_mode == SyncMode::Async {
-            (None, None)
-        } else {
-            let (responder_tx, responder_rx) = oneshot::channel();
-            (Some(responder_tx), Some(responder_rx))
-        };
-        {
-            let mut tx = self.tx.lock().await;
-            tx.send(Event { event, scope_moniker, responder: maybe_responder_tx }).await?;
-        }
-        Ok(maybe_responder_rx)
-    }
-}
-
-pub struct EventStream {
-    rx: mpsc::Receiver<Event>,
-    tx: mpsc::Sender<Event>,
-    dispatchers: Vec<Arc<EventDispatcher>>,
-}
-
-impl EventStream {
-    fn new() -> Self {
-        let (tx, rx) = mpsc::channel(2);
-        Self { rx, tx, dispatchers: vec![] }
-    }
-
-    fn create_dispatcher(
-        &mut self,
-        sync_mode: SyncMode,
-        scope_monikers: HashSet<AbsoluteMoniker>,
-    ) -> Weak<EventDispatcher> {
-        let dispatcher =
-            Arc::new(EventDispatcher::new(sync_mode.clone(), scope_monikers, self.tx.clone()));
-        self.dispatchers.push(dispatcher.clone());
-        Arc::downgrade(&dispatcher)
-    }
-
-    /// Receives the next event from the sender.
-    pub async fn next(&mut self) -> Option<Event> {
-        trace::duration!("component_manager", "events:next");
-        self.rx.next().await
-    }
-
-    /// Waits for an event with a particular EventType against a component with a
-    /// particular moniker. Ignores all other events.
-    pub async fn wait_until(
-        &mut self,
-        expected_event_type: EventType,
-        expected_moniker: AbsoluteMoniker,
-    ) -> Option<Event> {
-        while let Some(event) = self.next().await {
-            let actual_event_type = event.event.payload.type_();
-            if expected_moniker == event.event.target_moniker
-                && expected_event_type == actual_event_type
-            {
-                return Some(event);
-            }
-            event.resume();
-        }
-        None
-    }
-}
 
 pub struct RoutedEvent {
     pub source_name: CapabilityName,
@@ -232,8 +67,8 @@ impl EventRegistry {
         // Copy the senders so we don't hold onto the sender map lock
         // If we didn't do this, it is possible to deadlock while holding onto this lock.
         // For example,
-        // Task A : call send(event1) -> lock on sender map -> send -> wait for responders
-        // Task B : call send(event2) -> lock on sender map
+        // Task A : call dispatch(event1) -> lock on sender map -> send -> wait for responders
+        // Task B : call dispatch(event2) -> lock on sender map
         // If task B was required to respond to event1, then this is a deadlock.
         // Neither task can make progress.
         let dispatchers = {
@@ -257,7 +92,7 @@ impl EventRegistry {
 
         let mut responder_channels = vec![];
         for dispatcher in dispatchers {
-            let result = dispatcher.send(event.clone()).await;
+            let result = dispatcher.dispatch(event.clone()).await;
             match result {
                 Ok(Some(responder_channel)) => {
                     // A future can be canceled if the EventStream was dropped after

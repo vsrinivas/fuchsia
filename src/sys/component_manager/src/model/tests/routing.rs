@@ -8,7 +8,7 @@ use {
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
-            events::core::EVENT_SOURCE_SYNC_SERVICE_PATH,
+            events::source_factory::EVENT_SOURCE_SYNC_SERVICE_PATH,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
             rights, routing,

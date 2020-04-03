@@ -19,7 +19,7 @@ use {
         model::{
             binding::Binder,
             error::ModelError,
-            events::core::EventSourceFactory,
+            events::source_factory::EventSourceFactory,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
             runner::Runner,
