@@ -77,6 +77,9 @@ rustc_binary("system_controller_client") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
   ]
+
+  # TODO(46841): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_test("component_manager_panic_test_bin") {
