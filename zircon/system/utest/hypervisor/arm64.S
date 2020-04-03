@@ -18,7 +18,8 @@
 .set FIQ_EXC_OFFSET,         0x100
 .set SERROR_EXC_OFFSET,      0x180
 
-.set SPSR_M_BIT_ARCH32,      0x010
+.set SPSR_DAIF_AARCH64,      0x3c0
+.set SPSR_AIFM_AARCH32,      0x1d0
 
 .set GICC_BASE,              0x800001000
 .set GICC_IAR_OFFSET,        0xc
@@ -51,28 +52,17 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
     .skip (\base + \offset) - (2b - 1b)
 .endm
 
-// test_complete Signals test completion by writing value (0-255) to
-// EXIT_TEST_ADDR. EXIT_TEST_ADDR is monitored by the test routine for
-// access - indicating test completion.
-.macro test_complete value=0 arch=aarch64
-    .if \value > 255 || \value < 0
-        .err
-    .endif
-
-    .ifeqs "\arch", "aarch64"
+// Signals test completion by writing 0 to EXIT_TEST_ADDR.
+.macro test_complete arch=aarch64
+    .ifc \arch, aarch64
         mov x0, EXIT_TEST_ADDR
-        .if \value == 0
-            str xzr, [x0]
-        .else
-            mov x1, \value
-            str x1, [x0]
-        .endif
+        str xzr, [x0]
     .else
-        .ifeqs "\arch", "aarch32"
-            .word 0xE3A01000 + \value  // aarch32: movw r1, \value
-            .word 0xE30F0000           // aarch32: movw r0, [lower]EXIT_TEST_ADDR
-            .word 0xE34000FF           // aarch32: movw r0, [upper]EXIT_TEST_ADDR
-            .word 0xE5801000           // aarch32: str  r0, [r1]
+        .ifc \arch, aarch32
+            .word 0xE3A01000    // aarch32: movw r1, 0
+            .word 0xE30F0000    // aarch32: movw r0, [lower]EXIT_TEST_ADDR
+            .word 0xE34000FF    // aarch32: movw r0, [upper]EXIT_TEST_ADDR
+            .word 0xE5801000    // aarch32: str  r0, [r1]
         .else
             .error "Unsupported architecture"
         .endif
@@ -82,20 +72,23 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 // Drop exception level from EL1 to EL0 and, if requested, switch execution
 // state.
 .macro drop_to_el0 arch=aarch64
-    .ifeqs "\arch", "aarch32"
-        mov x0, SPSR_M_BIT_ARCH32  // for aarch32, set PSTATE to AARCH32
-        msr spsr_el1, x0           // and clear everything else upon eret.
+    .ifc \arch, aarch64
+        mov x0, SPSR_DAIF_AARCH64
     .else
-        .ifnes "\arch", "aarch64"  // accept default architecture, do nothing.
+        .ifc \arch, aarch32
+            mov x0, SPSR_AIFM_AARCH32
+        .else
             .error "Unsupported architecture"
         .endif
     .endif
+    msr spsr_el1, x0
+    isb
 
-    ldr w0, 2f               // resume execution at label '2' ahead
-    msr elr_el1, x0          // store exception link register
-    eret                     // resume at el0 using specified arch.
+    mov x0, xzr
+    add x0, x0, 2f - 1b // resume execution at label '2' ahead
+    msr elr_el1, x0     // store exception link register
+    eret                // resume at el0 using specified arch.
     2:
-    .word 2b - 1b + 4
 .endm
 
 .text
@@ -205,8 +198,15 @@ FUNCTION vcpu_wfi_pending_interrupt_gicv3_end
 FUNCTION vcpu_wfi_aarch32_start
     drop_to_el0 aarch32
     .word 0xE320F003         // aarch32: wfi
-    test_complete 1 aarch32  // Fail, if instruction was executed
-                             // without raising exception.
+
+    // From ARM DDI 0487C.a, Section D10.2.45: Since a WFI can complete at any
+    // time, even without a Wakeup event, the traps on WFI are not guaranteed to
+    // be taken, even if the WFI is executed when there is no Wakeup event. The
+    // only guarantee is that if the instruction does not complete in finite
+    // time in the absence of a Wakeup event, the trap will be taken.
+    //
+    // We therefore complete the test at this point.
+    test_complete aarch32
 
     exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
     test_complete
@@ -237,7 +237,7 @@ FUNCTION vcpu_fp_aarch32_start
     // This should trigger floating point exception.
     .word 0xE3A00000         // aarch32: mov r0, 0
     .word 0xED900B00         // aarch32: vldr d0, [r0]
-    test_complete 0 aarch32
+    test_complete aarch32
 
     exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
     mov x0, CPACR_EL1_FPEN_NO_TRAP
