@@ -7,6 +7,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_INTERNAL_H_
 
 #include <kernel/scheduler.h>
+#include <ktl/algorithm.h>
 
 // Implementation of the WAVLTree observer Scheduler::SubtreeMinObserver,
 // declared in kernel/scheduler.h. These only need to be visible to the WAVLTree
@@ -78,11 +79,11 @@ void Scheduler::SubtreeMinObserver::RecordRotation(Iter pivot, Iter lr_child, It
   // Compute the min with the newly adopted child.
   parent->scheduler_state_.min_finish_time_ = parent->scheduler_state_.finish_time_;
   if (sibling) {
-    parent->scheduler_state_.min_finish_time_ = std::min(
+    parent->scheduler_state_.min_finish_time_ = ktl::min(
         parent->scheduler_state_.min_finish_time_, sibling->scheduler_state_.min_finish_time_);
   }
   if (lr_child) {
-    parent->scheduler_state_.min_finish_time_ = std::min(
+    parent->scheduler_state_.min_finish_time_ = ktl::min(
         parent->scheduler_state_.min_finish_time_, lr_child->scheduler_state_.min_finish_time_);
   }
 }
@@ -96,11 +97,11 @@ void Scheduler::SubtreeMinObserver::RecordErase(Thread* /*node*/, Iter invalidat
   while (current) {
     current->scheduler_state_.min_finish_time_ = current->scheduler_state_.finish_time_;
     if (Iter left = current.left(); left) {
-      current->scheduler_state_.min_finish_time_ = std::min(
+      current->scheduler_state_.min_finish_time_ = ktl::min(
           current->scheduler_state_.min_finish_time_, left->scheduler_state_.min_finish_time_);
     }
     if (Iter right = current.right(); right) {
-      current->scheduler_state_.min_finish_time_ = std::min(
+      current->scheduler_state_.min_finish_time_ = ktl::min(
           current->scheduler_state_.min_finish_time_, right->scheduler_state_.min_finish_time_);
     }
     current = current.parent();

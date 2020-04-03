@@ -31,6 +31,7 @@
 #include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
+#include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <vm/vm.h>
 
@@ -359,7 +360,7 @@ Thread* Scheduler::DequeueFairThread() {
   // Snap the virtual clock to the earliest start time.
   const auto& earliest_thread = fair_run_queue_.front();
   const auto earliest_start = earliest_thread.scheduler_state_.start_time_;
-  const SchedTime eligible_time = std::max(virtual_time_, earliest_start);
+  const SchedTime eligible_time = ktl::max(virtual_time_, earliest_start);
 
   // Find the eligible thread with the earliest virtual finish time.
   // Note: Currently, fair tasks are always eligible when added to the run
@@ -761,7 +762,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     const SchedDuration delta_ns = total_runtime_ns - current_state->expected_runtime_ns_;
     const SchedDuration scaled_ns = delta_ns / (1 << kExpectedRuntimeAdjustmentRateShift);
     const SchedDuration clamped_ns =
-        std::max<SchedDuration>(scaled_ns, -current_state->expected_runtime_ns_);
+        ktl::max<SchedDuration>(scaled_ns, -current_state->expected_runtime_ns_);
     current_state->expected_runtime_ns_ += clamped_ns;
 
     // Adjust the aggregate value by the same amount.
@@ -919,12 +920,12 @@ SchedDuration Scheduler::CalculateTimeslice(Thread* thread) {
 }
 
 SchedTime Scheduler::ClampToDeadline(SchedTime completion_time) {
-  return std::min(completion_time, GetNextEligibleTime());
+  return ktl::min(completion_time, GetNextEligibleTime());
 }
 
 SchedTime Scheduler::ClampToEarlierDeadline(SchedTime completion_time, SchedTime finish_time) {
   Thread* const thread = FindEarlierDeadlineThread(completion_time, finish_time);
-  return thread ? std::min(completion_time, thread->scheduler_state_.start_time_) : completion_time;
+  return thread ? ktl::min(completion_time, thread->scheduler_state_.start_time_) : completion_time;
 }
 
 SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
@@ -996,7 +997,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
     // be less than 1.0 due to time slice consumed or due to previous preemption
     // by a deadline task or both.
     const SchedRemainder normalized_timeslice_remainder =
-        state->time_slice_ns_ / std::max(state->fair_.initial_time_slice_ns, SchedDuration{1});
+        state->time_slice_ns_ / ktl::max(state->fair_.initial_time_slice_ns, SchedDuration{1});
 
     DEBUG_ASSERT_MSG(
         normalized_timeslice_remainder <= SchedRemainder{1},
@@ -1005,7 +1006,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
         normalized_timeslice_remainder.raw_value());
 
     if (placement == Placement::Insertion || normalized_timeslice_remainder <= SchedRemainder{0}) {
-      state->start_time_ = std::max(state->finish_time_, virtual_time_);
+      state->start_time_ = ktl::max(state->finish_time_, virtual_time_);
       state->fair_.normalized_timeslice_remainder = SchedRemainder{1};
     } else if (placement == Placement::Preemption) {
       DEBUG_ASSERT(state->time_slice_ns_ > SchedDuration{0});
@@ -1565,7 +1566,7 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
       state->deadline_ = params;
       state->start_time_ = effective_start_time;
       state->finish_time_ = state->start_time_ + params.deadline_ns;
-      state->time_slice_ns_ = std::min(state->time_slice_ns_, params.capacity_ns);
+      state->time_slice_ns_ = ktl::min(state->time_slice_ns_, params.capacity_ns);
       current->total_deadline_utilization_ += state->deadline_.utilization;
 
       // Adjust the position of the thread in the run queue based on the new
@@ -1614,7 +1615,7 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
   const int original_priority_ = thread->effec_priority_;
   thread->priority_boost_ = 0;
   thread->base_priority_ = priority;
-  thread->effec_priority_ = std::max(thread->base_priority_, thread->inherited_priority_);
+  thread->effec_priority_ = ktl::max(thread->base_priority_, thread->inherited_priority_);
 
   // Perform the state-specific updates if the discipline or effective priority
   // changed.
@@ -1677,7 +1678,7 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
   const int original_priority_ = thread->effec_priority_;
   thread->priority_boost_ = 0;
   thread->inherited_priority_ = priority;
-  thread->effec_priority_ = std::max(thread->base_priority_, thread->inherited_priority_);
+  thread->effec_priority_ = ktl::max(thread->base_priority_, thread->inherited_priority_);
 
   // Perform the state-specific updates if the effective priority changed.
   if (thread->effec_priority_ != original_priority_) {
