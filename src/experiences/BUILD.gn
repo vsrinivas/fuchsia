@@ -9,7 +9,6 @@ group("experiences") {
     "examples",
     "session_shells",
     "settings",
-    "story_shells",
   ]
 }
 
@@ -39,6 +38,5 @@ group("dart_unittests") {
     "examples:dart_unittests",
     "session_shells:dart_unittests",
     "settings:dart_unittests",
-    "story_shells:dart_unittests",
   ]
 }
