@@ -48,8 +48,10 @@ constexpr uint64_t kSparseFormatVersion = 0x3;
 typedef enum sparse_flags {
   kSparseFlagLz4 = 0x1,
   kSparseFlagZxcrypt = 0x2,
+  // Marks a partition as intentionaly corrupted.
+  kSparseFlagCorrupted = 0x4,
   // The final value is the bitwise-OR of all other flags
-  kSparseFlagAllValid = kSparseFlagLz4 | kSparseFlagZxcrypt,
+  kSparseFlagAllValid = kSparseFlagLz4 | kSparseFlagZxcrypt | kSparseFlagCorrupted,
 } sparse_flags_t;
 
 typedef struct sparse_image {

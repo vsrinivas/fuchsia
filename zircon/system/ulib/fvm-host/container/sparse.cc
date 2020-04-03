@@ -4,12 +4,18 @@
 
 #include <inttypes.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 #include <fvm-host/container.h>
+#include <fvm-host/format.h>
+#include <fvm-host/sparse-paver.h>
+#include <fvm/fvm-sparse.h>
+#include <minfs/format.h>
 #include <safemath/checked_math.h>
 
 constexpr size_t kLz4HeaderSize = 15;
@@ -416,6 +422,31 @@ zx_status_t SparseContainer::Commit() {
   // Write each partition out to sparse file
   for (unsigned i = 0; i < image_.partition_count; i++) {
     fvm::partition_descriptor_t partition = partitions_[i].descriptor;
+    // For this case write a single extent with the right magic and GUID.
+    // For now we just do this for minfs, there is no need to generalize.
+    // All this code will be rewritten because is unmantainable.
+    if ((partition.flags & fvm::kSparseFlagCorrupted) != 0) {
+      fprintf(stderr, "fvm: Adding empty partition with Data Type guid.\n");
+      std::vector<uint8_t> data(minfs::kMinfsBlockSize, 0);
+      minfs::Superblock sb = {};
+      sb.magic0 = 0;
+      sb.magic1 = 0;
+      uint64_t blocks_per_slices = image_.slice_size / minfs::kMinfsBlockSize;
+      uint64_t slice_count = 0;
+
+      for (auto extent : partitions_[i].extents) {
+        slice_count += extent.slice_count;
+      }
+
+      for (uint64_t i = 0; i < blocks_per_slices * slice_count; ++i) {
+        // Fill up the slice we have.
+        if (WriteData(data.data(), data.size()) != ZX_OK) {
+          fprintf(stderr, "Failed to write corrupted minfs partition.\n");
+          return ZX_ERR_IO;
+        }
+      }
+      continue;
+    }
     Format* format = partitions_[i].format.get();
     vslice_info_t vslice_info;
     // Write out each extent in the partition
@@ -531,6 +562,35 @@ size_t SparseContainer::SliceCount() const {
   }
 
   return slices;
+}
+
+zx_status_t SparseContainer::AddCorruptedPartition(const char* type, uint64_t target_size) {
+  if (strcmp(kDataTypeName, type) != 0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  uint64_t partition_index = image_.partition_count;
+  SparsePartitionInfo info;
+  auto& descriptor = info.descriptor;
+  info.format = nullptr;
+  descriptor.magic = fvm::kPartitionDescriptorMagic;
+  memcpy(descriptor.type, kDataType, sizeof(kDataType));
+  memcpy(descriptor.name, kDataTypeName, sizeof(kDataTypeName));
+  // For the current use case we dont want to mark it as zxcrypt,
+  // reformat path will update this to be encrypted.
+  descriptor.flags = fvm::kSparseFlagCorrupted;
+  descriptor.extent_count = 0;
+
+  image_.header_length += sizeof(fvm::partition_descriptor_t);
+  partitions_.push_back(std::move(info));
+  image_.partition_count++;
+  zx_status_t status = ZX_OK;
+
+  // Allocate two slices to account for zxcrypt.
+  if ((status = AllocateExtent(static_cast<uint32_t>(partition_index), /*vslice_offset=*/0,
+                               /*slice_count=*/2, minfs::kMinfsBlockSize)) != ZX_OK) {
+    return status;
+  }
+  return status;
 }
 
 zx_status_t SparseContainer::AddPartition(const char* path, const char* type_name,

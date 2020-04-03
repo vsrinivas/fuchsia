@@ -58,6 +58,12 @@ class Container {
   virtual zx_status_t AddPartition(const char* path, const char* type_name,
                                    FvmReservation* reserve) = 0;
 
+  // Creates a partition of a given size and type, rounded to nearest slice. This is,
+  // will allocate minimum amount of slices and the rest for the data region.
+  virtual zx_status_t AddCorruptedPartition(const char* type, uint64_t required_size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Calculates the minimum disk size required to hold the unpacked contents of the container.
   virtual uint64_t CalculateDiskSize() const = 0;
 
@@ -255,6 +261,10 @@ class SparseContainer final : public Container {
 
   // Checks whether the container will fit within a disk of size |target_size| (in bytes).
   zx_status_t CheckDiskSize(uint64_t target_size) const;
+
+  // Creates a partition of a given size and type, rounded to nearest slice. This is,
+  // will allocate minimum amount of slices and the rest for the data region.
+  zx_status_t AddCorruptedPartition(const char* type, uint64_t required_size) final;
 
  private:
   bool valid_;

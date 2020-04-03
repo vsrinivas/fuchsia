@@ -10,15 +10,18 @@
 #include <fbl/alloc_checker.h>
 #include <fvm-host/container.h>
 #include <fvm-host/file-wrapper.h>
+#include <fvm-host/format.h>
 #include <fvm/sparse-reader.h>
 #include <safemath/checked_math.h>
 
+#include "fbl/auto_call.h"
 #include "mtd.h"
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
 constexpr char kMinimumInodes[] = "--minimum-inodes";
 constexpr char kMinimumData[] = "--minimum-data-bytes";
 constexpr char kMaximumBytes[] = "--maximum-bytes";
+constexpr char kEmptyMinfs[] = "--with-empty-minfs";
 
 enum class DiskType {
   File = 0,
@@ -103,6 +106,9 @@ int usage(void) {
           "                         number of bytes which may be used by the partition.\n"
           "                         Returns an error if more space is necessary to\n"
           "                         create the requested filesystem.\n");
+  fprintf(stderr,
+          " --with-empty-minfs    - Adds a placeholder partition that will be formatted on boot,\n"
+          "                         to minfs. The partition will be the 'data' partition.\n");
   exit(-1);
 }
 
@@ -138,6 +144,9 @@ int parse_size(const char* size_str, size_t* out) {
 }
 
 int add_partitions(Container* container, int argc, char** argv) {
+  auto add_corrupted_partition =
+      fbl::MakeAutoCall([&]() { container->AddCorruptedPartition(kDataTypeName, 0); });
+  bool seen = false;
   for (int i = 0; i < argc;) {
     if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
       usage();
@@ -145,6 +154,12 @@ int add_partitions(Container* container, int argc, char** argv) {
 
     const char* partition_type = argv[i] + 2;
     const char* partition_path = argv[i + 1];
+    if (i < argc && strcmp(argv[i], kEmptyMinfs) == 0) {
+      seen = true;
+      i++;
+      continue;
+    }
+
     std::optional<uint64_t> inodes = {}, data = {}, total_bytes = {};
     i += 2;
 
@@ -183,6 +198,9 @@ int add_partitions(Container* container, int argc, char** argv) {
       reserve.Dump(stderr);
       return -1;
     }
+  }
+  if (!seen) {
+    add_corrupted_partition.cancel();
   }
 
   return 0;
