@@ -63,9 +63,10 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use {
-        fidl_fuchsia_sys2::EventType,
         fuchsia_async as fasync, session_manager_lib,
-        test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
+        test_utils_lib::events::{
+            CapabilityRouted, EventMatcher, EventSource, Ordering, Resolved, Started,
+        },
     };
 
     /// Verifies that the session is routed the expected capabilities.
@@ -76,21 +77,18 @@ mod tests {
         event_source.start_component_tree().await.unwrap();
 
         let expected_events = vec![
-            RecordedEvent {
-                event_type: EventType::CapabilityRouted,
-                target_moniker: "./session:session:*".to_string(),
-                capability_id: Some("elf".to_string()),
-            },
-            RecordedEvent {
-                event_type: EventType::CapabilityRouted,
-                target_moniker: "./session:session:*".to_string(),
-                capability_id: Some("/svc/fuchsia.logger.LogSink".to_string()),
-            },
-            RecordedEvent {
-                event_type: EventType::CapabilityRouted,
-                target_moniker: "./session:session:*".to_string(),
-                capability_id: Some("/dev/class/input-report".to_string()),
-            },
+            EventMatcher::new()
+                .expect_type::<CapabilityRouted>()
+                .expect_moniker("./session:session:*")
+                .expect_capability_id("elf"),
+            EventMatcher::new()
+                .expect_type::<CapabilityRouted>()
+                .expect_moniker("./session:session:*")
+                .expect_capability_id("/svc/fuchsia.logger.LogSink"),
+            EventMatcher::new()
+                .expect_type::<CapabilityRouted>()
+                .expect_moniker("./session:session:*")
+                .expect_capability_id("/dev/class/input-report"),
         ];
 
         let expectation =
@@ -111,16 +109,8 @@ mod tests {
         event_source.start_component_tree().await.unwrap();
 
         let expected_events = vec![
-            RecordedEvent {
-                event_type: EventType::Resolved,
-                target_moniker: "./session:session:*".to_string(),
-                capability_id: None,
-            },
-            RecordedEvent {
-                event_type: EventType::Started,
-                target_moniker: "./session:session:*".to_string(),
-                capability_id: None,
-            },
+            EventMatcher::new().expect_type::<Resolved>().expect_moniker("./session:session:*"),
+            EventMatcher::new().expect_type::<Started>().expect_moniker("./session:session:*"),
         ];
 
         let expectation =

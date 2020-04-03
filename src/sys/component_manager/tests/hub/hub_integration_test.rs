@@ -57,7 +57,11 @@ impl TestRunner {
             event_source.start_component_tree().await?;
 
             // Wait for the root component to start up
-            start_event_stream.expect_exact::<Started>(".").await?.resume().await?;
+            start_event_stream
+                .expect_exact::<Started>(EventMatcher::new().expect_moniker("."))
+                .await?
+                .resume()
+                .await?;
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
@@ -387,8 +391,11 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .send()?;
 
     // Wait for the dynamic child to begin deletion
-    let event =
-        event_stream.expect_exact::<MarkedForDestruction>("./coll:simple_instance:1").await?;
+    let event = event_stream
+        .expect_exact::<MarkedForDestruction>(
+            EventMatcher::new().expect_moniker("./coll:simple_instance:1"),
+        )
+        .await?;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
     test_runner.verify_directory_listing("children", vec![]).await;
@@ -404,7 +411,9 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child to stop
-    let event = event_stream.expect_exact::<Stopped>("./coll:simple_instance:1").await?;
+    let event = event_stream
+        .expect_exact::<Stopped>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
+        .await?;
 
     // After stopping, the dynamic child should not have an exec directory
     test_runner
@@ -419,7 +428,9 @@ async fn dynamic_child_test() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to begin deletion
     let event = event_stream
-        .expect_exact::<MarkedForDestruction>("./coll:simple_instance:1/child:0")
+        .expect_exact::<MarkedForDestruction>(
+            EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
+        )
         .await?;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
@@ -438,7 +449,11 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1/child:0").await?;
+    let event = event_stream
+        .expect_exact::<Destroyed>(
+            EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
+        )
+        .await?;
 
     // The dynamic child's static child should not be visible in the hub anymore
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![]).await;
@@ -447,7 +462,9 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1").await?;
+    let event = event_stream
+        .expect_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
+        .await?;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub
     test_runner.verify_directory_listing("deleting", vec![]).await;

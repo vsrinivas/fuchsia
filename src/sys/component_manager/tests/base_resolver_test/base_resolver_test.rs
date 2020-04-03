@@ -38,11 +38,14 @@ async fn base_resolver_test() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(".").await?;
+    let event =
+        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
     event.resume().await?;
 
     // Expect the echo_server component to be bound to
-    let event = event_stream.expect_exact::<Started>("./echo_server:0").await?;
+    let event = event_stream
+        .expect_exact::<Started>(EventMatcher::new().expect_moniker("./echo_server:0"))
+        .await?;
     event.resume().await?;
 
     // Connect to the echo service

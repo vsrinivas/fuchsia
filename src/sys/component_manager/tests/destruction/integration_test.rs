@@ -12,9 +12,9 @@ use {
 
 /// Drains the required number of events, sorts them and compares them
 /// to the expected events
-fn expect_next(events: &mut Vec<RecordedEvent>, expected: Vec<RecordedEvent>) {
+fn expect_next(events: &mut Vec<EventMatcher>, expected: Vec<EventMatcher>) {
     let num_events: usize = min(expected.len(), events.len());
-    let mut next: Vec<RecordedEvent> = events.drain(0..num_events).collect();
+    let mut next: Vec<EventMatcher> = events.drain(0..num_events).collect();
     next.sort_unstable();
     assert_eq!(next, expected);
 }
@@ -33,7 +33,9 @@ async fn destruction() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Wait for `coll:root` to be destroyed.
-    let event = event_stream.wait_until_exact::<Destroyed>("./coll:root:1").await?;
+    let event = event_stream
+        .wait_until_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:root:1"))
+        .await?;
 
     // Assert that root component has no children.
     let child_dir_path = test.get_hub_v2_path().join("children");
@@ -48,51 +50,35 @@ async fn destruction() -> Result<(), Error> {
     expect_next(
         &mut events,
         vec![
-            RecordedEvent {
-                event_type: Stopped::TYPE,
-                target_moniker: "./coll:root:1/trigger_a:0".to_string(),
-                capability_id: None,
-            },
-            RecordedEvent {
-                event_type: Stopped::TYPE,
-                target_moniker: "./coll:root:1/trigger_b:0".to_string(),
-                capability_id: None,
-            },
+            EventMatcher::new()
+                .expect_type::<Stopped>()
+                .expect_moniker("./coll:root:1/trigger_a:0"),
+            EventMatcher::new()
+                .expect_type::<Stopped>()
+                .expect_moniker("./coll:root:1/trigger_b:0"),
         ],
     );
 
     expect_next(
         &mut events,
-        vec![RecordedEvent {
-            event_type: Stopped::TYPE,
-            target_moniker: "./coll:root:1".to_string(),
-            capability_id: None,
-        }],
+        vec![EventMatcher::new().expect_type::<Stopped>().expect_moniker("./coll:root:1")],
     );
 
     expect_next(
         &mut events,
         vec![
-            RecordedEvent {
-                event_type: Destroyed::TYPE,
-                target_moniker: "./coll:root:1/trigger_a:0".to_string(),
-                capability_id: None,
-            },
-            RecordedEvent {
-                event_type: Destroyed::TYPE,
-                target_moniker: "./coll:root:1/trigger_b:0".to_string(),
-                capability_id: None,
-            },
+            EventMatcher::new()
+                .expect_type::<Destroyed>()
+                .expect_moniker("./coll:root:1/trigger_a:0"),
+            EventMatcher::new()
+                .expect_type::<Destroyed>()
+                .expect_moniker("./coll:root:1/trigger_b:0"),
         ],
     );
 
     expect_next(
         &mut events,
-        vec![RecordedEvent {
-            event_type: Destroyed::TYPE,
-            target_moniker: "./coll:root:1".to_string(),
-            capability_id: None,
-        }],
+        vec![EventMatcher::new().expect_type::<Destroyed>().expect_moniker("./coll:root:1")],
     );
 
     assert!(events.is_empty());

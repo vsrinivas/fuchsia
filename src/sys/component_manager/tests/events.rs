@@ -165,7 +165,7 @@ impl EventSource {
     /// # Parameters
     /// - `ordering`: Tells `expect_events` whether it should verify that the events match the order
     ///               provided in the vector or if they can be in any order.
-    /// - `expected_events`: A Vector of `RecordedEvent`s that represent which events are expected
+    /// - `expected_events`: A Vector of `EventMatcher`s that represent which events are expected
     ///
     /// # Notes
     /// This function only listens for events directed at a component, not its Realm so any events
@@ -173,15 +173,19 @@ impl EventSource {
     pub async fn expect_events<'a>(
         &'a self,
         ordering: Ordering,
-        expected_events: Vec<RecordedEvent>,
+        expected_events: Vec<EventMatcher>,
     ) -> Result<BoxFuture<'a, Result<(), Error>>, Error> {
-        let mut event_types = vec![];
+        let mut event_names = vec![];
         for event in &expected_events {
-            event_types.push(event_name(&event.event_type));
+            if let Some(event_type) = &event.event_type {
+                event_names.push(event_name(&event_type));
+            } else {
+                return Err(format_err!("No event name or type set for matcher {:?}", event));
+            }
         }
-        event_types.dedup();
+        event_names.dedup();
 
-        let mut event_stream = self.subscribe(event_types).await?;
+        let mut event_stream = self.subscribe(event_names).await?;
         let (tx, rx) = oneshot::channel();
         fasync::spawn(async move {
             let res = event_stream.validate(ordering, expected_events).await;
@@ -219,18 +223,13 @@ impl EventStream {
 
     /// Expects the next event to be of a particular type and moniker.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_exact<T: Event>(&mut self, expected_moniker: &str) -> Result<T, Error> {
+    pub async fn expect_exact<T: Event>(
+        &mut self,
+        event_matcher: EventMatcher,
+    ) -> Result<T, Error> {
         let event = self.expect_type::<T>().await?;
-        if expected_moniker == event.target_moniker() {
-            Ok(event)
-        } else {
-            Err(format_err!(
-                "Incorrect moniker for {:?}. Expected: {}, Got: {}.",
-                T::TYPE,
-                expected_moniker,
-                event.target_moniker()
-            ))
-        }
+        event_matcher.expect_type::<T>().validate(&event)?;
+        Ok(event)
     }
 
     /// Waits for an event of a particular type.
@@ -250,11 +249,12 @@ impl EventStream {
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_exact<T: Event>(
         &mut self,
-        expected_target_moniker: &str,
+        event_matcher: EventMatcher,
     ) -> Result<T, Error> {
+        let event_matcher = event_matcher.expect_type::<T>();
         loop {
             let event = self.wait_until_type::<T>().await?;
-            if event.target_moniker() == expected_target_moniker {
+            if event_matcher.matches(&event) {
                 return Ok(event);
             }
             event.resume().await?;
@@ -270,7 +270,11 @@ impl EventStream {
         expected_capability_id: &str,
     ) -> Result<CapabilityRouted, Error> {
         loop {
-            let event = self.wait_until_exact::<CapabilityRouted>(expected_target_moniker).await?;
+            let event = self
+                .wait_until_exact::<CapabilityRouted>(
+                    EventMatcher::new().expect_moniker(expected_target_moniker),
+                )
+                .await?;
             if expected_capability_id == event.capability_id {
                 match event.source {
                     fsys::CapabilitySource::Component(_) => return Ok(event),
@@ -291,7 +295,11 @@ impl EventStream {
         expected_scope_moniker: Option<&str>,
     ) -> Result<CapabilityRouted, Error> {
         loop {
-            let event = self.wait_until_exact::<CapabilityRouted>(expected_target_moniker).await?;
+            let event = self
+                .wait_until_exact::<CapabilityRouted>(
+                    EventMatcher::new().expect_moniker(expected_target_moniker),
+                )
+                .await?;
 
             // If the capability ID matches and the capability source is framework
             // with a matching optional scope moniker, then return the event.
@@ -315,7 +323,7 @@ impl EventStream {
     /// # Parameters
     /// - `ordering`: Determines whether events must arrive in the same order they appear in the
     ///               Vec or may arrive in any order
-    /// - `expected_events`: A Vector of `RecordedEvent`s that represent which events are expected
+    /// - `expected_events`: A Vector of `EventMatcher`s that represent which events are expected
     ///
     /// # Notes
     /// This function only listens for events directed at a component, not its Realm so any events
@@ -323,12 +331,12 @@ impl EventStream {
     pub async fn validate(
         &mut self,
         ordering: Ordering,
-        mut expected_events: Vec<RecordedEvent>,
+        mut expected_events: Vec<EventMatcher>,
     ) -> Result<(), Error> {
         while let Ok(event) = self.next().await {
-            let recorded_event = RecordedEvent::try_from(&event)?;
+            let recorded_event = EventMatcher::try_from(&event)?;
             // Skip events directed at the Realm insted of the component.
-            if recorded_event.target_moniker != "." {
+            if recorded_event.target_moniker != Some(".".to_string()) {
                 let expected_event;
                 match ordering {
                     Ordering::Ordered => expected_event = expected_events.remove(0),
@@ -532,48 +540,98 @@ pub trait RoutingProtocol {
     }
 }
 
-/// Describes an event recorded by the EventLog
 #[derive(Clone, Eq, PartialOrd, Ord, Debug)]
-pub struct RecordedEvent {
-    pub event_type: fsys::EventType,
-    pub target_moniker: String,
-    pub capability_id: Option<String>,
+pub struct EventMatcher {
+    event_type: Option<fsys::EventType>,
+    capability_id: Option<String>,
+    target_moniker: Option<String>,
 }
 
-/// This implementation of PartialEq allows comparison between `RecordedEvent`s when the order in
+impl EventMatcher {
+    /// Creates a new `EventMatcher` with the given `event_type`.
+    /// The rest of the fields are unset.
+    pub fn new() -> Self {
+        Self { event_type: None, target_moniker: None, capability_id: None }
+    }
+
+    pub fn expect_type<T: Event>(mut self) -> Self {
+        self.event_type = Some(T::TYPE);
+        self
+    }
+
+    /// The expected target moniker.
+    pub fn expect_moniker(mut self, moniker: impl Into<String>) -> Self {
+        self.target_moniker = Some(moniker.into());
+        self
+    }
+
+    /// The expected capability id.
+    pub fn expect_capability_id(mut self, capability_id: impl Into<String>) -> Self {
+        self.capability_id = Some(capability_id.into());
+        self
+    }
+
+    fn matches<T: Event>(&self, event: &T) -> bool {
+        self.validate(event).is_ok()
+    }
+
+    fn validate<T: Event>(&self, event: &T) -> Result<(), Error> {
+        if Some(T::TYPE) != self.event_type {
+            return Err(format_err!("Expected type: {:?}. Got: {:?}", self.event_type, T::TYPE,));
+        }
+
+        if let Some(expected_moniker) = &self.target_moniker {
+            if expected_moniker == event.target_moniker() {
+                return Ok(());
+            } else {
+                return Err(format_err!(
+                    "Incorrect moniker for {:?}. Expected: {}, Got: {}.",
+                    T::TYPE,
+                    expected_moniker,
+                    event.target_moniker()
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// This implementation of PartialEq allows comparison between `EventMatcher`s when the order in
 /// which components are launched can't be guaranteed. `target_moniker` can end in a wild card in
 /// `target_moniker` to match by prefix instead of requiring a full match. For example, a test can
-/// use the the following `RecordedEvent`
+/// use the the following `EventMatcher`
 ///
 /// ```
-/// RecordedEvent {
-///    event_type: EventType::CapabilityRouted,
-///    target_moniker: "./session:session:*".to_string(),
-///    capability_id: Some("elf".to_string()),
-/// },
+/// EventMatcher::new<CapabilityRouted>()
+///     .expect_moniker("./session:session:*")
+///     .expect_capability_id("elf")
 /// ```
 ///
-/// to match another `RecordedEvent` with the target_moniker of "./session:session:1" or
+/// to match another `EventMatcher` with the target_moniker of "./session:session:1" or
 /// "./session:session:2". If both target_monikers have instance ids they are still compared as
 /// expected.
 ///
 /// This also works (wild card for name and id):
 ///
 /// ```
-/// RecordedEvent {
-///    event_type: EventType::RouteCapability,
-///    target_moniker: "./session:*".to_string(),
-///    capability_id: Some("elf".to_string()),
-/// },
+/// EventMatcher::new<CapabilityRouted>()
+///     .expect_moniker("./session:*")
+///     .expect_capability_id("elf")
 /// ```
-impl PartialEq<RecordedEvent> for RecordedEvent {
-    fn eq(&self, other: &RecordedEvent) -> bool {
-        let targets_match = if self.target_moniker.ends_with("*") {
-            let index = self.target_moniker.rfind('*').unwrap();
-            let prefix = &self.target_moniker[..index];
-            other.target_moniker.starts_with(prefix)
-        } else {
-            self.target_moniker == other.target_moniker
+impl PartialEq<EventMatcher> for EventMatcher {
+    fn eq(&self, other: &EventMatcher) -> bool {
+        let targets_match = match (&self.target_moniker, &other.target_moniker) {
+            (Some(self_moniker), Some(other_moniker)) => {
+                if self_moniker.ends_with("*") {
+                    let index = self_moniker.rfind('*').unwrap();
+                    let prefix = &self_moniker[..index];
+                    other_moniker.starts_with(prefix)
+                } else {
+                    self_moniker == other_moniker
+                }
+            }
+            (self_moniker, other_moniker) => self_moniker == other_moniker,
         };
 
         self.event_type == other.event_type
@@ -582,14 +640,15 @@ impl PartialEq<RecordedEvent> for RecordedEvent {
     }
 }
 
-impl TryFrom<&fsys::Event> for RecordedEvent {
+impl TryFrom<&fsys::Event> for EventMatcher {
     type Error = anyhow::Error;
 
     fn try_from(event: &fsys::Event) -> Result<Self, Self::Error> {
-        // Construct the RecordedEvent from the Event
-        let event_type = event.event_type.ok_or_else(|| format_err!("No event type"))?;
-        let target_moniker =
-            event.target_moniker.as_ref().ok_or_else(|| format_err!("No target moniker"))?.clone();
+        // Construct the EventMatcher from the Event
+        let event_type = Some(event.event_type.ok_or_else(|| format_err!("No event type"))?);
+        let target_moniker = Some(
+            event.target_moniker.as_ref().ok_or_else(|| format_err!("No target moniker"))?.clone(),
+        );
         let capability_id = if let Some(event_payload) = event.event_payload.as_ref() {
             event_payload
                 .routing_payload
@@ -601,14 +660,14 @@ impl TryFrom<&fsys::Event> for RecordedEvent {
             None
         };
 
-        Ok(RecordedEvent { event_type, target_moniker, capability_id })
+        Ok(EventMatcher { event_type, target_moniker, capability_id })
     }
 }
 
 /// Records events from an EventStream, allowing them to be
 /// flushed out into a vector at a later point in time.
 pub struct EventLog {
-    recorded_events: Arc<Mutex<Vec<RecordedEvent>>>,
+    recorded_events: Arc<Mutex<Vec<EventMatcher>>>,
     abort_handle: AbortHandle,
 }
 
@@ -629,9 +688,9 @@ impl EventLog {
                                 .await
                                 .expect("Failed to get next event from EventStreamSync");
 
-                            // Construct the RecordedEvent from the Event
-                            let recorded_event = RecordedEvent::try_from(&event)
-                                .expect("Failed to convert Event to RecordedEvent");
+                            // Construct the EventMatcher from the Event
+                            let recorded_event = EventMatcher::try_from(&event)
+                                .expect("Failed to convert Event to EventMatcher");
 
                             // Insert the event into the list
                             {
@@ -651,7 +710,7 @@ impl EventLog {
         Self { recorded_events, abort_handle }
     }
 
-    pub async fn flush(&self) -> Vec<RecordedEvent> {
+    pub async fn flush(&self) -> Vec<EventMatcher> {
         // Lock and flush out all events from the vector
         let mut recorded_events = self.recorded_events.lock().await;
         recorded_events.drain(..).collect()

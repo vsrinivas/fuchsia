@@ -34,7 +34,8 @@ async fn empty_component() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Root must be created first
-    let event = event_stream.expect_exact::<Started>(".").await?;
+    let event =
+        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
     event.resume().await?;
 
     let actual = launch_cs2(test.get_hub_v2_path());
@@ -64,7 +65,8 @@ async fn tree() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Root must be created first
-    let event = event_stream.expect_exact::<Started>(".").await?;
+    let event =
+        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
     event.resume().await?;
 
     // 6 descendants are created eagerly. Order is irrelevant.

@@ -6,7 +6,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::create_scoped_dynamic_instance,
     fuchsia_syslog::{self as fxlog},
-    test_utils_lib::events::{Event, EventSource, Ordering, RecordedEvent, Stopped},
+    test_utils_lib::events::{Event, EventMatcher, EventSource, Ordering, Stopped},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -33,10 +33,8 @@ async fn test_normal_behavior() {
 
     // TODO(47324) Once the runner watches for abnormal exit behavior, validate
     // that the component under test exited normally.
-    let expected_events = vec![RecordedEvent {
-        event_type: Stopped::TYPE,
-        target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-        capability_id: None,
-    }];
+    let expected_events = vec![EventMatcher::new()
+        .expect_type::<Stopped>()
+        .expect_moniker(format!("./{}:{}:*", collection_name, child_name))];
     event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
 }

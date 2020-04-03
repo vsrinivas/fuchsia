@@ -121,8 +121,8 @@ async fn scoped_events_test() -> Result<(), Error> {
         events_echo.message,
         concat!(
             "Events: [",
-            "RecordedEvent { event_type: CapabilityRouted, target_moniker: \"./echo_server:0\", capability_id: Some(\"elf\") }, ",
-            "RecordedEvent { event_type: Started, target_moniker: \"./echo_server:0\", capability_id: None }",
+            "EventMatcher { event_type: Some(CapabilityRouted), capability_id: Some(\"elf\"), target_moniker: Some(\"./echo_server:0\") }, ",
+            "EventMatcher { event_type: Some(Started), capability_id: None, target_moniker: Some(\"./echo_server:0\") }",
             "]"
         )
     );
@@ -244,10 +244,26 @@ async fn event_dispatch_order_test() -> Result<(), Error> {
     // "Discovered" is the first stage of a component's lifecycle so it must
     // be dispatched before "Resolved". Also, a child is not discovered until
     // the parent is resolved and its manifest is processed.
-    event_stream.expect_exact::<Discovered>(".").await?.resume().await?;
-    event_stream.expect_exact::<Resolved>(".").await?.resume().await?;
-    event_stream.expect_exact::<Discovered>("./child:0").await?.resume().await?;
-    event_stream.expect_exact::<Resolved>("./child:0").await?.resume().await?;
+    event_stream
+        .expect_exact::<Discovered>(EventMatcher::new().expect_moniker("."))
+        .await?
+        .resume()
+        .await?;
+    event_stream
+        .expect_exact::<Resolved>(EventMatcher::new().expect_moniker("."))
+        .await?
+        .resume()
+        .await?;
+    event_stream
+        .expect_exact::<Discovered>(EventMatcher::new().expect_moniker("./child:0"))
+        .await?
+        .resume()
+        .await?;
+    event_stream
+        .expect_exact::<Resolved>(EventMatcher::new().expect_moniker("./child:0"))
+        .await?
+        .resume()
+        .await?;
 
     Ok(())
 }

@@ -8,7 +8,7 @@ use {
     fuchsia_component::client,
     fuchsia_syslog as syslog,
     log::*,
-    test_utils_lib::events::{Destroyed, Event, EventSource, Ordering, RecordedEvent},
+    test_utils_lib::events::{Destroyed, EventMatcher, EventSource, Ordering},
 };
 
 #[fasync::run_singlethreaded]
@@ -28,11 +28,7 @@ async fn run_tests() -> Result<(), Error> {
 }
 
 async fn test_scoped_instance(event_source: &EventSource) -> Result<(), Error> {
-    let event = RecordedEvent {
-        event_type: Destroyed::TYPE,
-        target_moniker: "./coll:auto-*".to_string(),
-        capability_id: None,
-    };
+    let event = EventMatcher::new().expect_type::<Destroyed>().expect_moniker("./coll:auto-*");
     let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
     let expectation = event_source.expect_events(Ordering::Unordered, expected_events).await?;
     let mut instances = vec![];

@@ -23,7 +23,8 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(".").await?;
+    let event =
+        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
     event.resume().await?;
 
     let dispatched_event = work_scheduler_dispatch_reporter
@@ -49,11 +50,14 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<Started>(".").await?;
+    let event =
+        event_stream.expect_exact::<Started>(EventMatcher::new().expect_moniker(".")).await?;
     event.resume().await?;
 
     // `/worker_sibling:0` has started.
-    let event = event_stream.expect_exact::<Started>("./worker_sibling:0").await?;
+    let event = event_stream
+        .expect_exact::<Started>(EventMatcher::new().expect_moniker("./worker_sibling:0"))
+        .await?;
     event.resume().await?;
 
     // We no longer need to track `StartInstance` events.

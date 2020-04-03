@@ -86,8 +86,11 @@ async fn main() -> Result<(), Error> {
     fasync::spawn(f);
 
     // Wait for the dynamic child to begin deletion
-    let event =
-        event_stream.expect_exact::<MarkedForDestruction>("./coll:simple_instance:1").await?;
+    let event = event_stream
+        .expect_exact::<MarkedForDestruction>(
+            EventMatcher::new().expect_moniker("./coll:simple_instance:1"),
+        )
+        .await?;
     hub_report.report_directory_contents("/hub/children").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
@@ -97,13 +100,17 @@ async fn main() -> Result<(), Error> {
     destroy_handle.await.context("delete_child failed")?.expect("failed to delete child");
 
     // Wait for the dynamic child to stop
-    let event = event_stream.expect_exact::<Stopped>("./coll:simple_instance:1").await?;
+    let event = event_stream
+        .expect_exact::<Stopped>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
+        .await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
     event.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
     let event = event_stream
-        .expect_exact::<MarkedForDestruction>("./coll:simple_instance:1/child:0")
+        .expect_exact::<MarkedForDestruction>(
+            EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
+        )
         .await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
@@ -113,12 +120,18 @@ async fn main() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1/child:0").await?;
+    let event = event_stream
+        .expect_exact::<Destroyed>(
+            EventMatcher::new().expect_moniker("./coll:simple_instance:1/child:0"),
+        )
+        .await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
     event.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1").await?;
+    let event = event_stream
+        .expect_exact::<Destroyed>(EventMatcher::new().expect_moniker("./coll:simple_instance:1"))
+        .await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     event.resume().await?;
 

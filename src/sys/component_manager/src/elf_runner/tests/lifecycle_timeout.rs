@@ -6,7 +6,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::create_scoped_dynamic_instance,
     fuchsia_syslog::{self as fxlog},
-    test_utils_lib::events::{Destroyed, Event, EventSource, Ordering, RecordedEvent, Stopped},
+    test_utils_lib::events::{Destroyed, Event, EventMatcher, EventSource, Ordering, Stopped},
 };
 
 /// Test that a component tree which contains a root component with no program
@@ -43,37 +43,14 @@ async fn test_stop_timeouts() {
     // We don't know what "X" is for sure, it will tend to be "1", but there
     // is no contract around this and the validation logic does not accept
     // generic regexes.
+    let target_moniker = format!("./{}:{}:*", collection_name, child_name);
     let expected_events = vec![
-        RecordedEvent {
-            event_type: Stopped::TYPE,
-            target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-            capability_id: None,
-        },
-        RecordedEvent {
-            event_type: Stopped::TYPE,
-            target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-            capability_id: None,
-        },
-        RecordedEvent {
-            event_type: Stopped::TYPE,
-            target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-            capability_id: None,
-        },
-        RecordedEvent {
-            event_type: Destroyed::TYPE,
-            target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-            capability_id: None,
-        },
-        RecordedEvent {
-            event_type: Destroyed::TYPE,
-            target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-            capability_id: None,
-        },
-        RecordedEvent {
-            event_type: Destroyed::TYPE,
-            target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
-            capability_id: None,
-        },
+        EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
+        EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
+        EventMatcher::new().expect_type::<Stopped>().expect_moniker(&target_moniker),
+        EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
+        EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
+        EventMatcher::new().expect_type::<Destroyed>().expect_moniker(&target_moniker),
     ];
     event_stream.validate(Ordering::Ordered, expected_events).await.unwrap();
 }
