@@ -13,7 +13,6 @@
 #include <zircon/types.h>
 
 #include <fbl/auto_call.h>
-#include <kernel/atomic.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
@@ -22,6 +21,7 @@
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>
+#include <ktl/atomic.h>
 #include <ktl/popcount.h>
 #include <ktl/unique_ptr.h>
 
@@ -55,7 +55,7 @@ class WorkerThread {
 
   void Join() {
     if (thread_ != nullptr) {
-      atomic_store(&worker_should_stop_, 1);
+      worker_should_stop_.store(1);
       int unused_retcode;
       zx_status_t result = thread_->Join(&unused_retcode, ZX_TIME_INFINITE);
       ASSERT(result == ZX_OK);
@@ -70,21 +70,21 @@ class WorkerThread {
 
   Thread* thread() const { return thread_; }
 
-  int worker_iterations() { return atomic_load(&worker_iterations_); }
+  int worker_iterations() { return worker_iterations_.load(); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(WorkerThread);
 
  private:
   static int WorkerBody(void* arg) {
     auto* self = reinterpret_cast<WorkerThread*>(arg);
-    while (atomic_load(&self->worker_should_stop_) == 0) {
-      atomic_add(&self->worker_iterations_, 1);
+    while (self->worker_should_stop_.load() == 0) {
+      self->worker_iterations_.fetch_add(1);
     }
     return 0;
   }
 
-  volatile int worker_iterations_ = 0;
-  volatile int worker_should_stop_ = 0;
+  ktl::atomic<int> worker_iterations_{0};
+  ktl::atomic<int> worker_should_stop_{0};
   Thread* thread_;
 };
 
@@ -136,15 +136,15 @@ bool set_affinity_other_test() {
   BEGIN_TEST;
 
   struct WorkerState {
-    volatile int current_cpu = -1;
-    volatile int should_stop = 0;
+    ktl::atomic<cpu_num_t> current_cpu{INVALID_CPU};
+    ktl::atomic<int> should_stop{0};
   } state;
 
   // Start a worker, which reports the CPU it is running on.
   auto worker_body = [](void* arg) -> int {
     WorkerState& state = *reinterpret_cast<WorkerState*>(arg);
-    while (atomic_load(&state.should_stop) != 1) {
-      atomic_store(&state.current_cpu, arch_curr_cpu_num());
+    while (state.should_stop.load() != 1) {
+      state.current_cpu.store(arch_curr_cpu_num());
     }
     return 0;
   };
@@ -165,12 +165,11 @@ bool set_affinity_other_test() {
     worker->SetCpuAffinity(cpu_num_to_mask(c));
 
     // Wait for it to land on the correct CPU.
-    wait_for_cond(
-        [c, &state]() { return static_cast<cpu_num_t>(atomic_load(&state.current_cpu)) == c; });
+    wait_for_cond([c, &state]() { return state.current_cpu.load() == c; });
   }
 
   // Done.
-  atomic_store(&state.should_stop, 1);
+  state.should_stop.store(1);
   int worker_retcode;
   ASSERT_EQ(worker->Join(&worker_retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join thread.");
 
