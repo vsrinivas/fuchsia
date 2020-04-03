@@ -13,6 +13,7 @@ rustc_binary("inspect_validator_rust_puppet_bin") {
   testonly = true
 
   deps = [
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//src/diagnostics/inspect_validator/fidl:validate-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

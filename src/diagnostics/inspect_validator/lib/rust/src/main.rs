@@ -11,6 +11,8 @@
 use fuchsia_inspect::Property as UsablePropertyTrait;
 use {
     anyhow::{format_err, Context as _, Error},
+    fidl::endpoints::create_request_stream,
+    fidl_fuchsia_inspect::TreeMarker,
     fidl_test_inspect_validate::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -50,9 +52,19 @@ struct Actor {
     inspector: Inspector,
     nodes: HashMap<u32, Node>,
     properties: HashMap<u32, Property>,
+    lazy_children: HashMap<u32, LazyNode>,
 }
 
 impl Actor {
+    fn new(inspector: Inspector) -> Actor {
+        Actor {
+            inspector,
+            nodes: HashMap::new(),
+            properties: HashMap::new(),
+            lazy_children: HashMap::new(),
+        }
+    }
+
     fn act(&mut self, action: Action) -> Result<(), Error> {
         match action {
             Action::CreateNode(CreateNode { parent, id, name }) => {
@@ -362,6 +374,29 @@ impl Actor {
         Ok(())
     }
 
+    fn act_lazy(&mut self, lazy_action: LazyAction) -> Result<(), Error> {
+        match lazy_action {
+            LazyAction::CreateLazyNode(CreateLazyNode {
+                parent,
+                id,
+                name,
+                disposition,
+                actions,
+            }) => {
+                let parent = self.find_parent(parent)?;
+                let lazy_child = Self::create_lazy_node(&parent, name, disposition, actions)?;
+                self.lazy_children.insert(id, lazy_child);
+            }
+            LazyAction::DeleteLazyNode(DeleteLazyNode { id }) => {
+                self.lazy_children.remove(&id);
+            }
+            _ => {
+                return Err(format_err!("Unknown lazy action {:?}", lazy_action));
+            }
+        }
+        Ok(())
+    }
+
     fn find_parent<'a>(&'a self, id: u32) -> Result<&'a Node, Error> {
         if id == ROOT_ID {
             Ok(self.inspector.root())
@@ -373,6 +408,37 @@ impl Actor {
     fn find_property<'a>(&'a self, id: u32) -> Result<&'a Property, Error> {
         self.properties.get(&id).ok_or_else(|| format_err!("Property {} not found", id))
     }
+
+    fn create_lazy_node(
+        parent: &Node,
+        name: String,
+        disposition: LinkDisposition,
+        actions: Vec<Action>,
+    ) -> Result<LazyNode, Error> {
+        let mut actor = Actor::new(Inspector::new());
+        for action in actions.into_iter() {
+            if let Err(err) = actor.act(action) {
+                return Err(format_err!("Failed to perform action on lazy node: {:?}", err));
+            }
+        }
+
+        let callback = move || {
+            let clone = actor.inspector.clone();
+            async move { Ok(clone) }.boxed()
+        };
+
+        Ok(match disposition {
+            LinkDisposition::Child => parent.create_lazy_child(&name, callback),
+            LinkDisposition::Inline => parent.create_lazy_values(&name, callback),
+        })
+    }
+}
+
+fn new_inspector(params: &InitializationParams) -> Inspector {
+    match params.vmo_size {
+        Some(size) => Inspector::new_with_size(size as usize),
+        None => Inspector::new(),
+    }
 }
 
 async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Error> {
@@ -380,18 +446,25 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
     while let Some(event) = stream.try_next().await? {
         match event {
             ValidateRequest::Initialize { params, responder } => {
-                let inspector = match params.vmo_size {
-                    Some(size) => Inspector::new_with_size(size as usize),
-                    None => Inspector::new(),
-                };
-                responder
-                    .send(inspector.duplicate_vmo().map(|v| v.into_handle()), TestResult::Ok)
-                    .context("responding to initialize")?;
-                actor_maybe = Some(Actor {
-                    inspector,
-                    nodes: HashMap::<u32, Node>::new(),
-                    properties: HashMap::<u32, Property>::new(),
-                });
+                if actor_maybe.is_some() {
+                    responder.send(None, TestResult::Illegal).context("Double initialize call")?;
+                } else {
+                    let actor = Actor::new(new_inspector(&params));
+                    responder
+                        .send(
+                            actor.inspector.duplicate_vmo().map(|v| v.into_handle()),
+                            TestResult::Ok,
+                        )
+                        .context("responding to initialize")?;
+                    actor_maybe = Some(actor);
+                }
+            }
+            ValidateRequest::InitializeTree { params, responder } => {
+                let actor = Actor::new(new_inspector(&params));
+                let (tree, request_stream) = create_request_stream::<TreeMarker>()?;
+                service::spawn_tree_server(actor.inspector.clone(), request_stream);
+                responder.send(Some(tree), TestResult::Ok)?;
+                actor_maybe = Some(actor);
             }
             ValidateRequest::Act { action, responder } => {
                 let result = if let Some(a) = &mut actor_maybe {
@@ -407,11 +480,19 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
                 };
                 responder.send(result)?;
             }
-            ValidateRequest::InitializeTree { params: _, responder } => {
-                responder.send(None, TestResult::Unimplemented)?;
-            }
-            ValidateRequest::ActLazy { lazy_action: _, responder } => {
-                responder.send(TestResult::Unimplemented)?;
+            ValidateRequest::ActLazy { lazy_action, responder } => {
+                let result = if let Some(a) = &mut actor_maybe {
+                    match a.act_lazy(lazy_action) {
+                        Ok(()) => TestResult::Ok,
+                        Err(error) => {
+                            warn!("ActLazy saw illegal condition {:?}", error);
+                            TestResult::Illegal
+                        }
+                    }
+                } else {
+                    TestResult::Illegal
+                };
+                responder.send(result)?;
             }
         }
     }
