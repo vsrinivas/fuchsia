@@ -4,8 +4,7 @@
 
 #include "src/ui/lib/input_reader/fdio_hid_decoder.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/input/c/fidl.h>
+#include <lib/fdio/fdio.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
@@ -34,67 +33,70 @@ bool log_err(zx_status_t status, const std::string& what, const std::string& nam
 namespace ui_input {
 
 FdioHidDecoder::FdioHidDecoder(const std::string& name, fxl::UniqueFD fd)
-    : caller_(std::move(fd)), name_(name) {}
+    : name_(name), fd_(std::move(fd)) {}
 
 FdioHidDecoder::~FdioHidDecoder() = default;
 
 bool FdioHidDecoder::Init() {
-  zx_status_t status;
-  zx_handle_t svc = caller_.borrow_channel();
+  zx::channel chan;
+  zx_status_t status = fdio_get_service_handle(fd_.release(), chan.reset_and_get_address());
+  if (status != ZX_OK) {
+    return false;
+  }
+  device_ = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
 
   // Get the Boot Protocol if there is one.
-  fuchsia_hardware_input_BootProtocol boot_protocol;
-  status = fuchsia_hardware_input_DeviceGetBootProtocol(svc, &boot_protocol);
-  if (status != ZX_OK) {
-    return log_err(status, "boot protocol", name_);
-  }
-
-  if (boot_protocol == fuchsia_hardware_input_BootProtocol_KBD) {
-    boot_mode_ = BootMode::KEYBOARD;
-  } else if (boot_protocol == fuchsia_hardware_input_BootProtocol_MOUSE) {
-    boot_mode_ = BootMode::MOUSE;
-  } else {
-    boot_mode_ = BootMode::NONE;
+  {
+    auto result = device_.GetBootProtocol();
+    if (result.status() != ZX_OK) {
+      return log_err(status, "boot protocol", name_);
+    }
+    if (result->protocol == llcpp::fuchsia::hardware::input::BootProtocol::KBD) {
+      boot_mode_ = BootMode::KEYBOARD;
+    } else if (result->protocol == llcpp::fuchsia::hardware::input::BootProtocol::MOUSE) {
+      boot_mode_ = BootMode::MOUSE;
+    } else {
+      boot_mode_ = BootMode::NONE;
+    }
   }
 
   // Get the report descriptor.
-  uint16_t report_desc_len;
-  status = fuchsia_hardware_input_DeviceGetReportDescSize(svc, &report_desc_len);
-  if (status != ZX_OK)
-    return log_err(status, "report descriptor length", name_);
+  {
+    auto result = device_.GetReportDesc();
+    if (result.status() != ZX_OK)
+      return log_err(status, "report descriptor", name_);
 
-  report_descriptor_.resize(report_desc_len);
-  size_t actual;
-  status = fuchsia_hardware_input_DeviceGetReportDesc(svc, report_descriptor_.data(),
-                                                      report_descriptor_.size(), &actual);
-  if (status != ZX_OK)
-    return log_err(status, "report descriptor", name_);
-  report_descriptor_.resize(actual);
+    report_descriptor_.resize(result->desc.count());
+    memcpy(report_descriptor_.data(), result->desc.data(), result->desc.count());
+  }
 
   // Use lower 32 bits of channel koid as trace ID.
-  zx_info_handle_basic_t info;
-  zx_object_get_info(svc, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  trace_id_ = info.koid & 0xffffffff;
-  status = fuchsia_hardware_input_DeviceSetTraceId(svc, trace_id_);
-  if (status != ZX_OK)
-    return log_err(status, "failed to set trace ID", name_);
+  {
+    zx_info_handle_basic_t info;
+    zx_object_get_info(device_.channel().get(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
+                       nullptr);
+    trace_id_ = info.koid & 0xffffffff;
+    auto result = device_.SetTraceId(trace_id_);
+    if (result.status() != ZX_OK)
+      return log_err(status, "failed to set trace ID", name_);
+  }
 
   return true;
 }
 
 zx::event FdioHidDecoder::GetEvent() {
   zx::event event;
+  auto result = device_.GetReportsEvent();
+  if (result.status() != ZX_OK) {
+    log_err(result.status(), "event handle", name_);
+    return event;
+  }
+  if (result->status != ZX_OK) {
+    log_err(result->status, "event handle", name_);
+    return event;
+  }
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetEventHandle(
-      zx::unowned_channel(caller_.borrow_channel()));
-  zx_status_t status = resp.status();
-  if (status == ZX_OK) {
-    event = std::move(resp->event);
-  }
-  if (status != ZX_OK) {
-    log_err(status, "event handle", name_);
-    return {};
-  }
+  event = std::move(result->event);
   return event;
 }
 
@@ -105,85 +107,86 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(int* bytes_read
 
 zx_status_t FdioHidDecoder::Read(uint8_t* data, size_t data_size, size_t* report_size,
                                  zx_time_t* timestamp) {
-  zx_status_t call_status;
-  zx_status_t status = fuchsia_hardware_input_DeviceReadReport(
-      caller_.borrow_channel(), &call_status, data, data_size, report_size, timestamp);
-  if (status != ZX_OK) {
-    return status;
+  auto result = device_.ReadReport();
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
-  return call_status;
+  if (result->status != ZX_OK) {
+    return result->status;
+  }
+
+  if (result->data.count() > data_size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  memcpy(data, result->data.data(), result->data.count());
+  *report_size = result->data.count();
+  *timestamp = result->time;
+
+  return ZX_OK;
 }
 
 zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,
                                  const std::vector<uint8_t>& report) {
   FXL_CHECK(type != ReportType::INPUT);
 
-  fuchsia_hardware_input_ReportType fidl_report_type;
+  llcpp::fuchsia::hardware::input::ReportType fidl_report_type;
   switch (type) {
     case ReportType::INPUT:
-      fidl_report_type = fuchsia_hardware_input_ReportType_INPUT;
+      fidl_report_type = llcpp::fuchsia::hardware::input::ReportType::INPUT;
       break;
     case ReportType::OUTPUT:
-      fidl_report_type = fuchsia_hardware_input_ReportType_OUTPUT;
+      fidl_report_type = llcpp::fuchsia::hardware::input::ReportType::OUTPUT;
       break;
     case ReportType::FEATURE:
-      fidl_report_type = fuchsia_hardware_input_ReportType_FEATURE;
+      fidl_report_type = llcpp::fuchsia::hardware::input::ReportType::FEATURE;
       break;
   }
 
-  zx_handle_t svc = caller_.borrow_channel();
+  // This is a little unwieldy but we need a non-const version of `report` to make
+  // the FIDL call, so we have to make a copy.
+  std::vector<uint8_t> report_copy = report;
+  fidl::VectorView<uint8_t> report_view(fidl::unowned_ptr<uint8_t>(report_copy.data()),
+                                        report_copy.size());
 
-  zx_status_t call_status;
-  zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-      svc, fidl_report_type, report_id, report.data(), report.size(), &call_status);
-
-  if (status != ZX_OK) {
-    return status;
-  } else if (call_status != ZX_OK) {
-    return call_status;
+  auto result = device_.SetReport(fidl_report_type, report_id, std::move(report_view));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  if (result->status != ZX_OK) {
+    return result->status;
   }
   return ZX_OK;
 }
 
 zx_status_t FdioHidDecoder::GetReport(ReportType type, uint8_t report_id,
                                       std::vector<uint8_t>* report) {
-  zx_status_t res, call_status;
-  uint16_t size;
-
-  fuchsia_hardware_input_ReportType real_type;
+  llcpp::fuchsia::hardware::input::ReportType real_type;
   switch (type) {
     case ReportType::INPUT:
-      real_type = fuchsia_hardware_input_ReportType_INPUT;
+      real_type = llcpp::fuchsia::hardware::input::ReportType::INPUT;
       break;
     case ReportType::OUTPUT:
-      real_type = fuchsia_hardware_input_ReportType_OUTPUT;
+      real_type = llcpp::fuchsia::hardware::input::ReportType::OUTPUT;
       break;
     case ReportType::FEATURE:
-      real_type = fuchsia_hardware_input_ReportType_FEATURE;
+      real_type = llcpp::fuchsia::hardware::input::ReportType::FEATURE;
       break;
   }
 
-  res = fuchsia_hardware_input_DeviceGetReportSize(caller_.borrow_channel(), real_type, report_id,
-                                                   &call_status, &size);
-  if (res != ZX_OK || call_status != ZX_OK) {
-    FXL_LOG(ERROR) << "hid: could not get report (id " << report_id << " type " << real_type
-                   << ") size (status=" << zx_status_get_string(res) << ", "
-                   << zx_status_get_string(call_status) << ")";
-    return call_status;
+  auto result = device_.GetReport(real_type, report_id);
+  if (result.status() != ZX_OK) {
+    FXL_LOG(ERROR) << "hid: get report failed " << zx_status_get_string(result.status());
+    return result.status();
+  }
+  if (result->status != ZX_OK) {
+    FXL_LOG(ERROR) << "hid: could not get report (id " << report_id << " type "
+                   << static_cast<uint8_t>(real_type)
+                   << ") (status=" << zx_status_get_string(result->status) << ")";
+    return result->status;
   }
 
-  report->resize(size);
-
-  size_t actual;
-  res =
-      fuchsia_hardware_input_DeviceGetReport(caller_.borrow_channel(), real_type, report_id,
-                                             &call_status, report->data(), report->size(), &actual);
-  if (res != ZX_OK || call_status != ZX_OK) {
-    FXL_LOG(ERROR) << "hid: could not get report: " << zx_status_get_string(res) << " "
-                   << zx_status_get_string(call_status);
-    return call_status;
-  }
-  report->resize(actual);
+  report->resize(result->report.count());
+  memcpy(report->data(), result->report.data(), result->report.count());
 
   return ZX_OK;
 }

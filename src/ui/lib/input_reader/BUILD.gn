@@ -45,12 +45,11 @@ source_set("fdio") {
   deps = [
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device_c",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input_c",
+    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input_llcpp",
   ]
 
   public_deps = [
@@ -99,6 +98,6 @@ source_set("device") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input_c",
+    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input_llcpp",
   ]
 }

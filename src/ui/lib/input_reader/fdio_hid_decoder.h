@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_INPUT_READER_FDIO_HID_DECODER_H_
 #define SRC_UI_LIB_INPUT_READER_FDIO_HID_DECODER_H_
 
+#include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 
@@ -57,11 +58,15 @@ class FdioHidDecoder : public HidDecoder {
   zx_status_t GetReport(ReportType type, uint8_t report_id, std::vector<uint8_t>* report) override;
 
  private:
-  fdio_cpp::FdioCaller caller_;
+  llcpp::fuchsia::hardware::input::Device::SyncClient device_;
   const std::string name_;
   BootMode boot_mode_ = BootMode::NONE;
   std::vector<uint8_t> report_descriptor_;
   uint32_t trace_id_ = 0;
+
+  // This is only here to take the fd from the constructor and pass it to device_ during
+  // Init.
+  fxl::UniqueFD fd_;
 };
 
 }  // namespace ui_input
