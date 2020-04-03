@@ -16,7 +16,6 @@ use futures::{
     stream::{FusedStream, FuturesUnordered},
     Future, FutureExt, Stream, StreamExt,
 };
-use inspect::Property;
 use std::{
     convert::*,
     pin::Pin,
@@ -197,7 +196,8 @@ pub struct Player {
     terminated: bool,
     // TODO(41131): Use structured data when a proc macro to derive
     // Inspect support is available.
-    inspect_handle: inspect::StringProperty,
+    inspect_handle: inspect::Node,
+    inspect_state: inspect::Node,
     proxy_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
     waker: Option<Waker>,
 }
@@ -207,8 +207,9 @@ impl Player {
         id: Id,
         client_end: ClientEnd<PlayerMarker>,
         registration: PlayerRegistration,
-        inspect_handle: inspect::StringProperty,
+        inspect_handle: inspect::Node,
     ) -> Result<Self> {
+        let inspect_state = inspect_handle.create_child("state");
         Ok(Player {
             id,
             inner: client_end.into_proxy()?,
@@ -217,6 +218,7 @@ impl Player {
             hanging_get: None,
             terminated: false,
             inspect_handle,
+            inspect_state,
             proxy_tasks: FuturesUnordered::new(),
             waker: None,
         })
@@ -255,7 +257,55 @@ impl Player {
     /// Updates state with the latest delta published by the player.
     pub fn update(&mut self, delta: ValidPlayerInfoDelta) {
         self.state = ValidPlayerInfoDelta::apply(self.state.clone(), delta);
-        self.inspect_handle.set(&format!("{:#?}", self.state));
+        self.update_inspect();
+    }
+
+    /// Updates inspect tree from current state of player
+    fn update_inspect(&mut self) {
+        let inspect_state = self.inspect_handle.create_child("state");
+        if let Some(local) = self.state.local {
+            inspect_state.record_bool("local", local);
+        }
+
+        if let Some(player_status) = &self.state.player_status {
+            if let Some(duration) = player_status.duration {
+                inspect_state.record_int("duration", duration);
+            }
+            inspect_state.record_bool("is_live", player_status.is_live);
+            inspect_state
+                .record_string("player_state", format!("{:?}", player_status.player_state));
+            if let Some(timeline_function) = &player_status.timeline_function {
+                inspect_state
+                    .record_string("timeline_function", format!("{:?}", timeline_function));
+            }
+            inspect_state.record_string("repeat_mode", format!("{:?}", player_status.repeat_mode));
+            inspect_state.record_bool("shuffle_on", player_status.shuffle_on);
+            inspect_state
+                .record_string("content_type", format!("{:?}", player_status.content_type));
+            if let Some(error) = player_status.error {
+                inspect_state.record_string("error", format!("{:?}", error));
+            }
+        }
+
+        if let Some(metadata) = &self.state.metadata {
+            inspect_state.record_string("metadata", format!("{:#?}", metadata));
+        }
+
+        if let Some(media_images) = &self.state.media_images {
+            inspect_state.record_string("media_images", format!("{:#?}", media_images));
+        }
+
+        if let Some(player_capabilities) = &self.state.player_capabilities {
+            inspect_state
+                .record_string("player_capabilities", format!("{:?}", player_capabilities));
+        }
+
+        if let Some(interruption_behavior) = &self.state.interruption_behavior {
+            inspect_state
+                .record_string("interruption_behavior", format!("{:?}", interruption_behavior));
+        }
+
+        self.inspect_state = inspect_state;
     }
 
     /// Adds a task to the player proxy which depends on a connection to the
@@ -431,7 +481,7 @@ mod test {
             Id::new().expect("Creating id for test player"),
             player_client,
             PlayerRegistration { domain: Some(TEST_DOMAIN.to_string()), ..Decodable::new_empty() },
-            inspector.root().create_string("test_player", ""),
+            inspector.root().create_child("test_player"),
         )
         .expect("Creating player from valid prereqs");
         (inspector, player, player_server)
@@ -554,7 +604,7 @@ mod test {
         let mut requests = player_server.into_stream()?;
 
         assert_inspect_tree!(inspector, root: {
-            test_player: "",
+            test_player: {state: {}},
         });
 
         let waker = noop_waker();
@@ -581,21 +631,8 @@ mod test {
 
         let _ = player.next().await.expect("Polling player event");
 
-        const EXPECTED: &'static str = r"ValidPlayerInfoDelta {
-    local: None,
-    player_status: None,
-    metadata: None,
-    media_images: None,
-    player_capabilities: Some(
-        ValidPlayerCapabilities {
-            flags: Play | Pause,
-        },
-    ),
-    interruption_behavior: None,
-}";
-
         assert_inspect_tree!(inspector, root: {
-            test_player: EXPECTED,
+            test_player: {state: { player_capabilities: "ValidPlayerCapabilities { flags: Play | Pause }"}}
         });
 
         Ok(())

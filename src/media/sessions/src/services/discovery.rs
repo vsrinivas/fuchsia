@@ -429,7 +429,7 @@ mod test {
                 domain: Some(String::from("test_domain://")),
                 ..Decodable::new_empty()
             },
-            inspector.root().create_string("test_player", ""),
+            inspector.root().create_child("test_player"),
         )?;
         player_sink.send(player).await?;
         let mut player_requests = player_server.into_stream()?;

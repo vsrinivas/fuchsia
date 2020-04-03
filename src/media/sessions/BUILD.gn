@@ -39,7 +39,6 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/mpmc",
     "//src/lib/streammap",
     "//src/lib/syslog/rust:syslog",

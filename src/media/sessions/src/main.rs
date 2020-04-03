@@ -81,7 +81,10 @@ async fn main() {
     server
         .dir("svc")
         .add_fidl_service(move |request_stream| {
-            spawn_log_error(Publisher::new(player_sink.clone(), root).serve(request_stream))
+            spawn_log_error(
+                Publisher::new(player_sink.clone(), root.create_child("players"))
+                    .serve(request_stream),
+            )
         })
         .add_fidl_service(move |request_stream: DiscoveryRequestStream| {
             let discovery_request_sink = discovery_request_sink.clone().sink_err_into();

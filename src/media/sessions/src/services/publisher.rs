@@ -12,15 +12,13 @@ use futures::{channel::mpsc, prelude::*};
 const LOG_TAG: &str = "publisher";
 
 /// Implements `fuchsia.media.session2.Publisher`.
-#[derive(Clone)]
-pub struct Publisher<'a> {
-    #[allow(unused)]
-    player_list: &'a inspect::Node,
+pub struct Publisher {
+    player_list: inspect::Node,
     player_sink: mpsc::Sender<Player>,
 }
 
-impl<'a> Publisher<'a> {
-    pub fn new(player_sink: mpsc::Sender<Player>, player_list: &'a inspect::Node) -> Self {
+impl Publisher {
+    pub fn new(player_sink: mpsc::Sender<Player>, player_list: inspect::Node) -> Self {
         Self { player_sink, player_list }
     }
 
@@ -37,9 +35,7 @@ impl<'a> Publisher<'a> {
 
             let id = Id::new().context("Allocating new unique id")?;
             let id_str = format!("{}", id.get());
-            let value: Option<String> = None;
-            let value_str = format!("{:?}", value);
-            let player_node = self.player_list.create_string(id_str, value_str);
+            let player_node = self.player_list.create_child(id_str);
 
             let player_result = (move || -> Result<Player> {
                 let player = Player::new(id, player, registration, player_node)?;
