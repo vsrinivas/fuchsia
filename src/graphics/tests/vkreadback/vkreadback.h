@@ -25,13 +25,14 @@ class VkReadbackTest {
 
   enum Extension { NONE, VK_FUCHSIA_EXTERNAL_MEMORY };
 
-  VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
+  explicit VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
+  virtual ~VkReadbackTest();
 
   bool Initialize();
   bool Exec();
   bool Readback();
 
-  uint32_t get_device_memory_handle() { return device_memory_handle_; }
+  uint32_t get_device_memory_handle() const { return device_memory_handle_; }
   void set_device_memory_handle(uint32_t handle) { device_memory_handle_ = handle; }
 
  private:
@@ -40,11 +41,13 @@ class VkReadbackTest {
 
   Extension ext_;
   bool is_initialized_ = false;
+  bool image_initialized_ = false;
+  VkInstance vk_instance_;
   VkPhysicalDevice vk_physical_device_;
   VkDevice vk_device_;
   VkQueue vk_queue_;
   VkImage vk_image_;
-  VkDeviceMemory vk_device_memory_;
+  VkDeviceMemory vk_device_memory_ = VK_NULL_HANDLE;
 
   // Import/export
   VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;

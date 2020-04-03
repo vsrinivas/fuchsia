@@ -24,10 +24,9 @@ TEST(Vulkan, Readback) {
 
 TEST(Vulkan, ManyReadback) {
   std::vector<std::unique_ptr<VkReadbackTest>> tests;
-  // This should be limited by the number of FDs in use. The maximum number of FDs is 256
-  // (FDIO_MAX_FD), and the Intel mesa driver uses 2 per VkPhysicalDevice and 1 per VkDevice.
-  for (uint32_t i = 0; i < 75; i++) {
-    tests.push_back(std::make_unique<VkReadbackTest>());
+  constexpr uint32_t kReps = 75;
+  for (uint32_t i = 0; i < kReps; i++) {
+    tests.emplace_back(std::make_unique<VkReadbackTest>());
     ASSERT_TRUE(tests.back()->Initialize());
     ASSERT_TRUE(tests.back()->Exec());
   }
