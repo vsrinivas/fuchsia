@@ -20,13 +20,13 @@ func DebugBinaryUploads(mods *build.Modules, namespace string) ([]Upload, []stri
 
 func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, error) {
 	bins := mods.Binaries()
-	for _, pkg := range mods.PrebuiltPackages() {
-		if pkg.BinaryManifest == "" {
+	for _, pb := range mods.PrebuiltBinaries() {
+		if pb.Manifest == "" {
 			continue
 		}
-		prebuiltBins, err := pkg.Binaries(mods.BuildDir())
+		prebuiltBins, err := pb.Get(mods.BuildDir())
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to derive binaries from prebuilt package %q: %w", pkg.Name, err)
+			return nil, nil, fmt.Errorf("failed to derive binaries from prebuilt binary set %q: %w", pb.Name, err)
 		}
 		bins = append(bins, prebuiltBins...)
 	}
@@ -81,5 +81,5 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 type binModules interface {
 	BuildDir() string
 	Binaries() []build.Binary
-	PrebuiltPackages() []build.PrebuiltPackage
+	PrebuiltBinaries() []build.PrebuiltBinaries
 }

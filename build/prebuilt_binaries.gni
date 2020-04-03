@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/compiled_action.gni")
+
+# Generate a manifest of prebuilt binaries provided in .build-id format.
+#
+# Parameters
+#
+#   build_id_dir (required)
+#     Path to the .build-id directory to consume.
+#
+#   debug_archive (optional)
+#     Path to archive containing a .build-id tarball.
+#     TODO(fxbug.dev/41478): Delete me.
+#
+#   testonly (optional)
+#     Usual GN meanings.
+#
+template("prebuilt_binaries") {
+  assert(defined(invoker.build_id_dir), "build_id_dir is required")
+
+  binary_manifest = "$target_gen_dir/${target_name}_binaries.json"
+
+  compiled_action(target_name) {
+    # TODO(fxbug.dev/41478) Make unconditionally testonly once separated from
+    # prebuilt_package() instances.
+    forward_variables_from(invoker, [ "testonly" ])
+
+    tool = "//tools/debug/unpack_debug_symbols"
+    outputs = [ binary_manifest ]
+
+    depfile = "$target_gen_dir/$target_name.d"
+
+    args = [
+      "-build-id-dir",
+      rebase_path(invoker.build_id_dir),
+      "-cpu",
+      target_cpu,
+      "-os",
+      target_os,
+      "-output-manifest",
+      rebase_path(binary_manifest, root_build_dir),
+      "-dump-syms",
+      rebase_path(
+          "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
+          root_build_dir),
+      "-depfile",
+      rebase_path(depfile),
+    ]
+
+    if (defined(invoker.debug_archive)) {
+      args += [
+        "-debug-archive",
+        rebase_path(invoker.debug_archive, root_build_dir),
+      ]
+    }
+
+    metadata = {
+      prebuilt_binaries = [
+        {
+          name = target_name
+          manifest = rebase_path(binary_manifest, root_build_dir)
+          if (defined(invoker.debug_archive)) {
+            debug_archive = rebase_path(invoker.debug_archive, root_build_dir)
+          }
+        },
+      ]
+    }
+  }
+}

@@ -199,45 +199,11 @@ build_api_module("api") {
     ":fuzzers",
     ":images",
     ":platforms",
-    ":prebuilt_packages",
+    ":prebuilt_binaries",
     ":tests",
     ":tool_paths",
     ":zbi_tests",
     ":zircon",
-  ]
-}
-
-# This describes where to find all prebuilt packages and optionally where to
-# find the debug information for those packages.
-#
-# If debug information is present then `binaries` will point to another json
-# file which is almost a subset of the format seen at //zircon:binaries except
-# that `elf_build_id` is not a file pointer but instead the actual build ID.
-# This binary only has the `cpu`, `debug`, `os` and modified `elf_build_id`
-# fields. All fields but `elf_build_id` have the same meaning as in
-# //zircon:binaries except for `elf_build_id` which has the discussed meaning.
-#
-# The actual prebuilt_packages api module has the following schema:
-#
-# Type: list(scope)
-#
-#   archive
-#     Required: The path to the prebuilt fuchsia package. This is always a
-#     far file.
-#
-#   binaries
-#     Optional: The path to the json file which has the format described
-#     above.
-#
-#   debug_archive
-#     Optional: The path the the archive of debug binaries from which
-#     `binaries` was generated.
-build_api_module("prebuilt_packages") {
-  testonly = true
-  data_keys = [ "prebuilt_packages" ]
-  deps = [
-    "//build/images:packages",
-    "//sdk",
   ]
 }
 
@@ -343,6 +309,39 @@ build_api_module("platforms") {
       contents += [ platform ]
     }
   }
+}
+
+# This describes where to find all prebuilt binaries.
+#
+# The `manifest` field will point to another JSON file that is almost a subset
+# of the :binaries build API module: the only fields present are `cpu`,
+# `debug`, `os`, and `elf_build_id`, which in this case is not a file pointer
+# but instead the actual build ID.
+#
+#
+# Type: list(scope)
+#
+#   name
+#     Required: The name of the collection of prebuilt binaries.
+#     Type: string
+#
+#   ,manifest
+#     Required: The path to the manifest of prebuilt binaires. See note above
+#     for its schema.
+#     Type: string
+#
+#   debug_archive
+#     Optional: The path the the archive of debug binaries from which
+#     `path` was generated.
+#     Type: string
+#
+build_api_module("prebuilt_binaries") {
+  testonly = true
+  data_keys = [ "prebuilt_binaries" ]
+  deps = [
+    "//build/images:packages",
+    "//sdk",
+  ]
 }
 
 # See //zircon:tests for a description and schema definition.
