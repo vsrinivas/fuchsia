@@ -200,8 +200,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
  * @param pt The page table we're invalidating for (if nullptr, assume for current one)
  * @param pending The planned invalidation
  */
-template <page_alloc_fn_t paf>
-static void x86_tlb_invalidate_page(const X86PageTableBase<paf>* pt,
+static void x86_tlb_invalidate_page(const X86PageTableBase* pt,
                                     PendingTlbInvalidation* pending) {
   if (pending->count == 0) {
     return;
@@ -226,7 +225,7 @@ static void x86_tlb_invalidate_page(const X86PageTableBase<paf>* pt,
     target = MP_IPI_TARGET_ALL;
   } else {
     target = MP_IPI_TARGET_MASK;
-    target_mask = static_cast<X86ArchVmAspace<paf>*>(pt->ctx())->active_cpus();
+    target_mask = static_cast<X86ArchVmAspace*>(pt->ctx())->active_cpus();
   }
 
   mp_sync_exec(target, target_mask, TlbInvalidatePage_task, &task_context);
@@ -244,18 +243,15 @@ bool x86_enable_pcid() {
   return true;
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableMmu<paf>::check_paddr(paddr_t paddr) {
+bool X86PageTableMmu::check_paddr(paddr_t paddr) {
   return x86_mmu_check_paddr(paddr);
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableMmu<paf>::check_vaddr(vaddr_t vaddr) {
+bool X86PageTableMmu::check_vaddr(vaddr_t vaddr) {
   return x86_mmu_check_vaddr(vaddr);
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableMmu<paf>::supports_page_size(PageTableLevel level) {
+bool X86PageTableMmu::supports_page_size(PageTableLevel level) {
   DEBUG_ASSERT(level != PT_L);
   switch (level) {
     case PD_L:
@@ -269,13 +265,11 @@ bool X86PageTableMmu<paf>::supports_page_size(PageTableLevel level) {
   }
 }
 
-template <page_alloc_fn_t paf>
-IntermediatePtFlags X86PageTableMmu<paf>::intermediate_flags() {
+IntermediatePtFlags X86PageTableMmu::intermediate_flags() {
   return X86_MMU_PG_RW | X86_MMU_PG_U;
 }
 
-template <page_alloc_fn_t paf>
-PtFlags X86PageTableMmu<paf>::terminal_flags(PageTableLevel level, uint flags) {
+PtFlags X86PageTableMmu::terminal_flags(PageTableLevel level, uint flags) {
   PtFlags terminal_flags = 0;
 
   if (flags & ARCH_MMU_FLAG_PERM_WRITE) {
@@ -326,8 +320,7 @@ PtFlags X86PageTableMmu<paf>::terminal_flags(PageTableLevel level, uint flags) {
   return terminal_flags;
 }
 
-template <page_alloc_fn_t paf>
-PtFlags X86PageTableMmu<paf>::split_flags(PageTableLevel level, PtFlags flags) {
+PtFlags X86PageTableMmu::split_flags(PageTableLevel level, PtFlags flags) {
   DEBUG_ASSERT(level != PML4_L && level != PT_L);
   DEBUG_ASSERT(flags & X86_MMU_PG_PS);
   if (level == PD_L) {
@@ -345,13 +338,11 @@ PtFlags X86PageTableMmu<paf>::split_flags(PageTableLevel level, PtFlags flags) {
   return flags;
 }
 
-template <page_alloc_fn_t paf>
-void X86PageTableMmu<paf>::TlbInvalidate(PendingTlbInvalidation* pending) {
+void X86PageTableMmu::TlbInvalidate(PendingTlbInvalidation* pending) {
   x86_tlb_invalidate_page(this, pending);
 }
 
-template <page_alloc_fn_t paf>
-uint X86PageTableMmu<paf>::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
+uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
   uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
 
   if (flags & X86_MMU_PG_RW) {
@@ -396,26 +387,22 @@ uint X86PageTableMmu<paf>::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel l
   return mmu_flags;
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableEpt<paf>::allowed_flags(uint flags) {
+bool X86PageTableEpt::allowed_flags(uint flags) {
   if (!(flags & ARCH_MMU_FLAG_PERM_READ)) {
     return false;
   }
   return true;
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableEpt<paf>::check_paddr(paddr_t paddr) {
+bool X86PageTableEpt::check_paddr(paddr_t paddr) {
   return x86_mmu_check_paddr(paddr);
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableEpt<paf>::check_vaddr(vaddr_t vaddr) {
+bool X86PageTableEpt::check_vaddr(vaddr_t vaddr) {
   return x86_mmu_check_vaddr(vaddr);
 }
 
-template <page_alloc_fn_t paf>
-bool X86PageTableEpt<paf>::supports_page_size(PageTableLevel level) {
+bool X86PageTableEpt::supports_page_size(PageTableLevel level) {
   DEBUG_ASSERT(level != PT_L);
   switch (level) {
     case PD_L:
@@ -429,13 +416,11 @@ bool X86PageTableEpt<paf>::supports_page_size(PageTableLevel level) {
   }
 }
 
-template <page_alloc_fn_t paf>
-PtFlags X86PageTableEpt<paf>::intermediate_flags() {
+PtFlags X86PageTableEpt::intermediate_flags() {
   return X86_EPT_R | X86_EPT_W | X86_EPT_X;
 }
 
-template <page_alloc_fn_t paf>
-PtFlags X86PageTableEpt<paf>::terminal_flags(PageTableLevel level, uint flags) {
+PtFlags X86PageTableEpt::terminal_flags(PageTableLevel level, uint flags) {
   PtFlags terminal_flags = 0;
 
   if (flags & ARCH_MMU_FLAG_PERM_READ) {
@@ -466,21 +451,18 @@ PtFlags X86PageTableEpt<paf>::terminal_flags(PageTableLevel level, uint flags) {
   return terminal_flags;
 }
 
-template <page_alloc_fn_t paf>
-PtFlags X86PageTableEpt<paf>::split_flags(PageTableLevel level, PtFlags flags) {
+PtFlags X86PageTableEpt::split_flags(PageTableLevel level, PtFlags flags) {
   DEBUG_ASSERT(level != PML4_L && level != PT_L);
   // We don't need to relocate any flags on split for EPT.
   return flags;
 }
 
-template <page_alloc_fn_t paf>
-void X86PageTableEpt<paf>::TlbInvalidate(PendingTlbInvalidation* pending) {
+void X86PageTableEpt::TlbInvalidate(PendingTlbInvalidation* pending) {
   // TODO(ZX-981): Implement this.
   pending->clear();
 }
 
-template <page_alloc_fn_t paf>
-uint X86PageTableEpt<paf>::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
+uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
   uint mmu_flags = 0;
 
   if (flags & X86_EPT_R) {
@@ -560,32 +542,26 @@ void x86_mmu_init(void) {
   }
 }
 
-template <page_alloc_fn_t paf>
-X86PageTableBase<paf>::X86PageTableBase() {}
+X86PageTableBase::X86PageTableBase() {}
 
-template <page_alloc_fn_t paf>
-X86PageTableBase<paf>::~X86PageTableBase() {
+X86PageTableBase::~X86PageTableBase() {
   DEBUG_ASSERT_MSG(!phys_, "page table dtor called before Destroy()");
 }
 
 // We disable analysis due to the write to |pages_| tripping it up.  It is safe
 // to write to |pages_| since this is part of object construction.
-template <page_alloc_fn_t paf>
-zx_status_t X86PageTableBase<paf>::Init(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t X86PageTableBase::Init(void* ctx, page_alloc_fn_t test_paf) TA_NO_THREAD_SAFETY_ANALYSIS {
+  test_page_alloc_func_ = test_paf;
+
   /* allocate a top level page table for the new address space */
-  vm_page* p;
-  paddr_t pa;
-  zx_status_t status = paf(0, &p, &pa);
-  if (status != ZX_OK) {
+  virt_ = AllocatePageTable();
+  if (!virt_) {
     TRACEF("error allocating top level page directory\n");
     return ZX_ERR_NO_MEMORY;
   }
-  virt_ = reinterpret_cast<pt_entry_t*>(paddr_to_physmap(pa));
-  phys_ = pa;
-  p->set_state(VM_PAGE_STATE_MMU);
 
-  // TODO(abdulla): Remove when PMM returns pre-zeroed pages.
-  arch_zero_page(virt_);
+  phys_ = physmap_to_paddr(virt_);
+  DEBUG_ASSERT(phys_ != 0);
 
   ctx_ = ctx;
   pages_ = 1;
@@ -594,8 +570,10 @@ zx_status_t X86PageTableBase<paf>::Init(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS 
 
 // We disable analysis due to the write to |pages_| tripping it up.  It is safe
 // to write to |pages_| since this is part of object construction.
-template <page_alloc_fn_t paf>
-zx_status_t X86PageTableMmu<paf>::InitKernel(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t X86PageTableMmu::InitKernel(void* ctx,
+                                        page_alloc_fn_t test_paf) TA_NO_THREAD_SAFETY_ANALYSIS {
+  test_page_alloc_func_ = test_paf;
+
   phys_ = kernel_pt_phys;
   virt_ = (pt_entry_t*)X86_PHYS_TO_VIRT(phys_);
   ctx_ = ctx;
@@ -604,22 +582,20 @@ zx_status_t X86PageTableMmu<paf>::InitKernel(void* ctx) TA_NO_THREAD_SAFETY_ANAL
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86PageTableMmu<paf>::AliasKernelMappings() {
+zx_status_t X86PageTableMmu::AliasKernelMappings() {
   // Copy the kernel portion of it from the master kernel pt.
   memcpy(virt_ + NO_OF_PT_ENTRIES / 2, const_cast<pt_entry_t*>(&KERNEL_PT[NO_OF_PT_ENTRIES / 2]),
          sizeof(pt_entry_t) * NO_OF_PT_ENTRIES / 2);
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-X86ArchVmAspace<paf>::X86ArchVmAspace() {}
+X86ArchVmAspace::X86ArchVmAspace() {}
 
 /*
  * Fill in the high level x86 arch aspace structure and allocating a top level page table.
  */
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint mmu_flags) {
+zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags,
+                                  page_alloc_fn_t test_paf) {
   static_assert(sizeof(cpu_mask_t) == sizeof(active_cpus_), "err");
   canary_.Assert();
 
@@ -630,28 +606,28 @@ zx_status_t X86ArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint mmu_flags
   base_ = base;
   size_ = size;
   if (mmu_flags & ARCH_ASPACE_FLAG_KERNEL) {
-    X86PageTableMmu<paf>* mmu = new (&page_table_storage_.mmu) X86PageTableMmu<paf>();
+    X86PageTableMmu* mmu = new (&page_table_storage_.mmu) X86PageTableMmu();
     pt_ = mmu;
 
-    zx_status_t status = mmu->InitKernel(this);
+    zx_status_t status = mmu->InitKernel(this, test_paf);
     if (status != ZX_OK) {
       return status;
     }
     LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", pt_->phys(), pt_->virt());
   } else if (mmu_flags & ARCH_ASPACE_FLAG_GUEST) {
-    X86PageTableEpt<paf>* ept = new (&page_table_storage_.ept) X86PageTableEpt<paf>();
+    X86PageTableEpt* ept = new (&page_table_storage_.ept) X86PageTableEpt();
     pt_ = ept;
 
-    zx_status_t status = ept->Init(this);
+    zx_status_t status = ept->Init(this, test_paf);
     if (status != ZX_OK) {
       return status;
     }
     LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", pt_->phys(), pt_->virt());
   } else {
-    X86PageTableMmu<paf>* mmu = new (&page_table_storage_.mmu) X86PageTableMmu<paf>();
+    X86PageTableMmu* mmu = new (&page_table_storage_.mmu) X86PageTableMmu();
     pt_ = mmu;
 
-    zx_status_t status = mmu->Init(this);
+    zx_status_t status = mmu->Init(this, test_paf);
     if (status != ZX_OK) {
       return status;
     }
@@ -668,29 +644,26 @@ zx_status_t X86ArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint mmu_flags
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::Destroy() {
+zx_status_t X86ArchVmAspace::Destroy() {
   canary_.Assert();
   DEBUG_ASSERT(active_cpus_.load() == 0);
 
   if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-    static_cast<X86PageTableEpt<paf>*>(pt_)->Destroy(base_, size_);
+    static_cast<X86PageTableEpt*>(pt_)->Destroy(base_, size_);
   } else {
-    static_cast<X86PageTableMmu<paf>*>(pt_)->Destroy(base_, size_);
+    static_cast<X86PageTableMmu*>(pt_)->Destroy(base_, size_);
   }
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
   return pt_->UnmapPages(vaddr, count, unmapped);
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
+zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
                                                 uint mmu_flags, size_t* mapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
@@ -698,8 +671,7 @@ zx_status_t X86ArchVmAspace<paf>::MapContiguous(vaddr_t vaddr, paddr_t paddr, si
   return pt_->MapPagesContiguous(vaddr, paddr, count, mmu_flags, mapped);
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
+zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
                                       size_t* mapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
@@ -707,16 +679,14 @@ zx_status_t X86ArchVmAspace<paf>::Map(vaddr_t vaddr, paddr_t* phys, size_t count
   return pt_->MapPages(vaddr, phys, count, mmu_flags, mapped);
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
+zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
   return pt_->ProtectPages(vaddr, count, mmu_flags);
 }
 
-template <page_alloc_fn_t paf>
-void X86ArchVmAspace<paf>::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace* aspace) {
+void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace* aspace) {
   cpu_mask_t cpu_bit = cpu_num_to_mask(arch_curr_cpu_num());
   if (aspace != nullptr) {
     aspace->canary_.Assert();
@@ -745,8 +715,7 @@ void X86ArchVmAspace<paf>::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmA
     x86_set_tss_io_bitmap(aspace->io_bitmap());
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t X86ArchVmAspace<paf>::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
@@ -781,25 +750,16 @@ void x86_mmu_percpu_init(void) {
   }
 }
 
-template <page_alloc_fn_t paf>
-X86ArchVmAspace<paf>::~X86ArchVmAspace() {
+X86ArchVmAspace::~X86ArchVmAspace() {
   if (pt_) {
     pt_->~X86PageTableBase();
   }
   // TODO(ZX-980): check that we've destroyed the aspace.
 }
 
-template <page_alloc_fn_t paf>
-vaddr_t X86ArchVmAspace<paf>::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
+vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
                                        uint next_region_mmu_flags, vaddr_t align, size_t size,
                                        uint mmu_flags) {
   canary_.Assert();
   return PAGE_ALIGN(base);
 }
-
-template class X86ArchVmAspace<pmm_alloc_page>;
-template class X86PageTableBase<pmm_alloc_page>;
-
-extern page_alloc_fn_t test_page_alloc_fn;
-template class X86ArchVmAspace<test_page_alloc_fn>;
-template class X86PageTableBase<test_page_alloc_fn>;

@@ -286,14 +286,12 @@ static void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
   }
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
   Guard<Mutex> al{&lock_};
   return QueryLocked(vaddr, paddr, mmu_flags);
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
   ulong index;
   uint index_shift;
   uint page_size_shift;
@@ -384,15 +382,22 @@ zx_status_t ArmArchVmAspace<paf>::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uin
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::AllocPageTable(paddr_t* paddrp, uint page_size_shift) {
+zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shift) {
   LTRACEF("page_size_shift %u\n", page_size_shift);
 
   // currently we only support allocating a single page
   DEBUG_ASSERT(page_size_shift == PAGE_SIZE_SHIFT);
 
+  // Allocate a page from the pmm via function pointer passed to us in Init().
+  // The default is pmm_alloc_page so test and explicitly call it to avoid any unnecessary
+  // virtual functions.
   vm_page_t* page;
-  zx_status_t status = paf(0, &page, paddrp);
+  zx_status_t status;
+  if (likely(!test_page_alloc_func_)) {
+    status = pmm_alloc_page(0, &page, paddrp);
+  } else {
+    status = test_page_alloc_func_(0, &page, paddrp);
+  }
   if (status != ZX_OK) {
     return status;
   }
@@ -406,8 +411,7 @@ zx_status_t ArmArchVmAspace<paf>::AllocPageTable(paddr_t* paddrp, uint page_size
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-void ArmArchVmAspace<paf>::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift) {
+void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift) {
   LTRACEF("vaddr %p paddr 0x%lx page_size_shift %u\n", vaddr, paddr, page_size_shift);
 
   // currently we only support freeing a single page
@@ -426,8 +430,7 @@ void ArmArchVmAspace<paf>::FreePageTable(void* vaddr, paddr_t paddr, uint page_s
   pt_pages_--;
 }
 
-template <page_alloc_fn_t paf>
-volatile pte_t* ArmArchVmAspace<paf>::GetPageTable(uint page_size_shift, vaddr_t pt_index,
+volatile pte_t* ArmArchVmAspace::GetPageTable(uint page_size_shift, vaddr_t pt_index,
                                                    volatile pte_t* page_table) {
   pte_t pte;
   paddr_t paddr;
@@ -469,8 +472,7 @@ volatile pte_t* ArmArchVmAspace<paf>::GetPageTable(uint page_size_shift, vaddr_t
   }
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::SplitLargePage(vaddr_t vaddr, uint index_shift,
+zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift,
                                                  uint page_size_shift, vaddr_t pt_index,
                                                  volatile pte_t* page_table) {
   DEBUG_ASSERT(index_shift > page_size_shift);
@@ -527,8 +529,7 @@ static bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift
 
 // use the appropriate TLB flush instruction to globally flush the modified entry
 // terminal is set when flushing at the final level of the page table.
-template <page_alloc_fn_t paf>
-void ArmArchVmAspace<paf>::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
+void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
   if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
     paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
     __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr, terminal);
@@ -551,8 +552,7 @@ void ArmArchVmAspace<paf>::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
 }
 
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
-template <page_alloc_fn_t paf>
-ssize_t ArmArchVmAspace<paf>::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
+ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                                              uint index_shift, uint page_size_shift,
                                              volatile pte_t* page_table) {
   volatile pte_t* next_page_table;
@@ -620,8 +620,7 @@ ssize_t ArmArchVmAspace<paf>::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, s
 }
 
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
-template <page_alloc_fn_t paf>
-ssize_t ArmArchVmAspace<paf>::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in,
+ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in,
                                            size_t size_in, pte_t attrs, uint index_shift,
                                            uint page_size_shift, volatile pte_t* page_table) {
   ssize_t ret;
@@ -701,8 +700,7 @@ err:
 }
 
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
+zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                                    size_t size_in, pte_t attrs, uint index_shift,
                                                    uint page_size_shift,
                                                    volatile pte_t* page_table) {
@@ -775,8 +773,7 @@ zx_status_t ArmArchVmAspace<paf>::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vad
 }
 
 // internal routine to map a run of pages
-template <page_alloc_fn_t paf>
-ssize_t ArmArchVmAspace<paf>::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
+ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                                        vaddr_t vaddr_base, uint top_size_shift,
                                        uint top_index_shift, uint page_size_shift) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
@@ -800,8 +797,7 @@ ssize_t ArmArchVmAspace<paf>::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size
   return ret;
 }
 
-template <page_alloc_fn_t paf>
-ssize_t ArmArchVmAspace<paf>::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
+ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
                                          uint top_size_shift, uint top_index_shift,
                                          uint page_size_shift) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
@@ -822,8 +818,7 @@ ssize_t ArmArchVmAspace<paf>::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vad
   return ret;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
+zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
                                                vaddr_t vaddr_base, uint top_size_shift,
                                                uint top_index_shift, uint page_size_shift) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
@@ -847,8 +842,7 @@ zx_status_t ArmArchVmAspace<paf>::ProtectPages(vaddr_t vaddr, size_t size, pte_t
   return ret;
 }
 
-template <page_alloc_fn_t paf>
-void ArmArchVmAspace<paf>::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* vaddr_base,
+void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* vaddr_base,
                                               uint* top_size_shift, uint* top_index_shift,
                                               uint* page_size_shift) {
   if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
@@ -878,8 +872,7 @@ void ArmArchVmAspace<paf>::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vadd
   }
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
+zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
                                                 uint mmu_flags, size_t* mapped) {
   canary_.Assert();
   LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n", vaddr, paddr, count,
@@ -927,8 +920,7 @@ zx_status_t ArmArchVmAspace<paf>::MapContiguous(vaddr_t vaddr, paddr_t paddr, si
   return (ret < 0) ? (zx_status_t)ret : ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
+zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
                                       size_t* mapped) {
   canary_.Assert();
   LTRACEF("vaddr %#" PRIxPTR " count %zu flags %#x\n", vaddr, count, mmu_flags);
@@ -1003,8 +995,7 @@ zx_status_t ArmArchVmAspace<paf>::Map(vaddr_t vaddr, paddr_t* phys, size_t count
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
   canary_.Assert();
   LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
@@ -1042,8 +1033,7 @@ zx_status_t ArmArchVmAspace<paf>::Unmap(vaddr_t vaddr, size_t count, size_t* unm
   return (ret < 0) ? (zx_status_t)ret : 0;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
+zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
   canary_.Assert();
 
   if (!IsValidVaddr(vaddr)) {
@@ -1075,8 +1065,7 @@ zx_status_t ArmArchVmAspace<paf>::Protect(vaddr_t vaddr, size_t count, uint mmu_
   return ret;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint flags) {
+zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags, page_alloc_fn_t paf) {
   canary_.Assert();
   LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n", this, base, size, flags);
 
@@ -1085,6 +1074,9 @@ zx_status_t ArmArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint flags) {
   // Validate that the base + size is sane and doesn't wrap.
   DEBUG_ASSERT(size > PAGE_SIZE);
   DEBUG_ASSERT(base + size - 1 > base);
+
+  // Set the page allocation function. If set to null (default), pmm_alloc_page will be used.
+  test_page_alloc_func_ = paf;
 
   flags_ = flags;
   if (flags & ARCH_ASPACE_FLAG_KERNEL) {
@@ -1098,10 +1090,13 @@ zx_status_t ArmArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint flags) {
     tt_phys_ = vaddr_to_paddr(const_cast<pte_t*>(tt_virt_));
     asid_ = (uint16_t)MMU_ARM64_GLOBAL_ASID;
   } else {
+    uint page_size_shift;
     if (flags & ARCH_ASPACE_FLAG_GUEST) {
       DEBUG_ASSERT(base + size <= 1UL << MMU_GUEST_SIZE_SHIFT);
+      page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
     } else {
       DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
+      page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
       if (asid.Alloc(&asid_) != ZX_OK) {
         return ZX_ERR_NO_MEMORY;
       }
@@ -1111,12 +1106,12 @@ zx_status_t ArmArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint flags) {
     size_ = size;
 
     paddr_t pa;
-    vm_page_t* page;
-    zx_status_t status = paf(0, &page, &pa);
+
+    // allocate a top level page table to serve as the translation table
+    zx_status_t status = AllocPageTable(&pa, page_size_shift);
     if (status != ZX_OK) {
       return status;
     }
-    page->set_state(VM_PAGE_STATE_MMU);
 
     volatile pte_t* va = static_cast<volatile pte_t*>(paddr_to_physmap(pa));
 
@@ -1134,8 +1129,7 @@ zx_status_t ArmArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint flags) {
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-zx_status_t ArmArchVmAspace<paf>::Destroy() {
+zx_status_t ArmArchVmAspace::Destroy() {
   canary_.Assert();
   LTRACEF("aspace %p\n", this);
 
@@ -1162,8 +1156,7 @@ zx_status_t ArmArchVmAspace<paf>::Destroy() {
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-void ArmArchVmAspace<paf>::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace* aspace) {
+void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace* aspace) {
   if (TRACE_CONTEXT_SWITCH) {
     TRACEF("aspace %p\n", aspace);
   }
@@ -1240,23 +1233,15 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
   return ZX_OK;
 }
 
-template <page_alloc_fn_t paf>
-ArmArchVmAspace<paf>::ArmArchVmAspace() {}
+ArmArchVmAspace::ArmArchVmAspace() = default;
 
-template <page_alloc_fn_t paf>
-ArmArchVmAspace<paf>::~ArmArchVmAspace() {
   // TODO: check that we've destroyed the aspace
-}
+ArmArchVmAspace::~ArmArchVmAspace() = default;
 
-template <page_alloc_fn_t paf>
-vaddr_t ArmArchVmAspace<paf>::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
+vaddr_t ArmArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
                                        uint next_region_mmu_flags, vaddr_t align, size_t size,
                                        uint mmu_flags) {
   canary_.Assert();
   return PAGE_ALIGN(base);
 }
 
-template class ArmArchVmAspace<pmm_alloc_page>;
-
-extern page_alloc_fn_t test_page_alloc_fn;
-template class ArmArchVmAspace<test_page_alloc_fn>;

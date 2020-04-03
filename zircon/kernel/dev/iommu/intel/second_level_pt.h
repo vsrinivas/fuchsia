@@ -18,7 +18,7 @@ class DeviceContext;
 class IommuImpl;
 
 // Implementation of second-level page tables used by VT-d
-class SecondLevelPageTable final : public X86PageTableBase<pmm_alloc_page> {
+class SecondLevelPageTable final : public X86PageTableBase {
  public:
   SecondLevelPageTable(IommuImpl* iommu, DeviceContext* parent);
   ~SecondLevelPageTable();

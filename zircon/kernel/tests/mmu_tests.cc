@@ -227,10 +227,10 @@ static bool test_mapping_oom() {
       list_add_head(&node, &page->queue_node);
     }
 
-    TestArchVmAspace<test_page_alloc_fn> aspace;
+    ArchVmAspace aspace;
     vaddr_t base = 1UL << 20;
     size_t size = (1UL << 47) - base - (1UL << 20);
-    zx_status_t err = aspace.Init(base, size, 0);
+    zx_status_t err = aspace.Init(base, size, 0, test_page_alloc_fn);
     ASSERT_EQ(err, ZX_OK, "init aspace");
 
     const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;

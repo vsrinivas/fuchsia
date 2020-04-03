@@ -12,6 +12,7 @@
 #include <hwreg/bitfields.h>
 // Needed for ARCH_MMU_FLAG_*
 #include <vm/arch_vm_aspace.h>
+#include <vm/pmm.h>
 
 typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64
@@ -69,7 +70,6 @@ using IntermediatePtFlags = uint64_t;
 
 struct MappingCursor;
 
-template <page_alloc_fn_t paf>
 class X86PageTableBase {
  public:
   X86PageTableBase();
@@ -93,8 +93,10 @@ class X86PageTableBase {
   zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
 
  protected:
+  using page_alloc_fn_t = ArchVmAspaceInterface::page_alloc_fn_t;
+
   // Initialize an empty page table, assigning this given context to it.
-  zx_status_t Init(void* ctx);
+  zx_status_t Init(void* ctx, page_alloc_fn_t test_paf = nullptr);
 
   // Release the resources associated with this page table.  |base| and |size|
   // are only used for debug checks that the page tables have no more mappings.
@@ -126,6 +128,9 @@ class X86PageTableBase {
   // visible to hardware page table walkers. On x86, this is only true for Intel IOMMU page
   // tables when the IOMMU 'caching mode' bit is true.
   virtual bool needs_cache_flushes() = 0;
+
+  // Page allocate function, overridable for testing.
+  page_alloc_fn_t test_page_alloc_func_ = nullptr;
 
   // Pointer to the translation table.
   paddr_t phys_ = 0;
@@ -176,6 +181,8 @@ class X86PageTableBase {
       TA_REQ(lock_);
   void UnmapEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
                   volatile pt_entry_t* pte, bool was_terminal) TA_REQ(lock_);
+
+  pt_entry_t* AllocatePageTable();
 
   fbl::Canary<fbl::magic("X86P")> canary_;
 

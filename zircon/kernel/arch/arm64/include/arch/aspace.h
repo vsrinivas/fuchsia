@@ -15,15 +15,16 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <vm/arch_vm_aspace.h>
-#include <vm/pmm.h>
 
-template <page_alloc_fn_t paf>
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
  public:
   ArmArchVmAspace();
   virtual ~ArmArchVmAspace();
 
-  zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
+  using ArchVmAspaceInterface::page_alloc_fn_t;
+
+  zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags,
+                   page_alloc_fn_t test_paf = nullptr) override;
 
   zx_status_t Destroy() override;
 
@@ -95,9 +96,13 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   void FlushTLBEntry(vaddr_t vaddr, bool terminal) TA_REQ(lock_);
 
+  // data fields
   fbl::Canary<fbl::magic("VAAS")> canary_;
 
   DECLARE_MUTEX(ArmArchVmAspace) lock_;
+
+  // Page allocate function, if set will be used instead of the default allocator
+  page_alloc_fn_t test_page_alloc_func_ = nullptr;
 
   uint16_t asid_ = MMU_ARM64_UNUSED_ASID;
 
@@ -120,9 +125,6 @@ static inline paddr_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {
   return static_cast<paddr_t>(vmid) << 48 | baddr;
 }
 
-using ArchVmAspace = ArmArchVmAspace<pmm_alloc_page>;
-
-template <page_alloc_fn_t paf>
-using TestArchVmAspace = ArmArchVmAspace<paf>;
+using ArchVmAspace = ArmArchVmAspace;
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_
