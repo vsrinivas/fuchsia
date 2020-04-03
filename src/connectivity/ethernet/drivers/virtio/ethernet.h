@@ -65,6 +65,8 @@ class EthernetDevice : public Device,
   }
 
  private:
+  static constexpr size_t kFailureWarnRate = 100;
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(EthernetDevice);
 
   // DDK device hooks; see ddk/device.h
@@ -82,6 +84,7 @@ class EthernetDevice : public Device,
   Ring tx_;
   std::unique_ptr<io_buffer_t[]> bufs_;
   size_t unkicked_ TA_GUARDED(tx_lock_);
+  size_t tx_failed_descriptor_alloc_ TA_GUARDED(tx_lock_);
 
   // Saved net device configuration out of the pci config BAR
   virtio_net_config_t config_ TA_GUARDED(state_lock_);

@@ -140,6 +140,7 @@ EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti,
       tx_(this),
       bufs_(nullptr),
       unkicked_(0),
+      tx_failed_descriptor_alloc_(0),
       ifc_({nullptr, nullptr}) {}
 
 EthernetDevice::~EthernetDevice() { LTRACE_ENTRY; }
@@ -387,7 +388,13 @@ void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* ne
     desc = tx_.AllocDescChain(1, &id);
   }
   if (!desc) {
-    zxlogf(ERROR, "dropping packet; out of descriptors\n");
+    tx_failed_descriptor_alloc_++;
+    if (tx_failed_descriptor_alloc_ == 1 || (tx_failed_descriptor_alloc_ % kFailureWarnRate) == 0) {
+      zxlogf(WARN, "transmit dropping packet; out of descriptors, %lu pending (%lu times)\n",
+             unkicked_, tx_failed_descriptor_alloc_);
+    }
+    tx_.Kick();
+    unkicked_ = 0;
     op.Complete(ZX_ERR_NO_RESOURCES);
     return;
   }
