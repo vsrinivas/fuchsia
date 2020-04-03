@@ -35,6 +35,10 @@ const _maxElapsedSincePowerOn = Duration(minutes: 3);
 /// Used if the device's real time clock is not reset to zero on reboot.
 const _rebootToTimekeeper = Duration(seconds: 15);
 
+/// Wait at most this long for reboot to ensure all programs of interest have
+/// hit their measurement checkpoints.
+const _maxTestRuntime = Duration(seconds: 90);
+
 /// Collects uptime information.
 class Uptime {
   // Elapsed time since last reboot.
@@ -74,6 +78,7 @@ void main() {
     ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
   sl4f.Sl4f sl4fDriver;
   sl4f.Scenic scenicDriver;
+  sl4f.Modular basemgrController;
 
   final performance = sl4f.Performance(sl4fDriver);
 
@@ -83,6 +88,7 @@ void main() {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
     scenicDriver = sl4f.Scenic(sl4fDriver);
+    basemgrController = sl4f.Modular(sl4fDriver);
   });
 
   tearDown(() async {
@@ -241,21 +247,28 @@ void main() {
     // test to fail.  We use this as an opportunity to record the time taken
     // to reboot as a performance test result.
     var rebootDuration = await sl4fDriver.reboot();
-
-    for (var attempt = 0; attempt < _tries; attempt++) {
-      try {
-        final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
-        if (!_isAllBlack(screen)) {
-          print('Saw a screen that is not black.');
-          await exportTimings('fuchsia.boot', rebootDuration);
-          return;
+    try {
+      // This call, and the 'shutdown' below are no-ops in configurations where
+      // modular is already running.
+      await basemgrController.boot();
+      for (var attempt = 0; attempt < _tries; attempt++) {
+        try {
+          final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
+          if (!_isAllBlack(screen)) {
+            print('Saw a screen that is not black.');
+            await Future.delayed(_maxTestRuntime - rebootDuration,
+                () => exportTimings('fuchsia.boot', rebootDuration));
+            return;
+          }
+        } on sl4f.JsonRpcException {
+          print('Error taking screenshot; Scenic might not be ready yet.');
         }
-      } on sl4f.JsonRpcException {
-        print('Error taking screenshot; Scenic might not be ready yet.');
+        await Future.delayed(_delay);
       }
-      await Future.delayed(_delay);
+      fail('Screen was all black.');
+    } finally {
+      await basemgrController.shutdown(forceShutdownBasemgr: false);
     }
-    fail('Screen was all black.');
   },
       // This is a large test that waits for the DUT to come up and to start
       // rendering something.
