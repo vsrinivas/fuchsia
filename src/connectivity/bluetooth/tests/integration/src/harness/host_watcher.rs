@@ -9,7 +9,7 @@ use {
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
         types::{HostId, HostInfo},
     },
-    futures::future::{self, BoxFuture, FutureExt},
+    futures::future::{self, BoxFuture, FutureExt, TryFutureExt},
     std::{collections::HashMap, convert::TryFrom},
 };
 
@@ -26,7 +26,10 @@ pub type HostWatcherHarness = ExpectationHarness<HostWatcherState, HostWatcherPr
 async fn watch_hosts(harness: HostWatcherHarness) -> Result<(), Error> {
     let proxy = harness.aux().clone();
     loop {
-        let hosts = proxy.watch().await?;
+        let hosts = proxy
+            .watch()
+            .await
+            .context("Error calling fuchsia.bluetooth.sys.HostWatcher.watch()")?;
         let hosts: Result<HashMap<HostId, HostInfo>, Error> = hosts
             .into_iter()
             .map(|info| {
@@ -34,7 +37,8 @@ async fn watch_hosts(harness: HostWatcherHarness) -> Result<(), Error> {
                 info.map(|info| (info.id, info))
             })
             .collect();
-        let hosts = hosts?;
+        let hosts = hosts
+            .context("Invalid host received from fuchsia.bluetooth.sys.HostWatcher.watch()")?;
         harness.write_state().hosts = hosts;
         harness.notify_state_changed();
     }
@@ -54,7 +58,9 @@ impl TestHarness for HostWatcherHarness {
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let harness = new_host_watcher_harness().await?;
-            let run_host_watcher = watch_hosts(harness.clone()).boxed();
+            let run_host_watcher = watch_hosts(harness.clone())
+                .map_err(|e| e.context("Error running HostWatcher harness"))
+                .boxed();
             Ok((harness, (), run_host_watcher))
         }
         .boxed()

@@ -50,8 +50,11 @@ pub type ControlHarness = ExpectationHarness<ControlState, ControlProxy>;
 
 pub async fn handle_control_events(harness: ControlHarness) -> Result<(), Error> {
     let mut events = harness.aux().take_event_stream();
-
-    while let Some(e) = events.try_next().await? {
+    while let Some(e) = events
+        .try_next()
+        .await
+        .context("Error receiving fuchsia.bluetooth.control.Control events")?
+    {
         match e {
             ControlEvent::OnActiveAdapterChanged { adapter } => {
                 harness.write_state().active_host = adapter.map(|host| host.identifier);

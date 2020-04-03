@@ -131,7 +131,7 @@ async fn test_disconnect((access, control): (AccessHarness, ControlHarness)) -> 
 //  * Set local name via fuchsia.bluetooth.sys.Access.SetLocalName()
 //  * Receive host information via fuchsia.bluetooth.sys.HostWatcher.Watch()
 async fn test_set_local_name(
-    (access, (control, host_watcher)): (AccessHarness, (ControlHarness, HostWatcherHarness)),
+    (access, control, host_watcher): (AccessHarness, ControlHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
     let (_host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
 
@@ -152,7 +152,7 @@ async fn test_set_local_name(
 //  * Enable discovery via fuchsia.bluetooth.sys.Access.StartDiscovery()
 //  * Disable discovery by dropping our token
 async fn test_discovery(
-    (access, (control, host_watcher)): (AccessHarness, (ControlHarness, HostWatcherHarness)),
+    (access, control, host_watcher): (AccessHarness, ControlHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
     let (host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
     let host = HostId::from_str(&host)?;
@@ -180,7 +180,7 @@ async fn test_discovery(
 //  * Enable discoverable via fuchsia.bluetooth.sys.Access.StartDiscoverable()
 //  * Disable discoverable by dropping our token
 async fn test_discoverable(
-    (access, (control, host_watcher)): (AccessHarness, (ControlHarness, HostWatcherHarness)),
+    (access, control, host_watcher): (AccessHarness, ControlHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
     let (host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
     let host = HostId::from_str(&host)?;
