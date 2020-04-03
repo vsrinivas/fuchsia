@@ -20,9 +20,9 @@ namespace stubs {
 
 class ChannelProvider : public fuchsia::update::channel::testing::Provider_TestBase {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::update::channel::Provider> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::update::channel::Provider> request) {
-      binding_ = std::make_unique<fidl::Binding<fuchsia::update::channel::Provider>>(
+  ::fidl::InterfaceRequestHandler<fuchsia::update::channel::Provider> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::update::channel::Provider> request) {
+      binding_ = std::make_unique<::fidl::Binding<fuchsia::update::channel::Provider>>(
           this, std::move(request));
     };
   }
@@ -40,7 +40,7 @@ class ChannelProvider : public fuchsia::update::channel::testing::Provider_TestB
   void set_channel(const std::string& channel) { channel_ = channel; }
 
  private:
-  std::unique_ptr<fidl::Binding<fuchsia::update::channel::Provider>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::update::channel::Provider>> binding_;
   std::string channel_;
 };
 

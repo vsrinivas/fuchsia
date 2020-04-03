@@ -205,11 +205,11 @@ executable("channel_provider_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:channel_provider",
     "//src/developer/feedback/testing/stubs:cobalt",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

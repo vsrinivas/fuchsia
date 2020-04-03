@@ -25,6 +25,9 @@ test_package("feedback_utils_tests") {
       name = "bridge_unittest"
     },
     {
+      name = "channel_provider_ptr_unittest"
+    },
+    {
       name = "cobalt_unittest"
     },
     {
@@ -64,6 +67,7 @@ test_package("feedback_utils_tests") {
   deps = [
     ":archive_unittest",
     ":bridge_unittest",
+    ":channel_provider_ptr_unittest",
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
     ":inspect_protocol_stats_unittest",
@@ -109,6 +113,24 @@ executable("bridge_unittest") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("channel_provider_ptr_unittest") {
+  testonly = true
+
+  sources = [ "channel_provider_ptr_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/feedback/utils/fidl:channel_provider_ptr",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 
