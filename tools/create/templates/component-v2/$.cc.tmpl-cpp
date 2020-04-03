@@ -1,0 +1,18 @@
+// Copyright {{COPYRIGHT_YEAR}} The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "{{PROJECT_PATH}}/{{PROJECT_NAME}}.h"
+
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
+
+#include <iostream>
+
+namespace {{snake_case PROJECT_NAME}} {
+
+App::App(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
+  async::PostTask(dispatcher_, []() { std::cout << "Hello, Fuchsia!" << std::endl; });
+}
+
+}  // namespace {{snake_case PROJECT_NAME}}
