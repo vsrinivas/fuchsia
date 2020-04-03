@@ -28,6 +28,7 @@ type PrebuiltBinaries struct {
 
 // Get returns the list of binaries in enumerated in the associated
 // binary manifest.
+// Returns os.ErrIsNotExist if the file does not exist.
 func (pb *PrebuiltBinaries) Get(buildDir string) ([]Binary, error) {
 	if pb.Manifest == "" {
 		return nil, errors.New("no associated debug binary manifest")
