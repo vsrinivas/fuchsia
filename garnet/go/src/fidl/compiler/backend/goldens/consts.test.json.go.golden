@@ -2,32 +2,29 @@
 
 package name
 
-
-
-
 const (
-	EnabledFlag bool = true
-	Offset int8 = -33
-	Answer uint16 = 42
-	AnswerInBinary uint16 = 42
-	PopulationUsa2018 uint32 = 330000000
-	Diamond uint64 = 1746410393481133080
-	Fuchsia uint64 = 4054509061583223046
-	Username string = "\"squeenze\""
-	MinTemp float32 = -273.15
-	ConversionFactor float64 = 1.41421
-	EnumVal EnumType = EnumType.VALUE
-	EnumPrimitiveVal int32 = EnumType.VALUE
-	BitsVal BitsType = BitsType.VALUE
-	BitsPrimitiveVal int32 = BitsType.VALUE
+	EnabledFlag       bool     = true
+	Offset            int8     = -33
+	Answer            uint16   = 42
+	AnswerInBinary    uint16   = 42
+	PopulationUsa2018 uint32   = 330000000
+	Diamond           uint64   = 1746410393481133080
+	Fuchsia           uint64   = 4054509061583223046
+	Username          string   = "\"squeenze\""
+	MinTemp           float32  = -273.15
+	ConversionFactor  float64  = 1.41421
+	EnumVal           EnumType = EnumType.VALUE
+	EnumPrimitiveVal  int32    = EnumType.VALUE
+	BitsVal           BitsType = BitsType.VALUE
+	BitsPrimitiveVal  int32    = BitsType.VALUE
 )
 
-
-
 type EnumType int32
+
 const (
 	EnumTypeValue EnumType = 1
 )
+
 func (x EnumType) String() string {
 	switch x {
 	case 1:
@@ -37,9 +34,11 @@ func (x EnumType) String() string {
 }
 
 type BitsType int32
+
 const (
 	BitsTypeValue BitsType = 1
 )
+
 func (x BitsType) String() string {
 	switch x {
 	case 1:

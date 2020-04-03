@@ -2,19 +2,14 @@
 
 package json
 
-
 import (
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
-
-
-
-
 type Pizza struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Toppings []string`fidl_offset_v1:"0" fidl_bounds:",16"`
+	_        struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	Toppings []string `fidl_offset_v1:"0" fidl_bounds:",16"`
 }
 
 var _mPizza = _bindings.CreateLazyMarshaler(Pizza{})
@@ -24,8 +19,8 @@ func (msg *Pizza) Marshaler() _bindings.Marshaler {
 }
 
 type Pasta struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Sauce string`fidl_offset_v1:"0" fidl_bounds:"16"`
+	_     struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	Sauce string   `fidl_offset_v1:"0" fidl_bounds:"16"`
 }
 
 var _mPasta = _bindings.CreateLazyMarshaler(Pasta{})
@@ -35,8 +30,8 @@ func (msg *Pasta) Marshaler() _bindings.Marshaler {
 }
 
 type NullableUnionStruct struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	TheUnion *Union`fidl_offset_v1:"0"`
+	_        struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	TheUnion *Union   `fidl_offset_v1:"0"`
 }
 
 var _mNullableUnionStruct = _bindings.CreateLazyMarshaler(NullableUnionStruct{})
@@ -56,8 +51,8 @@ func (msg *Empty) Marshaler() _bindings.Marshaler {
 }
 
 type StructWithNullableXUnion struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	X1 *OlderSimpleUnion`fidl_offset_v1:"0"`
+	_  struct{}          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	X1 *OlderSimpleUnion `fidl_offset_v1:"0"`
 }
 
 var _mStructWithNullableXUnion = _bindings.CreateLazyMarshaler(StructWithNullableXUnion{})
@@ -67,8 +62,8 @@ func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
 }
 
 type testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Xu StrictBoundedXUnion`fidl_offset_v1:"0"`
+	_  struct{}            `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Xu StrictBoundedXUnion `fidl_offset_v1:"0"`
 }
 
 var _mtestProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
@@ -78,8 +73,8 @@ func (msg *testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedRespon
 }
 
 type testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Xu OlderSimpleUnion`fidl_offset_v1:"0"`
+	_  struct{}         `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Xu OlderSimpleUnion `fidl_offset_v1:"0"`
 }
 
 var _mtestProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
@@ -87,17 +82,18 @@ var _mtestProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse 
 func (msg *testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) Marshaler() _bindings.Marshaler {
 	return _mtestProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
 }
+
 type I_pizzaOrPastaTag uint64
+
 const (
 	PizzaOrPastaPizza = 1 // 0x00000001
 	PizzaOrPastaPasta = 2 // 0x00000002
 )
 
-
 type PizzaOrPasta struct {
 	I_pizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl_ordinal:"1"`
-	Pasta Pasta  `fidl_ordinal:"2"`
+	Pizza             Pizza `fidl_ordinal:"1"`
+	Pasta             Pasta `fidl_ordinal:"2"`
 }
 
 func (_m *PizzaOrPasta) Which() I_pizzaOrPastaTag {
@@ -130,18 +126,17 @@ func PizzaOrPastaWithPasta(pasta Pasta) PizzaOrPasta {
 	return _u
 }
 
-
 type I_explicitPizzaOrPastaTag uint64
+
 const (
 	ExplicitPizzaOrPastaPizza = 1 // 0x00000001
 	ExplicitPizzaOrPastaPasta = 4 // 0x00000004
 )
 
-
 type ExplicitPizzaOrPasta struct {
 	I_explicitPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl_ordinal:"1"`
-	Pasta Pasta  `fidl_ordinal:"4"`
+	Pizza                     Pizza `fidl_ordinal:"1"`
+	Pasta                     Pasta `fidl_ordinal:"4"`
 }
 
 func (_m *ExplicitPizzaOrPasta) Which() I_explicitPizzaOrPastaTag {
@@ -174,20 +169,19 @@ func ExplicitPizzaOrPastaWithPasta(pasta Pasta) ExplicitPizzaOrPasta {
 	return _u
 }
 
-
 type I_flexiblePizzaOrPastaTag uint64
-const (
-	FlexiblePizzaOrPasta_unknownData = 0  // 0x00000000
-	FlexiblePizzaOrPastaPizza = 1 // 0x00000001
-	FlexiblePizzaOrPastaPasta = 2 // 0x00000002
-)
 
+const (
+	FlexiblePizzaOrPasta_unknownData = 0 // 0x00000000
+	FlexiblePizzaOrPastaPizza        = 1 // 0x00000001
+	FlexiblePizzaOrPastaPasta        = 2 // 0x00000002
+)
 
 type FlexiblePizzaOrPasta struct {
 	I_flexiblePizzaOrPastaTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	Pizza Pizza  `fidl_ordinal:"1"`
-	Pasta Pasta  `fidl_ordinal:"2"`
+	I_unknownData             []byte
+	Pizza                     Pizza `fidl_ordinal:"1"`
+	Pasta                     Pasta `fidl_ordinal:"2"`
 }
 
 func (_m *FlexiblePizzaOrPasta) Which() I_flexiblePizzaOrPastaTag {
@@ -227,18 +221,17 @@ func FlexiblePizzaOrPastaWithPasta(pasta Pasta) FlexiblePizzaOrPasta {
 	return _u
 }
 
-
 type I_strictPizzaOrPastaTag uint64
+
 const (
 	StrictPizzaOrPastaPizza = 1 // 0x00000001
 	StrictPizzaOrPastaPasta = 2 // 0x00000002
 )
 
-
 type StrictPizzaOrPasta struct {
 	I_strictPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl_ordinal:"1"`
-	Pasta Pasta  `fidl_ordinal:"2"`
+	Pizza                   Pizza `fidl_ordinal:"1"`
+	Pasta                   Pasta `fidl_ordinal:"2"`
 }
 
 func (_m *StrictPizzaOrPasta) Which() I_strictPizzaOrPastaTag {
@@ -271,20 +264,19 @@ func StrictPizzaOrPastaWithPasta(pasta Pasta) StrictPizzaOrPasta {
 	return _u
 }
 
-
 type I_unionTag uint64
+
 const (
-	UnionPrimitive = 1 // 0x00000001
-	UnionStringNeedsConstructor = 2 // 0x00000002
+	UnionPrimitive                        = 1 // 0x00000001
+	UnionStringNeedsConstructor           = 2 // 0x00000002
 	UnionVectorStringAlsoNeedsConstructor = 3 // 0x00000003
 )
 
-
 type Union struct {
-	I_unionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl_ordinal:"1"`
-	StringNeedsConstructor string  `fidl_bounds:"" fidl_ordinal:"2"`
-	VectorStringAlsoNeedsConstructor []string  `fidl_bounds:"" fidl_ordinal:"3"`
+	I_unionTag                       `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Primitive                        int32    `fidl_ordinal:"1"`
+	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
+	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *Union) Which() I_unionTag {
@@ -328,22 +320,21 @@ func UnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor 
 	return _u
 }
 
-
 type I_flexibleUnionTag uint64
+
 const (
-	FlexibleUnion_unknownData = 0  // 0x00000000
-	FlexibleUnionPrimitive = 1 // 0x00000001
-	FlexibleUnionStringNeedsConstructor = 2 // 0x00000002
+	FlexibleUnion_unknownData                     = 0 // 0x00000000
+	FlexibleUnionPrimitive                        = 1 // 0x00000001
+	FlexibleUnionStringNeedsConstructor           = 2 // 0x00000002
 	FlexibleUnionVectorStringAlsoNeedsConstructor = 3 // 0x00000003
 )
 
-
 type FlexibleUnion struct {
-	I_flexibleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	Primitive int32  `fidl_ordinal:"1"`
-	StringNeedsConstructor string  `fidl_bounds:"" fidl_ordinal:"2"`
-	VectorStringAlsoNeedsConstructor []string  `fidl_bounds:"" fidl_ordinal:"3"`
+	I_flexibleUnionTag               `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_unknownData                    []byte
+	Primitive                        int32    `fidl_ordinal:"1"`
+	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
+	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *FlexibleUnion) Which() I_flexibleUnionTag {
@@ -396,20 +387,19 @@ func FlexibleUnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsCons
 	return _u
 }
 
-
 type I_strictUnionTag uint64
+
 const (
-	StrictUnionPrimitive = 1 // 0x00000001
-	StrictUnionStringNeedsConstructor = 2 // 0x00000002
+	StrictUnionPrimitive                        = 1 // 0x00000001
+	StrictUnionStringNeedsConstructor           = 2 // 0x00000002
 	StrictUnionVectorStringAlsoNeedsConstructor = 3 // 0x00000003
 )
 
-
 type StrictUnion struct {
-	I_strictUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl_ordinal:"1"`
-	StringNeedsConstructor string  `fidl_bounds:"" fidl_ordinal:"2"`
-	VectorStringAlsoNeedsConstructor []string  `fidl_bounds:"" fidl_ordinal:"3"`
+	I_strictUnionTag                 `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Primitive                        int32    `fidl_ordinal:"1"`
+	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
+	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *StrictUnion) Which() I_strictUnionTag {
@@ -453,16 +443,15 @@ func StrictUnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstr
 	return _u
 }
 
-
 type I_fieldCollisionTag uint64
+
 const (
 	FieldCollisionFieldCollisionTag = 1 // 0x00000001
 )
 
-
 type FieldCollision struct {
 	I_fieldCollisionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	FieldCollisionTag int32  `fidl_ordinal:"1"`
+	FieldCollisionTag   int32 `fidl_ordinal:"1"`
 }
 
 func (_m *FieldCollision) Which() I_fieldCollisionTag {
@@ -484,18 +473,17 @@ func FieldCollisionWithFieldCollisionTag(fieldCollisionTag int32) FieldCollision
 	return _u
 }
 
-
 type I_explicitUnionTag uint64
+
 const (
-	ExplicitUnionPrimitive = 1 // 0x00000001
+	ExplicitUnionPrimitive              = 1 // 0x00000001
 	ExplicitUnionStringNeedsConstructor = 3 // 0x00000003
 )
 
-
 type ExplicitUnion struct {
-	I_explicitUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl_ordinal:"1"`
-	StringNeedsConstructor string  `fidl_bounds:"" fidl_ordinal:"3"`
+	I_explicitUnionTag     `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Primitive              int32  `fidl_ordinal:"1"`
+	StringNeedsConstructor string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *ExplicitUnion) Which() I_explicitUnionTag {
@@ -528,18 +516,17 @@ func ExplicitUnionWithStringNeedsConstructor(stringNeedsConstructor string) Expl
 	return _u
 }
 
-
 type I_reverseOrdinalUnionTag uint64
+
 const (
 	ReverseOrdinalUnionSecond = 2 // 0x00000002
-	ReverseOrdinalUnionFirst = 1 // 0x00000001
+	ReverseOrdinalUnionFirst  = 1 // 0x00000001
 )
-
 
 type ReverseOrdinalUnion struct {
 	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Second uint32  `fidl_ordinal:"2"`
-	First uint32  `fidl_ordinal:"1"`
+	Second                   uint32 `fidl_ordinal:"2"`
+	First                    uint32 `fidl_ordinal:"1"`
 }
 
 func (_m *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {
@@ -572,20 +559,19 @@ func ReverseOrdinalUnionWithFirst(first uint32) ReverseOrdinalUnion {
 	return _u
 }
 
-
 type I_flexibleFooTag uint64
-const (
-	FlexibleFoo_unknownData = 0  // 0x00000000
-	FlexibleFooS = 1 // 0x00000001
-	FlexibleFooI = 2 // 0x00000002
-)
 
+const (
+	FlexibleFoo_unknownData = 0 // 0x00000000
+	FlexibleFooS            = 1 // 0x00000001
+	FlexibleFooI            = 2 // 0x00000002
+)
 
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	S string  `fidl_bounds:"" fidl_ordinal:"1"`
-	I int32  `fidl_ordinal:"2"`
+	I_unknownData    []byte
+	S                string `fidl_bounds:"" fidl_ordinal:"1"`
+	I                int32  `fidl_ordinal:"2"`
 }
 
 func (_m *FlexibleFoo) Which() I_flexibleFooTag {
@@ -625,18 +611,17 @@ func FlexibleFooWithI(i int32) FlexibleFoo {
 	return _u
 }
 
-
 type I_strictFooTag uint64
+
 const (
 	StrictFooS = 1 // 0x00000001
 	StrictFooI = 2 // 0x00000002
 )
 
-
 type StrictFoo struct {
 	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S string  `fidl_bounds:"" fidl_ordinal:"1"`
-	I int32  `fidl_ordinal:"2"`
+	S              string `fidl_bounds:"" fidl_ordinal:"1"`
+	I              int32  `fidl_ordinal:"2"`
 }
 
 func (_m *StrictFoo) Which() I_strictFooTag {
@@ -669,20 +654,19 @@ func StrictFooWithI(i int32) StrictFoo {
 	return _u
 }
 
-
 type I_explicitFooTag uint64
-const (
-	ExplicitFoo_unknownData = 0  // 0x00000000
-	ExplicitFooS = 2 // 0x00000002
-	ExplicitFooI = 1 // 0x00000001
-)
 
+const (
+	ExplicitFoo_unknownData = 0 // 0x00000000
+	ExplicitFooS            = 2 // 0x00000002
+	ExplicitFooI            = 1 // 0x00000001
+)
 
 type ExplicitFoo struct {
 	I_explicitFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	S string  `fidl_bounds:"" fidl_ordinal:"2"`
-	I int32  `fidl_ordinal:"1"`
+	I_unknownData    []byte
+	S                string `fidl_bounds:"" fidl_ordinal:"2"`
+	I                int32  `fidl_ordinal:"1"`
 }
 
 func (_m *ExplicitFoo) Which() I_explicitFooTag {
@@ -722,18 +706,17 @@ func ExplicitFooWithI(i int32) ExplicitFoo {
 	return _u
 }
 
-
 type I_explicitStrictFooTag uint64
+
 const (
 	ExplicitStrictFooS = 3 // 0x00000003
 	ExplicitStrictFooI = 2 // 0x00000002
 )
 
-
 type ExplicitStrictFoo struct {
 	I_explicitStrictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S string  `fidl_bounds:"" fidl_ordinal:"3"`
-	I int32  `fidl_ordinal:"2"`
+	S                      string `fidl_bounds:"" fidl_ordinal:"3"`
+	I                      int32  `fidl_ordinal:"2"`
 }
 
 func (_m *ExplicitStrictFoo) Which() I_explicitStrictFooTag {
@@ -766,20 +749,19 @@ func ExplicitStrictFooWithI(i int32) ExplicitStrictFoo {
 	return _u
 }
 
-
 type I_olderSimpleUnionTag uint64
-const (
-	OlderSimpleUnion_unknownData = 0  // 0x00000000
-	OlderSimpleUnionI = 1 // 0x00000001
-	OlderSimpleUnionF = 2 // 0x00000002
-)
 
+const (
+	OlderSimpleUnion_unknownData = 0 // 0x00000000
+	OlderSimpleUnionI            = 1 // 0x00000001
+	OlderSimpleUnionF            = 2 // 0x00000002
+)
 
 type OlderSimpleUnion struct {
 	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	I int64  `fidl_ordinal:"1"`
-	F float32  `fidl_ordinal:"2"`
+	I_unknownData         []byte
+	I                     int64   `fidl_ordinal:"1"`
+	F                     float32 `fidl_ordinal:"2"`
 }
 
 func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
@@ -819,22 +801,21 @@ func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
 	return _u
 }
 
-
 type I_newerSimpleUnionTag uint64
-const (
-	NewerSimpleUnion_unknownData = 0  // 0x00000000
-	NewerSimpleUnionI = 1 // 0x00000001
-	NewerSimpleUnionS = 2 // 0x00000002
-	NewerSimpleUnionV = 3 // 0x00000003
-)
 
+const (
+	NewerSimpleUnion_unknownData = 0 // 0x00000000
+	NewerSimpleUnionI            = 1 // 0x00000001
+	NewerSimpleUnionS            = 2 // 0x00000002
+	NewerSimpleUnionV            = 3 // 0x00000003
+)
 
 type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	I int64  `fidl_ordinal:"1"`
-	S string  `fidl_bounds:"" fidl_ordinal:"2"`
-	V []string  `fidl_bounds:"" fidl_ordinal:"3"`
+	I_unknownData         []byte
+	I                     int64    `fidl_ordinal:"1"`
+	S                     string   `fidl_bounds:"" fidl_ordinal:"2"`
+	V                     []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
@@ -887,20 +868,19 @@ func NewerSimpleUnionWithV(v []string) NewerSimpleUnion {
 	return _u
 }
 
-
 type I_strictSimpleXUnionTag uint64
+
 const (
 	StrictSimpleXUnionI = 1 // 0x00000001
 	StrictSimpleXUnionF = 2 // 0x00000002
 	StrictSimpleXUnionS = 3 // 0x00000003
 )
 
-
 type StrictSimpleXUnion struct {
 	I_strictSimpleXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I int32  `fidl_ordinal:"1"`
-	F float32  `fidl_ordinal:"2"`
-	S string  `fidl_bounds:"" fidl_ordinal:"3"`
+	I                       int32   `fidl_ordinal:"1"`
+	F                       float32 `fidl_ordinal:"2"`
+	S                       string  `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
@@ -944,18 +924,17 @@ func StrictSimpleXUnionWithS(s string) StrictSimpleXUnion {
 	return _u
 }
 
-
 type I_xUnionContainingEmptyStructTag uint64
-const (
-	XUnionContainingEmptyStruct_unknownData = 0  // 0x00000000
-	XUnionContainingEmptyStructEmpty = 1 // 0x00000001
-)
 
+const (
+	XUnionContainingEmptyStruct_unknownData = 0 // 0x00000000
+	XUnionContainingEmptyStructEmpty        = 1 // 0x00000001
+)
 
 type XUnionContainingEmptyStruct struct {
 	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	Empty Empty  `fidl_ordinal:"1"`
+	I_unknownData                    []byte
+	Empty                            Empty `fidl_ordinal:"1"`
 }
 
 func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag {
@@ -982,16 +961,15 @@ func XUnionContainingEmptyStructWithEmpty(empty Empty) XUnionContainingEmptyStru
 	return _u
 }
 
-
 type I_strictBoundedXUnionTag uint64
+
 const (
 	StrictBoundedXUnionV = 1 // 0x00000001
 )
 
-
 type StrictBoundedXUnion struct {
 	I_strictBoundedXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	V []uint8  `fidl_bounds:"10" fidl_ordinal:"1"`
+	V                        []uint8 `fidl_bounds:"10" fidl_ordinal:"1"`
 }
 
 func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
@@ -1013,20 +991,19 @@ func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
 	return _u
 }
 
-
 type I_explicitXUnionTag uint64
-const (
-	ExplicitXUnion_unknownData = 0  // 0x00000000
-	ExplicitXUnionI = 1 // 0x00000001
-	ExplicitXUnionF = 4 // 0x00000004
-)
 
+const (
+	ExplicitXUnion_unknownData = 0 // 0x00000000
+	ExplicitXUnionI            = 1 // 0x00000001
+	ExplicitXUnionF            = 4 // 0x00000004
+)
 
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
-	I int64  `fidl_ordinal:"1"`
-	F float32  `fidl_ordinal:"4"`
+	I_unknownData       []byte
+	I                   int64   `fidl_ordinal:"1"`
+	F                   float32 `fidl_ordinal:"4"`
 }
 
 func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {
@@ -1066,16 +1043,14 @@ func ExplicitXUnionWithF(f float32) ExplicitXUnion {
 	return _u
 }
 
-
 const (
-	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal uint64 = 0x68bfe80f00000000
-	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal uint64 = 0x728fedeed6ef99da
-	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x176e085800000000
+	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal      uint64 = 0x68bfe80f00000000
+	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal   uint64 = 0x728fedeed6ef99da
+	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal    uint64 = 0x176e085800000000
 	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal uint64 = 0xfd2ba0109faffe3
 )
 
 type TestProtocolWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *TestProtocolWithCtxInterface) StrictXUnionHenceResponseMayBeStackAllocated(ctx_ _bindings.Context) (StrictBoundedXUnion, error) {
 	var req_ _bindings.Message
@@ -1091,16 +1066,12 @@ func (p *TestProtocolWithCtxInterface) FlexibleXUnionHenceResponseMustBeHeapAllo
 	return resp_.Xu, err_
 }
 
-
 type TestProtocolWithCtx interface {
 	StrictXUnionHenceResponseMayBeStackAllocated(ctx_ _bindings.Context) (StrictBoundedXUnion, error)
 	FlexibleXUnionHenceResponseMustBeHeapAllocated(ctx_ _bindings.Context) (OlderSimpleUnion, error)
 }
 
-
-
-type TestProtocolWithCtxTransitionalBase struct {}
-
+type TestProtocolWithCtxTransitionalBase struct{}
 
 type TestProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -1132,6 +1103,7 @@ func (s_ *TestProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type TestProtocolService struct {
 	_bindings.BindingSet
 }
@@ -1146,6 +1118,3 @@ func (s *TestProtocolService) EventProxyFor(key _bindings.BindingKey) (*TestProt
 }
 
 type TestProtocolEventProxy _bindings.ChannelProxy
-
-
-

@@ -2,13 +2,10 @@
 
 package name
 
-
 import (
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
-
-
 
 const (
 	// const comment #1
@@ -17,16 +14,16 @@ const (
 	C int32 = 4
 )
 
-
-
 // enum comment #1.
 //
 // enum comment #2.
 type MyEnum uint32
+
 const (
 	MyEnumFoo MyEnum = 1
 	MyEnumBar MyEnum = 2
 )
+
 func (x MyEnum) String() string {
 	switch x {
 	case 1:
@@ -41,10 +38,12 @@ func (x MyEnum) String() string {
 //
 // bits comment #2
 type MyBits uint32
+
 const (
 	MyBitsMyFirstBit MyBits = 1
 	MyBitsMyOtherBit MyBits = 2
 )
+
 func (x MyBits) String() string {
 	switch x {
 	case 1:
@@ -63,7 +62,7 @@ type Struct struct {
 	// struct member comment #1
 	//
 	// struct member comment #3
-	Field int32`fidl_offset_v1:"0"`
+	Field int32 `fidl_offset_v1:"0"`
 }
 
 var _mStruct = _bindings.CreateLazyMarshaler(Struct{})
@@ -71,11 +70,12 @@ var _mStruct = _bindings.CreateLazyMarshaler(Struct{})
 func (msg *Struct) Marshaler() _bindings.Marshaler {
 	return _mStruct
 }
+
 type I_unionTag uint64
+
 const (
 	UnionField = 1 // 0x00000001
 )
-
 
 // union comment #1
 //
@@ -85,7 +85,7 @@ type Union struct {
 	// union member comment #1
 	//
 	// union member comment #3
-	Field int32  `fidl_ordinal:"1"`
+	Field int32 `fidl_ordinal:"1"`
 }
 
 func (_m *Union) Which() I_unionTag {
@@ -107,8 +107,6 @@ func UnionWithField(field int32) Union {
 	return _u
 }
 
-
-
 // table comment #1
 //
 // table comment #3
@@ -117,7 +115,7 @@ type Table struct {
 	// table field comment #1
 	//
 	// table field comment #3
-	Field int32 `fidl_ordinal:"1"`
+	Field        int32 `fidl_ordinal:"1"`
 	FieldPresent bool
 }
 
@@ -144,15 +142,15 @@ func (u *Table) HasField() bool {
 func (u *Table) ClearField() {
 	u.FieldPresent = false
 }
+
 const (
-	InterfaceMethodOrdinal uint64 = 0x3f43684c00000000
-	InterfaceMethodGenOrdinal uint64 = 0x60e700e002995ef8
-	InterfaceOnEventOrdinal uint64 = 0x136d200d00000000
+	InterfaceMethodOrdinal     uint64 = 0x3f43684c00000000
+	InterfaceMethodGenOrdinal  uint64 = 0x60e700e002995ef8
+	InterfaceOnEventOrdinal    uint64 = 0x136d200d00000000
 	InterfaceOnEventGenOrdinal uint64 = 0x914c226136244ed
 )
 
 type InterfaceWithCtxInterface _bindings.ChannelProxy
-
 
 // method comment #1
 //
@@ -172,7 +170,6 @@ func (p *InterfaceWithCtxInterface) ExpectOnEvent(ctx_ _bindings.Context) error 
 	return err_
 }
 
-
 // interface comment #1
 //
 // interface comment #3
@@ -186,10 +183,7 @@ type InterfaceWithCtx interface {
 	// event comment #3
 }
 
-
-
-type InterfaceWithCtxTransitionalBase struct {}
-
+type InterfaceWithCtxTransitionalBase struct{}
 
 type InterfaceWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -212,6 +206,7 @@ func (s_ *InterfaceWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_binding
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type InterfaceService struct {
 	_bindings.BindingSet
 }
@@ -231,5 +226,3 @@ func (p *InterfaceEventProxy) OnEvent() error {
 	var event_ _bindings.Message
 	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventGenOrdinal, event_)
 }
-
-

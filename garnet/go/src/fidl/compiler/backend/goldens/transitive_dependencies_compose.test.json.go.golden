@@ -2,20 +2,15 @@
 
 package top
 
-
 import (
 	bottom "fidl/bottom"
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
-
-
-
-
 type topWithCtxGetFooResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Foo bottom.Foo`fidl_offset_v1:"0"`
+	_   struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Foo bottom.Foo `fidl_offset_v1:"0"`
 }
 
 var _mtopWithCtxGetFooResponse = _bindings.CreateLazyMarshaler(topWithCtxGetFooResponse{})
@@ -23,13 +18,13 @@ var _mtopWithCtxGetFooResponse = _bindings.CreateLazyMarshaler(topWithCtxGetFooR
 func (msg *topWithCtxGetFooResponse) Marshaler() _bindings.Marshaler {
 	return _mtopWithCtxGetFooResponse
 }
+
 const (
-	TopGetFooOrdinal uint64 = 0x3949df2c00000000
+	TopGetFooOrdinal    uint64 = 0x3949df2c00000000
 	TopGetFooGenOrdinal uint64 = 0x2c8ccb022c3c571f
 )
 
 type TopWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (bottom.Foo, error) {
 	var req_ _bindings.Message
@@ -38,15 +33,11 @@ func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (bottom.Foo, error)
 	return resp_.Foo, err_
 }
 
-
 type TopWithCtx interface {
 	GetFoo(ctx_ _bindings.Context) (bottom.Foo, error)
 }
 
-
-
-type TopWithCtxTransitionalBase struct {}
-
+type TopWithCtxTransitionalBase struct{}
 
 type TopWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -71,6 +62,7 @@ func (s_ *TopWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type TopService struct {
 	_bindings.BindingSet
 }
@@ -85,6 +77,3 @@ func (s *TopService) EventProxyFor(key _bindings.BindingKey) (*TopEventProxy, bo
 }
 
 type TopEventProxy _bindings.ChannelProxy
-
-
-

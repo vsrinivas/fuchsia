@@ -2,19 +2,14 @@
 
 package json
 
-
 import (
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
-
-
-
-
 type superWithCtxFooRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	S string`fidl_offset_v1:"0" fidl_bounds:""`
+	S string   `fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _msuperWithCtxFooRequest = _bindings.CreateLazyMarshaler(superWithCtxFooRequest{})
@@ -25,7 +20,7 @@ func (msg *superWithCtxFooRequest) Marshaler() _bindings.Marshaler {
 
 type superWithCtxFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Y int64`fidl_offset_v1:"0"`
+	Y int64    `fidl_offset_v1:"0"`
 }
 
 var _msuperWithCtxFooResponse = _bindings.CreateLazyMarshaler(superWithCtxFooResponse{})
@@ -36,7 +31,7 @@ func (msg *superWithCtxFooResponse) Marshaler() _bindings.Marshaler {
 
 type subWithCtxFooRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	S string`fidl_offset_v1:"0" fidl_bounds:""`
+	S string   `fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _msubWithCtxFooRequest = _bindings.CreateLazyMarshaler(subWithCtxFooRequest{})
@@ -47,7 +42,7 @@ func (msg *subWithCtxFooRequest) Marshaler() _bindings.Marshaler {
 
 type subWithCtxFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Y int64`fidl_offset_v1:"0"`
+	Y int64    `fidl_offset_v1:"0"`
 }
 
 var _msubWithCtxFooResponse = _bindings.CreateLazyMarshaler(subWithCtxFooResponse{})
@@ -55,13 +50,13 @@ var _msubWithCtxFooResponse = _bindings.CreateLazyMarshaler(subWithCtxFooRespons
 func (msg *subWithCtxFooResponse) Marshaler() _bindings.Marshaler {
 	return _msubWithCtxFooResponse
 }
+
 const (
-	SuperFooOrdinal uint64 = 0x2f16c1bc00000000
+	SuperFooOrdinal    uint64 = 0x2f16c1bc00000000
 	SuperFooGenOrdinal uint64 = 0x4f6c089228ba7c92
 )
 
 type SuperWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
 	req_ := &superWithCtxFooRequest{
@@ -72,15 +67,11 @@ func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, er
 	return resp_.Y, err_
 }
 
-
 type SuperWithCtx interface {
 	Foo(ctx_ _bindings.Context, s string) (int64, error)
 }
 
-
-
-type SuperWithCtxTransitionalBase struct {}
-
+type SuperWithCtxTransitionalBase struct{}
 
 type SuperWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -113,6 +104,7 @@ func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type SuperService struct {
 	_bindings.BindingSet
 }
@@ -128,15 +120,12 @@ func (s *SuperService) EventProxyFor(key _bindings.BindingKey) (*SuperEventProxy
 
 type SuperEventProxy _bindings.ChannelProxy
 
-
-
 const (
-	SubFooOrdinal uint64 = 0x2f16c1bc00000000
+	SubFooOrdinal    uint64 = 0x2f16c1bc00000000
 	SubFooGenOrdinal uint64 = 0x4f6c089228ba7c92
 )
 
 type SubWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *SubWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
 	req_ := &subWithCtxFooRequest{
@@ -147,15 +136,11 @@ func (p *SubWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, erro
 	return resp_.Y, err_
 }
 
-
 type SubWithCtx interface {
 	Foo(ctx_ _bindings.Context, s string) (int64, error)
 }
 
-
-
-type SubWithCtxTransitionalBase struct {}
-
+type SubWithCtxTransitionalBase struct{}
 
 type SubWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -188,6 +173,7 @@ func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type SubService struct {
 	_bindings.BindingSet
 }
@@ -202,6 +188,3 @@ func (s *SubService) EventProxyFor(key _bindings.BindingKey) (*SubEventProxy, bo
 }
 
 type SubEventProxy _bindings.ChannelProxy
-
-
-

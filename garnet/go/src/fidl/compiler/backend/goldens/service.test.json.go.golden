@@ -2,22 +2,17 @@
 
 package name
 
-
 import (
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
-
-
-
 const (
-	FirstProtocolMethodOnFirstOrdinal uint64 = 0x2838a83100000000
+	FirstProtocolMethodOnFirstOrdinal    uint64 = 0x2838a83100000000
 	FirstProtocolMethodOnFirstGenOrdinal uint64 = 0x580cbd0d43ccbe3b
 )
 
 type FirstProtocolWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *FirstProtocolWithCtxInterface) MethodOnFirst(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
@@ -25,15 +20,11 @@ func (p *FirstProtocolWithCtxInterface) MethodOnFirst(ctx_ _bindings.Context) er
 	return err_
 }
 
-
 type FirstProtocolWithCtx interface {
 	MethodOnFirst(ctx_ _bindings.Context) error
 }
 
-
-
-type FirstProtocolWithCtxTransitionalBase struct {}
-
+type FirstProtocolWithCtxTransitionalBase struct{}
 
 type FirstProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -56,6 +47,7 @@ func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type FirstProtocolService struct {
 	_bindings.BindingSet
 }
@@ -71,15 +63,12 @@ func (s *FirstProtocolService) EventProxyFor(key _bindings.BindingKey) (*FirstPr
 
 type FirstProtocolEventProxy _bindings.ChannelProxy
 
-
-
 const (
-	SecondProtocolMethodOnSecondOrdinal uint64 = 0xd09c00f00000000
+	SecondProtocolMethodOnSecondOrdinal    uint64 = 0xd09c00f00000000
 	SecondProtocolMethodOnSecondGenOrdinal uint64 = 0x5785f9c1f2aece21
 )
 
 type SecondProtocolWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *SecondProtocolWithCtxInterface) MethodOnSecond(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
@@ -87,15 +76,11 @@ func (p *SecondProtocolWithCtxInterface) MethodOnSecond(ctx_ _bindings.Context) 
 	return err_
 }
 
-
 type SecondProtocolWithCtx interface {
 	MethodOnSecond(ctx_ _bindings.Context) error
 }
 
-
-
-type SecondProtocolWithCtxTransitionalBase struct {}
-
+type SecondProtocolWithCtxTransitionalBase struct{}
 
 type SecondProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -118,6 +103,7 @@ func (s_ *SecondProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type SecondProtocolService struct {
 	_bindings.BindingSet
 }
@@ -132,6 +118,3 @@ func (s *SecondProtocolService) EventProxyFor(key _bindings.BindingKey) (*Second
 }
 
 type SecondProtocolEventProxy _bindings.ChannelProxy
-
-
-

@@ -2,16 +2,13 @@
 
 package name
 
-
-
-
-
-
 type MyStrictEnum uint32
+
 const (
 	MyStrictEnumFoo MyStrictEnum = 1
 	MyStrictEnumBar MyStrictEnum = 2
 )
+
 func (x MyStrictEnum) String() string {
 	switch x {
 	case 1:

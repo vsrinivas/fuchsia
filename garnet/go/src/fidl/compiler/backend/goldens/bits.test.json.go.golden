@@ -2,16 +2,13 @@
 
 package json
 
-
-
-
-
-
 type MyBits uint32
+
 const (
 	MyBitsMyFirstBit MyBits = 1
 	MyBitsMyOtherBit MyBits = 2
 )
+
 func (x MyBits) String() string {
 	switch x {
 	case 1:
@@ -23,10 +20,12 @@ func (x MyBits) String() string {
 }
 
 type StrictBits uint64
+
 const (
 	StrictBitsSmallest StrictBits = 1
-	StrictBitsBiggest StrictBits = 9223372036854775808
+	StrictBitsBiggest  StrictBits = 9223372036854775808
 )
+
 func (x StrictBits) String() string {
 	switch x {
 	case 1:

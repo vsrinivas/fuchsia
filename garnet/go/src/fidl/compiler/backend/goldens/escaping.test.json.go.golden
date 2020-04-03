@@ -2,14 +2,9 @@
 
 package escapeme
 
-
 import (
 	_bindings "syscall/zx/fidl"
 )
-
-
-
-
 
 // "pleaseescapethisdocommentproperly"
 type DocCommentWithQuotes struct {

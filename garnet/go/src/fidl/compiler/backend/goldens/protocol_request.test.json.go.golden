@@ -2,19 +2,14 @@
 
 package name
 
-
 import (
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
-
-
-
-
 type parentWithCtxGetChildResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	C ChildWithCtxInterface`fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+	_ struct{}              `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	C ChildWithCtxInterface `fidl_offset_v1:"0" fidl_handle_subtype:"4"`
 }
 
 var _mparentWithCtxGetChildResponse = _bindings.CreateLazyMarshaler(parentWithCtxGetChildResponse{})
@@ -24,8 +19,8 @@ func (msg *parentWithCtxGetChildResponse) Marshaler() _bindings.Marshaler {
 }
 
 type parentWithCtxGetChildRequestResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	R ChildWithCtxInterfaceRequest`fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
+	_ struct{}                     `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	R ChildWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 
 var _mparentWithCtxGetChildRequestResponse = _bindings.CreateLazyMarshaler(parentWithCtxGetChildRequestResponse{})
@@ -35,8 +30,8 @@ func (msg *parentWithCtxGetChildRequestResponse) Marshaler() _bindings.Marshaler
 }
 
 type parentWithCtxTakeChildRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	C ChildWithCtxInterface`fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+	_ struct{}              `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	C ChildWithCtxInterface `fidl_offset_v1:"0" fidl_handle_subtype:"4"`
 }
 
 var _mparentWithCtxTakeChildRequest = _bindings.CreateLazyMarshaler(parentWithCtxTakeChildRequest{})
@@ -46,8 +41,8 @@ func (msg *parentWithCtxTakeChildRequest) Marshaler() _bindings.Marshaler {
 }
 
 type parentWithCtxTakeChildRequestRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	R ChildWithCtxInterfaceRequest`fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
+	_ struct{}                     `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	R ChildWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 
 var _mparentWithCtxTakeChildRequestRequest = _bindings.CreateLazyMarshaler(parentWithCtxTakeChildRequestRequest{})
@@ -55,20 +50,15 @@ var _mparentWithCtxTakeChildRequestRequest = _bindings.CreateLazyMarshaler(paren
 func (msg *parentWithCtxTakeChildRequestRequest) Marshaler() _bindings.Marshaler {
 	return _mparentWithCtxTakeChildRequestRequest
 }
-const (
-)
+
+const ()
 
 type ChildWithCtxInterface _bindings.ChannelProxy
-
-
 
 type ChildWithCtx interface {
 }
 
-
-
-type ChildWithCtxTransitionalBase struct {}
-
+type ChildWithCtxTransitionalBase struct{}
 
 type ChildWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -86,6 +76,7 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type ChildService struct {
 	_bindings.BindingSet
 }
@@ -101,21 +92,18 @@ func (s *ChildService) EventProxyFor(key _bindings.BindingKey) (*ChildEventProxy
 
 type ChildEventProxy _bindings.ChannelProxy
 
-
-
 const (
-	ParentGetChildOrdinal uint64 = 0x3692bc6900000000
-	ParentGetChildGenOrdinal uint64 = 0x57e26ed694158086
-	ParentGetChildRequestOrdinal uint64 = 0x3faacc7e00000000
-	ParentGetChildRequestGenOrdinal uint64 = 0x5ea0990a698a80
-	ParentTakeChildOrdinal uint64 = 0x4c0642f900000000
-	ParentTakeChildGenOrdinal uint64 = 0x6a9827d18871f87d
-	ParentTakeChildRequestOrdinal uint64 = 0x5ec3867a00000000
+	ParentGetChildOrdinal            uint64 = 0x3692bc6900000000
+	ParentGetChildGenOrdinal         uint64 = 0x57e26ed694158086
+	ParentGetChildRequestOrdinal     uint64 = 0x3faacc7e00000000
+	ParentGetChildRequestGenOrdinal  uint64 = 0x5ea0990a698a80
+	ParentTakeChildOrdinal           uint64 = 0x4c0642f900000000
+	ParentTakeChildGenOrdinal        uint64 = 0x6a9827d18871f87d
+	ParentTakeChildRequestOrdinal    uint64 = 0x5ec3867a00000000
 	ParentTakeChildRequestGenOrdinal uint64 = 0x6c4a70e2a2126637
 )
 
 type ParentWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *ParentWithCtxInterface) GetChild(ctx_ _bindings.Context) (ChildWithCtxInterface, error) {
 	var req_ _bindings.Message
@@ -147,7 +135,6 @@ func (p *ParentWithCtxInterface) TakeChildRequest(ctx_ _bindings.Context, r Chil
 	return err_
 }
 
-
 type ParentWithCtx interface {
 	GetChild(ctx_ _bindings.Context) (ChildWithCtxInterface, error)
 	GetChildRequest(ctx_ _bindings.Context) (ChildWithCtxInterfaceRequest, error)
@@ -155,10 +142,7 @@ type ParentWithCtx interface {
 	TakeChildRequest(ctx_ _bindings.Context, r ChildWithCtxInterfaceRequest) error
 }
 
-
-
-type ParentWithCtxTransitionalBase struct {}
-
+type ParentWithCtxTransitionalBase struct{}
 
 type ParentWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -216,6 +200,7 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type ParentService struct {
 	_bindings.BindingSet
 }
@@ -230,6 +215,3 @@ func (s *ParentService) EventProxyFor(key _bindings.BindingKey) (*ParentEventPro
 }
 
 type ParentEventProxy _bindings.ChannelProxy
-
-
-

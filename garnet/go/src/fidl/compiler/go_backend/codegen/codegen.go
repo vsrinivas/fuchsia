@@ -6,6 +6,7 @@ package codegen
 
 import (
 	"bytes"
+	"go/format"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -38,7 +39,7 @@ func (gen *Generator) generateImplDotGo(tree ir.Root) ([]byte, error) {
 	if err := gen.implDotGoTmpl.Execute(buf, tree); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return format.Source(buf.Bytes())
 }
 
 func (gen *Generator) generateFile(dataFn func() ([]byte, error), filename string) error {

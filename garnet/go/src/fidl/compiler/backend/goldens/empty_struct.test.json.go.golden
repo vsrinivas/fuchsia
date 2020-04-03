@@ -2,15 +2,10 @@
 
 package json
 
-
 import (
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
-
-
-
-
 
 type Empty struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1"`
@@ -24,7 +19,7 @@ func (msg *Empty) Marshaler() _bindings.Marshaler {
 
 type emptyProtocolWithCtxSendRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	E Empty`fidl_offset_v1:"0"`
+	E Empty    `fidl_offset_v1:"0"`
 }
 
 var _memptyProtocolWithCtxSendRequest = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxSendRequest{})
@@ -35,7 +30,7 @@ func (msg *emptyProtocolWithCtxSendRequest) Marshaler() _bindings.Marshaler {
 
 type emptyProtocolWithCtxReceiveResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	E Empty`fidl_offset_v1:"0"`
+	E Empty    `fidl_offset_v1:"0"`
 }
 
 var _memptyProtocolWithCtxReceiveResponse = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxReceiveResponse{})
@@ -46,7 +41,7 @@ func (msg *emptyProtocolWithCtxReceiveResponse) Marshaler() _bindings.Marshaler 
 
 type emptyProtocolWithCtxSendAndReceiveRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	E Empty`fidl_offset_v1:"0"`
+	E Empty    `fidl_offset_v1:"0"`
 }
 
 var _memptyProtocolWithCtxSendAndReceiveRequest = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxSendAndReceiveRequest{})
@@ -57,7 +52,7 @@ func (msg *emptyProtocolWithCtxSendAndReceiveRequest) Marshaler() _bindings.Mars
 
 type emptyProtocolWithCtxSendAndReceiveResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	E Empty`fidl_offset_v1:"0"`
+	E Empty    `fidl_offset_v1:"0"`
 }
 
 var _memptyProtocolWithCtxSendAndReceiveResponse = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxSendAndReceiveResponse{})
@@ -65,17 +60,17 @@ var _memptyProtocolWithCtxSendAndReceiveResponse = _bindings.CreateLazyMarshaler
 func (msg *emptyProtocolWithCtxSendAndReceiveResponse) Marshaler() _bindings.Marshaler {
 	return _memptyProtocolWithCtxSendAndReceiveResponse
 }
+
 const (
-	EmptyProtocolSendOrdinal uint64 = 0x1109a64200000000
-	EmptyProtocolSendGenOrdinal uint64 = 0x7a2963cbd88da03
-	EmptyProtocolReceiveOrdinal uint64 = 0x172c2b6f00000000
-	EmptyProtocolReceiveGenOrdinal uint64 = 0x63ba2e5c5fdb4895
-	EmptyProtocolSendAndReceiveOrdinal uint64 = 0x7b7cca3c00000000
+	EmptyProtocolSendOrdinal              uint64 = 0x1109a64200000000
+	EmptyProtocolSendGenOrdinal           uint64 = 0x7a2963cbd88da03
+	EmptyProtocolReceiveOrdinal           uint64 = 0x172c2b6f00000000
+	EmptyProtocolReceiveGenOrdinal        uint64 = 0x63ba2e5c5fdb4895
+	EmptyProtocolSendAndReceiveOrdinal    uint64 = 0x7b7cca3c00000000
 	EmptyProtocolSendAndReceiveGenOrdinal uint64 = 0x1e59efe8b1bbd615
 )
 
 type EmptyProtocolWithCtxInterface _bindings.ChannelProxy
-
 
 func (p *EmptyProtocolWithCtxInterface) Send(ctx_ _bindings.Context, e Empty) error {
 	req_ := &emptyProtocolWithCtxSendRequest{
@@ -100,16 +95,12 @@ func (p *EmptyProtocolWithCtxInterface) SendAndReceive(ctx_ _bindings.Context, e
 	return resp_.E, err_
 }
 
-
 type EmptyProtocolWithCtx interface {
 	Send(ctx_ _bindings.Context, e Empty) error
 	SendAndReceive(ctx_ _bindings.Context, e Empty) (Empty, error)
 }
 
-
-
-type EmptyProtocolWithCtxTransitionalBase struct {}
-
+type EmptyProtocolWithCtxTransitionalBase struct{}
 
 type EmptyProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
@@ -155,6 +146,7 @@ func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
+
 type EmptyProtocolService struct {
 	_bindings.BindingSet
 }
@@ -176,5 +168,3 @@ func (p *EmptyProtocolEventProxy) Receive(e Empty) error {
 	}
 	return ((*_bindings.ChannelProxy)(p)).Send(EmptyProtocolReceiveGenOrdinal, event_)
 }
-
-
