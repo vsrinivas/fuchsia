@@ -30,7 +30,7 @@ class WebSemanticsTest : public SemanticsIntegrationTest {
 };
 
 // Loads a static page via the component framework and verifies its semantic tree.
-TEST_F(WebSemanticsTest, StaticSemantics) {
+TEST_F(WebSemanticsTest, DISABLED_StaticSemantics) {
   web_runner_tests::TestServer server;
   FX_CHECK(server.FindAndBindPort());
 
