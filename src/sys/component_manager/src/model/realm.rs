@@ -1325,7 +1325,7 @@ pub mod tests {
             .await
             .expect("create event source");
         let mut event_stream = event_source
-            .subscribe(vec![EventType::CapabilityReady])
+            .subscribe(vec![EventType::CapabilityReady.into()])
             .await
             .expect("subscribe to event stream");
         event_source.start_component_tree().await;

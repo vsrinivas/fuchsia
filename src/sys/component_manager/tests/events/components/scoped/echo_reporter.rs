@@ -36,7 +36,7 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
 
     // Subscribe to relevant events.
     let event_source = EventSource::new_sync()?;
-    let event_log = event_source.record_events(vec![Started::TYPE, CapabilityRouted::TYPE]).await?;
+    let event_log = event_source.record_events(vec![Started::NAME, CapabilityRouted::NAME]).await?;
 
     event_source.start_component_tree().await?;
 

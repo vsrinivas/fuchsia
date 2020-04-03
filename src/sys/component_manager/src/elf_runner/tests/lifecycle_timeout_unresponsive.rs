@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_sys2::EventType,
     fuchsia_async as fasync,
     fuchsia_component::client::create_scoped_dynamic_instance,
     fuchsia_syslog::{self as fxlog},
-    test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
+    test_utils_lib::events::{Destroyed, Event, EventSource, Ordering, RecordedEvent, Stopped},
 };
 
 /// This test invokes components which don't stop when they're told to. We
@@ -19,7 +18,7 @@ async fn test_stop_timeouts() {
     let event_source = EventSource::new_sync().unwrap();
     event_source.start_component_tree().await.unwrap();
     let mut event_stream =
-        event_source.subscribe(vec![EventType::Stopped, EventType::Destroyed]).await.unwrap();
+        event_source.subscribe(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
@@ -45,32 +44,32 @@ async fn test_stop_timeouts() {
     // generic regexes.
     let expected_events = vec![
         RecordedEvent {
-            event_type: EventType::Stopped,
+            event_type: Stopped::TYPE,
             target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
             capability_id: None,
         },
         RecordedEvent {
-            event_type: EventType::Stopped,
+            event_type: Stopped::TYPE,
             target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
             capability_id: None,
         },
         RecordedEvent {
-            event_type: EventType::Stopped,
+            event_type: Stopped::TYPE,
             target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
             capability_id: None,
         },
         RecordedEvent {
-            event_type: EventType::Destroyed,
+            event_type: Destroyed::TYPE,
             target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
             capability_id: None,
         },
         RecordedEvent {
-            event_type: EventType::Destroyed,
+            event_type: Destroyed::TYPE,
             target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
             capability_id: None,
         },
         RecordedEvent {
-            event_type: EventType::Destroyed,
+            event_type: Destroyed::TYPE,
             target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
             capability_id: None,
         },

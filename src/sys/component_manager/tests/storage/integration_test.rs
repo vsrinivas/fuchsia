@@ -38,7 +38,7 @@ async fn storage() -> Result<(), Error> {
     .await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
 
     event_source.start_component_tree().await?;
 
@@ -73,7 +73,7 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source
-        .subscribe(vec![Started::TYPE, Destroyed::TYPE, CapabilityRouted::TYPE])
+        .subscribe(vec![Started::NAME, Destroyed::NAME, CapabilityRouted::NAME])
         .await?;
 
     // The root component connects to the Trigger capability to start the dynamic child.

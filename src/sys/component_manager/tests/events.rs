@@ -25,6 +25,21 @@ pub enum Ordering {
     Unordered,
 }
 
+/// Returns the string name for the given `event_type`
+fn event_name(event_type: &fsys::EventType) -> String {
+    match event_type {
+        fsys::EventType::CapabilityReady => "capability_ready",
+        fsys::EventType::CapabilityRouted => "capability_routed",
+        fsys::EventType::Destroyed => "destroyed",
+        fsys::EventType::Discovered => "discovered",
+        fsys::EventType::MarkedForDestruction => "",
+        fsys::EventType::Resolved => "resolved",
+        fsys::EventType::Started => "started",
+        fsys::EventType::Stopped => "stopped",
+    }
+    .to_string()
+}
+
 /// A wrapper over the BlockingEventSource FIDL proxy.
 /// Provides all of the FIDL methods with a cleaner, simpler interface.
 /// Refer to events.fidl for a detailed description of this protocol.
@@ -54,10 +69,10 @@ impl EventSource {
         Self { proxy }
     }
 
-    pub async fn subscribe(&self, event_types: Vec<fsys::EventType>) -> Result<EventStream, Error> {
+    pub async fn subscribe(&self, event_names: Vec<impl AsRef<str>>) -> Result<EventStream, Error> {
         let (client_end, stream) = create_request_stream::<fsys::EventStreamMarker>()?;
         self.proxy
-            .subscribe(&mut event_types.into_iter(), client_end)
+            .subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end)
             .await?
             .map_err(|error| format_err!("Error: {:?}", error))?;
         Ok(EventStream::new(stream))
@@ -65,9 +80,9 @@ impl EventSource {
 
     pub async fn record_events(
         &self,
-        event_types: Vec<fsys::EventType>,
+        event_names: Vec<impl AsRef<str>>,
     ) -> Result<EventLog, Error> {
-        let event_stream = self.subscribe(event_types).await?;
+        let event_stream = self.subscribe(event_names).await?;
         Ok(EventLog::new(event_stream))
     }
 
@@ -78,7 +93,7 @@ impl EventSource {
     where
         I: Injector,
     {
-        let mut event_stream = self.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -113,7 +128,7 @@ impl EventSource {
     where
         I: Interposer,
     {
-        let mut event_stream = self.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -162,7 +177,7 @@ impl EventSource {
     ) -> Result<BoxFuture<'a, Result<(), Error>>, Error> {
         let mut event_types = vec![];
         for event in &expected_events {
-            event_types.push(event.event_type);
+            event_types.push(event_name(&event.event_type));
         }
         event_types.dedup();
 
@@ -345,6 +360,8 @@ impl EventStream {
 /// Common features of any event - event type, target moniker, conversion function
 pub trait Event: Handler {
     const TYPE: fsys::EventType;
+    const NAME: &'static str;
+
     fn target_moniker(&self) -> &str;
     fn from_fidl(event: fsys::Event) -> Result<Self, Error>;
 }
@@ -665,6 +682,7 @@ impl Drop for EventLog {
 macro_rules! create_event {
     (
         event_type: $event_type:ident,
+        event_name: $event_name:ident,
         payload: {
             name: $payload_name:ident,
             data: {$(
@@ -690,6 +708,7 @@ macro_rules! create_event {
 
         impl Event for $event_type {
             const TYPE: fsys::EventType = fsys::EventType::$event_type;
+            const NAME: &'static str = stringify!($event_name);
 
             fn target_moniker(&self) -> &str {
                 &self.target_moniker
@@ -743,7 +762,7 @@ macro_rules! create_event {
             }
         }
     };
-    ($event_type:ident) => {
+    ($event_type:ident, $event_name:ident) => {
         pub struct $event_type {
             target_moniker: String,
             handler: Option<fsys::HandlerProxy>,
@@ -751,6 +770,7 @@ macro_rules! create_event {
 
         impl Event for $event_type {
             const TYPE: fsys::EventType = fsys::EventType::$event_type;
+            const NAME: &'static str = stringify!($event_name);
 
             fn target_moniker(&self) -> &str {
                 &self.target_moniker
@@ -790,14 +810,15 @@ macro_rules! create_event {
 }
 
 // To create a class for an event, use the above macro here.
-create_event!(Destroyed);
-create_event!(Discovered);
-create_event!(MarkedForDestruction);
-create_event!(Resolved);
-create_event!(Started);
-create_event!(Stopped);
+create_event!(Destroyed, destroyed);
+create_event!(Discovered, discovered);
+create_event!(MarkedForDestruction, marked_for_destruction);
+create_event!(Resolved, resolved);
+create_event!(Started, started);
+create_event!(Stopped, stopped);
 create_event!(
     event_type: CapabilityReady,
+    event_name: capability_ready,
     payload: {
         name: capability_ready,
         data: {
@@ -816,6 +837,7 @@ create_event!(
 );
 create_event!(
     event_type: CapabilityRouted,
+    event_name: capability_routed,
     payload: {
         name: routing_payload,
         data: {

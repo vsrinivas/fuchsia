@@ -28,8 +28,8 @@ async fn destruction() -> Result<(), Error> {
 
     let event_source = test.connect_to_event_source().await?;
 
-    let event_log = event_source.record_events(vec![Stopped::TYPE, Destroyed::TYPE]).await?;
-    let mut event_stream = event_source.subscribe(vec![Destroyed::TYPE]).await?;
+    let event_log = event_source.record_events(vec![Stopped::NAME, Destroyed::NAME]).await?;
+    let mut event_stream = event_source.subscribe(vec![Destroyed::NAME]).await?;
     event_source.start_component_tree().await?;
 
     // Wait for `coll:root` to be destroyed.

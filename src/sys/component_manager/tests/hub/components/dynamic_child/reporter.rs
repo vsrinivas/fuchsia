@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
 
     // Subscribe to relevant events
     let mut event_stream = event_source
-        .subscribe(vec![Stopped::TYPE, MarkedForDestruction::TYPE, Destroyed::TYPE])
+        .subscribe(vec![Stopped::NAME, MarkedForDestruction::NAME, Destroyed::NAME])
         .await?;
 
     // Delete the dynamic child

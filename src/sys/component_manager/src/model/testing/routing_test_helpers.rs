@@ -9,7 +9,7 @@ use {
         model::{
             binding::Binder,
             error::ModelError,
-            hooks::{EventType, HooksRegistration},
+            hooks::HooksRegistration,
             model::{ComponentManagerConfig, Model, ModelParams},
             moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
             resolver::ResolverRegistry,
@@ -776,13 +776,12 @@ pub mod capability_util {
             &*EVENT_SOURCE_SYNC_SERVICE_PATH,
         )
         .await;
-        let mut event_types =
-            events.into_iter().map(|event| EventType::try_from(event.to_string()).unwrap().into());
+        let event_names: Vec<String> = events.into_iter().map(|event| event.to_string()).collect();
         let (client_end, _stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()
                 .expect("create client");
         let res = event_source_proxy
-            .subscribe(&mut event_types, client_end)
+            .subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end)
             .await
             .expect("failed to use service");
         event_source_proxy.start_component_tree().await.expect("failed to start component tree");

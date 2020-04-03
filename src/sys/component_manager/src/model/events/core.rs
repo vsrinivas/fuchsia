@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             events::{
-                registry::{EventRegistry, EventStream, SyncMode},
+                registry::{EventRegistry, EventStream, RoutedEvent, SyncMode},
                 serve::serve_event_source_sync,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -197,6 +197,36 @@ impl Hook for EventSourceFactory {
     }
 }
 
+struct RouteEventsResult {
+    /// Maps from source name to a set of scope monikers
+    mapping: HashMap<CapabilityName, HashSet<AbsoluteMoniker>>,
+}
+
+impl RouteEventsResult {
+    fn new() -> Self {
+        Self { mapping: HashMap::new() }
+    }
+
+    fn insert(&mut self, source_name: CapabilityName, scope_moniker: AbsoluteMoniker) {
+        self.mapping.entry(source_name).or_insert(HashSet::new()).insert(scope_moniker);
+    }
+
+    fn len(&self) -> usize {
+        self.mapping.len()
+    }
+
+    fn contains_event(&self, event_name: &CapabilityName) -> bool {
+        self.mapping.contains_key(event_name)
+    }
+
+    fn to_vec(self) -> Vec<RoutedEvent> {
+        self.mapping
+            .into_iter()
+            .map(|(source_name, scope_monikers)| RoutedEvent { source_name, scope_monikers })
+            .collect()
+    }
+}
+
 /// A system responsible for implementing basic events functionality on a scoped realm.
 #[derive(Clone)]
 pub struct EventSource {
@@ -250,7 +280,10 @@ impl EventSource {
                 registry
                     .subscribe(
                         &sync_mode,
-                        vec![(EventType::Resolved, hashset!(target_moniker.clone()))],
+                        vec![RoutedEvent {
+                            source_name: EventType::Resolved.into(),
+                            scope_monikers: hashset!(target_moniker.clone()),
+                        }],
                     )
                     .await,
             )
@@ -287,31 +320,36 @@ impl EventSource {
     /// The client might request to subscribe to events that it's not allowed to see. Events
     /// that are allowed should have been defined in its manifest and either offered to it or
     /// requested from the current realm.
-    // TODO(fxb/48721): this should take a vector of strings not event types. Lots of cleanup can
-    // be done in this function once that is done.
-    pub async fn subscribe(&mut self, events: Vec<EventType>) -> Result<EventStream, EventsError> {
+    pub async fn subscribe(
+        &mut self,
+        events: Vec<CapabilityName>,
+    ) -> Result<EventStream, EventsError> {
         // Register event capabilities if any. It identifies the sources of these events (might be the
         // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
         // realms.
         let events = if self.debug {
-            events.into_iter().map(|event| (event, hashset!(AbsoluteMoniker::root()))).collect()
+            events
+                .into_iter()
+                .map(|event| RoutedEvent {
+                    source_name: event.clone(),
+                    scope_monikers: hashset!(AbsoluteMoniker::root()),
+                })
+                .collect()
         } else {
-            let routed_events =
+            let route_result =
                 self.route_events(&events).await.map_err(|e| EventsError::RoutingFailed(e))?;
-            if routed_events.len() != events.len() {
+            if route_result.len() != events.len() {
                 let names = events
                     .into_iter()
-                    .filter(|event| !routed_events.contains_key(&event))
-                    .map(|event| event.to_string().into())
+                    .filter(|event| !route_result.contains_event(&event))
                     .collect();
                 return Err(EventsError::NotAvailable { names });
             }
-            routed_events.into_iter().collect()
+            route_result.to_vec()
         };
 
         // Create an event stream for the given events
         if let Some(registry) = self.registry.upgrade() {
-            // TODO(fxb/48721): we should also pass the target name
             return Ok(registry.subscribe(&self.sync_mode, events).await);
         }
         Err(EventsError::RegistryNotFound)
@@ -326,8 +364,8 @@ impl EventSource {
 
     async fn route_events(
         &self,
-        events: &Vec<EventType>,
-    ) -> Result<HashMap<EventType, HashSet<AbsoluteMoniker>>, ModelError> {
+        events: &Vec<CapabilityName>,
+    ) -> Result<RouteEventsResult, ModelError> {
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
         let realm = model.look_up_realm(&self.target_moniker).await?;
         let decl = {
@@ -335,11 +373,7 @@ impl EventSource {
             state.as_ref().expect("route_events: not registered").decl().clone()
         };
 
-        let mut result = HashMap::new();
-        let events = events
-            .into_iter()
-            .map(|event| event.to_string().into())
-            .collect::<Vec<CapabilityName>>();
+        let mut result = RouteEventsResult::new();
         for use_decl in decl.uses {
             match &use_decl {
                 UseDecl::Event(event_decl) => {
@@ -347,12 +381,7 @@ impl EventSource {
                         continue;
                     }
                     let (source_name, scope_moniker) = self.route_event(event_decl, &realm).await?;
-                    result
-                        .entry(source_name.to_string().try_into().map_err(|e| {
-                            ModelError::capability_discovery_error(format!("Unknown event: {}", e))
-                        })?)
-                        .or_insert(HashSet::new())
-                        .insert(scope_moniker);
+                    result.insert(source_name, scope_moniker);
                 }
                 _ => {}
             }

@@ -47,7 +47,7 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
 async fn main() -> Result<(), Error> {
     let fs = ServiceFs::new_local();
     let event_source = EventSource::new_sync()?;
-    let mut event_stream = event_source.subscribe(vec![CapabilityReady::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![CapabilityReady::NAME]).await?;
 
     event_source.start_component_tree().await?;
 

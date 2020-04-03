@@ -77,7 +77,7 @@ async fn scoped_events_test() -> Result<(), Error> {
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
     let mut echo_rx = {
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
 
         event_source.start_component_tree().await?;
 
@@ -143,7 +143,7 @@ async fn realm_offered_event_source_test() -> Result<(), Error> {
     // Inject echo capability for `root/nested_realm/reporter` so that we can observe its messages
     // here.
     let mut echo_rx = {
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
 
         event_source.start_component_tree().await?;
 
@@ -237,7 +237,7 @@ async fn event_dispatch_order_test() -> Result<(), Error> {
     .await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![Discovered::TYPE, Resolved::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Discovered::NAME, Resolved::NAME]).await?;
 
     event_source.start_component_tree().await?;
 

@@ -9,18 +9,19 @@ use {
             error::ModelError,
             events::core::EventSource,
             events::registry::{Event, EventStream, SyncMode},
-            hooks::{EventPayload, EventType},
+            hooks::EventPayload,
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },
     },
     async_trait::async_trait,
+    cm_rust::CapabilityName,
     fidl::endpoints::{create_request_stream, ClientEnd},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{self as fio, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
-    log::{debug, error, warn},
+    log::{error, info, warn},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -33,19 +34,11 @@ pub async fn serve_event_source_sync(
             let mut event_source = event_source.clone();
             async move {
                 match request {
-                    fsys::BlockingEventSourceRequest::Subscribe {
-                        event_types,
-                        stream,
-                        responder,
-                    } => {
-                        // Convert the FIDL event types into standard event types
-                        let event_types = event_types
-                            .into_iter()
-                            .map(|event_type| EventType::from(event_type))
-                            .collect();
-
+                    fsys::BlockingEventSourceRequest::Subscribe { events, stream, responder } => {
                         // Subscribe to events.
-                        match event_source.subscribe(event_types).await {
+                        let events: Vec<CapabilityName> =
+                            events.into_iter().map(|e| e.into()).collect();
+                        match event_source.subscribe(events).await {
                             Ok(event_stream) => {
                                 // Unblock the component
                                 responder.send(&mut Ok(()))?;
@@ -54,7 +47,7 @@ pub async fn serve_event_source_sync(
                                 serve_event_stream(event_stream, stream).await?;
                             }
                             Err(error) => {
-                                debug!("Error subscribing to events: {}", error);
+                                info!("Error subscribing to events: {}", error);
                                 responder.send(&mut Err(fcomponent::Error::ResourceUnavailable))?;
                             }
                         };

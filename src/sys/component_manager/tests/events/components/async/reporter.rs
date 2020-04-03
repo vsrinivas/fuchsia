@@ -13,7 +13,7 @@ use {
 async fn main() -> Result<(), Error> {
     // Track all the starting child components.
     let event_source = EventSource::new_async()?;
-    let mut event_stream = event_source.subscribe(vec![Started::TYPE, Destroyed::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::NAME, Destroyed::NAME]).await?;
 
     let mut instances = vec![];
     let url =

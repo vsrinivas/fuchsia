@@ -12,7 +12,7 @@ use {
     },
     anyhow::format_err,
     async_trait::async_trait,
-    cm_rust::ComponentDecl,
+    cm_rust::{CapabilityName, ComponentDecl},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
@@ -129,6 +129,12 @@ events!([
     /// This event must occur before Destroyed.
     (Stopped, stopped),
 ]);
+
+impl Into<CapabilityName> for EventType {
+    fn into(self) -> CapabilityName {
+        self.to_string().into()
+    }
+}
 
 /// The component manager calls out to objects that implement the `Hook` trait on registered
 /// component manager events. Hooks block the flow of a task, and can mutate, decorate and replace

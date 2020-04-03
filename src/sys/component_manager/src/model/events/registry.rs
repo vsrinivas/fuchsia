@@ -10,6 +10,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
+    cm_rust::CapabilityName,
     fuchsia_trace as trace,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{
@@ -81,6 +82,8 @@ pub struct EventDispatcher {
 }
 
 impl EventDispatcher {
+    /// Creates a new event dispatcher. This dispatcher will only dispatch events that arrive from
+    /// the given scopes and dispatch them under the given name for that scope.
     fn new(
         sync_mode: SyncMode,
         scope_monikers: HashSet<AbsoluteMoniker>,
@@ -181,9 +184,14 @@ impl EventStream {
     }
 }
 
+pub struct RoutedEvent {
+    pub source_name: CapabilityName,
+    pub scope_monikers: HashSet<AbsoluteMoniker>,
+}
+
 /// Subscribes to events from multiple tasks and sends events to all of them.
 pub struct EventRegistry {
-    dispatcher_map: Arc<Mutex<HashMap<EventType, Vec<Weak<EventDispatcher>>>>>,
+    dispatcher_map: Arc<Mutex<HashMap<CapabilityName, Vec<Weak<EventDispatcher>>>>>,
 }
 
 impl EventRegistry {
@@ -204,18 +212,15 @@ impl EventRegistry {
     }
 
     /// Subscribes to events of a provided set of EventTypes.
-    pub async fn subscribe(
-        &self,
-        sync_mode: &SyncMode,
-        event_types: Vec<(EventType, HashSet<AbsoluteMoniker>)>,
-    ) -> EventStream {
+    pub async fn subscribe(&self, sync_mode: &SyncMode, events: Vec<RoutedEvent>) -> EventStream {
         // TODO(fxb/48510): get rid of this channel and use FIDL directly.
         let mut event_stream = EventStream::new();
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
-        for (event_type, scope_monikers) in event_types {
-            let dispatchers = dispatcher_map.entry(event_type).or_insert(vec![]);
-            let dispatcher = event_stream.create_dispatcher(sync_mode.clone(), scope_monikers);
+        for event in events {
+            let dispatchers = dispatcher_map.entry(event.source_name).or_insert(vec![]);
+            let dispatcher =
+                event_stream.create_dispatcher(sync_mode.clone(), event.scope_monikers);
             dispatchers.push(dispatcher);
         }
 
@@ -233,7 +238,7 @@ impl EventRegistry {
         // Neither task can make progress.
         let dispatchers = {
             let mut dispatcher_map = self.dispatcher_map.lock().await;
-            if let Some(dispatchers) = dispatcher_map.get_mut(&event.payload.type_()) {
+            if let Some(dispatchers) = dispatcher_map.get_mut(&event.payload.type_().into()) {
                 let mut strong_dispatchers = vec![];
                 dispatchers.retain(|dispatcher| {
                     if let Some(dispatcher) = dispatcher.upgrade() {
@@ -293,7 +298,10 @@ impl EventRegistry {
     #[cfg(test)]
     async fn dispatchers_per_event_type(&self, event_type: EventType) -> usize {
         let dispatcher_map = self.dispatcher_map.lock().await;
-        dispatcher_map.get(&event_type).map(|dispatchers| dispatchers.len()).unwrap_or_default()
+        dispatcher_map
+            .get(&event_type.into())
+            .map(|dispatchers| dispatchers.len())
+            .unwrap_or_default()
     }
 }
 
@@ -331,7 +339,10 @@ mod tests {
         let mut event_stream_a = event_registry
             .subscribe(
                 &SyncMode::Async,
-                vec![(EventType::Discovered, hashset!(AbsoluteMoniker::root()))],
+                vec![RoutedEvent {
+                    source_name: EventType::Discovered.into(),
+                    scope_monikers: hashset!(AbsoluteMoniker::root()),
+                }],
             )
             .await;
 
@@ -340,7 +351,10 @@ mod tests {
         let mut event_stream_b = event_registry
             .subscribe(
                 &SyncMode::Async,
-                vec![(EventType::Discovered, hashset!(AbsoluteMoniker::root()))],
+                vec![RoutedEvent {
+                    source_name: EventType::Discovered.into(),
+                    scope_monikers: hashset!(AbsoluteMoniker::root()),
+                }],
             )
             .await;
 

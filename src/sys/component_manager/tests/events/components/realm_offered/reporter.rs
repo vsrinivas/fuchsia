@@ -14,7 +14,7 @@ use {
 async fn main() -> Result<(), Error> {
     // Track all the starting components.
     let event_source = EventSource::new_sync()?;
-    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec!["started_nested"]).await?;
 
     event_source.start_component_tree().await?;
 

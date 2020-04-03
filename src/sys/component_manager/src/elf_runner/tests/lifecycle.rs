@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_sys2::EventType,
     fuchsia_async as fasync,
     fuchsia_component::client::create_scoped_dynamic_instance,
     fuchsia_syslog::{self as fxlog},
-    test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
+    test_utils_lib::events::{Event, EventSource, Ordering, RecordedEvent, Stopped},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -16,7 +15,7 @@ async fn test_normal_behavior() {
 
     let event_source = EventSource::new_sync().unwrap();
     event_source.start_component_tree().await.unwrap();
-    let mut event_stream = event_source.subscribe(vec![EventType::Stopped]).await.unwrap();
+    let mut event_stream = event_source.subscribe(vec![Stopped::NAME]).await.unwrap();
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
@@ -35,7 +34,7 @@ async fn test_normal_behavior() {
     // TODO(47324) Once the runner watches for abnormal exit behavior, validate
     // that the component under test exited normally.
     let expected_events = vec![RecordedEvent {
-        event_type: EventType::Stopped,
+        event_type: Stopped::TYPE,
         target_moniker: format!("./{}:{}:*", collection_name, child_name).to_string(),
         capability_id: None,
     }];

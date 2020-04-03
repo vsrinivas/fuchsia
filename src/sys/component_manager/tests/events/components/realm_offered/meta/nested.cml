@@ -19,7 +19,12 @@
             "from": "self",
             "to": [ "#reporter" ],
         },
-        { "event": "started", "from": "framework", "to": [ "#reporter" ] },
+        {
+          "event": "started",
+          "from": "framework",
+          "to": [ "#reporter" ],
+          "as": "started_nested"
+        },
     ],
     "use": [
       {

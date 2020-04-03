@@ -231,7 +231,7 @@ mod tests {
 
         let (model, builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
 
-        let events = vec![EventType::Started];
+        let events = vec![EventType::Started.into()];
         let mut event_source = builtin_environment
             .event_source_factory
             .create_for_debug()

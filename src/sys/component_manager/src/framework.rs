@@ -345,8 +345,8 @@ mod tests {
             startup,
         },
         cm_rust::{
-            self, CapabilityPath, ChildDecl, ExposeDecl, ExposeProtocolDecl, ExposeSource,
-            ExposeTarget, NativeIntoFidl,
+            self, CapabilityName, CapabilityPath, ChildDecl, ExposeDecl, ExposeProtocolDecl,
+            ExposeSource, ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints,
         fidl_fidl_examples_echo as echo,
@@ -377,7 +377,7 @@ mod tests {
             mock_resolver: MockResolver,
             mock_runner: Arc<MockRunner>,
             realm_moniker: AbsoluteMoniker,
-            events: Vec<EventType>,
+            events: Vec<CapabilityName>,
         ) -> Self {
             // Init model.
             let mut resolver = ResolverRegistry::new();
@@ -622,7 +622,7 @@ mod tests {
         mock_resolver.add_component("a", component_decl_with_test_runner());
         mock_resolver.add_component("b", component_decl_with_test_runner());
 
-        let events = vec![EventType::MarkedForDestruction, EventType::Destroyed];
+        let events = vec![EventType::MarkedForDestruction.into(), EventType::Destroyed.into()];
         let mut test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),

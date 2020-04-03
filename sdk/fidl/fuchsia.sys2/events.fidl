@@ -9,7 +9,7 @@ using fuchsia.io;
 
 /// The maximum number of event types that a receiver can listen to.
 /// This capacity should match the actual number of event types.
-const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 8;
+const uint64 MAX_NUM_EVENTS_RECEIVED = 8;
 
 /// The maximum string length of a capability ID.
 /// This value is currently set arbitrarily.
@@ -119,7 +119,7 @@ table Event {
     2: string:fuchsia.component.MAX_MONIKER_LENGTH target_moniker;
 
     /// Handler for resuming from event
-    /// This will not be available if this is an async event.
+    /// This will be absent if this is an async event.
     3: Handler handler;
 
     /// Optional payload for some event types
@@ -136,8 +136,9 @@ protocol EventSource {
     ///
     /// Errors:
     /// - `RESOURCE_UNAVAILABLE` when the component hasn't been granted the capability to subscribe
-    ///   to some event in the requested `event_types`.
-    Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, EventStream stream)
+    ///   to some event in the requested `events`.
+    Subscribe(vector<fuchsia.component.event_name>:MAX_NUM_EVENTS_RECEIVED events,
+              EventStream stream)
         -> () error fuchsia.component.Error;
 };
 

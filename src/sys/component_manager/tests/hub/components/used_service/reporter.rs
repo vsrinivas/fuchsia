@@ -20,7 +20,7 @@ async fn main() -> Result<(), Error> {
 
     let hub_report = {
         // Subscribes to CapabilityRouted events
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
 
         // Connect to the HubReport service
         let hub_report = HubReport::new()?;
@@ -40,7 +40,7 @@ async fn main() -> Result<(), Error> {
 
     {
         // Subscribes to CapabilityRouted events
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
 
         // Connect to the Echo capability.
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Error> {
 
     {
         // Subscribes to CapabilityRouted events
-        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await?;
 
         // Connect to the Echo capability again
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;

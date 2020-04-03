@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
+    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
     futures::{channel::mpsc, StreamExt},
     hub_report_capability::*,
     io_util::*,
@@ -26,7 +26,7 @@ impl TestRunner {
     async fn start(
         root_component_url: &str,
         num_eager_static_components: i32,
-        event_types: Vec<fsys::EventType>,
+        event_names: Vec<&str>,
     ) -> Result<(TestRunner, EventStream), Error> {
         assert!(
             num_eager_static_components >= 1,
@@ -43,12 +43,12 @@ impl TestRunner {
             // in predictable orders. There is a possibility for the CapabilityRouted event
             // to be interleaved between the Started events.
             let event_source = test.connect_to_event_source().await?;
-            let mut start_event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
+            let mut start_event_stream = event_source.subscribe(vec![Started::NAME]).await?;
 
             // Subscribe to events which are required by this test runner.
-            // TODO(xbhatnag): There may be problems here if event_types contains
+            // TODO(xbhatnag): There may be problems here if event_names contains
             // Started or CapabilityRouted
-            let event_stream = event_source.subscribe(event_types).await?;
+            let event_stream = event_source.subscribe(event_names).await?;
 
             // Inject HubReportCapability wherever it's requested.
             event_source.install_injector(hub_report_capability.clone()).await?;
@@ -342,7 +342,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     let (test_runner, mut event_stream) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
-        vec![MarkedForDestruction::TYPE, Stopped::TYPE, Destroyed::TYPE],
+        vec![MarkedForDestruction::NAME, Stopped::NAME, Destroyed::NAME],
     )
     .await?;
 
