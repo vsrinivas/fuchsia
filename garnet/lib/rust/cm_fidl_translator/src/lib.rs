@@ -750,7 +750,7 @@ mod tests {
                                 "realm": {}
                             },
                             "source_path": "/fonts/CoolFonts",
-                            "target_path": "/svc/fuchsia.fonts.Provider"
+                            "target_path": "/svc/fuchsia.fonts.Provider2"
                         }
                     },
                     {
@@ -759,7 +759,7 @@ mod tests {
                                 "framework": {}
                             },
                             "source_path": "/svc/fuchsia.sys2.Realm",
-                            "target_path": "/svc/fuchsia.sys2.Realm"
+                            "target_path": "/svc/fuchsia.sys2.Realm2"
                         }
                     },
                     {
@@ -832,12 +832,12 @@ mod tests {
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
-                        target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                        target_path: Some("/svc/fuchsia.fonts.Provider2".to_string()),
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
-                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm2".to_string()),
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),

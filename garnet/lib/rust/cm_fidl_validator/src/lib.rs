@@ -367,7 +367,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    // Collects all the environment names, watching for duplicates.
+    /// Collects all the environment names, watching for duplicates.
     fn collect_environment_names(&mut self, envs: &'a [fsys::EnvironmentDecl]) {
         for env in envs {
             if let Some(name) = env.name.as_ref() {
@@ -384,16 +384,8 @@ impl<'a> ValidationContext<'a> {
             self.validate_use_decl(&use_);
         }
 
-        // Ensure that no more than one runner is specified.
-        let mut runners_count: i32 = 0;
-        for use_ in uses.iter() {
-            if let fsys::UseDecl::Runner(_) = use_ {
-                runners_count += 1;
-            }
-        }
-        if runners_count > 1 {
-            self.errors.push(Error::multiple_runners_specified("UseRunnerDecl"));
-        }
+        self.validate_use_has_single_runner(&uses);
+        self.validate_use_paths(&uses);
     }
 
     fn validate_use_decl(&mut self, use_: &fsys::UseDecl) {
@@ -464,6 +456,50 @@ impl<'a> ValidationContext<'a> {
             }
             fsys::UseDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
+            }
+        }
+    }
+
+    /// Ensures that no more than one runner is specified.
+    fn validate_use_has_single_runner(&mut self, uses: &[fsys::UseDecl]) {
+        let mut runners_count: i32 = 0;
+        for use_ in uses.iter() {
+            if let fsys::UseDecl::Runner(_) = use_ {
+                runners_count += 1;
+            }
+        }
+        if runners_count > 1 {
+            self.errors.push(Error::multiple_runners_specified("UseRunnerDecl"));
+        }
+    }
+
+    /// Validates that Service, Protocol and Directory target paths differ.
+    fn validate_use_paths(&mut self, uses: &[fsys::UseDecl]) {
+        let mut used_ids = HashMap::new();
+        for use_ in uses.iter() {
+            match use_ {
+                fsys::UseDecl::Service(fsys::UseServiceDecl {
+                    target_path: Some(path), ..
+                })
+                | fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    target_path: Some(path), ..
+                })
+                | fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                    target_path: Some(path),
+                    ..
+                }) => {
+                    let decl = match use_ {
+                        fsys::UseDecl::Service(_) => "UseServiceDecl",
+                        fsys::UseDecl::Protocol(_) => "UseProtocolDecl",
+                        fsys::UseDecl::Directory(_) => "UseDirectoryDecl",
+                        _ => unreachable!(),
+                    };
+                    if used_ids.insert(path, use_).is_some() {
+                        // Disallow multiple capabilities for the same path.
+                        self.errors.push(Error::duplicate_field(decl, "path", path));
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -1978,7 +2014,7 @@ mod tests {
                 Error::missing_field("UseEventDecl", "target_name"),
             ])),
         },
-        test_validate_uses_invalid_identifiers => {
+        test_validate_uses_invalid_identifiers_service => {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
@@ -1987,11 +2023,37 @@ mod tests {
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseServiceDecl", "source"),
+                Error::invalid_field("UseServiceDecl", "source_path"),
+                Error::invalid_field("UseServiceDecl", "target_path"),
+            ])),
+        },
+        test_validate_uses_invalid_identifiers_protocol => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
                     UseDecl::Protocol(UseProtocolDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseProtocolDecl", "source"),
+                Error::invalid_field("UseProtocolDecl", "source_path"),
+                Error::invalid_field("UseProtocolDecl", "target_path"),
+            ])),
+        },
+        test_validate_uses_invalid_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("foo/".to_string()),
@@ -2017,12 +2079,6 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("UseServiceDecl", "source"),
-                Error::invalid_field("UseServiceDecl", "source_path"),
-                Error::invalid_field("UseServiceDecl", "target_path"),
-                Error::invalid_field("UseProtocolDecl", "source"),
-                Error::invalid_field("UseProtocolDecl", "source_path"),
-                Error::invalid_field("UseProtocolDecl", "target_path"),
                 Error::invalid_field("UseDirectoryDecl", "source"),
                 Error::invalid_field("UseDirectoryDecl", "source_path"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
@@ -2063,18 +2119,18 @@ mod tests {
                     UseDecl::Protocol(UseProtocolDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target_path: Some(format!("/{}", "c".repeat(1024))),
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target_path: Some(format!("/{}", "d".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: Some(StorageType::Cache),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target_path: Some(format!("/{}", "e".repeat(1024))),
                     }),
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: Some(format!("{}", "a".repeat(101))),
@@ -2099,6 +2155,41 @@ mod tests {
                 Error::field_too_long("UseRunnerDecl", "source_name"),
                 Error::field_too_long("UseEventDecl", "source_name"),
                 Error::field_too_long("UseEventDecl", "target_name"),
+            ])),
+        },
+        test_validate_conflicting_paths => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/foo".to_string()),
+                        target_path: Some("/bar".to_string()),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/space".to_string()),
+                        target_path: Some("/bar".to_string()),
+                    }),
+                    UseDecl::Protocol(UseProtocolDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/space".to_string()),
+                        target_path: Some("/bar".to_string()),
+                    }),
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/crow".to_string()),
+                        target_path: Some("/bar".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::duplicate_field("UseServiceDecl", "path", "/bar"),
+                Error::duplicate_field("UseProtocolDecl", "path", "/bar"),
+                Error::duplicate_field("UseDirectoryDecl", "path", "/bar"),
             ])),
         },
 
