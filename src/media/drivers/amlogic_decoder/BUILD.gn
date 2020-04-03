@@ -38,10 +38,7 @@ if (target_cpu == "arm64") {
       ":test_support",
     ]
 
-    sources = [
-      "binding.c",
-      "tests/test_support_disabled.cc",
-    ]
+    sources = [ "binding.c" ]
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
