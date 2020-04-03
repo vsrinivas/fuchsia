@@ -208,18 +208,17 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
       final gpuThreads = process.threads
           .where((thread) =>
               thread.name.startsWith(appName) && thread.name.endsWith('.gpu'))
-          .followedBy(process.threads
-            ..where((thread) =>
-                thread.name.startsWith(appName) &&
-                thread.name.endsWith('.raster')))
+          .followedBy(process.threads.where((thread) =>
+              thread.name.startsWith(appName) &&
+              thread.name.endsWith('.raster')))
           .toList();
       if (gpuThreads.isEmpty) {
         print('Warning, found ui thread but no gpu thread for app $appName');
         continue;
       }
       if (gpuThreads.length > 1) {
-        print('Warning, found multiple gpu threads for app $appName. '
-            'Continuing with the first one.');
+        print('Warning, found multiple (${gpuThreads.length}) gpu threads for'
+            'app $appName.  Continuing with the first one.');
       }
 
       final gpuThread = gpuThreads.first;
