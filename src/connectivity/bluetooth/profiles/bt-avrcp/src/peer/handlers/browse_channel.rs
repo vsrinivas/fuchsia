@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     bt_avctp::{self as avctp, AvctpCommand},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
+    fuchsia_syslog::{fx_log_err, fx_vlog},
     futures::{self, Future},
     std::{convert::TryFrom, sync::Arc},
 };
@@ -142,7 +142,6 @@ impl BrowseChannelHandler {
         let target_delegate = self.target_delegate.clone();
 
         async move {
-            fx_log_info!("Command: {:?}", command);
             // Decode the provided `command` into a PduId and command parameters.
             let (pdu_id, parameters) = match BrowseChannelHandler::decode_command(&command) {
                 Ok((id, packet)) => (id, packet),

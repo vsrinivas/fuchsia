@@ -319,6 +319,21 @@ impl TargetDelegate {
 
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
     }
+
+    pub async fn send_set_addressed_player_command(
+        &self,
+        mut player_id: fidl_avrcp::AddressedPlayerId,
+    ) -> Result<(), TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.target_handler {
+                Some(target_handler) => target_handler.set_addressed_player(&mut player_id),
+                None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+            }
+        };
+
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+    }
 }
 
 #[cfg(test)]

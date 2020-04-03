@@ -96,6 +96,7 @@ decoder_enum!(
         RequestContinuingResponse => RequestContinuingResponseCommand,
         AbortContinuingResponse => AbortContinuingResponseCommand,
         SetAbsoluteVolume => SetAbsoluteVolumeCommand,
+        SetAddressedPlayer => SetAddressedPlayerCommand,
     }
 );
 

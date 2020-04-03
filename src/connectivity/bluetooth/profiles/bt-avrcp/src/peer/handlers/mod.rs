@@ -5,7 +5,7 @@
 use super::*;
 
 use {
-    fidl_fuchsia_bluetooth_avrcp::{Notification, TargetPassthroughError},
+    fidl_fuchsia_bluetooth_avrcp::{AddressedPlayerId, Notification, TargetPassthroughError},
     fuchsia_async::Time,
     fuchsia_zircon::Duration,
     futures::future::Either,
@@ -757,6 +757,19 @@ fn handle_abort_continuing_response(
         .map_err(|e| Error::AvctpError(e));
 }
 
+async fn handle_set_addressed_player(
+    cmd: SetAddressedPlayerCommand,
+    target_delegate: Arc<TargetDelegate>,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let player_id = AddressedPlayerId { id: cmd.player_id() };
+    // If the target rejects the requested `player_id`, the StatusCode will be bubbled up
+    // as a reject.
+    let _ = target_delegate.send_set_addressed_player_command(player_id).await?;
+
+    let response = SetAddressedPlayerResponse::new(StatusCode::Success);
+    Ok(Box::new(response))
+}
+
 async fn handle_control_command(
     delegate: Arc<TargetDelegate>,
     continuations: Arc<Continuations>,
@@ -785,7 +798,10 @@ async fn handle_control_command(
             ControlCommand::SetAbsoluteVolume(cmd) => {
                 handle_set_absolute_volume(cmd, delegate).await
             }
-            _ => Err(StatusCode::InvalidCommand),
+            ControlCommand::SetAddressedPlayer(cmd) => {
+                handle_set_addressed_player(cmd, delegate).await
+            }
+            _ => Err(StatusCode::InvalidParameter),
         }
     };
 
@@ -1012,7 +1028,7 @@ mod test {
                         ..Notification::empty()
                     })),
                     TargetHandlerRequest::SetAddressedPlayer { responder, .. } => {
-                        responder.send(&mut Err(TargetAvcError::RejectedInvalidPlayerId))
+                        responder.send(&mut Ok(()))
                     }
                     TargetHandlerRequest::GetMediaPlayerItems { responder, .. } => {
                         responder.send(&mut Err(TargetAvcError::RejectedNoAvailablePlayers))
@@ -1593,6 +1609,39 @@ mod test {
             packet_body,
         )
         .expect_accept();
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_set_addressed_player_command() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x60, // SetAddressedPlayer pdu id
+            0x00, // Single packet
+            0x00, 0x02, // param_len: 2 bytes
+            0x00, 0x02, // player_id
+        ]
+        .to_vec();
+
+        let expected_packet_response: Vec<u8> = [
+            0x60, // SetAddressedPlayer pdu id
+            0x00, // Single packet
+            0x00, 0x01, // param_len, 1 byte
+            0x04, // Response code, success
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Control),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_accept()
+        .expect_body(expected_packet_response);
 
         cmd_handler.handle_command_internal(command).await
     }

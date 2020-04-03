@@ -9,8 +9,9 @@ use std::convert::{TryFrom, TryInto};
 
 mod get_folder_items;
 mod get_total_items;
+mod set_addressed_player;
 
-pub use self::{get_folder_items::*, get_total_items::*};
+pub use self::{get_folder_items::*, get_total_items::*, set_addressed_player::*};
 
 pub_decodable_enum!(
     Scope <u8, Error, OutOfRange> {
