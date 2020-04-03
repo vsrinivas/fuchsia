@@ -30,13 +30,18 @@ const char* const kHelpIntro = R"(fidlcat [ <options> ] [ command [args] ]
   record all fidl calls invoked by the process.  The command may be of the form
   "run <component URL>", in which case the given component will be launched.
 
+  fidlcat will return the code 1 if its parameters are invalid.
+
+  fidlcat expects a debug agent to be running on the target device.  It will
+  return the code 2 if it cannot connect to the debug agent.
+
 Options:
 
 )";
 
 const char* const kRemoteHostHelp = R"(  --connect
-      The host and port of the target Fuchsia instance, of the form
-      [<ipv6_addr>]:port.)";
+      The host and port of the debug agent running on the target Fuchsia
+      instance, of the form [<ipv6_addr>]:port.)";
 
 const char* const kRemotePidHelp = R"(  --remote-pid
       The koid of the remote process. Can be passed multiple times.)";
@@ -144,6 +149,11 @@ const char* const kLogFileHelp = R"(  --log-file=<pathspec>
 const char* const kCompareHelp = R"(  --compare=<path>
       Compare output with the one stored in the given file)";
 
+const char kQuitAgentOnExit[] = R"(  --quit-agent-on-exit
+      Will send a quit message to a connected debug agent in order for it to
+      shutdown. This is so that fidlcat doesn't leak unwanted debug agents on
+      "on-the-fly" debugging sessions.)";
+
 const char* const kHelpHelp = R"(  --help
   -h
       Prints all command-line switches.)";
@@ -217,6 +227,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("verbose", 'v', kVerbosityHelp, &CommandLineOptions::verbose);
   parser.AddSwitch("quiet", 'q', kQuietHelp, &CommandLineOptions::quiet);
   parser.AddSwitch("log-file", 0, kLogFileHelp, &CommandLineOptions::log_file);
+  parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,
+                   &CommandLineOptions::quit_agent_on_exit);
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
 

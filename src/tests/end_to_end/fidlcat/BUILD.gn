@@ -1,0 +1,99 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/host.gni")
+import("//build/testing/environments.gni")
+
+_shared_out_dir = get_label_info(":bogus(${target_toolchain})", "root_out_dir")
+
+dart_test("fidlcat_test") {
+  sources = [ "fidlcat_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":runtime_deps" ]
+
+  args = [ "--data-dir=" + rebase_path(_shared_out_dir) ]
+
+  environments = [
+    # Runs on "main" builders (try and ci) in QEMU environments.
+    qemu_env,
+  ]
+}
+
+# Extract the symbols for the given ELF file from the .build-id directory.
+template("generate_symbols") {
+  assert(defined(invoker.library_label), "Must define 'library_label'")
+  assert(defined(invoker.library_path), "Must define 'library_path'")
+  assert(defined(invoker.output), "Must define 'output'")
+
+  action(target_name) {
+    deps = [ invoker.library_label ]
+    inputs = [ invoker.library_path ]
+    outputs = [ invoker.output ]
+
+    script = "generate_debug.sh"
+
+    args = [
+      "--build-id-dir",
+      rebase_path("$root_build_dir/.build-id"),
+      "--build-id-script",
+      rebase_path("//build/images/elfinfo.py"),
+      "--binary",
+      rebase_path(invoker.library_path),
+      "--output",
+      rebase_path(invoker.output),
+    ]
+  }
+}
+
+generate_symbols("echo_client_cpp_sym") {
+  library_label =
+      "//garnet/examples/fidl/echo_client_cpp:bin($target_toolchain)"
+  library_path = "$_shared_out_dir/echo_client_cpp"
+  output = "${target_gen_dir}/echo_client_cpp.debug"
+}
+
+copy("runtime_deps") {
+  testonly = true
+
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [
+    "$_shared_out_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
+    "$_shared_out_dir/gen/sdk/core.fidl_json.txt",
+    "$host_tools_dir/fidlcat",
+    "${target_gen_dir}/echo_client_cpp.debug",
+  ]
+
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/fidlcat" ]
+  }
+
+  deps = [
+    ":echo_client_cpp_sym",
+    "//garnet/examples/fidl/echo_client_cpp",
+    "//garnet/examples/fidl/echo_server_cpp",
+    "//garnet/examples/fidl/services:echo",
+    "//garnet/packages/prod:run",
+    "//garnet/packages/tools:sl4f",
+    "//sdk:core_fidl_json($target_toolchain)",
+    "//src/developer/debug/debug_agent",
+    "//tools/fidlcat:fidlcat_host($host_toolchain)",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":fidlcat_test($host_toolchain)" ]
+}

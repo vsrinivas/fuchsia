@@ -101,7 +101,8 @@ class InterceptionWorkflow {
                   const std::vector<std::string>& symbol_repo_paths,
                   const std::string& symbol_cache_path,
                   const std::vector<std::string>& symbol_servers,
-                  std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher);
+                  std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher,
+                  bool quit_agent_on_exit);
 
   // Connect the workflow to the host/port pair given.  |and_then| is posted to
   // the loop on completion.

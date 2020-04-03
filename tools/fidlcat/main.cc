@@ -79,14 +79,15 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
   uint16_t port;
   zxdb::Err parse_err = zxdb::ParseHostPort(*(options.connect), &host, &port);
   if (!parse_err.ok()) {
-    FXL_LOG(FATAL) << "Could not parse host/port pair: " << parse_err.msg();
+    fprintf(stderr, "Could not parse host/port pair: %s", parse_err.msg().c_str());
+    exit(1);
   }
 
   auto attach = [workflow, process_koids, remote_name = options.remote_name,
                  params](const zxdb::Err& err) {
     if (!err.ok()) {
-      FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
-      return;
+      fprintf(stderr, "Unable to connect: %s", err.msg().c_str());
+      exit(2);
     }
     FXL_LOG(INFO) << "Connected!";
     if (!process_koids.empty()) {
@@ -164,7 +165,8 @@ int ConsoleMain(int argc, const char* argv[]) {
 
   InterceptionWorkflow workflow;
   workflow.Initialize(options.symbol_paths, options.symbol_repo_paths, options.symbol_cache_path,
-                      options.symbol_servers, std::move(decoder_dispatcher));
+                      options.symbol_servers, std::move(decoder_dispatcher),
+                      options.quit_agent_on_exit);
 
   if (workflow.HasSymbolServers()) {
     for (const auto& server : workflow.GetSymbolServers()) {
