@@ -8,6 +8,13 @@ else
   devshell_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 fi
 
+# We are migrating FX to support ipv4. This variable influences
+# invocations of device-finder to modulate whether ipv4 is enabled or
+# not, and is present to allow negatively affected users to turn the
+# feature off. This flag will be removed once the migration is
+# complete. Tracking Bug: fxb/49230
+export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-true}"
+
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
 source "${devshell_lib_dir}/prebuilt.sh"
@@ -252,7 +259,7 @@ function get-fuchsia-device-addr {
   case "$device" in
     "")
         # Note: the arguments below enable netboot, mdns is always enabled as well.
-        output="$(fx-device-finder list -netboot -ipv4=false "$@")" || {
+        output="$(fx-device-finder list -netboot -ipv4="${FX_ENABLE_IPV4}" "$@")" || {
           code=$?
           fx-error "Device discovery failed with status: $code"
           exit $code
@@ -261,7 +268,7 @@ function get-fuchsia-device-addr {
           fx-error "Multiple devices found."
           fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
           # Note: the arguments below enable netboot, mdns is always enabled as well.
-          devices="$(fx-device-finder list -netboot -ipv4=false -full)" || {
+          devices="$(fx-device-finder list -netboot -ipv4="${FX_ENABLE_IPV4}" -full)" || {
             code=$?
             fx-error "Device discovery failed with status: $code"
             exit $code
@@ -273,7 +280,7 @@ function get-fuchsia-device-addr {
         fi
         echo "${output}" ;;
      # Note: the arguments below enable netboot, mdns is always enabled as well.
-     *) fx-device-finder resolve -device-limit 1 -netboot -ipv4=false "$@" "$device" ;;
+     *) fx-device-finder resolve -device-limit 1 -netboot -ipv4="${FX_ENABLE_IPV4}" "$@" "$device" ;;
   esac
 }
 
