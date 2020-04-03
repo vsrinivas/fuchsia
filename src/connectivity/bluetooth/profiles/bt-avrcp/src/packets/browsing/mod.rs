@@ -8,8 +8,9 @@ use bt_avctp::pub_decodable_enum;
 use std::convert::{TryFrom, TryInto};
 
 mod get_folder_items;
+mod get_total_items;
 
-pub use self::get_folder_items::*;
+pub use self::{get_folder_items::*, get_total_items::*};
 
 pub_decodable_enum!(
     Scope <u8, Error, OutOfRange> {

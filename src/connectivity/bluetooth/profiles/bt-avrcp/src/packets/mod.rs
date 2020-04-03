@@ -111,6 +111,7 @@ pub_decodable_enum! {
         SetAddressedPlayer => 0x60,
         GetFolderItems => 0x71,
         PlayItem => 0x74,
+        GetTotalNumberOfItems => 0x75,
         AddToNowPlaying => 0x90,
         GeneralReject => 0xa0,
     }

@@ -100,6 +100,27 @@ impl BrowseChannelHandler {
 
                 Ok(buf)
             }
+            PduId::GetTotalNumberOfItems => {
+                let get_total_items_cmd = GetTotalNumberOfItemsCommand::decode(&parameters)
+                    .map_err(|_| StatusCode::InvalidParameter)?;
+                fx_vlog!(tag: "avrcp", 2, "Received GetTotalNumberOfItems Command {:?}", get_total_items_cmd);
+
+                // Currently, for GetTotalNumberOfItems, we only support MediaPlayerList scope.
+                if get_total_items_cmd.scope() != Scope::MediaPlayerList {
+                    return Err(StatusCode::InvalidParameter);
+                }
+
+                // Use an arbitrary uid_counter for creating the response. Don't support
+                // multiple players, so this value is irrelevant.
+                let uid_counter: u16 = 0x1234;
+                let resp = GetTotalNumberOfItemsResponse::new(StatusCode::Success, uid_counter, 1);
+
+                // Encode the result into the output buffer.
+                let mut buf = vec![0; resp.encoded_len()];
+                resp.encode(&mut buf[..]).map_err(|_| StatusCode::ParameterContentError)?;
+
+                Ok(buf)
+            }
             _ => {
                 fx_vlog!(tag: "avrcp", 2, "Browse channel Pdu not handled: {:?}", pdu_id);
                 return Err(StatusCode::InvalidParameter);
