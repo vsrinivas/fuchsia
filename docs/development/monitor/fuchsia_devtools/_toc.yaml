@@ -3,10 +3,10 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/development/monitor/system_monitor/README.md
+  path: /docs/development/monitor/fuchsia_devtools/README.md
 - title: "Dockyard"
   section:
-  - include: /docs/development/monitor/system_monitor/dockyard/_toc.yaml
+  - include: /docs/development/monitor/fuchsia_devtools/dockyard/_toc.yaml
 - title: "Harvester"
   section:
-  - include: /docs/development/monitor/system_monitor/harvester/_toc.yaml
+  - include: /docs/development/monitor/fuchsia_devtools/harvester/_toc.yaml

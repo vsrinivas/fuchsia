@@ -3,6 +3,6 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/development/monitor/system_monitor/dockyard/README.md
+  path: /docs/development/monitor/fuchsia_devtools/dockyard/README.md
 - title: "Terms"
-  path: /docs/development/monitor/system_monitor/dockyard/terms.md
+  path: /docs/development/monitor/fuchsia_devtools/dockyard/terms.md

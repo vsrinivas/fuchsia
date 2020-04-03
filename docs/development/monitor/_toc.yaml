@@ -5,6 +5,6 @@ toc:
 - title: "Use fidlcat"
   section:
   - include: /docs/development/monitor/fidlcat/_toc.yaml
-- title: "Use the system monitor"
+- title: "Use Fuchsia DevTools"
   section:
-  - include: /docs/development/monitor/system_monitor/_toc.yaml
+  - include: /docs/development/monitor/fuchsia_devtools/_toc.yaml
