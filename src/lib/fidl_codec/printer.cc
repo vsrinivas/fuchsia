@@ -46,6 +46,28 @@ void PrettyPrinter::DisplayHandle(const zx_handle_info_t& handle) {
   fidl_codec::DisplayHandle(colors_, handle, os_);
 }
 
+void PrettyPrinter::DisplayTime(zx_time_t time_ns) {
+  if (time_ns == ZX_TIME_INFINITE) {
+    (*this) << fidl_codec::Blue << "ZX_TIME_INFINITE" << fidl_codec::ResetColor;
+  } else if (time_ns == ZX_TIME_INFINITE_PAST) {
+    (*this) << fidl_codec::Blue << "ZX_TIME_INFINITE_PAST" << fidl_codec::ResetColor;
+  } else {
+    // Gets the time in seconds.
+    time_t value = time_ns / kOneBillion;
+    struct tm tm;
+    if (localtime_r(&value, &tm) == &tm) {
+      char buffer[100];
+      strftime(buffer, sizeof(buffer), "%c", &tm);
+      // And now, displays the nano seconds.
+      (*this) << fidl_codec::Blue << buffer << " and ";
+      snprintf(buffer, sizeof(buffer), "%09" PRId64, time_ns % kOneBillion);
+      (*this) << buffer << " ns" << fidl_codec::ResetColor;
+    } else {
+      (*this) << fidl_codec::Red << "unknown time" << fidl_codec::ResetColor;
+    }
+  }
+}
+
 void PrettyPrinter::IncrementTabulations() {
   ++tabulations_;
   if (need_to_print_header_) {

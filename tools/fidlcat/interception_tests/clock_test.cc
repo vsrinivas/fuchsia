@@ -72,7 +72,7 @@ std::unique_ptr<SystemCallTest> ZxClockGet(int64_t result, std::string_view resu
 
 CLOCK_GET_DISPLAY_TEST(
     ZxClockGet, ZX_OK,
-    ClockExpected(kClockGetTestValue / kOneBillion,
+    ClockExpected(kClockGetTestValue / fidl_codec::kOneBillion,
                   "\n"
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_get("
                   "clock_id:\x1B[32mclock\x1B[0m: \x1B[31mZX_CLOCK_UTC\x1B[0m)\n"
@@ -102,7 +102,7 @@ std::unique_ptr<SystemCallTest> ZxClockGetMonotonic(int64_t result, std::string_
 
 CLOCK_GET_MONOTONIC_DISPLAY_TEST(
     ZxClockGetMonotonic, kClockGetMonotonicTestValue,
-    ClockExpected(kClockGetMonotonicTestValue / kOneBillion,
+    ClockExpected(kClockGetMonotonicTestValue / fidl_codec::kOneBillion,
                   "\n"
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_get_monotonic()\n"
                   "  -> \x1B[32mtime\x1B[0m: \x1B[34m%c and 115697412 ns\x1B[0m\n")
@@ -134,7 +134,7 @@ std::unique_ptr<SystemCallTest> ZxDeadlineAfter(int64_t result, std::string_view
 
 DEADLINE_AFTER_DISPLAY_TEST(
     ZxDeadlineAfter, kDeadlineAfterTestValue, kDeadlineAfterTestDuration,
-    ClockExpected(kDeadlineAfterTestValue / kOneBillion,
+    ClockExpected(kDeadlineAfterTestValue / fidl_codec::kOneBillion,
                   "\n"
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_deadline_after("
                   "nanoseconds:\x1B[32mduration\x1B[0m: \x1B[34m1000 nano seconds\x1B[0m)\n"

@@ -21,6 +21,7 @@
 namespace fidl_codec {
 
 constexpr int kTabSize = 2;
+constexpr uint64_t kOneBillion = 1'000'000'000L;
 
 struct Colors {
   Colors(const char* new_reset, const char* new_red, const char* new_green, const char* new_blue,
@@ -61,6 +62,9 @@ class PrettyPrinter {
   // Displays a handle. This allows the caller to also display some infered data we have inferered
   // for this handle (if any).
   virtual void DisplayHandle(const zx_handle_info_t& handle);
+
+  // Displays a time.
+  void DisplayTime(zx_time_t time_ns);
 
   void IncrementTabulations();
   void DecrementTabulations();

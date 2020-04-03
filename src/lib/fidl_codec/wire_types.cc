@@ -194,33 +194,193 @@ void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this);
 
 std::string Int8Type::Name() const { return "int8"; }
 
+void Int8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue;
+        if (negative) {
+          printer << '-';
+        }
+        printer << absolute << ResetColor;
+        break;
+    }
+  }
+}
+
 void Int8Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt8Type(this); }
 
 std::string Int16Type::Name() const { return "int16"; }
+
+void Int16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue;
+        if (negative) {
+          printer << '-';
+        }
+        printer << absolute << ResetColor;
+        break;
+    }
+  }
+}
 
 void Int16Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt16Type(this); }
 
 std::string Int32Type::Name() const { return "int32"; }
 
+void Int32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue;
+        if (negative) {
+          printer << '-';
+        }
+        printer << absolute << ResetColor;
+        break;
+    }
+  }
+}
+
 void Int32Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt32Type(this); }
 
-std::string Int64Type::Name() const { return "int64"; }
+std::string Int64Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+      return "int64";
+    case Kind::kTime:
+      return "zx.time";
+  }
+}
+
+void Int64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue;
+        if (negative) {
+          printer << '-';
+        }
+        printer << absolute << ResetColor;
+        break;
+      case Kind::kTime:
+        printer.DisplayTime(static_cast<zx_time_t>(absolute));
+        break;
+    }
+  }
+}
 
 void Int64Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt64Type(this); }
 
 std::string Uint8Type::Name() const { return "uint8"; }
 
+void Uint8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    FXL_DCHECK(!negative);
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue << absolute << ResetColor;
+        break;
+      case Kind::kHexaDecimal:
+        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        break;
+    }
+  }
+}
+
 void Uint8Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint8Type(this); }
 
 std::string Uint16Type::Name() const { return "uint16"; }
+
+void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    FXL_DCHECK(!negative);
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue << absolute << ResetColor;
+        break;
+      case Kind::kHexaDecimal:
+        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        break;
+    }
+  }
+}
 
 void Uint16Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint16Type(this); }
 
 std::string Uint32Type::Name() const { return "uint32"; }
 
+void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    FXL_DCHECK(!negative);
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue << absolute << ResetColor;
+        break;
+      case Kind::kHexaDecimal:
+        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        break;
+    }
+  }
+}
+
 void Uint32Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint32Type(this); }
 
-std::string Uint64Type::Name() const { return "uint64"; }
+std::string Uint64Type::Name() const {
+  switch (kind_) {
+    case Kind::kDecimal:
+    case Kind::kHexaDecimal:
+      return "uint64";
+  }
+}
+
+void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    FXL_DCHECK(!negative);
+    switch (kind_) {
+      case Kind::kDecimal:
+        printer << Blue << absolute << ResetColor;
+        break;
+      case Kind::kHexaDecimal:
+        printer << Blue << std::hex << absolute << std::dec << ResetColor;
+        break;
+    }
+  }
+}
 
 void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(this); }
 

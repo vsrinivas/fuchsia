@@ -134,21 +134,23 @@ std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
     case SyscallType::kUint8:
       return std::make_unique<fidl_codec::Uint8Type>();
     case SyscallType::kUint8Hexa:
-      return std::make_unique<fidl_codec::Uint8Type>(/*hexadecimal_display=*/true);
+      return std::make_unique<fidl_codec::Uint8Type>(fidl_codec::Uint8Type::Kind::kHexaDecimal);
     case SyscallType::kUint16:
       return std::make_unique<fidl_codec::Uint16Type>();
     case SyscallType::kUint16Hexa:
-      return std::make_unique<fidl_codec::Uint16Type>(/*hexadecimal_display=*/true);
+      return std::make_unique<fidl_codec::Uint16Type>(fidl_codec::Uint16Type::Kind::kHexaDecimal);
     case SyscallType::kUint32:
       return std::make_unique<fidl_codec::Uint32Type>();
     case SyscallType::kUint32Hexa:
-      return std::make_unique<fidl_codec::Uint32Type>(/*hexadecimal_display=*/true);
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kHexaDecimal);
     case SyscallType::kUint64:
       return std::make_unique<fidl_codec::Uint64Type>();
     case SyscallType::kUint64Hexa:
-      return std::make_unique<fidl_codec::Uint64Type>(/*hexadecimal_display=*/true);
+      return std::make_unique<fidl_codec::Uint64Type>(fidl_codec::Uint64Type::Kind::kHexaDecimal);
     case SyscallType::kHandle:
       return std::make_unique<fidl_codec::HandleType>();
+    case SyscallType::kTime:
+      return std::make_unique<fidl_codec::Int64Type>(fidl_codec::Int64Type::Kind::kTime);
     default:
       return nullptr;
   }

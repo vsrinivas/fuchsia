@@ -22,7 +22,6 @@
 
 namespace fidlcat {
 
-#define kOneBillion 1'000'000'000L
 #define kSecondsPerMinute 60
 #define kMinutesPerHour 60
 #define kHoursPerDay 24
@@ -189,8 +188,8 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayDuration& duratio
     duration_ns = -duration_ns;
   }
   const char* separator = "";
-  int64_t nanoseconds = duration_ns % kOneBillion;
-  int64_t seconds = duration_ns / kOneBillion;
+  int64_t nanoseconds = duration_ns % fidl_codec::kOneBillion;
+  int64_t seconds = duration_ns / fidl_codec::kOneBillion;
   if (seconds != 0) {
     int64_t minutes = seconds / kSecondsPerMinute;
     if (minutes != 0) {
@@ -252,13 +251,13 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayTime& time) {
   } else if (time.time_ns() == ZX_TIME_INFINITE_PAST) {
     os << time.colors().blue << "ZX_TIME_INFINITE_PAST" << time.colors().reset;
   } else {
-    time_t value = time.time_ns() / kOneBillion;
+    time_t value = time.time_ns() / fidl_codec::kOneBillion;
     struct tm tm;
     if (localtime_r(&value, &tm) == &tm) {
       char buffer[100];
       strftime(buffer, sizeof(buffer), "%c", &tm);
       os << time.colors().blue << buffer << " and ";
-      snprintf(buffer, sizeof(buffer), "%09" PRId64, time.time_ns() % kOneBillion);
+      snprintf(buffer, sizeof(buffer), "%09" PRId64, time.time_ns() % fidl_codec::kOneBillion);
       os << buffer << " ns" << time.colors().reset;
     } else {
       os << time.colors().red << "unknown time" << time.colors().reset;

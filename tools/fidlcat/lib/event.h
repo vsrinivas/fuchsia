@@ -32,7 +32,6 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
 
   void DisplayHandle(const zx_handle_info_t& handle) override;
   void DisplayStatus(zx_status_t status);
-  void DisplayTime(zx_time_t time_ns);
   bool DisplayReturnedValue(SyscallReturnType type, int64_t returned_value);
   void DisplayInline(
       const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,

@@ -504,6 +504,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
   std::string result = ss.str();
   ASSERT_EQ(
       "zx_clock_get_monotonic\n"
+      "zx_nanosleep\n"
       "zx_ticks_get\n"
       "zx_ticks_per_second\n"
       "zx_system_get_dcache_line_size\n"
@@ -516,6 +517,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_channel_read\n"
       "zx_channel_read_etc\n"
       "zx_channel_write\n"
+      "zx_channel_call\n"
       "zx_thread_exit\n"
       "zx_process_exit\n"
       "zx_job_create\n"
@@ -577,7 +579,6 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
       "processargs_extract_handles\n"
       "__libc_extensions_init\n"
       "zx_clock_get\n"
-      "zx_nanosleep\n"
       "zx_deadline_after\n"
       "zx_clock_adjust\n"
       "zx_system_get_version\n"
@@ -598,7 +599,6 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
       "zx_object_set_property\n"
       "zx_object_get_info\n"
       "zx_object_get_child\n"
-      "zx_channel_call\n"
       "zx_socket_create\n"
       "zx_socket_write\n"
       "zx_socket_read\n"

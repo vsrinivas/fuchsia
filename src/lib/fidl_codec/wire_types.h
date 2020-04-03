@@ -128,7 +128,7 @@ class IntegralType : public Type {
                 "IntegralType can only be used for integers");
 
  public:
-  explicit IntegralType(bool hexadecimal_display) : hexadecimal_display_(hexadecimal_display) {}
+  IntegralType() = default;
 
   size_t InlineSize() const override { return sizeof(T); }
 
@@ -147,98 +147,118 @@ class IntegralType : public Type {
     }
     return std::make_unique<IntegerValue>(value, false);
   }
-
-  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override {
-    uint64_t absolute;
-    bool negative;
-    if (!value->GetIntegerValue(&absolute, &negative)) {
-      printer << Red << "invalid" << ResetColor;
-    } else {
-      printer << Blue;
-      if (negative) {
-        printer << '-';
-      }
-      if (hexadecimal_display_) {
-        printer << std::hex << absolute << std::dec << ResetColor;
-      } else {
-        printer << absolute << ResetColor;
-      }
-    }
-  }
-
- private:
-  bool hexadecimal_display_;
 };
 
 class Int8Type : public IntegralType<int8_t> {
  public:
-  explicit Int8Type(bool hexadecimal_display = false) : IntegralType<int8_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal };
+
+  explicit Int8Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Int16Type : public IntegralType<int16_t> {
  public:
-  explicit Int16Type(bool hexadecimal_display = false)
-      : IntegralType<int16_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal };
+
+  explicit Int16Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Int32Type : public IntegralType<int32_t> {
  public:
-  explicit Int32Type(bool hexadecimal_display = false)
-      : IntegralType<int32_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal };
+
+  explicit Int32Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Int64Type : public IntegralType<int64_t> {
  public:
-  explicit Int64Type(bool hexadecimal_display = false)
-      : IntegralType<int64_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal, kTime };
+
+  explicit Int64Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Uint8Type : public IntegralType<uint8_t> {
  public:
-  explicit Uint8Type(bool hexadecimal_display = false)
-      : IntegralType<uint8_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal, kHexaDecimal };
+
+  explicit Uint8Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Uint16Type : public IntegralType<uint16_t> {
  public:
-  explicit Uint16Type(bool hexadecimal_display = false)
-      : IntegralType<uint16_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal, kHexaDecimal };
+
+  explicit Uint16Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Uint32Type : public IntegralType<uint32_t> {
  public:
-  explicit Uint32Type(bool hexadecimal_display = false)
-      : IntegralType<uint32_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal, kHexaDecimal };
+
+  explicit Uint32Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 class Uint64Type : public IntegralType<uint64_t> {
  public:
-  explicit Uint64Type(bool hexadecimal_display = false)
-      : IntegralType<uint64_t>(hexadecimal_display) {}
+  enum class Kind { kDecimal, kHexaDecimal };
+
+  explicit Uint64Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
 
   std::string Name() const override;
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
   void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  Kind kind_;
 };
 
 // A generic type that can be used for any numeric value that corresponds to a
