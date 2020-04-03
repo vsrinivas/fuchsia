@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 // PrebuiltBinaries represents a set of prebuilt binaries.
@@ -32,6 +34,12 @@ type PrebuiltBinaries struct {
 func (pb *PrebuiltBinaries) Get(buildDir string) ([]Binary, error) {
 	if pb.Manifest == "" {
 		return nil, errors.New("no associated debug binary manifest")
+	}
+	exists, err := osmisc.FileExists(filepath.Join(buildDir, pb.Manifest))
+	if err != nil {
+		return nil, err
+	} else if !exists {
+		return nil, os.ErrNotExist
 	}
 	return loadBinaries(filepath.Join(buildDir, pb.Manifest))
 }
