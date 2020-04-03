@@ -68,6 +68,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/lib/pkg_url",
+    "//third_party/googletest:gtest_prod",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -75,11 +76,10 @@ source_set("lib") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/inspector",
-    "//zircon/public/lib/loader-service",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-process",
-    "//third_party/googletest:gtest_prod",
+    "//zircon/system/ulib/loader-service",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]

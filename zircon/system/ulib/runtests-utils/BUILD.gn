@@ -69,13 +69,13 @@ zx_library("runtests-utils") {
       "//zircon/public/lib/fidl-async-cpp",
       "//zircon/public/lib/fs",
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/loader-service",
       "//zircon/public/lib/unittest",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/fidl/fuchsia-logger:c",
+      "//zircon/system/ulib/loader-service",
     ]
-    if (false) { # is_gcc
+    if (false) {  # is_gcc
       if (clang_tool_dir == "") {
         clang_exec = "clang"
       } else {

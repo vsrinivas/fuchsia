@@ -1,2 +1,7 @@
 [
+  {
+    "label": "//zircon/system/ulib/loader-service:loader-service",
+    "name": "loader-service",
+    "sdk": false
+  }
 ]
