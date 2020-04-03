@@ -69,10 +69,12 @@ protocol Resolver {
 protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
+    [Transitional, Deprecated]
     SubscribeToService(service_name service, ServiceSubscriber subscriber);
 
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
+    [Transitional]
     SubscribeToService2(service_name service, ServiceSubscriber2 subscriber);
 };
 
@@ -87,6 +89,7 @@ protocol Publisher {
     /// `perform_probe` indicates whether a probe for a conflicting instance
     /// should be performed before publishing the instance. This value should
     /// be `true` unless the instance name is known to be unique.
+    [Transitional, Deprecated]
     PublishServiceInstance(service_name service,
                            instance_name instance,
                            bool perform_probe,
@@ -100,6 +103,7 @@ protocol Publisher {
     /// `perform_probe` indicates whether a probe for a conflicting instance
     /// should be performed before publishing the instance. This value should
     /// be `true` unless the instance name is known to be unique.
+    [Transitional]
     PublishServiceInstance2(service_name service,
                             instance_name instance,
                             bool perform_probe,
