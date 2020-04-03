@@ -31,7 +31,7 @@ use {
     anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
-    futures::{future::FutureObj, FutureExt},
+    futures::{future::BoxFuture, FutureExt},
     parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard},
     slab::Slab,
     std::{
@@ -127,7 +127,7 @@ pub trait ExpectableStateExt: ExpectableState + Sized {
         &self,
         expectation: Predicate<Self::State>,
         timeout: zx::Duration,
-    ) -> FutureObj<'_, Result<Self::State, Error>>;
+    ) -> BoxFuture<'_, Result<Self::State, Error>>;
 }
 
 impl<T: ExpectableState + Sized> ExpectableStateExt for T
@@ -139,15 +139,18 @@ where
         &self,
         expectation: Predicate<T::State>,
         timeout: zx::Duration,
-    ) -> FutureObj<'_, Result<Self::State, Error>> {
-        let msg = format!("{:?}", expectation);
-        FutureObj::new(Box::pin(
+    ) -> BoxFuture<'_, Result<Self::State, Error>> {
+        let state = self.clone();
+        let exp = expectation.clone();
             ExpectationFuture::new(self.clone(), expectation)
                 .map(|s| Ok(s))
                 .on_timeout(timeout.after_now(), move || {
-                    Err(format_err!("Timed out waiting for expectation: {:?}", msg))
-                }),
-        ))
+                    let state = state.read();
+                    let result = exp.assert_satisfied(&state);
+                    result
+                        .map(|_| state)
+                        .map_err(|err| format_err!("Timed out waiting for expectation, last result:\n{:?}", err))
+                }).boxed()
     }
 }
 
@@ -172,7 +175,6 @@ struct HarnessInner<S, A> {
 
     /// All the tasks currently pending on a state change
     tasks: Slab<task::Waker>,
-
     /// Arbitrary auxilliary data. Commonly used to hold a FIDL proxy, but can
     /// be used to store any data necessary for driving the behavior that will
     /// result in state updates.
