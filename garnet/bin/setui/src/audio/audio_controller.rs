@@ -11,7 +11,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::fx_log_err,
     futures::StreamExt,
     parking_lot::RwLock,
     std::collections::HashMap,
@@ -111,11 +111,6 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                                 .await;
                         }
                         SettingRequest::SetVolume(volume) => {
-                            // TODO(fxb/48736): remove temporary logging.
-                            fx_log_info!("[audio_controller] received SettingRequest::SetVolume");
-
-                            // TODO(fxb/48736): remove temporary logging.
-                            fx_log_info!("[audio_controller] binding volume controls");
                             if check_and_bind_volume_controls(
                                 audio_service_connected.clone(),
                                 service_context_handle.clone(),
@@ -133,8 +128,6 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
 
                             let storage_handle_clone = storage.clone();
                             fasync::spawn(async move {
-                                // TODO(fxb/48736): remove temporary logging.
-                                fx_log_info!("[audio_controller] storing audio values");
                                 let mut storage_lock = storage_handle_clone.lock().await;
                                 storage_lock.write(&stored_value, false).await.unwrap_or_else(
                                     move |e| {

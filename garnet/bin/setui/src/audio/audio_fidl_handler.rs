@@ -5,7 +5,7 @@ use {
     crate::fidl_processor::process_stream, crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender, fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage, fidl_fuchsia_settings::*, fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_info, futures::future::LocalBoxFuture, futures::prelude::*,
+    futures::future::LocalBoxFuture, futures::prelude::*,
 };
 
 impl Sender<AudioSettings> for AudioWatchResponder {
@@ -134,8 +134,6 @@ pub fn spawn_audio_fidl_handler(switchboard_client: SwitchboardClient, stream: A
                             }
                         }
                         AudioRequest::Watch { responder } => {
-                            // TODO(fxb/48736): remove temporary logging.
-                            fx_log_info!("[audio_fidl_handler] watch request received");
                             context.watch(responder).await;
                         }
                         _ => {
@@ -151,20 +149,16 @@ pub fn spawn_audio_fidl_handler(switchboard_client: SwitchboardClient, stream: A
     );
 }
 
-// TODO(fxb/48736): remove temporary logging.
 async fn set_volume(
     switchboard_client: &SwitchboardClient,
     request: SettingRequest,
     responder: AudioSetResponder,
 ) {
-    fx_log_info!("[audio_fidl_handler] received set request: {:?}", request);
     if let Ok(response_rx) = switchboard_client.request(SettingType::Audio, request).await {
         fasync::spawn(async move {
-            fx_log_info!("[audio_fidl_handler] set request processed");
             // Return success if we get a Ok result from the
             // switchboard.
             if let Ok(Ok(_)) = response_rx.await {
-                fx_log_info!("[audio_fidl_handler] set request response sent");
                 responder.send(&mut Ok(())).log_fidl_response_error(AudioMarker::DEBUG_NAME);
             } else {
                 responder
