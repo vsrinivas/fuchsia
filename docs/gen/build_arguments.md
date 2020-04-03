@@ -109,7 +109,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:75
+From //BUILD.gn:71
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -322,6 +322,16 @@ From //build/images/args.gni:45
 
 From //src/media/codec/examples/BUILD.gn:10
 
+### build_id_format
+Build ID algorithm to use for Fuchsia-target code.  This does not apply
+to host or guest code.  The value is the argument to the linker's
+`--build-id=...` switch.  If left empty (the default), the linker's
+default format is used.
+
+**Current value (from the default):** `""`
+
+From //build/config/fuchsia/BUILD.gn:16
+
 ### build_info_board
 Board configuration of the current build
 
@@ -396,7 +406,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:96
+From //products/core.gni:94
 
 **Overridden from the default:** `[]`
 
@@ -404,7 +414,7 @@ From //BUILD.gn:28
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:96
+From //products/core.gni:94
 
 **Overridden from the default:** `[]`
 
@@ -419,8 +429,8 @@ From //src/camera/debug.gni:6
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
 If true, base_packages and cache_packages are checked against dependencies
-on :non_production_tag, which is used to tag any non-production GN labels.
-Build will fail if such dependency is found.
+on //build/validate:non_production_tag, which is used to tag any
+non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
@@ -440,6 +450,15 @@ additionally consumed by the Go toolchain.
 **Current value (from the default):** `"../prebuilt/third_party/clang/linux-x64/bin"`
 
 From //build/config/clang/clang.gni:12
+
+### clang_tool_dir
+Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
+found.  If this is "", then the behavior depends on $use_prebuilt_clang.
+This toolchain is expected to support both Fuchsia targets and the host.
+
+**Current value (from the default):** `""`
+
+From //zircon/public/gn/toolchain/clang.gni:16
 
 ### cobalt_environment
 Selects the Cobalt environment to send data to. Choices:
@@ -495,7 +514,7 @@ We run multiple rustc jobs in parallel, each of which can cause significant
 amount of memory, especially when using LTO. To avoid out-of-memory errors
 we explicitly reduce the number of jobs.
 
-**Current value (from the default):** `29`
+**Current value (from the default):** `32`
 
 From //build/rust/BUILD.gn:15
 
@@ -517,13 +536,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/faae6470cf8900d7ab2f8ae27e0deba36009da1b/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/194e23910c13a68097f7dc7d058fdecd5ebd0b08/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/faae6470cf8900d7ab2f8ae27e0deba36009da1b/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/194e23910c13a68097f7dc7d058fdecd5ebd0b08/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -605,7 +624,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/b5d1395c553909312d0395a8a07ef211c4dafeaf/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -620,7 +639,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/b5d1395c553909312d0395a8a07ef211c4dafeaf/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -670,7 +689,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/b5d1395c553909312d0395a8a07ef211c4dafeaf/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -952,7 +971,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/b5d1395c553909312d0395a8a07ef211c4dafeaf/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -967,14 +986,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/b5d1395c553909312d0395a8a07ef211c4dafeaf/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/b5d1395c553909312d0395a8a07ef211c4dafeaf/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1624,7 +1643,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:18
+From //products/core.gni:16
 
 **Overridden from the default:** `[]`
 
@@ -1632,7 +1651,7 @@ From //build/images/args.gni:61
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:18
+From //products/core.gni:16
 
 **Overridden from the default:** `[]`
 
@@ -2258,7 +2277,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//tools/net/dev_finder:host", "//bundles:tools"]`
 
-From //products/core.gni:98
+From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
@@ -2266,7 +2285,7 @@ From //BUILD.gn:42
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//tools/net/dev_finder:host", "//bundles:tools"]`
 
-From //products/core.gni:98
+From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
@@ -2342,6 +2361,15 @@ TODO(#38701): Remove this when the fork has been merged back in.
 **Current value (from the default):** `false`
 
 From //third_party/dart/sdk_args.gni:10
+
+### use_prebuilt_clang
+If $clang_tool_dir is "", then this controls how the Clang toolchain
+binaries are found.  If true, then the standard prebuilt is used.
+Otherwise the tools are just expected to be found by the shell via `PATH`.
+
+**Current value (from the default):** `true`
+
+From //zircon/public/gn/toolchain/clang.gni:11
 
 ### use_prebuilt_dart_sdk
 Whether to use the prebuilt Dart SDK for everything.
@@ -2562,7 +2590,6 @@ silently clobber the default value shown here.
 ```
 {
   default_deps = ["//:legacy-arm64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-arm64", "//tools:all-hosts"]
-  enable_netsvc_debugging_features = false
   goma_dir = "/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"
   use_ccache = false
   use_goma = false
@@ -2571,13 +2598,13 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:96
+From //BUILD.gn:92
 
 ### zircon_asserts
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:209
+From //build/config/fuchsia/BUILD.gn:219
 
 ### zircon_b_partition
 
@@ -2596,27 +2623,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:70
-
-### zircon_enable_netsvc_debugging_features
-Whether to include various features (non-shipping, insecure, etc.) in the
-netsvc build.
-
-**Current value for `target_cpu = "arm64"`:** `false`
-
-From //products/core.gni:16
-
-**Overridden from the default:** `false`
-
-From //BUILD.gn:63
-
-**Current value for `target_cpu = "x64"`:** `false`
-
-From //products/core.gni:16
-
-**Overridden from the default:** `false`
-
-From //BUILD.gn:63
+From //BUILD.gn:66
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2654,7 +2661,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:67
+From //BUILD.gn:63
 
 ### zvb_partition_name
 Partition name from where image will be verified
