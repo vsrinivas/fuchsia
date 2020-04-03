@@ -593,6 +593,15 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    /// Sets all values of the array to zero starting on `start_slot_index` (inclusive).
+    pub fn array_clear(&self, start_slot_index: usize) -> Result<(), Error> {
+        let array_slots = self.array_slots()? - start_slot_index;
+        let values = vec![0u8; array_slots * 8]; // *8 given that it's 64bit values
+        self.container
+            .write_bytes(utils::offset_for_index(self.index + 1) + start_slot_index * 8, &values);
+        Ok(())
+    }
+
     /// Sets the value of an int ARRAY_VALUE block.
     pub fn array_set_int_slot(&self, slot_index: usize, value: i64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::IntValue)?;
@@ -1468,6 +1477,40 @@ mod tests {
         assert!(block
             .become_array_value(6, ArrayFormat::Default, BlockType::IntValue, 1, 2)
             .is_ok());
+    }
+
+    #[test]
+    fn array_clear() {
+        let mut container = [0u8; constants::MIN_ORDER_SIZE * 4];
+
+        // Write some dummy data in the container after the slot fields.
+        let dummy = vec![0xff, 0xff, 0xff];
+        container[48..51].copy_from_slice(&dummy);
+
+        let block = Block::new_free(&container[..], 0, 2, 0).expect("new free");
+        assert!(block.become_reserved().is_ok());
+        assert!(block
+            .become_array_value(4, ArrayFormat::LinearHistogram, BlockType::UintValue, 3, 2)
+            .is_ok());
+
+        for i in 0..4 {
+            block.array_set_uint_slot(i, (i + 1) as u64).expect("set uint");
+        }
+
+        block.array_clear(1).expect("clear array");
+
+        assert_eq!(1, block.array_get_uint_slot(0).expect("get uint 0"));
+        assert_eq!(container[16..24], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        for i in 1..4 {
+            assert_eq!(0, block.array_get_uint_slot(i).expect("get uint"));
+            assert_eq!(
+                container[16 + (i * 8)..24 + (i * 8)],
+                [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            );
+        }
+
+        // Dummy data shouldn't have been overwritten
+        assert_eq!(&container[48..51], &dummy[..]);
     }
 
     #[test]

@@ -877,6 +877,9 @@ pub trait ArrayProperty {
 
     /// Subtract the given |value| to the property current value at the given |index|.
     fn subtract(&self, index: usize, value: Self::Type);
+
+    /// Sets all slots of the array to 0.
+    fn clear(&self);
 }
 
 /// Utility for generating array property functions (example: set, add, subtract)
@@ -918,6 +921,15 @@ macro_rules! array_property {
                 array_property_fn!(set, $type, $name);
                 array_property_fn!(add, $type, $name);
                 array_property_fn!(subtract, $type, $name);
+
+                fn clear(&self) {
+                    if let Some(ref inner) = self.inner {
+                        inner.state.lock().clear_array(inner.block_index, 0)
+                            .unwrap_or_else(|e| {
+                                fx_log_err!("Failed to clear property. Error: {:?}", e);
+                            });
+                    }
+                }
             }
 
             drop_value_impl!([<$name_cap ArrayProperty>]);
@@ -934,14 +946,18 @@ pub trait HistogramProperty {
     #[allow(missing_docs)]
     type Type;
 
-    #[allow(missing_docs)]
+    /// Inserts a new value in the histogram.
     fn insert(&self, value: Self::Type);
-    #[allow(missing_docs)]
+
+    /// Inserts the given value in the histogram |count| times.
     fn insert_multiple(&self, value: Self::Type, count: usize);
+
+    /// Clears all buckets of the histogram.
+    fn clear(&self);
 }
 
 macro_rules! histogram_property {
-    ($histogram_type:ident, $name_cap:ident, $type:ident) => {
+    ($histogram_type:ident, $name_cap:ident, $type:ident, $clear_start_index:expr) => {
         paste::item! {
             impl HistogramProperty for [<$name_cap $histogram_type HistogramProperty>] {
                 type Type = $type;
@@ -952,6 +968,16 @@ macro_rules! histogram_property {
 
                 fn insert_multiple(&self, value: $type, count: usize) {
                     self.array.add(self.get_index(value), count as $type);
+                }
+
+                fn clear(&self) {
+                    if let Some(ref inner) = self.array.inner {
+                        // Ensure we don't delete the array slots that contain histogram metadata.
+                        inner.state.lock().clear_array(inner.block_index, $clear_start_index)
+                            .unwrap_or_else(|e| {
+                                fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
+                            });
+                    }
                 }
             }
         }
@@ -987,7 +1013,10 @@ macro_rules! linear_histogram_property {
                 }
             }
 
-            histogram_property!(Linear, $name_cap, $type);
+            histogram_property!(
+                Linear, $name_cap, $type,
+                // -2 = the overflow and underflow slots which still need to be cleared.
+                constants::LINEAR_HISTOGRAM_EXTRA_SLOTS - 2);
         }
     };
 }
@@ -1024,7 +1053,10 @@ macro_rules! exponential_histogram_property {
                 }
             }
 
-            histogram_property!(Exponential, $name_cap, $type);
+            histogram_property!(
+                Exponential, $name_cap, $type,
+                // -2 = the overflow and underflow slots which still need to be cleared.
+                constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS - 2);
         }
     };
 }
@@ -1371,6 +1403,11 @@ mod tests {
                 assert_eq!(array_block.array_get_double_slot(i).unwrap(), *value);
             }
 
+            array.clear();
+            for i in 0..5 {
+                assert_eq!(0.0, array_block.array_get_double_slot(i).unwrap());
+            }
+
             assert_eq!(node_block.child_count().unwrap(), 1);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -1405,6 +1442,11 @@ mod tests {
             let block = uint_histogram.get_block().unwrap();
             for (i, value) in [10, 5, 2, 0, 0, 0, 1, 0, 1].iter().enumerate() {
                 assert_eq!(block.array_get_uint_slot(i).unwrap(), *value);
+            }
+
+            uint_histogram.clear();
+            for (i, value) in [10, 5, 0, 0, 0, 0, 0, 0, 0].iter().enumerate() {
+                assert_eq!(*value, block.array_get_uint_slot(i).unwrap());
             }
 
             let double_histogram = node.create_double_linear_histogram(
@@ -1463,6 +1505,11 @@ mod tests {
             let block = uint_histogram.get_block().unwrap();
             for (i, value) in [1, 1, 2, 2, 0, 0, 0, 1, 1].iter().enumerate() {
                 assert_eq!(block.array_get_uint_slot(i).unwrap(), *value);
+            }
+
+            uint_histogram.clear();
+            for (i, value) in [1, 1, 2, 0, 0, 0, 0, 0, 0].iter().enumerate() {
+                assert_eq!(*value, block.array_get_uint_slot(i).unwrap());
             }
 
             let double_histogram = node.create_double_exponential_histogram(

@@ -375,6 +375,14 @@ impl State {
     array_fns!(uint, u64, UintValue);
     array_fns!(double, f64, DoubleValue);
 
+    /// Sets all slots of the array at the given index to zero
+    pub fn clear_array(&mut self, block_index: u32, start_slot_index: usize) -> Result<(), Error> {
+        with_header_lock!(self, {
+            let block = self.heap.get_block(block_index)?;
+            block.array_clear(start_slot_index)
+        })
+    }
+
     fn allocate_reserved_value(
         &mut self,
         name: &str,
