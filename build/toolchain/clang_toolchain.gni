@@ -103,7 +103,7 @@ template("clang_toolchain") {
         buildidtool = rebase_path(
                 "//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
                 root_build_dir)
-        if (output_breakpad_syms) {
+        if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
           dump_syms = rebase_path(
                   "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
                   root_build_dir)
@@ -197,8 +197,14 @@ template("clang_toolchain") {
         # TODO: see the comment below
         command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
+      if (invoker.toolchain_cpu == "wasm") {
+        # default_output_extension doesn't work on binaries
+        unstripped_outfile = "$unstripped_outfile.wasm"
+      }
+
       # TODO(47565): Replacement for rustenv
       command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       outputs = [ outfile ]
@@ -211,7 +217,8 @@ template("clang_toolchain") {
       #    outputs += [ "$outfile.sym" ]
       #  }
       #}
-      if (output_breakpad_syms && invoker.toolchain_os =="fuchsia" && host_os != "mac") {
+      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia" &&
+          host_os != "mac") {
         command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
       if (use_strip) {
@@ -221,18 +228,19 @@ template("clang_toolchain") {
           command +=
               " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
         }
-      }
-      if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
-        command +=
-            " && $buildidtool -build-id-dir .build-id" +
-            " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-            " -entry \".debug=$unstripped_outfile\""
+        if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
+          command +=
+              " && $buildidtool -build-id-dir .build-id" +
+              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+              " -entry \".debug=$unstripped_outfile\""
+        }
       }
     }
 
     tool("rust_rlib") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
+
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
@@ -245,6 +253,7 @@ template("clang_toolchain") {
     tool("rust_staticlib") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
+
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
@@ -267,6 +276,7 @@ template("clang_toolchain") {
     tool("rust_cdylib") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
+
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
@@ -287,12 +297,16 @@ template("clang_toolchain") {
 
         # TODO: see the comment below
         command += "mkdir -p {{output_dir}}/exe.unstripped && "
+      } else {
+        unstripped_outfile = outfile
       }
       command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       if (invoker.toolchain_os == "mac") {
         default_output_extension = ".dylib"
+      } else if (invoker.toolchain_cpu == "wasm32") {
+        default_output_extension = ".wasm"
       } else {
         default_output_extension = ".so"
       }
@@ -307,7 +321,7 @@ template("clang_toolchain") {
       #    outputs += [ "$outfile.sym" ]
       #  }
       #}
-      if (output_breakpad_syms && current_os == "fuchsia") {
+      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
         command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
       if (use_strip) {
@@ -317,18 +331,19 @@ template("clang_toolchain") {
           command +=
               " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
         }
-      }
-      if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
-        command +=
-            " && $buildidtool -build-id-dir .build-id" +
-            " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-            " -entry \".debug=$unstripped_outfile\""
+        if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
+          command +=
+              " && $buildidtool -build-id-dir .build-id" +
+              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+              " -entry \".debug=$unstripped_outfile\""
+        }
       }
     }
 
     tool("rust_macro") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
+
       # TODO(47565): Replacement for rustenv
       command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
@@ -391,7 +406,7 @@ template("clang_toolchain") {
               " -entry \".debug=$unstripped_outfile\""
         }
       }
-      if (output_breakpad_syms && current_os == "fuchsia") {
+      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.sym" ]
         command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
@@ -429,7 +444,7 @@ template("clang_toolchain") {
         }
       }
       outputs = []
-      if (output_breakpad_syms && current_os == "fuchsia") {
+      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.sym" ]
         command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
@@ -470,7 +485,7 @@ template("clang_toolchain") {
         }
       }
       outputs = []
-      if (output_breakpad_syms && current_os == "fuchsia") {
+      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.sym" ]
         command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }

@@ -82,9 +82,12 @@ if (is_mac) {
   ]
 }
 
-assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia",
-       "current_os was neither mac, linux, nor fuchsia")
-assert(current_cpu == "x64" || current_cpu == "arm64")
+assert(
+    current_os == "mac" || current_os == "linux" || current_os == "fuchsia" ||
+        (current_os == "unknown" && current_cpu == "wasm32"),
+    "current_os was neither mac, linux, unknown, nor fuchsia")
+assert(
+    current_cpu == "x64" || current_cpu == "arm64" || current_cpu == "wasm32")
 if (current_os == "mac") {
   _suffix = "apple-darwin"
 } else if (current_os == "linux") {
@@ -96,6 +99,8 @@ if (current_cpu == "x64") {
   rust_target = "x86_64-${_suffix}"
 } else if (current_cpu == "arm64") {
   rust_target = "aarch64-${_suffix}"
+} else if (current_cpu == "wasm32" && current_os == "unknown") {
+  rust_target = "wasm32-unknown-unknown"
 }
 
 _host_os_cpu = "${host_os}-${host_cpu}"

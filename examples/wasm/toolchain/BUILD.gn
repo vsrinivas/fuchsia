@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file shows how to target an unknown-unknown-wasm
+# triple in-tree.
+#
+# In the long run, other triples will likely replace this as the standard
+# and this may even be removed. Using this toolchain should be considered
+# *Highly Experimental*.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "wasm_toolchain_example"
+}
+
+group("toolchain") {
+  deps = [ ":bin($unknown_wasm32_toolchain)" ]
+}

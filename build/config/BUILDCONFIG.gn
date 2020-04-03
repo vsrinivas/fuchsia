@@ -61,6 +61,7 @@ host_x64_toolchain = "//build/toolchain:host_x64"
 host_arm64_toolchain = "//build/toolchain:host_arm64"
 linux_x64_toolchain = "//build/toolchain:linux_x64"
 linux_arm64_toolchain = "//build/toolchain:linux_arm64"
+unknown_wasm32_toolchain = "//build/toolchain:unknown_wasm32"
 
 host_out_dir = get_label_info("//anything($host_toolchain)", "root_out_dir")
 
