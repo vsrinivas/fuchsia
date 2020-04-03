@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use fuchsia_syslog::fx_log_warn;
-use futures::channel::oneshot::Sender;
+use futures::channel::oneshot::{Receiver, Sender};
 use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -347,6 +347,47 @@ pub trait Switchboard {
         setting_type: SettingType,
         listener: ListenCallback,
     ) -> Result<Box<dyn ListenSession + Send + Sync>, Error>;
+}
+
+/// SwitchboardClient is a cloneable wrapper around SwitchboardHandle that
+/// ensures the switchboard lock is not held beyond its intended usage.
+#[derive(Clone)]
+pub struct SwitchboardClient {
+    handle: SwitchboardHandle,
+}
+
+impl SwitchboardClient {
+    pub fn new(handle: &SwitchboardHandle) -> Self {
+        Self { handle: handle.clone() }
+    }
+
+    pub async fn request(
+        &self,
+        setting_type: SettingType,
+        request: SettingRequest,
+    ) -> Result<Receiver<SettingResponseResult>, Error> {
+        let (response_tx, response_rx) =
+            futures::channel::oneshot::channel::<SettingResponseResult>();
+        let mut handle_lock = self.handle.lock().await;
+
+        let result = handle_lock.request(setting_type, request, response_tx);
+
+        match result {
+            Ok(_) => Ok(response_rx),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn listen(
+        &self,
+        setting_type: SettingType,
+        listener: ListenCallback,
+    ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
+        let mut handle_lock = self.handle.lock().await;
+        let result = handle_lock.listen(setting_type, listener);
+
+        return result;
+    }
 }
 
 /// Custom trait used to handle results from responding to FIDL calls.

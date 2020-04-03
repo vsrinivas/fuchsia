@@ -155,7 +155,7 @@ async fn test_environment_startup() {
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let messenger_factory = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
 
@@ -166,7 +166,7 @@ async fn test_sequential() {
     let completion_ack = authority.execute_lifespan(
         Lifespan::Initialization,
         HashSet::new(),
-        switchboard.clone(),
+        switchboard_client,
         service_context,
         true,
     );
@@ -204,7 +204,7 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let messenger_factory = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -213,7 +213,7 @@ async fn test_simultaneous() {
     let completion_ack = authority.execute_lifespan(
         Lifespan::Initialization,
         HashSet::new(),
-        switchboard.clone(),
+        switchboard_client,
         service_context,
         false,
     );
@@ -250,7 +250,7 @@ async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
     let messenger_factory = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -269,7 +269,7 @@ async fn test_err_handling() {
     let completion_ack = authority.execute_lifespan(
         Lifespan::Initialization,
         HashSet::new(),
-        switchboard.clone(),
+        switchboard_client,
         service_context,
         true,
     );
@@ -304,7 +304,7 @@ async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
     let messenger_factory = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -325,7 +325,7 @@ async fn test_available_components() {
     let _ = authority.execute_lifespan(
         Lifespan::Initialization,
         available_components.clone(),
-        switchboard.clone(),
+        switchboard_client.clone(),
         service_context,
         true,
     );

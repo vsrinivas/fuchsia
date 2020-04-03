@@ -6,8 +6,7 @@ use crate::agent::earcons_agent::CommonEarconsParams;
 use crate::audio::play_sound;
 use crate::input::monitor_media_buttons;
 use crate::switchboard::base::{
-    AudioStreamType, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardHandle,
+    AudioStreamType, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
 };
 
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
@@ -67,9 +66,13 @@ impl VolumeChangeEarconsHandler {
         });
     }
 
-    pub fn get_volume_info(&self, switchboard: SwitchboardHandle, setting_type: SettingType) {
+    pub fn get_volume_info(
+        &self,
+        switchboard_client: SwitchboardClient,
+        setting_type: SettingType,
+    ) {
         get_volume_info(
-            switchboard,
+            switchboard_client,
             setting_type,
             self.last_media_user_volume.clone(),
             self.volume_button_event.clone(),
@@ -82,18 +85,15 @@ impl VolumeChangeEarconsHandler {
 ///
 /// Intended to be sent after getting a response from the listen command on the switchboard.
 pub fn get_volume_info(
-    switchboard: SwitchboardHandle,
+    switchboard_client: SwitchboardClient,
     setting_type: SettingType,
     last_media_user_volume: Arc<Mutex<Option<f32>>>,
     volume_button_event: Arc<Mutex<i8>>,
     common_earcons_params: CommonEarconsParams,
 ) {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    let switchboard_clone = switchboard.clone();
     fasync::spawn(async move {
-        match switchboard_clone.lock().await.request(setting_type, SettingRequest::Get, response_tx)
-        {
-            Ok(_) => {
+        match switchboard_client.request(setting_type, SettingRequest::Get).await {
+            Ok(response_rx) => {
                 match response_rx.await {
                     Ok(Ok(response)) => {
                         handle_volume_request(

@@ -4,8 +4,7 @@
 use {
     crate::fidl_processor::process_stream,
     crate::switchboard::base::{
-        SettingRequest, SettingResponseResult, SettingType, SwitchboardHandle,
-        SystemLoginOverrideMode,
+        SettingRequest, SettingType, SwitchboardClient, SystemLoginOverrideMode,
     },
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::*,
@@ -59,10 +58,13 @@ impl Sender<SystemSettings> for SetUiServiceWatchResponder {
     }
 }
 
-pub fn spawn_setui_fidl_handler(switchboard: SwitchboardHandle, stream: SetUiServiceRequestStream) {
+pub fn spawn_setui_fidl_handler(
+    switchboard_client: SwitchboardClient,
+    stream: SetUiServiceRequestStream,
+) {
     process_stream::<SetUiServiceMarker, SystemSettings, SetUiServiceWatchResponder>(
     stream,
-    switchboard,
+    switchboard_client,
     SettingType::System,
     Box::new(
       move |context,
@@ -77,7 +79,7 @@ pub fn spawn_setui_fidl_handler(switchboard: SwitchboardHandle, stream: SetUiSer
                   if operation == AccountOperation::SetLoginOverride {
                     if let Some(login_override) = mutation_info.login_override {
                       set_login_override(
-                        context.switchboard.clone(),
+                        &context.switchboard_client,
                         SystemLoginOverrideMode::from(login_override),
                         responder,
                       )
@@ -112,16 +114,13 @@ pub fn spawn_setui_fidl_handler(switchboard: SwitchboardHandle, stream: SetUiSer
 }
 
 async fn set_login_override(
-    switchboard: SwitchboardHandle,
+    switchboard_client: &SwitchboardClient,
     mode: SystemLoginOverrideMode,
     responder: SetUiServiceMutateResponder,
 ) {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    if switchboard
-        .lock()
+    if let Ok(response_rx) = switchboard_client
+        .request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode))
         .await
-        .request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode), response_tx)
-        .is_ok()
     {
         fasync::spawn(async move {
             // Return success if we get a Ok result from the

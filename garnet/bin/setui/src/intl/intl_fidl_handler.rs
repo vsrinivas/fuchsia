@@ -12,8 +12,7 @@ use futures::FutureExt;
 
 use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
-    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardHandle,
+    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -44,10 +43,8 @@ async fn set(
     settings: IntlSettings,
     responder: IntlSetResponder,
 ) {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    match context.switchboard.lock().await.request(SettingType::Intl, settings.into(), response_tx)
-    {
-        Ok(_) => {
+    match context.switchboard_client.request(SettingType::Intl, settings.into()).await {
+        Ok(response_rx) => {
             fasync::spawn(async move {
                 let result = match response_rx.await {
                     Ok(Ok(_)) => responder.send(&mut Ok(())),
@@ -65,10 +62,10 @@ async fn set(
     }
 }
 
-pub fn spawn_intl_fidl_handler(switchboard: SwitchboardHandle, stream: IntlRequestStream) {
+pub fn spawn_intl_fidl_handler(switchboard_client: SwitchboardClient, stream: IntlRequestStream) {
     process_stream::<IntlMarker, IntlSettings, IntlWatchResponder>(
         stream,
-        switchboard,
+        switchboard_client,
         SettingType::Intl,
         Box::new(
             move |context, req| -> LocalBoxFuture<'_, Result<Option<IntlRequest>, anyhow::Error>> {

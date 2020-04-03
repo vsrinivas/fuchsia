@@ -111,10 +111,10 @@ fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
     request
 }
 
-pub fn spawn_audio_fidl_handler(switchboard_handle: SwitchboardHandle, stream: AudioRequestStream) {
+pub fn spawn_audio_fidl_handler(switchboard_client: SwitchboardClient, stream: AudioRequestStream) {
     process_stream::<AudioMarker, AudioSettings, AudioWatchResponder>(
         stream,
-        switchboard_handle,
+        switchboard_client,
         SettingType::Audio,
         Box::new(
             move |context,
@@ -126,7 +126,7 @@ pub fn spawn_audio_fidl_handler(switchboard_handle: SwitchboardHandle, stream: A
                     match req {
                         AudioRequest::Set { settings, responder } => {
                             if let Some(request) = to_request(settings) {
-                                set_volume(context.switchboard.clone(), request, responder).await
+                                set_volume(&context.switchboard_client, request, responder).await
                             } else {
                                 responder
                                     .send(&mut Err(Error::Unsupported))
@@ -153,13 +153,12 @@ pub fn spawn_audio_fidl_handler(switchboard_handle: SwitchboardHandle, stream: A
 
 // TODO(fxb/48736): remove temporary logging.
 async fn set_volume(
-    switchboard: SwitchboardHandle,
+    switchboard_client: &SwitchboardClient,
     request: SettingRequest,
     responder: AudioSetResponder,
 ) {
     fx_log_info!("[audio_fidl_handler] received set request: {:?}", request);
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    if switchboard.lock().await.request(SettingType::Audio, request, response_tx).is_ok() {
+    if let Ok(response_rx) = switchboard_client.request(SettingType::Audio, request).await {
         fasync::spawn(async move {
             fx_log_info!("[audio_fidl_handler] set request processed");
             // Return success if we get a Ok result from the

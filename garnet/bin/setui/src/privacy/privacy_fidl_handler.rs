@@ -15,8 +15,7 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 
 use crate::switchboard::base::{
-    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardHandle,
+    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
 };
 
 use crate::switchboard::hanging_get_handler::Sender;
@@ -44,17 +43,12 @@ impl From<PrivacySettings> for SettingRequest {
 }
 
 async fn set(
-    switchboard_handle: SwitchboardHandle,
+    switchboard_client: &SwitchboardClient,
     settings: PrivacySettings,
     responder: PrivacySetResponder,
 ) {
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    match switchboard_handle.lock().await.request(
-        SettingType::Privacy,
-        settings.into(),
-        response_tx,
-    ) {
-        Ok(_) => {
+    match switchboard_client.request(SettingType::Privacy, settings.into()).await {
+        Ok(response_rx) => {
             fasync::spawn(async move {
                 let result = match response_rx.await {
                     Ok(_) => responder.send(&mut Ok(())),
@@ -74,10 +68,13 @@ async fn set(
     }
 }
 
-pub fn spawn_privacy_fidl_handler(switchboard: SwitchboardHandle, stream: PrivacyRequestStream) {
+pub fn spawn_privacy_fidl_handler(
+    switchboard_client: SwitchboardClient,
+    stream: PrivacyRequestStream,
+) {
     process_stream::<PrivacyMarker, PrivacySettings, PrivacyWatchResponder>(
         stream,
-        switchboard,
+        switchboard_client,
         SettingType::Privacy,
         Box::new(
             move |context,
@@ -87,7 +84,7 @@ pub fn spawn_privacy_fidl_handler(switchboard: SwitchboardHandle, stream: Privac
                     #[allow(unreachable_patterns)]
                     match req {
                         PrivacyRequest::Set { settings, responder } => {
-                            set(context.switchboard, settings, responder).await;
+                            set(&context.switchboard_client, settings, responder).await;
                         }
                         PrivacyRequest::Watch { responder } => {
                             context.watch(responder).await;
