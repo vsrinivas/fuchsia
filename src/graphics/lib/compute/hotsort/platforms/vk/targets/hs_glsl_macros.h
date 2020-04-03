@@ -537,6 +537,38 @@
 //
 
 //
+// A fast 64-bit comparator for platforms with no support for 64-bit integers.
+//
+// Try both implementations for a particular architecture and define HS_UVEC2_IS_GE.
+//
+// Example:
+//
+//   #define HS_UVEC2_IS_GE HS_UVEC2_IS_GE_V1
+//
+
+//
+// A branchy implementation
+//
+#define HS_UVEC2_IS_GE_V0(a_, b_, ge_)                                                             \
+  {                                                                                                \
+    ge_ = (a_[1] > b_[1]) || ((a_[1] == b_[1]) && (a_[0] >= b_[0]));                               \
+  }
+
+//
+// A branchless implementation.
+//
+#define HS_UVEC2_IS_GE_V1(a_, b_, ge_)                                                             \
+  {                                                                                                \
+    uint borrow_lo, borrow_hi, diff_hi;                                                            \
+                                                                                                   \
+    usubBorrow(a_[0], b_[0], borrow_lo);                                                           \
+                                                                                                   \
+    diff_hi = usubBorrow(a_[1], b_[1], borrow_hi);                                                 \
+                                                                                                   \
+    ge_ = (((diff_hi == 0) ? borrow_lo : borrow_hi) == 0);                                         \
+  }
+
+//
 // INTRA-LANE COMPARE-EXCHANGE VARIANTS (UVEC2)
 //
 // Try each variant when bringing up a new target device.
@@ -544,12 +576,9 @@
 
 #define HS_UVEC2_CMP_XCHG_V0(a, b)                                                                 \
   {                                                                                                \
-    uint borrow_lo, borrow_hi;                                                                     \
+    bool ge;                                                                                       \
                                                                                                    \
-    usubBorrow(a[0], b[0], borrow_lo);                                                             \
-    usubBorrow(a[1], b[1] - borrow_lo, borrow_hi);                                                 \
-                                                                                                   \
-    const bool ge = (borrow_hi == 0);                                                              \
+    HS_UVEC2_IS_GE(a, b, ge)                                                                       \
                                                                                                    \
     if (ge)                                                                                        \
       {                                                                                            \
@@ -561,15 +590,13 @@
 
 #define HS_UVEC2_CMP_XCHG_V1(a, b)                                                                 \
   {                                                                                                \
-    uint borrow_lo, borrow_hi;                                                                     \
+    bool ge;                                                                                       \
                                                                                                    \
-    usubBorrow(a[0], b[0], borrow_lo);                                                             \
-    usubBorrow(a[1], b[1] - borrow_lo, borrow_hi);                                                 \
+    HS_UVEC2_IS_GE(a, b, ge)                                                                       \
                                                                                                    \
-    const bool        ge = (borrow_hi == 0);                                                       \
-    const HS_KEY_TYPE t  = a;                                                                      \
-    a                    = ge ? b : a;                                                             \
-    b                    = ge ? t : b;                                                             \
+    const HS_KEY_TYPE t = a;                                                                       \
+    a                   = ge ? b : a;                                                              \
+    b                   = ge ? t : b;                                                              \
   }
 
 //
@@ -617,12 +644,10 @@
 // this is the default
 #define HS_UVEC2_COND_MIN_MAX_V0(lt, a, b)                                                         \
   {                                                                                                \
-    uint borrow_lo, borrow_hi;                                                                     \
+    bool ge;                                                                                       \
                                                                                                    \
-    usubBorrow(a[0], b[0], borrow_lo);                                                             \
-    usubBorrow(a[1], b[1] - borrow_lo, borrow_hi);                                                 \
+    HS_UVEC2_IS_GE(a, b, ge)                                                                       \
                                                                                                    \
-    const bool ge    = (borrow_hi == 0);                                                           \
     const bool ge_lt = (ge HS_LOGICAL_XOR lt);                                                     \
     a                = ge_lt ? a : b;                                                              \
   }

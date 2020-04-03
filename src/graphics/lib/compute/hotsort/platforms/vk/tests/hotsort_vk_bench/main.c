@@ -7,6 +7,7 @@
 //
 
 #include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -211,6 +212,8 @@ vk_debug_report_cb(VkDebugReportFlagsEXT      flags,
 //
 //
 
+#if 1
+
 static uint32_t
 hs_rand_u32()
 {
@@ -222,17 +225,42 @@ hs_rand_u32()
   return seed;
 }
 
+#else
+
+static uint32_t
+hs_rand_u32()
+{
+  static uint32_t const pattern[] = { 2, 0, 3, 1 };
+  static uint32_t       next      = 0;
+
+  return pattern[next++ % ARRAY_LENGTH_MACRO(pattern)];
+}
+
+#endif
+
 //
 //
 //
 
 static void
-hs_fill_rand(uint32_t * vin_h, uint32_t const count, uint32_t const words)
+hs_fill_rand(uint32_t * vin_h, uint32_t const count, uint32_t const words, uint32_t rand_bits)
 {
 #if 1
+  uint32_t const word_mask = words - 1;
+
+  union
+  {
+    uint64_t qword;
+    uint32_t dwords[2];
+  } const rand_mask = { .qword = (rand_bits == 0) ? 0 : (UINT64_MAX >> (64 - rand_bits)) };
+
+#ifndef NDEBUG
+  fprintf(stderr, "rand_mask(%u) = 0x%016" PRIX64 "\n", rand_bits, rand_mask.qword);
+#endif
+
   for (uint32_t ii = 0; ii < count * words; ii++)
-    vin_h[ii] = hs_rand_u32();
-#elif 0  // in-order
+    vin_h[ii] = hs_rand_u32() & rand_mask.dwords[ii & word_mask];
+#elif 0  // increasing order
   memset(vin_h, 0, count * words * sizeof(uint32_t));
   for (uint32_t ii = 0; ii < count; ii++)
     vin_h[ii * words] = ii;
@@ -533,6 +561,7 @@ main(int argc, char const * argv[])
   uint32_t const warmup     = (argc <= 8) ? HS_BENCH_WARMUP : strtoul(argv[8], NULL, 0);
   bool const     linearize  = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
   bool const     verify     = (argc <= 10) ? true : strtoul(argv[10], NULL, 0) != 0;
+  uint32_t const rand_bits  = (argc <= 11) ? key_val_words * 32 : strtoul(argv[11], NULL, 0);
 
   //
   //
@@ -540,6 +569,15 @@ main(int argc, char const * argv[])
   if (count_lo == 0)
     {
       fprintf(stderr, "Key count must be >= 1\n");
+      exit(EXIT_FAILURE);
+    }
+
+  //
+  //
+  //
+  if (rand_bits > 64)
+    {
+      fprintf(stderr, "Rand bits must be [0,64]\n");
       exit(EXIT_FAILURE);
     }
 
@@ -891,7 +929,7 @@ main(int argc, char const * argv[])
   void * rand_h   = malloc(buffer_out_size);
   void * sorted_h = malloc(buffer_out_size);
 
-  hs_fill_rand(rand_h, buffer_out_count, key_val_words);
+  hs_fill_rand(rand_h, buffer_out_count, key_val_words, rand_bits);
 
   void * rand_map;
 

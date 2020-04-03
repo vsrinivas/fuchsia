@@ -11,6 +11,8 @@
 
 #define HS_DISABLE_COMPARE_64 1
 
+#define HS_UVEC2_IS_GE HS_UVEC2_IS_GE_V0
+
 //
 //
 //
