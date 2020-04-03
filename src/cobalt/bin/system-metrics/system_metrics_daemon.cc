@@ -5,7 +5,7 @@
 // The cobalt system metrics collection daemon uses cobalt to log system metrics
 // on a regular basis.
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
-
+#include <sys/statvfs.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
@@ -54,7 +54,6 @@ namespace {
 std::chrono::seconds SecondsBeforeNextHour(std::chrono::seconds uptime) {
   return std::chrono::seconds(3600 - (uptime.count() % 3600));
 }
-
 }  // namespace
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
@@ -87,8 +86,21 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       temperature_fetcher_(std::move(temperature_fetcher)),
       activity_listener_(std::move(activity_listener)),
       inspector_(context),
-      metric_temperature_node_(inspector_.root().CreateChild(kInspectNodeName)),
-      inspect_readings_(metric_temperature_node_.CreateIntArray(kReadingPropertyName, kTempArraySize)) {}
+      platform_metric_node_(inspector_.root().CreateChild(kInspecPlatformtNodeName)),
+      // Diagram of hierarchy can be seen below:
+      // root
+      // - platform_metrics
+      //   - temperature
+      //     - readings
+      //   - cpu
+      //     - max
+      //     - mean
+      metric_cpu_node_(platform_metric_node_.CreateChild(kCPUNodeName)),
+      inspect_cpu_max_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMax, kCPUArraySize)),
+      inspect_cpu_mean_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMean, kCPUArraySize)),
+      metric_temperature_node_(platform_metric_node_.CreateChild(kTemperatureNodeName)),
+      inspect_temperature_readings_(
+          metric_temperature_node_.CreateIntArray(kReadingTemperature, kTempArraySize)) {}
 
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
@@ -393,6 +405,21 @@ void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {
       cpu_data_stored_ = 0;
     }
   }
+
+  cpu_usage_accumulator_ += cpu_percentage;
+  if (cpu_percentage > cpu_usage_max_) {
+    cpu_usage_max_ = cpu_percentage;
+  }
+  // Every 10 (kInspectSamplePeriod) seconds, write to inspect
+  const size_t kInspectSamplePeriod = 10;
+  if (cpu_data_stored_ % kInspectSamplePeriod == 0) {
+    inspect_cpu_max_.Set(cpu_array_index_, cpu_usage_max_);
+    inspect_cpu_mean_.Set(cpu_array_index_++, cpu_usage_accumulator_ / kInspectSamplePeriod);
+    cpu_usage_max_ = cpu_usage_accumulator_ = 0;
+    if (cpu_array_index_ == kCPUArraySize) {
+      cpu_array_index_ = 0;
+    }
+  }
 }
 
 bool SystemMetricsDaemon::LogCpuToCobalt() {
@@ -437,7 +464,7 @@ std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
   }
   uint32_t bucket_index = temperature_bucket_config_->BucketIndex(temperature);
   temperature_map_[bucket_index]++;
-  inspect_readings_.Set(num_temps_++, temperature);
+  inspect_temperature_readings_.Set(num_temps_++, temperature);
   if (num_temps_ == kTempArraySize) {  // Flush every minute.
     LogTemperatureToCobalt();
     temperature_map_.clear();  // Drop the data even if logging does not succeed.

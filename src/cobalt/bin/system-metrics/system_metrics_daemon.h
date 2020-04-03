@@ -10,8 +10,8 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/inspect/cpp/component.h>
 
 #include <chrono>
@@ -50,11 +50,20 @@ class SystemMetricsDaemon {
   void StartLogging();
 
   // Reader side must use the exact name to read from Inspect.
-  // Details are in b/152076901#comment6.
   // Design doc in go/fuchsia-metrics-to-inspect-design.
-  static constexpr const char* kInspectNodeName = "metrics_temperature";
-  static constexpr const char* kReadingPropertyName = "readings";
+  // Details about config file are in b/152076901#comment6.
+  static constexpr const char* kInspecPlatformtNodeName = "platform_metrics";
+
+  static constexpr const char* kTemperatureNodeName = "temperature";
+  static constexpr const char* kReadingTemperature = "readings";
   static constexpr size_t kTempArraySize = 6;
+
+  // Details about config file are in b/152073842#comment6.
+  static constexpr const char* kCPUNodeName = "cpu";
+  static constexpr const char* kReadingCPUMax = "max";
+  static constexpr const char* kReadingCPUMean = "mean";
+  static constexpr size_t kCPUArraySize = 6;
+
  private:
   friend class SystemMetricsDaemonTest;
   friend class SystemMetricsDaemonInitializationTest;
@@ -182,8 +191,17 @@ class SystemMetricsDaemon {
   fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
 
   sys::ComponentInspector inspector_;
+  inspect::Node platform_metric_node_;
+
+  inspect::Node metric_cpu_node_;
+  inspect::DoubleArray inspect_cpu_max_;
+  inspect::DoubleArray inspect_cpu_mean_;
+  double cpu_usage_accumulator_ = 0;
+  double cpu_usage_max_ = 0;
+  size_t cpu_array_index_ = 0;
+
   inspect::Node metric_temperature_node_;
-  inspect::IntArray inspect_readings_;
+  inspect::IntArray inspect_temperature_readings_;
 
   template <typename T>
   T GetCobaltEventCodeForDeviceState(fuchsia::ui::activity::State state) {

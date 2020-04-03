@@ -8,8 +8,8 @@
 #include <fuchsia/cobalt/cpp/fidl_test_base.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
@@ -54,9 +54,12 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   // Note that we first save an unprotected pointer in fake_clock_ and then
   // give ownership of the pointer to daemon_.
   SystemMetricsDaemonTest()
-      : executor_(dispatcher()), context_provider_(), fake_clock_(new FakeSteadyClock()),
+      : executor_(dispatcher()),
+        context_provider_(),
+        fake_clock_(new FakeSteadyClock()),
         daemon_(new SystemMetricsDaemon(
-            dispatcher(), context_provider_.context(), &fake_logger_, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
+            dispatcher(), context_provider_.context(), &fake_logger_,
+            std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
             std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
@@ -69,7 +72,7 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
         fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsStepSize);
   }
 
-  inspect::Inspector Inspector(){ return *(daemon_->inspector_.inspector()); }
+  inspect::Inspector Inspector() { return *(daemon_->inspector_.inspector()); }
 
   // Run a promise to completion on the default async executor.
   void RunPromiseToCompletion(fit::promise<> promise) {
@@ -77,6 +80,15 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
     RunLoopUntilIdle();
     ASSERT_TRUE(done);
+  }
+
+  fit::result<inspect::Hierarchy> GetHierachyFromInspect() {
+    fit::result<inspect::Hierarchy> hierarchy;
+    RunPromiseToCompletion(
+        inspect::ReadFromInspector(Inspector()).then([&](fit::result<inspect::Hierarchy>& result) {
+          hierarchy = std::move(result);
+        }));
+    return hierarchy;
   }
 
   void UpdateState(fuchsia::ui::activity::State state) { daemon_->UpdateState(state); }
@@ -231,22 +243,48 @@ TEST_F(SystemMetricsDaemonTest, InspectTemperature) {
   SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()));
   EXPECT_EQ(seconds(10).count(), LogTemperature().count());
 
-  // [START get_hierarchy]
-  fit::result<inspect::Hierarchy> hierarchy;
-  RunPromiseToCompletion(inspect::ReadFromInspector( Inspector()).then(
-      [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+  // Get hierarchy, node, and readings
+  fit::result<inspect::Hierarchy> hierarchy = GetHierachyFromInspect();
   ASSERT_TRUE(hierarchy.is_ok());
-  // [END get_hierarchy]
 
-  // [START assertions]
-  auto* metric_temperature = hierarchy.value().GetByPath({"metrics_temperature"});
-  ASSERT_TRUE(metric_temperature);
-  auto* temp_readings = metric_temperature->node().get_property<inspect::IntArrayValue>("readings");
+  auto* metric_node = hierarchy.value().GetByPath({SystemMetricsDaemon::kInspecPlatformtNodeName});
+  ASSERT_TRUE(metric_node);
+  auto* temperature_node = metric_node->GetByPath({SystemMetricsDaemon::kTemperatureNodeName});
+  ASSERT_TRUE(temperature_node);
+  auto* temp_readings = temperature_node->node().get_property<inspect::IntArrayValue>(
+      SystemMetricsDaemon::kReadingTemperature);
   ASSERT_TRUE(temp_readings);
 
   // Expect 6 readings in the array
   EXPECT_EQ(SystemMetricsDaemon::kTempArraySize, temp_readings->value().size());
   EXPECT_EQ(38u, temp_readings->value()[kLastItemInTemperatureBuffer]);
+}
+
+// Tests the method LogCpuUsage() and read from inspect
+TEST_F(SystemMetricsDaemonTest, InspectCpuUsage) {
+  fake_logger_.reset();
+  PrepareForLogCpuUsage();
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
+  // Call count is 1. Just one call to LogCobaltEvents, with 60 events.
+  CheckValues(cobalt::kLogCobaltEvents, 1, fuchsia_system_metrics::kCpuPercentageMetricId,
+              DeviceState::Active, -1 /*no second position event code*/, 1);
+
+  // Get hierarchy, node, and readings
+  fit::result<inspect::Hierarchy> hierarchy = GetHierachyFromInspect();
+  ASSERT_TRUE(hierarchy.is_ok());
+
+  auto* metric_node = hierarchy.value().GetByPath({SystemMetricsDaemon::kInspecPlatformtNodeName});
+  ASSERT_TRUE(metric_node);
+  auto* cpu_node = metric_node->GetByPath({SystemMetricsDaemon::kCPUNodeName});
+  ASSERT_TRUE(cpu_node);
+  auto* cpu_max =
+      cpu_node->node().get_property<inspect::DoubleArrayValue>(SystemMetricsDaemon::kReadingCPUMax);
+  ASSERT_TRUE(cpu_max);
+
+  // Expect 6 readings in the array
+  EXPECT_EQ(SystemMetricsDaemon::kCPUArraySize, cpu_max->value().size());
+  EXPECT_EQ(12.34, cpu_max->value()[0]);
 }
 
 // Tests the method LogFuchsiaUptime(). Uses a local FakeLogger_Sync and
