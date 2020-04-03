@@ -6,57 +6,23 @@
 
 namespace feedback {
 
-InspectManager::InspectManager(inspect::Node* root_node) : node_manager_(root_node) {
-  node_manager_.Get("/fidl/fuchsia.feedback.ComponentDataRegister");
-  component_data_register_stats_.current_num_connections =
-      node_manager_.Get("/fidl/fuchsia.feedback.ComponentDataRegister")
-          .CreateUint("current_num_connections", 0);
-  component_data_register_stats_.total_num_connections =
-      node_manager_.Get("/fidl/fuchsia.feedback.ComponentDataRegister")
-          .CreateUint("total_num_connections", 0);
+InspectManager::InspectManager(inspect::Node* root_node)
+    : node_manager_(root_node),
+      component_data_register_stats_(&node_manager_,
+                                     "/fidl/fuchsia.feedback.ComponentDataRegister"),
+      data_provider_stats_(&node_manager_, "/fidl/fuchsia.feedback.DataProvider"),
+      device_id_provider_stats_(&node_manager_, "/fidl/fuchsia.feedback.DeviceIdProvider") {}
 
-  node_manager_.Get("/fidl/fuchsia.feedback.DataProvider");
-  data_provider_stats_.current_num_connections =
-      node_manager_.Get("/fidl/fuchsia.feedback.DataProvider")
-          .CreateUint("current_num_connections", 0);
-  data_provider_stats_.total_num_connections =
-      node_manager_.Get("/fidl/fuchsia.feedback.DataProvider")
-          .CreateUint("total_num_connections", 0);
-
-  node_manager_.Get("/fidl/fuchsia.feedback.DeviceIdProvider");
-  device_id_provider_stats_.current_num_connections =
-      node_manager_.Get("/fidl/fuchsia.feedback.DeviceIdProvider")
-          .CreateUint("current_num_connections", 0);
-  device_id_provider_stats_.total_num_connections =
-      node_manager_.Get("/fidl/fuchsia.feedback.DeviceIdProvider")
-          .CreateUint("total_num_connections", 0);
+void InspectManager::UpdateComponentDataRegisterProtocolStats(InspectProtocolStatsUpdateFn update) {
+  std::invoke(update, component_data_register_stats_);
 }
 
-void InspectManager::IncrementNumComponentDataRegisterConnections() {
-  component_data_register_stats_.current_num_connections.Add(1);
-  component_data_register_stats_.total_num_connections.Add(1);
+void InspectManager::UpdateDataProviderProtocolStats(InspectProtocolStatsUpdateFn update) {
+  std::invoke(update, data_provider_stats_);
 }
 
-void InspectManager::DecrementCurrentNumComponentDataRegisterConnections() {
-  component_data_register_stats_.current_num_connections.Subtract(1);
-}
-
-void InspectManager::IncrementNumDataProviderConnections() {
-  data_provider_stats_.current_num_connections.Add(1);
-  data_provider_stats_.total_num_connections.Add(1);
-}
-
-void InspectManager::DecrementCurrentNumDataProviderConnections() {
-  data_provider_stats_.current_num_connections.Subtract(1);
-}
-
-void InspectManager::IncrementNumDeviceIdProviderConnections() {
-  device_id_provider_stats_.current_num_connections.Add(1);
-  device_id_provider_stats_.total_num_connections.Add(1);
-}
-
-void InspectManager::DecrementCurrentNumDeviceIdProviderConnections() {
-  device_id_provider_stats_.current_num_connections.Subtract(1);
+void InspectManager::UpdateDeviceIdProviderProtocolStats(InspectProtocolStatsUpdateFn update) {
+  std::invoke(update, device_id_provider_stats_);
 }
 
 }  // namespace feedback

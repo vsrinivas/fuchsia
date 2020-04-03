@@ -80,6 +80,7 @@ TEST_F(InspectManagerTest, InitialInspectTree) {
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
                                  NodeMatches(NameMatches("config")),
                                  NodeMatches(NameMatches("database")),
+                                 NodeMatches(NameMatches("fidl")),
                                  NodeMatches(NameMatches("reports")),
                                  NodeMatches(NameMatches("settings")),
                                  NodeMatches(NameMatches("queue")),

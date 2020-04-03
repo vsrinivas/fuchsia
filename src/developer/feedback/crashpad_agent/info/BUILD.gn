@@ -25,6 +25,7 @@ source_set("info") {
     "//src/developer/feedback/crashpad_agent:config",
     "//src/developer/feedback/crashpad_agent:settings",
     "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils:inspect_protocol_stats",
     "//src/lib/timekeeper",
   ]
 
@@ -53,6 +54,7 @@ source_set("inspect_manager") {
 
   deps = [
     "//src/developer/feedback/crashpad_agent:constants",
+    "//src/developer/feedback/utils:inspect_protocol_stats",
     "//src/developer/feedback/utils:time",
     "//src/lib/files:files",
     "//src/lib/syslog/cpp",

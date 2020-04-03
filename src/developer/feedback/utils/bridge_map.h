@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_BRIDGE_MAP_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_BRIDGE_MAP_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_BRIDGE_MAP_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_BRIDGE_MAP_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
@@ -108,4 +108,4 @@ class BridgeMap {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_BRIDGE_MAP_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_BRIDGE_MAP_H_

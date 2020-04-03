@@ -225,7 +225,7 @@ source_set("inspect_manager") {
     "inspect_manager.h",
   ]
 
-  deps = [ "//src/lib/fxl" ]
-
   public_deps = [ "//src/developer/feedback/utils:inspect_node_manager" ]
+
+  deps = [ "//src/developer/feedback/utils:inspect_protocol_stats" ]
 }

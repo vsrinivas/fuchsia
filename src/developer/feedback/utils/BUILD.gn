@@ -93,6 +93,20 @@ source_set("inspect_node_manager") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("inspect_protocol_stats") {
+  sources = [
+    "inspect_protocol_stats.cc",
+    "inspect_protocol_stats.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/utils:inspect_node_manager",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 source_set("logs") {
   sources = [
     "log_format.cc",

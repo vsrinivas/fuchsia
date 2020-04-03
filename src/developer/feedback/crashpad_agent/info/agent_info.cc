@@ -16,4 +16,8 @@ void AgentInfo::ExposeConfig(const feedback::Config& config) {
   context_->InspectManager().ExposeConfig(config);
 }
 
+void AgentInfo::UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update) {
+  context_->InspectManager().UpdateCrashReporterProtocolStats(update);
+}
+
 }  // namespace feedback

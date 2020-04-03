@@ -16,6 +16,7 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/utils/inspect_node_manager.h"
+#include "src/developer/feedback/utils/inspect_protocol_stats.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -36,6 +37,9 @@ class InspectManager {
 
   // Records the current size of the queue of pending reports.
   void SetQueueSize(uint64_t size);
+
+  // Updates stats related to fuchsia.feedback.CrashReporter.
+  void UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update);
 
   // Increase the total number of cleaned reports by |num_cleaned|.
   void IncreaseReportsCleanedBy(uint64_t num_cleaned);
@@ -133,6 +137,7 @@ class InspectManager {
   Settings settings_;
   Database database_;
   Queue queue_;
+  InspectProtocolStats crash_reporter_stats_;
 
   // Maps a local report ID to a |Report|.
   std::map<std::string, Report> reports_;

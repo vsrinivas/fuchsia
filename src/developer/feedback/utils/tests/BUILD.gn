@@ -31,6 +31,9 @@ test_package("feedback_utils_tests") {
       name = "inspect_node_manager_unittest"
     },
     {
+      name = "inspect_protocol_stats_unittest"
+    },
+    {
       name = "log_format_unittest"
     },
     {
@@ -63,6 +66,7 @@ test_package("feedback_utils_tests") {
     ":bridge_unittest",
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
+    ":inspect_protocol_stats_unittest",
     ":log_format_unittest",
     ":promise_unittest",
     ":rotating_file_set_unittest",
@@ -138,6 +142,19 @@ executable("inspect_node_manager_unittest") {
     "//src/developer/feedback/utils:inspect_node_manager",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("inspect_protocol_stats_unittest") {
+  testonly = true
+
+  sources = [ "inspect_protocol_stats_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/developer/feedback/utils:inspect_protocol_stats",
   ]
 }
 

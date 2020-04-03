@@ -26,6 +26,7 @@ using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
 using inspect::testing::UintIs;
+using testing::Contains;
 using testing::ElementsAre;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
@@ -58,6 +59,8 @@ class CrashpadAgentTest : public UnitTestFixture {
   std::unique_ptr<inspect::Inspector> inspector_;
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
+
+ protected:
   std::unique_ptr<CrashpadAgent> agent_;
 };
 
@@ -77,10 +80,76 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
           NodeMatches(AllOf(NameMatches("database"),
                             PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
                                                             kCrashpadDatabaseMaxSizeInKb))))),
+          AllOf(NodeMatches(NameMatches("fidl")), ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                                                      NameMatches("fuchsia.feedback.CrashReporter"),
+                                                      PropertyList(UnorderedElementsAreArray({
+                                                          UintIs("current_num_connections", 0u),
+                                                          UintIs("total_num_connections", 0u),
+                                                      }))))))),
           NodeMatches(AllOf(NameMatches("settings"),
                             PropertyList(ElementsAre(StringIs(
                                 "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
           NodeMatches(NameMatches("reports")), NodeMatches(NameMatches("queue")))));
+}
+
+TEST_F(CrashpadAgentTest, CrashReporter_CheckInspect) {
+  SetUpAgent();
+  const size_t kNumConnections = 4;
+  fuchsia::feedback::CrashReporterSyncPtr crash_reporters[kNumConnections];
+
+  // Add 3 new connections.
+  agent_->HandleCrashReporterRequest(crash_reporters[0].NewRequest());
+  agent_->HandleCrashReporterRequest(crash_reporters[1].NewRequest());
+  agent_->HandleCrashReporterRequest(crash_reporters[2].NewRequest());
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                      PropertyList(UnorderedElementsAreArray({
+                                                          UintIs("current_num_connections", 3u),
+                                                          UintIs("total_num_connections", 3u),
+                                                      }))))))))));
+
+  // Close 1 connection.
+  crash_reporters[1].Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                      PropertyList(UnorderedElementsAreArray({
+                                                          UintIs("current_num_connections", 2u),
+                                                          UintIs("total_num_connections", 3u),
+                                                      }))))))))));
+
+  // Add 1 new connection.
+  agent_->HandleCrashReporterRequest(crash_reporters[3].NewRequest());
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                      PropertyList(UnorderedElementsAreArray({
+                                                          UintIs("current_num_connections", 3u),
+                                                          UintIs("total_num_connections", 4u),
+                                                      }))))))))));
+
+  // Close remaining connections.
+  crash_reporters[0].Unbind();
+  crash_reporters[2].Unbind();
+  crash_reporters[3].Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("fidl")),
+          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                      PropertyList(UnorderedElementsAreArray({
+                                                          UintIs("current_num_connections", 0u),
+                                                          UintIs("total_num_connections", 4u),
+                                                      }))))))))));
 }
 
 }  // namespace

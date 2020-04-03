@@ -9,6 +9,7 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
+#include "src/developer/feedback/utils/inspect_protocol_stats.h"
 
 namespace feedback {
 
@@ -19,6 +20,9 @@ struct AgentInfo {
 
   // Exposes the static configuration of the agent.
   void ExposeConfig(const feedback::Config& config);
+
+  // Updates stats related to fuchsia.feedback.CrashReporter.
+  void UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update);
 
  private:
   std::shared_ptr<InfoContext> context_;

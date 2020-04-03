@@ -82,7 +82,11 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
 
 void CrashpadAgent::HandleCrashReporterRequest(
     fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
-  crash_reporter_connections_.AddBinding(crash_reporter_.get(), std::move(request), dispatcher_);
+  crash_reporter_connections_.AddBinding(
+      crash_reporter_.get(), std::move(request), dispatcher_, [this](const zx_status_t status) {
+        info_.UpdateCrashReporterProtocolStats(&InspectProtocolStats::CloseConnection);
+      });
+  info_.UpdateCrashReporterProtocolStats(&InspectProtocolStats::NewConnection);
 }
 
 }  // namespace feedback

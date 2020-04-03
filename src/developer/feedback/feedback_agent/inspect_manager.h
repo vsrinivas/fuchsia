@@ -10,6 +10,7 @@
 #include <cstdint>
 
 #include "src/developer/feedback/utils/inspect_node_manager.h"
+#include "src/developer/feedback/utils/inspect_protocol_stats.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -19,33 +20,21 @@ class InspectManager {
  public:
   InspectManager(inspect::Node* root_node);
 
-  // Increments the current and total numbers of ComponentDataRegister connections.
-  void IncrementNumComponentDataRegisterConnections();
-  // Decrements the current number of ComponentDataRegister connections.
-  void DecrementCurrentNumComponentDataRegisterConnections();
+  // Register creating or closing a connection to ComponentDataRegister.
+  void UpdateComponentDataRegisterProtocolStats(InspectProtocolStatsUpdateFn update);
 
-  // Increments the current and total numbers of DataProvider connections.
-  void IncrementNumDataProviderConnections();
-  // Decrements the current number of DataProvider connections.
-  void DecrementCurrentNumDataProviderConnections();
+  // Register creating or closing a connection to DataProvider.
+  void UpdateDataProviderProtocolStats(InspectProtocolStatsUpdateFn update);
 
-  // Increments the current and total numbers of DeviceIdProvider connections.
-  void IncrementNumDeviceIdProviderConnections();
-  // Decrements the current number of DeviceIdProvider connections.
-  void DecrementCurrentNumDeviceIdProviderConnections();
+  // Register creating or closing a connection to DeviceIdProvider.
+  void UpdateDeviceIdProviderProtocolStats(InspectProtocolStatsUpdateFn update);
 
  private:
-  // Inspect node containing stats for a given protocol.
-  struct ProtocolStats {
-    inspect::UintProperty total_num_connections;
-    inspect::UintProperty current_num_connections;
-  };
-
   InspectNodeManager node_manager_;
 
-  ProtocolStats component_data_register_stats_;
-  ProtocolStats data_provider_stats_;
-  ProtocolStats device_id_provider_stats_;
+  InspectProtocolStats component_data_register_stats_;
+  InspectProtocolStats data_provider_stats_;
+  InspectProtocolStats device_id_provider_stats_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };
