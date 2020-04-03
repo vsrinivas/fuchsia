@@ -276,36 +276,19 @@ void Session::NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end
   ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
 }
 
-void Session::SendTrigger(const char* trigger_name) {
-  size_t length_remaining = strlen(trigger_name);
-  if (length_remaining > 100) {
-    fprintf(stderr, "Session: Trigger name too long: %s\n", trigger_name);
+void Session::SendAlert(const char* alert_name) {
+  trace_provider_packet_t packet{};
+
+  size_t alert_name_length = strlen(alert_name);
+  if (alert_name_length > sizeof(packet.data16) + sizeof(packet.data32) + sizeof(packet.data64)) {
+    fprintf(stderr, "Session: Alert name too long: %s\n", alert_name);
     return;
   }
 
-  trace_provider_packet_t packet{};
-  packet.request = TRACE_PROVIDER_TRIGGER;
-  packet.data16 = static_cast<uint16_t>(length_remaining);
-  size_t max_to_copy = sizeof(packet.data32) + sizeof(packet.data64);
-  size_t to_copy = length_remaining > max_to_copy ? max_to_copy : length_remaining;
-  memcpy(&packet.data32, trigger_name, to_copy);
+  packet.request = TRACE_PROVIDER_ALERT;
+  memcpy(&packet.data16, alert_name, alert_name_length);
   auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
   ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
-  trigger_name += to_copy;
-
-  length_remaining -= to_copy;
-  max_to_copy = sizeof(packet.data16) + sizeof(packet.data32) + sizeof(packet.data64);
-  while (status == ZX_OK && length_remaining != 0) {
-    trace_provider_packet_t packet{};
-    packet.request = TRACE_PROVIDER_TRIGGER_CONT;
-    to_copy = length_remaining > max_to_copy ? max_to_copy : length_remaining;
-    memcpy(&packet.data16, trigger_name, to_copy);
-    status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
-    ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
-
-    trigger_name += to_copy;
-    length_remaining -= to_copy;
-  }
 }
 
 }  // namespace internal

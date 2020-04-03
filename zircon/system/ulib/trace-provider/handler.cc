@@ -12,7 +12,7 @@ const trace_handler_ops_t TraceHandler::kOps = {
     .trace_stopped = &TraceHandler::CallTraceStopped,
     .trace_terminated = &TraceHandler::CallTraceTerminated,
     .notify_buffer_full = &TraceHandler::CallNotifyBufferFull,
-    .send_trigger = &TraceHandler::CallSendTrigger};
+    .send_alert = &TraceHandler::CallSendAlert};
 
 TraceHandler::TraceHandler() : trace_handler{.ops = &kOps} {}
 
@@ -39,8 +39,8 @@ void TraceHandler::CallNotifyBufferFull(trace_handler_t* handler, uint32_t wrapp
   static_cast<TraceHandler*>(handler)->NotifyBufferFull(wrapped_count, durable_data_end);
 }
 
-void TraceHandler::CallSendTrigger(trace_handler_t* handler, const char* trigger_name) {
-  static_cast<TraceHandler*>(handler)->SendTrigger(trigger_name);
+void TraceHandler::CallSendAlert(trace_handler_t* handler, const char* alert_name) {
+  static_cast<TraceHandler*>(handler)->SendAlert(alert_name);
 }
 
 }  // namespace trace

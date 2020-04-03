@@ -215,10 +215,12 @@ void trace_context_write_blob_record(trace_context_t* context, trace_blob_type_t
                                      const trace_string_ref_t* name_ref, const void* blob,
                                      size_t blob_size);
 
-// Send a trigger.
+// Sends an alert.
 // |context| must be a valid trace context reference.
-// |trigger_name| is the name of the trigger (max 100 characters).
-void trace_context_send_trigger(trace_context_t* context, const char* trigger_name);
+// |alert_name| is the name of the alert (max 14 characters).
+//
+// This function is thread-safe.
+void trace_context_send_alert(trace_context_t* context, const char* alert_name);
 
 // Writes a kernel object record for the object reference by the specified handle
 // into the trace buffer.  Discards the record if it cannot be written.
@@ -514,14 +516,12 @@ void trace_context_write_flow_end_event_record(trace_context_t* context, trace_t
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_blob_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    const void* blob, size_t blob_size,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_blob_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                           const trace_thread_ref_t* thread_ref,
+                                           const trace_string_ref_t* category_ref,
+                                           const trace_string_ref_t* name_ref, const void* blob,
+                                           size_t blob_size, const trace_arg_t* args,
+                                           size_t num_args);
 
 // Writes a large blob record without metadata into the trace buffer.
 // Discards the record if it cannot be written.
@@ -532,11 +532,10 @@ void trace_context_write_blob_event_record(
 // |blob| is a pointer to the data, and contains |blob_size| bytes.
 //
 // This function is thread-safe.
-void trace_context_write_blob_attachment_record(
-    trace_context_t* context,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    const void* blob, size_t blob_size);
+void trace_context_write_blob_attachment_record(trace_context_t* context,
+                                                const trace_string_ref_t* category_ref,
+                                                const trace_string_ref_t* name_ref,
+                                                const void* blob, size_t blob_size);
 
 // Writes an initialization record into the trace buffer.
 // Discards the record if it cannot be written.

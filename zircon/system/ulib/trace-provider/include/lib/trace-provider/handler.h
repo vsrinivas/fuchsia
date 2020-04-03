@@ -63,8 +63,8 @@ class TraceHandler : public trace_handler_t {
   // thus far written to the durable buffer.
   virtual void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_buffer_offset) {}
 
-  // Called by the trace engine to send a trigger.
-  virtual void SendTrigger(const char* trigger_name) {}
+  // Called by the trace engine to send an alert.
+  virtual void SendAlert(const char* alert_name) {}
 
  private:
   static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
@@ -73,7 +73,7 @@ class TraceHandler : public trace_handler_t {
   static void CallTraceTerminated(trace_handler_t* handler);
   static void CallNotifyBufferFull(trace_handler_t* handler, uint32_t wrapped_count,
                                    uint64_t durable_buffer_offset);
-  static void CallSendTrigger(trace_handler_t* handler, const char* trigger_name);
+  static void CallSendAlert(trace_handler_t* handler, const char* alert_name);
 
   static const trace_handler_ops_t kOps;
 };

@@ -281,15 +281,18 @@ __BEGIN_CDECLS
   } while (0)
 
 #ifndef NTRACE
-#define TRACE_INTERNAL_TRIGGER(trigger_name)                                           \
-  do {                                                                                             \
-    trace_context_t* TRACE_INTERNAL_CONTEXT = trace_acquire_context();                             \
-    if (unlikely(TRACE_INTERNAL_CONTEXT)) {                                                        \
-      trace_internal_trigger_and_release_context(TRACE_INTERNAL_CONTEXT, (trigger_name));                   \
-    }                                                                                              \
+#define TRACE_INTERNAL_ALERT(category_literal, alert_name)                                    \
+  do {                                                                                        \
+    trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;                                           \
+    trace_context_t* TRACE_INTERNAL_CONTEXT =                                                 \
+        trace_acquire_context_for_category((category_literal), &TRACE_INTERNAL_CATEGORY_REF); \
+    if (unlikely(TRACE_INTERNAL_CONTEXT)) {                                                   \
+      trace_internal_send_alert_and_release_context(TRACE_INTERNAL_CONTEXT, (alert_name));    \
+    }                                                                                         \
   } while (0)
 #else
-#define TRACE_INTERNAL_TRIGGER(trigger_name) ((void)(trigger_name), false)
+#define TRACE_INTERNAL_ALERT(category_literal, alert_name) \
+  ((void)(alert_name), (void)(category_literal), false)
 #endif  // NTRACE
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -361,8 +364,8 @@ void trace_internal_write_blob_record_and_release_context(trace_context_t* conte
                                                           const char* name_literal,
                                                           const void* blob, size_t blob_size);
 
-void trace_internal_trigger_and_release_context(trace_context_t* context,
-                                                const char* trigger_name);
+void trace_internal_send_alert_and_release_context(trace_context_t* context,
+                                                   const char* alert_name);
 
 #ifndef NTRACE
 

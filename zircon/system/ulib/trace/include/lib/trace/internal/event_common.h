@@ -392,16 +392,18 @@
 #define TRACE_BLOB(type, name, blob, blob_size) \
   TRACE_INTERNAL_BLOB((type), (name), (blob), (blob_size))
 
-// Sends a trigger.
+// Sends an alert. Alerts are forwarded directly to trace controller clients
+// and are typically used to trigger actions, such as stopping the current
+// trace.
 //
-// |trigger_name| is the name of the trigger to send.
+// |alert_name| is the name of the alert to send.
 //
-// Trigger names are limited to at most 100 characters.
+// Alert names are limited to at most 14 characters.
 //
 // Usage:
-//     TRACE_TRIGGER("my-trigger");
+//     TRACE_ALERT("my-category", "my-alert");
 //
-#define TRACE_TRIGGER(trigger_name) \
-  TRACE_INTERNAL_TRIGGER((trigger_name))
+#define TRACE_ALERT(category_literal, alert_name) \
+  TRACE_INTERNAL_ALERT((category_literal), (alert_name))
 
 #endif  // LIB_TRACE_INTERNAL_EVENT_COMMON_H_
