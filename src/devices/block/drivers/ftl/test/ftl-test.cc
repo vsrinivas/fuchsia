@@ -677,4 +677,28 @@ TEST_F(FtlUpgradeTest, BadBlocksWriteVersion2) {
   ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage1, 2, 0, buffer.data()));
 }
 
+using FtlBadBlockTest = FtlTestWithDriverAccess;
+
+TEST_F(FtlBadBlockTest, FtlSucceedsAfterContinousFailures) {
+  auto options = kDefaultOptions;
+  options.max_bad_blocks = 10;
+  TestOptions driver_options = kDefaultTestOptions;
+  driver_options.bad_block_interval = 5;
+  driver_options.bad_block_burst = 10;
+
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(options, driver_options);
+  // Retain a pointer. The driver's lifetime is tied to ftl_.
+  NdmRamDriver* driver = driver_to_pass.get();
+  ASSERT_NULL(driver->Init());
+  ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+  SetUpBaseTest();
+
+  // One page at a time.
+  SingleLoop(1);
+
+  ASSERT_NO_FATAL_FAILURES(CheckVolume(1, ftl_.num_pages()));
+  ASSERT_TRUE(ftl_.ReAttach());
+  ASSERT_NO_FATAL_FAILURES(CheckVolume(1, ftl_.num_pages()));
+}
+
 }  // namespace
