@@ -41,12 +41,12 @@ executable("memcpy") {
 executable("vkcopy") {
   testonly = true
 
-  sources = [
-    "//src/graphics/tests/common/vulkan_context.cc",
-    "test_vkcopy.cc",
-  ]
+  sources = [ "test_vkcopy.cc" ]
 
-  deps = [ "//src/lib/vulkan" ]
+  deps = [
+    "//src/graphics/tests/common",
+    "//src/lib/vulkan",
+  ]
 
   public_deps = [
     "//src/lib/fxl/test:test_settings",

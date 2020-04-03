@@ -4,10 +4,18 @@
 import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-group("common") {
+source_set("common") {
   testonly = true
 
-  public_deps = [ ":vkcontext" ]
+  sources = [
+    "//src/graphics/tests/common/vulkan_context.cc",
+    "//src/graphics/tests/common/vulkan_context.h",
+  ]
+
+  public_deps = [
+    "//src/lib/vulkan",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 test_package("vulkan-test-common") {
@@ -16,7 +24,6 @@ test_package("vulkan-test-common") {
   tests = [
     {
       name = "vkcontext"
-      #      environments = magma_libvulkan_hardware_envs
     },
   ]
 }
@@ -24,14 +31,12 @@ test_package("vulkan-test-common") {
 executable("vkcontext") {
   testonly = true
 
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  sources = [ "test_vkcontext.cc" ]
 
-  sources = [
-    "//src/graphics/tests/common/vulkan_context.cc",
-    "test_vkcontext.cc",
+  deps = [
+    ":common",
+    "//src/lib/vulkan",
   ]
-
-  deps = [ "//src/lib/vulkan" ]
 
   public_deps = [
     "//src/lib/fxl/test:test_settings",
