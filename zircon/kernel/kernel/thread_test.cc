@@ -406,14 +406,6 @@ bool set_migrate_ready_threads_test() {
     // anything that would block until the workers are migrated.
     for (Thread* worker : workers) {
       worker->SetCpuAffinity(cpu_num_to_mask(kTargetCpu));
-
-      // Validate the thread state.
-      cpu_num_t curr_cpu;
-      {
-        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-        curr_cpu = worker->curr_cpu_;
-      }
-      ASSERT_EQ(curr_cpu, kTargetCpu, "The worker was assigned to the wrong CPU.");
     }
 
     const auto context_switches_after = get_local_percpu()->stats.context_switches;
