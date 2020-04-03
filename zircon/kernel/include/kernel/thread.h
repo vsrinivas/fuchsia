@@ -404,7 +404,14 @@ struct Thread {
   friend class OwnedWaitQueue;
 
   int magic_;
-  struct list_node thread_list_node_ TA_GUARDED(thread_lock);
+
+  struct ThreadListTrait {
+    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
+      return thread.thread_list_node_;
+    }
+  };
+  fbl::DoublyLinkedListNodeState<Thread*> thread_list_node_ TA_GUARDED(thread_lock);
+  using List = fbl::DoublyLinkedList<Thread*, ThreadListTrait>;
 
   // active bits
   struct list_node queue_node_;

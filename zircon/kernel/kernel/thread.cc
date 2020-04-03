@@ -47,6 +47,7 @@
 #include <kernel/timer.h>
 #include <ktl/algorithm.h>
 #include <ktl/atomic.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <lockdep/lockdep.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -67,8 +68,10 @@ KCOUNTER(thread_suspend_count, "thread.suspend")
 // counts the number of calls to resume() that succeeded.
 KCOUNTER(thread_resume_count, "thread.resume")
 
-// global thread list
-static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
+// The global thread list. This is a lazy_init type, since initial thread code
+// manipulates the list before global constructors are run. This is initialized by
+// thread_init_early.
+static lazy_init::LazyInit<Thread::List> thread_list;
 
 // master thread spinlock
 spin_lock_t thread_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
@@ -109,8 +112,13 @@ static void init_thread_lock_state(Thread* t) {
 
 // Default constructor/destructor.
 Thread::Thread() {}
+
 Thread::~Thread() {
+  // At this point, the thread must not be on the global thread list.
+  DEBUG_ASSERT(!thread_list_node_.InContainer());
+
   DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
+
   // owned_wait_queues is a fbl:: list of unmanaged pointers.  It will debug
   // assert if it is not empty when it destructs; we do not need to do so
   // here.
@@ -229,7 +237,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   // add it to the global thread list
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    list_add_head(&thread_list, &t->thread_list_node_);
+    thread_list->push_front(t);
   }
 
   kcounter_add(thread_create_count, 1);
@@ -436,7 +444,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
     }
 
     // remove it from the master thread list
-    list_delete(&thread_list_node_);
+    thread_list->erase(*this);
 
     // clear the structure's magic
     magic_ = 0;
@@ -511,7 +519,7 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
   // if we're detached, then do our teardown here
   if (current_thread->flags_ & THREAD_FLAG_DETACHED) {
     // remove it from the master thread list
-    list_delete(&current_thread->thread_list_node_);
+    thread_list->erase(*current_thread);
 
     // queue a dpc to free the stack and, optionally, the thread structure
     if (current_thread->stack_.base() || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
@@ -546,7 +554,7 @@ void Thread::Forget() {
     __UNUSED Thread* current_thread = Thread::Current::Get();
     DEBUG_ASSERT(current_thread != this);
 
-    list_delete(&thread_list_node_);
+    thread_list->erase(*this);
   }
 
   DEBUG_ASSERT(!list_in_list(&queue_node_));
@@ -1124,7 +1132,7 @@ void thread_construct_first(Thread* t, const char* name) {
   arch_set_current_thread(t);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  list_add_head(&thread_list, &t->thread_list_node_);
+  thread_list->push_front(t);
 }
 
 /**
@@ -1134,6 +1142,10 @@ void thread_construct_first(Thread* t, const char* name) {
  */
 void thread_init_early() {
   DEBUG_ASSERT(arch_curr_cpu_num() == 0);
+
+  // Initialize the thread list. This needs to be done manually now, since initial thread code
+  // manipulates the list before global constructors are run.
+  thread_list.Initialize();
 
   // Init the boot percpu data.
   percpu::InitializeBoot();
@@ -1401,15 +1413,13 @@ void dump_thread(Thread* t, bool full) {
  * @brief  Dump debugging info about all threads
  */
 void dump_all_threads_locked(bool full) {
-  Thread* t;
-
-  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
-    if (t->magic_ != THREAD_MAGIC) {
-      dprintf(INFO, "bad magic on thread struct %p, aborting.\n", t);
-      hexdump(t, sizeof(Thread));
+  for (Thread& t : thread_list.Get()) {
+    if (t.magic_ != THREAD_MAGIC) {
+      dprintf(INFO, "bad magic on thread struct %p, aborting.\n", &t);
+      hexdump(&t, sizeof(Thread));
       break;
     }
-    dump_thread_locked(t, full);
+    dump_thread_locked(&t, full);
   }
 }
 
@@ -1424,32 +1434,29 @@ void dump_thread_user_tid(uint64_t tid, bool full) {
 }
 
 void dump_thread_user_tid_locked(uint64_t tid, bool full) {
-  Thread* t;
-
-  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
-    if (t->user_tid_ != tid) {
+  for (Thread& t : thread_list.Get()) {
+    if (t.user_tid_ != tid) {
       continue;
     }
 
-    if (t->magic_ != THREAD_MAGIC) {
-      dprintf(INFO, "bad magic on thread struct %p, aborting.\n", t);
-      hexdump(t, sizeof(Thread));
+    if (t.magic_ != THREAD_MAGIC) {
+      dprintf(INFO, "bad magic on thread struct %p, aborting.\n", &t);
+      hexdump(&t, sizeof(Thread));
       break;
     }
-    dump_thread_locked(t, full);
+    dump_thread_locked(&t, full);
   }
 }
 
 Thread* thread_id_to_thread_slow(uint64_t tid) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  Thread* t;
-  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
-    if (t->user_tid_ == tid) {
-      return t;
+  for (Thread& t : thread_list.Get()) {
+    if (t.user_tid_ == tid) {
+      return &t;
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 /** @} */
@@ -1457,17 +1464,15 @@ Thread* thread_id_to_thread_slow(uint64_t tid) {
 // Used by ktrace at the start of a trace to ensure that all
 // the running threads, processes, and their names are known
 void ktrace_report_live_threads() {
-  Thread* t;
-
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
-    DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
-    if (t->user_tid_) {
-      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t->user_tid_),
-                  static_cast<uint32_t>(t->user_pid_), t->name_);
+  for (Thread& t : thread_list.Get()) {
+    DEBUG_ASSERT(t.magic_ == THREAD_MAGIC);
+    if (t.user_tid_) {
+      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid_),
+                  static_cast<uint32_t>(t.user_pid_), t.name_);
     } else {
-      ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t)), 0,
-                  t->name_);
+      ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(&t)), 0,
+                  t.name_);
     }
   }
 }
