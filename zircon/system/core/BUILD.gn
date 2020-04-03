@@ -7,7 +7,6 @@ group("core") {
     # TODO(bwb): depend on these from GN when build systems are unified. These are
     # data dependencies of devcoordinator
     "$zx/system/core/devmgr/fragment",
-    "$zx/system/core/pwrbtn-monitor",
     "$zx/system/core/svchost",
   ]
 }

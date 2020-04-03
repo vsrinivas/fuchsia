@@ -85,7 +85,6 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
-    ":bin.pwrbtn-monitor",
 #------------------
 #------------------
     ":bin.sh",
@@ -1258,7 +1257,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/core/ptysvc:ptysvc-manifest",
 #------------------
 #------------------
-    #":bin.pwrbtn-monitor",
+    "//zircon/system/core/pwrbtn-monitor:pwrbtn-monitor-manifest",
 #------------------
     "//zircon/system/uapp/run-vc:run-vc-manifest",
     "//zircon/system/uapp/runtests:runtests-manifest",
