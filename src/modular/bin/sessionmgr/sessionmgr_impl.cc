@@ -421,6 +421,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
 
   session_storage_ =
       std::make_unique<SessionStorage>(ledger_client_.get(), fuchsia::ledger::PageId());
+  OnTerminate(Reset(&session_storage_));
 
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
@@ -428,7 +429,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
       presentation_provider_impl_.get(), (config_.enable_story_shell_preload()),
       &inspect_root_node_));
-
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
@@ -448,7 +448,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
     }
     story_controller_ptr->FocusModule(std::move(mod_name));
   };
-  OnTerminate(Reset(&session_storage_));
+
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master), std::move(module_focuser));
   puppet_master_impl_ =
