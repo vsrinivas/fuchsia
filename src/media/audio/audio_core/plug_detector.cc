@@ -114,8 +114,8 @@ class PlugDetectorImpl : public PlugDetector {
       FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
     });
     device->GetChannel([d = std::move(device), this, is_input, name](
-                           ::fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> req) {
-      observer_(req.TakeChannel(), name, is_input);
+                           ::fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> intf) {
+      observer_(intf.TakeChannel(), name, is_input);
     });
   }
   Observer observer_;
