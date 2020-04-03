@@ -6,11 +6,10 @@
 
 #include <ostream>
 #include <unordered_map>
-#include <unordered_set>
 
 #include <gtest/gtest.h>
 
-#define ASSERT_OK(v) ASSERT_EQ(v, ZX_OK)
+#include "src/lib/testing/predicates/status.h"
 
 namespace vmo_store {
 namespace testing {

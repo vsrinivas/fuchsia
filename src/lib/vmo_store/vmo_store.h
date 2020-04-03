@@ -43,43 +43,100 @@ struct Options {
   fit::optional<PinOptions> pin;
 };
 
-// A data structure that keeps track of registered VMOs using a `BackingStore`.
-// `VmoStore` keeps track of registered VMOs and performs common mapping and pinning operations,
-// providing common operations used in VMO pre-registration on Banjo and FIL APIs.
-// This structure is not thread-safe. Users must provide their own thread-safety accounting for the
-// chosen `BackingStore` format.
-template <typename BackingStore>
-class VmoStore {
+// A base class used to compose `VmoStore`s.
+//
+// Users should not use `VmoStoreBase` directly, use `VmoStore` or `OwnedVmoStore` instead.
+//
+// `Impl` is a base implementation that is either `AbstractStorage` or
+// `VmoStoreBase<AbstractStorage>`.
+template <typename Impl>
+class VmoStoreBase {
  public:
+  static_assert(internal::has_key_v<Impl>, "Backing must define a Key type");
+  static_assert(internal::has_meta_v<Impl>, "Backing must define a Meta type");
   // The key type used to reference VMOs.
-  using Key = typename BackingStore::Key;
+  using Key = typename Impl::Key;
   // User metadata associated with every registered VMO.
-  using Meta = typename BackingStore::Meta;
+  using Meta = typename Impl::Meta;
   using StoredVmo = ::vmo_store::StoredVmo<Meta>;
-
-  template <typename... StoreArgs>
-  explicit VmoStore(Options options, StoreArgs... store_args)
-      : store_(store_args...),
-        options_(std::move(options)){
-
-        };
 
   // Reserves `capacity` slots on the underlying store.
   // Stores that grow automatically may chose to pre-allocate memory on `Reserve`.
   // Stores that do not grow automatically will only increase their memory consumption upon
   // `Reserve` being called.
-  zx_status_t Reserve(size_t capacity) { return store_.Reserve(capacity); }
+  zx_status_t Reserve(size_t capacity) { return impl_.Reserve(capacity); }
 
   // Returns the number of registered VMOs.
-  size_t count() const { return store_.count(); }
+  size_t count() const { return impl_.count(); }
   // Returns `true` if the backing store is full.
   // Stores that grow automatically will never report that they're full.
-  bool is_full() const { return store_.is_full(); }
+  bool is_full() const { return impl_.is_full(); }
+
+ protected:
+  template <typename... StoreArgs>
+  VmoStoreBase(StoreArgs... store_args) : impl_(std::forward<StoreArgs>(store_args)...) {}
+  Impl impl_;
+};
+
+// A data structure that keeps track of registered VMOs using a `Backing` storage type.
+// `VmoStore` keeps track of registered VMOs and performs common mapping and pinning operations,
+// providing common operations used in VMO pre-registration on Banjo and FIDL APIs.
+// This structure is not thread-safe. Users must provide their own thread-safety accounting for the
+// chosen `Backing` format.
+// `Backing` is the data structure used to store the registered VMOs. It must implement
+// `AbstractStorage`.
+//
+// Example usage:
+// ```
+//   using namespace vmo_store;
+//   // Declaring our types first.
+//   // `MyKey` is the key type that is used to register and retrieve VMOs from a VmoStore.
+//   using MyKey = size_t;
+//   // `MyMeta` is extra user metadata associated with every stored VMO (can be `void`).
+//   using MyMeta = std::string;
+//   // Declare our store alias, we're using `HashTableStorage` in this example.
+//   // See `storage_types.h` for other Backing storage types.
+//   using MyVmoStore = VmoStore<HashTableStorage<MyKey, MyMeta>>;
+//   MyVmoStore store(Options{...});
+//
+//   // Now let's register, retrieve, and unregister a `zx::vmo` obtained through `GetVmo()`.
+//   // The second argument to `Register` is our user metadata.
+//   fit::result<size_t, zx_status_t> result = store.Register(GetVmo(), "my first VMO");
+//   size_t key = result.take_value();
+//   auto * my_registered_vmo = store.GetVmo(key);
+//
+//   // Print metadata associated with VMO.
+//   std::cout << "Got Vmo called " << my_registered_vmo->meta() << std::endl;
+//   // see `stored_vmo.h` for other `StoredVmo` methods, like retrieving mapped or pinned memory.
+//
+//   // Finally, unregister the VMO, which will discard the VMO handle along with any mapping or
+//   // pinning.
+//   store.Unregister(key);
+// ```
+//
+// See `OwnedVmoStore` for an alternative API where registration happens through an ownership agent.
+template <typename Backing>
+class VmoStore : public VmoStoreBase<Backing> {
+ public:
+  using typename VmoStoreBase<Backing>::Key;
+  using typename VmoStoreBase<Backing>::Meta;
+  using typename VmoStoreBase<Backing>::StoredVmo;
+
+  static_assert(
+      internal::is_abstract_storage<Backing>,
+      "Backing must implement AbstractStorage, see storage_types.h for build in storage classes");
+
+  template <typename... StoreArgs>
+  explicit VmoStore(Options options, StoreArgs... store_args)
+      : VmoStoreBase<Backing>(std::forward<StoreArgs>(store_args)...),
+        options_(std::move(options)){
+
+        };
 
   // Registers a VMO with this store, returning the key used to access that VMO on success.
   template <typename... MetaArgs>
   fit::result<Key, zx_status_t> Register(zx::vmo vmo, MetaArgs... vmo_args) {
-    return Register(StoredVmo(std::move(vmo), vmo_args...));
+    return Register(StoredVmo(std::move(vmo), std::forward<MetaArgs>(vmo_args)...));
   }
 
   fit::result<Key, zx_status_t> Register(StoredVmo vmo) {
@@ -87,7 +144,7 @@ class VmoStore {
     if (status != ZX_OK) {
       return fit::error(status);
     }
-    auto key = store_.Push(std::move(vmo));
+    auto key = this->impl_.Push(std::move(vmo));
     if (!key.has_value()) {
       return fit::error(ZX_ERR_NO_RESOURCES);
     }
@@ -97,7 +154,8 @@ class VmoStore {
   // Registers a VMO with this store using the provided `key`.
   template <typename... MetaArgs>
   zx_status_t RegisterWithKey(Key key, zx::vmo vmo, MetaArgs... vmo_args) {
-    return RegisterWithKey(std::move(key), StoredVmo(std::move(vmo), vmo_args...));
+    return RegisterWithKey(std::move(key),
+                           StoredVmo(std::move(vmo), std::forward<MetaArgs>(vmo_args)...));
   }
 
   zx_status_t RegisterWithKey(Key key, StoredVmo vmo) {
@@ -105,14 +163,14 @@ class VmoStore {
     if (status != ZX_OK) {
       return status;
     }
-    return store_.Insert(std::move(key), std::move(vmo));
+    return this->impl_.Insert(std::move(key), std::move(vmo));
   }
 
   // Unregisters the VMO at `key`.
   // The VMO handle will be dropped, alongside all the mapping and pinning handles.
   // Returns `ZX_ERR_NOT_FOUND` if `key` does not point to a registered VMO.
   zx_status_t Unregister(Key key) {
-    if (!store_.Erase(key)) {
+    if (!this->impl_.Erase(key)) {
       return ZX_ERR_NOT_FOUND;
     }
     return ZX_OK;
@@ -120,12 +178,15 @@ class VmoStore {
 
   // Gets an _unowned_ pointer to the `StoredVmo` referenced by `key`.
   // Returns `nullptr` if `key` does not point to a register VMO.
-  StoredVmo* GetVmo(Key key) { return store_.Get(key); }
+  StoredVmo* GetVmo(const Key& key) { return this->impl_.Get(key); }
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VmoStore);
 
  private:
   zx_status_t PrepareStore(StoredVmo* vmo) {
+    if (!vmo->vmo()->is_valid()) {
+      return ZX_ERR_BAD_HANDLE;
+    }
     zx_status_t status;
     if (options_.map) {
       const auto& map_options = *options_.map;
@@ -144,7 +205,6 @@ class VmoStore {
     return ZX_OK;
   }
 
-  BackingStore store_;
   Options options_;
 };
 

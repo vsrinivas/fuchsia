@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/predicates/status.h"
 #include "vmo_store.h"
 
 namespace vmo_store {
@@ -15,9 +16,23 @@ namespace testing {
 
 #define ASSERT_RESULT(result) \
   ASSERT_TRUE(result.is_ok()) << "Unexpected error result: " << zx_status_get_string(result.error())
-#define ASSERT_OK(v) ASSERT_EQ(v, ZX_OK)
 
 namespace {
+
+// Move-only metadata class proving that StoredVmo can store move-only values.
+class MoveOnlyMeta {
+ public:
+  MoveOnlyMeta(uint64_t value) : meta_(value) {}
+  MoveOnlyMeta(MoveOnlyMeta&& other) = default;
+  MoveOnlyMeta& operator=(MoveOnlyMeta&&) = default;
+
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MoveOnlyMeta);
+
+  uint64_t meta() const { return meta_; }
+
+ private:
+  uint64_t meta_;
+};
 
 zx::vmo MakeVmo() {
   zx::vmo vmo;
@@ -31,6 +46,11 @@ StoredVmo<M> MakeStoredVmoHelper(zx::vmo vmo, uint64_t v) {
 }
 
 template <>
+StoredVmo<MoveOnlyMeta> MakeStoredVmoHelper(zx::vmo vmo, uint64_t v) {
+  return StoredVmo<MoveOnlyMeta>(std::move(vmo), MoveOnlyMeta(v));
+}
+
+template <>
 StoredVmo<void> MakeStoredVmoHelper(zx::vmo vmo, uint64_t) {
   return StoredVmo<void>(std::move(vmo));
 }
@@ -38,6 +58,11 @@ StoredVmo<void> MakeStoredVmoHelper(zx::vmo vmo, uint64_t) {
 template <typename M>
 void CompareMeta(StoredVmo<M>* vmo, uint64_t compare) {
   ASSERT_EQ(vmo->meta(), static_cast<M>(compare));
+}
+
+template <>
+void CompareMeta(StoredVmo<MoveOnlyMeta>* vmo, uint64_t compare) {
+  ASSERT_EQ(vmo->meta().meta(), compare);
 }
 
 template <>
@@ -122,7 +147,7 @@ class TypedStorageTest : public ::testing::Test {
 using TestTypes = ::testing::Types<SlabStorage<uint64_t, void>, SlabStorage<uint64_t, int32_t>,
                                    SlabStorage<uint8_t>, HashTableStorage<uint64_t, void>,
                                    HashTableStorage<uint64_t, int32_t>, HashTableStorage<uint8_t>,
-                                   TestDynamicStorage>;
+                                   SlabStorage<uint64_t, MoveOnlyMeta>, TestDynamicStorage>;
 
 TYPED_TEST_SUITE(TypedStorageTest, TestTypes);
 
@@ -145,7 +170,7 @@ TYPED_TEST(TypedStorageTest, BasicStoreOperations) {
   ASSERT_OK(store.RegisterWithKey(k3, std::move(vmo))) << "Failed to register with key " << k3;
 
   // Can't insert with a used key.
-  ASSERT_EQ(store.RegisterWithKey(k1, TestFixture::MakeStoredVmo()), ZX_ERR_ALREADY_EXISTS);
+  ASSERT_STATUS(store.RegisterWithKey(k1, TestFixture::MakeStoredVmo()), ZX_ERR_ALREADY_EXISTS);
 
   auto* retrieved = store.GetVmo(k1);
   ASSERT_TRUE(retrieved);
@@ -166,13 +191,22 @@ TYPED_TEST(TypedStorageTest, BasicStoreOperations) {
 
   // Unregister k3 and check that we can't get it anymore nor erase it again.
   ASSERT_OK(store.Unregister(k3));
-  ASSERT_EQ(store.Unregister(k3), ZX_ERR_NOT_FOUND);
+  ASSERT_STATUS(store.Unregister(k3), ZX_ERR_NOT_FOUND);
   ASSERT_EQ(store.GetVmo(k3), nullptr);
   // Check that the VMO handle got destroyed.
   uint64_t vmo_size;
-  ASSERT_EQ(vmo3->get_size(&vmo_size), ZX_ERR_BAD_HANDLE);
+  ASSERT_STATUS(vmo3->get_size(&vmo_size), ZX_ERR_BAD_HANDLE);
 
   ASSERT_EQ(store.count(), 2u);
+
+  // Attempting to register a VMO with an invalid handle will cause an error.
+  auto error_result =
+      store.Register(MakeStoredVmoHelper<typename TestFixture::VmoStore::Meta>(zx::vmo(), 0));
+  ASSERT_TRUE(error_result.is_error()) << "Unexpected key result " << error_result.value();
+  ASSERT_STATUS(error_result.error(), ZX_ERR_BAD_HANDLE);
+  ASSERT_STATUS(store.RegisterWithKey(
+                    k1, MakeStoredVmoHelper<typename TestFixture::VmoStore::Meta>(zx::vmo(), 0)),
+                ZX_ERR_BAD_HANDLE);
 }
 
 }  // namespace testing

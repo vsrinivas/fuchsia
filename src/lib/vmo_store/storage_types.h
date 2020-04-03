@@ -18,9 +18,11 @@ namespace vmo_store {
 // Defines the contract of a base storage class that can be used with `VmoStore`.
 // `Key` is the type of key used to address VMOs in the store.
 // `Meta` is optional user metadata associated with the `StoredVmo`s kept by the store.
-template <typename Key, typename Meta = void>
+template <typename _Key, typename _Meta = void>
 class AbstractStorage {
  public:
+  using Key = _Key;
+  using Meta = _Meta;
   virtual ~AbstractStorage() = default;
   // Reserves `capacity` lots on this store.
   virtual zx_status_t Reserve(size_t capacity) = 0;
@@ -51,8 +53,8 @@ class AbstractStorage {
 template <typename _Key, typename _Meta = void>
 class SlabStorage : public AbstractStorage<_Key, _Meta> {
  public:
-  using Key = _Key;
-  using Meta = _Meta;
+  using typename AbstractStorage<_Key, _Meta>::Key;
+  using typename AbstractStorage<_Key, _Meta>::Meta;
   using Item = StoredVmo<Meta>;
   SlabStorage() = default;
 
@@ -99,8 +101,8 @@ class SlabStorage : public AbstractStorage<_Key, _Meta> {
 template <typename _Key, typename _Meta = void>
 class HashTableStorage : public AbstractStorage<_Key, _Meta> {
  public:
-  using Key = _Key;
-  using Meta = _Meta;
+  using typename AbstractStorage<_Key, _Meta>::Key;
+  using typename AbstractStorage<_Key, _Meta>::Meta;
   using Item = StoredVmo<Meta>;
 
   static_assert(std::numeric_limits<Key>::is_integer);
@@ -179,8 +181,8 @@ class HashTableStorage : public AbstractStorage<_Key, _Meta> {
   fbl::HashTable<Key, std::unique_ptr<HashTableVmo>> table_;
 };
 
-// Provides a BackingStore for `VmoStore` that uses any implementer of `AbstractStorage`.
-// This type of BackingStore can be used if the static dispatch option provided by `VmoStore` is not
+// Provides a `Backing` for `VmoStore` that uses any implementer of `AbstractStorage`.
+// This type of `Backing` can be used if the static dispatch option provided by `VmoStore` is not
 // feasible or desirable, such as providing C-bindings for `VmoStore`, for example.
 // `DynamicDispatchStorage` can be used to have different backing stores decided at runtime, at the
 // cost of having dynamic dispatch method calls, which can be slower than static dispatch.
@@ -196,29 +198,57 @@ class HashTableStorage : public AbstractStorage<_Key, _Meta> {
 //              std::unique_ptr<AbstractStorage>(foo_or_bar ? new Foo() : new Bar());
 // }
 template <typename _Key, typename _Meta = void>
-class DynamicDispatchStorage {
+class DynamicDispatchStorage : public AbstractStorage<_Key, _Meta> {
  public:
-  using Key = _Key;
-  using Meta = _Meta;
+  using typename AbstractStorage<_Key, _Meta>::Key;
+  using typename AbstractStorage<_Key, _Meta>::Meta;
   using Item = StoredVmo<Meta>;
   using Base = AbstractStorage<Key, Meta>;
   using BasePtr = std::unique_ptr<Base>;
 
   explicit DynamicDispatchStorage(BasePtr impl) : impl_(std::move(impl)) {}
 
-  inline zx_status_t Reserve(size_t capacity) { return impl_->Reserve(capacity); }
-  inline zx_status_t Insert(Key key, Item&& vmo) {
+  inline zx_status_t Reserve(size_t capacity) override { return impl_->Reserve(capacity); }
+  inline zx_status_t Insert(Key key, Item&& vmo) override {
     return impl_->Insert(std::move(key), std::move(vmo));
   }
-  inline fit::optional<Key> Push(Item&& vmo) { return impl_->Push(std::move(vmo)); }
-  inline Item* Get(const Key& key) { return impl_->Get(key); }
-  bool Erase(Key key) { return impl_->Erase(std::move(key)); }
-  inline size_t count() const { return impl_->count(); }
-  inline bool is_full() const { return impl_->is_full(); }
+  inline fit::optional<Key> Push(Item&& vmo) override { return impl_->Push(std::move(vmo)); }
+  inline Item* Get(const Key& key) override { return impl_->Get(key); }
+  bool Erase(Key key) override { return impl_->Erase(std::move(key)); }
+  inline size_t count() const override { return impl_->count(); }
+  inline bool is_full() const override { return impl_->is_full(); }
 
  private:
   BasePtr impl_;
 };
+
+namespace internal {
+// Helpers for static assertions to detect type members.
+DECLARE_HAS_MEMBER_TYPE(has_key, Key);
+DECLARE_HAS_MEMBER_TYPE(has_meta, Meta);
+
+#define DECLARE_MEMBER_TYPE_FALLBACK(trait_name, member, check, fallback)  \
+  template <typename T>                                                    \
+  struct trait_name {                                                      \
+   private:                                                                \
+    template <typename C, typename std::enable_if_t<check<C>>* = nullptr>  \
+    static typename C::member test();                                      \
+    template <typename C, typename std::enable_if_t<!check<C>>* = nullptr> \
+    static fallback test();                                                \
+                                                                           \
+   public:                                                                 \
+    using type = decltype(test<T>());                                      \
+  };  // namespace internal
+
+// These provide better errors for is_abstract_storage, avoiding "Undeclared identifier Key|Meta"
+// error messages.
+DECLARE_MEMBER_TYPE_FALLBACK(key_for, Key, has_key_v, size_t)
+DECLARE_MEMBER_TYPE_FALLBACK(meta_for, Meta, has_meta_v, void)
+
+template <typename T>
+static inline constexpr bool is_abstract_storage = std::is_convertible<
+    T*, AbstractStorage<typename key_for<T>::type, typename meta_for<T>::type>*>::value;
+}  // namespace internal
 
 }  // namespace vmo_store
 

@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 source_set("vmo_store") {
   sources = [
     "growable_slab.h",
+    "owned_vmo_store.h",
     "stored_vmo.h",
     "vmo_store.h",
   ]
@@ -25,6 +26,7 @@ executable("test_bin") {
   sources = [
     "growable_slab_test.cc",
     "map_pin_test.cc",
+    "owned_vmo_store_test.cc",
     "typed_store_test.cc",
   ]
   deps = [

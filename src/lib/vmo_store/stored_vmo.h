@@ -16,14 +16,32 @@
 
 namespace vmo_store {
 
+template <typename Meta>
+class StoredVmo;
+
 namespace internal {
 template <typename M>
 struct MetaStorage {
   explicit MetaStorage(M&& value) : value(std::move(value)) {}
+
   M value;
 };
 template <>
 struct MetaStorage<void> {};
+
+// Provides access to `StoredVmo` owner cookie.
+// Inherited by `RegistrationAgent`.
+class VmoOwner {
+ protected:
+  template <typename Meta>
+  void SetOwner(StoredVmo<Meta>* store, void* cookie) {
+    store->set_owner_cookie(cookie);
+  }
+  template <typename Meta>
+  void* GetOwner(const StoredVmo<Meta>& store) {
+    return store.owner_cookie();
+  }
+};
 }  // namespace internal
 
 // A VMO stored in a `VmoStore`.
@@ -96,6 +114,7 @@ class StoredVmo {
 
   // Get an unowned handle to the VMO.
   zx::unowned_vmo vmo() { return zx::unowned_vmo(vmo_); }
+
   // Accessor for pinned VMO regions.
   const fzl::PinnedVmo& pinned_vmo() { return pinned_; }
 
@@ -196,6 +215,12 @@ class StoredVmo {
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StoredVmo);
 
+ protected:
+  friend internal::VmoOwner;
+
+  void set_owner_cookie(void* owner_cookie) { owner_cookie_ = owner_cookie; }
+  void* owner_cookie() const { return owner_cookie_; }
+
  private:
   zx::vmo vmo_;
   internal::MetaStorage<Meta> meta_;
@@ -203,6 +228,8 @@ class StoredVmo {
   fzl::PinnedVmo pinned_;
   // pinned_region_index_ is allocated with `pinned_.region_count()` entries.
   std::unique_ptr<uint64_t[]> pinned_region_index_;
+  // Owner cookie. Set by `internal::VmoOwner`, used to provide ownership association.
+  void* owner_cookie_ = nullptr;
 };
 
 }  // namespace vmo_store
