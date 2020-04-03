@@ -43,8 +43,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  groupid_t BlockGroupID() final { return 0; }
-
   uint32_t DeviceBlockSize() const final { return kMinfsBlockSize; }
 
   block_client::BlockDevice* GetDevice() final { return device_; }
@@ -103,8 +101,6 @@ void FillWriteRequest(MockTransactionHandler* transaction_handler, uint32_t firs
   out_requests[1].length = disk_blocks_per_fs_block;
   out_requests[1].vmo_offset = disk_blocks_per_fs_block;
   out_requests[1].dev_offset = second_block_location * disk_blocks_per_fs_block;
-  out_requests[0].group = transaction_handler->BlockGroupID();
-  out_requests[1].group = transaction_handler->BlockGroupID();
 }
 
 // Tests the alloc_*_counts bitmap reconstruction.

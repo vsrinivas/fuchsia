@@ -1343,7 +1343,6 @@ zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transac
   const uint32_t kDiskBlocksPerFsBlock = kMinfsBlockSize / transaction_handler->DeviceBlockSize();
   request.opcode = opcode;
   request.vmoid = vmoid.get();
-  request.group = transaction_handler->BlockGroupID();
   request.length = kDiskBlocksPerFsBlock;
   request.vmo_offset = 0;
   request.dev_offset = block_num * kDiskBlocksPerFsBlock;

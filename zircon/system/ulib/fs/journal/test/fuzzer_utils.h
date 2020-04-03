@@ -76,7 +76,6 @@ class FuzzedTransactionHandler final : public fs::TransactionHandler {
 
   // TransactionHandler interface
   uint32_t FsBlockSize() const final { return block_size_; }
-  groupid_t BlockGroupID() final { return 1; }
   uint32_t DeviceBlockSize() const final { return block_size_; }
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
   block_client::BlockDevice* GetDevice() final { return nullptr; }

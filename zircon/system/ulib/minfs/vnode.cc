@@ -785,13 +785,11 @@ VnodeMinfs::~VnodeMinfs() {
   size_t request_count = 0;
   block_fifo_request_t request[2];
   if (vmoid_.IsAttached()) {
-    request[request_count].group = fs_->bc_->BlockGroupID();
     request[request_count].vmoid = vmoid_.TakeId();
     request[request_count].opcode = BLOCKIO_CLOSE_VMO;
     request_count++;
   }
   if (vmoid_indirect_.IsAttached()) {
-    request[request_count].group = fs_->bc_->BlockGroupID();
     request[request_count].vmoid = vmoid_indirect_.TakeId();
     request[request_count].opcode = BLOCKIO_CLOSE_VMO;
     request_count++;

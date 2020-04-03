@@ -11,7 +11,6 @@
 #include <memory>
 
 #include <block-client/cpp/block-device.h>
-#include <block-client/cpp/block-group-registry.h>
 #include <fs/transaction/block_transaction.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
@@ -34,7 +33,6 @@ class InspectorTransactionHandler : public fs::TransactionHandler, public storag
   // fs::TransactionHandler interface:
   uint64_t BlockNumberToDevice(uint64_t block_num) const final;
   zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
-  groupid_t BlockGroupID() final { return group_registry_.GroupID(); }
   block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
   // storage::VmoidRegistry interface:
@@ -56,7 +54,6 @@ class InspectorTransactionHandler : public fs::TransactionHandler, public storag
   std::unique_ptr<block_client::BlockDevice> device_;
   fuchsia_hardware_block_BlockInfo info_ = {};
   uint32_t block_size_;
-  block_client::BlockGroupRegistry group_registry_;
 };
 
 }  // namespace disk_inspector

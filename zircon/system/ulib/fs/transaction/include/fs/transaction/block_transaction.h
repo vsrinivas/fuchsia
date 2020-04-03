@@ -76,9 +76,6 @@ class TransactionHandler {
   virtual zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations);
 
 #ifdef __Fuchsia__
-  // Acquires the block group on which the transaction should be issued.
-  virtual groupid_t BlockGroupID() = 0;
-
   // Acquires the block size of the underlying device.
   // TODO(rvargas): Remove this method.
   virtual uint32_t DeviceBlockSize() const = 0;

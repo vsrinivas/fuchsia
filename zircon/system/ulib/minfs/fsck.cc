@@ -848,14 +848,12 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
       kMinfsBlockSize / transaction_handler->DeviceBlockSize();
   request[0].opcode = BLOCKIO_WRITE;
   request[0].vmoid = vmoid.get();
-  request[0].group = transaction_handler->BlockGroupID();
   request[0].length = disk_blocks_per_fs_block;
   request[0].vmo_offset = 0;
   request[0].dev_offset = kSuperblockStart * disk_blocks_per_fs_block;
 
   request[1].opcode = BLOCKIO_WRITE;
   request[1].vmoid = vmoid.get();
-  request[1].group = transaction_handler->BlockGroupID();
   request[1].length = disk_blocks_per_fs_block;
   request[1].vmo_offset = 0;
   if ((info->flags & kMinfsFlagFVM) == 0) {

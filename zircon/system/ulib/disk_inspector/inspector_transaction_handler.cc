@@ -46,7 +46,6 @@ zx_status_t InspectorTransactionHandler::RunOperation(const storage::Operation& 
   }
 
   block_fifo_request_t request;
-  request.group = BlockGroupID();
   request.vmoid = buffer->vmoid();
   request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
   request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);

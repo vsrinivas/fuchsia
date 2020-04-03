@@ -25,7 +25,6 @@
 #include <blobfs/format.h>
 #include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
-#include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -102,8 +101,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   }
 
   zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
-
-  groupid_t BlockGroupID() final;
 
   block_client::BlockDevice* GetDevice() final { return block_device_.get(); }
 
@@ -276,7 +273,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   async_dispatcher_t* dispatcher_ = nullptr;
   std::unique_ptr<BlockDevice> block_device_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
-  block_client::BlockGroupRegistry group_registry_;
   Writability writability_;
   CompressionAlgorithm write_compression_algorithm_;
   zx::resource vmex_resource_;

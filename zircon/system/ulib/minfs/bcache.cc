@@ -121,8 +121,6 @@ zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, ui
   return ZX_OK;
 }
 
-groupid_t Bcache::BlockGroupID() { return group_registry_.GroupID(); }
-
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 
 zx_status_t Bcache::RunOperation(const storage::Operation& operation,
@@ -133,7 +131,6 @@ zx_status_t Bcache::RunOperation(const storage::Operation& operation,
   }
 
   block_fifo_request_t request;
-  request.group = BlockGroupID();
   request.vmoid = buffer->vmoid();
   request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
   request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);

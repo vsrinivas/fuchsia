@@ -33,8 +33,6 @@ class MockTransactionHandler : public TransactionHandler {
     return DeviceBlockSize() * static_cast<uint32_t>(kDiskBlockRatio);
   }
 
-  groupid_t BlockGroupID() final { return 1; }
-
   uint32_t DeviceBlockSize() const final { return 8192; }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }

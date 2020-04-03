@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unordered_set>
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -239,6 +243,132 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   // But now, other (previously valid) block methods fail, because FIDL has
   // closed the channel.
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->BlockGetInfo(&block_info));
+}
+
+TEST(RemoveBlockDeviceTest, LargeThreadCountSuceeds) {
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  MockBlockDevice mock_device;
+  ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+
+  std::unique_ptr<RemoteBlockDevice> device;
+  ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+
+  storage::OwnedVmoid vmoid;
+  ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
+  ASSERT_EQ(kGoldenVmoid, vmoid.get());
+
+  constexpr int kThreadCount = 2 * MAX_TXN_GROUP_COUNT;
+  std::thread threads[kThreadCount];
+  fbl::Mutex mutex;
+  fbl::ConditionVariable condition;
+  int done = 0;
+  for (int i = 0; i < kThreadCount; ++i) {
+    threads[i] = std::thread(
+        [device = device.get(), &mutex, &done, &condition, vmoid = vmoid.get()]() {
+          block_fifo_request_t request = {};
+          request.opcode = BLOCKIO_READ;
+          request.vmoid = vmoid;
+          request.length = 1;
+          ASSERT_OK(device->FifoTransaction(&request, 1));
+          fbl::AutoLock lock(&mutex);
+          ++done;
+          condition.Signal();
+        });
+  }
+  vmoid.TakeId();  // We don't need the vmoid any more.
+  block_fifo_request_t requests[kThreadCount + BLOCK_FIFO_MAX_DEPTH];
+  size_t request_count = 0;
+  do {
+    if (request_count < kThreadCount) {
+      // Read some more requests.
+      size_t count = 0;
+      ASSERT_OK(mock_device.ReadFifoRequests(&requests[request_count], &count));
+      ASSERT_LT(0, count);
+      request_count += count;
+    }
+    // Check that all the outstanding requests we have use different group IDs.
+    std::unordered_set<groupid_t> groups;
+    for (size_t i = done; i < request_count; ++i) {
+      ASSERT_TRUE(groups.insert(requests[i].group).second);
+    }
+    // Finish one request.
+    block_fifo_response_t response;
+    response.status = ZX_OK;
+    response.reqid = requests[done].reqid;
+    response.group = requests[done].group;
+    response.count = 1;
+    int last_done = done;
+    EXPECT_OK(mock_device.WriteFifoResponse(response));
+    // Wait for it to be done.
+    fbl::AutoLock lock(&mutex);
+    while (done != last_done + 1) {
+      condition.Wait(&mutex);
+    }
+  } while (done < kThreadCount);
+  for (int i = 0; i < kThreadCount; ++i) {
+    threads[i].join();
+  }
+}
+
+TEST(RemoveBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+  std::unique_ptr<RemoteBlockDevice> device;
+  constexpr int kThreadCount = 2 * MAX_TXN_GROUP_COUNT;
+  std::thread threads[kThreadCount];
+
+  {
+    MockBlockDevice mock_device;
+    ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+
+    ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+
+    storage::OwnedVmoid vmoid;
+    ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
+    ASSERT_EQ(kGoldenVmoid, vmoid.get());
+
+    for (int i = 0; i < kThreadCount; ++i) {
+      threads[i] = std::thread(
+          [device = device.get(), vmoid = vmoid.get()]() {
+            block_fifo_request_t request = {};
+            request.opcode = BLOCKIO_READ;
+            request.vmoid = vmoid;
+            request.length = 1;
+            ASSERT_EQ(ZX_ERR_PEER_CLOSED, device->FifoTransaction(&request, 1));
+          });
+    }
+    vmoid.TakeId();  // We don't need the vmoid any more.
+
+    // Wait for at least 2 requests to be received.
+    block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
+    size_t request_count = 0;
+    while (request_count < 2) {
+      size_t count = 0;
+      ASSERT_OK(mock_device.ReadFifoRequests(requests, &count));
+      request_count += count;
+    }
+
+    // Allow MockBlockDevice to go out of scope which should close the fifo.
+    loop.Shutdown();
+  }
+
+  // We should be able to join all the threads.
+  for (int i = 0; i < kThreadCount; ++i) {
+    threads[i].join();
+  }
 }
 
 }  // namespace

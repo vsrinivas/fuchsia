@@ -36,8 +36,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  groupid_t BlockGroupID() final { return 0; }
-
   uint32_t DeviceBlockSize() const final { return kMinfsBlockSize; }
 
   block_client::BlockDevice* GetDevice() final { return nullptr; }

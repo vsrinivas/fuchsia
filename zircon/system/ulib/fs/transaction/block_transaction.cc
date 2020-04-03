@@ -31,7 +31,6 @@ zx_status_t TransactionHandler::RunRequests(
   block_requests.resize(operations.size());
   for (size_t i = 0; i < operations.size(); i++) {
     auto& request = block_requests[i];
-    request.group = BlockGroupID();
     request.vmoid = operations[i].vmoid;
 
     const auto& operation = operations[i].op;
@@ -95,7 +94,6 @@ void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset, ui
 
   block_fifo_request_t request;
   request.opcode = op;
-  request.group = handler_->BlockGroupID();
   request.vmoid = id;
   // NOTE: It's easier to compare everything when dealing
   // with blocks (not offsets!) so the following are described in

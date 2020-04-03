@@ -518,7 +518,6 @@ zx_status_t Blobfs::RunOperation(const storage::Operation& operation,
   }
 
   block_fifo_request_t request;
-  request.group = BlockGroupID();
   request.vmoid = buffer->vmoid();
   request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
   request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);
@@ -529,8 +528,6 @@ zx_status_t Blobfs::RunOperation(const storage::Operation& operation,
 
   return block_device_->FifoTransaction(&request, 1);
 }
-
-groupid_t Blobfs::BlockGroupID() { return group_registry_.GroupID(); }
 
 zx_status_t Blobfs::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   zx_status_t status = Device()->BlockAttachVmo(vmo, out);

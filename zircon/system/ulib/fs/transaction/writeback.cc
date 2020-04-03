@@ -21,7 +21,6 @@ zx_status_t FlushRequests(TransactionHandler* transaction_handler,
   const uint32_t block_per_fs_block =
       transaction_handler->FsBlockSize() / transaction_handler->DeviceBlockSize();
   for (size_t i = 0; i < operations.size(); i++) {
-    blk_reqs[i].group = transaction_handler->BlockGroupID();
     blk_reqs[i].vmoid = operations[i].vmoid;
     switch (operations[i].op.type) {
       case storage::OperationType::kTrim:

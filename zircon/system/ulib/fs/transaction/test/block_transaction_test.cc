@@ -52,8 +52,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
 
   uint32_t FsBlockSize() const final { return DeviceBlockSize() * kBlockRatio; }
 
-  groupid_t BlockGroupID() final { return 1; }
-
   uint32_t DeviceBlockSize() const final { return kBlockSize ; }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num * kBlockRatio; }

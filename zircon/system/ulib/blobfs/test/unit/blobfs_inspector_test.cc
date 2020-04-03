@@ -53,8 +53,6 @@ class FakeTransactionHandler : public fs::TransactionHandler {
     return ZX_OK;
   }
 
-  groupid_t BlockGroupID() final { return 0; }
-
   uint32_t DeviceBlockSize() const final { return fake_device_->BlockSize(); }
 
   block_client::BlockDevice* GetDevice() final { return nullptr; }

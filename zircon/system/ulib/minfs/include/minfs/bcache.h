@@ -29,7 +29,6 @@
 #include <lib/zx/vmo.h>
 
 #include <block-client/cpp/block-device.h>
-#include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
 #include <fvm/client.h>
 #include <storage/buffer/vmo_buffer.h>
@@ -65,8 +64,6 @@ class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
   }
 
   zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
-
-  groupid_t BlockGroupID() final;
 
   uint32_t DeviceBlockSize() const final;
 
@@ -112,7 +109,6 @@ class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
 
   uint32_t max_blocks_;
   fuchsia_hardware_block_BlockInfo info_ = {};
-  block_client::BlockGroupRegistry group_registry_;
   std::unique_ptr<block_client::BlockDevice> device_;
   // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.
   storage::VmoBuffer buffer_;
