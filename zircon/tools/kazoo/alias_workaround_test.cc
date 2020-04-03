@@ -13,7 +13,7 @@ TEST(AliasWorkaround, Mappings) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_aliases, &library));
 
-  EXPECT_EQ(library.name(), "zz");
+  EXPECT_EQ(library.name(), "zx");
   ASSERT_EQ(library.syscalls().size(), 1u);
 
   const auto& sc = library.syscalls()[0];

@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
-
-using zx;
+library zx;
 
 // This file is copies of some syscalls that were interesting for the kernel
 // header generator.
 
 using mutable_vector_void = vector<handle>;
 using optional_uint32 = uint32;
-using paddr = uint64;
 using vector_handle_u32size = vector<byte>;
 using vector_paddr = vector<paddr>;
 using vector_void_u32size = vector<byte>;
@@ -25,7 +22,7 @@ protocol KernelCases {
            handle<vmo> vmo,
            uint64 offset,
            uint64 size) ->
-        (zx.status status, vector_paddr addrs, handle<pmt> pmt);
+        (status status, vector_paddr addrs, handle<pmt> pmt);
 
     // Still have NORETURN markup for kernel (but only this one).
     [noreturn]
@@ -37,18 +34,18 @@ protocol KernelCases {
             uint32 action,
             uint32 options,
             mutable_vector_void ptr) ->
-        (zx.status status);
+        (status status);
 
     // vector of handles isn't turned into user_out_handle*, rather stays as
     // user_out_ptr<zx_handle_t>, because it's not just one.
     Read(handle<channel> handle,
          uint32 options) ->
-        (zx.status status,
+        (status status,
          vector_void_u32size bytes,
          vector_handle_u32size handles,
          optional_uint32 actual_bytes,
          optional_uint32 actual_handles);
 
     [testonly]
-    compiled_out_in_non_test(int32 a, int32 b) -> (zx.status status);
+    compiled_out_in_non_test(int32 a, int32 b) -> (status status);
 };

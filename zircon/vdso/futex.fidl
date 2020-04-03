@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/39732): This should be read as "library zx".
-library zz;
+library zx;
 
 // TODO(scottmg): This is approximately right, but will need to match the
 // current definition of zx_futex_t (atomic_int in some #if branches).
