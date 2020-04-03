@@ -16,6 +16,7 @@ driver_module("as370-thermal") {
   sources = [ "as370-thermal.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
@@ -30,7 +31,6 @@ driver_module("as370-thermal") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:llcpp",
   ]
 }
 
@@ -43,6 +43,8 @@ test("as370-thermal-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/ddk",
@@ -63,8 +65,6 @@ test("as370-thermal-test") {
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/banjo/ddk.protocol.power:ddk.protocol.power_mock",
     "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:llcpp",
   ]
 }
 

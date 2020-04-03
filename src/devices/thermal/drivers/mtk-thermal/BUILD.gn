@@ -16,6 +16,7 @@ driver_module("mtk-thermal") {
   sources = [ "mtk-thermal.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -34,7 +35,6 @@ driver_module("mtk-thermal") {
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
 
@@ -47,6 +47,7 @@ test("mtk-thermal-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -69,7 +70,6 @@ test("mtk-thermal-test") {
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
 

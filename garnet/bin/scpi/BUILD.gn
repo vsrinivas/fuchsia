@@ -12,6 +12,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.scpi",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -19,7 +20,6 @@ source_set("lib") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/system/fidl/fuchsia-kernel:llcpp",
   ]
 }

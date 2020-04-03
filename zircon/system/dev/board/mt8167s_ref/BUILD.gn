@@ -44,6 +44,7 @@ driver_module("mt8167s_ref") {
     "mt8167.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -61,7 +62,6 @@ driver_module("mt8167s_ref") {
     "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/device-protocol-display",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 
@@ -106,6 +106,7 @@ test("mt8167s_ref-test") {
     "mt8167.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -123,7 +124,6 @@ test("mt8167s_ref-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/dev/lib/device-protocol-display",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
