@@ -114,7 +114,7 @@ class InvokedEvent : public Event {
   InvokedEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
       : Event(timestamp, thread, syscall) {}
 
-  void PrettyPrint(FidlcatPrinter& printer);
+  void PrettyPrint(FidlcatPrinter& printer) const;
 };
 
 // Event that represents the return value and out parameters when a syscall returns.
@@ -124,7 +124,7 @@ class OutputEvent : public Event {
               int64_t returned_value)
       : Event(timestamp, thread, syscall), returned_value_(returned_value) {}
 
-  void PrettyPrint(FidlcatPrinter& printer);
+  void PrettyPrint(FidlcatPrinter& printer) const;
 
  private:
   int64_t returned_value_;

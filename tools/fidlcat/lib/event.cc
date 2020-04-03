@@ -110,14 +110,14 @@ void FidlcatPrinter::DisplayOutline(
   }
 }
 
-void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) {
+void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) const {
   printer << syscall()->name();
   printer.DisplayInline(syscall()->input_inline_members(), inline_fields());
   printer << '\n';
   printer.DisplayOutline(syscall()->input_outline_members(), outline_fields());
 }
 
-void OutputEvent::PrettyPrint(FidlcatPrinter& printer) {
+void OutputEvent::PrettyPrint(FidlcatPrinter& printer) const {
   fidl_codec::Indent indent(printer);
   if (!printer.DisplayReturnedValue(syscall()->return_type(), returned_value_)) {
     return;

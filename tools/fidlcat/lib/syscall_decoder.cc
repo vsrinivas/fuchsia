@@ -65,7 +65,7 @@ void MemoryDumpToVector(const zxdb::MemoryDump& dump, std::vector<uint8_t>* outp
 
 void SyscallUse::SyscallInputsDecoded(SyscallDecoder* decoder) {}
 
-void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* decoder) { decoder->Destroy(); }
+void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* decoder) {}
 
 void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
   FXL_LOG(ERROR) << error.message();
@@ -280,17 +280,73 @@ void SyscallDecoder::LoadInputs() {
   if (error_.type() != DecoderError::Type::kNone) {
     use_->SyscallDecodingError(error_, this);
   } else {
-    StepToReturnAddress();
+    if (StepToReturnAddress()) {
+      DecodeInputs();
+    }
   }
 }
 
-void SyscallDecoder::StepToReturnAddress() {
+bool SyscallDecoder::StepToReturnAddress() {
   zxdb::Thread* thread = weak_thread_.get();
   if (aborted_ || (thread == nullptr) || (thread->GetStack().size() == 0)) {
     aborted_ = true;
     Destroy();
-    return;
+    return false;
   }
+
+  if (syscall_->return_type() != SyscallReturnType::kNoReturn) {
+    thread_observer_->Register(thread_id(), this);
+    thread_observer_->AddExitBreakpoint(thread, syscall_->name(), return_address_);
+  }
+
+  // Restarts the stopped thread. When the breakpoint will be reached (at the
+  // end of the syscall), LoadSyscallReturnValue will be called.
+  thread->Continue();
+  return true;
+}
+
+void SyscallDecoder::DecodeInputs() {
+  if (syscall_->fidl_codec_values_ready()) {
+    // We are able to create values from the syscall => create the values.
+    //
+    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+    // print the syscall.
+    int64_t timestamp = time(nullptr);
+    const Thread* thread = dispatcher_->SearchThread(thread_id_);
+    if (thread == nullptr) {
+      const Process* process = dispatcher_->SearchProcess(process_id_);
+      if (process == nullptr) {
+        process = dispatcher_->CreateProcess(process_name_, process_id_);
+      }
+      thread = dispatcher_->CreateThread(thread_id_, process);
+    }
+    invoked_event_ = std::make_unique<InvokedEvent>(timestamp << 32, thread, syscall_);
+    auto inline_member = syscall_->input_inline_members().begin();
+    auto outline_member = syscall_->input_outline_members().begin();
+    for (const auto& input : syscall_->inputs()) {
+      if (input->InlineValue()) {
+        if (input->ConditionsAreTrue(this, Stage::kEntry)) {
+          FXL_DCHECK(inline_member != syscall_->input_inline_members().end());
+          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
+          FXL_DCHECK(value != nullptr);
+          invoked_event_->AddInlineField(inline_member->get(), std::move(value));
+        }
+        ++inline_member;
+      } else {
+        if (input->ConditionsAreTrue(this, Stage::kEntry)) {
+          FXL_DCHECK(outline_member != syscall_->input_outline_members().end());
+          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
+          FXL_DCHECK(value != nullptr);
+          invoked_event_->AddOutlineField(outline_member->get(), std::move(value));
+        }
+        ++outline_member;
+      }
+    }
+  }
+  UseInputs();
+}
+
+void SyscallDecoder::UseInputs() {
   // Eventually calls the code before displaying the input (which may invalidate
   // the display).
   if ((syscall_->inputs_decoded_action() == nullptr) ||
@@ -301,15 +357,7 @@ void SyscallDecoder::StepToReturnAddress() {
   if (syscall_->return_type() == SyscallReturnType::kNoReturn) {
     // We don't expect the syscall to return and it doesn't have any output.
     use_->SyscallOutputsDecoded(this);
-    return;
   }
-
-  thread_observer_->Register(thread_id(), this);
-  thread_observer_->AddExitBreakpoint(thread, syscall_->name(), return_address_);
-
-  // Restarts the stopped thread. When the breakpoint will be reached (at the
-  // end of the syscall), LoadSyscallReturnValue will be called.
-  thread->Continue();
 }
 
 void SyscallDecoder::LoadSyscallReturnValue() {
@@ -350,15 +398,62 @@ void SyscallDecoder::LoadOutputs() {
   if (error_.type() != DecoderError::Type::kNone) {
     use_->SyscallDecodingError(error_, this);
   } else {
-    DecodeAndDisplay();
+    DecodeOutputs();
   }
 }
 
-void SyscallDecoder::DecodeAndDisplay() {
+void SyscallDecoder::DecodeOutputs() {
   if (pending_request_count_ > 0) {
     return;
   }
+  if (syscall_->fidl_codec_values_ready()) {
+    // We are able to create values from the syscall => create the values.
+    //
+    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+    // print the syscall.
+    int64_t timestamp = time(nullptr);
+    const Thread* thread = dispatcher_->SearchThread(thread_id_);
+    if (thread == nullptr) {
+      const Process* process = dispatcher_->SearchProcess(process_id_);
+      if (process == nullptr) {
+        process = dispatcher_->CreateProcess(process_name_, process_id_);
+      }
+      thread = dispatcher_->CreateThread(thread_id_, process);
+    }
+    output_event_ = std::make_unique<OutputEvent>(
+        timestamp << 32, thread, syscall_, syscall_return_value_);
+    auto inline_member = syscall_->output_inline_members().begin();
+    auto outline_member = syscall_->output_outline_members().begin();
+    for (const auto& output : syscall_->outputs()) {
+      if (output->InlineValue()) {
+        if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
+            (output->ConditionsAreTrue(this, Stage::kExit))) {
+          FXL_DCHECK(inline_member != syscall_->output_inline_members().end());
+          std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
+          FXL_DCHECK(value != nullptr);
+          output_event_->AddInlineField(inline_member->get(), std::move(value));
+        }
+        ++inline_member;
+      } else {
+        if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
+            (output->ConditionsAreTrue(this, Stage::kExit))) {
+          FXL_DCHECK(outline_member != syscall_->output_outline_members().end());
+          std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
+          FXL_DCHECK(value != nullptr);
+          output_event_->AddOutlineField(outline_member->get(), std::move(value));
+        }
+        ++outline_member;
+      }
+    }
+  }
+  UseOutputs();
+}
+
+void SyscallDecoder::UseOutputs() {
   use_->SyscallOutputsDecoded(this);
+
+  // Now our job is done, we can destroy the object.
+  Destroy();
 }
 
 void SyscallDecoder::Destroy() {
@@ -389,43 +484,9 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
     DisplayStackFrame(dispatcher_->colors(), line_header_, decoder->caller_locations(), os_);
   }
 
-  if (decoder->syscall()->fidl_codec_values_ready()) {
-    // We are able to create values from the syscall => create the values and then print them.
-    //
-    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-    // print the syscall.
-    int64_t timestamp = time(nullptr);
-    const Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
-    if (thread == nullptr) {
-      const Process* process = dispatcher_->SearchProcess(decoder->process_id());
-      if (process == nullptr) {
-        process = dispatcher_->CreateProcess(decoder->process_name(), decoder->process_id());
-      }
-      thread = dispatcher_->CreateThread(decoder->thread_id(), process);
-    }
-    InvokedEvent* invoked_event = decoder->set_invoked_event(
-        std::make_unique<InvokedEvent>(timestamp << 32, thread, decoder->syscall()));
-    auto inline_member = decoder->syscall()->input_inline_members().begin();
-    auto outline_member = decoder->syscall()->input_outline_members().begin();
-    for (const auto& input : decoder->syscall()->inputs()) {
-      if (input->InlineValue()) {
-        if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-          FXL_DCHECK(inline_member != decoder->syscall()->input_inline_members().end());
-          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(decoder, Stage::kEntry);
-          FXL_DCHECK(value != nullptr);
-          invoked_event->AddInlineField(inline_member->get(), std::move(value));
-        }
-        ++inline_member;
-      } else {
-        if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-          FXL_DCHECK(outline_member != decoder->syscall()->input_outline_members().end());
-          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(decoder, Stage::kEntry);
-          FXL_DCHECK(value != nullptr);
-          invoked_event->AddOutlineField(outline_member->get(), std::move(value));
-        }
-        ++outline_member;
-      }
-    }
+  const InvokedEvent* invoked_event = decoder->invoked_event();
+  if (invoked_event != nullptr) {
+    // We have been able to create values from the syscall => print them.
     const fidl_codec::Colors& colors = dispatcher_->colors();
     std::string line_header = invoked_event->thread()->process()->name() + ' ' + colors.red +
                               std::to_string(invoked_event->thread()->process()->koid()) +
@@ -471,45 +532,9 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
     const fidl_codec::Colors& colors = dispatcher_->colors();
-    if (decoder->syscall()->fidl_codec_values_ready()) {
-      // We are able to create values from the syscall => create the values and then print them.
-      //
-      // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
-      // print the syscall.
-      int64_t timestamp = time(nullptr);
-      const Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
-      if (thread == nullptr) {
-        const Process* process = dispatcher_->SearchProcess(decoder->process_id());
-        if (process == nullptr) {
-          process = dispatcher_->CreateProcess(decoder->process_name(), decoder->process_id());
-        }
-        thread = dispatcher_->CreateThread(decoder->thread_id(), process);
-      }
-      OutputEvent* output_event = decoder->set_output_event(std::make_unique<OutputEvent>(
-          timestamp << 32, thread, decoder->syscall(), decoder->syscall_return_value()));
-      auto inline_member = decoder->syscall()->output_inline_members().begin();
-      auto outline_member = decoder->syscall()->output_outline_members().begin();
-      for (const auto& output : decoder->syscall()->outputs()) {
-        if (output->InlineValue()) {
-          if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-              (output->ConditionsAreTrue(decoder, Stage::kExit))) {
-            FXL_DCHECK(inline_member != decoder->syscall()->output_inline_members().end());
-            std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(decoder, Stage::kExit);
-            FXL_DCHECK(value != nullptr);
-            output_event->AddInlineField(inline_member->get(), std::move(value));
-          }
-          ++inline_member;
-        } else {
-          if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-              (output->ConditionsAreTrue(decoder, Stage::kExit))) {
-            FXL_DCHECK(outline_member != decoder->syscall()->output_outline_members().end());
-            std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(decoder, Stage::kExit);
-            FXL_DCHECK(value != nullptr);
-            output_event->AddOutlineField(outline_member->get(), std::move(value));
-          }
-          ++outline_member;
-        }
-      }
+    const OutputEvent* output_event = decoder->output_event();
+    if (output_event != nullptr) {
+      // We have been able to create values from the syscall => print them.
       std::string line_header;
       if (dispatcher_->with_process_info() || (dispatcher_->last_displayed_syscall() != this)) {
         line_header = output_event->thread()->process()->name() + ' ' + colors.red +
@@ -594,9 +619,6 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
 
     dispatcher_->set_last_displayed_syscall(this);
   }
-
-  // Now our job is done, we can destroy the object.
-  decoder->Destroy();
 }
 
 void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {

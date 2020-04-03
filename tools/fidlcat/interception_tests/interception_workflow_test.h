@@ -497,7 +497,6 @@ class SyscallCheck : public SyscallUse {
       if (memcmp(bytes, data.bytes(), data.num_bytes()) != 0) {
         std::string result = "bytes not equivalent\n";
         AppendElements(result, bytes, data.bytes(), data.num_bytes());
-        decoder->Destroy();
         FAIL() << result;
       }
       FXL_DCHECK(decoder->ArgumentValue(3) == data.num_bytes());  // num_bytes
@@ -508,11 +507,9 @@ class SyscallCheck : public SyscallUse {
       if (memcmp(handles, data.handles(), data.num_handles()) != 0) {
         std::string result = "handles not equivalent";
         AppendElements(result, handles, data.handles(), data.num_handles());
-        decoder->Destroy();
         FAIL() << result;
       }
       FXL_DCHECK(decoder->ArgumentValue(5) == data.num_handles());  // num_handles
-      decoder->Destroy();
     } else if (decoder->syscall()->name() == "zx_channel_call") {
       DataForSyscallTest& data = controller_->remote_api()->data();
       FXL_DCHECK(decoder->ArgumentValue(0) == kHandle);           // handle
@@ -536,10 +533,8 @@ class SyscallCheck : public SyscallUse {
       if (memcmp(bytes, ref_bytes, ref_num_bytes) != 0) {
         std::string result = "bytes not equivalent\n";
         AppendElements(result, bytes, ref_bytes, ref_num_bytes);
-        decoder->Destroy();
         FAIL() << result;
       }
-      decoder->Destroy();
     } else {
       FAIL() << "can't check " << decoder->syscall()->name();
     }

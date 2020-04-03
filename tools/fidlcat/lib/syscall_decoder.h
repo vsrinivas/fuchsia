@@ -146,14 +146,8 @@ class SyscallDecoder {
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
   int pending_request_count() const { return pending_request_count_; }
-  InvokedEvent* set_invoked_event(std::unique_ptr<InvokedEvent> invoked_event) {
-    invoked_event_ = std::move(invoked_event);
-    return invoked_event_.get();
-  }
-  OutputEvent* set_output_event(std::unique_ptr<OutputEvent> output_event) {
-    output_event_ = std::move(output_event);
-    return output_event_.get();
-  }
+  const InvokedEvent* invoked_event() const { return invoked_event_.get(); }
+  const OutputEvent* output_event() const { return output_event_.get(); }
   const fidl_codec::semantic::MethodSemantic* semantic() const { return semantic_; }
   void set_semantic(const fidl_codec::semantic::MethodSemantic* semantic) { semantic_ = semantic; }
   const fidl_codec::StructValue* decoded_request() const { return decoded_request_; }
@@ -247,7 +241,13 @@ class SyscallDecoder {
   // Puts a breakpoint at the return address (the address just after the call to
   // the syscall) and restarts the stopped thread. When the breakpoint is
   // reached, it calls LoadSyscallReturnValue.
-  void StepToReturnAddress();
+  bool StepToReturnAddress();
+
+  // Decodes the inputs and generates invoked_event_.
+  void DecodeInputs();
+
+  // Uses the inputs (for example to display them).
+  void UseInputs();
 
   // Reads the returned value of the syscall. Then calls LoadOutputs.
   void LoadSyscallReturnValue();
@@ -264,9 +264,12 @@ class SyscallDecoder {
   // parallel.
   void LoadOutputs();
 
-  // When this function is called, everything we need to display the syscall
-  // has been loaded. This function display the syscall. Then, it calls Destroy.
-  void DecodeAndDisplay();
+  // Decodes the outputs and generates the output_event_.
+  void DecodeOutputs();
+
+  // Uses the outputs (for example to display them).
+  // Then, it calls Destroy.
+  void UseOutputs();
 
   // Destroys this object and remove it from the |syscall_decoders_| list in the
   // SyscallDecoderDispatcher. This function is called when the syscall display
