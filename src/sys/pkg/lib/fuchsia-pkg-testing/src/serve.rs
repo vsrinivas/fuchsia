@@ -342,8 +342,8 @@ mod tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // FIXME(49247)
-    async fn test_serve_empty() {
+    #[ignore]
+    async fn test_serve_empty_hangs_on_last_get() {
         let repo = Arc::new(RepositoryBuilder::new().build().await.unwrap());
         let served_repo = repo.server().start().unwrap();
 
@@ -365,7 +365,31 @@ mod tests {
 
         // requests fail after stopping the server
         served_repo.stop().await;
+
+        // FIXME(49247): this often flakes by hanging
         assert_matches!(get(url).await, Err(_));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_serve_empty() {
+        let repo = Arc::new(RepositoryBuilder::new().build().await.unwrap());
+        let served_repo = repo.server().start().unwrap();
+
+        // contains no packages.
+        let packages = served_repo.list_packages().await.unwrap();
+        assert_eq!(packages, vec![]);
+
+        // no '..' allowed.
+        assert_matches!(served_repo.get("blobs/../root.json").await, Err(_));
+
+        // getting a known file fetches something.
+        let bytes = served_repo.get("targets.json").await.unwrap();
+        assert_ne!(bytes, Vec::<u8>::new());
+
+        // even if it doesn't go through the helper function.
+        let url = format!("{}/targets.json", served_repo.local_url());
+        let also_bytes = get(&url).await.unwrap();
+        assert_eq!(bytes, also_bytes);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
