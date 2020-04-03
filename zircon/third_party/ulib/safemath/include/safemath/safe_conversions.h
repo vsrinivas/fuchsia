@@ -181,7 +181,7 @@ struct SaturateFastOp<
                             std::is_integral<Dst>::value &&
                             !SaturateFastAsmOp<Dst, Src>::is_supported>::type> {
   static const bool is_supported = true;
-  static Dst Do(Src value) {
+  static constexpr Dst Do(Src value) {
     // The exact order of the following is structured to hit the correct
     // optimization heuristics across compilers. Do not change without
     // checking the emitted code.

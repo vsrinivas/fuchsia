@@ -122,7 +122,7 @@ decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
   return nullptr;
 }
 
-nullptr_t Parser::Fail(const SourceSpan& span, std::string_view message) {
+std::nullptr_t Parser::Fail(const SourceSpan& span, std::string_view message) {
   if (Ok()) {
     error_reporter_->ReportErrorWithSquiggle(span, std::move(message));
   }

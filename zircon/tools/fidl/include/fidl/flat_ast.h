@@ -137,13 +137,13 @@ class Name final {
         member_name_(other.member_name_) {
     switch (kind_) {
       case Kind::kSourced:
-        name_context_.sourced = other.name_context_.sourced;
+        new (&name_context_.sourced) SourcedNameContext(other.name_context_.sourced);
         break;
       case Kind::kDerived:
-        name_context_.derived = other.name_context_.derived;
+        new (&name_context_.derived) DerivedNameContext(other.name_context_.derived);
         break;
       case Kind::kIntrinsic:
-        name_context_.intrinsic = other.name_context_.intrinsic;
+        new (&name_context_.intrinsic) IntrinsicNameContext(other.name_context_.intrinsic);
         break;
     }
   }
@@ -157,13 +157,14 @@ class Name final {
 
     switch (kind_) {
       case Kind::kSourced:
-        name_context_.sourced = std::move(other.name_context_.sourced);
+        new (&name_context_.sourced) SourcedNameContext(std::move(other.name_context_.sourced));
         break;
       case Kind::kDerived:
-        name_context_.derived = std::move(other.name_context_.derived);
+        new (&name_context_.derived) DerivedNameContext(std::move(other.name_context_.derived));
         break;
       case Kind::kIntrinsic:
-        name_context_.intrinsic = std::move(other.name_context_.intrinsic);
+        new (&name_context_.intrinsic)
+            IntrinsicNameContext(std::move(other.name_context_.intrinsic));
         break;
     }
   }
