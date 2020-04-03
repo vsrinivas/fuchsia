@@ -110,6 +110,26 @@ if (is_linux || is_mac) {
     cycle_count = "1"
     cycle_timeout = "10m"
   }
+
+  system_test_upgrade_suite("nuc-release-upgrade-longevity") {
+    release_builder = "fuchsia/global.ci/fuchsia-x64-release-build_only"
+    service_account = _service_account
+
+    # FIXME(fxb/46175) This can be removed once NUCs support `dm reboot-recovery`.
+    ota_to_recovery = true
+    environments = [
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "e2e-isolated" ]
+      },
+    ]
+    timeout = "4h"
+    pave_timeout = "5m"
+    cycle_count = "40"
+    cycle_timeout = "10m"
+  }
 }
 
 group("tests") {
@@ -118,6 +138,7 @@ group("tests") {
     ":nuc-release-reboot($host_toolchain)",
     ":nuc-release-reboot-longevity($host_toolchain)",
     ":nuc-release-upgrade($host_toolchain)",
+    ":nuc-release-upgrade-longevity($host_toolchain)",
     ":system_tests",
   ]
 }
