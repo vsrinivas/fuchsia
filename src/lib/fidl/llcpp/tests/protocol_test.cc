@@ -6,9 +6,15 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/zx/object.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/object.h>
+
+#include <cstdint>
 
 #include <llcpptest/protocol/test/llcpp/fidl.h>
 
@@ -18,6 +24,15 @@ namespace test = ::llcpp::llcpptest::protocol::test;
 
 namespace {
 zx_status_t kErrorStatus = 271;
+
+template <typename T>
+uint32_t GetHandleCount(zx::unowned<T> h) {
+  zx_info_handle_count_t info = {};
+  auto status = h->get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  return info.handle_count;
+}
+
 }  // namespace
 
 class ErrorServer : public test::ErrorMethods::Interface {
@@ -219,4 +234,143 @@ TEST(SyncClientTest, DefaultInitializationError) {
 
   auto resp = client.NoArgsPrimitiveError(false);
   ASSERT_EQ(ZX_ERR_BAD_HANDLE, resp.status());
+}
+
+class HandleProviderServer : public test::HandleProvider::Interface {
+ public:
+  void GetHandle(GetHandleCompleter::Sync completer) override {
+    test::HandleStruct s;
+    zx::event::create(0, &s.h);
+    completer.Reply(std::move(s));
+  }
+
+  void GetHandleVector(uint32_t count, GetHandleVectorCompleter::Sync completer) override {
+    std::vector<test::HandleStruct> v(count);
+    for (auto& s : v) {
+      zx::event::create(0, &s.h);
+    }
+    completer.Reply(fidl::unowned_vec(v));
+  }
+
+  void GetHandleUnion(GetHandleUnionCompleter::Sync completer) override {
+    zx::event h;
+    zx::event::create(0, &h);
+    test::HandleUnionStruct s = {.u = test::HandleUnion::WithH(fidl::unowned_ptr(&h))};
+    completer.Reply(std::move(s));
+  }
+};
+
+class HandleTest : public ::testing::Test {
+ protected:
+  virtual void SetUp() {
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
+    ASSERT_EQ(loop_->StartThread("test_llcpp_handle_server"), ZX_OK);
+
+    zx::channel server_end;
+    ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
+    server_ = std::make_unique<HandleProviderServer>();
+    fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
+  }
+
+  test::HandleProvider::SyncClient TakeClient() {
+    EXPECT_TRUE(client_end_.is_valid());
+    return test::HandleProvider::SyncClient(std::move(client_end_));
+  }
+
+ private:
+  std::unique_ptr<async::Loop> loop_;
+  std::unique_ptr<HandleProviderServer> server_;
+  zx::channel client_end_;
+};
+
+TEST_F(HandleTest, HandleClosedAfterResultOfMove) {
+  auto client = TakeClient();
+  auto result = client.GetHandle();
+
+  ASSERT_TRUE(result.ok()) << result.error();
+  ASSERT_TRUE(result->value.h.is_valid());
+
+  // Dupe the event so we can get the handle count after move.
+  zx::event dupe;
+  ASSERT_EQ(result->value.h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+
+  // Moving the ResultOf::GetHandle should move the handle.
+  { auto release = std::move(result); }  // ~ResultOf::GetHandle
+
+  // Only remaining handle should be the dupe.
+  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
+}
+
+TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
+  auto client = TakeClient();
+  auto result = client.GetHandle();
+
+  ASSERT_TRUE(result.ok()) << result.error();
+  ASSERT_TRUE(result->value.h.is_valid());
+
+  // Dupe the event so we can get the handle count after move.
+  zx::event dupe;
+  ASSERT_EQ(result->value.h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+
+  // A move of a struct holding a handle will move the handle from the result, resulting in a close
+  { auto release = std::move(result->value); }  // ~HandleStruct
+
+  // Only remaining handle should be the dupe.
+  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
+}
+
+TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
+  constexpr uint32_t kNumHandles = 2;
+
+  auto client = TakeClient();
+  std::vector<zx::event> dupes(kNumHandles);
+
+  {
+    auto result = client.GetHandleVector(kNumHandles);
+
+    ASSERT_TRUE(result.ok()) << result.error();
+    ASSERT_EQ(result->value.count(), kNumHandles);
+
+    for (uint32_t i = 0; i < kNumHandles; i++) {
+      ASSERT_TRUE(result->value[i].h.is_valid());
+      ASSERT_EQ(result->value[i].h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupes[i]), ZX_OK);
+    }
+
+    { auto release = std::move(result->value); }  // ~VectorView<HandleStruct>
+
+    // std::move of VectorView only moves pointers, not handles.
+    // 1 handle in ResultOf + 1 handle in dupe = 2.
+    for (auto& e : dupes) {
+      ASSERT_EQ(GetHandleCount(e.borrow()), 2u);
+    }
+  }
+
+  // Handle cleaned up after ResultOf destructor is called.
+  // Remaining handle is the dupe.
+  for (auto& e : dupes) {
+    ASSERT_EQ(GetHandleCount(e.borrow()), 1u);
+  }
+}
+
+TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterTrackingPtrMove) {
+  auto client = TakeClient();
+  zx::event dupe;
+
+  {
+    auto result = client.GetHandleUnion();
+
+    ASSERT_TRUE(result.ok()) << result.error();
+    ASSERT_TRUE(result->value.u.h().is_valid());
+    ASSERT_EQ(result->value.u.h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+
+    { auto release = std::move(result->value); }  // ~HandleUnion
+
+    // std::move of tracking_ptr in union only moves pointers, not handles.
+    // 1 handle in ResultOf + 1 handle in dupe = 2.
+    ASSERT_EQ(GetHandleCount(dupe.borrow()), 2u);
+  }
+
+  // Handle cleaned up after ResultOf destructor is called.
+  // Remaining handle is the dupe.
+  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
 }

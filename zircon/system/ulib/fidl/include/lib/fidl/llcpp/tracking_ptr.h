@@ -179,7 +179,10 @@ class tracking_ptr final {
 
   marked_ptr release_marked_ptr() noexcept {
     marked_ptr temp = mptr_;
-    mptr_ = kNullMarkedPtr;
+    if (is_owned()) {
+      // Unowned pointers keep their value like raw pointers, but owned pointers should zero.
+      mptr_ = kNullMarkedPtr;
+    }
     return temp;
   }
 
@@ -209,14 +212,12 @@ class tracking_ptr<T[]> final {
 
   tracking_ptr(tracking_ptr&& other) noexcept {
     reset(other.is_owned_, other.ptr_);
-    other.is_owned_ = false;
-    other.ptr_ = nullptr;
+    other.release();
   }
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
   tracking_ptr(tracking_ptr<std::remove_const_t<U>[]>&& other) noexcept {
     reset(other.is_owned_, other.ptr_);
-    other.is_owned_ = false;
-    other.ptr_ = nullptr;
+    other.release();
   }
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   tracking_ptr(std::unique_ptr<U>&& other) {
@@ -233,8 +234,7 @@ class tracking_ptr<T[]> final {
 
   tracking_ptr& operator=(tracking_ptr&& other) noexcept {
     reset(other.is_owned_, other.ptr_);
-    other.is_owned_ = false;
-    other.ptr_ = nullptr;
+    other.release();
     return *this;
   }
   tracking_ptr& operator=(const tracking_ptr&) = delete;
@@ -248,8 +248,11 @@ class tracking_ptr<T[]> final {
   // Hand off responsibility of ownership to the caller.
   // The internal data can be retrieved through get() and is_owned() before calling release().
   void release() {
-    ptr_ = nullptr;
-    is_owned_ = false;
+    if (is_owned()) {
+      // Unowned pointers keep their value like raw pointers, but owned pointers should zero.
+      ptr_ = nullptr;
+      is_owned_ = false;
+    }
   }
 
  private:

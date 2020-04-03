@@ -9,6 +9,22 @@ enum MyError : int32 {
     REALLY_BAD_ERROR = 2;
 };
 
+struct HandleStruct {
+    handle<event> h;
+};
+
+struct VectorStruct {
+    vector<HandleStruct> v;
+};
+
+union HandleUnion {
+    1: handle<event> h;
+};
+
+struct HandleUnionStruct {
+    HandleUnion u;
+};
+
 /// Protocol for testing methods with error types.
 /// In the implementation, each method is hardcoded to return either the
 /// success or the error case. This should follow the naming of the method,
@@ -22,4 +38,10 @@ protocol Frobinator {
     Frob(string value);
     Grob(string value) -> (string value);
     -> Hrob(string value);
+};
+
+protocol HandleProvider {
+    GetHandle() -> (HandleStruct value);
+    GetHandleVector(uint32 count) -> (vector<HandleStruct> value);
+    GetHandleUnion() -> (HandleUnionStruct value);
 };

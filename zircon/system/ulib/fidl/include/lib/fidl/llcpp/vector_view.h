@@ -72,8 +72,7 @@ class VectorView {
         "VectorView<T> can only be move-constructed from VectorView<T> or VectorView<const T>");
     count_ = other.count_;
     data_ = other.data_;
-    other.count_ = 0;
-    other.data_ = nullptr;
+    other.release();
   }
 
   ~VectorView() {
@@ -91,8 +90,7 @@ class VectorView {
     }
     count_ = other.count_;
     data_ = other.data_;
-    other.count_ = 0;
-    other.data_ = nullptr;
+    other.release();
     return *this;
   }
 
@@ -145,6 +143,15 @@ class VectorView {
   }
 
   bool is_owned() const noexcept { return count_ & kOwnershipMask; }
+
+  void release() {
+    if (is_owned()) {
+      // Match unique_ptr std::move behavior in owned and unowned case
+      // (unowned case doesn't reset source).
+      count_ = 0;
+      data_ = nullptr;
+    }
+  }
 
   friend ::LayoutChecker;
 
