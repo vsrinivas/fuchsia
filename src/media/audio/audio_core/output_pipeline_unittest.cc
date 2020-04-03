@@ -180,7 +180,15 @@ TEST_F(OutputPipelineTest, Loopback) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects = {},
+          .effects =
+              {
+                  {
+                      .lib_name = "test_effects.so",
+                      .effect_name = "add_1.0",
+                      .instance_name = "",
+                      .effect_config = "",
+                  },
+              },
           .loopback = true,
           .output_rate = 48000,
       }},
@@ -192,21 +200,96 @@ TEST_F(OutputPipelineTest, Loopback) {
                                                    kDefaultTransform);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
-  // should have silence with a single effect that adds 1.0 to each sample, so we expect all samples
-  // to be 1.0).
-  auto buf = pipeline->LockBuffer(zx::time(0) + zx::msec(1), 0, 48);
+  // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
+  // and one on the linearize stage). Therefore we expect all samples to be 2.0.
+  auto buf = pipeline->LockBuffer(zx::time(0), 0, 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 48u);
-  CheckBuffer(buf->payload(), 1.0, 96);
+  CheckBuffer(buf->payload(), 2.0, 96);
 
-  // Verify our loopback stream contains no effects, since our loopback point is before the effects
-  // have been applied.
-  auto loopback_buf = pipeline->loopback()->LockBuffer(zx::time(0) + zx::msec(1), 0, 48);
+  // We loopback after the mix stage and before the linearize stage. So we should observe only a
+  // single effects pass. Therefore we expect all loopback samples to be 1.0.
+  auto transform = pipeline->loopback()->ReferenceClockToFractionalFrames();
+  auto loopback_frame =
+      FractionalFrames<int64_t>::FromRaw(transform.timeline_function.Apply((zx::time(0)).get()))
+          .Floor();
+  auto loopback_buf =
+      pipeline->loopback()->LockBuffer(zx::time(0) + zx::msec(1), loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), 0u);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
-  CheckBuffer(loopback_buf->payload(), 0.0, 96);
+  CheckBuffer(loopback_buf->payload(), 1.0, 96);
+}
+
+// Identical to |Loopback|, except we run mix and linearize stages at different rates.
+TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
+  auto test_effects = testing::TestEffectsModule::Open();
+  test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .effects =
+          {
+              {
+                  .lib_name = "test_effects.so",
+                  .effect_name = "add_1.0",
+                  .instance_name = "",
+                  .effect_config = "",
+              },
+          },
+      .inputs = {{
+          .name = "mix",
+          .input_streams =
+              {
+                  RenderUsage::MEDIA,
+                  RenderUsage::SYSTEM_AGENT,
+                  RenderUsage::INTERRUPTION,
+                  RenderUsage::COMMUNICATION,
+              },
+          .effects =
+              {
+                  {
+                      .lib_name = "test_effects.so",
+                      .effect_name = "add_1.0",
+                      .instance_name = "",
+                      .effect_config = "",
+                  },
+              },
+          .loopback = true,
+          .output_rate = 48000,
+      }},
+      .loopback = false,
+      .output_rate = 96000,
+  };
+  auto pipeline_config = PipelineConfig(root);
+  auto pipeline = std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
+                                                   kDefaultTransform);
+
+  // Verify our stream from the pipeline has the effects applied (we have no input streams so we
+  // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
+  // and one on the linearize stage). Therefore we expect all samples to be 2.0.
+  auto buf = pipeline->LockBuffer(zx::time(0), 0, 96);
+  ASSERT_TRUE(buf);
+  ASSERT_EQ(buf->start().Floor(), 0u);
+  ASSERT_EQ(buf->length().Floor(), 96u);
+  CheckBuffer(buf->payload(), 2.0, 192);
+
+  // We loopback after the mix stage and before the linearize stage. So we should observe only a
+  // single effects pass. Therefore we expect all loopback samples to be 1.0.
+  auto transform = pipeline->loopback()->ReferenceClockToFractionalFrames();
+  auto loopback_frame =
+      FractionalFrames<int64_t>::FromRaw(transform.timeline_function.Apply((zx::time(0)).get()))
+          .Floor();
+  auto loopback_buf =
+      pipeline->loopback()->LockBuffer(zx::time(0) + zx::msec(1), loopback_frame, 48);
+  ASSERT_TRUE(loopback_buf);
+  ASSERT_EQ(loopback_buf->start().Floor(), 0u);
+  ASSERT_EQ(loopback_buf->length().Floor(), 48u);
+  CheckBuffer(loopback_buf->payload(), 1.0, 96);
 }
 
 static const std::string kInstanceName = "instance name";

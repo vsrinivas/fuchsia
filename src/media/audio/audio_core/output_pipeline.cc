@@ -73,16 +73,8 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
     Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec, channels);
 
-  // If we're not running at the output rate, we need to update the timeline function for this stage
-  // to compenstate for this rate change.
-  auto timeline_function = ref_clock_to_fractional_frame;
-  if (output_format.frames_per_second() != format().frames_per_second()) {
-    auto timeline_offset = TimelineFunction(
-        TimelineRate(output_format.frames_per_second(), format().frames_per_second()));
-    timeline_function =
-        fbl::MakeRefCounted<DerivedTimelineFunction>(timeline_function, timeline_offset);
-  }
-  auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames, timeline_function);
+  auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
+                                          ref_clock_to_fractional_frame);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_DCHECK((*usage_mask & mask) == 0);
@@ -113,8 +105,13 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
 
   mix_stages_.emplace_back(stage, UsagesFromRenderUsages(spec.input_streams));
   for (const auto& input : spec.inputs) {
-    auto substage = CreateMixStage(input, channels, max_block_size_frames,
-                                   ref_clock_to_fractional_frame, usage_mask, sampler);
+    // Create a new timeline function to represend the ref_clock_to_frac_frame mapping for this
+    // input.
+    auto frac_fps = FractionalFrames<int64_t>(input.output_rate).raw_value();
+    auto function = fbl::MakeRefCounted<VersionedTimelineFunction>(
+        TimelineFunction(TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
+    auto substage =
+        CreateMixStage(input, channels, max_block_size_frames, function, usage_mask, sampler);
     stage->AddInput(substage, sampler);
   }
   return root;
