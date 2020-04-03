@@ -15,9 +15,10 @@
 
 namespace {
 
-const size_t kNumBuffers = 2;
-const size_t kSrcBuffer = 0;
-const size_t kDstBuffer = 1;
+constexpr size_t kNumBuffers = 2;
+constexpr size_t kSrcBuffer = 0;
+constexpr size_t kDstBuffer = 1;
+constexpr uint8_t kSrcValue = 0xaa;
 
 }  // namespace
 
@@ -43,13 +44,12 @@ class VkCopyTest {
   };
   std::array<Buffer, kNumBuffers> buffers_;
   vk::UniqueCommandPool command_pool_;
-  std::vector<VkCommandBuffer> command_buffers_;
+  std::vector<vk::CommandBuffer> command_buffers_;
 };
 
 VkCopyTest::~VkCopyTest() {
   if (is_initialized_) {
-    vkFreeCommandBuffers(*ctx_->device(), *command_pool_, command_buffers_.size(),
-                         command_buffers_.data());
+    ctx_->device()->freeCommandBuffers(*command_pool_, command_buffers_);
   }
   is_initialized_ = false;
 }
@@ -76,6 +76,7 @@ bool VkCopyTest::Initialize() {
 
 bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
   vk::Result rv;
+  const auto &device = ctx_->device();
 
   vk::PhysicalDeviceMemoryProperties memory_props;
   ctx_->physical_device().getMemoryProperties(&memory_props);
@@ -98,7 +99,7 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
     buffer_info.usage = buffer.usage;
     buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
-    auto rvt_buffer = ctx_->device()->createBufferUnique(buffer_info);
+    auto rvt_buffer = device->createBufferUnique(buffer_info);
     if (vk::Result::eSuccess != rvt_buffer.result) {
       RTN_MSG(false, "VK Error: 0x%x - Create buffer.\n", rvt_buffer.result);
     }
@@ -108,24 +109,24 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
     alloc_info.allocationSize = buffer_size;
     alloc_info.memoryTypeIndex = memory_type;
 
-    auto rvt_memory = ctx_->device()->allocateMemoryUnique(alloc_info);
+    auto rvt_memory = device->allocateMemoryUnique(alloc_info);
     if (vk::Result::eSuccess != rvt_memory.result) {
       RTN_MSG(false, "VK Error: 0x%x - Create buffer memory.\n", rvt_memory.result);
     }
     buffer.memory = std::move(rvt_memory.value);
 
     void *addr;
-    rv = ctx_->device()->mapMemory(*(buffer.memory), 0 /* offset */, buffer_size,
-                                   vk::MemoryMapFlags(), &addr);
+    rv = device->mapMemory(*(buffer.memory), 0 /* offset */, buffer_size, vk::MemoryMapFlags(),
+                           &addr);
     if (vk::Result::eSuccess != rv) {
       RTN_MSG(false, "VK Error: 0x%x - Map buffer memory.\n", rv);
     }
 
     uint8_t index = (buffer.usage == vk::BufferUsageFlagBits::eTransferSrc) ? 0 : 1;
-    memset(addr, static_cast<uint8_t>(index), buffer_size);
-    ctx_->device()->unmapMemory(*(buffer.memory));
+    memset(addr, static_cast<uint8_t>(kSrcValue + index), buffer_size);
+    device->unmapMemory(*(buffer.memory));
 
-    rv = ctx_->device()->bindBufferMemory(*(buffer.buffer), *(buffer.memory), 0 /* offset */);
+    rv = device->bindBufferMemory(*(buffer.buffer), *(buffer.memory), 0 /* offset */);
     if (rv != vk::Result::eSuccess) {
       RTN_MSG(false, "VK Error: 0x%x - Bind buffer memory.\n", rv);
     }
@@ -134,80 +135,74 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
   vk::CommandPoolCreateInfo command_pool_info;
   command_pool_info.queueFamilyIndex = ctx_->queue_family_index();
 
-  auto rvt_command_pool = ctx_->device()->createCommandPoolUnique(command_pool_info);
+  auto rvt_command_pool = device->createCommandPoolUnique(command_pool_info);
   if (vk::Result::eSuccess != rvt_command_pool.result) {
     RTN_MSG(false, "VK Error: 0x%x - Create command pool.\n", rvt_command_pool.result);
   }
   command_pool_ = std::move(rvt_command_pool.value);
 
-  VkCommandBufferAllocateInfo command_buffer_allocate_info{
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .commandPool = *command_pool_,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = 1,
-  };
-  command_buffers_.resize(command_buffer_allocate_info.commandBufferCount);
-  auto result = vkAllocateCommandBuffers(*ctx_->device(), &command_buffer_allocate_info,
-                                         command_buffers_.data());
-  if (VK_SUCCESS != result) {
-    RTN_MSG(false, "VK Error: 0x%x - Allocate command buffers.\n", result);
-  }
-  VkCommandBuffer &command_buffer = command_buffers_.front();
+  vk::CommandBufferAllocateInfo cmd_buff_alloc_info;
+  cmd_buff_alloc_info.commandPool = *command_pool_;
+  cmd_buff_alloc_info.level = vk::CommandBufferLevel::ePrimary;
+  cmd_buff_alloc_info.commandBufferCount = 1;
 
-  VkCommandBufferBeginInfo command_buffer_begin_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .pInheritanceInfo = nullptr,  // ignored for primary buffers
-  };
-  result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
-  if (VK_SUCCESS != result) {
-    RTN_MSG(false, "VK Error: 0x%x - Begin command buffer.\n", result);
+  auto rvt_alloc_cmd_bufs = device->allocateCommandBuffers(cmd_buff_alloc_info);
+  if (vk::Result::eSuccess != rvt_alloc_cmd_bufs.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Allocate command buffers.\n", rvt_alloc_cmd_bufs.result);
+  }
+  command_buffers_ = std::move(rvt_alloc_cmd_bufs.value);
+  vk::CommandBuffer &command_buffer = command_buffers_.front();
+
+  auto rv_begin = command_buffer.begin(vk::CommandBufferBeginInfo{});
+  if (vk::Result::eSuccess != rv_begin) {
+    RTN_MSG(false, "VK Error: 0x%x - Begin command buffer.\n", rv_begin);
   }
 
-  VkBufferCopy copy_region = {0 /* srcOffset */, 0 /* dstOffset */, buffer_size};
-  vkCmdCopyBuffer(command_buffer, *(buffers_[kSrcBuffer].buffer), *(buffers_[kDstBuffer].buffer),
-                  1 /* regionCount */, &copy_region);
+  vk::BufferCopy copy_region(0 /* srcOffset */, 0 /* dstOffset */, buffer_size);
+  command_buffer.copyBuffer(*(buffers_[kSrcBuffer].buffer), *(buffers_[kDstBuffer].buffer),
+                            1 /* regionCount */, &copy_region);
 
-  result = vkEndCommandBuffer(command_buffer);
-  if (VK_SUCCESS != result) {
-    RTN_MSG(false, "VK Error: 0x%x - End command buffer.\n", result);
+  auto rv_end = command_buffer.end();
+  if (vk::Result::eSuccess != rv_end) {
+    RTN_MSG(false, "VK Error: 0x%x - End command buffer.\n", rv_end);
   }
 
   return true;
 }
 
 bool VkCopyTest::Exec() {
-  VkCommandBuffer &command_buffer = command_buffers_.front();
-  VkSubmitInfo submit_info = {
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = nullptr,
-      0 /* waitSemaphoreCount */,
-      nullptr /* pWaitSemaphores */,
-      nullptr /* pWaitDstStageMask */,
-      static_cast<uint32_t>(command_buffers_.size()),
-      command_buffers_.data(),
-      0 /* signalSemaphoreCount */,
-      nullptr /* pSignalSemaphores */
-  };
-  vk::SubmitInfo submit_info_hpp(submit_info);
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &command_buffer;
+  const auto &device = ctx_->device();
 
-  auto rv = ctx_->queue().submit(1 /* submitCt */, &submit_info_hpp, nullptr /* fence */);
+  // Submit command buffer and wait for it to complete.
+  vk::SubmitInfo submit_info;
+  submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers_.size());
+  submit_info.pCommandBuffers = command_buffers_.data();
+
+  auto rv = ctx_->queue().submit(1 /* submitCt */, &submit_info, nullptr /* fence */);
   if (rv != vk::Result::eSuccess) {
     RTN_MSG(false, "VK Error: 0x%x - vk::Queue submit failed.\n", rv);
   }
 
   ctx_->queue().waitIdle();
 
+  // Verify that we've copied from kSrcBuffer to kDstBuffer.
+  void *dst_addr;
+  auto rv_map = device->mapMemory(*(buffers_[kDstBuffer].memory), 0 /* offset */, buffer_size_,
+                                  vk::MemoryMapFlags(), &dst_addr);
+  if (vk::Result::eSuccess != rv_map) {
+    RTN_MSG(false, "VK Error: 0x%x - Map buffer memory, value test.\n", rv_map);
+  }
+  if (*(static_cast<uint8_t *>(dst_addr)) != kSrcValue) {
+    RTN_MSG(false, "Dst buffer contents don't match src buffer - copy failed.\n");
+  }
+  device->unmapMemory(*(buffers_[kDstBuffer].memory));
+
   return true;
 }
 
 int main() {
-  const uint32_t kBufferSize = 60 * 1024 * 1024;
-  const uint32_t kIterations = 1000;
+  constexpr uint32_t kBufferSize = 60 * 1024 * 1024;
+  constexpr uint32_t kIterations = 1000;
 
   VkCopyTest app(kBufferSize);
 
