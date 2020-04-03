@@ -6,6 +6,7 @@ package artifactory
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
@@ -25,7 +26,10 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 			continue
 		}
 		prebuiltBins, err := pb.Get(mods.BuildDir())
-		if err != nil {
+		// The manifest might not have been built, but that's okay.
+		if os.IsNotExist(err) {
+			continue
+		} else if err != nil {
 			return nil, nil, fmt.Errorf("failed to derive binaries from prebuilt binary set %q: %w", pb.Name, err)
 		}
 		bins = append(bins, prebuiltBins...)
