@@ -469,8 +469,10 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
 
 static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_level, void* context,
                                          void** status) {
-  ACPI_DEVICE_INFO* info = nullptr;
-  ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
+  ACPI_DEVICE_INFO* info_rawptr = nullptr;
+  ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info_rawptr);
+  auto acpi_free = [] (auto mem) { ACPI_FREE(mem); };
+  std::unique_ptr<ACPI_DEVICE_INFO, decltype(acpi_free)> info{info_rawptr, acpi_free};
   if (acpi_status != AE_OK) {
     return acpi_status;
   }
@@ -480,7 +482,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
   zx_device_t* sys_root = ctx->sys_root;
   zx_device_t* platform_bus = ctx->platform_bus;
 
-  acpi_apply_workarounds(object, info);
+  acpi_apply_workarounds(object, info.get());
   if (!memcmp(&info->Name, "HDAS", 4)) {
     // We must have already seen at least one PCI root due to traversal order.
     if (ctx->last_pci == 0xFF) {
@@ -497,13 +499,11 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     }
   }
 
-  const char* hid = hid_from_acpi_devinfo(info);
-  if (hid == 0) {
-    ACPI_FREE(info);
+  const char* hid = hid_from_acpi_devinfo(info.get());
+  if (hid == nullptr) {
     return AE_OK;
   }
-  const char* cid;
-  cid = nullptr;
+  const char* cid = nullptr;
   if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
       // IDs may be 7 or 8 bytes, and Length includes the null byte
       (info->CompatibleIdList.Ids[0].Length == HID_LENGTH ||
@@ -513,7 +513,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
 
   if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
        !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
-    pci_init(sys_root, object, info, ctx);
+    pci_init(sys_root, object, info.get(), ctx);
   } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
     battery_init(acpi_root, object);
   } else if (!memcmp(hid, LID_HID_STRING, HID_LENGTH)) {
@@ -527,22 +527,19 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
   } else if (!memcmp(hid, GOOGLE_CROS_EC_HID_STRING, HID_LENGTH)) {
     cros_ec_lpc_init(acpi_root, object);
   } else if (!memcmp(hid, DPTF_THERMAL_HID_STRING, HID_LENGTH)) {
-    thermal_init(acpi_root, info, object);
+    thermal_init(acpi_root, info.get(), object);
   } else if (!memcmp(hid, I8042_HID_STRING, HID_LENGTH) ||
              (cid && !memcmp(cid, I8042_HID_STRING, HID_LENGTH))) {
-    publish_device(acpi_root, platform_bus, object, info, "i8042", ZX_PROTOCOL_ACPI, &acpi_proto);
+    publish_device(acpi_root, platform_bus, object, info.get(), "i8042", ZX_PROTOCOL_ACPI, &acpi_proto);
   } else if (!memcmp(hid, RTC_HID_STRING, HID_LENGTH) ||
              (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
-    publish_device(acpi_root, platform_bus, object, info, "rtc", ZX_PROTOCOL_ACPI, &acpi_proto);
+    publish_device(acpi_root, platform_bus, object, info.get(), "rtc", ZX_PROTOCOL_ACPI, &acpi_proto);
   } else if (!memcmp(hid, GOLDFISH_PIPE_HID_STRING, HID_LENGTH)) {
-    publish_device(acpi_root, platform_bus, object, info, "goldfish", ZX_PROTOCOL_ACPI,
+    publish_device(acpi_root, platform_bus, object, info.get(), "goldfish", ZX_PROTOCOL_ACPI,
                    &acpi_proto);
   } else if (!memcmp(hid, SERIAL_HID_STRING, HID_LENGTH)) {
-    publish_device(acpi_root, platform_bus, object, info, "serial", ZX_PROTOCOL_ACPI, &acpi_proto);
+    publish_device(acpi_root, platform_bus, object, info.get(), "serial", ZX_PROTOCOL_ACPI, &acpi_proto);
   }
-
-  ACPI_FREE(info);
-
   return AE_OK;
 }
 
