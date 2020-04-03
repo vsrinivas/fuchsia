@@ -205,7 +205,7 @@ uint32_t As370Sdhci::SdhciGetBaseClock() { return 0; }
 
 uint64_t As370Sdhci::SdhciGetQuirks(uint64_t* out_dma_boundary_alignment) {
   *out_dma_boundary_alignment = kDmaBoundaryAlignment128M;
-  uint64_t quirks = SDHCI_QUIRK_NO_DMA | SDHCI_QUIRK_NON_STANDARD_TUNING |
+  uint64_t quirks = SDHCI_QUIRK_NON_STANDARD_TUNING |
                     SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER |
                     SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT;
 
