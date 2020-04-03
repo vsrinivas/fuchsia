@@ -657,11 +657,10 @@ mod stub {
             scheduling: &UpdateCheckSchedule,
             _protocol_state: &ProtocolState,
         ) -> BoxFuture<'_, UpdateCheckSchedule> {
-            let schedule = UpdateCheckSchedule {
-                last_update_time: scheduling.last_update_time,
-                next_update_window_start: clock::now() + Duration::from_secs(3),
-                next_update_time: clock::now() + Duration::from_secs(3),
-            };
+            let schedule = UpdateCheckSchedule::builder()
+                .last_time(scheduling.last_update_time)
+                .next_time(clock::now() + Duration::from_secs(3))
+                .build();
             future::ready(schedule).boxed()
         }
 

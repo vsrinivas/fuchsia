@@ -51,11 +51,10 @@ impl Policy for FuchsiaPolicy {
             STARTUP_DELAY
         };
         next_update_time = max(next_update_time, policy_data.current_time + min_delay);
-        UpdateCheckSchedule {
-            last_update_time: scheduling.last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        }
+        UpdateCheckSchedule::builder()
+            .last_time(scheduling.last_update_time)
+            .next_time(next_update_time)
+            .build()
     }
 
     fn update_check_allowed(
@@ -142,18 +141,13 @@ impl PolicyEngine for FuchsiaPolicyEngine {
 mod tests {
     use super::*;
     use omaha_client::installer::stub::StubPlan;
-    use std::time::SystemTime;
 
     #[test]
     fn test_compute_next_update_time() {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(1234);
-        let schedule = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-        };
+        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
             &[],
@@ -161,11 +155,10 @@ mod tests {
             &ProtocolState::default(),
         );
         let next_update_time = last_update_time + PERIODIC_INTERVAL;
-        let expected = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let expected = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         assert_eq!(result, expected);
     }
 
@@ -174,11 +167,7 @@ mod tests {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(123456);
-        let schedule = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-        };
+        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
             &[],
@@ -186,11 +175,10 @@ mod tests {
             &ProtocolState::default(),
         );
         let next_update_time = now + STARTUP_DELAY;
-        let expected = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let expected = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         assert_eq!(result, expected);
     }
 
@@ -199,21 +187,16 @@ mod tests {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(123456);
-        let schedule = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-        };
+        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         let mut protocol_state = ProtocolState::default();
         protocol_state.consecutive_failed_update_checks = 1;
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
         let next_update_time = now + RETRY_DELAY;
-        let expected = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let expected = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         assert_eq!(result, expected);
     }
 
@@ -222,21 +205,16 @@ mod tests {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(123456);
-        let schedule = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-        };
+        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         let mut protocol_state = ProtocolState::default();
         protocol_state.consecutive_failed_update_checks = 4;
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
         let next_update_time = now + PERIODIC_INTERVAL;
-        let expected = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let expected = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         assert_eq!(result, expected);
     }
 
@@ -247,22 +225,17 @@ mod tests {
         let last_update_time = now - Duration::from_secs(1234);
         let interval = Duration::from_secs(5678);
         let next_update_time = last_update_time + interval;
-        let schedule = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-        };
+        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         let protocol_state = ProtocolState {
             server_dictated_poll_interval: Some(interval),
             ..ProtocolState::default()
         };
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
-        let expected = UpdateCheckSchedule {
-            last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let expected = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         assert_eq!(result, expected);
     }
 
@@ -272,11 +245,10 @@ mod tests {
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL;
-        let schedule = UpdateCheckSchedule {
-            last_update_time: last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let schedule = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         let check_options = CheckOptions::default();
         let result = FuchsiaPolicy::update_check_allowed(
             &policy_data,
@@ -298,11 +270,10 @@ mod tests {
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - PERIODIC_INTERVAL + Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL;
-        let schedule = UpdateCheckSchedule {
-            last_update_time: last_update_time,
-            next_update_window_start: next_update_time,
-            next_update_time,
-        };
+        let schedule = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_time(next_update_time)
+            .build();
         let result = FuchsiaPolicy::update_check_allowed(
             &policy_data,
             &[],

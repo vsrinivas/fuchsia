@@ -1022,11 +1022,10 @@ where
         let options = CheckOptions::default();
 
         let context = update_check::Context {
-            schedule: UpdateCheckSchedule {
-                last_update_time: clock::now() - Duration::new(500, 0),
-                next_update_time: clock::now(),
-                next_update_window_start: clock::now(),
-            },
+            schedule: UpdateCheckSchedule::builder()
+                .last_time(clock::now() - Duration::new(500, 0))
+                .next_time(clock::now())
+                .build(),
             state: ProtocolState::default(),
         };
 
@@ -1113,7 +1112,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::cell::RefCell;
-    use std::time::{Duration, SystemTime};
+    use std::time::Duration;
 
     fn make_test_app_set() -> AppSet {
         AppSet::new(vec![App::new(
@@ -1454,11 +1453,7 @@ mod tests {
         timer.expect(Duration::from_secs(111));
         let next_update_time = clock::now() + Duration::from_secs(111);
         let policy_engine = MockPolicyEngine {
-            check_schedule: UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH,
-                next_update_time,
-                next_update_window_start: next_update_time,
-            },
+            check_schedule: UpdateCheckSchedule::builder().next_time(next_update_time).build(),
             ..MockPolicyEngine::default()
         };
 
@@ -1495,17 +1490,14 @@ mod tests {
         timer.expect(Duration::from_secs(1 * 60 * 60));
         let now = clock::now();
         let policy_engine = MockPolicyEngine {
-            check_schedule: UpdateCheckSchedule {
+            check_schedule: UpdateCheckSchedule::builder()
                 // A day into the future, which triggers the capping logic
-                last_update_time: now + Duration::from_secs(24 * 60 * 60),
+                .last_time(now + Duration::from_secs(24 * 60 * 60))
                 // By policy, the next update time would be an hour from then
-                next_update_time: now
-                    + Duration::from_secs(24 * 60 * 60)
-                    + Duration::from_secs(1 * 60 * 60),
-                next_update_window_start: now
-                    + Duration::from_secs(24 * 60 * 60)
-                    + Duration::from_secs(1 * 60 * 60),
-            },
+                .next_time(
+                    now + Duration::from_secs(24 * 60 * 60) + Duration::from_secs(1 * 60 * 60),
+                )
+                .build(),
             ..MockPolicyEngine::default()
         };
 
@@ -1560,11 +1552,7 @@ mod tests {
         timer.expect(Duration::from_secs(111));
         let next_update_time = clock::now() + Duration::from_secs(111);
         let policy_engine = MockPolicyEngine {
-            check_schedule: UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH,
-                next_update_time,
-                next_update_window_start: next_update_time,
-            },
+            check_schedule: UpdateCheckSchedule::builder().next_time(next_update_time).build(),
             ..MockPolicyEngine::default()
         };
         let apps = make_test_app_set();
@@ -1687,11 +1675,10 @@ mod tests {
                 .collect::<Vec<UpdateCheckSchedule>>()
                 .await;
 
-            let expected_schedule = UpdateCheckSchedule {
-                last_update_time: clock::now(),
-                next_update_time: clock::now(),
-                next_update_window_start: clock::now(),
-            };
+            let expected_schedule = UpdateCheckSchedule::builder()
+                .last_time(clock::now())
+                .next_time(clock::now())
+                .build();
 
             assert_eq!(actual_schedules, vec![expected_schedule]);
         });
@@ -2526,11 +2513,9 @@ mod tests {
 
         let (timer, mut timers) = timer::BlockingTimer::new();
         let policy_engine = MockPolicyEngine {
-            check_schedule: UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH,
-                next_update_time: clock::now() + Duration::from_secs(321),
-                next_update_window_start: clock::now() + Duration::from_secs(321),
-            },
+            check_schedule: UpdateCheckSchedule::builder()
+                .next_time(clock::now() + Duration::from_secs(321))
+                .build(),
             ..MockPolicyEngine::default()
         };
         let (mut ctl, state_machine) = pool.run_until(

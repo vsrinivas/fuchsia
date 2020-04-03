@@ -22,11 +22,10 @@ impl Policy for StubPolicy {
         scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
     ) -> UpdateCheckSchedule {
-        UpdateCheckSchedule {
-            last_update_time: scheduling.last_update_time,
-            next_update_window_start: policy_data.current_time,
-            next_update_time: policy_data.current_time,
-        }
+        UpdateCheckSchedule::builder()
+            .last_time(scheduling.last_update_time)
+            .next_time(policy_data.current_time)
+            .build()
     }
 
     fn update_check_allowed(
@@ -104,29 +103,22 @@ impl PolicyEngine for StubPolicyEngine {
 mod tests {
     use super::*;
     use crate::{installer::stub::StubPlan, protocol::request::InstallSource};
-    use std::time::SystemTime;
-
-    const SCHEDULING: UpdateCheckSchedule = UpdateCheckSchedule {
-        last_update_time: SystemTime::UNIX_EPOCH,
-        next_update_window_start: SystemTime::UNIX_EPOCH,
-        next_update_time: SystemTime::UNIX_EPOCH,
-    };
 
     #[test]
     fn test_compute_next_update_time() {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
+        let update_check_schedule = UpdateCheckSchedule::default();
         let result = StubPolicy::compute_next_update_time(
             &policy_data,
             &[],
-            &SCHEDULING,
+            &update_check_schedule,
             &ProtocolState::default(),
         );
-        let expected = UpdateCheckSchedule {
-            last_update_time: SCHEDULING.last_update_time,
-            next_update_window_start: now,
-            next_update_time: now,
-        };
+        let expected = UpdateCheckSchedule::builder()
+            .last_time(update_check_schedule.last_update_time)
+            .next_time(now)
+            .build();
         assert_eq!(result, expected);
     }
 
@@ -137,7 +129,7 @@ mod tests {
         let result = StubPolicy::update_check_allowed(
             &policy_data,
             &[],
-            &SCHEDULING,
+            &UpdateCheckSchedule::default(),
             &ProtocolState::default(),
             &check_options,
         );
@@ -155,7 +147,7 @@ mod tests {
         let result = StubPolicy::update_check_allowed(
             &policy_data,
             &[],
-            &SCHEDULING,
+            &UpdateCheckSchedule::default(),
             &ProtocolState::default(),
             &check_options,
         );

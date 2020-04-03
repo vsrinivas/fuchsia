@@ -271,11 +271,7 @@ mod tests {
     fn test_schedule_node() {
         let inspector = Inspector::new();
         let node = ScheduleNode::new(inspector.root().create_child("schedule"));
-        let schedule = UpdateCheckSchedule {
-            last_update_time: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
-        };
+        let schedule = UpdateCheckSchedule::default();
         node.set(&schedule);
 
         assert_inspect_tree!(

@@ -373,20 +373,48 @@ pub struct UpdateCheckSchedule {
     /// When the last update check was attempted (start time of the check process).
     pub last_update_time: SystemTime,
 
-    /// When the next periodic update window starts.
-    pub next_update_window_start: SystemTime,
-
-    /// When the update should happen (in the update window).
+    /// When the update should happen.
     pub next_update_time: SystemTime,
 }
 
-#[cfg(test)]
 impl Default for UpdateCheckSchedule {
     fn default() -> Self {
         UpdateCheckSchedule {
             last_update_time: SystemTime::UNIX_EPOCH,
             next_update_time: SystemTime::UNIX_EPOCH,
-            next_update_window_start: SystemTime::UNIX_EPOCH,
+        }
+    }
+}
+
+impl UpdateCheckSchedule {
+    pub fn builder() -> ScheduleBuilder {
+        ScheduleBuilder::default()
+    }
+}
+
+/// This is a builder for the UpdateCheckSchedule.
+///
+/// let schedule = UpdateCheckSchedule::builder().last_time(SystemTime::now()).build();
+///
+#[derive(Clone, Debug, Default)]
+pub struct ScheduleBuilder {
+    last_time: Option<SystemTime>,
+    next_time: Option<SystemTime>,
+}
+
+impl ScheduleBuilder {
+    pub fn last_time(mut self, last_update_time: SystemTime) -> Self {
+        self.last_time = Some(last_update_time);
+        self
+    }
+    pub fn next_time(mut self, next_update_time: SystemTime) -> Self {
+        self.next_time = Some(next_update_time);
+        self
+    }
+    pub fn build(self) -> UpdateCheckSchedule {
+        UpdateCheckSchedule {
+            last_update_time: self.last_time.unwrap_or(SystemTime::UNIX_EPOCH),
+            next_update_time: self.next_time.unwrap_or(SystemTime::UNIX_EPOCH),
         }
     }
 }
@@ -398,10 +426,6 @@ impl fmt::Debug for UpdateCheckSchedule {
         f.debug_struct("UpdateCheckSchedule")
             .field("last_update_time", &DateTime::<Utc>::from(self.last_update_time).to_rfc3339())
             .field("next_update_time", &DateTime::<Utc>::from(self.next_update_time).to_rfc3339())
-            .field(
-                "next_update_window_start",
-                &DateTime::<Utc>::from(self.next_update_window_start).to_rfc3339(),
-            )
             .finish()
     }
 }
@@ -858,8 +882,7 @@ mod tests {
         assert_eq!(
             "UpdateCheckSchedule { \
              last_update_time: \"1970-01-01T00:00:00+00:00\", \
-             next_update_time: \"1970-01-01T00:00:00+00:00\", \
-             next_update_window_start: \"1970-01-01T00:00:00+00:00\" \
+             next_update_time: \"1970-01-01T00:00:00+00:00\" \
              }",
             format!("{:?}", UpdateCheckSchedule::default())
         );
@@ -867,17 +890,63 @@ mod tests {
         assert_eq!(
             "UpdateCheckSchedule { \
              last_update_time: \"1970-01-02T03:46:40+00:00\", \
-             next_update_time: \"1970-01-03T07:33:20+00:00\", \
-             next_update_window_start: \"1970-01-03T07:33:20+00:00\" \
+             next_update_time: \"1970-01-03T07:33:20+00:00\" \
              }",
             format!(
                 "{:?}",
                 UpdateCheckSchedule {
                     last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
                     next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
-                    next_update_window_start: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
                 }
             )
+        );
+    }
+
+    #[test]
+    fn test_update_check_schedule_builder_all_fields() {
+        assert_eq!(
+            UpdateCheckSchedule::builder()
+                .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
+                .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(200000))
+                .build(),
+            UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+                next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
+            }
+        );
+    }
+
+    #[test]
+    fn test_update_check_schedule_builder_subset_fields() {
+        assert_eq!(
+            UpdateCheckSchedule::builder()
+                .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
+                .build(),
+            UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+                next_update_time: SystemTime::UNIX_EPOCH,
+            }
+        );
+
+        assert_eq!(
+            UpdateCheckSchedule::builder()
+                .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
+                .build(),
+            UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH,
+                next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+            }
+        );
+    }
+
+    #[test]
+    fn test_update_check_schedule_builder_defaults() {
+        assert_eq!(
+            UpdateCheckSchedule::builder().build(),
+            UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH,
+                next_update_time: SystemTime::UNIX_EPOCH,
+            }
         );
     }
 }

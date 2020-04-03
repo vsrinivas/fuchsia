@@ -41,11 +41,10 @@ impl Context {
             .await
             .map(|micros| Duration::from_micros(micros as u64));
         Context {
-            schedule: UpdateCheckSchedule {
-                last_update_time,
-                next_update_time: clock::now(),
-                next_update_window_start: clock::now(),
-            },
+            schedule: UpdateCheckSchedule::builder()
+                .last_time(last_update_time)
+                .next_time(clock::now())
+                .build(),
             state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
         }
     }
@@ -165,11 +164,10 @@ mod tests {
             let last_update_time = i64_to_time(123456789);
             let server_dictated_poll_interval = Some(Duration::from_micros(56789));
             let context = Context {
-                schedule: UpdateCheckSchedule {
-                    last_update_time,
-                    next_update_time: clock::now(),
-                    next_update_window_start: clock::now(),
-                },
+                schedule: UpdateCheckSchedule::builder()
+                    .last_time(last_update_time)
+                    .next_time(clock::now())
+                    .build(),
                 state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
             };
             context.persist(&mut storage).await;
@@ -187,11 +185,10 @@ mod tests {
             storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654).await.unwrap();
 
             let context = Context {
-                schedule: UpdateCheckSchedule {
-                    last_update_time,
-                    next_update_time: clock::now(),
-                    next_update_window_start: clock::now(),
-                },
+                schedule: UpdateCheckSchedule::builder()
+                    .last_time(last_update_time)
+                    .next_time(clock::now())
+                    .build(),
                 state: ProtocolState {
                     server_dictated_poll_interval: None,
                     ..ProtocolState::default()
