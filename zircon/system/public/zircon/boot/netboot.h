@@ -65,6 +65,11 @@
 #define NB_FVM_FILENAME NB_IMAGE_PREFIX NB_FVM_HOST_FILENAME
 #define NB_BOOTLOADER_HOST_FILENAME "bootloader.img"
 #define NB_BOOTLOADER_FILENAME NB_IMAGE_PREFIX NB_BOOTLOADER_HOST_FILENAME
+// Firmware images are slightly different, as they have an optional type suffix:
+//   firmware_     <- type = "" (the default)
+//   firmware_foo  <- type = "foo"
+#define NB_FIRMWARE_HOST_FILENAME_PREFIX "firmware_"
+#define NB_FIRMWARE_FILENAME_PREFIX NB_IMAGE_PREFIX NB_FIRMWARE_HOST_FILENAME_PREFIX
 #define NB_ZIRCONA_HOST_FILENAME "zircona.img"
 #define NB_ZIRCONA_FILENAME NB_IMAGE_PREFIX NB_ZIRCONA_HOST_FILENAME
 #define NB_ZIRCONB_HOST_FILENAME "zirconb.img"
@@ -89,6 +94,11 @@
 #define NB_INIT_PARTITION_TABLES_FILENAME NB_IMAGE_PREFIX NB_INIT_PARTITION_TABLES_HOST_FILENAME
 #define NB_WIPE_PARTITION_TABLES_HOST_FILENAME "wipe_partition_tables"
 #define NB_WIPE_PARTITION_TABLES_FILENAME NB_IMAGE_PREFIX NB_WIPE_PARTITION_TABLES_HOST_FILENAME
+
+// Should match paver FIDL definition.
+// Length does not include the '\0' terminator, so when allocating a character
+// buffer to hold the type use (NB_FIRMWARE_TYPE_MAX_LENGTH  + 1).
+#define NB_FIRMWARE_TYPE_MAX_LENGTH 256
 
 typedef struct board_info {
   char board_name[ZX_MAX_NAME_LEN];
