@@ -248,6 +248,9 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
           guest_state->rdx &= ~(1u << X86_FEATURE_ACPI.bit);
           break;
         case X86_CPUID_TOPOLOGY:
+          guest_state->rax = 0;
+          guest_state->rbx = 0;
+          guest_state->rcx = 0;
           guest_state->rdx = vmcs->Read(VmcsField16::VPID) - 1;
           break;
         case X86_CPUID_XSAVE:
