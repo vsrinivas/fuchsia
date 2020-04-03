@@ -649,7 +649,6 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
   Thread* thread = Thread::Current::Get();
   thread->flags_ |= THREAD_FLAG_VCPU;
-  thread->SetSoftCpuAffinity(cpu_num_to_mask(vpid % arch_max_num_cpus()));
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -695,9 +694,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
   VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
-  zx_paddr_t table = gpas->arch_aspace()->arch_table_phys();
-  status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
-                     table, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
+  zx_paddr_t pml4_address = gpas->arch_aspace()->arch_table_phys();
+  status =
+      vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
+                pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
   if (status != ZX_OK) {
     return status;
   }
@@ -759,20 +759,26 @@ void Vcpu::MigrateCpu(Thread::MigrateStage stage) {
       // entering the the guest, instead of VMRESUME.
       vmx_state_.resume = false;
 
+      // Load the VMCS on the destination processor.
+      __UNUSED zx_status_t status = vmptrld(vmcs_page_.PhysicalAddress());
+      DEBUG_ASSERT(status == ZX_OK);
+
       // Update the host MSR list entries with the per-CPU variables of the
       // destination processor.
       edit_msr_list(&host_msr_page_, 5, X86_MSR_IA32_TSC_AUX, read_msr(X86_MSR_IA32_TSC_AUX));
 
-      // In addition to calling VMPTRLD, we also update the VMCS with the
-      // per-CPU variables of the destination processor.
+      // Update the VMCS with the per-CPU variables of the destination
+      // processor.
       x86_percpu* percpu = x86_get_percpu();
-      __UNUSED zx_status_t status = vmptrld(vmcs_page_.PhysicalAddress());
-      DEBUG_ASSERT(status == ZX_OK);
       vmwrite(static_cast<uint64_t>(VmcsField16::HOST_TR_SELECTOR), TSS_SELECTOR(percpu->cpu_num));
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_FS_BASE), thread_->arch_.fs_base);
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_GS_BASE), read_msr(X86_MSR_IA32_GS_BASE));
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_TR_BASE),
               reinterpret_cast<uint64_t>(&percpu->default_tss));
+
+      // Invalidate TLB mappings for the EPT.
+      zx_paddr_t pml4_address = guest_->AddressSpace()->arch_aspace()->arch_table_phys();
+      invept(InvEpt::SINGLE_CONTEXT, ept_pointer(pml4_address));
       break;
     }
   }
