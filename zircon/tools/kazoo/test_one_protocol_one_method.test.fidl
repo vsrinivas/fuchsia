@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zx;
+library zz;
+
+using zx;
 
 [Transport="Syscall"]
 protocol Single {
     /// This does a single thing.
-    DoThing(int32 an_input) -> (status status);
+    DoThing(int32 an_input) -> (zx.status status);
 };

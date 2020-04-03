@@ -102,7 +102,6 @@ sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.policy
 sdk://fidl/fuchsia.wlan.service
 sdk://fidl/fuchsia.wlan.stats
-sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp
 sdk://pkg/async-default
