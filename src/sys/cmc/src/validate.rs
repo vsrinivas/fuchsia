@@ -494,6 +494,17 @@ impl<'a> ValidationContext<'a> {
     ) -> Result<(), Error> {
         self.validate_from_clause("expose", expose)?;
 
+        // Ensure that if the expose target is framework, the source target is self always.
+        if expose.to == Some(cml::Ref::Framework) {
+            match &expose.from {
+                OneOrMany::One(cml::Ref::Self_) => {}
+                OneOrMany::Many(vec) if vec.iter().all(|from| *from == cml::Ref::Self_) => {}
+                _ => {
+                    return Err(Error::validate("Expose to framework can only be done from self."))
+                }
+            }
+        }
+
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
             // Directories can only have a single `from` clause.
@@ -1459,6 +1470,37 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate("Resolver \"pkg_resolver\" is exposed from self, so it must be declared in \"resolvers\"")),
+        },
+        test_cml_expose_to_framework_ok => {
+            input = json!({
+                "expose": [
+                    {
+                        "directory": "/foo",
+                        "from": "self",
+                        "rights": ["r*"],
+                        "to": "framework"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_expose_to_framework_invalid => {
+            input = json!({
+                "expose": [
+                    {
+                        "directory": "/foo",
+                        "from": "#logger",
+                        "to": "framework"
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("Expose to framework can only be done from self.")),
         },
 
         // offer

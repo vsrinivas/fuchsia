@@ -829,7 +829,11 @@ impl<'a> ValidationContext<'a> {
         match target {
             Some(r) => match r {
                 fsys::Ref::Realm(_) => {}
-                fsys::Ref::Framework(_) => {}
+                fsys::Ref::Framework(_) => {
+                    if source != Some(&fsys::Ref::Self_(fsys::SelfRef {})) {
+                        self.errors.push(Error::invalid_field(decl, "source"));
+                    }
+                }
                 _ => {
                     self.errors.push(Error::invalid_field(decl, "target"));
                 }
@@ -2366,7 +2370,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        target: Some(Ref::Framework(FrameworkRef {})),
+                        target: Some(Ref::Realm(RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("/foo".to_string()),
                     }),
@@ -2413,6 +2417,12 @@ mod tests {
         test_validate_exposes_invalid_source_target => {
             input = {
                 let mut decl = new_component_decl();
+                decl.children = Some(vec![ChildDecl{
+                    name: Some("logger".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(StartupMode::Lazy),
+                    environment: None,
+                }]);
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: None,
@@ -2454,6 +2464,17 @@ mod tests {
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("b".to_string()),
                     }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("/i".to_string()),
+                        target_path: Some("/j".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
                 ]);
                 decl
             },
@@ -2470,6 +2491,7 @@ mod tests {
                 Error::invalid_field("ExposeRunnerDecl", "target"),
                 Error::invalid_field("ExposeResolverDecl", "source"),
                 Error::invalid_field("ExposeResolverDecl", "target"),
+                Error::invalid_field("ExposeDirectoryDecl", "source"),
             ])),
         },
         test_validate_exposes_long_identifiers => {
