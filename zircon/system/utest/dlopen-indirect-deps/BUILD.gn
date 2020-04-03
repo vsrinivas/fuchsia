@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("dlopen-indirect-deps") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlopen-indirect-deps.c" ]
   deps = [
@@ -68,6 +65,14 @@ shared_library("dlopen-indirect-deps-test-libb") {
   sources = [ "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c" ]
 }
 
-migrated_manifest("dlopen-indirect-deps-manifest") {
+unittest_package("dlopen-indirect-deps-package") {
+  package_name = "dlopen-indirect-deps"
   deps = [ ":dlopen-indirect-deps" ]
+
+  tests = [
+    {
+      name = "dlopen-indirect-deps"
+      dest = "dlopen-indirect-deps-test"
+    },
+  ]
 }

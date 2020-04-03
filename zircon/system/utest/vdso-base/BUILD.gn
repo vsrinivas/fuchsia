@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("vdso-base") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-base.c" ]
   deps = [
@@ -28,6 +25,14 @@ test("vdso-base") {
   libs = [ "zircon" ]
 }
 
-migrated_manifest("vdso-base-manifest") {
+unittest_package("vdso-base-package") {
+  package_name = "vdso-base"
   deps = [ ":vdso-base" ]
+
+  tests = [
+    {
+      name = "vdso-base"
+      dest = "vdso-base-test"
+    },
+  ]
 }

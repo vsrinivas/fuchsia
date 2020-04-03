@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("fpu") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "fputest.c" ]
   deps = [
@@ -27,6 +24,14 @@ test("fpu") {
   ]
 }
 
-migrated_manifest("fpu-manifest") {
+unittest_package("fpu-package") {
+  package_name = "fpu"
   deps = [ ":fpu" ]
+
+  tests = [
+    {
+      name = "fpu"
+      dest = "fpu-test"
+    },
+  ]
 }

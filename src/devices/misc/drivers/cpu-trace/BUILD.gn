@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 source_set("perf-mon") {
@@ -65,9 +66,6 @@ group("tests") {
 }
 
 test("perf-mon-tests") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tests/perf-mon-tests.cc" ]
   deps = [
@@ -87,6 +85,14 @@ migrated_manifest("cpu-trace-manifest") {
   deps = [ ":cpu-trace" ]
 }
 
-migrated_manifest("perf-mon-tests-manifest") {
+unittest_package("perf-mon-tests-package") {
+  package_name = "perf-mon-tests"
   deps = [ ":perf-mon-tests" ]
+
+  tests = [
+    {
+      name = "perf-mon-tests"
+      dest = "perf-mon-tests-test"
+    },
+  ]
 }

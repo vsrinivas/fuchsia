@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("isolateddevmgr-test") {
@@ -23,9 +24,6 @@ driver_module("isolateddevmgr-test") {
 }
 
 test("isolateddevmgr") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
@@ -45,6 +43,14 @@ migrated_manifest("isolateddevmgr-test-manifest") {
   deps = [ ":isolateddevmgr-test" ]
 }
 
-migrated_manifest("isolateddevmgr-manifest") {
+unittest_package("isolateddevmgr-package") {
+  package_name = "isolateddevmgr"
   deps = [ ":isolateddevmgr" ]
+
+  tests = [
+    {
+      name = "isolateddevmgr"
+      dest = "isolateddevmgr-test"
+    },
+  ]
 }

@@ -13,14 +13,10 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 test("fvm") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -102,10 +98,18 @@ test("fvm-integration") {
   ]
 }
 
-migrated_manifest("fvm-manifest") {
-  deps = [ ":fvm" ]
-}
-
 migrated_manifest("fvm-integration-manifest") {
   deps = [ ":fvm-integration" ]
+}
+
+unittest_package("fvm-package") {
+  package_name = "fvm"
+  deps = [ ":fvm" ]
+
+  tests = [
+    {
+      name = "fvm"
+      dest = "fvm-test"
+    },
+  ]
 }

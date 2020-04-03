@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("thread-initial-state") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "${current_cpu}.S",
@@ -31,6 +28,14 @@ test("thread-initial-state") {
   libs = [ "zircon" ]
 }
 
-migrated_manifest("thread-initial-state-manifest") {
+unittest_package("thread-initial-state-package") {
+  package_name = "thread-initial-state"
   deps = [ ":thread-initial-state" ]
+
+  tests = [
+    {
+      name = "thread-initial-state"
+      dest = "thread-initial-state-test"
+    },
+  ]
 }

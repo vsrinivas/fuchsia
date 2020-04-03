@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -21,9 +21,6 @@ group("test") {
 }
 
 test("launchpad") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "launchpad.cc" ]
   deps = [
@@ -37,6 +34,14 @@ test("launchpad") {
   ]
 }
 
-migrated_manifest("launchpad-manifest") {
+unittest_package("launchpad-package") {
+  package_name = "launchpad"
   deps = [ ":launchpad" ]
+
+  tests = [
+    {
+      name = "launchpad"
+      dest = "launchpad-test"
+    },
+  ]
 }

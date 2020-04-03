@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -21,9 +21,6 @@ group("test") {
 }
 
 test("region-alloc") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "region-alloc-c-api.c",
@@ -37,6 +34,14 @@ test("region-alloc") {
   ]
 }
 
-migrated_manifest("region-alloc-manifest") {
+unittest_package("region-alloc-package") {
+  package_name = "region-alloc"
   deps = [ ":region-alloc" ]
+
+  tests = [
+    {
+      name = "region-alloc"
+      dest = "region-alloc-test"
+    },
+  ]
 }

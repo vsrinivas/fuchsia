@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("ethernet") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ethernet.cc" ]
   deps = [
@@ -35,6 +32,14 @@ test("ethernet") {
   ]
 }
 
-migrated_manifest("ethernet-manifest") {
+unittest_package("ethernet-package") {
+  package_name = "ethernet"
   deps = [ ":ethernet" ]
+
+  tests = [
+    {
+      name = "ethernet"
+      dest = "ethernet-test"
+    },
+  ]
 }

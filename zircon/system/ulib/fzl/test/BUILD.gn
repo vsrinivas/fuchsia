@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -24,9 +24,6 @@ group("test") {
 }
 
 test("fzl-zxtest") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "pinned-vmo-tests.cc",
@@ -51,9 +48,6 @@ test("fzl-zxtest") {
 }
 
 test("fzl") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "fzl-test.cc",
@@ -84,10 +78,26 @@ test("fzl") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-migrated_manifest("fzl-zxtest-manifest") {
-  deps = [ ":fzl-zxtest" ]
+unittest_package("fzl-package") {
+  package_name = "fzl"
+  deps = [ ":fzl" ]
+
+  tests = [
+    {
+      name = "fzl"
+      dest = "fzl-test"
+    },
+  ]
 }
 
-migrated_manifest("fzl-manifest") {
-  deps = [ ":fzl" ]
+unittest_package("fzl-zxtest-package") {
+  package_name = "fzl-zxtest"
+  deps = [ ":fzl-zxtest" ]
+
+  tests = [
+    {
+      name = "fzl-zxtest"
+      dest = "fzl-zxtest-test"
+    },
+  ]
 }

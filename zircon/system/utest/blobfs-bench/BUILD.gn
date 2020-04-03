@@ -13,14 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("blobfs-bench") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -63,6 +58,14 @@ test("blobfs-bench") {
   ]
 }
 
-migrated_manifest("blobfs-bench-manifest") {
+unittest_package("blobfs-bench-package") {
+  package_name = "blobfs-bench"
   deps = [ ":blobfs-bench" ]
+
+  tests = [
+    {
+      name = "blobfs-bench"
+      dest = "blobfs-bench-test"
+    },
+  ]
 }

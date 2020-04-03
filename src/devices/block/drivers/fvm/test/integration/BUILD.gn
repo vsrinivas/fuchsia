@@ -3,12 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("fvm-driver-integration") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "volume_manager_api_test.cc" ]
   include_dirs = [ ".." ]
@@ -24,6 +21,14 @@ test("fvm-driver-integration") {
   ]
 }
 
-migrated_manifest("fvm-driver-integration-manifest") {
+unittest_package("fvm-driver-integration-package") {
+  package_name = "fvm-driver-integration"
   deps = [ ":fvm-driver-integration" ]
+
+  tests = [
+    {
+      name = "fvm-driver-integration"
+      dest = "fvm-driver-integration-test"
+    },
+  ]
 }

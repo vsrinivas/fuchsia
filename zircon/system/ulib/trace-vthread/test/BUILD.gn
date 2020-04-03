@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -48,11 +48,6 @@ source_set("test-common") {
 
 # The unittest for the default case of dynamically linked trace-engine.
 test("trace-vthread-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -70,11 +65,6 @@ test("trace-vthread-test") {
 
 # The unittest with a static trace-engine.
 test("trace-vthread-with-static-engine-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -90,10 +80,26 @@ test("trace-vthread-with-static-engine-test") {
   ]
 }
 
-migrated_manifest("trace-vthread-test-manifest") {
+unittest_package("trace-vthread-test-package") {
+  package_name = "trace-vthread-test"
   deps = [ ":trace-vthread-test" ]
+
+  tests = [
+    {
+      name = "trace-vthread-test"
+      dest = "trace-vthread-test-test"
+    },
+  ]
 }
 
-migrated_manifest("trace-vthread-with-static-engine-test-manifest") {
+unittest_package("trace-vthread-with-static-engine-test-package") {
+  package_name = "trace-vthread-with-static-engine-test"
   deps = [ ":trace-vthread-with-static-engine-test" ]
+
+  tests = [
+    {
+      name = "trace-vthread-with-static-engine-test"
+      dest = "trace-vthread-with-static-engine-test-test"
+    },
+  ]
 }

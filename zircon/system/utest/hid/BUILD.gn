@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("hid") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hid-driver.cc" ]
   deps = [
@@ -36,6 +33,14 @@ test("hid") {
   ]
 }
 
-migrated_manifest("hid-manifest") {
+unittest_package("hid-package") {
+  package_name = "hid"
   deps = [ ":hid" ]
+
+  tests = [
+    {
+      name = "hid"
+      dest = "hid-test"
+    },
+  ]
 }

@@ -3,12 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("operation") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "operation-list-test.cc",
@@ -29,6 +26,14 @@ test("operation") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-migrated_manifest("operation-manifest") {
+unittest_package("operation-package") {
+  package_name = "operation"
   deps = [ ":operation" ]
+
+  tests = [
+    {
+      name = "operation"
+      dest = "operation-test"
+    },
+  ]
 }

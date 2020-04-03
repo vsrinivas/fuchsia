@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("int-types") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "int-types.c",
@@ -43,6 +40,14 @@ config("config") {
   cflags = [ "-Wno-type-limits" ]
 }
 
-migrated_manifest("int-types-manifest") {
+unittest_package("int-types-package") {
+  package_name = "int-types"
   deps = [ ":int-types" ]
+
+  tests = [
+    {
+      name = "int-types"
+      dest = "int-types-test"
+    },
+  ]
 }

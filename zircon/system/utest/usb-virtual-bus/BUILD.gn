@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
@@ -49,9 +50,6 @@ test("usb-virtual-bus-ums") {
 }
 
 test("usb-virtual-bus-hid") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hid-test.cc" ]
   deps = [
@@ -70,9 +68,6 @@ test("usb-virtual-bus-hid") {
 }
 
 test("usb-virtual-bus-ftdi") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-test.cc" ]
   deps = [
@@ -89,9 +84,6 @@ test("usb-virtual-bus-ftdi") {
 }
 
 test("usb-virtual-bus-cdc-acm") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm-test.cc" ]
   deps = [
@@ -108,9 +100,6 @@ test("usb-virtual-bus-cdc-acm") {
 }
 
 test("usb-virtual-bus-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   sources = [ "usb-virtual-bus-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.virtualbustest:fuchsia.hardware.usb.virtualbustest_llcpp",
@@ -130,9 +119,6 @@ test("usb-virtual-bus-test") {
 }
 
 test("usb-virtual-bus-cdc-ecm") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-ecm-test.cc" ]
   deps = [
@@ -156,22 +142,62 @@ migrated_manifest("usb-virtual-bus-ums-manifest") {
   deps = [ ":usb-virtual-bus-ums" ]
 }
 
-migrated_manifest("usb-virtual-bus-hid-manifest") {
-  deps = [ ":usb-virtual-bus-hid" ]
-}
-
-migrated_manifest("usb-virtual-bus-ftdi-manifest") {
-  deps = [ ":usb-virtual-bus-ftdi" ]
-}
-
-migrated_manifest("usb-virtual-bus-cdc-acm-manifest") {
+unittest_package("usb-virtual-bus-cdc-acm-package") {
+  package_name = "usb-virtual-bus-cdc-acm"
   deps = [ ":usb-virtual-bus-cdc-acm" ]
+
+  tests = [
+    {
+      name = "usb-virtual-bus-cdc-acm"
+      dest = "usb-virtual-bus-cdc-acm-test"
+    },
+  ]
 }
 
-migrated_manifest("usb-virtual-bus-test-manifest") {
-  deps = [ ":usb-virtual-bus-test" ]
-}
-
-migrated_manifest("usb-virtual-bus-cdc-ecm-manifest") {
+unittest_package("usb-virtual-bus-cdc-ecm-package") {
+  package_name = "usb-virtual-bus-cdc-ecm"
   deps = [ ":usb-virtual-bus-cdc-ecm" ]
+
+  tests = [
+    {
+      name = "usb-virtual-bus-cdc-ecm"
+      dest = "usb-virtual-bus-cdc-ecm-test"
+    },
+  ]
+}
+
+unittest_package("usb-virtual-bus-test-package") {
+  package_name = "usb-virtual-bus-test"
+  deps = [ ":usb-virtual-bus-test" ]
+
+  tests = [
+    {
+      name = "usb-virtual-bus-test"
+      dest = "usb-virtual-bus-test-test"
+    },
+  ]
+}
+
+unittest_package("usb-virtual-bus-ftdi-package") {
+  package_name = "usb-virtual-bus-ftdi"
+  deps = [ ":usb-virtual-bus-ftdi" ]
+
+  tests = [
+    {
+      name = "usb-virtual-bus-ftdi"
+      dest = "usb-virtual-bus-ftdi-test"
+    },
+  ]
+}
+
+unittest_package("usb-virtual-bus-hid-package") {
+  package_name = "usb-virtual-bus-hid"
+  deps = [ ":usb-virtual-bus-hid" ]
+
+  tests = [
+    {
+      name = "usb-virtual-bus-hid"
+      dest = "usb-virtual-bus-hid-test"
+    },
+  ]
 }

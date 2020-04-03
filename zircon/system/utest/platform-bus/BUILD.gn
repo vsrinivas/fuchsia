@@ -14,12 +14,10 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 test("platform-bus") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
@@ -257,10 +255,6 @@ foreach(driver, simple_drivers) {
   }
 }
 
-migrated_manifest("platform-bus-manifest") {
-  deps = [ ":platform-bus" ]
-}
-
 migrated_manifest("test-board-manifest") {
   deps = [ ":test-board" ]
 }
@@ -291,4 +285,16 @@ migrated_manifest("test-audio-codec-manifest") {
 
 migrated_manifest("test-pwm-manifest") {
   deps = [ ":test-pwm" ]
+}
+
+unittest_package("platform-bus-package") {
+  package_name = "platform-bus"
+  deps = [ ":platform-bus" ]
+
+  tests = [
+    {
+      name = "platform-bus"
+      dest = "platform-bus-test"
+    },
+  ]
 }

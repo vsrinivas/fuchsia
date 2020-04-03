@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -24,9 +24,6 @@ group("test") {
 }
 
 test("libhwreg") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "asm-test.cc",
@@ -48,9 +45,6 @@ test("libhwreg") {
 }
 
 test("libhwreg-i2c") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c-hwreg-test.cc" ]
   deps = [
@@ -67,10 +61,26 @@ test("libhwreg-i2c") {
   ]
 }
 
-migrated_manifest("libhwreg-manifest") {
+unittest_package("libhwreg-package") {
+  package_name = "libhwreg"
   deps = [ ":libhwreg" ]
+
+  tests = [
+    {
+      name = "libhwreg"
+      dest = "libhwreg-test"
+    },
+  ]
 }
 
-migrated_manifest("libhwreg-i2c-manifest") {
+unittest_package("libhwreg-i2c-package") {
+  package_name = "libhwreg-i2c"
   deps = [ ":libhwreg-i2c" ]
+
+  tests = [
+    {
+      name = "libhwreg-i2c"
+      dest = "libhwreg-i2c-test"
+    },
+  ]
 }

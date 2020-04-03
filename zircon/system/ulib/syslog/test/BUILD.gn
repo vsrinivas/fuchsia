@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -24,9 +24,6 @@ group("test") {
 }
 
 test("syslog") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "syslog_socket_tests.cc",
@@ -42,9 +39,6 @@ test("syslog") {
 }
 
 test("syslog-static") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "syslog_socket_tests.cc",
@@ -60,10 +54,26 @@ test("syslog-static") {
   defines = [ "SYSLOG_STATIC" ]
 }
 
-migrated_manifest("syslog-manifest") {
+unittest_package("syslog-package") {
+  package_name = "syslog"
   deps = [ ":syslog" ]
+
+  tests = [
+    {
+      name = "syslog"
+      dest = "syslog-test"
+    },
+  ]
 }
 
-migrated_manifest("syslog-static-manifest") {
+unittest_package("syslog-static-package") {
+  package_name = "syslog-static"
   deps = [ ":syslog-static" ]
+
+  tests = [
+    {
+      name = "syslog-static"
+      dest = "syslog-static-test"
+    },
+  ]
 }

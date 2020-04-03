@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 
@@ -19,11 +19,6 @@ source_set("shared") {
 }
 
 test("ftl") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -50,11 +45,6 @@ test("ftl") {
 }
 
 test("ftl-integration") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -95,10 +85,26 @@ fuzzer("ftl-read-write-fuzzer") {
   deps = [ ":shared" ]
 }
 
-migrated_manifest("ftl-manifest") {
-  deps = [ ":ftl" ]
+unittest_package("ftl-integration-package") {
+  package_name = "ftl-integration"
+  deps = [ ":ftl-integration" ]
+
+  tests = [
+    {
+      name = "ftl-integration"
+      dest = "ftl-integration-test"
+    },
+  ]
 }
 
-migrated_manifest("ftl-integration-manifest") {
-  deps = [ ":ftl-integration" ]
+unittest_package("ftl-package") {
+  package_name = "ftl"
+  deps = [ ":ftl" ]
+
+  tests = [
+    {
+      name = "ftl"
+      dest = "ftl-test"
+    },
+  ]
 }

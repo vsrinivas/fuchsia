@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("kernel-unittests") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kernel-unittests.cc" ]
   deps = [
@@ -29,6 +26,14 @@ test("kernel-unittests") {
   ]
 }
 
-migrated_manifest("kernel-unittests-manifest") {
+unittest_package("kernel-unittests-package") {
+  package_name = "kernel-unittests"
   deps = [ ":kernel-unittests" ]
+
+  tests = [
+    {
+      name = "kernel-unittests"
+      dest = "kernel-unittests-test"
+    },
+  ]
 }

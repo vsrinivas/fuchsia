@@ -13,12 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("cleanup") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cleanup.cc" ]
   deps = [
@@ -28,6 +25,14 @@ test("cleanup") {
   ]
 }
 
-migrated_manifest("cleanup-manifest") {
+unittest_package("cleanup-package") {
+  package_name = "cleanup"
   deps = [ ":cleanup" ]
+
+  tests = [
+    {
+      name = "cleanup"
+      dest = "cleanup-test"
+    },
+  ]
 }

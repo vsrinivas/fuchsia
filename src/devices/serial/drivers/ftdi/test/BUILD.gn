@@ -3,12 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("ftdi-i2c-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-i2c-test.cc" ]
   include_dirs = [ ".." ]
@@ -55,6 +52,14 @@ source_set("common") {
   ]
 }
 
-migrated_manifest("ftdi-i2c-test-manifest") {
+unittest_package("ftdi-i2c-test-package") {
+  package_name = "ftdi-i2c-test"
   deps = [ ":ftdi-i2c-test" ]
+
+  tests = [
+    {
+      name = "ftdi-i2c-test"
+      dest = "ftdi-i2c-test-test"
+    },
+  ]
 }

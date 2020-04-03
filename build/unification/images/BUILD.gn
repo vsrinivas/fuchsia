@@ -1683,7 +1683,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     #":bin.debugdata-test-helper",
 #------------------
-    "//zircon/system/utest/dump1:dump1-manifest",
 #------------------
     "//zircon/system/ulib/elf-search/test:elf-search-test-helper-manifest",
 #------------------
@@ -1997,7 +1996,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     #":lib.fake-object.ubsan-sancov-full",
 #------------------
-    "//zircon/system/dev/lib/fake-resource/test:fake-resource-manifest",
 #------------------
     #":lib.fake-resource.asan",
 #------------------
@@ -2727,101 +2725,62 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/storage/buffer/test_support/test:storage_buffer_test_support-manifest",
     "//zircon/system/ulib/storage/operation/test:storage_operation-manifest",
 #------------------
-    "//zircon/system/ulib/abs_clock/test:abs_clock_test-manifest",
 #------------------
-    "//zircon/system/ulib/affine/test:affine-manifest",
     "//src/devices/block/drivers/ahci:ahci-unittest-manifest",
     "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-test-manifest",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-test-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-manifest",
     "//src/devices/clock/drivers/amlogic-clk:amlogic-clk-test-manifest",
     "//src/devices/power/drivers/as370-power:as370-power-test-manifest",
-    "//zircon/system/ulib/async-loop/test:async-loop-manifest",
-    "//zircon/system/ulib/async/test:async-manifest",
-    "//zircon/system/ulib/async-testing/test:async-testing-manifest",
     "//zircon/system/dev/lib/as370/test:audio-dsp-test-manifest",
     "//src/ui/backlight/tests:backlight-test-manifest",
-    "//zircon/system/utest/backtrace-request:backtrace-request-integration-manifest",
-    "//zircon/system/ulib/backtrace-request/test:backtrace-request-manifest",
 #------------------
     #":test.sys.backtrace-test-test",
 #------------------
     "//zircon/system/utest/biotime:biotime-test-manifest",
-    "//zircon/system/ulib/bitmap/test:bitmap-manifest",
-    "//zircon/system/utest/blobfs-bench:blobfs-bench-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
 #------------------
-    "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
 #------------------
     "//zircon/system/core/bootsvc/test:bootsvc-unit-test-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/channel-fatal:channel-fatal-manifest",
 #------------------
-    "//zircon/system/utest/chromeos-disk-setup:chromeos-disk-setup-manifest",
-    "//zircon/system/utest/cleanup:cleanup-manifest",
-    "//zircon/system/utest/closure-queue:closure-queue-manifest",
-    "//zircon/system/ulib/cobalt-client/test:cobalt-client-unit-manifest",
-    "//zircon/system/utest/compiler:compiler-manifest",
 #------------------
     "//zircon/system/core/console:console-test-manifest",
 #------------------
-    "//zircon/system/utest/core-display:core-display-manifest",
-    "//zircon/system/utest/cprng:cprng-manifest",
 #------------------
     #":test.sys.crashsvc-test",
 #------------------
-    "//zircon/system/utest/ctor:ctor-manifest",
     "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
     "//src/devices/tests/ddk-power:ddk-power-manifest",
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
-    "//zircon/system/ulib/ddk/test:ddk-unittest-manifest",
 #------------------
-    "//zircon/system/ulib/debugdata/test:debugdata-manifest",
-    "//zircon/system/utest/debugger:debugger-manifest",
 #------------------
     #":test.sys.default-stack-size-default-test",
 #------------------
 #------------------
     #":test.sys.default-stack-size-phdr-test",
 #------------------
-    "//zircon/system/utest/devcoordinator-namespace:devcoordinator-namespace-manifest",
-    "//zircon/system/utest/device-enumeration:device-enumeration-manifest",
     "//zircon/system/dev/lib/device-protocol-pci/test:device-protocol-pci-test-manifest",
     "//zircon/system/dev/lib/device-protocol-pdev/test:device-protocol-pdev-test-manifest",
-    "//zircon/system/ulib/digest/test:digest-manifest",
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-manifest",
 #------------------
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
 #------------------
-    "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-manifest",
     "//zircon/system/dev/lib/dma-buffer/test:dma-buffer-test-manifest",
 #------------------
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
-    "//zircon/system/utest/entropy:entropy-manifest",
-    "//zircon/system/utest/errno:errno-manifest",
-    "//zircon/system/utest/ethernet:ethernet-manifest",
-    "//zircon/system/utest/events:events-manifest",
-    "//zircon/system/utest/exception:exception-manifest",
-    "//zircon/system/utest/exit:exit-manifest",
-    "//zircon/system/dev/lib/fake-bti/test:fake-bti-manifest",
 #------------------
-    "//zircon/system/dev/lib/fake-mmio-reg/test:fake-mmio-reg-manifest",
 #------------------
-    "//zircon/system/dev/lib/fake-object/test:fake-object-manifest",
-    "//zircon/system/dev/lib/fake-resource/test:fake-resource-manifest",
-    "//zircon/system/ulib/fbl/test:fbl-manifest",
 #------------------
     #":test.sys.fdio-test",
 #------------------
-    "//zircon/system/ulib/fdio-caller/test:fdio-caller-manifest",
 #------------------
-    "//zircon/system/ulib/ffl/test:ffl-manifest",
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
 #------------------
@@ -2834,98 +2793,53 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/fidl:fidl-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
 #------------------
     "//zircon/system/ulib/fit/test:fit-manifest",
-    "//zircon/system/ulib/fit/test:fit-unittest-manifest",
-    "//zircon/system/utest/fpu:fpu-manifest",
-    "//zircon/system/ulib/framebuffer/test:framebuffer-test-manifest",
-    "//zircon/system/ulib/fs/test:fs-connection-manifest",
     "//zircon/system/utest/fs-recovery:fs-recovery-manifest",
 #------------------
     "//zircon/system/ulib/fs/test_support/test:fs_test_support-manifest",
 #------------------
-    "//zircon/system/ulib/fs/transaction/test:fs-transaction-manifest",
-    "//zircon/system/ulib/fs/test:fs-vnode-manifest",
-    "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-manifest",
-    "//src/devices/block/drivers/ftl/test:ftl-integration-manifest",
 #------------------
     "//zircon/system/ulib/ftl/test:ftl_test-manifest",
 #------------------
-    "//src/devices/block/drivers/ftl/test:ftl-manifest",
     "//zircon/system/utest/futex-ownership:futex-ownership-manifest",
-    "//src/devices/block/drivers/fvm/test/integration:fvm-driver-integration-manifest",
-    "//src/devices/block/drivers/fvm/test:fvm-driver-unittests-manifest",
-    "//zircon/system/utest/fvm:fvm-manifest",
 #------------------
-    "//zircon/system/ulib/fvm/test:fvm-unit-manifest",
 #------------------
-    "//zircon/system/ulib/fzl/test:fzl-manifest",
-    "//zircon/system/ulib/fzl/test:fzl-zxtest-manifest",
-    "//zircon/system/utest/getentropy:getentropy-manifest",
     "//src/devices/block/drivers/gpt:gpt-device-test-manifest",
-    "//zircon/system/ulib/gpt/test:gpt-unit-manifest",
-    "//zircon/system/utest/handle-alias:handle-alias-manifest",
 #------------------
     #":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
     #":test.sys.hermetic-decompressor-test",
 #------------------
-    "//zircon/system/utest/hid:hid-manifest",
-    "//zircon/system/ulib/hid-parser/test:hid-parser-manifest",
-    "//zircon/system/utest/hypervisor:hypervisor-manifest",
-    "//zircon/system/ulib/id_allocator/test:id_allocator-manifest",
-    "//zircon/system/ulib/image-format/test:image-format-test-manifest",
     "//zircon/system/ulib/inspect/test:inspect-manifest",
-    "//zircon/system/utest/inspector:inspector-manifest",
     "//zircon/system/uapp/disk-pave:install-disk-image-test-manifest",
-    "//zircon/system/utest/int-types:int-types-manifest",
-    "//src/media/audio/drivers/intel-hda/test:intel-hda-test-manifest",
-    "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-manifest",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
-    "//src/devices/tests/isolateddevmgr:isolateddevmgr-manifest",
 #------------------
     "//zircon/system/utest/kcounter:kcounter-manifest",
 #------------------
-    "//zircon/system/utest/kernel-clocks:kernel-clocks-manifest",
-#------------------
-    "//zircon/system/utest/kernel-cmdline:kernel-cmdline-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-manifest",
 #------------------
-    "//zircon/system/utest/kernel-unittests:kernel-unittests-manifest",
-    "//zircon/system/ulib/launchpad/test:launchpad-manifest",
+#------------------
 #------------------
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/fs-pty/test:libfs-pty-test-manifest",
 #------------------
-    "//zircon/system/ulib/hwreg/test:libhwreg-manifest",
-    "//zircon/system/ulib/hwreg/test:libhwreg-i2c-manifest",
 #------------------
     #":test.sys.linenoise-test-test",
 #------------------
-    "//zircon/system/utest/loader-service:loader-service-manifest",
 #------------------
-    "//zircon/system/ulib/lockdep/test:lockdep-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/log:log-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/logger:logger-manifest",
 #------------------
-    "//zircon/system/ulib/driver-unit-test/test:logger-unit-manifest",
     "//src/devices/block/drivers/mbr:mbr-test-manifest",
-    "//zircon/system/ulib/memfs/test:memfs-tests-manifest",
-    "//zircon/system/ulib/mipi-dsi/test:mipidsi-manifest",
-    "//zircon/system/utest/miscsvc:miscsvc-manifest",
     "//zircon/system/ulib/mock-function/test:mock-function-test-manifest",
 #------------------
-    "//zircon/system/dev/lib/mock-mmio-reg/test:mock-mmio-reg-manifest",
 #------------------
     "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test-manifest",
     "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test-manifest",
@@ -2933,13 +2847,9 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-test-manifest",
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-transaction-test-manifest",
     "//zircon/system/dev/lib/mt8167/test:mt8167-audio-lib-test-manifest",
-    "//zircon/system/utest/mt8167-thermal:mt8167-thermal-manifest",
 #------------------
     "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-test-manifest",
 #------------------
-    "//zircon/system/utest/namespace:namespace-manifest",
-    "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
-    "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
 #------------------
     "//zircon/system/core/netsvc:netsvc-stress-test-manifest",
 #------------------
@@ -2970,7 +2880,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     #":test.sys.noop-test.ubsan-sancov-full",
 #------------------
-    "//src/devices/tests/operation:operation-manifest",
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
     "//zircon/system/ulib/paver/test:paver-test-manifest",
@@ -2980,85 +2889,46 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/bus/drivers/pci/test:pci-driver-manifest",
 #------------------
 #------------------
-    "//src/devices/bus/drivers/pci/test:pci-unit-manifest",
 #------------------
-    "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-manifest",
     "//zircon/system/utest/perftest:perftest-manifest",
-    "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-manifest",
-#------------------
-    "//zircon/system/utest/platform-bus:platform-bus-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/policy:policy-manifest",
 #------------------
-    "//zircon/system/utest/posixio:posixio-manifest",
-    "//zircon/system/ulib/pretty/test:pretty-test-manifest",
-    "//zircon/system/utest/processor:processor-manifest",
-    "//zircon/system/utest/profile:profile-manifest",
-    "//zircon/system/utest/property:property-manifest",
-    "//zircon/system/utest/psutils:ps-manifest",
-    "//zircon/system/utest/psutils:handles-manifest",
-    "//zircon/system/utest/pty:pty-manifest",
+#------------------
 #------------------
     "//zircon/system/core/ptysvc:ptysvc-test-manifest",
 #------------------
-    "//zircon/system/utest/qsort:qsort-manifest",
-    "//zircon/system/utest/race-tests:race-tests-manifest",
     "//src/devices/nand/drivers/ram-nand:ram-nand-test-manifest",
-    "//zircon/system/utest/ramdisk:ramdisk-manifest",
     "//zircon/system/ulib/range/test:range-manifest",
-    "//zircon/system/ulib/refcount/test:refcount-test-manifest",
-    "//zircon/system/ulib/region-alloc/test:region-alloc-manifest",
-    "//zircon/system/utest/register-state:register-state-manifest",
-    "//zircon/system/utest/rtc-lib:rtc-lib-manifest",
     "//zircon/system/utest/runtests-utils:runtests-utils-manifest",
-    "//zircon/system/dev/audio/lib/simple-audio-stream/tests:sa-unittest-manifest",
-    "//zircon/system/dev/lib/scsi/test:scsilib-disk-test-manifest",
     "//zircon/system/utest/service:service-llcpp-manifest",
 #------------------
-    "//zircon/system/ulib/runtests-utils/test:service-proxy-dir-manifest",
 #------------------
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-manifest",
-    "//zircon/system/ulib/simplehid/test:simplehid-manifest",
-    "//zircon/system/ulib/smbios/test:smbios-test-manifest",
     "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
-    "//zircon/system/utest/status:status-manifest",
 #------------------
     #":test.sys.stdio-test",
 #------------------
     "//zircon/system/ulib/storage-metrics/test:storage-metrics-manifest",
-    "//zircon/system/utest/svchost:svchost-manifest",
     "//zircon/system/dev/lib/as370/test:syn-audio-in-test-manifest",
-    "//zircon/system/utest/sysconf:sysconf-manifest",
     "//zircon/system/ulib/sysconfig-client/test:sysconfig-sync-client-test-manifest",
-    "//zircon/system/utest/sysinfo:sysinfo-manifest",
-    "//zircon/system/ulib/syslog/test:syslog-manifest",
-    "//zircon/system/ulib/syslog/test:syslog-static-manifest",
     "//zircon/system/utest/sysmem:sysmem-manifest",
     "//src/devices/sysmem/drivers/sysmem:sysmem-unittest-manifest",
-    "//zircon/system/utest/task-utils:task-utils-manifest",
-    "//zircon/system/ulib/test-exceptions/test:test-exceptions-manifest",
-    "//zircon/system/ulib/test-utils/test:test-utils-manifest",
 #------------------
     "//zircon/system/ulib/tftp/test:tftp-test-manifest",
 #------------------
     "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
-    "//zircon/system/utest/thread-initial-state:thread-initial-state-manifest",
-    "//zircon/system/utest/thread-safe-deleter:thread-safe-deleter-manifest",
-    "//zircon/system/utest/thread-state:thread-state-manifest",
 #------------------
     #":test.sys.ti-lp8556-test",
 #------------------
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-manifest",
     "//zircon/system/utest/time:time-manifest",
 #------------------
-    "//zircon/system/utest/timers:timers-manifest",
 #------------------
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
     "//zircon/system/ulib/trace-provider/test:provider-test-manifest",
 #------------------
-    "//zircon/system/ulib/trace-reader/test:trace-reader-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/trace:trace-static-engine-manifest",
@@ -3066,53 +2936,30 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/trace:trace-manifest",
 #------------------
-    "//zircon/system/ulib/trace-vthread/test:trace-vthread-test-manifest",
-    "//zircon/system/ulib/trace-vthread/test:trace-vthread-with-static-engine-test-manifest",
     "//src/devices/serial/drivers/uart16550:uart16550-test-manifest",
     "//zircon/system/ulib/unittest/test:unittest-manifest",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest-manifest",
     "//zircon/system/dev/lib/usb/test:usb-desc-lib-test-manifest",
     "//zircon/system/dev/lib/usb/test:usb-request-cpp-test-manifest",
-    "//zircon/system/utest/usb:usb-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-cdc-acm-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-cdc-ecm-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-test-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-ftdi-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-hid-manifest",
     "//zircon/system/dev/lib/usb/test:usb-wrapper-test-manifest",
     "//zircon/system/utest/utc-procargs:utc-procargs-manifest",
-    "//zircon/system/ulib/utf_conversion/test:utf_conversion-manifest",
 #------------------
-    "//zircon/system/utest/util:util-manifest",
 #------------------
-    "//zircon/system/utest/vdso-base:vdso-base-manifest",
-    "//zircon/system/utest/vdso:vdso-manifest",
     "//zircon/system/utest/vdso-variant:vdso-variant-manifest",
     "//zircon/system/utest/vdso-variant:vdso-variant-helper-manifest",
 #------------------
-    "//src/graphics/drivers/virtio:virtio-gpu-test-manifest",
-    "//src/devices/block/drivers/virtio:virtio-block-test-manifest",
-    "//src/devices/block/drivers/virtio:virtio-scsi-test-manifest",
 #------------------
-    "//zircon/system/utest/vmo:vmo-manifest",
 #------------------
     #":test.sys.zbi-bootfs-test-test",
 #------------------
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
 #------------------
-    "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-manifest",
-#------------------
-    "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
-    "//zircon/system/ulib/zx/test:zx-manifest",
-#------------------
-    "//zircon/system/utest/zxcrypt:zxcrypt-manifest",
-#------------------
-    "//zircon/system/ulib/zxio/test:zxio-manifest",
-#------------------
-    "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/zxtest/test:zxtest-manifest",
+#------------------
+#------------------
+#------------------
+#------------------
 #------------------
 #------------------
 #------------------
@@ -3151,7 +2998,6 @@ aggregate_manifest("migrated-tests") {
 #------------------
     #":bin.debugdata-test-helper",
 #------------------
-    "//zircon/system/utest/dump1:dump1-manifest",
 #------------------
 #------------------
 #------------------
@@ -3389,101 +3235,62 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/storage/buffer/test_support/test:storage_buffer_test_support-manifest",
     "//zircon/system/ulib/storage/operation/test:storage_operation-manifest",
 #------------------
-    "//zircon/system/ulib/abs_clock/test:abs_clock_test-manifest",
 #------------------
-    "//zircon/system/ulib/affine/test:affine-manifest",
     "//src/devices/block/drivers/ahci:ahci-unittest-manifest",
     "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-test-manifest",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-test-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-manifest",
     "//src/devices/clock/drivers/amlogic-clk:amlogic-clk-test-manifest",
     "//src/devices/power/drivers/as370-power:as370-power-test-manifest",
-    "//zircon/system/ulib/async-loop/test:async-loop-manifest",
-    "//zircon/system/ulib/async/test:async-manifest",
-    "//zircon/system/ulib/async-testing/test:async-testing-manifest",
     "//zircon/system/dev/lib/as370/test:audio-dsp-test-manifest",
     "//src/ui/backlight/tests:backlight-test-manifest",
-    "//zircon/system/utest/backtrace-request:backtrace-request-integration-manifest",
-    "//zircon/system/ulib/backtrace-request/test:backtrace-request-manifest",
 #------------------
     #":test.sys.backtrace-test-test",
 #------------------
     "//zircon/system/utest/biotime:biotime-test-manifest",
-    "//zircon/system/ulib/bitmap/test:bitmap-manifest",
-    "//zircon/system/utest/blobfs-bench:blobfs-bench-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
 #------------------
-    "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
 #------------------
     "//zircon/system/core/bootsvc/test:bootsvc-unit-test-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/channel-fatal:channel-fatal-manifest",
 #------------------
-    "//zircon/system/utest/chromeos-disk-setup:chromeos-disk-setup-manifest",
-    "//zircon/system/utest/cleanup:cleanup-manifest",
-    "//zircon/system/utest/closure-queue:closure-queue-manifest",
-    "//zircon/system/ulib/cobalt-client/test:cobalt-client-unit-manifest",
-    "//zircon/system/utest/compiler:compiler-manifest",
 #------------------
     "//zircon/system/core/console:console-test-manifest",
 #------------------
-    "//zircon/system/utest/core-display:core-display-manifest",
-    "//zircon/system/utest/cprng:cprng-manifest",
 #------------------
     #":test.sys.crashsvc-test",
 #------------------
-    "//zircon/system/utest/ctor:ctor-manifest",
     "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
     "//src/devices/tests/ddk-power:ddk-power-manifest",
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
-    "//zircon/system/ulib/ddk/test:ddk-unittest-manifest",
 #------------------
-    "//zircon/system/ulib/debugdata/test:debugdata-manifest",
-    "//zircon/system/utest/debugger:debugger-manifest",
 #------------------
     #":test.sys.default-stack-size-default-test",
 #------------------
 #------------------
     #":test.sys.default-stack-size-phdr-test",
 #------------------
-    "//zircon/system/utest/devcoordinator-namespace:devcoordinator-namespace-manifest",
-    "//zircon/system/utest/device-enumeration:device-enumeration-manifest",
     "//zircon/system/dev/lib/device-protocol-pci/test:device-protocol-pci-test-manifest",
     "//zircon/system/dev/lib/device-protocol-pdev/test:device-protocol-pdev-test-manifest",
-    "//zircon/system/ulib/digest/test:digest-manifest",
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-manifest",
 #------------------
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
 #------------------
-    "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-manifest",
     "//zircon/system/dev/lib/dma-buffer/test:dma-buffer-test-manifest",
 #------------------
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
-    "//zircon/system/utest/entropy:entropy-manifest",
-    "//zircon/system/utest/errno:errno-manifest",
-    "//zircon/system/utest/ethernet:ethernet-manifest",
-    "//zircon/system/utest/events:events-manifest",
-    "//zircon/system/utest/exception:exception-manifest",
-    "//zircon/system/utest/exit:exit-manifest",
-    "//zircon/system/dev/lib/fake-bti/test:fake-bti-manifest",
 #------------------
-    "//zircon/system/dev/lib/fake-mmio-reg/test:fake-mmio-reg-manifest",
 #------------------
-    "//zircon/system/dev/lib/fake-object/test:fake-object-manifest",
-    "//zircon/system/dev/lib/fake-resource/test:fake-resource-manifest",
-    "//zircon/system/ulib/fbl/test:fbl-manifest",
 #------------------
     #":test.sys.fdio-test",
 #------------------
-    "//zircon/system/ulib/fdio-caller/test:fdio-caller-manifest",
 #------------------
-    "//zircon/system/ulib/ffl/test:ffl-manifest",
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
 #------------------
@@ -3496,99 +3303,54 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/fidl:fidl-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
 #------------------
     "//zircon/system/ulib/fit/test:fit-manifest",
-    "//zircon/system/ulib/fit/test:fit-unittest-manifest",
-    "//zircon/system/utest/fpu:fpu-manifest",
-    "//zircon/system/ulib/framebuffer/test:framebuffer-test-manifest",
-    "//zircon/system/ulib/fs/test:fs-connection-manifest",
     "//zircon/system/utest/fs-recovery:fs-recovery-manifest",
 #------------------
     "//zircon/system/ulib/fs/test_support/test:fs_test_support-manifest",
 #------------------
-    "//zircon/system/ulib/fs/transaction/test:fs-transaction-manifest",
-    "//zircon/system/ulib/fs/test:fs-vnode-manifest",
-    "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-manifest",
-    "//src/devices/block/drivers/ftl/test:ftl-integration-manifest",
 #------------------
     "//zircon/system/ulib/ftl/test:ftl_test-manifest",
 #------------------
-    "//src/devices/block/drivers/ftl/test:ftl-manifest",
     "//zircon/system/utest/futex-ownership:futex-ownership-manifest",
-    "//src/devices/block/drivers/fvm/test/integration:fvm-driver-integration-manifest",
-    "//src/devices/block/drivers/fvm/test:fvm-driver-unittests-manifest",
-    "//zircon/system/utest/fvm:fvm-manifest",
 #------------------
-    "//zircon/system/ulib/fvm/test:fvm-unit-manifest",
 #------------------
-    "//zircon/system/ulib/fzl/test:fzl-manifest",
-    "//zircon/system/ulib/fzl/test:fzl-zxtest-manifest",
-    "//zircon/system/utest/getentropy:getentropy-manifest",
     "//src/devices/block/drivers/gpt:gpt-device-test-manifest",
-    "//zircon/system/ulib/gpt/test:gpt-unit-manifest",
-    "//zircon/system/utest/handle-alias:handle-alias-manifest",
 #------------------
     #":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
     #":test.sys.hermetic-decompressor-test",
 #------------------
-    "//zircon/system/utest/hid:hid-manifest",
-    "//zircon/system/ulib/hid-parser/test:hid-parser-manifest",
-    "//zircon/system/utest/hypervisor:hypervisor-manifest",
-    "//zircon/system/ulib/id_allocator/test:id_allocator-manifest",
-    "//zircon/system/ulib/image-format/test:image-format-test-manifest",
     "//zircon/system/ulib/inspect/test:inspect-manifest",
-    "//zircon/system/utest/inspector:inspector-manifest",
     "//zircon/system/uapp/disk-pave:install-disk-image-test-manifest",
-    "//zircon/system/utest/int-types:int-types-manifest",
-    "//src/media/audio/drivers/intel-hda/test:intel-hda-test-manifest",
-    "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-manifest",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
-    "//src/devices/tests/isolateddevmgr:isolateddevmgr-manifest",
 #------------------
     "//zircon/system/utest/kcounter:kcounter-manifest",
 #------------------
-    "//zircon/system/utest/kernel-clocks:kernel-clocks-manifest",
-#------------------
-    "//zircon/system/utest/kernel-cmdline:kernel-cmdline-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-manifest",
 #------------------
-    "//zircon/system/utest/kernel-unittests:kernel-unittests-manifest",
-    "//zircon/system/ulib/launchpad/test:launchpad-manifest",
+#------------------
 #------------------
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/fs-pty/test:libfs-pty-test-manifest",
 #------------------
-    "//zircon/system/ulib/hwreg/test:libhwreg-manifest",
-    "//zircon/system/ulib/hwreg/test:libhwreg-i2c-manifest",
 #------------------
     #":test.sys.linenoise-test-test",
 #------------------
-    "//zircon/system/utest/loader-service:loader-service-manifest",
 #------------------
-    "//zircon/system/ulib/lockdep/test:lockdep-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/log:log-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/logger:logger-manifest",
 #------------------
-    "//zircon/system/ulib/driver-unit-test/test:logger-unit-manifest",
     "//src/media/audio/drivers/astro-tdm-output/test:astro-audio-out-test-manifest",
     "//src/devices/block/drivers/mbr:mbr-test-manifest",
-    "//zircon/system/ulib/memfs/test:memfs-tests-manifest",
-    "//zircon/system/ulib/mipi-dsi/test:mipidsi-manifest",
-    "//zircon/system/utest/miscsvc:miscsvc-manifest",
     "//zircon/system/ulib/mock-function/test:mock-function-test-manifest",
 #------------------
-    "//zircon/system/dev/lib/mock-mmio-reg/test:mock-mmio-reg-manifest",
 #------------------
     "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test-manifest",
     "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test-manifest",
@@ -3596,13 +3358,9 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-test-manifest",
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-transaction-test-manifest",
     "//zircon/system/dev/lib/mt8167/test:mt8167-audio-lib-test-manifest",
-    "//zircon/system/utest/mt8167-thermal:mt8167-thermal-manifest",
 #------------------
     "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-test-manifest",
 #------------------
-    "//zircon/system/utest/namespace:namespace-manifest",
-    "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
-    "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
 #------------------
     "//zircon/system/core/netsvc:netsvc-stress-test-manifest",
 #------------------
@@ -3633,7 +3391,6 @@ aggregate_manifest("migrated-tests") {
 #------------------
     #":test.sys.noop-test.ubsan-sancov-full",
 #------------------
-    "//src/devices/tests/operation:operation-manifest",
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
     "//zircon/system/ulib/paver/test:paver-test-manifest",
@@ -3643,81 +3400,42 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/bus/drivers/pci/test:pci-driver-manifest",
 #------------------
 #------------------
-    "//src/devices/bus/drivers/pci/test:pci-unit-manifest",
 #------------------
-    "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-manifest",
     "//zircon/system/utest/perftest:perftest-manifest",
-    "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-manifest",
-#------------------
-    "//zircon/system/utest/platform-bus:platform-bus-manifest",
 #------------------
 #------------------
-    "//zircon/system/utest/policy:policy-manifest",
 #------------------
-    "//zircon/system/utest/posixio:posixio-manifest",
-    "//zircon/system/ulib/pretty/test:pretty-test-manifest",
-    "//zircon/system/utest/processor:processor-manifest",
-    "//zircon/system/utest/profile:profile-manifest",
-    "//zircon/system/utest/property:property-manifest",
-    "//zircon/system/utest/psutils:ps-manifest",
-    "//zircon/system/utest/psutils:handles-manifest",
-    "//zircon/system/utest/pty:pty-manifest",
+#------------------
 #------------------
     "//zircon/system/core/ptysvc:ptysvc-test-manifest",
 #------------------
-    "//zircon/system/utest/qsort:qsort-manifest",
-    "//zircon/system/utest/race-tests:race-tests-manifest",
     "//src/devices/nand/drivers/ram-nand:ram-nand-test-manifest",
-    "//zircon/system/utest/ramdisk:ramdisk-manifest",
     "//zircon/system/ulib/range/test:range-manifest",
-    "//zircon/system/ulib/refcount/test:refcount-test-manifest",
-    "//zircon/system/ulib/region-alloc/test:region-alloc-manifest",
-    "//zircon/system/utest/register-state:register-state-manifest",
-    "//zircon/system/utest/rtc-lib:rtc-lib-manifest",
     "//zircon/system/utest/runtests-utils:runtests-utils-manifest",
-    "//zircon/system/dev/audio/lib/simple-audio-stream/tests:sa-unittest-manifest",
-    "//zircon/system/dev/lib/scsi/test:scsilib-disk-test-manifest",
     "//zircon/system/utest/service:service-llcpp-manifest",
 #------------------
-    "//zircon/system/ulib/runtests-utils/test:service-proxy-dir-manifest",
 #------------------
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-manifest",
-    "//zircon/system/ulib/simplehid/test:simplehid-manifest",
-    "//zircon/system/ulib/smbios/test:smbios-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
-    "//zircon/system/utest/status:status-manifest",
 #------------------
     #":test.sys.stdio-test",
 #------------------
     "//zircon/system/ulib/storage-metrics/test:storage-metrics-manifest",
-    "//zircon/system/utest/svchost:svchost-manifest",
     "//zircon/system/dev/lib/as370/test:syn-audio-in-test-manifest",
-    "//zircon/system/utest/sysconf:sysconf-manifest",
     "//zircon/system/ulib/sysconfig-client/test:sysconfig-sync-client-test-manifest",
-    "//zircon/system/utest/sysinfo:sysinfo-manifest",
-    "//zircon/system/ulib/syslog/test:syslog-manifest",
-    "//zircon/system/ulib/syslog/test:syslog-static-manifest",
     "//zircon/system/utest/sysmem:sysmem-manifest",
     "//src/devices/sysmem/drivers/sysmem:sysmem-unittest-manifest",
-    "//zircon/system/utest/task-utils:task-utils-manifest",
-    "//zircon/system/ulib/test-exceptions/test:test-exceptions-manifest",
-    "//zircon/system/ulib/test-utils/test:test-utils-manifest",
 #------------------
     "//zircon/system/ulib/tftp/test:tftp-test-manifest",
 #------------------
     "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
-    "//zircon/system/utest/thread-initial-state:thread-initial-state-manifest",
-    "//zircon/system/utest/thread-safe-deleter:thread-safe-deleter-manifest",
-    "//zircon/system/utest/thread-state:thread-state-manifest",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-manifest",
     "//zircon/system/utest/time:time-manifest",
 #------------------
-    "//zircon/system/utest/timers:timers-manifest",
 #------------------
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
     "//zircon/system/ulib/trace-provider/test:provider-test-manifest",
 #------------------
-    "//zircon/system/ulib/trace-reader/test:trace-reader-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/trace:trace-static-engine-manifest",
@@ -3725,55 +3443,31 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/trace:trace-manifest",
 #------------------
-    "//zircon/system/ulib/trace-vthread/test:trace-vthread-test-manifest",
-    "//zircon/system/ulib/trace-vthread/test:trace-vthread-with-static-engine-test-manifest",
     "//src/devices/serial/drivers/uart16550:uart16550-test-manifest",
     "//zircon/system/ulib/unittest/test:unittest-manifest",
     "//src/connectivity/ethernet/drivers/asix-88179:usb-virtual-bus-asix-88179-manifest",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest-manifest",
     "//zircon/system/dev/lib/usb/test:usb-desc-lib-test-manifest",
     "//zircon/system/dev/lib/usb/test:usb-request-cpp-test-manifest",
-    "//zircon/system/utest/usb:usb-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-cdc-acm-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-cdc-ecm-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-test-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-ftdi-manifest",
-    "//zircon/system/utest/usb-virtual-bus:usb-virtual-bus-hid-manifest",
     "//zircon/system/dev/lib/usb/test:usb-wrapper-test-manifest",
     "//zircon/system/utest/utc-procargs:utc-procargs-manifest",
-    "//zircon/system/ulib/utf_conversion/test:utf_conversion-manifest",
 #------------------
-    "//zircon/system/utest/util:util-manifest",
 #------------------
-    "//zircon/system/utest/vdso-base:vdso-base-manifest",
-    "//zircon/system/utest/vdso:vdso-manifest",
     "//zircon/system/utest/vdso-variant:vdso-variant-manifest",
 #------------------
-    "//src/graphics/drivers/virtio:virtio-gpu-test-manifest",
-    "//src/devices/block/drivers/virtio:virtio-block-test-manifest",
-    "//src/devices/block/drivers/virtio:virtio-scsi-test-manifest",
 #------------------
-    "//zircon/system/utest/vmo:vmo-manifest",
 #------------------
     #":test.sys.zbi-bootfs-test-test",
 #------------------
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
 #------------------
-    "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-manifest",
-#------------------
-    "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
-    "//zircon/system/ulib/zx/test:zx-manifest",
-#------------------
-    "//zircon/system/utest/zxcrypt:zxcrypt-manifest",
-#------------------
-    "//zircon/system/ulib/zxio/test:zxio-manifest",
-#------------------
-    "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/zxtest/test:zxtest-manifest",
 #------------------
-    "//zircon/system/ulib/ram-crashlog/test:ram-crashlog-manifest",
+#------------------
+#------------------
+#------------------
+#------------------
 #------------------
 #------------------
   ]

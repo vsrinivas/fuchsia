@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 # The output of the test code below is made up of several binaries
@@ -15,11 +16,6 @@ import("//build/unification/images/migrated_manifest.gni")
 #                    and loads pci_test.so
 # pci_test.so: A zxtest driver to test the PCI protocol
 test("pci-unit") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -123,10 +119,6 @@ driver_module("pci_protocol_test_driver") {
   ]
 }
 
-migrated_manifest("pci-unit-manifest") {
-  deps = [ ":pci-unit" ]
-}
-
 migrated_manifest("pci-driver-manifest") {
   deps = [ ":pci-driver" ]
 }
@@ -141,4 +133,16 @@ migrated_manifest("pci_fake.proxy-manifest") {
 
 migrated_manifest("pci_protocol_test_driver-manifest") {
   deps = [ ":pci_protocol_test_driver" ]
+}
+
+unittest_package("pci-unit-package") {
+  package_name = "pci-unit"
+  deps = [ ":pci-unit" ]
+
+  tests = [
+    {
+      name = "pci-unit"
+      dest = "pci-unit-test"
+    },
+  ]
 }

@@ -13,14 +13,9 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 test("fake-bti") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -38,6 +33,14 @@ test("fake-bti") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-migrated_manifest("fake-bti-manifest") {
+unittest_package("fake-bti-package") {
+  package_name = "fake-bti"
   deps = [ ":fake-bti" ]
+
+  tests = [
+    {
+      name = "fake-bti"
+      dest = "fake-bti-test"
+    },
+  ]
 }

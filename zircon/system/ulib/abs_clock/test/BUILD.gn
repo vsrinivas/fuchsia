@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -21,11 +21,6 @@ group("test") {
 }
 
 test("abs_clock_test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -46,6 +41,14 @@ test("abs_clock_test") {
   ]
 }
 
-migrated_manifest("abs_clock_test-manifest") {
+unittest_package("abs-clock-test-package") {
+  package_name = "abs-clock-test"
   deps = [ ":abs_clock_test" ]
+
+  tests = [
+    {
+      name = "abs_clock_test"
+      dest = "abs_clock_test-test"
+    },
+  ]
 }

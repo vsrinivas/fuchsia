@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("integration") {
   testonly = true
@@ -21,11 +21,6 @@ group("integration") {
 }
 
 test("zxtest-integration") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -57,6 +52,14 @@ test("zxtest-integration") {
   }
 }
 
-migrated_manifest("zxtest-integration-manifest") {
+unittest_package("zxtest-integration-package") {
+  package_name = "zxtest-integration"
   deps = [ ":zxtest-integration" ]
+
+  tests = [
+    {
+      name = "zxtest-integration"
+      dest = "zxtest-integration-test"
+    },
+  ]
 }

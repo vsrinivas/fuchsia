@@ -64,11 +64,6 @@ driver_module("virtio_scsi") {
 }
 
 test("virtio-block-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -93,11 +88,6 @@ test("virtio-block-test") {
 }
 
 test("virtio-scsi-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -129,22 +119,26 @@ migrated_manifest("virtio_scsi-manifest") {
   deps = [ ":virtio_scsi" ]
 }
 
-migrated_manifest("virtio-block-test-manifest") {
-  deps = [ ":virtio-block-test" ]
-}
-
-migrated_manifest("virtio-scsi-test-manifest") {
-  deps = [ ":virtio-scsi-test" ]
-}
-
 unittest_package("virtio-block-test-package") {
   deps = [ ":virtio-block-test" ]
 
   tests = [
     {
       name = "virtio-block-test"
-      dest = "virtio-block-test-package"
+      dest = "virtio-block-test-test"
       environments = basic_envs
+    },
+  ]
+}
+
+unittest_package("virtio-scsi-test-package") {
+  package_name = "virtio-scsi-test"
+  deps = [ ":virtio-scsi-test" ]
+
+  tests = [
+    {
+      name = "virtio-scsi-test"
+      dest = "virtio-scsi-test-test"
     },
   ]
 }

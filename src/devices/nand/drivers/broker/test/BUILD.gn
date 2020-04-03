@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 source_set("common") {
   visibility = [ ":*" ]
@@ -30,11 +30,6 @@ source_set("common") {
 }
 
 test("nand-broker") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -49,11 +44,6 @@ test("nand-broker") {
 }
 
 test("nandpart-broker") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -67,10 +57,26 @@ test("nandpart-broker") {
   deps = [ ":common" ]
 }
 
-migrated_manifest("nand-broker-manifest") {
+unittest_package("nand-broker-package") {
+  package_name = "nand-broker"
   deps = [ ":nand-broker" ]
+
+  tests = [
+    {
+      name = "nand-broker"
+      dest = "nand-broker-test"
+    },
+  ]
 }
 
-migrated_manifest("nandpart-broker-manifest") {
+unittest_package("nandpart-broker-package") {
+  package_name = "nandpart-broker"
   deps = [ ":nandpart-broker" ]
+
+  tests = [
+    {
+      name = "nandpart-broker"
+      dest = "nandpart-broker-test"
+    },
+  ]
 }

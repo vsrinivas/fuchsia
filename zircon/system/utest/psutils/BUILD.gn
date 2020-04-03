@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test/test_package.gni")
 
 group("psutils") {
   testonly = true
@@ -24,9 +24,6 @@ group("psutils") {
 }
 
 test("ps") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps_test.c" ]
   deps = [
@@ -39,9 +36,6 @@ test("ps") {
 }
 
 test("handles") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handles_test.cc" ]
   deps = [
@@ -53,10 +47,26 @@ test("handles") {
   ]
 }
 
-migrated_manifest("ps-manifest") {
+unittest_package("ps-package") {
+  package_name = "ps"
   deps = [ ":ps" ]
+
+  tests = [
+    {
+      name = "ps"
+      dest = "ps-test"
+    },
+  ]
 }
 
-migrated_manifest("handles-manifest") {
+unittest_package("handles-package") {
+  package_name = "handles"
   deps = [ ":handles" ]
+
+  tests = [
+    {
+      name = "handles"
+      dest = "handles-test"
+    },
+  ]
 }
