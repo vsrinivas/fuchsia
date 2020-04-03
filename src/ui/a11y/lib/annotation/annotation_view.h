@@ -147,11 +147,16 @@ class AnnotationViewFactoryInterface {
       fuchsia::ui::views::ViewRef client_view_ref) = 0;
 
   virtual void SetViewPropertiesChangedCallback(
-      AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback) = 0;
+      AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback);
   virtual void SetViewAttachedCallback(
-      AnnotationViewInterface::ViewAttachedCallback view_attached_callback) = 0;
+      AnnotationViewInterface::ViewAttachedCallback view_attached_callback);
   virtual void SetViewDetachedCallback(
-      AnnotationViewInterface::ViewDetachedCallback view_detached_callback) = 0;
+      AnnotationViewInterface::ViewDetachedCallback view_detached_callback);
+
+ protected:
+  AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback_;
+  AnnotationViewInterface::ViewAttachedCallback view_attached_callback_;
+  AnnotationViewInterface::ViewDetachedCallback view_detached_callback_;
 };
 
 class AnnotationViewFactory : public AnnotationViewFactoryInterface {
@@ -162,18 +167,8 @@ class AnnotationViewFactory : public AnnotationViewFactoryInterface {
   std::unique_ptr<AnnotationViewInterface> CreateAndInitAnnotationView(
       fuchsia::ui::views::ViewRef client_view_ref) override;
 
-  void SetViewPropertiesChangedCallback(AnnotationViewInterface::ViewPropertiesChangedCallback
-                                            view_properties_changed_callback) override;
-  void SetViewAttachedCallback(
-      AnnotationViewInterface::ViewAttachedCallback view_attached_callback) override;
-  void SetViewDetachedCallback(
-      AnnotationViewInterface::ViewDetachedCallback view_detached_callback) override;
-
  private:
   sys::ComponentContext* context_;
-  AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback_;
-  AnnotationViewInterface::ViewAttachedCallback view_attached_callback_;
-  AnnotationViewInterface::ViewDetachedCallback view_detached_callback_;
 };
 
 }  // namespace a11y

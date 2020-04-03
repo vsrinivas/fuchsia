@@ -8,6 +8,9 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <optional>
+
+#include "src/ui/a11y/lib/annotation/annotation_view.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 namespace a11y {
 
@@ -17,11 +20,22 @@ namespace a11y {
 // viewRef goes out of scope.
 class ViewWrapper {
  public:
+  // Maintains state of a11y annotations in this view.
+  struct AnnotationState {
+    // True when this view holds a11y focus and false otherwise.
+    bool has_annotations = false;
+
+    // Stores id of a11y-focused node within this view when this view holds a11y focus.
+    std::optional<uint32_t> annotated_node_id = std::nullopt;
+  };
+
   // Creates a Wrapper for this view and binds the associated semantic tree.
-  ViewWrapper(fuchsia::ui::views::ViewRef view_ref,
-              std::unique_ptr<SemanticTreeService> tree_service_ptr,
-              fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
-                  semantic_tree_request);
+  ViewWrapper(
+      fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<SemanticTreeService> tree_service_ptr,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request,
+      // TODO: Remove default values once user classes have been updated.
+      sys::ComponentContext* context = nullptr,
+      std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory = nullptr);
 
   ~ViewWrapper();
 
@@ -37,14 +51,33 @@ class ViewWrapper {
   // Returns a clone of the ViewRef owned by this object.
   fuchsia::ui::views::ViewRef ViewRefClone() const;
 
+  // Highlights node with id |node_id|.
+  void HighlightNode(uint32_t node_id);
+
+  // Clears contents of annotation view.
+  void ClearHighlights();
+
  private:
+  // Helper function to draw highlight arround currently annotated node.
+  void DrawHighlight();
+
+  // Helper function to hide highlights.
+  void HideHighlights();
+
+  AnnotationState annotation_state_;
+
   fuchsia::ui::views::ViewRef view_ref_;
 
   fidl::Binding<fuchsia::accessibility::semantics::SemanticTree,
                 std::unique_ptr<SemanticTreeService>>
       semantic_tree_binding_;
 
-  // TODO(36198): Add annotation view here.
+  // Used to instantiate annotation view.
+  std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory_;
+
+  // View used to draw annotations over semantic view.
+  std::unique_ptr<AnnotationViewInterface> annotation_view_;
 };
+
 }  // namespace a11y
 #endif  // SRC_UI_A11Y_LIB_VIEW_VIEW_WRAPPER_H_

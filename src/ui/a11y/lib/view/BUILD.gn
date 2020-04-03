@@ -26,6 +26,7 @@ source_set("view") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/semantics",
   ]
 }

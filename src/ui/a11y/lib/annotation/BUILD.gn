@@ -22,6 +22,5 @@ source_set("annotation") {
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/util",
-    "//src/ui/a11y/lib/view",
   ]
 }

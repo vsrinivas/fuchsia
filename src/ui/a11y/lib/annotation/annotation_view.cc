@@ -211,16 +211,16 @@ std::unique_ptr<AnnotationViewInterface> AnnotationViewFactory::CreateAndInitAnn
   return annotation_view;
 }
 
-void AnnotationViewFactory::SetViewPropertiesChangedCallback(
+void AnnotationViewFactoryInterface::SetViewPropertiesChangedCallback(
     AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback) {
   view_properties_changed_callback_ = std::move(view_properties_changed_callback);
 }
-void AnnotationViewFactory::SetViewAttachedCallback(
+void AnnotationViewFactoryInterface::SetViewAttachedCallback(
     AnnotationViewInterface::ViewAttachedCallback view_attached_callback) {
   view_attached_callback_ = std::move(view_attached_callback);
 }
 
-void AnnotationViewFactory::SetViewDetachedCallback(
+void AnnotationViewFactoryInterface::SetViewDetachedCallback(
     AnnotationViewInterface::ViewDetachedCallback view_detached_callback) {
   view_detached_callback_ = std::move(view_detached_callback);
 }

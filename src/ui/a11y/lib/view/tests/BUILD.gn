@@ -29,6 +29,7 @@ executable("view_tests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
