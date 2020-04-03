@@ -321,6 +321,9 @@ func main() {
 			log.Fatalf("error in checking state of build-id dir: %v", err)
 		}
 		if empty {
+			if err := writeManifest(nil); err != nil {
+				log.Fatalf("failed to write empty manifest: %v", err)
+			}
 			log.Infof("build-id directory is empty; no work to do")
 			return
 		}

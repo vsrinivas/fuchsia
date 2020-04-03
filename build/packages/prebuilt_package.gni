@@ -1,7 +1,7 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/compiled_action.gni")
+import("//build/prebuilt_binaries.gni")
 
 declare_args() {
   # To ensure that everything can be built without debug symbols present we
@@ -20,6 +20,7 @@ declare_args() {
 #
 #   debug_archive (optional)
 #     Path to archive containing a .build-id directory for the package.
+#     TODO(fxbug.dev/41478): Delete me.
 #
 #   package_name (optional)
 #     Name of the package.
@@ -50,43 +51,14 @@ template("prebuilt_package") {
   unpack_action_name = target_name + ".debug-archive"
 
   if (defined(invoker.debug_archive) && unpack_debug_archives) {
-    compiled_action(unpack_action_name) {
-      tool = "//tools/debug/unpack_debug_symbols"
-      manifest = "$target_gen_dir/${target_name}_binaries.json"
-      outputs = [ manifest ]
+    prebuilt_binaries(unpack_action_name) {
+      build_id_dir = "$root_build_dir/.build-id"
 
-      depfile = "$target_gen_dir/$target_name.d"
-
-      args = [
-        "-build-id-dir",
-        ".build-id",
-        "-cpu",
-        target_cpu,
-        "-os",
-        target_os,
-        "-depfile",
-        rebase_path(depfile),
-        "-debug-archive",
-        rebase_path(invoker.debug_archive, root_build_dir),
-        "-output-manifest",
-        rebase_path(manifest, root_build_dir),
-        "-dump-syms",
-        rebase_path(
-            "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
-            root_build_dir),
-      ]
-      metadata = {
-        prebuilt_packages = [
-          {
-            archive = invoker.archive
-            debug_archive = invoker.debug_archive
-            if (defined(invoker.package_name)) {
-              package_name = invoker.package_name
-            }
-            binaries = rebase_path(manifest, root_build_dir)
-          },
-        ]
-      }
+      forward_variables_from(invoker,
+                             [
+                               "debug_archive",
+                               "testonly",
+                             ])
     }
   } else {
     if (defined(invoker.debug_archive)) {

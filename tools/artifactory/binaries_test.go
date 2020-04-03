@@ -20,7 +20,7 @@ import (
 type mockBinModules struct {
 	buildDir string
 	bins     []build.Binary
-	pkgs     []build.PrebuiltPackage
+	pbins    []build.PrebuiltBinaries
 }
 
 func (m mockBinModules) BuildDir() string {
@@ -31,8 +31,8 @@ func (m mockBinModules) Binaries() []build.Binary {
 	return m.bins
 }
 
-func (m mockBinModules) PrebuiltPackages() []build.PrebuiltPackage {
-	return m.pkgs
+func (m mockBinModules) PrebuiltBinaries() []build.PrebuiltBinaries {
+	return m.pbins
 }
 
 func TestDebugBinaryUploads(t *testing.T) {
@@ -91,10 +91,10 @@ func TestDebugBinaryUploads(t *testing.T) {
 				OS:    "fuchsia",
 			},
 		},
-		pkgs: []build.PrebuiltPackage{
+		pbins: []build.PrebuiltBinaries{
 			{
-				Name:           "prebuilt",
-				BinaryManifest: prebuiltBinManifest,
+				Name:     "prebuilt",
+				Manifest: prebuiltBinManifest,
 			},
 		},
 	}
