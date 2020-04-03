@@ -410,6 +410,10 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
+    // Spectre V1: If syscall number >= ZX_SYS_COUNT, replace it with zero. The branch/test above
+    // means this can only occur in wrong-path speculative executions.
+    csel x16, xzr, x16, hs
+    csdb
     // Jump to the right syscall wrapper. The syscall table is an
     // array of 16 byte aligned routines for each syscall. Each routine
     // marshalls some arguments, bls to the routine, and then branches
