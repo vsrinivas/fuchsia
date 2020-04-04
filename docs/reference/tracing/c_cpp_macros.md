@@ -563,21 +563,10 @@ This macro accepts the following arguments:
   <tr>
     <td><code>category</code></td>
     <td><p><b>Required</b></p>
-    <p>Specifies the category of the trace event. By convention, it should
-    use a category in a colon separated format:</p>
-    <p><code>provider</code>:<code>category</code>:<code>sub-category</code></p>
-    <p>For example <code>demo:flow:outline</code>, indicates the following:</p>
-      <ul>
-        <li><code>demo</code>: Indicates the name of the trace provider which is
-        your actual component.</li>
-        <li><code>flow</code>: Indicates the name of the category which can
-        indicate, like in this example, a call by call flow of the component.</li>
-        <li><code>outline</code>: Indicates the name of the sub-category which
-        can indicate, like in this example, that you are tracing the high
-        level flow of the component or just top level functions.</li>
-      </ul>
+    <p>Specifies the category of the trace event.</p>
+    <p>For example, a category could be: <code>demo</code></p>
       <p>The category namespace is global to all components that are running,
-      so if there is another component that also uses <code>demo</code>, you maye see trace
+      so if there is another component that also uses <code>demo</code>, you may see trace
       data from another trace provider.</p>
     </td>
     <td>Null terminated string.</td>
@@ -638,7 +627,7 @@ In some cases, you may need to record trace data, but do not need to record
 any key and value pairs:
 
 ```
-TRACE_INSTANT("test:helloworld", "hello_world_test", TRACE_SCOPE_PROCESS);
+TRACE_INSTANT("helloworld", "hello_world_test", TRACE_SCOPE_PROCESS);
 ```
 
 #### Single key and value pair
@@ -646,7 +635,7 @@ TRACE_INSTANT("test:helloworld", "hello_world_test", TRACE_SCOPE_PROCESS);
 In some cases, you may want to only record trace data for a single key and value pair:
 
 ```
-TRACE_INSTANT("test:helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "message", TA_STRING("Hello, World!"));
+TRACE_INSTANT("helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "message", TA_STRING("Hello, World!"));
 ```
 
 #### Multiple key and value pairs
@@ -654,7 +643,7 @@ TRACE_INSTANT("test:helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "messa
 In some cases, you may want to only record trace data for a multiple key and value pairs:
 
 ```
-TRACE_INSTANT("test:helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "message1", TA_STRING("First: Hello, World!"), "message2", TA_STRING("Second: Hello, World!"), "message3", TA_STRING("Third: Hello, World!"));
+TRACE_INSTANT("helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "message1", TA_STRING("First: Hello, World!"), "message2", TA_STRING("Second: Hello, World!"), "message3", TA_STRING("Third: Hello, World!"));
 ```
 
 -->

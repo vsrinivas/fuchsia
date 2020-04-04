@@ -34,14 +34,14 @@ Example:
 #include <ddk/trace/event.h>
 
 void DoSomething(int a, std::string b) {
-  TRACE_DURATION("example:example1", "DoSomething", "a", a, "b", b);
+  TRACE_DURATION("example", "DoSomething", "a", a, "b", b);
 
   // Do something
 }
 ```
 
 The first two arguments to most macros are the "category" and the
-event name. Here they are "example:example1" and "DoSomething" respectively.
+event name. Here they are "example" and "DoSomething" respectively.
 
 Trace categories are how the tracing system lets the user specify
 what data to collect. If a category is not requested by the user
@@ -49,15 +49,6 @@ then the data is not collected.
 
 Categories don't need to be unique across the driver.
 One typically groups several events under the same category.
-By convention categories have the format
-"<provider-name>:<category-name>[:<subcategory1-name>...]".
-"<provider-name>" for drivers should generally by the driver name.
-This is done to avoid collisions in category names across the
-entire system. A potential augmentation to this convention is to prefix
-all driver categories with "driver:". E.g., "driver:ethernet:packets".
-Avoiding naming collisions with other trace providers is important,
-otherwise the user may ask for a particular category and get completely
-unrelated data from a different trace provider.
 
 The event name is included in the trace to describe what the event
 is about. It is typically unique for each event.
@@ -114,7 +105,7 @@ These examples use the category from the source additions described above.
 Example:
 
 ```sh
-fuchsia$ trace record --categories=example:example1,kernel:sched,kernel:meta
+fuchsia$ trace record --categories=example,kernel:sched,kernel:meta
 host$ fx cp --to-host /data/trace.json trace.json
 ```
 
@@ -124,7 +115,7 @@ viewing with the Chrome trace viewer.
 
 ```sh
 host$ fx traceutil record \
-  --categories=example:example1,kernel:sched,kernel:meta
+  --categories=example,kernel:sched,kernel:meta
 ```
 
 The categories `kernel:sched,kernel:meta` should always be present if you

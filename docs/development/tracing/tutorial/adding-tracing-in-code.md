@@ -37,10 +37,10 @@ To write an instant event representing a single moment in time:
 * {C and C++}
 
   ```c
-  TRACE_INSTANT("test:helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "message", TA_STRING("Hello, World!"));
+  TRACE_INSTANT("helloworld", "hello_world_test", TRACE_SCOPE_PROCESS, "message", TA_STRING("Hello, World!"));
   ```
 
-This example specifies a category of `test:helloworld`, a name of `hello_world_test`,
+This example specifies a category of `helloworld`, a name of `hello_world_test`,
 a scope of `TRACE_SCOPE_PROCESS`, and a key and value pair.
 
 For more information on the `TRACE_INSTANT` macro, see
@@ -86,7 +86,7 @@ the recording of the statistics. For example, you can use the
   ```c
   #ifndef NTRACE
       status.tx_count++;
-      TRACE_INSTANT("demo:statistics:bandwidth", "txpackets", TRACE_SCOPE_PROCESS,
+      TRACE_INSTANT("bandwidth", "txpackets", TRACE_SCOPE_PROCESS,
                     "count", TA_UINT64(status.tx_count));
   #endif  // NTRACE
   ```
