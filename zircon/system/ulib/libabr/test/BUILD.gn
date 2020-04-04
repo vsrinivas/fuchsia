@@ -21,11 +21,11 @@ test("libabr-test") {
   output_name = "libabr-test"
   deps = [
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/libabr",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/libabr",
   ]
-  include_dirs = [ "//zircon/public/lib/libabr" ]
+  include_dirs = [ "//zircon/system/ulib/libabr" ]
 }
 
 migrated_manifest("libabr-test-manifest") {
