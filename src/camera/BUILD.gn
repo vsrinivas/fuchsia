@@ -19,6 +19,14 @@ group("camera") {
   ]
 }
 
+group("service") {
+  public_deps = [
+    "//src/camera/bin/device",
+    "//src/camera/bin/device_watcher",
+  ]
+}
+
+# DEPRECATED
 group("camera_manager") {
   public_deps = [ "//src/camera/camera_manager2" ]
 }
