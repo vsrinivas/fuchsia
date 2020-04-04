@@ -358,7 +358,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			return fmt.Errorf("failed to generate coverage report: %w", err)
 		}
 
-		if err := covargs.SaveReport(report, shardSize, reportDir); err != nil {
+		if _, err := covargs.SaveReport(report, shardSize, reportDir); err != nil {
 			return fmt.Errorf("failed to save report: %w", err)
 		}
 	}

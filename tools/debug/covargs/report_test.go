@@ -5,6 +5,10 @@
 package covargs
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -194,7 +198,7 @@ var testReport = &codecoverage.CoverageReport{
 	},
 }
 
-func TestExport(t *testing.T) {
+func TestGenerate(t *testing.T) {
 	report, err := GenerateReport(testExport, "/path/to/fuchsia", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -202,5 +206,46 @@ func TestExport(t *testing.T) {
 
 	if !reflect.DeepEqual(report, testReport) {
 		t.Error("expected", testReport, "but got", report)
+	}
+}
+
+func TestSave(t *testing.T) {
+	tests := []struct{
+		numReports int
+		shardSize int
+		numShards int
+	}{
+		{1, 1, 0},
+		{3, 3, 0},
+		{6, 3, 2},
+		{8, 3, 3},
+	}
+
+	dir, err := ioutil.TempDir("", "covargs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	for i, tt := range tests {
+		testDir := filepath.Join(dir, fmt.Sprintf("test%d", i))
+		err := os.MkdirAll(testDir, os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		report := &codecoverage.CoverageReport{}
+		for i := 0; i < tt.numReports; i++ {
+			report.Files = append(report.Files, &codecoverage.File{})
+		}
+
+		report, err = SaveReport(report, tt.shardSize, testDir)
+		if err != nil {
+			t.Error("unexpected error", err)
+		}
+
+		if fileShards := len(report.FileShards); fileShards != tt.numShards {
+			t.Error("expected", tt.numShards, "but got", fileShards)
+		}
 	}
 }
