@@ -47,6 +47,6 @@ zx_library("fs-management") {
     # uapp/blobfs
     #"uapp/minfs",
     "$zx/third_party/uapp/fsck-msdosfs",
-    "$zx/third_party/uapp/mkfs-msdosfs",
+    #"$zx/third_party/uapp/mkfs-msdosfs",
   ]
 }

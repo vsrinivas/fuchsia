@@ -129,6 +129,10 @@ template("esp") {
   }
   output_file = "$root_out_dir/$output_file"
 
+  mkfs_label = "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)"
+  mkfs_out_dir = get_label_info(mkfs_label, "root_out_dir")
+  mkfs_bin = "$mkfs_out_dir/mkfs-msdosfs"
+
   compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -139,15 +143,14 @@ template("esp") {
                            ])
 
     tool = "//tools/make-efi"
-    mkfs_msdosfs_bin = "$zircon_tools_dir/mkfs-msdosfs"
 
     outputs = [ output_file ]
-    inputs = [ mkfs_msdosfs_bin ]
+    inputs = [ mkfs_bin ]
     args = [
       "--output",
       rebase_path(output_file),
       "--mkfs",
-      rebase_path(mkfs_msdosfs_bin),
+      rebase_path(mkfs_bin),
     ]
 
     if (defined(invoker.zircon_bin)) {
@@ -198,6 +201,6 @@ template("esp") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ "//zircon/public/tool/mkfs-msdosfs($host_toolchain)" ]
+    deps += [ mkfs_label ]
   }
 }
