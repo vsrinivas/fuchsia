@@ -78,7 +78,6 @@ group("zbi") {
 # Artifacts imported from the ZN build which may be added to ZBI tests.
 
 zbiables = [
-  "bin.svchost",
   "driver.fragment",
   "driver.fragment.proxy",
   "test.core.standalone-test",
