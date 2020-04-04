@@ -25,7 +25,6 @@ driver_module("tpm") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/driver-unit-test",
     "//zircon/public/lib/explicit-memory",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -33,6 +32,7 @@ driver_module("tpm") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/ulib/driver-unit-test",
   ]
 }
 

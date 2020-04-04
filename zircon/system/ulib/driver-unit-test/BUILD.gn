@@ -2,23 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("driver-unit-test") {
   sdk = "static"
   sdk_headers = [
-    "driver-unit-test/logger.h",
-    "driver-unit-test/utils.h",
+    "lib/driver-unit-test/logger.h",
+    "lib/driver-unit-test/utils.h",
   ]
   sources = [
     "logger.cc",
     "utils.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-driver-test:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-driver-test:c",
   ]
 }

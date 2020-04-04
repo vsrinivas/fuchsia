@@ -146,7 +146,6 @@ group("ulib") {
     "driver-integration-test:driver-integration-test-static",
 #------------------
 #------------------
-    "driver-unit-test",
 #------------------
 #------------------
 #------------------

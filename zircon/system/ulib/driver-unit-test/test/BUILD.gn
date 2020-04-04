@@ -26,11 +26,11 @@ test("logger-unit") {
   }
   sources = [ "logger-test.cc" ]
   deps = [
-    "//zircon/public/lib/driver-unit-test",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-driver-test:c",
+    "//zircon/system/ulib/driver-unit-test",
   ]
 }
 
