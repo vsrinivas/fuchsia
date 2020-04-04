@@ -82,6 +82,13 @@ enum {
   MAGMA_COHERENCY_DOMAIN_RAM = 1,
 };
 
+enum { MAGMA_POLL_TYPE_SEMAPHORE = 1, MAGMA_POLL_TYPE_HANDLE = 2 };
+
+enum {
+  MAGMA_POLL_CONDITION_READABLE = 1,
+  MAGMA_POLL_CONDITION_SIGNALED = 3,
+};
+
 #define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
 #define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
 
@@ -116,6 +123,16 @@ typedef uintptr_t magma_buffer_format_description_t;
 
 // Corresponds to a zx_handle_t on Fuchsia.
 typedef uint32_t magma_handle_t;
+
+typedef struct magma_poll_item {
+  union {
+    magma_semaphore_t semaphore;
+    magma_handle_t handle;
+  };
+  uint32_t type;
+  uint32_t condition;
+  uint32_t result;
+} magma_poll_item_t;
 
 // a buffer plus its associated relocations referenced by a command buffer
 struct magma_system_exec_resource {

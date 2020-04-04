@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include "platform_port.h"
+
 namespace magma {
 
 class PlatformHandle {
@@ -16,6 +18,11 @@ class PlatformHandle {
 
   virtual bool GetCount(uint32_t* count_out) = 0;
   virtual uint32_t release() = 0;
+
+  // Registers an async wait delivered on the given |port| when the given handle is readable,
+  // or if the handle has a peer and the peer is closed.
+  // On success returns true and |key_out| is set.
+  virtual bool WaitAsync(PlatformPort* port, uint64_t* key_out) = 0;
 
   static bool duplicate_handle(uint32_t handle_in, uint32_t* handle_out);
 

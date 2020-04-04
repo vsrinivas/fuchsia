@@ -103,6 +103,10 @@ magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32
   return result_return;
 }
 
+magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,
                                                  struct magma_system_command_buffer* command_buffer,
                                                  struct magma_system_exec_resource* resources,

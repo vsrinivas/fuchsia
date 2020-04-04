@@ -365,3 +365,7 @@ magma_status_t magma_initialize_tracing(magma_handle_t channel) {
 magma_status_t magma_initialize_logging(magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

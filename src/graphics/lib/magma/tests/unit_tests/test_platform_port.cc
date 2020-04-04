@@ -10,6 +10,10 @@
 #include "platform_port.h"
 #include "platform_semaphore.h"
 
+#ifdef __Fuchsia__
+#include <lib/zx/channel.h>
+#endif
+
 namespace {
 
 class TestPort {
@@ -92,8 +96,53 @@ class TestPort {
     }));
     thread->join();
   }
+
+  static void TestHandle() {
+#ifdef __Fuchsia__
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0 /*flags*/, &local, &remote));
+
+    auto handle = magma::PlatformHandle::Create(local.release());
+    ASSERT_TRUE(handle);
+
+    auto port = magma::PlatformPort::Create();
+    ASSERT_TRUE(port);
+
+    uint64_t handle_key;
+    EXPECT_TRUE(handle->WaitAsync(port.get(), &handle_key));
+
+    uint64_t key;
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, port->Wait(&key, 0).get());
+
+    uint32_t dummy;
+    EXPECT_EQ(ZX_OK, remote.write(0 /* flags */, &dummy, sizeof(dummy), nullptr /* handles */,
+                                  0 /* num_handles*/));
+
+    // Close the peer
+    remote.reset();
+
+    EXPECT_EQ(MAGMA_STATUS_OK, port->Wait(&key, 0).get());
+    EXPECT_EQ(handle_key, key);
+
+    local.reset(handle->release());
+
+    uint32_t actual_bytes;
+    EXPECT_EQ(ZX_OK, local.read(0 /* flags */, &dummy, nullptr /*handles*/, sizeof(dummy),
+                                0 /*num_handles*/, &actual_bytes, nullptr /*actual_handles*/));
+
+    handle = magma::PlatformHandle::Create(local.release());
+
+    EXPECT_TRUE(handle->WaitAsync(port.get(), &handle_key));
+
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, port->Wait(&key, 0).get());
+#else
+    GTEST_SKIP();
+#endif
+  }
 };
 
 }  // namespace
 
 TEST(PlatformPort, Test) { TestPort::Test(); }
+
+TEST(PlatformPort, Handle) { TestPort::TestHandle(); }

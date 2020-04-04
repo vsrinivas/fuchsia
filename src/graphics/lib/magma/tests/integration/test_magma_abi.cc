@@ -32,6 +32,7 @@ namespace {
 
 inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
 
+inline constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ull; }
 }  // namespace
 
 class TestConnection {
@@ -284,6 +285,149 @@ class TestConnection {
     for (uint32_t i = 0; i < semaphore.size(); i++) {
       magma_release_semaphore(connection_, semaphore[i]);
     }
+  }
+
+  void PollWithNotificationChannel(uint32_t semaphore_count) {
+    ASSERT_TRUE(connection_);
+
+    std::vector<magma_poll_item_t> items;
+
+    for (uint32_t i = 0; i < semaphore_count; i++) {
+      magma_semaphore_t semaphore;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore));
+
+      items.push_back({.semaphore = semaphore,
+                       .type = MAGMA_POLL_TYPE_SEMAPHORE,
+                       .condition = MAGMA_POLL_CONDITION_SIGNALED});
+    }
+
+    items.push_back({
+        .handle = magma_get_notification_channel_handle(connection_),
+        .type = MAGMA_POLL_TYPE_HANDLE,
+        .condition = MAGMA_POLL_CONDITION_READABLE,
+    });
+
+    constexpr int64_t kTimeoutNs = ms_to_ns(100);
+    auto start = std::chrono::steady_clock::now();
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count());
+
+    magma_signal_semaphore(items[0].semaphore);
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(items[0].result, items[0].condition);
+    EXPECT_EQ(items[1].result, 0u);
+
+    magma_reset_semaphore(items[0].semaphore);
+
+    start = std::chrono::steady_clock::now();
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count());
+
+    for (uint32_t i = 0; i < semaphore_count; i++) {
+      magma_signal_semaphore(items[i].semaphore);
+    }
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+
+    for (uint32_t i = 0; i < items.size(); i++) {
+      if (i < items.size() - 1) {
+        EXPECT_EQ(items[i].result, items[i].condition);
+      } else {
+        // Notification channel
+        EXPECT_EQ(items[i].result, 0u);
+      }
+    }
+
+    for (uint32_t i = 0; i < semaphore_count; i++) {
+      magma_release_semaphore(connection_, items[i].semaphore);
+    }
+  }
+
+  void PollWithTestChannel() {
+#ifdef __Fuchsia__
+    ASSERT_TRUE(connection_);
+
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0 /* flags */, &local, &remote));
+
+    magma_semaphore_t semaphore;
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore));
+
+    std::vector<magma_poll_item_t> items;
+    items.push_back({.semaphore = semaphore,
+                     .type = MAGMA_POLL_TYPE_SEMAPHORE,
+                     .condition = MAGMA_POLL_CONDITION_SIGNALED});
+    items.push_back({
+        .handle = local.get(),
+        .type = MAGMA_POLL_TYPE_HANDLE,
+        .condition = MAGMA_POLL_CONDITION_READABLE,
+    });
+
+    constexpr int64_t kTimeoutNs = ms_to_ns(100);
+    auto start = std::chrono::steady_clock::now();
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count());
+
+    magma_signal_semaphore(semaphore);
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(items[0].result, items[0].condition);
+    EXPECT_EQ(items[1].result, 0u);
+
+    magma_reset_semaphore(semaphore);
+
+    start = std::chrono::steady_clock::now();
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count());
+
+    uint32_t dummy;
+    EXPECT_EQ(ZX_OK, remote.write(0 /* flags */, &dummy, sizeof(dummy), nullptr /* handles */,
+                                  0 /* num_handles*/));
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(items[0].result, 0u);
+    EXPECT_EQ(items[1].result, items[1].condition);
+
+    magma_signal_semaphore(semaphore);
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(items[0].result, items[0].condition);
+    EXPECT_EQ(items[1].result, items[1].condition);
+#else
+    GTEST_SKIP();
+#endif
+  }
+
+  void PollChannelClosed() {
+#ifdef __Fuchsia__
+    ASSERT_TRUE(connection_);
+
+    zx::channel local, remote;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0 /* flags */, &local, &remote));
+
+    std::vector<magma_poll_item_t> items;
+    items.push_back({
+        .handle = local.get(),
+        .type = MAGMA_POLL_TYPE_HANDLE,
+        .condition = MAGMA_POLL_CONDITION_READABLE,
+    });
+
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), 0));
+
+    remote.reset();
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_poll(items.data(), items.size(), 0));
+#else
+    GTEST_SKIP();
+#endif
   }
 
   void SemaphoreExport(uint32_t* handle_out, uint64_t* id_out) {
@@ -645,6 +789,16 @@ TEST(MagmaAbi, SemaphoreImportExport) {
 }
 
 TEST(MagmaAbi, ImmediateCommands) { TestConnection().ImmediateCommands(); }
+
+TEST(MagmaAbi, PollWithNotificationChannel) {
+  TestConnection().PollWithNotificationChannel(1);
+  TestConnection().PollWithNotificationChannel(2);
+  TestConnection().PollWithNotificationChannel(3);
+}
+
+TEST(MagmaAbi, PollWithTestChannel) { TestConnection().PollWithTestChannel(); }
+
+TEST(MagmaAbi, PollChannelClosed) { TestConnection().PollChannelClosed(); }
 
 TEST(MagmaAbi, ImageFormat) {
   TestConnection test;

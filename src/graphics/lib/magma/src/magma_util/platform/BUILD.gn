@@ -108,10 +108,15 @@ source_set("handle_header") {
   public_configs = [ ":platform_include_config" ]
 
   sources = [ "platform_handle.h" ]
+
+  public_deps = [ ":port_header" ]
 }
 
 source_set("handle") {
-  public_deps = [ ":handle_header" ]
+  public_deps = [
+    ":handle_header",
+    ":port",
+  ]
 
   if (is_fuchsia) {
     deps = [ "zircon:handle" ]

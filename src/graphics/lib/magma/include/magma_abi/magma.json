@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 52,
+    "next-free-ordinal": 53,
     "exports": [
       {
         "ordinal": 4,
@@ -649,7 +649,7 @@
         "ordinal": 39,
         "name": "magma_wait_semaphores",
         "type": "magma_status_t",
-        "description": "Waits for one or all provided semaphores to be signaled. Does not reset any semaphores.",
+        "description": "DEPRECATED. Waits for one or all provided semaphores to be signaled. Does not reset any semaphores.",
         "arguments": [
           {
             "name": "semaphores",
@@ -736,7 +736,7 @@
         "ordinal": 43,
         "name": "magma_wait_notification_channel",
         "type": "magma_status_t",
-        "description": "Returns MAGMA_STATUS_OK if a message is available on the notification channel before the given timeout expires.",
+        "description": "DEPRECATED. Returns MAGMA_STATUS_OK if a message is available on the notification channel before the given timeout expires.",
         "arguments": [
           {
             "name": "connection",
@@ -896,6 +896,29 @@
             "name": "channel",
             "type": "magma_handle_t",
             "description": "An open connection to the syslog service."
+          }
+        ]
+      },
+      {
+        "ordinal": 52,
+        "name": "magma_poll",
+        "type": "magma_status_t",
+        "description": "Waits for at least one of the given items to meet a condition. Does not reset any semaphores. Results are returned in the items array.",
+        "arguments": [
+          {
+            "name": "items",
+            "type": "magma_poll_item_t*",
+            "description": "Array of poll items. Type should be either MAGMA_POLL_TYPE_SEMAPHORE or MAGMA_POLL_TYPE_HANDLE. Condition may be set to MAGMA_POLL_CONDITION_SIGNALED OR MAGMA_POLL_CONDITION_READABLE. If condition is 0 the item is ignored. Item results are set to the condition that was satisfied, otherwise 0. If the same item is given twice the behavior is undefined."
+          },
+          {
+            "name": "count",
+            "type": "uint32_t",
+            "description": "Number of poll items in the array."
+          },
+          {
+            "name": "timeout_ns",
+            "type": "uint64_t",
+            "description": "Time in ns to wait before returning MAGMA_STATUS_TIMED_OUT."
           }
         ]
       }

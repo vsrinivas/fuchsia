@@ -45,15 +45,19 @@ magma::Status ZirconPlatformSemaphore::Wait(uint64_t timeout_ms) {
   return status;
 }
 
-bool ZirconPlatformSemaphore::WaitAsync(PlatformPort* platform_port) {
+bool ZirconPlatformSemaphore::WaitAsync(PlatformPort* port, uint64_t* key_out) {
   TRACE_DURATION("magma:sync", "semaphore wait async", "id", koid_);
   TRACE_FLOW_BEGIN("magma:sync", "semaphore wait async", koid_);
 
-  auto port = static_cast<ZirconPlatformPort*>(platform_port);
-  zx_status_t status = event_.wait_async(port->zx_port(), id(), zx_signal(), ZX_WAIT_ASYNC_ONCE);
+  auto zircon_port = static_cast<ZirconPlatformPort*>(port);
+
+  uint64_t key = id();
+  zx_status_t status =
+      event_.wait_async(zircon_port->zx_port(), key, zx_signal(), ZX_WAIT_ASYNC_ONCE);
   if (status != ZX_OK)
     return DRETF(false, "wait_async failed: %d", status);
 
+  *key_out = key;
   return true;
 }
 

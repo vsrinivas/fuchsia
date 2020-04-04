@@ -225,12 +225,16 @@ source_set("handle") {
   ]
 
   public_deps = [
+    ":port",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:handle_header",
   ]
 
-  deps = [ "$magma_build_root/src/magma_util:macros" ]
+  deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "..:object",
+  ]
 }
 
 source_set("iommu") {

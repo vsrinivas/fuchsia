@@ -345,7 +345,8 @@ void magma_reset_semaphore(
     magma_semaphore_t semaphore);
 
 ///
-/// \brief Waits for one or all provided semaphores to be signaled. Does not reset any semaphores.
+/// \brief DEPRECATED. Waits for one or all provided semaphores to be signaled. Does not reset any
+///        semaphores.
 /// \param semaphores Array of valid semaphores.
 /// \param count Number of semaphores in the array.
 /// \param timeout_ms Time to wait before returning MAGMA_STATUS_TIMED_OUT.
@@ -390,8 +391,8 @@ magma_handle_t magma_get_notification_channel_handle(
     magma_connection_t connection);
 
 ///
-/// \brief Returns MAGMA_STATUS_OK if a message is available on the notification channel before the
-///        given timeout expires.
+/// \brief DEPRECATED. Returns MAGMA_STATUS_OK if a message is available on the notification channel
+///        before the given timeout expires.
 /// \param connection An open connection.
 /// \param timeout_ns Time to wait before returning MAGMA_STATUS_TIMED_OUT.
 ///
@@ -475,6 +476,22 @@ magma_status_t magma_create_connection2(
 ///
 magma_status_t magma_initialize_logging(
     magma_handle_t channel);
+
+///
+/// \brief Waits for at least one of the given items to meet a condition. Does not reset any
+///        semaphores. Results are returned in the items array.
+/// \param items Array of poll items. Type should be either MAGMA_POLL_TYPE_SEMAPHORE or
+///        MAGMA_POLL_TYPE_HANDLE. Condition may be set to MAGMA_POLL_CONDITION_SIGNALED OR
+///        MAGMA_POLL_CONDITION_READABLE. If condition is 0 the item is ignored. Item results are
+///        set to the condition that was satisfied, otherwise 0. If the same item is given twice the
+///        behavior is undefined.
+/// \param count Number of poll items in the array.
+/// \param timeout_ns Time in ns to wait before returning MAGMA_STATUS_TIMED_OUT.
+///
+magma_status_t magma_poll(
+    magma_poll_item_t* items,
+    uint32_t count,
+    uint64_t timeout_ns);
 
 #if defined(__cplusplus)
 }

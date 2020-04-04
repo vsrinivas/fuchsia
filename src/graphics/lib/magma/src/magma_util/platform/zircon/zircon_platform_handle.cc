@@ -6,6 +6,9 @@
 
 #include <lib/zx/handle.h>
 
+#include "platform_object.h"
+#include "zircon_platform_port.h"
+
 namespace magma {
 
 bool ZirconPlatformHandle::GetCount(uint32_t* count_out) {
@@ -16,6 +19,20 @@ bool ZirconPlatformHandle::GetCount(uint32_t* count_out) {
     return DRETF(false, "zx_object_get_info failed");
 
   *count_out = info.handle_count;
+  return true;
+}
+
+bool ZirconPlatformHandle::WaitAsync(PlatformPort* port, uint64_t* key_out) {
+  if (!PlatformObject::IdFromHandle(get(), key_out))
+    return DRET_MSG(false, "IdFromHandle failed");
+
+  auto zircon_port = static_cast<ZirconPlatformPort*>(port);
+  zx_status_t status =
+      handle_.wait_async(zircon_port->zx_port(), *key_out,
+                         ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+  if (status != ZX_OK)
+    return DRETF(false, "wait_async failed: %d", status);
+
   return true;
 }
 

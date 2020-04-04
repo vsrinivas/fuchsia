@@ -5,12 +5,14 @@
 #include "magma.h"
 
 #include <chrono>
+#include <map>
 
 #include "magma_util/macros.h"
 #include "platform_connection_client.h"
 #include "platform_device_client.h"
 #include "platform_handle.h"
 #include "platform_logger.h"
+#include "platform_object.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
 #include "platform_thread.h"
@@ -382,6 +384,95 @@ magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32
     if (!status)
       return status.get();
   }
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
+  // Optimize for simple case
+  if (count == 1 && items[0].type == MAGMA_POLL_TYPE_SEMAPHORE &&
+      items[0].condition == MAGMA_POLL_CONDITION_SIGNALED) {
+    items[0].result = 0;
+    // TODO(fxb/49103) change WaitNoReset to take ns
+    if (!reinterpret_cast<magma::PlatformSemaphore*>(items[0].semaphore)
+             ->WaitNoReset(magma::ns_to_ms(timeout_ns)))
+      return MAGMA_STATUS_TIMED_OUT;
+
+    items[0].result = items[0].condition;
+    return MAGMA_STATUS_OK;
+  }
+
+  std::unique_ptr<magma::PlatformPort> port = magma::PlatformPort::Create();
+  if (!port)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create port");
+
+  // Map of key to item index
+  std::map<uint64_t, uint32_t> map;
+
+  for (uint32_t i = 0; i < count; i++) {
+    items[i].result = 0;
+
+    if (!items[i].condition)
+      continue;
+
+    switch (items[i].type) {
+      case MAGMA_POLL_TYPE_SEMAPHORE: {
+        if (items[i].condition != MAGMA_POLL_CONDITION_SIGNALED)
+          return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid condition for semaphore: 0x%x",
+                          items[i].condition);
+
+        auto semaphore = reinterpret_cast<magma::PlatformSemaphore*>(items[i].semaphore);
+        uint64_t key;
+        if (!semaphore->WaitAsync(port.get(), &key))
+          return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitAsync failed");
+
+        map[key] = i;
+        break;
+      }
+
+      case MAGMA_POLL_TYPE_HANDLE: {
+        if (items[i].condition != MAGMA_POLL_CONDITION_READABLE)
+          return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid condition for handle: 0x%x",
+                          items[i].condition);
+
+        auto platform_handle = magma::PlatformHandle::Create(items[i].handle);
+        if (!platform_handle)
+          return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create platform handle");
+
+        uint64_t key;
+        bool result = platform_handle->WaitAsync(port.get(), &key);
+        platform_handle->release();
+
+        if (!result)
+          return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitAsync failed");
+
+        map[key] = i;
+        break;
+      }
+    }
+  }
+
+  if (map.empty())
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Nothing to do");
+
+  // TODO(fxb/49103) change PlatformPort::Wait to take ns
+  uint64_t key;
+  magma::Status status = port->Wait(&key, magma::ns_to_ms(timeout_ns));
+  if (!status)
+    return status.get();
+
+  while (status) {
+    auto iter = map.find(key);
+    if (iter == map.end())
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Couldn't find key in map: 0x%lx", key);
+
+    uint32_t index = iter->second;
+    DASSERT(index < count);
+    items[index].result = items[index].condition;
+
+    // Check for more events
+    status = port->Wait(&key, 0);
+  }
+
   return MAGMA_STATUS_OK;
 }
 

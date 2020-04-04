@@ -177,8 +177,8 @@ class TestMsdArmDevice {
 
       magma::Status Wait(uint64_t timeout_ms) override { return MAGMA_STATUS_OK; }
 
-      bool WaitAsync(magma::PlatformPort* platform_port) override {
-        return real_semaphore_->WaitAsync(platform_port);
+      bool WaitAsync(magma::PlatformPort* port, uint64_t* key_out) override {
+        return real_semaphore_->WaitAsync(port, key_out);
       }
       uint64_t id() override { return real_semaphore_->id(); }
       bool duplicate_handle(uint32_t* handle_out) override {

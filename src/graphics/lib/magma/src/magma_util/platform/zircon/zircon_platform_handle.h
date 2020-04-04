@@ -20,6 +20,8 @@ class ZirconPlatformHandle : public PlatformHandle {
 
   bool GetCount(uint32_t* count_out) override;
 
+  bool WaitAsync(PlatformPort* port, uint64_t* key_out) override;
+
   uint32_t release() override { return handle_.release(); }
 
   zx_handle_t get() { return handle_.get(); }

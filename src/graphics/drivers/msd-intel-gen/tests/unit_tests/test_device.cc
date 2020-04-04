@@ -385,7 +385,7 @@ class TestMsdIntelDevice {
       return wait_return_.load();
     }
 
-    bool WaitAsync(magma::PlatformPort* platform_port) override { return false; }
+    bool WaitAsync(magma::PlatformPort* port, uint64_t* key_out) override { return false; }
 
     std::unique_ptr<magma::PlatformSemaphore> sem_ = magma::PlatformSemaphore::Create();
     std::unique_ptr<magma::PlatformSemaphore> signal_sem_ = magma::PlatformSemaphore::Create();
