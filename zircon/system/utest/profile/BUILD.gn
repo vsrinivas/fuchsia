@@ -20,10 +20,10 @@ test("profile") {
   sources = [ "profile.cc" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/profile",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-scheduler:c",
+    "//zircon/system/ulib/profile",
   ]
 }
 
