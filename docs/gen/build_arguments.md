@@ -366,7 +366,7 @@ This is a list of targets that will be built as goldfish vulkan ICDs.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:14
+From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:14
 
 ### build_libvulkan_img_rgx
 Targets that will be built as IMG vulkan ICDS.
@@ -624,7 +624,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/22a878cf77c55d8875e33026570bcda614dfb852/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -639,7 +639,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/22a878cf77c55d8875e33026570bcda614dfb852/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -689,7 +689,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/22a878cf77c55d8875e33026570bcda614dfb852/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -936,7 +936,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:654
+From //build/config/BUILDCONFIG.gn:655
 
 ### fastboot_product
 
@@ -971,7 +971,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/22a878cf77c55d8875e33026570bcda614dfb852/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -986,14 +986,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/22a878cf77c55d8875e33026570bcda614dfb852/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/76fb47bc6a0f87368f21474fc29fdf0bb16a5cde/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/22a878cf77c55d8875e33026570bcda614dfb852/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1445,7 +1445,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:579
+From //build/config/BUILDCONFIG.gn:580
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1795,7 +1795,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:29
 
 **Current value (from the default):** `"//prebuilt/third_party/libvulkan_goldfish/arm64/libvulkan_goldfish.so"`
 
-From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:9
+From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:9
 
 ### prebuilt_libvulkan_img_path
 The path to a prebuilt libvulkan.so for an IMG GPU.
@@ -1994,7 +1994,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:859
+From //build/config/BUILDCONFIG.gn:860
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2003,7 +2003,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:864
+From //build/config/BUILDCONFIG.gn:865
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2027,7 +2027,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:700
+From //build/config/BUILDCONFIG.gn:701
 
 ### signed_image
 
@@ -2237,7 +2237,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:98
+From //build/config/BUILDCONFIG.gn:99
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -2265,7 +2265,7 @@ From //build/config/sanitizers/BUILD.gn:30
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:674
+From //build/config/BUILDCONFIG.gn:675
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
