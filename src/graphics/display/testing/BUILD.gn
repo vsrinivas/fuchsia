@@ -10,11 +10,11 @@ static_library("testing") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format-llcpp",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
 }

@@ -13,10 +13,10 @@ source_set("gpu_lib") {
   public_deps = [
     "//src/devices/bus/lib/virtio",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/image-format",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/ulib/image-format",
   ]
 }
 

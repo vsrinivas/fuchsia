@@ -37,9 +37,9 @@ source_set("hsv_color_source") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem",
+    "//zircon/system/ulib/image-format",
   ]
 }
 
@@ -53,8 +53,8 @@ source_set("image_format_rgba") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem",
+    "//zircon/system/ulib/image-format",
   ]
 }

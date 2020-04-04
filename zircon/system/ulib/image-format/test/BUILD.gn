@@ -25,8 +25,8 @@ test("image-format-test") {
   sources = [ "image-format-test.cc" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/image-format",
   ]
 }
 

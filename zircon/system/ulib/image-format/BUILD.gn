@@ -2,16 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("image-format") {
   sdk = "source"
   sdk_headers = [ "lib/image-format/image_format.h" ]
   sources = [ "image_format.cc" ]
-  public_deps = [ "$zx/system/fidl/fuchsia-sysmem:c.headers" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-sysmem:c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
 
@@ -20,13 +31,13 @@ zx_library("image-format-llcpp") {
   sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
   sources = [ "image-format-llcpp.cc" ]
   public_deps = [
-    ":image-format.headers",
-    "$zx/system/fidl/fuchsia-sysmem:c.headers",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp.headers",
+    ":image-format",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
   deps = [
     ":image-format",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
 }

@@ -30,7 +30,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -41,14 +40,15 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/image-format",
   ]
 
   deps = [
     "//zircon/public/lib/fidl-utils",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/region-alloc",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/image-format",
   ]
 }
 
@@ -104,7 +104,6 @@ test("sysmem-unittest") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -114,6 +113,7 @@ test("sysmem-unittest") {
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/image-format",
   ]
 }
 

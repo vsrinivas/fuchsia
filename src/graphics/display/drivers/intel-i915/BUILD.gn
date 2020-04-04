@@ -34,7 +34,6 @@ driver_module("intel-i915") {
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zx",
@@ -43,6 +42,7 @@ driver_module("intel-i915") {
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/edid",
+    "//zircon/system/ulib/image-format",
   ]
 }
 
@@ -73,7 +73,6 @@ test("intel-i915-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/region-alloc",
@@ -86,6 +85,7 @@ test("intel-i915-test") {
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/edid",
+    "//zircon/system/ulib/image-format",
   ]
 }
 

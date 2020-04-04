@@ -71,7 +71,7 @@ source_set("camera-fakes") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/image-format",
+    "//zircon/system/ulib/image-format",
   ]
   public_deps = [
     "//sdk/lib/fidl/cpp",

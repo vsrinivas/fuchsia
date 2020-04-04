@@ -20,7 +20,7 @@ executable("test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/syslog",
+    "//zircon/system/ulib/image-format",
   ]
 }

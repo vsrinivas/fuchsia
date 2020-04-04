@@ -15,10 +15,10 @@ source_set("camera-task") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/system/ulib/image-format",
   ]
 }
