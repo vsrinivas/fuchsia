@@ -46,7 +46,13 @@ action("prebuilt_ids.txt") {
   args = [
     "--output-format",
     "ids.txt",
+    "--input",
     rebase_path(prebuilt_build_ids),
+    # We also include the new, canonical location of
+    # //prebuilt/.build-id, where unpacked, prebuilt, .build-id directories
+    # are being migrated to.
+    "--input",
+    rebase_path("//prebuilt/.build_id"),
     rebase_path(prebuilt_ids_txt),
   ]
 

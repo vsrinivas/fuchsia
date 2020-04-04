@@ -92,23 +92,34 @@ def main():
     parser.add_argument("--stamp",
                         help="Touch STAMP after finishing",
                         metavar="STAMP")
-    parser.add_argument("input")
+    parser.add_argument("--input", action="append",
+                        help=".build-id directories or ids.txt files depending on the output format")
     parser.add_argument("output")
 
     args = parser.parse_args()
 
-    input_path = os.path.abspath(args.input)
+        
+    input_paths = map(os.path.abspath, args.input)
+    input_paths = filter(os.path.exists, input_paths) # conventionally ignore empty inputs
+    input_dirs = map(os.path.isdir, input_paths)
+    if len(input_dirs) > 0:
+        assert len(input_dirs) == len(input_paths), "input formats cannot be mixed"
+        in_fmt = build_id_fmt
+    else:
+        in_fmt = ids_fmt
+
     output_path = args.output
-    in_fmt = build_id_fmt if os.path.isdir(input_path) else ids_fmt
     rel_to_in = os.path.abspath(args.ids_rel_to_in) if args.ids_rel_to_in is not None else None
     rel_to_out = os.path.abspath(args.ids_rel_to_out) if args.ids_rel_to_out is not None else None
 
-    if in_fmt == ids_fmt:
-        if rel_to_in is None:
-          rel_to_in = os.path.abspath(os.path.dirname(input_path))
-        mods = read_ids_txt(input_path, rel_to_in)
-    else:
-        mods = read_build_id_dir(input_path)
+    mods = {}
+    for input_path in input_paths:
+        if in_fmt == ids_fmt:
+            if rel_to_in is None:
+                rel_to_in = os.path.abspath(os.path.dirname(input_path))
+            mods.update(read_ids_txt(input_path, rel_to_in))
+        else:
+            mods.update(read_build_id_dir(input_path))
 
     if args.output_format == None:
         if in_fmt == ids_fmt:
