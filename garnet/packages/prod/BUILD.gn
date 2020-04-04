@@ -575,5 +575,5 @@ group("tee_manager") {
 
 group("goldfish-vulkan") {
   testonly = true
-  public_deps = [ "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
+  public_deps = [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
 }
