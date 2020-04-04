@@ -557,7 +557,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
       }
     }
   } else if (scan_request) {
-    BRCMF_DBG(SCAN, "ESCAN Completed scan: %s\n", aborted ? "Aborted" : "Done");
+    BRCMF_DBG(WLANIF, "ESCAN Completed scan: %s\n", aborted ? "Aborted" : "Done");
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id,
                           aborted ? WLAN_SCAN_RESULT_INTERNAL_ERROR : WLAN_SCAN_RESULT_SUCCESS);
   }
@@ -834,7 +834,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
   err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size, &fw_err);
   if (err != ZX_OK) {
     if (err == ZX_ERR_UNAVAILABLE) {
-      BRCMF_DBG(INFO, "system busy : escan canceled\n");
+      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx\n", atomic_load(&ifp->vif->sme_state));
     } else {
       BRCMF_ERR("escan failed: %s, fw err %s\n", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
@@ -2259,7 +2259,7 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
 
 out_err:
   if (ndev->scan_busy) {
-    BRCMF_DBG(TEMP, "out_err %d, signaling scan end", err);
+    BRCMF_ERR("scan id:%d err %d, signaling scan end", ndev->scan_txn_id, err);
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }
 free_req:
@@ -2721,6 +2721,7 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
                 : req->scan_type == WLAN_SCAN_TYPE_ACTIVE ? "active" : "invalid");
 
   if (ndev->scan_busy) {
+    BRCMF_ERR("scan already in progress id: %d\n", ndev->scan_txn_id);
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
     return;
   }
