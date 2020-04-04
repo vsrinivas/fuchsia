@@ -2,7 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("fsck-msdosfs") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("fsck-msdosfs") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "boot.c",
     "check.c",
@@ -10,8 +31,9 @@ zx_executable("fsck-msdosfs") {
     "fat.c",
     "main.c",
   ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
+}
+
+migrated_manifest("fsck-msdosfs-manifest") {
+  deps = [ ":fsck-msdosfs" ]
 }

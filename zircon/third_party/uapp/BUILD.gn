@@ -5,6 +5,5 @@
 group("uapp") {
   deps = [
     "dash",
-    "fsck-msdosfs",
   ]
 }

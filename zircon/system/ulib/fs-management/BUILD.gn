@@ -46,7 +46,7 @@ zx_library("fs-management") {
   data_deps = [
     # uapp/blobfs
     #"uapp/minfs",
-    "$zx/third_party/uapp/fsck-msdosfs",
+    #"$zx/third_party/uapp/fsck-msdosfs",
     #"$zx/third_party/uapp/mkfs-msdosfs",
   ]
 }

@@ -315,7 +315,7 @@ template("zircon_library") {
     }
     if (library == "fs-management") {
       data_deps += [
-        "//build/unification/data:bin.fsck-msdosfs",
+        "//zircon/third_party/uapp/fsck-msdosfs",
         "//zircon/third_party/uapp/mkfs-msdosfs",
         "//zircon/system/uapp/blobfs",
         "//zircon/system/uapp/minfs",

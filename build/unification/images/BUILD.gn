@@ -67,7 +67,6 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
-    ":bin.fsck-msdosfs",
 #------------------
 #------------------
 #------------------
@@ -216,7 +215,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.fsck-msdosfs",
 #------------------
 #------------------
     ":bin.hermetic-decompressor-fuzzer.asan",
@@ -1196,7 +1194,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/ulib/driver-info/app:driverinfo-manifest",
     "//zircon/system/uapp/fs-fsck:fsck-manifest",
 #------------------
-    #":bin.fsck-msdosfs",
+    "//zircon/third_party/uapp/fsck-msdosfs:fsck-msdosfs-manifest",
 #------------------
 #------------------
     "//zircon/system/core/devmgr/fshost:fshost-manifest",
@@ -1688,7 +1686,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/fidl:fidl-handle-policy-test-app-manifest",
 #------------------
 #------------------
-    #":bin.fsck-msdosfs",
+    "//zircon/third_party/uapp/fsck-msdosfs:fsck-msdosfs-manifest",
 #------------------
 #------------------
 #------------------
