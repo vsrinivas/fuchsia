@@ -6,6 +6,9 @@
 # Helper functions, no environment specific functions should be included below
 # this line.
 
+# Force all pipes to return any non-zero error code instead of just the last
+set -o pipefail
+
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
@@ -173,10 +176,13 @@ function get-host-ip {
 }
 
 function get-sdk-version {
-# Get the Fuchsia SDK id
- # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
- local FUCHSIA_SDK_METADATA="${1-$(get-fuchsia-sdk-dir)}/meta/manifest.json"
-  grep \"id\": "${FUCHSIA_SDK_METADATA}" | cut -d\" -f4
+  # Get the Fuchsia SDK id
+  # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
+  local FUCHSIA_SDK_METADATA="${1-$(get-fuchsia-sdk-dir)}/meta/manifest.json"
+  if ! SDK_VERSION="$(grep \"id\": "${FUCHSIA_SDK_METADATA}" | cut -d\" -f4)"; then
+    return 1
+  fi
+  echo "${SDK_VERSION}"
 }
 
 function get-package-src-path {
@@ -246,18 +252,22 @@ function get-available-images {
   local BUCKET=""
 
   BUCKET="${2:-${DEFAULT_FUCHSIA_BUCKET}}"
-
-  for f in $(run-gsutil "ls" "gs://${BUCKET}/development/${1}/images" | cut -d/ -f7 | tr '\n' ' ')
-  do
+  GSURL="gs://${BUCKET}/development/${1}/images"
+  if ! RESULTS=$(run-gsutil "ls" "${GSURL}" | cut -d/ -f7 | tr '\n' ' '); then
+    return 1
+  fi
+  if [[ "${RESULTS}" == "" ]]; then
+    return 2
+  fi
+  for f in ${RESULTS}; do
     IMAGES+=("${f%.*}")
   done
   if [[ "${BUCKET}" != "${DEFAULT_FUCHSIA_BUCKET}" ]]; then
-      for f in $(run-gsutil "ls" "gs://${DEFAULT_FUCHSIA_BUCKET}/development/${1}/images" | cut -d/ -f7 | tr '\n' ' ')
-      do
-        IMAGES+=("${f%.*}")
-      done
+    echo -n "${IMAGES[*]} "
+    get-available-images "${1}" "${DEFAULT_FUCHSIA_BUCKET}"
+  else
+    echo "${IMAGES[*]}"
   fi
-  echo "${IMAGES[@]}"
 }
 
 function kill-running-pm {

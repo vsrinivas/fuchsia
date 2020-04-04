@@ -108,28 +108,40 @@ if [[ "${DEVICE_IP_ADDR}" != "" && "${DEVICE_NAME_FILTER}" != "" ]]; then
   exit 1
 fi
 
-SDK_ID="$(get-sdk-version)"
+if ! SDK_ID="$(get-sdk-version)"; then
+  fx-error "Could not get SDK version"
+  exit 1
+fi
+
+if [[ "${IMAGE_NAME}" == "list" ]]; then
+  if ! IMAGES="$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")"; then
+    fx-error "Could not get list of available images for ${SDK_ID}"
+    exit 1
+  fi
+  echo "Valid images for this SDK version are: ${IMAGES}."
+  exit 1
+fi
 
 # The package tarball.  We add the SDK ID to the filename to make them
 # unique.
 #
 # Consider cleaning up old tarballs when getting a new one?
 #
-if [[ "$IMAGE_NAME" == "" ]]; then
-  IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
-  fx-error "IMAGE_NAME not set. Valid images for this SDK version are:" "${IMAGES[*]}."
-  exit 1
-fi
 
 FUCHSIA_TARGET_PACKAGES=$(get-package-src-path "${SDK_ID}" "${IMAGE_NAME}")
+# The package tarball, we add the SDK ID to make it unique, and note the
+# .tar.gz extension for packages vs .tgz extension for images.
 IMAGE_FILENAME="${SDK_ID}_${IMAGE_NAME}.tar.gz"
 
 # Validate the image is found
 if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" ]] ; then
-  if ! run-gsutil ls "${FUCHSIA_TARGET_PACKAGES}"; then
+  if ! run-gsutil ls "${FUCHSIA_TARGET_PACKAGES}" >/dev/null 2>&1; then
     echo "Packages for ${IMAGE_NAME} not found. Valid images for this SDK version are:"
-    IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
-    echo "${IMAGES[*]}."
+    if ! IMAGES="$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")"; then
+      fx-error "Could not get list of available images for ${SDK_ID}"
+      exit 1
+    fi
+    echo "${IMAGES}"
     exit 2
   fi
 

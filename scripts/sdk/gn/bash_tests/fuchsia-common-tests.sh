@@ -197,6 +197,9 @@ TEST_get-available-images() {
       echo "gs://other/development/sdk_id/images/image4.tgz"
       echo "gs://other/development/sdk_id/images/image5.tgz"
       echo "gs://other/development/sdk_id/images/image6.tgz"
+    else
+      echo "CommandException: One or more URLs matched no objects."
+      exit 1
     fi
 EOF
   RESULT_LIST=()
@@ -205,6 +208,8 @@ EOF
 
   IFS=' ' read -r -a RESULT_LIST <<< "$(get-available-images "sdk_id" "other")"
   BT_EXPECT_EQ "${RESULT_LIST[*]}" "image4 image5 image6 image1 image2 image3"
+
+  BT_EXPECT_FAIL get-available-images "sdk_id" "invalid"
 }
 
 TEST_kill-running-pm_not_found() {

@@ -157,6 +157,25 @@ TEST_fserve_registers_package_server() {
   gn-test-check-mock-args "${expected[@]}"
 }
 
+# Verify that the tool fails if gsutil fails to find the specified image,
+# and also doesn't list any available images
+TEST_fserve_lists_notfound() {
+  cat > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"EOF"
+  if [[ "$1" == "ls" ]]; then
+    echo "ls: cannot access \'${2}\': No such file or directory"
+    exit 1
+  elif [[ "$1" == "cp" ]]; then
+    echo "CommandException: No URLs matched: \'${2}\'"
+    exit 1
+  fi
+EOF
+
+  BT_EXPECT_FAIL gn-test-run-bash-script "${FSERVE_CMD}" --image unknown > list_images_output.txt  2>&1
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "Packages for unknown not found"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "Could not get list of available images for"
+}
+
 # Verify image names are listed if the image is not found.
 TEST_fserve_lists_images() {
   set_up_gsutil_multibucket

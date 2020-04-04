@@ -19,7 +19,11 @@ FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 DEVICE_NAME_FILTER=""
-IMAGE_NAME="generic-x64"
+
+IMAGE_NAME="$(get-fuchsia-property image)"
+if [[ "${IMAGE_NAME}" == "" ]]; then
+  IMAGE_NAME="generic-x64"
+fi
 
 function usage {
   echo "Usage: $0"
@@ -96,25 +100,34 @@ shift
 done
 
 
-SDK_ID="$(get-sdk-version)"
+if ! SDK_ID="$(get-sdk-version)"; then
+  fx-error "Could not get SDK version"
+  exit 1
+fi
 
 if [[ "${IMAGE_NAME}" == "list" ]]; then
-  IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
-  echo "Valid images for this SDK version are: ${IMAGES[*]}."
+  if ! IMAGES="$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")"; then
+    fx-error "Could not get list of available images for ${SDK_ID}"
+    exit 1
+  fi
+  echo "Valid images for this SDK version are: ${IMAGES}."
   exit 1
 fi
 
 FUCHSIA_TARGET_IMAGE="$(get-image-src-path "${SDK_ID}" "${IMAGE_NAME}")"
-# The image tarball.  We add the SDK ID to the filename to make them
-# unique.
+# The image tarball, we add the SDK ID to make it unique, and note the
+# .tar.gz extension for packages vs .tgz extension for images.
 IMAGE_FILENAME="${SDK_ID}_${IMAGE_NAME}.tgz"
 
 # Validate the image is found
 if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" ]] ; then
-  if ! run-gsutil ls "${FUCHSIA_TARGET_IMAGE}" > /dev/null; then
+  if ! run-gsutil ls "${FUCHSIA_TARGET_IMAGE}" >/dev/null 2>&1; then
     echo "Image ${IMAGE_NAME} not found. Valid images for this SDK version are:"
-    IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
-    echo "${IMAGES[@]}"
+    if ! IMAGES="$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")"; then
+      fx-error "Could not get list of available images for ${SDK_ID}"
+      exit 1
+    fi
+    echo "${IMAGES}"
     exit 2
   fi
 
