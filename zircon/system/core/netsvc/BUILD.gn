@@ -45,7 +45,7 @@ executable("netsvc") {
   ]
   data_deps = [
     # netsvc launches /boot/bin/sh for netruncmd.
-    "//build/unification/data:bin.sh",
+    "//zircon/third_party/uapp/dash",
   ]
 }
 

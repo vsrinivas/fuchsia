@@ -434,7 +434,7 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       deps = [
         ":legacy-aux-$cpu",
-        ":legacy-image-$cpu",
+        ":legacy-deps-$cpu",
         ":legacy-tests-$cpu",
         ":legacy_targets-$cpu",
       ]
@@ -488,18 +488,6 @@ foreach(host, standard_build_hosts) {
 
 foreach(cpu, standard_fuchsia_cpus) {
   if (current_toolchain == default_toolchain) {
-    zbi("legacy-image-$cpu") {
-      output_dir = root_build_dir
-      testonly = true
-      cpu = cpu
-      deps = [ ":legacy-deps-$cpu" ]
-      metadata = {
-        # legacy-$cpu depends on this to get all these deps built.
-        # But they shouldn't contribute metadata to the build_api_module().
-        legacy_barrier = []
-      }
-    }
-
     zbi_input("legacy-tests-$cpu") {
       output_dir = root_build_dir
       testonly = true
@@ -538,7 +526,6 @@ foreach(cpu, standard_fuchsia_cpus) {
     deps = [
       "$zx/bootloader",
       "$zx/kernel",
-      "$zx/third_party/uapp",
     ]
     metadata = {
       legacy_barrier = []

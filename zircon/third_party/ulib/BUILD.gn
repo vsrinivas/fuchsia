@@ -9,6 +9,7 @@ group("ulib") {
     "backtrace",
     "boringssl",
     "cksum",
+    "linenoise",
     "lz4",
     "ngunwind",
     "safemath",

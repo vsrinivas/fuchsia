@@ -28,5 +28,6 @@ source_set("semantics") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//zircon/third_party/uapp/dash:output_h",
   ]
 }

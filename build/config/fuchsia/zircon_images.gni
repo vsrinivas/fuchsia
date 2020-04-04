@@ -38,10 +38,12 @@ template("zircon_extras_manifest") {
   assert(invoker.manifest == "image" || invoker.manifest == "tests",
          "Parameter 'manifest' can only be 'image' or 'tests'")
 
-  manifest_deps = [
-    "//build/unification/images:legacy-${invoker.manifest}",
-    "//build/unification/images:migrated-${invoker.manifest}",
-  ]
+  manifest_deps = [ "//build/unification/images:migrated-${invoker.manifest}" ]
+  if (invoker.manifest == "tests") {
+    manifest_deps += [
+      "//build/unification/images:legacy-${invoker.manifest}",
+    ]
+  }
   manifest_sources = []
   foreach(dep, manifest_deps) {
     out_dir = get_label_info(dep, "target_out_dir")

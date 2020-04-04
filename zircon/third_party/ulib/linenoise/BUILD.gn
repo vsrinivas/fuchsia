@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("linenoise") {
+  sdk = "source"
+  sdk_headers = [ "linenoise/linenoise.h" ]
   sources = [ "linenoise.c" ]
   include_dirs = [ "include/linenoise" ]
   deps = [

@@ -2,7 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("dash") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("dash") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "sh"
   sources = [
     "src/alias.c",
@@ -42,24 +63,26 @@ zx_executable("dash") {
   ]
   configs += [ ":config" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-hardware-pty:c",
-    "$zx/system/fidl/fuchsia-kernel:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/third_party/ulib/linenoise",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-hardware-pty:c",
+    "//zircon/system/fidl/fuchsia-kernel:c",
+    "//zircon/public/lib/linenoise",
   ]
-
-  # This code doesn't use the annotation attribute.
-  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
 
   # TODO(41901): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs +=
-      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+
+  configs += [ "//build/config:Wno-unused-function" ]
+}
+
+source_set("output_h") {
+  public = [ "src/output.h" ]
 }
 
 config("config") {
@@ -85,7 +108,7 @@ config("config") {
     "-Wno-sign-compare",
     "-Wno-logical-not-parentheses",
   ]
-  if (is_gcc) {
+  if (false) {  # is_gcc
     cflags_c += [ "-Wno-discarded-qualifiers" ]
   } else {
     cflags_c += [
@@ -95,4 +118,8 @@ config("config") {
       "-Wno-string-plus-int",
     ]
   }
+}
+
+migrated_manifest("dash-manifest") {
+  deps = [ ":dash" ]
 }

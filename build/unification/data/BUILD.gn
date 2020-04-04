@@ -23,7 +23,6 @@ template("zircon_data_dep") {
 }
 
 artifacts = [
-  "bin.sh",
   "hermetic.decompress-lz4f",
   "hermetic.decompress-zstd",
 ]
