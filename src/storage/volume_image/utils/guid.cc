@@ -107,7 +107,9 @@ constexpr uint64_t kLowMask = 0x0F;
 
 fit::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> guid) {
   if (guid.size() != kGuidLength) {
-    return fit::error("Input GUID size must be equal to |kGuidLength|.\n");
+    std::string error = "Input GUID size must be equal to |kGuidLength|. Input Size: ";
+    error.append(std::to_string(guid.size())).append(".\n");
+    return fit::error(error);
   }
   std::array<char, kGuidStrLength> out_guid;
 
@@ -135,7 +137,9 @@ fit::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> gu
 fit::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString(
     fbl::Span<const char> guid) {
   if (guid.size() != kGuidStrLength) {
-    return fit::error("Input GUID size must be equal to |kGuidStrLength|.\n");
+    std::string error = "Input GUID size must be equal to |kGuidStrLength|. Input Size: ";
+    error.append(std::to_string(guid.size())).append(".\n");
+    return fit::error(error);
   }
   std::array<uint8_t, kGuidLength> out_guid;
 

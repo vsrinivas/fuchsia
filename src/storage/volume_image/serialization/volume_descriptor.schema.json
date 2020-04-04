@@ -54,13 +54,14 @@
                 },
                 "options": {
                     "type": "array",
-                    "items": {
+                    "contains": {
                         "type": "integer",
                         "minimum": 0
                     },
                     "uniqueItems": true
                 }
             },
+            "additionalProperties": false,
             "required": [
                 "magic",
                 "instance_guid",
@@ -70,4 +71,6 @@
             ]
         }
     },
+    "type": "object",
+    "$ref": "#/definitions/volume_descriptor"
 }

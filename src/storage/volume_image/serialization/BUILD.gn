@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file
+
+config("schema_path") {
+  if (!is_fuchsia) {
+    defines = [ "STORAGE_VOLUME_IMAGE_SCHEMA_PATH=\"schema/\"" ]
+  } else {
+    defines = [ "STORAGE_VOLUME_IMAGE_SCHEMA_PATH=\"pkg/data/schema/\"" ]
+  }
+}
+
+copy("schema_json") {
+  sources = [ "volume_descriptor.schema.json" ]
+  outputs = [ "$root_out_dir/schema/{{source_file_part}}" ]
+}
+
+source_set("schema") {
+  sources = [ "schema.cc" ]
+  public = [ "schema.h" ]
+
+  configs += [ ":schema_path" ]
+
+  if (!is_fuchsia) {
+    deps += [ ":schema_json" ]
+    metadata = {
+      runtime_deps = get_target_outputs(":copy")
+    }
+  }
+}
+
+executable("serialization-test") {
+  testonly = true
+  sources = [ "schema_test.cc" ]
+  deps = [
+    ":schema",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+  ]
+}

@@ -14,10 +14,10 @@
 
 #include "src/storage/volume_image/block_io.h"
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/guid.h"
 
 namespace storage::volume_image {
 
-constexpr uint64_t kGuidLength = 16;
 constexpr uint64_t kNameLength = 40;
 
 // Metadata describing the block image to be generated.
@@ -25,7 +25,14 @@ struct VolumeDescriptor {
   static constexpr uint64_t kMagic = 0xB10C14;
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
-  static fit::result<VolumeDescriptor, std::string> Deserialize(fbl::Span<uint8_t> serialized);
+  static fit::result<VolumeDescriptor, std::string> Deserialize(
+      fbl::Span<const uint8_t> serialized);
+
+  // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
+  static fit::result<VolumeDescriptor, std::string> Deserialize(fbl::Span<const char> serialized) {
+    return Deserialize(fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(serialized.data()),
+                                                serialized.size() * sizeof(char)));
+  }
 
   // Returns a byte vector containing the serialized version data.
   // The serialization is meant to be human readable.

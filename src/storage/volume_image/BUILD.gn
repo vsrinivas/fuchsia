@@ -17,6 +17,7 @@ source_set("volume-descriptor") {
   ]
   public_deps = [
     "utils:guid",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
@@ -30,7 +31,10 @@ executable("volume-descriptor-test") {
   ]
   deps = [
     ":volume-descriptor",
+    "serialization:schema",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
   ]
@@ -39,6 +43,7 @@ executable("volume-descriptor-test") {
 unittest_package("storage-volume-image-tests") {
   deps = [
     ":volume-descriptor-test",
+    "serialization:serialization-test",
     "utils:utils-test",
   ]
 
@@ -50,6 +55,18 @@ unittest_package("storage-volume-image-tests") {
     {
       name = "utils-test"
       environments = basic_envs
+    },
+    {
+      name = "serialization-test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//src/storage/volume_image/serialization/volume_descriptor.schema.json")
+      dest = "schema/volume_descriptor.schema.json"
     },
   ]
 }
