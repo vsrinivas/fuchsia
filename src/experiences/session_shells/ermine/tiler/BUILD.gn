@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//topaz/runtime/dart/flutter_test.gni")
+
+dart_library("tiler") {
+  package_name = "tiler"
+
+  sources = [
+    "tiler.dart",
+    "src/sizer.dart",
+    "src/tile.dart",
+    "src/tile_model.dart",
+    "src/tiler.dart",
+    "src/tiler_model.dart",
+    "src/utils.dart",
+  ]
+
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
+}
+
+flutter_test("tiler_unittests") {
+  sources = [
+    "tiler_test.dart",
+  ]
+
+  deps = [
+    ":tiler",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+  ]
+}
+

@@ -39,6 +39,7 @@ flutter_app("userpicker_base_shell") {
   ]
 
   deps = [
+    "//src/experiences/session_shells/ermine/device",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.netstack",
@@ -50,7 +51,6 @@ flutter_app("userpicker_base_shell") {
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/widgets:lib.widgets",
-    "//topaz/public/lib/device/dart",
     "//zircon/system/fidl/fuchsia-device-manager",
   ]
 }
