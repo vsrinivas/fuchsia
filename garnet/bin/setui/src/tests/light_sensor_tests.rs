@@ -66,7 +66,7 @@ async fn test_light_sensor() {
         Box::pin(async { Ok(()) })
     };
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(Box::new(service_gen))
         .settings(&[SettingType::LightSensor])
         .spawn_and_get_nested_environment(ENV_NAME)

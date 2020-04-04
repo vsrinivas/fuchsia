@@ -14,7 +14,7 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 /// sent to the switchboard.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_device() {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .settings(&[SettingType::Device])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

@@ -118,7 +118,7 @@ async fn test_environment_startup() {
     let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let service_agent = TestAgent::new(service_agent_id, Lifespan::Service, Some(service_tx));
 
-    let environment = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    let environment = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .agents(&[
             TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
             service_agent.clone(),

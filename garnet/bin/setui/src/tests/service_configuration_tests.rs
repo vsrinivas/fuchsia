@@ -17,7 +17,7 @@ pub fn get_test_settings_types() -> HashSet<SettingType> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_no_configuration_provided() {
-    let factory = InMemoryStorageFactory::create_handle();
+    let factory = InMemoryStorageFactory::create();
 
     let default_configuration = ServiceConfiguration { services: get_test_settings_types() };
 
@@ -40,7 +40,7 @@ async fn test_no_configuration_provided() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_default_configuration_provided() {
-    let factory = InMemoryStorageFactory::create_handle();
+    let factory = InMemoryStorageFactory::create();
 
     let default_configuration = ServiceConfiguration { services: get_test_settings_types() };
 

@@ -101,7 +101,7 @@ struct FakeServices {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
 ) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>) {
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
     let env = EnvironmentBuilder::new(storage_factory)

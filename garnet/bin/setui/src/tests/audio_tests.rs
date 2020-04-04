@@ -125,7 +125,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
 ) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>) {
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
     let env = EnvironmentBuilder::new(storage_factory)
@@ -236,7 +236,7 @@ async fn test_audio_input() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_volume_restore() {
     let (service_registry, fake_services) = create_services().await;
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     let expected_info = (0.9, false);
     {
         let store = storage_factory
@@ -310,7 +310,7 @@ async fn test_audio_info_copy() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_persisted_values_applied_at_start() {
     let (service_registry, fake_services) = create_services().await;
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
     let test_audio_info = AudioInfo {

@@ -17,7 +17,7 @@ const ENV_NAME: &str = "hanging_get_test_environment";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_multiple_watches() {
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     let store =
         storage_factory.lock().await.get_device_storage::<SetupInfo>(StorageAccessContext::Test);
     let initial_interfaces =

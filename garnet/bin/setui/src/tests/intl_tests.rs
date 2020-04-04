@@ -77,7 +77,7 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create_handle();
+    let factory = InMemoryStorageFactory::create();
     let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
     let intl_service = create_test_intl_env(factory).await;
 
@@ -116,7 +116,7 @@ async fn test_intl_e2e() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create_handle();
+    let factory = InMemoryStorageFactory::create();
     let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
     let intl_service = create_test_intl_env(factory).await;
 
@@ -157,7 +157,7 @@ async fn test_intl_e2e_set_twice() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create_handle();
+    let factory = InMemoryStorageFactory::create();
     let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
     let intl_service = create_test_intl_env(factory).await;
 
@@ -197,7 +197,7 @@ async fn test_intl_e2e_idempotent_set() {
 async fn test_intl_invalid_timezone() {
     const INITIAL_TIME_ZONE: &'static str = "GMT";
 
-    let factory = InMemoryStorageFactory::create_handle();
+    let factory = InMemoryStorageFactory::create();
     let intl_service = create_test_intl_env(factory).await;
 
     // Set a real value.

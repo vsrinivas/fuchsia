@@ -24,7 +24,7 @@ async fn verify_restore_handling(
     let counter: Arc<Mutex<u64>> = Arc::new(Mutex::new(0));
 
     let counter_clone = counter.clone();
-    if let Ok(environment) = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    if let Ok(environment) = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .handler(
             SettingType::Unknown,
             create_setting_handler(Box::new(move |command| {

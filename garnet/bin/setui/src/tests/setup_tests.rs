@@ -20,7 +20,7 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup_default() {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -40,7 +40,7 @@ async fn test_setup_default() {
 // updated to verify restart request is made on interface change.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup() {
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     let store =
         storage_factory.lock().await.get_device_storage::<SetupInfo>(StorageAccessContext::Test);
 

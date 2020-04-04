@@ -82,7 +82,7 @@ async fn test_display() {
         Box::pin(async { Ok(()) })
     };
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(Box::new(service_gen))
         .settings(&[SettingType::Display])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -127,7 +127,7 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
     let brightness_service_handle = BrightnessService::create();
     service_registry.lock().await.register_service(brightness_service_handle.clone());
 
-    let storage_factory = InMemoryStorageFactory::create_handle();
+    let storage_factory = InMemoryStorageFactory::create();
     {
         let store = storage_factory
             .lock()
@@ -211,7 +211,7 @@ async fn test_display_failure() {
         }
     };
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(Box::new(service_gen))
         .settings(&[SettingType::Display, SettingType::Intl])
         .spawn_and_get_nested_environment(ENV_NAME)
