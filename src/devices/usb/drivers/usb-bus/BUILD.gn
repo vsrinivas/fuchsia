@@ -28,8 +28,8 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.usb.hub",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/utf_conversion",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/ulib/utf_conversion",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.usb.bus",
@@ -68,8 +68,8 @@ test("usb-device") {
     ":common",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fake_ddk",
-    "//zircon/public/lib/utf_conversion",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/utf_conversion",
   ]
 }
 
