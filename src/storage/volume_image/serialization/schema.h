@@ -12,6 +12,7 @@ namespace storage::volume_image {
 // Defines available schemas.
 enum Schema {
   kVolumeDescriptor,
+  kAddressDescriptor,
 };
 
 // Returns a string with the respective schema.

@@ -1,0 +1,56 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Volume Descriptor Serialized Format",
+    "description": "Configuration for processing a volume image.",
+    "definitions": {
+        "address_space": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "target": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "count": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "options": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                }
+            },
+            "required": [
+                "source",
+                "target",
+                "count"
+            ]
+        },
+        "address_descriptor": {
+            "type": "object",
+            "properties": {
+                "magic": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "mappings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/address_map"
+                    }
+                }
+            },
+            "required": [
+                "magic",
+                "mappings"
+            ]
+        }
+    },
+    "$ref": "#/definitions/address_descriptor"
+}

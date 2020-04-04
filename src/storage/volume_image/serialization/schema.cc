@@ -21,6 +21,9 @@ std::string GetSchema(Schema schema) {
     case Schema::kVolumeDescriptor:
       file.open(std::string(kPath).append("volume_descriptor.schema.json"));
       return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    case Schema::kAddressDescriptor:
+      file.open(std::string(kPath).append("address_descriptor.schema.json"));
+      return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     default:
       return std::string();
   }

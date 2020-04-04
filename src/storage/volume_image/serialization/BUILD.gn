@@ -11,7 +11,10 @@ config("schema_path") {
 }
 
 copy("schema_json") {
-  sources = [ "volume_descriptor.schema.json" ]
+  sources = [
+    "address_descriptor.schema.json",
+    "volume_descriptor.schema.json",
+  ]
   outputs = [ "$root_out_dir/schema/{{source_file_part}}" ]
 }
 

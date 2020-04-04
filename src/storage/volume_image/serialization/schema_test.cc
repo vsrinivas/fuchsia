@@ -20,5 +20,13 @@ TEST(SchemaTest, VolumeDescriptorSchemaIsValid) {
   ASSERT_FALSE(parser.HasError()) << parser.error_str();
 }
 
+TEST(SchemaTest, AddressDescriptorSchemaIsValid) {
+  auto schema_json = GetSchema(Schema::kAddressDescriptor);
+
+  json_parser::JSONParser parser;
+  auto document = parser.ParseFromString(schema_json, "address_descriptor.schema.json");
+  ASSERT_FALSE(parser.HasError()) << parser.error_str();
+}
+
 }  // namespace
 }  // namespace storage::volume_image

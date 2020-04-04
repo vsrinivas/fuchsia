@@ -8,28 +8,28 @@
 #include <lib/fit/result.h>
 
 #include <cstdint>
+#include <map>
+#include <string>
 #include <vector>
 
 #include <fbl/span.h>
 
 namespace storage::volume_image {
 
-struct AddressSpace {
-  // Where the address space begins.
-  uint64_t offset;
-
-  // Number of addressable blocks in this address space.
-  uint64_t count;
-};
-
 // Describes a mapping from an address space in a source format, into a target space.
 // The target space is the fvm virtual address space that each partition has.
 struct AddressMap {
   // Original address space, where data is read from.
-  AddressSpace source;
+  uint64_t source;
 
   // Target address space, where data is written to, in the fvm image.
-  AddressSpace target;
+  uint64_t target;
+
+  // Number of addressable blocks in this address space.
+  uint64_t count;
+
+  // Options that apply to this mapping.
+  std::map<std::string, uint64_t> options;
 };
 
 // Represents how the input partition image, should be transformed to fit in the fvm.
@@ -37,12 +37,13 @@ struct AddressDescriptor {
   // Returns an |AddressDescriptor| containing the deserialized contents from |serialized|.
   //
   // On error, returns a string describing the error condition.
-  static fit::result<AddressDescriptor, std::string> Deserialize(fbl::Span<uint8_t> serialized);
+  static fit::result<AddressDescriptor, std::string> Deserialize(
+      fbl::Span<const uint8_t> serialized);
 
   // Returns a vector containing a serialized version of |this|.
   //
   // On error, returns a string describing the error condition.
-  fit::result<std::vector<uint8_t>, std::string> Serialize();
+  fit::result<std::vector<uint8_t>, std::string> Serialize() const;
 
   // List of mappings.
   std::vector<AddressMap> mappings;
