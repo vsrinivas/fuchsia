@@ -154,7 +154,7 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
                      << " milliseconds.";
 
       // Use our Reporter to log this to Cobalt, if enabled.
-      REP(OutputUnderflow(output_underflow_duration, uptime));
+      REPORT(OutputUnderflow(output_underflow_duration, uptime));
 
       underflow_start_time_ = uptime;
       output_producer_->FillWithSilence(rb.virt(), rb.frames());

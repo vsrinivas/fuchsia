@@ -26,17 +26,17 @@ class AudioDevice;
 // The idea is to make instrumentation as simple as possible for the code that
 // does the real work. This class implements methods corresponding to the
 // events that need to be reported in terms that make the most sense for the
-// caller. Calls to those methods are made using the |REP| macro, which is
+// caller. Calls to those methods are made using the |REPORT| macro, which is
 // notationally simple:
 //
-//     REP(ThatThingHappened(details, more_details));
+//     REPORT(ThatThingHappened(details, more_details));
 //
 // Use of the macro also allows instrumentation to be dropped from the build
 // using a simple gn argument, if desired (by setting ENABLE_REPORTER to 0).
 // The reporter is provisioned by calling its |Init| method, also using the
-// |REP| macro. This is done in main.cc:
+// |REPORT| macro. This is done in main.cc:
 //
-//    REP(Init(component_context));
+//    REPORT(Init(component_context));
 //
 // Note that calls to methods such as |AddingDevice| allocate resources, which
 // should be deallocated by e.g. |RemovingDevice|. For the time being, this
@@ -59,7 +59,7 @@ class Reporter {
   ////////////////////////////////////////////////////////////////////////////
   // The following methods are intended to be called using REP. For example:
   //
-  //     REP(Init(component_context));
+  //     REPORT(Init(component_context));
   //
   void Init(sys::ComponentContext* component_context);
 
@@ -228,9 +228,9 @@ class Reporter {
   fuchsia::cobalt::LoggerPtr cobalt_logger_;
 };
 
-#define REP(x) media::audio::Reporter::Singleton().x
+#define REPORT(x) media::audio::Reporter::Singleton().x
 #else  // ENABLE_REPORTER
-#define REP(x) (void)0
+#define REPORT(x) (void)0
 #endif  // ENABLE_REPORTER
 
 }  // namespace media::audio

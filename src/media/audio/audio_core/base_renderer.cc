@@ -34,7 +34,7 @@ BaseRenderer::BaseRenderer(
       packet_allocator_(kMaxPacketAllocatorSlabs, true) {
   TRACE_DURATION("audio", "BaseRenderer::BaseRenderer");
   FX_DCHECK(context);
-  REP(AddingRenderer(*this));
+  REPORT(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
   // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of the
@@ -55,7 +55,7 @@ BaseRenderer::~BaseRenderer() {
 
   wav_writer_.Close();
   payload_buffers_.clear();
-  REP(RemovingRenderer(*this));
+  REPORT(RemovingRenderer(*this));
 }
 
 void BaseRenderer::Shutdown() {
@@ -94,7 +94,7 @@ void BaseRenderer::RecomputeMinLeadTime() {
   });
 
   if (min_lead_time_ != cur_lead_time) {
-    REP(SettingRendererMinLeadTime(*this, cur_lead_time));
+    REPORT(SettingRendererMinLeadTime(*this, cur_lead_time));
     min_lead_time_ = cur_lead_time;
     ReportNewMinLeadTime();
   }
@@ -201,7 +201,7 @@ void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
     return;
   }
 
-  REP(AddingRendererPayloadBuffer(*this, id, vmo_mapper->size()));
+  REPORT(AddingRendererPayloadBuffer(*this, id, vmo_mapper->size()));
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
@@ -226,7 +226,7 @@ void BaseRenderer::RemovePayloadBuffer(uint32_t id) {
     return;
   }
 
-  REP(RemovingRendererPayloadBuffer(*this, id));
+  REPORT(RemovingRendererPayloadBuffer(*this, id));
   cleanup.cancel();
 }
 
@@ -273,7 +273,7 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
     return;
   }
 
-  REP(SettingRendererPtsContinuityThreshold(*this, threshold_seconds));
+  REPORT(SettingRendererPtsContinuityThreshold(*this, threshold_seconds));
 
   pts_continuity_threshold_ = threshold_seconds;
   pts_continuity_threshold_set_ = true;
@@ -333,7 +333,7 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
     return;
   }
 
-  REP(SendingRendererPacket(*this, packet));
+  REPORT(SendingRendererPacket(*this, packet));
 
   // Compute the PTS values for this packet applying our interpolation and continuity thresholds as
   // we go. Start by checking to see if this our PTS to frames transformation needs to be computed

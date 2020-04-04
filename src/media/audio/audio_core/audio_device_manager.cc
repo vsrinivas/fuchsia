@@ -95,7 +95,7 @@ void AudioDeviceManager::AddDevice(const std::shared_ptr<AudioDevice>& device) {
           })
           .or_else([device](zx_status_t& error) {
             FX_PLOGS(ERROR, error) << "AddDevice failed";
-            REP(DeviceStartupFailed(*device));
+            REPORT(DeviceStartupFailed(*device));
             device->Shutdown();
           }));
 }
@@ -119,7 +119,7 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
 
   devices_.insert(std::move(dev));
 
-  REP(ActivatingDevice(*device));
+  REPORT(ActivatingDevice(*device));
   device->SetActivated();
 
   // Notify interested users of the new device. If it will become the new default, set 'is_default'
@@ -142,7 +142,7 @@ void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device
   TRACE_DURATION("audio", "AudioDeviceManager::RemoveDevice");
   FX_DCHECK(device != nullptr);
 
-  REP(RemovingDevice(*device));
+  REPORT(RemovingDevice(*device));
 
   // If device was active: reset the default (based on most-recently-plugged).
   if (device->activated()) {
@@ -232,7 +232,7 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   dev->system_gain_dirty = true;
 
   // Change the gain and then report the new settings to our clients.
-  REP(SettingDeviceGainInfo(*dev, gain_info, set_flags));
+  REPORT(SettingDeviceGainInfo(*dev, gain_info, set_flags));
   dev->SetGainInfo(gain_info, set_flags);
   NotifyDeviceGainChanged(*dev);
 }
@@ -341,7 +341,7 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
                    << device_name << "'";
   }
 
-  REP(AddingDevice(device_name, *new_device));
+  REPORT(AddingDevice(device_name, *new_device));
   AddDevice(std::move(new_device));
 }
 

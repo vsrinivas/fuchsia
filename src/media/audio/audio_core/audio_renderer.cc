@@ -89,7 +89,7 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   }
   format_ = {format_result.take_value()};
 
-  REP(SettingRendererStreamType(*this, stream_type));
+  REPORT(SettingRendererStreamType(*this, stream_type));
 
   context().route_graph().SetRendererRoutingProfile(
       *this, {.routable = true, .usage = StreamUsage::WithRenderUsage(usage_)});
@@ -126,7 +126,7 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
 
         auto& gain = link.mixer->bookkeeping().gain;
 
-        REP(SettingRendererFinalGain(*this, gain_db));
+        REPORT(SettingRendererFinalGain(*this, gain_db));
 
         if (volume_command.ramp.has_value()) {
           gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
@@ -156,7 +156,7 @@ void AudioRenderer::SetGain(float gain_db) {
     return;
   }
 
-  REP(SettingRendererGain(*this, gain_db));
+  REPORT(SettingRendererGain(*this, gain_db));
 
   stream_gain_db_ = gain_db;
   context().volume_manager().NotifyStreamChanged(this);
@@ -179,7 +179,7 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
     return;
   }
 
-  REP(SettingRendererGainWithRamp(*this, gain_db, duration, ramp_type));
+  REPORT(SettingRendererGainWithRamp(*this, gain_db, duration, ramp_type));
 
   context().volume_manager().NotifyStreamChanged(this, Ramp{duration, ramp_type});
 
@@ -197,7 +197,7 @@ void AudioRenderer::SetMute(bool mute) {
   }
   AUD_VLOG_OBJ(TRACE, this) << " (mute: " << mute << ")";
 
-  REP(SettingRendererMute(*this, mute));
+  REPORT(SettingRendererMute(*this, mute));
   mute_ = mute;
 
   context().volume_manager().NotifyStreamChanged(this);

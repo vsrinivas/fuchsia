@@ -37,7 +37,7 @@ static int StartAudioCore() {
 
   // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
   auto component_context = sys::ComponentContext::Create();
-  REP(Init(component_context.get()));
+  REPORT(Init(component_context.get()));
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (!process_config) {

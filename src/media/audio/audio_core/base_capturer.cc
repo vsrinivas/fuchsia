@@ -67,7 +67,7 @@ BaseCapturer::BaseCapturer(
       overflow_count_(0u),
       partial_overflow_count_(0u) {
   FX_DCHECK(mix_domain_);
-  REP(AddingCapturer(*this));
+  REPORT(AddingCapturer(*this));
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
@@ -91,7 +91,7 @@ BaseCapturer::BaseCapturer(
 
 BaseCapturer::~BaseCapturer() {
   TRACE_DURATION("audio.debug", "BaseCapturer::~BaseCapturer");
-  REP(RemovingCapturer(*this));
+  REPORT(RemovingCapturer(*this));
 }
 
 void BaseCapturer::OnLinkAdded() { RecomputeMinFenceTime(); }
@@ -226,7 +226,7 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     return;
   }
 
-  REP(AddingCapturerPayloadBuffer(*this, id, payload_buf_size));
+  REPORT(AddingCapturerPayloadBuffer(*this, id, payload_buf_size));
 
   payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size / format_.bytes_per_frame());
   AUD_VLOG_OBJ(TRACE, this) << "payload buf -- size:" << payload_buf_size
@@ -495,7 +495,7 @@ void BaseCapturer::RecomputeMinFenceTime() {
     FX_VLOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
                     << cur_min_fence_time.get();
 
-    REP(SettingCapturerMinFenceTime(*this, cur_min_fence_time));
+    REPORT(SettingCapturerMinFenceTime(*this, cur_min_fence_time));
     min_fence_time_ = cur_min_fence_time;
   }
 }
@@ -963,7 +963,7 @@ void BaseCapturer::FinishBuffers(const PcbList& finished_buffers) {
     pkt.payload_offset = finished_buffer.offset_frames * format_.bytes_per_frame();
     pkt.payload_size = finished_buffer.filled_frames * format_.bytes_per_frame();
 
-    REP(SendingCapturerPacket(*this, pkt));
+    REPORT(SendingCapturerPacket(*this, pkt));
 
     if (finished_buffer.cbk != nullptr) {
       AUD_VLOG_OBJ(SPEW, this) << "Sync -mode -- payload size:" << pkt.payload_size
