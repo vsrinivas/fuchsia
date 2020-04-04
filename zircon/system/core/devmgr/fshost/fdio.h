@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FDIO_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FDIO_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FDIO_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FDIO_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -21,19 +21,11 @@ namespace devmgr {
 #define FSHOST_SIGNAL_EXIT_DONE  ZX_USER_SIGNAL_2  // Signalled by fshost
 
 // Flags for specifying what should be in a new process's namespace
-#define FS_SVC      0x0001
-#define FS_DEV      0x0002
-#define FS_BOOT     0x0004
-#define FS_DATA     0x0010
-#define FS_SYSTEM   0x0020
-#define FS_BLOB     0x0040
-#define FS_VOLUME   0x0080
-#define FS_PKGFS    0x0100
-#define FS_INSTALL  0x0200
-#define FS_TMP      0x0400
-#define FS_HUB      0x0800
-#define FS_BIN      0x1000
-#define FS_BLOB_EXEC 0x2000
+// Note that there were previously many more constants here, but this is now only used by fshost
+// which only needs to support the following
+#define FS_SVC        0x0001
+#define FS_DATA       0x0010
+#define FS_BLOB_EXEC  0x2000
 #define FS_SVC_BLOBFS 0x4000
 // Intended to include everything except for:
 //   - FS_BLOB_EXEC, which is a RWX blobfs connection and should only be provided to pkgfs
@@ -41,9 +33,6 @@ namespace devmgr {
 #define FS_ALL        0x9FFF
 
 // clang-format on
-
-#define FS_FOR_FSPROC (FS_SVC)
-#define FS_FOR_APPMGR (FS_ALL & (~FS_HUB))
 
 #define FS_READONLY_DIR_FLAGS \
   (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
@@ -115,4 +104,4 @@ class ArgumentVector {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FDIO_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FDIO_H_

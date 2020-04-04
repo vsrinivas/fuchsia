@@ -12,9 +12,7 @@ namespace devmgr {
 
 zx::channel FshostFsProvider::CloneFs(const char* path) {
   int flags = FS_READ_WRITE_DIR_FLAGS;
-  if (strcmp(path, "svc") == 0) {
-    path = "/svc";
-  } else if (strcmp(path, "data") == 0) {
+  if (strcmp(path, "data") == 0) {
     path = "/fs/data";
   } else if (strcmp(path, "blobexec") == 0) {
     path = "/fs/blob";

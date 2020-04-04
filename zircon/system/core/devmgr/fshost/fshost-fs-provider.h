@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FSHOST_FS_PROVIDER_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FSHOST_FS_PROVIDER_H_
 
-#include "../shared/fdio.h"
+#include "fdio.h"
 
 namespace devmgr {
 

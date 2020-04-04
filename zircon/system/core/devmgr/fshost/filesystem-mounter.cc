@@ -10,7 +10,7 @@
 #include <fs-management/mount.h>
 #include <minfs/minfs.h>
 
-#include "../shared/fdio.h"
+#include "fdio.h"
 #include "fshost-fs-provider.h"
 #include "pkgfs-launcher.h"
 

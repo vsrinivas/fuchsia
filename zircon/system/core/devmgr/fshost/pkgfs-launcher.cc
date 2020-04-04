@@ -25,7 +25,7 @@
 #include <fs-management/mount.h>
 #include <loader-service/loader-service.h>
 
-#include "../shared/fdio.h"
+#include "fdio.h"
 #include "fshost-boot-args.h"
 #include "fshost-fs-provider.h"
 

@@ -20,9 +20,9 @@
 #include <loader-service/loader-service.h>
 
 // Used for fshost signals.
-#include "../shared/fdio.h"
 #include "admin-server.h"
 #include "delayed-outdir.h"
+#include "fdio.h"
 #include "fshost-boot-args.h"
 #include "metrics.h"
 #include "registry.h"
