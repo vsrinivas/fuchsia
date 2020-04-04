@@ -60,8 +60,8 @@ source_set("lib") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 

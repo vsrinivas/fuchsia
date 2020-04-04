@@ -288,8 +288,8 @@ executable("nested_environment_test") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/task-utils",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/task-utils",
   ]
 
   # TODO(46850): Fix the leaks and remove this.

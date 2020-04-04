@@ -36,8 +36,8 @@ source_set("ps_internal") {
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -50,8 +50,8 @@ source_set("handles_internal") {
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -63,8 +63,8 @@ executable("ps") {
     ":ps_internal",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -74,8 +74,8 @@ executable("top") {
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -84,8 +84,8 @@ executable("kill") {
   sources = [ "kill.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -94,8 +94,8 @@ executable("killall") {
   sources = [ "killall.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -105,8 +105,8 @@ executable("vmaps") {
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -119,8 +119,8 @@ executable("vmos") {
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -136,8 +136,8 @@ executable("memgraph") {
   deps = [
     ":gen-memgraph-schema",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -172,8 +172,8 @@ executable("threads") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/inspector",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -182,8 +182,8 @@ executable("signal") {
   sources = [ "signal.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 
@@ -194,8 +194,8 @@ executable("handles") {
   deps = [
     ":handles_internal",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/task-utils",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
 

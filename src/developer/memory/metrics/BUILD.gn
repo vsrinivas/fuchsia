@@ -24,8 +24,8 @@ source_set("metrics") {
   deps = [
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/task-utils",
   ]
 }
