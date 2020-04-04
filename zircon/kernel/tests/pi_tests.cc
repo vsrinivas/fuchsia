@@ -241,12 +241,6 @@ class LoopIterPrinter {
 // priority inheritance chains, and then evaluate that the effective priorities
 // of the threads involved in the graph are what we expect them to be after
 // various mutations of the graph have taken place.
-//
-// Threads involved in these tests need to opt out of the scheduler's boosting
-// behavior.  In order to achieve this, these are the only threads in the system
-// which should ever set the NO_BOOST flag in their flags.  They do this by
-// directly manipulating their flags member after being created, but before
-// being started.
 class TestThread {
  public:
   enum class State : uint32_t {
@@ -385,15 +379,6 @@ bool TestThread::Create(int initial_base_priority) {
 
   ASSERT_NONNULL(thread_);
 
-  // Set the NO_BOOST flag on this thread so that the scheduler does not apply
-  // any priority boost and we end up with deterministic effective priority
-  // behavior.
-  //
-  // Note, the pattern here of reaching in and manipulating this flag directly
-  // is *not* something to be emulated.  The NO_BOOST flag is not something
-  // which should have an API, or be used by anything but very specific test
-  // code.
-  thread_->flags_ |= THREAD_FLAG_NO_BOOST;
   state_.store(State::CREATED);
 
   END_TEST;

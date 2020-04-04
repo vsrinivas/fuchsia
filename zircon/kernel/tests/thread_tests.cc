@@ -412,27 +412,6 @@ static void preempt_test() {
   }
 
   printf("done with preempt test, above time stamps should be very close\n");
-
-  /* do the same as above, but mark the threads as real time, which should
-   * effectively disable timer based preemption for them. They should
-   * complete in order, about a second apart. */
-  printf("testing real time preemption\n");
-
-  const int num_threads = 5;
-  preempt_count = num_threads;
-
-  for (int i = 0; i < num_threads; i++) {
-    Thread* t = Thread::Create("preempt tester", &preempt_tester, NULL, LOW_PRIORITY);
-    t->SetRealTime();
-    t->SetCpuAffinity(cpu_num_to_mask(0));
-    t->DetachAndResume();
-  }
-
-  while (preempt_count > 0) {
-    Thread::Current::SleepRelative(ZX_SEC(1));
-  }
-
-  printf("done with real-time preempt test, above time stamps should be 1 second apart\n");
 }
 
 static int join_tester(void* arg) {
@@ -893,9 +872,9 @@ static int spinner_thread(void* arg) {
 }
 
 int spinner(int argc, const cmd_args* argv, uint32_t) {
-  if (argc < 2) {
+  if (argc < 1) {
     printf("not enough args\n");
-    printf("usage: %s <priority> <rt>\n", argv[0].str);
+    printf("usage: %s <priority>\n", argv[0].str);
     return -1;
   }
 
@@ -903,9 +882,6 @@ int spinner(int argc, const cmd_args* argv, uint32_t) {
   if (!t)
     return ZX_ERR_NO_MEMORY;
 
-  if (argc >= 3 && !strcmp(argv[2].str, "rt")) {
-    t->SetRealTime();
-  }
   t->DetachAndResume();
 
   return 0;

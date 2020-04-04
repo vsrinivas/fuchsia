@@ -57,10 +57,8 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 // clang-format off
 #define THREAD_FLAG_DETACHED                 (1 << 0)
 #define THREAD_FLAG_FREE_STRUCT              (1 << 1)
-#define THREAD_FLAG_REAL_TIME                (1 << 2)
-#define THREAD_FLAG_IDLE                     (1 << 3)
-#define THREAD_FLAG_NO_BOOST                 (1 << 4)
-#define THREAD_FLAG_VCPU                     (1 << 5)
+#define THREAD_FLAG_IDLE                     (1 << 2)
+#define THREAD_FLAG_VCPU                     (1 << 3)
 
 #define THREAD_SIGNAL_KILL                   (1 << 0)
 #define THREAD_SIGNAL_SUSPEND                (1 << 1)
@@ -140,7 +138,6 @@ struct Thread {
 
   void SetCurrent();
   void SetUsermodeThread(ThreadDispatcher* user_thread);
-  zx_status_t SetRealTime();
 
   // Called to mark a thread as schedulable.
   void Resume();
@@ -208,28 +205,7 @@ struct Thread {
   cpu_num_t LastCpu() const TA_EXCL(thread_lock);
   // Return true if thread has been signaled.
   bool IsSignaled() { return signals_ != 0; }
-  bool IsRealtime() const {
-    return (flags_ & THREAD_FLAG_REAL_TIME) && base_priority_ > DEFAULT_PRIORITY;
-  }
   bool IsIdle() const { return !!(flags_ & THREAD_FLAG_IDLE); }
-  bool IsRealTimeOrIdle() const { return !!(flags_ & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE)); }
-  // A thread may not participate in the scheduler's boost behavior if it is...
-  //
-  // 1) flagged as real-time
-  // 2) flagged as idle
-  // 3) flagged as "no boost"
-  //
-  // Note that flag #3 should *only* ever be used by kernel test code when
-  // attempting to test priority inheritance chain propagation.  It is important
-  // that these tests maintain rigorous control of the relationship between base
-  // priority, inherited priority, and the resulting effective priority.  Allowing
-  // the scheduler to introduce the concept of dynamic boost priority into the
-  // calculation of effective priority makes writing tests like this more
-  // difficult which is why we have an internal flag which can be used for
-  // disabling this behavior.
-  bool CannotBoost() const {
-    return !!(flags_ & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE | THREAD_FLAG_NO_BOOST));
-  }
 
   // All of these operations implicitly operate on the current thread.
   struct Current {
@@ -428,14 +404,12 @@ struct Thread {
 
   // priority: in the range of [MIN_PRIORITY, MAX_PRIORITY], from low to high.
   // base_priority is set at creation time, and can be tuned with thread_set_priority().
-  // priority_boost is a signed value that is moved around within a range by the scheduler.
   // inherited_priority is temporarily set to >0 when inheriting a priority from another
   // thread blocked on a locking primitive this thread holds. -1 means no inherit.
-  // effective_priority is MAX(base_priority + priority boost, inherited_priority) and is
-  // the working priority for run queue decisions.
+  // effective_priority is MAX(base_priority, inherited_priority) and is the working
+  // priority for run queue decisions.
   int effec_priority_;
   int base_priority_;
-  int priority_boost_;
   int inherited_priority_;
 
   SchedulerState scheduler_state_;

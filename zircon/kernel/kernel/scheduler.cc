@@ -320,7 +320,6 @@ void Scheduler::InitializeThread(Thread* thread, int priority) {
   thread->base_priority_ = priority;
   thread->effec_priority_ = priority;
   thread->inherited_priority_ = -1;
-  thread->priority_boost_ = 0;
   thread->scheduler_state_.expected_runtime_ns_ = kDefaultTargetLatency;
 }
 
@@ -335,7 +334,6 @@ void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_
   thread->base_priority_ = HIGHEST_PRIORITY;
   thread->effec_priority_ = HIGHEST_PRIORITY;
   thread->inherited_priority_ = -1;
-  thread->priority_boost_ = 0;
   thread->scheduler_state_.expected_runtime_ns_ = SchedDuration{params.capacity};
 }
 
@@ -1613,7 +1611,6 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
   // deadline scheduler is available and remove this conversion once the
   // kernel uses the abstraction throughout.
   const int original_priority_ = thread->effec_priority_;
-  thread->priority_boost_ = 0;
   thread->base_priority_ = priority;
   thread->effec_priority_ = ktl::max(thread->base_priority_, thread->inherited_priority_);
 
@@ -1648,7 +1645,6 @@ void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params
   // TODO(eieio): Replace this with actual deadline PI.
   const int original_priority_ = thread->effec_priority_;
   thread->base_priority_ = HIGHEST_PRIORITY;
-  thread->priority_boost_ = 0;
   thread->inherited_priority_ = -1;
   thread->effec_priority_ = thread->base_priority_;
 
@@ -1676,7 +1672,6 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
   }
 
   const int original_priority_ = thread->effec_priority_;
-  thread->priority_boost_ = 0;
   thread->inherited_priority_ = priority;
   thread->effec_priority_ = ktl::max(thread->base_priority_, thread->inherited_priority_);
 

@@ -260,26 +260,6 @@ static void free_thread_resources(Thread* t) {
 }
 
 /**
- * @brief Flag a thread as real time
- *
- * @return ZX_OK on success
- */
-zx_status_t Thread::SetRealTime() {
-  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
-
-  {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    if (this == Thread::Current::Get()) {
-      // if we're currently running, cancel the preemption timer.
-      TimerQueue::PreemptCancel();
-    }
-    flags_ |= THREAD_FLAG_REAL_TIME;
-  }
-
-  return ZX_OK;
-}
-
-/**
  * @brief  Make a suspended thread executable.
  *
  * This function is called to start a thread which has just been
@@ -1374,17 +1354,16 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name_);
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
-            "priority %d [%d:%d,%d], remaining time slice %" PRIi64 "\n",
+            "priority %d [%d,%d], remaining time slice %" PRIi64 "\n",
             thread_state_to_str(t->state_), (int)t->curr_cpu_, (int)t->last_cpu_, t->hard_affinity_,
-            t->soft_affinity_, t->effec_priority_, t->base_priority_, t->priority_boost_,
-            t->inherited_priority_, t->remaining_time_slice_);
+            t->soft_affinity_, t->effec_priority_, t->base_priority_, t->inherited_priority_,
+            t->remaining_time_slice_);
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
     t->stack_.DumpInfo(INFO);
-    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s\n", t->entry_, t->arg_, t->flags_,
+    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry_, t->arg_, t->flags_,
             (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
             (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
-            (t->flags_ & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
             (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "", (t->flags_ & THREAD_FLAG_VCPU) ? "Vc" : "");
 
     dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, wait queues owned %s\n",
@@ -1396,10 +1375,9 @@ void dump_thread_locked(Thread* t, bool full_dump) {
             t->user_pid_, t->user_tid_);
     arch_dump_thread(t);
   } else {
-    printf("thr %p st %4s owq %d pri %2d [%d:%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
+    printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
            thread_state_to_str(t->state_), !t->owned_wait_queues_.is_empty(), t->effec_priority_,
-           t->base_priority_, t->priority_boost_, t->inherited_priority_, t->user_pid_,
-           t->user_tid_, oname, t->name_);
+           t->base_priority_, t->inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
   }
 }
 
