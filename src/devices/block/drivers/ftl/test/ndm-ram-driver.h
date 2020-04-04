@@ -9,25 +9,46 @@
 #include <lib/ftl/ndm-driver.h>
 #include <zircon/types.h>
 
+#include <cstdint>
+#include <limits>
+
 #include <fbl/array.h>
 
 struct TestOptions {
-  int ecc_error_interval;  // Controls simulation of ECC errors.
-  int bad_block_interval;  // Controls simulation of bad block sequence.
-  int bad_block_burst;     // Controls the size of the sequence of operations that will run
-                           // into a bad block.
-  bool use_half_size;      // Makes only half of the space visible.
-  bool save_config_data;   // Save options on the partition info.
+  static constexpr TestOptions NoEccErrors() {
+    TestOptions options = {};
+    options.ecc_error_interval = std::numeric_limits<int>::max();
+    options.save_config_data = false;
+    return options;
+  }
+
+  // Controls simulation of ECC errors.
+  int ecc_error_interval = 900;
+
+  // Controls simulation of bad block sequence.
+  int bad_block_interval = 50;
+
+  // Controls the size of the sequence of operations that will run
+  // into a bad block.
+  int bad_block_burst = 1;
+
+  // Makes only half of the space visible.
+  bool use_half_size = false;
+
+  // Save options on the partition info.
+  bool save_config_data = true;
+
+  // Delay before power failure kicks in.
+  int power_failure_delay = -1;
 };
-constexpr TestOptions kDefaultTestOptions = {900, 50, 1, false, true};
 
 // Ram-backed driver for testing purposes.
 class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
-  NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, kDefaultTestOptions) {}
+  explicit NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, {}) {}
   NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)
       : options_(options), test_options_(test_options) {}
-  ~NdmRamDriver() final {}
+  ~NdmRamDriver() final = default;
 
   // Extends the visible volume to the whole size of the storage.
   bool DoubleSize();
@@ -37,6 +58,12 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   void set_options(const ftl::VolumeOptions& options) { options_ = options; }
   void set_max_bad_blocks(uint32_t value) { options_.max_bad_blocks = value; }
   uint32_t num_bad_blocks() const { return num_bad_blocks_; }
+
+  void SetPowerFailureDelay(int delay) {
+    test_options_.power_failure_delay = delay;
+    power_failure_delay_ = 0;
+    power_failure_triggered_ = false;
+  }
 
   // NdmDriver interface:
   const char* Init() final;
@@ -57,6 +84,13 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   // Returns true for a freshly minted bad block.
   bool SimulateBadBlock(uint32_t page_num);
 
+  // Returns true if a power failure should be triggered at this point.
+  bool ShouldTriggerPowerFailure();
+
+  // Triggers side-effects of a power failure.
+  void OnWritePowerFailure(uint64_t page_number, const uint8_t* data, const uint8_t* spare);
+  void OnErasePowerFailure(uint64_t page_number);
+
   // Access the main data and spare area for a given page.
   uint8_t* MainData(uint32_t page_num);
   uint8_t* SpareData(uint32_t page_num);
@@ -75,8 +109,19 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   fbl::Array<uint8_t> flags_;
   ftl::VolumeOptions options_;
   TestOptions test_options_;
-  int ecc_error_interval_ = 0;  // Controls simulation of ECC errors.
-  int bad_block_interval_ = 0;  // Controls simulation of bad blocks.
+
+  // Controls simulation of ECC errors.
+  int ecc_error_interval_ = 0;
+
+  // Controls simulation of bad blocks.
+  int bad_block_interval_ = 0;
+
+  // Marks that power failure happened.
+  bool power_failure_triggered_ = false;
+
+  // Controls simulation of bad blocks.
+  int power_failure_delay_ = 0;
+
   uint32_t num_bad_blocks_ = 0;
 };
 

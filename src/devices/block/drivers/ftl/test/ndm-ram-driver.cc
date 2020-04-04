@@ -18,7 +18,8 @@ void SetFlag(uint8_t flag, uint8_t* where) { *where = *where | flag; }
 
 void ClearFlag(uint8_t flag, uint8_t* where) { *where = *where & static_cast<uint8_t>(~flag); }
 
-bool IsFlagSet(uint8_t flag, const uint8_t* where) { return (*where & flag) == flag; }
+bool IsFlagSet(uint8_t flag, const uint8_t* where) { return (*where & flag) == flag;
+}
 
 }  // namespace
 
@@ -27,7 +28,7 @@ bool NdmRamDriver::DoubleSize() {
 
   // This mimics the code of NandDriverImpl::HandleAlternateConfig with the
   // exceptions of not having to confirm the existence of a small device, and
-  // leaving final re-initialization to FtlShell::Reatach (controlled by the
+  // leaving final re-initialization to FtlShell::Reattach (controlled by the
   // test code).
 
   if (!IsNdmDataPresent(options_)) {
@@ -125,7 +126,16 @@ int NdmRamDriver::NandWrite(uint32_t start_page, uint32_t page_count, const void
 
 // Returns kNdmOk or kNdmError. kNdmError triggers marking the block as bad.
 int NdmRamDriver::NandErase(uint32_t page_num) {
+  if (power_failure_triggered_) {
+    return ftl::kNdmFatalError;
+  }
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
+
+  if (ShouldTriggerPowerFailure()) {
+    OnErasePowerFailure(page_num);
+    return ftl::kNdmFatalError;
+  }
+
   if (BadBlock(page_num)) {
     ZX_ASSERT(false);
   }
@@ -151,6 +161,10 @@ int NdmRamDriver::IsBadBlock(uint32_t page_num) {
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
   ZX_ASSERT(page_num % PagesPerBlock() == 0);
 
+  if (power_failure_triggered_) {
+    return ftl::kNdmError;
+  }
+
   // If first byte on first page is not all 0xFF, block is bad.
   // This is a common (although not unique) factory marking used by real NAND
   // chips. This code enables a test to simulate factory-bad blocks.
@@ -172,6 +186,10 @@ bool NdmRamDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uin
 
 int NdmRamDriver::ReadPage(uint32_t page_num, uint8_t* data, uint8_t* spare) {
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
+  if (power_failure_triggered_) {
+    return ftl::kNdmFatalError;
+  }
+
   // Fail ECC if page never written or was failed before.
   if (data && !Written(page_num)) {
     // Reading FF is definitely OK at least for spare data.
@@ -203,6 +221,16 @@ int NdmRamDriver::ReadPage(uint32_t page_num, uint8_t* data, uint8_t* spare) {
 
 int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
+
+  if (power_failure_triggered_) {
+    return ftl::kNdmFatalError;
+  }
+
+  if (ShouldTriggerPowerFailure()) {
+    OnWritePowerFailure(page_num, data, spare);
+    return ftl::kNdmFatalError;
+  }
+
   if (BadBlock(page_num)) {
     ZX_ASSERT(false);
   }
@@ -280,3 +308,28 @@ void NdmRamDriver::SetBadBlock(uint32_t page_num, bool value) {
 }
 
 uint32_t NdmRamDriver::PagesPerBlock() const { return options_.block_size / options_.page_size; }
+
+bool NdmRamDriver::ShouldTriggerPowerFailure() {
+  ZX_ASSERT(!power_failure_triggered_);
+  if (test_options_.power_failure_delay < 0) {
+    return false;
+  }
+  power_failure_delay_++;
+  return (power_failure_triggered_ = (power_failure_delay_ > test_options_.power_failure_delay));
+}
+
+void NdmRamDriver::OnWritePowerFailure(uint64_t page_number, const uint8_t* data,
+                                       const uint8_t* spare) {
+  SetWritten(page_number, true);
+}
+
+void NdmRamDriver::OnErasePowerFailure(uint64_t page_number) {
+  for (uint32_t offset = 0; offset < PagesPerBlock(); ++offset) {
+    uint64_t page = page_number + offset;
+    // If ECC is always calculated, this should not matter.
+    memset(MainData(page), 0xFF, options_.page_size);
+    memset(SpareData(page), 0xFF, options_.eb_size);
+    SetWritten(page, true);
+    SetFailEcc(page, false);
+  }
+}

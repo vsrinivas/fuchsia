@@ -12,6 +12,7 @@
 #include <zxtest/zxtest.h>
 
 #include "ftl-shell.h"
+#include "test/ndm-ram-driver.h"
 
 namespace {
 
@@ -351,7 +352,7 @@ void FtlTestWithDriverAccess::SetUpBaseTest() {
 using FtlExtendTest = FtlTestWithDriverAccess;
 
 TEST_F(FtlExtendTest, ExtendVolume) {
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.use_half_size = true;
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
 
@@ -383,7 +384,7 @@ TEST_F(FtlExtendTest, ExtendVolume) {
 }
 
 TEST_F(FtlExtendTest, ReduceReservedBlocks) {
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.bad_block_interval = 500000;  // Large enough to avoid it.
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
 
@@ -432,7 +433,7 @@ TEST_F(FtlExtendTest, ReduceReservedBlocksFailure) {
 // Reducing the bad block reservation should fail if it cannot hold the current
 // bad block table.
 TEST(FtlExtendTest, ReduceReservedBlocksTooSmall) {
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.bad_block_interval = 5;
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
 
@@ -461,7 +462,7 @@ TEST(FtlExtendTest, ReduceReservedBlocksTooSmall) {
 // Even if the new table can hold the current one, if a translated block would
 // end up in the wrong region the operation should fail.
 TEST(FtlExtendTest, ReduceReservedBlocksInvalidLocation) {
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.bad_block_interval = 5;
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
 
@@ -544,8 +545,7 @@ void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t maj
 
 // Verifies that the NDM control header can be upgraded to version 2.
 TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
-  const TestOptions kNoEccErrors = {INT32_MAX, 50, 1, false, false};
-  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, TestOptions::NoEccErrors());
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
   NdmRamDriver* driver = driver_to_pass.get();
@@ -618,8 +618,7 @@ TEST_F(FtlUpgradeTest, CreateNewVolumeWithVersion2ByDefault) {
 // Verifies that a new control block with partition data is automatically added.
 TEST_F(FtlUpgradeTest, ForceUpgrade) {
   // Start with an old version.
-  const TestOptions kNoEccErrors = {INT32_MAX, 50, 1, false, false};
-  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, TestOptions::NoEccErrors());
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
   NdmRamDriver* driver = driver_to_pass.get();
@@ -653,8 +652,7 @@ TEST_F(FtlUpgradeTest, ForceUpgrade) {
 
 TEST_F(FtlUpgradeTest, BadBlocksWriteVersion2) {
   // Start with an old version.
-  const TestOptions kNoEccErrors = {INT32_MAX, 50, 1, false, false};
-  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, TestOptions::NoEccErrors());
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
   NdmRamDriver* driver = driver_to_pass.get();
@@ -682,7 +680,7 @@ using FtlBadBlockTest = FtlTestWithDriverAccess;
 TEST_F(FtlBadBlockTest, FtlSucceedsAfterContinousFailures) {
   auto options = kDefaultOptions;
   options.max_bad_blocks = 10;
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.bad_block_interval = 5;
   driver_options.bad_block_burst = 10;
 

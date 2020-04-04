@@ -2,19 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
+#include <limits>
+
 #include <zxtest/zxtest.h>
 
+#include "lib/ftl/ndm-driver.h"
 #include "ndm-ram-driver.h"
 
 namespace {
 
+constexpr uint32_t kBlockCount = 20;
 constexpr uint32_t kPagesPerBlock = 32;
 constexpr uint32_t kPageSize = 2048;
 constexpr uint32_t kOobSize = 16;
 
 // 20 blocks of 32 pages, 4 bad blocks max.
 constexpr ftl::VolumeOptions kDefaultOptions = {
-    20, 4, (kPagesPerBlock * kPageSize), kPageSize, kOobSize, 0,
+    kBlockCount, 4, (kPagesPerBlock * kPageSize), kPageSize, kOobSize, 0,
 };
 
 TEST(DriverTest, TrivialLifetime) { NdmRamDriver driver({}); }
@@ -152,7 +157,7 @@ TEST(DriverTest, ReAttach) {
 TEST(DriverTest, WriteBadBlock) {
   ASSERT_TRUE(ftl::InitModules());
 
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.bad_block_interval = 80;
 
   NdmRamDriver driver(kDefaultOptions, driver_options);
@@ -183,7 +188,7 @@ TEST(DriverTest, WriteBadBlockWithRange) {
 
   constexpr uint64_t kCycles = 5;
 
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.bad_block_interval = 80;
   driver_options.bad_block_burst = kDefaultOptions.max_bad_blocks;
 
@@ -217,7 +222,7 @@ TEST(DriverTest, WriteBadBlockWithRange) {
 TEST(DriverTest, ReadUnsafeEcc) {
   ASSERT_TRUE(ftl::InitModules());
 
-  TestOptions driver_options = kDefaultTestOptions;
+  TestOptions driver_options = {};
   driver_options.ecc_error_interval = 80;
 
   NdmRamDriver driver(kDefaultOptions, driver_options);
@@ -236,6 +241,58 @@ TEST(DriverTest, ReadUnsafeEcc) {
 
   ASSERT_EQ(ftl::kNdmUnsafeEcc, driver.NandRead(0, 1, data.data(), oob.data()));
   ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.data(), oob.data()));
+}
+
+TEST(DriverTest, PowerFailureTriggered) {
+  constexpr int kCycles = 5;
+  constexpr int kFailAfter = 5;
+  ASSERT_TRUE(ftl::InitModules());
+
+  TestOptions driver_options = TestOptions::NoEccErrors();
+  driver_options.bad_block_interval = std::numeric_limits<int>::max();
+  driver_options.power_failure_delay = kFailAfter;
+
+  NdmRamDriver driver(kDefaultOptions, driver_options);
+  ASSERT_EQ(nullptr, driver.Init());
+
+  fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
+  fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
+
+  memset(data.data(), 0, data.size());
+  memset(oob.data(), 0, oob.size());
+
+  for (uint64_t cycle = 0; cycle < kCycles; ++cycle) {
+    for (int i = 0; i < kFailAfter; i++) {
+      ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(kPagesPerBlock * i, 1, data.data(), oob.data()));
+      // Reads do not increment the failure rate.
+      ASSERT_EQ(ftl::kNdmOk, driver.NandRead(kPagesPerBlock * i, 1, data.data(), oob.data()),
+                "Cycle: %ld\n", cycle);
+    }
+
+    // Now the power failure is triggered.
+    ASSERT_EQ(ftl::kNdmFatalError, driver.NandErase(0));
+
+    // All operations fail with fatal failure.
+    for (unsigned int i = 0; i < kBlockCount * kPagesPerBlock; i += kPagesPerBlock) {
+      ASSERT_EQ(ftl::kNdmFatalError, driver.NandRead(i, 1, data.data(), oob.data()));
+      ASSERT_EQ(ftl::kNdmFatalError, driver.NandErase(i));
+      ASSERT_EQ(ftl::kNdmFatalError, driver.NandWrite(i, 1, data.data(), oob.data()));
+    }
+
+    // Turning power failure off should allow this to pass.
+    driver.SetPowerFailureDelay(-1);
+
+    // Now operations succeed.
+    for (unsigned int i = 0; i < kBlockCount * kPagesPerBlock; i += kPagesPerBlock) {
+      ASSERT_EQ(ftl::kNdmOk, driver.NandErase(i));
+      ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(i, 1, data.data(), oob.data()));
+      ASSERT_EQ(ftl::kNdmOk, driver.NandRead(i, 1, data.data(), oob.data()));
+      // Clean up for next cycle.
+      ASSERT_EQ(ftl::kNdmOk, driver.NandErase(i));
+    }
+    // This resets the counter and should fail again after |kFailAfter| write/erase.
+    driver.SetPowerFailureDelay(kFailAfter);
+  }
 }
 
 }  // namespace
