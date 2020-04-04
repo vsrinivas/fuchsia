@@ -54,6 +54,8 @@ class AsyncBinding {
     UnbindInternal(std::move(calling_ref), is_server_ ? &epitaph : nullptr);
   }
 
+  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
+
  protected:
   AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl, bool is_server,
                TypeErasedOnUnboundFn on_unbound_fn, DispatchFn dispatch_fn);
@@ -85,8 +87,6 @@ class AsyncBinding {
                                 std::move(unbound_task->channel));
     delete unbound_task;
   }
-
-  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
 
   void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
 

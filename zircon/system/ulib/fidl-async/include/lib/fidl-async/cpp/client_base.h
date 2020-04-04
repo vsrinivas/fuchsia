@@ -18,12 +18,26 @@
 namespace fidl {
 namespace internal {
 
-// Struct used to track an outstanding asynchronous transaction.
-struct ResponseContext {
-  // Intrusive list node for tracking this ResponseContext.
-  // TODO(madhaviyengar): Replace this once an intrusive tree/map is added to the SDK.
-  list_node_t node = LIST_INITIAL_CLEARED_VALUE;
-  zx_txid_t txid = 0;  // txid of outstanding transaction.
+// ResponseContext contains the state for an outstanding asynchronous transaction. It inherits from
+// an intrusive container node so that ClientBase can track it.
+// TODO(madhaviyengar): Replace list_node_t once an intrusive tree/map is added to the SDK.
+class ResponseContext : private list_node_t {
+ public:
+  ResponseContext() : list_node_t(LIST_INITIAL_CLEARED_VALUE) {}
+  virtual ~ResponseContext() = default;
+
+  zx_txid_t Txid() const { return txid_; }
+
+  // Invoked if an error occurs handling the response message prior to invoking the user-specified
+  // callback or if the ClientBase is destroyed with the transaction outstanding. Note that
+  // OnError() may be invoked within ~ClientBase(), so the user must ensure that a ClientBase is not
+  // destroyed while holding any locks OnError() would take.
+  virtual void OnError() = 0;
+
+ private:
+  friend class ClientBase;
+
+  zx_txid_t txid_ = 0;  // Zircon txid of outstanding transaction.
 };
 
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
@@ -56,11 +70,11 @@ class ClientBase {
 
   // Returns a strong reference to binding to prevent channel deletion during a zx_channel_call() or
   // zx_channel_write(). The caller is responsible for releasing the reference.
-  std::shared_ptr<AsyncBinding> GetBinding();
+  std::shared_ptr<AsyncBinding> GetBinding() { return binding_.lock(); }
 
   // Invoked by InternalDispatch() below. If `context` is non-null, the message was the response to
   // an asynchronous transaction. Otherwise, the message was an event.
-  virtual void Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
+  virtual zx_status_t Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
 
   // Dispatch function invoked by AsyncBinding on incoming message. The client only requires `msg`.
   void InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*,
@@ -73,7 +87,8 @@ class ClientBase {
   std::mutex lock_;
   // The base node of an intrusive container of ResponseContexts corresponding to outstanding
   // asynchronous transactions.
-  ResponseContext __TA_GUARDED(lock_) contexts_ = {};
+  list_node_t contexts_ __TA_GUARDED(lock_) = LIST_INITIAL_VALUE(contexts_);
+  zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;  // Value used to compute the next txid.
 };
 
 }  // namespace internal

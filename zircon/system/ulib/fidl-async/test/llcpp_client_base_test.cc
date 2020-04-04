@@ -34,14 +34,14 @@ class TestClient : public ClientBase {
   void PrepareAsyncTxn(ResponseContext* context) {
     ClientBase::PrepareAsyncTxn(context);
     std::unique_lock lock(lock_);
-    EXPECT_FALSE(txids_.count(context->txid));
-    txids_.insert(context->txid);
+    EXPECT_FALSE(txids_.count(context->Txid()));
+    txids_.insert(context->Txid());
   }
 
   void ForgetAsyncTxn(ResponseContext* context) {
     {
       std::unique_lock lock(lock_);
-      txids_.erase(context->txid);
+      txids_.erase(context->Txid());
     }
     ClientBase::ForgetAsyncTxn(context);
   }
@@ -52,17 +52,23 @@ class TestClient : public ClientBase {
 
   // For responses, find and remove the entry for the matching txid. For events, increment the
   // event count.
-  void Dispatch(fidl_msg_t* msg, ResponseContext* context) override {
+  zx_status_t Dispatch(fidl_msg_t* msg, ResponseContext* context) override {
     auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-    ASSERT_EQ(!hdr->txid, !context);  // hdr->txid == 0 iff context == nullptr.
+    EXPECT_EQ(!hdr->txid, !context);  // hdr->txid == 0 iff context == nullptr.
+    if (!hdr->txid != !context) {
+      return ZX_OK;  // This is a failure, but let the test continue.
+    }
     std::unique_lock lock(lock_);
     if (hdr->txid) {
       auto txid_it = txids_.find(hdr->txid);
-      ASSERT_TRUE(txid_it != txids_.end());  // the transaction must be found.
-      txids_.erase(txid_it);
+      EXPECT_TRUE(txid_it != txids_.end());  // the transaction must be found.
+      if (txid_it != txids_.end()) {
+        txids_.erase(txid_it);
+      }
     } else {
       event_count_++;
     }
+    return ZX_OK;
   }
 
   uint32_t GetEventCount() {
@@ -76,7 +82,7 @@ class TestClient : public ClientBase {
   }
 
   size_t GetTxidCount() {
-    auto internal_count = list_length(&contexts_.node);
+    auto internal_count = list_length(&contexts_);
     std::unique_lock lock(lock_);
     EXPECT_EQ(txids_.size(), internal_count);
     return internal_count;
@@ -85,6 +91,12 @@ class TestClient : public ClientBase {
   std::mutex lock_;
   std::unordered_set<zx_txid_t> txids_;
   uint32_t event_count_ = 0;
+};
+
+class TestResponseContext : public ResponseContext {
+ public:
+  TestResponseContext() = default;
+  void OnError() {}
 };
 
 TEST(ClientBaseTestCase, AsyncTxn) {
@@ -109,11 +121,11 @@ TEST(ClientBaseTestCase, AsyncTxn) {
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
-  ResponseContext context;
+  TestResponseContext context;
   client->PrepareAsyncTxn(&context);
-  EXPECT_TRUE(client->IsPending(context.txid));
+  EXPECT_TRUE(client->IsPending(context.Txid()));
   fidl_message_header_t hdr;
-  fidl_init_txn_header(&hdr, context.txid, 0);
+  fidl_init_txn_header(&hdr, context.Txid(), 0);
   ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
 
   // Trigger unbound handler.
@@ -143,14 +155,14 @@ TEST(ClientBaseTestCase, ParallelAsyncTxns) {
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
   // the channel.
-  ResponseContext contexts[10];
+  TestResponseContext contexts[10];
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
     threads[i] = std::thread([context = &contexts[i], &remote, client]{
       client->PrepareAsyncTxn(context);
-      EXPECT_TRUE(client->IsPending(context->txid));
+      EXPECT_TRUE(client->IsPending(context->Txid()));
       fidl_message_header_t hdr;
-      fidl_init_txn_header(&hdr, context->txid, 0);
+      fidl_init_txn_header(&hdr, context->Txid(), 0);
       ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
     });
   }
@@ -172,9 +184,9 @@ TEST(ClientBaseTestCase, ForgetAsyncTxn) {
   TestClient client(std::move(local), loop.dispatcher(), nullptr);
 
   // Generate a txid for a ResponseContext.
-  ResponseContext context;
+  TestResponseContext context;
   client.PrepareAsyncTxn(&context);
-  EXPECT_TRUE(client.IsPending(context.txid));
+  EXPECT_TRUE(client.IsPending(context.Txid()));
 
   // Forget the transaction.
   client.ForgetAsyncTxn(&context);
@@ -318,6 +330,34 @@ TEST(ClientBaseTestCase, BindingRefPreventsUnbind) {
   ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&unbound, 0));
   binding.reset();
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+TEST(ClientBaseTestCase, ReleaseOutstandingTxnsOnDestroy) {
+  class ReleaseTestResponseContext : public ResponseContext {
+   public:
+    ReleaseTestResponseContext(sync_completion_t* done) : done_(done) {}
+    void OnError() {
+      sync_completion_signal(done_);
+      delete this;
+    }
+    sync_completion_t* done_;
+  };
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  auto* client = new TestClient(std::move(local), loop.dispatcher(), nullptr);
+
+  // Create and register a response context which will signal when deleted.
+  sync_completion_t done;
+  client->PrepareAsyncTxn(new ReleaseTestResponseContext(&done));
+
+  // Delete the client and ensure that the response context is deleted.
+  delete client;
+  EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
 
 }  // namespace

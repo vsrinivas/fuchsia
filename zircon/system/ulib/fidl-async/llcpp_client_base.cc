@@ -16,6 +16,18 @@ constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 ClientBase::~ClientBase() {
   Unbind();
+  // Release any managed ResponseContexts.
+  list_node_t delete_list = LIST_INITIAL_CLEARED_VALUE;
+  {
+    std::scoped_lock lock(lock_);
+    list_move(&contexts_, &delete_list);
+  }
+  list_node_t* node = nullptr;
+  list_node_t* temp_node = nullptr;
+  list_for_every_safe(&delete_list, node, temp_node) {
+    list_delete(node);
+    static_cast<ResponseContext*>(node)->OnError();
+  }
 }
 
 void ClientBase::Unbind() {
@@ -25,7 +37,6 @@ void ClientBase::Unbind() {
 
 ClientBase::ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
                        TypeErasedOnUnboundFn on_unbound) {
-  list_initialize(&contexts_.node);
   binding_ = AsyncBinding::CreateClientBinding(
       dispatcher, std::move(channel), this, fit::bind_member(this, &ClientBase::InternalDispatch),
       std::move(on_unbound));
@@ -45,11 +56,11 @@ void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
   do {
     found = false;
     do {
-      context->txid = ++contexts_.txid & kUserspaceTxidMask;  // txid must be within mask.
-    } while (!context->txid);  // txid must be non-zero.
-    ResponseContext* entry = nullptr;
-    list_for_every_entry(&contexts_.node, entry, ResponseContext, node) {
-      if (entry->txid == context->txid) {
+      context->txid_ = ++txid_base_ & kUserspaceTxidMask;  // txid must be within mask.
+    } while (!context->txid_);  // txid must be non-zero.
+    list_node_t* node = nullptr;
+    list_for_every(&contexts_, node) {
+      if (static_cast<ResponseContext*>(node)->txid_ == context->txid_) {
         found = true;
         break;
       }
@@ -57,17 +68,14 @@ void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
   } while (found);
 
   // Insert the ResponseContext.
-  list_add_tail(&contexts_.node, &context->node);
+  list_add_tail(&contexts_, static_cast<list_node_t*>(context));
 }
 
 void ClientBase::ForgetAsyncTxn(ResponseContext* context) {
+  auto* node = static_cast<list_node_t*>(context);
   std::scoped_lock lock(lock_);
-  ZX_ASSERT(list_in_list(&context->node));
-  list_delete(&context->node);
-}
-
-std::shared_ptr<AsyncBinding> ClientBase::GetBinding() {
-  return binding_.lock();
+  ZX_ASSERT(list_in_list(node));
+  list_delete(node);
 }
 
 void ClientBase::InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*,
@@ -84,11 +92,12 @@ void ClientBase::InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* ms
   if (hdr->txid) {
     {
       std::scoped_lock lock(lock_);
-      ResponseContext* entry = nullptr;
-      list_for_every_entry(&contexts_.node, entry, ResponseContext, node) {
-        if (entry->txid == hdr->txid) {
+      list_node_t* node = nullptr;
+      list_for_every(&contexts_, node) {
+        auto* entry = static_cast<ResponseContext*>(node);
+        if (entry->txid_ == hdr->txid) {
           context = entry;
-          list_delete(&entry->node);  // This is safe since we break immediately after.
+          list_delete(node);  // This is safe since we break immediately after.
           break;
         }
       }
@@ -103,7 +112,7 @@ void ClientBase::InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* ms
   }
 
   // Dispatch the message
-  Dispatch(msg, context);
+  *status = Dispatch(msg, context);
 }
 
 }  // namespace internal
