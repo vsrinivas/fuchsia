@@ -35,7 +35,6 @@
 
 #include <arch/debugger.h>
 #include <arch/exception.h>
-#include <kernel/atomic.h>
 #include <kernel/dpc.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
