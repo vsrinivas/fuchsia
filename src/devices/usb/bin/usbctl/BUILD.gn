@@ -23,11 +23,11 @@ executable("usbctl") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/usb-peripheral-utils",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
+    "//zircon/system/ulib/usb-peripheral-utils",
   ]
 }
 
