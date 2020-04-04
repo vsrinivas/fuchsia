@@ -2,32 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("debugdata") {
   sources = [ "debugdata.cc" ]
   sdk = "source"
   sdk_headers = [ "lib/debugdata/debugdata.h" ]
   deps = [
-    "$zx/system/fidl/fuchsia-debugdata:llcpp",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-debugdata:llcpp",
   ]
   public_deps = [
     # <debugdata/debugdata.h has #include <fuchsia/debugdata/llcpp/fidl.h>.
-    "$zx/system/fidl/fuchsia-debugdata:llcpp.headers",
+    "//zircon/system/fidl/fuchsia-debugdata:llcpp",
 
     # <debugdata/debugdata.h> has #include <fbl/unique_fd.h>.
-    "$zx/system/ulib/fbl:headers",
+    "//zircon/public/lib/fbl",
 
     # <debugdata/debugdata.h> has #include <lib/async/cpp/wait.h>.
-    "$zx/system/ulib/async:async-cpp.headers",
+    "//zircon/public/lib/async-cpp",
 
     # <debugdata/debugdata.h> has #include <lib/zircon-internal/fnv1hash.h>.
-    "$zx/system/ulib/zircon-internal:headers",
+    "//zircon/public/lib/zircon-internal",
   ]
 }
