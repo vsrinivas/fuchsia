@@ -2,67 +2,102 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("fragment") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("fragment") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "fragment.cc" ]
   data_deps = [ ":fragment.proxy" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.amlogiccanvas",
-    "$zx/system/banjo/ddk.protocol.buttons",
-    "$zx/system/banjo/ddk.protocol.camerasensor",
-    "$zx/system/banjo/ddk.protocol.clock",
-    "$zx/system/banjo/ddk.protocol.codec",
-    "$zx/system/banjo/ddk.protocol.dsiimpl",
-    "$zx/system/banjo/ddk.protocol.ethernet.board",
-    "$zx/system/banjo/ddk.protocol.gdc",
-    "$zx/system/banjo/ddk.protocol.ge2d",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.isp",
-    "$zx/system/banjo/ddk.protocol.mipicsi",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.power",
-    "$zx/system/banjo/ddk.protocol.powerimpl",
-    "$zx/system/banjo/ddk.protocol.pwm",
-    "$zx/system/banjo/ddk.protocol.sdio",
-    "$zx/system/banjo/ddk.protocol.shareddma",
-    "$zx/system/banjo/ddk.protocol.spi",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/banjo/ddk.protocol.tee",
-    "$zx/system/banjo/ddk.protocol.thermal",
-    "$zx/system/banjo/ddk.protocol.usb.modeswitch",
-    "$zx/system/banjo/ddk.protocol.usb.phy",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
+    "//zircon/system/banjo/ddk.protocol.buttons",
+    "//sdk/banjo/ddk.protocol.camerasensor",
+    "//zircon/system/banjo/ddk.protocol.clock",
+    "//zircon/system/banjo/ddk.protocol.codec",
+    "//sdk/banjo/ddk.protocol.dsiimpl",
+    "//zircon/system/banjo/ddk.protocol.ethernet.board",
+    "//sdk/banjo/ddk.protocol.gdc",
+    "//sdk/banjo/ddk.protocol.ge2d",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/ddk.protocol.isp",
+    "//sdk/banjo/ddk.protocol.mipicsi",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.power",
+    "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/banjo/ddk.protocol.pwm",
+    "//sdk/banjo/ddk.protocol.sdio",
+    "//zircon/system/banjo/ddk.protocol.shareddma",
+    "//zircon/system/banjo/ddk.protocol.spi",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/banjo/ddk.protocol.tee",
+    "//sdk/banjo/ddk.protocol.thermal",
+    "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
+    "//sdk/banjo/ddk.protocol.usb.phy",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
 
-zx_driver("fragment.proxy") {
+driver_module("fragment.proxy") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "fragment-proxy.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.amlogiccanvas",
-    "$zx/system/banjo/ddk.protocol.buttons",
-    "$zx/system/banjo/ddk.protocol.clock",
-    "$zx/system/banjo/ddk.protocol.codec",
-    "$zx/system/banjo/ddk.protocol.ethernet.board",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.power",
-    "$zx/system/banjo/ddk.protocol.pwm",
-    "$zx/system/banjo/ddk.protocol.spi",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/banjo/ddk.protocol.tee",
-    "$zx/system/banjo/ddk.protocol.usb.modeswitch",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
+    "//zircon/system/banjo/ddk.protocol.buttons",
+    "//zircon/system/banjo/ddk.protocol.clock",
+    "//zircon/system/banjo/ddk.protocol.codec",
+    "//zircon/system/banjo/ddk.protocol.ethernet.board",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.power",
+    "//zircon/system/banjo/ddk.protocol.pwm",
+    "//zircon/system/banjo/ddk.protocol.spi",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/banjo/ddk.protocol.tee",
+    "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
   ]
+}
+
+migrated_manifest("fragment-manifest") {
+  deps = [ ":fragment" ]
+}
+
+migrated_manifest("fragment.proxy-manifest") {
+  deps = [ ":fragment.proxy" ]
 }

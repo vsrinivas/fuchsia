@@ -100,10 +100,8 @@ aggregate_manifest("legacy-image") {
 #------------------
 #------------------
 #------------------
-    ":driver.fragment",
 #------------------
 #------------------
-    ":driver.fragment.proxy",
 #------------------
 #------------------
 #------------------
@@ -1338,10 +1336,10 @@ aggregate_manifest("migrated-image") {
     "//src/devices/nand/drivers/cadence-hpnfc:cadence-hpnfc-manifest",
     "//src/devices/clock/drivers/clock:clock-manifest",
 #------------------
-    #":driver.fragment",
+    "//zircon/system/core/devmgr/fragment:fragment-manifest",
 #------------------
 #------------------
-    #":driver.fragment.proxy",
+    "//zircon/system/core/devmgr/fragment:fragment.proxy-manifest",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:cpu-trace-manifest",
     "//src/ui/input/drivers/cypress:cypress-manifest",

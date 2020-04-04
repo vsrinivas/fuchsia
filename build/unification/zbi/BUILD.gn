@@ -77,11 +77,7 @@ group("zbi") {
 
 # Artifacts imported from the ZN build which may be added to ZBI tests.
 
-zbiables = [
-  "driver.fragment",
-  "driver.fragment.proxy",
-  "test.core.standalone-test",
-]
+zbiables = [ "test.core.standalone-test" ]
 
 foreach(target, zbiables) {
   label = "//build/unification/images:$target"

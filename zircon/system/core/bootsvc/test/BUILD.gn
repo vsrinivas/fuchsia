@@ -102,8 +102,8 @@ zbi_input("integration-test-deps") {
     "//zircon/system/core/netsvc",
     "//zircon/system/core/pwrbtn-monitor",
     "//zircon/system/core/svchost",
-    "//build/unification/zbi:driver.fragment-zbi",
-    "//build/unification/zbi:driver.fragment.proxy-zbi",
+    "//zircon/system/core/devmgr/fragment",
+    "//zircon/system/core/devmgr/fragment:fragment.proxy",
   ]
 }
 
