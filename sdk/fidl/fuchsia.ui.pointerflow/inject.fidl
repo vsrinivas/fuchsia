@@ -1,0 +1,219 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointerflow;
+
+using fuchsia.ui.views;
+using fuchsia.ui.input3;
+using zx;
+
+const uint32 MAX_INJECT = 128;
+
+/// A coordination mechanism to clearly define the *injecting* of pointer events
+/// into the scene (injection policy, injection context, etc), for *dispatching*
+/// pointer events to UI clients (referenced by |fuchsia.ui.views.ViewRef|).
+///
+/// NOTE WELL! ONLY COMPONENTS IN THE TRUSTED COMPUTING BASE SHOULD BE GRANTED
+///            ACCESS TO THIS PROTOCOL.
+/// (1) The injector acts with the user's authority. UI clients cannot tell the
+///     difference between a real user and an injector.
+/// (2) The defined context is self-specified by the injector. An injector that
+///     gains access to a sensitive context will operate in that scope.
+/// (3) The injected events may be arbitrary. An injector can inject whatever
+///     it wants to the clients it can reach.
+///
+/// This protocol sets up the defined context for an |Injector|, and places it
+/// on a target. These parameters are set up in the |InjectorConfig|. An
+/// |Injector| may *inject* pointer events on the specified target in the scene,
+/// but the *dispatch* of pointer events to UI clients will depend on the
+/// dispatch policy and the scene topology.
+///
+/// An |Injector| operates within a defined context; it serves two purposes:
+/// (1) Scoping. It confirms the |Injector|'s ability to inject pointer events
+///     on the specified target.
+/// (2) Coordinate System. It provides the reference coordinate space to
+///     interpret injected pointer events.
+///
+/// An |Injector| is placed on the specified target in the scene, and it is
+/// afforded some guarantees against snooping and interference from UI clients
+/// outside the target's view tree ("non-target clients").  Non-target clients
+/// never have injected events dispatched to them: an |Injector| preserves
+/// *confidentiality* for target clients.  Non-target clients never block
+/// injected events from reaching the target on injection, or from reaching
+/// target clients on dispatch: an |Injector| preserves *integrity* and
+/// *availability* for target clients.
+///
+/// Note. This protocol, and its policies, are *not* a sufficient guard against
+///       UI redress attacks! The confidentiality, integrity, and availability
+///       guarantees apply only with respect to non-target clients. Within a
+///       target, UI redress attacks can still happen, between target clients.
+[Discoverable]
+protocol InjectorRegistry {
+    /// Sets up a defined context for an |Injector|, and places it on a target.
+    /// These parameters are specified in an |InjectorConfig|.
+    ///
+    /// If |config| is invalid (e.g., missing important data), the |injector|
+    /// request will be denied (i.e., the channel will be closed).
+    ///
+    /// The return event tells the caller that (1) the server has processed the
+    /// call, and (2) the |injector| is connected.
+    Register(InjectorConfig config, request<Injector> injector) -> ();
+};
+
+/// The channel for injecting pointer events on a target.
+/// The associated |InjectorConfig| applies to injected pointer events.
+///
+/// An |Injector| may *inject* pointer events on a target in the scene, but the
+/// *dispatch* of pointer events to UI clients will depend on the dispatch
+/// policy and the scene topology.
+protocol Injector {
+    /// Injects events on a target.
+    ///
+    /// Batching: The caller is expected to batch-inject all events that share the
+    /// same timestamp (e.g., multiple finger samples). There may be multiple such
+    /// batches per injection call.
+    ///
+    /// Flow control: The caller is allowed at most one in-flight |Inject| call
+    /// at at time: subsequent |Inject| calls must wait until the acknowledgment
+    /// returns.  Non-compliance results in channel closure.
+    Inject(vector<Event>:MAX_INJECT events) -> ();
+};
+
+/// A specification for an |Injector|.
+table InjectorConfig {
+    /// A specification of the pointer device.
+    1: DeviceConfig device_config;
+
+    /// The scope and coordinate system of the injector.
+    2: InjectorContext context;
+
+    /// The region where dispatch is attempted for injected events.
+    3: InjectorTarget target;
+
+    /// A specification of the UI clients in |target| that may have injected
+    /// events dispatched to them.
+    ///
+    /// For example, if |dispatch_policy| is |EXCLUSIVE|, then only |target| may
+    /// have injected events dispatched to it, regardless of other factors, such
+    /// as surface occlusion by clients inside and outside of |target|.
+    4: DispatchPolicy dispatch_policy;
+};
+
+/// A specification of the pointer device.
+table DeviceConfig {
+    /// An identifier for the pointer device that issues pointer event streams.
+    1: uint32 device_id;
+
+    /// A characterization of the pointer device.
+    2: fuchsia.ui.input3.PointerDeviceType device_type;
+};
+
+/// The region from which injection is attempted for injected events.  As the
+/// context, it serves two purposes:
+/// (1) Scoping. It confirms the |Injector|'s ability to inject pointer events
+///     on the specified target.  Specifically, the context must be a view-tree
+///     ancestor of the target.
+/// (2) Coordinate System. It provides the reference coordinate space to
+///     interpret injected pointer events.  Specifically, the injector specifies
+///     the location of injected events in its own coordinate system (instead of
+///     the target's coordinate system).
+union InjectorContext {
+    /// A Scenic view from which injection is attempted for injected events.
+    /// - This view must be connected to the scene graph for injection.
+    /// - Injected events are confined to this view and its sub-views.
+    1: fuchsia.ui.views.ViewRef view;
+};
+
+/// The region in which dispatch is attempted for injected events.
+/// The particular dispatch policy is specified in |InjectorConfig|.
+union InjectorTarget {
+    /// A Scenic view in which dispatch is attempted for injected events.
+    /// - This view must be connected to the scene graph for dispatch.
+    /// - Injected events are confined to this view and its sub-views.
+    1: fuchsia.ui.views.ViewRef view;
+};
+
+/// A specification of the UI clients that may have injected events dispatched
+/// to them in an |InjectorTarget|. One is specified in |InjectorConfig|.
+///
+/// For a given pointer stream, zero or more clients may "latch" onto it: each
+/// latched client is eligible to have the entire pointer stream dispatched to
+/// it. A "latch attempt" determines which clients are latched, it succeeds when
+/// at least one client is latched, and it fails when no clients are latched.
+///
+/// Note: A client's latch is not a guarantee that the entire pointer stream
+///       *will* be dispatched to that client; other mechanisms may prematurely
+///       end the pointer stream dispatched to that client.
+/// Note: It's possible for a latch attempt to succeed on a hidden surface
+///       (i.e., manipulate a surface that is invisible to the user), where the
+///       occluding surface is owned by a client outside of |InjectorTarget|.
+///       However, occluding clients cannot participate in a latch attempt,
+///       because latched clients must be a sub-view of the |InjectorTarget|.
+enum DispatchPolicy {
+    /// A single client may latch onto a pointer stream, where:
+    /// - the pointer stream starts in the clip region of |InjectorTarget|,
+    /// - the latch attempt is on the ADD phase of the pointer stream, and
+    /// - the client is the |InjectorTarget| itself.
+    ///
+    /// Note: This policy guarantees confidentiality, integrity, and
+    ///       availability of dispatch to the client, but by itself, does *not*
+    ///       confer immunity against UI redress attacks.
+    /// Note: The client may be told that it owns exclusive dispatch.
+    EXCLUSIVE = 1;
+
+    /// A single client may latch onto a pointer stream, where:
+    /// - the pointer stream starts in the clip region of |InjectorTarget|,
+    /// - the latch attempt is on the DOWN phase of the pointer stream,
+    /// - the latch attempt hits one or more surfaces owned by a client,
+    /// - one of those surfaces is top-most (in Z or paint order) in the view
+    ///   tree rooted at |InjectorTarget|, and
+    /// - the client is a sub-view of |InjectorTarget| (inclusive).
+    ///
+    /// Note: It's possible for the latch attempt to fail, by failing to hit any
+    ///       surface in any sub-view of |InjectorTarget|.
+    TOP_HIT_ONLY = 2;
+
+    /// Multiple clients may latch onto a pointer stream, where:
+    /// - the pointer stream starts in the clip region of |InjectorTarget|,
+    /// - the latch attempt is on the DOWN phase of the pointer stream,
+    /// - the latch attempt hits one or more surfaces owned by multiple clients,
+    /// - each client is a sub-view of the |InjectorTarget| (inclusive).
+    ///
+    /// With multiple latches, a pointer stream is dispatched in parallel to
+    /// each latched client.
+    ///
+    /// Note: It's possible for the latch attempt to fail, by failing to hit any
+    ///       surface in any sub-view of |InjectorTarget|.
+    ALL_HIT_PARALLEL = 3;
+};
+
+/// A description of each sampled data point for a pointer device.
+table Event {
+    /// The time when this event happened.
+    /// Required field.
+    1: zx.time timestamp;
+
+    /// An identifier of the pointer that issued this event.
+    /// It is unique only to a given pointer device.
+    /// Required field.
+    2: uint32 pointer_id;
+
+    /// The state of this event in the pointer event stream's state machine.
+    /// Required field.
+    3: fuchsia.ui.input3.PointerEventPhase phase;
+
+    /// The horizontal position of this event, interpreted in the injector's
+    /// coordinate system.
+    /// Required field.
+    4: float32 position_x;
+
+    /// The vertical position of this event, interpreted in the injector's
+    /// coordinate system.
+    /// Required field.
+    5: float32 position_y;
+
+    /// An identifier to correlate this event's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    6: uint64 trace_flow_id;
+};
