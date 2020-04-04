@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("perftest") {
   sdk = "source"
   sdk_headers = [
@@ -15,21 +27,21 @@ zx_library("perftest") {
     "runner.cc",
   ]
   deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/trace",
-    "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/trace-provider:trace-provider-with-fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
 
   # TODO(46944): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   # Add to public_configs since the UB is found in a public header.
-  public_configs = [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+  configs +=
+      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }

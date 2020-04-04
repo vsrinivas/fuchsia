@@ -16,6 +16,7 @@ import("//build/unification/images/migrated_manifest.gni")
 
 executable("biotime") {
   configs += [ "//build/unification/config:zircon-migrated" ]
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
@@ -26,10 +27,10 @@ executable("biotime") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/perftest",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/perftest",
   ]
 }
 

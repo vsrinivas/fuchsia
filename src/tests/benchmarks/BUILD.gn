@@ -49,8 +49,8 @@ executable("kernel-boot-timeline") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/lib/inspect_deprecated:reader",
-    "//zircon/public/lib/perftest",
     "//zircon/system/fidl/fuchsia-kernel",
+    "//zircon/system/ulib/perftest",
   ]
 }
 

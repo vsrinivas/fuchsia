@@ -59,7 +59,7 @@ executable("bin") {
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
   ]
-  public_deps = [ "//zircon/public/lib/perftest" ]
+  public_deps = [ "//zircon/system/ulib/perftest" ]
   libs = [ "zircon" ]
 
   # TODO(46944): UBSan has found an instance of undefined behavior in this target.

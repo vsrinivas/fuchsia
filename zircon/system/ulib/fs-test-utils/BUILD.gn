@@ -53,7 +53,6 @@ zx_library("fs-test-utils") {
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/memfs-cpp",
-    "//zircon/public/lib/perftest",
     "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
@@ -62,5 +61,6 @@ zx_library("fs-test-utils") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/ulib/perftest",
   ]
 }
