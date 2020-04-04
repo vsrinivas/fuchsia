@@ -155,6 +155,16 @@ zx_status_t VirtioMagma::Handle_wait_semaphores(const virtio_magma_wait_semaphor
   return VirtioMagmaGeneric::Handle_wait_semaphores(&request_mod, response);
 }
 
+zx_status_t VirtioMagma::Handle_poll(const virtio_magma_poll_ctrl_t* request,
+                                     virtio_magma_poll_resp_t* response) {
+  auto request_mod = *request;
+  // The actual items immediately follow the request struct.
+  request_mod.items = reinterpret_cast<uint64_t>(&request[1]);
+  // Transform byte count back to item count
+  request_mod.count /= sizeof(magma_poll_item_t);
+  return VirtioMagmaGeneric::Handle_poll(&request_mod, response);
+}
+
 zx_status_t VirtioMagma::Handle_read_notification_channel(
     const virtio_magma_read_notification_channel_ctrl_t* request,
     virtio_magma_read_notification_channel_resp_t* response) {

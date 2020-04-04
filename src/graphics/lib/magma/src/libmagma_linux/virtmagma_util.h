@@ -118,7 +118,7 @@ typedef VirtmagmaObject<magma_connection_t, std::pair<int32_t, int32_t>, 0x1111>
     virtmagma_connection_t;
 typedef VirtmagmaObject<magma_buffer_t, magma_connection_t, 0x2222> virtmagma_buffer_t;
 typedef VirtmagmaObject<magma_semaphore_t, magma_connection_t, 0x3333> virtmagma_semaphore_t;
-typedef VirtmagmaObject<uint32_t, int32_t, 0x4444> virtmagma_handle_t;
+typedef VirtmagmaObject<magma_handle_t, int32_t, 0x4444> virtmagma_handle_t;
 typedef VirtmagmaObject<magma_device_t, OwnedFd, 0x5555> virtmagma_device_t;
 
 // TODO(MA-623): support an object that is a parent of magma_connection_t

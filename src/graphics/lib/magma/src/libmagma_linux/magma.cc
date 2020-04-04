@@ -104,7 +104,68 @@ magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32
 }
 
 magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
+  if (count == 0)
+    return MAGMA_STATUS_OK;
+
+  std::vector<magma_poll_item_t> unwrapped_items(count);
+  int32_t file_descriptor = -1;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    unwrapped_items[i] = items[i];
+
+    switch (items[i].type) {
+      case MAGMA_POLL_TYPE_SEMAPHORE: {
+        auto semaphore_wrapped = virtmagma_semaphore_t::Get(items[i].semaphore);
+        unwrapped_items[i].semaphore = semaphore_wrapped->Object();
+
+        if (i == 0) {
+          auto semaphore0_parent_wrapped = virtmagma_connection_t::Get(semaphore_wrapped->Parent());
+          file_descriptor = semaphore0_parent_wrapped->Parent().first;
+        }
+        break;
+      }
+
+      case MAGMA_POLL_TYPE_HANDLE: {
+        auto iter = GlobalHandleTable().find(items[i].handle);
+        if (iter == GlobalHandleTable().end()) {
+          return MAGMA_STATUS_INVALID_ARGS;  // Not found
+        }
+
+        virtmagma_handle_t* handle = iter->second;
+        unwrapped_items[i].handle = handle->Object();
+
+        if (i == 0) {
+          file_descriptor = handle->Parent();
+        }
+        break;
+      }
+    }
+  }
+
+  virtio_magma_poll_ctrl_t request{};
+  virtio_magma_poll_resp_t response{};
+  request.hdr.type = VIRTIO_MAGMA_CMD_POLL;
+  request.items = reinterpret_cast<uint64_t>(unwrapped_items.data());
+  // Send byte count so kernel knows how much memory to copy
+  request.count = count * sizeof(magma_poll_item_t);
+  request.timeout_ns = timeout_ns;
+
+  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                              sizeof(response)))
+    return MAGMA_STATUS_INTERNAL_ERROR;
+  if (response.hdr.type != VIRTIO_MAGMA_RESP_POLL)
+    return MAGMA_STATUS_INTERNAL_ERROR;
+
+  magma_status_t result_return = static_cast<decltype(result_return)>(response.result_return);
+  if (result_return != MAGMA_STATUS_OK)
+    return result_return;
+
+  // Update the results
+  for (uint32_t i = 0; i < count; i++) {
+    items[i].result = unwrapped_items[i].result;
+  }
+
+  return MAGMA_STATUS_OK;
 }
 
 void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,

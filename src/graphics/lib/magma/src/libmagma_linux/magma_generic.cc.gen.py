@@ -181,6 +181,10 @@ def generate_wrap(export):
     sub = 'handle_out'
     if name[-len(sub):] == sub:
       ret += '    GlobalHandleTable()[*' + name + '] = virtmagma_handle_t::Create(*' + name + ', file_descriptor);\n'
+
+  if export['type'] == 'magma_handle_t':
+    ret += '    GlobalHandleTable()[result_return] = virtmagma_handle_t::Create(result_return, file_descriptor);\n'
+
   return ret, needs_connection
 
 # Generate an implementation for an export

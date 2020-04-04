@@ -52,6 +52,8 @@ class VirtioMagma : public VirtioMagmaGeneric,
   virtual zx_status_t Handle_wait_semaphores(
       const virtio_magma_wait_semaphores_ctrl_t* request,
       virtio_magma_wait_semaphores_resp_t* response) override;
+  virtual zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
+                                  virtio_magma_poll_resp_t* response) override;
   virtual zx_status_t Handle_read_notification_channel(
       const virtio_magma_read_notification_channel_ctrl_t* request,
       virtio_magma_read_notification_channel_resp_t* response) override;
