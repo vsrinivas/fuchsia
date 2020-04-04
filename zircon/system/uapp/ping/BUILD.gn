@@ -19,8 +19,8 @@ executable("ping") {
   sources = [ "ping.cc" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/inet6",
     "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/inet6",
   ]
 }
 
