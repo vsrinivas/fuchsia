@@ -31,11 +31,13 @@ namespace {
 using fuchsia::feedback::CrashReport;
 using fuchsia::feedback::Data;
 
-// This should be kept higher than the timeout the component serving fuchsia.feedback.DataProvider
-// has on its side for each feedback data as we pay the price for making the request (establishing
-// the connection, potentially spawning the serving component for the first time, getting the
-// response, etc.) .
-constexpr zx::duration kFeedbackDataCollectionTimeout = zx::sec(30) + /*some slack*/ zx::sec(5);
+// Most of the time spent generating a crash report is spent collecting annotations and attachments
+// from other services. The timeout should be kept higher than how long any of these services might
+// take as we pay the extra price on top of that timeout for making the request (establishing the
+// connection, potentially spawning the serving component for the first time, getting the response,
+// etc.).
+constexpr zx::duration kCrashReportGenerationTimeout =
+    zx::sec(30) /*fuchsia.feedback.DataProvider*/ + zx::sec(5) /*some slack*/;
 
 }  // namespace
 
@@ -125,8 +127,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
-  auto data_promise = data_provider_.GetData(kFeedbackDataCollectionTimeout);
-  auto device_id_promise = device_id_provider_.GetId(kFeedbackDataCollectionTimeout);
+  auto data_promise = data_provider_.GetData(kCrashReportGenerationTimeout);
+  auto device_id_promise = device_id_provider_.GetId(kCrashReportGenerationTimeout);
 
   auto promise = fit::join_promises(std::move(data_promise), std::move(device_id_promise))
                      .then([this, report = std::move(report)](
