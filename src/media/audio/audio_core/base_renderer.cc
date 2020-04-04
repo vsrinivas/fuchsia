@@ -18,11 +18,6 @@ namespace {
 // If client does not specify a ref_time for Play, pad it by this amount
 constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
 
-// Short-term workaround (until clients who timestamp are updated): if a client
-// specifies ref_time but uses PlayNoReply (thus doesn't want the callback
-// telling them what actual ref_time was), secretly pad by this amount.
-constexpr zx::duration kPaddingForPlayNoReplyWithRefTime = zx::msec(10);
-
 // 4 slabs will allow each renderer to create >500 packets. Any client creating any more packets
 // than this that are outstanding at the same time will be disconnected.
 constexpr size_t kMaxPacketAllocatorSlabs = 4;
@@ -547,11 +542,6 @@ void BaseRenderer::PlayNoReply(int64_t reference_time, int64_t media_time) {
   AUD_VLOG_OBJ(TRACE, this)
       << " (ref: " << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
-
-  if (reference_time != fuchsia::media::NO_TIMESTAMP) {
-    reference_time += kPaddingForPlayNoReplyWithRefTime.to_nsecs();
-  }
-
   Play(reference_time, media_time, nullptr);
 }
 
