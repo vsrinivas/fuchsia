@@ -19,7 +19,6 @@ test("chromeos-disk-setup") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "chromeos-disk-setup.cc" ]
   deps = [
-    "//zircon/public/lib/chromeos-disk-setup",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -29,6 +28,7 @@ test("chromeos-disk-setup") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxio",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/chromeos-disk-setup",
   ]
 
   # TODO(41890): UBSan has found an instance of undefined behavior in this target.
