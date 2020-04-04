@@ -62,7 +62,7 @@ class Cobalt {
   void Shutdown();
 
  private:
-  void ConnectToLogger(fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request);
+  void ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request);
   void RetryConnectingToLogger();
   void LogEvent(CobaltEvent event);
   void SendEvent(uint64_t event_id);

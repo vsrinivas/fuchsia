@@ -31,7 +31,7 @@ class SystemLogListener : public fuchsia::logger::LogListener {
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
   LogMessageStore* store_;
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
 
   fuchsia::logger::LogPtr logger_;
 };

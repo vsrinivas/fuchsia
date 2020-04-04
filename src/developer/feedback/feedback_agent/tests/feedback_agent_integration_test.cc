@@ -71,7 +71,7 @@ class LogListener : public fuchsia::logger::LogListener {
   void Log(fuchsia::logger::LogMessage log) { has_logs_ = true; }
   void Done() { FXL_NOTIMPLEMENTED(); }
 
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
   fuchsia::logger::LogListenerPtr log_listener_;
   bool has_logs_ = false;
 };

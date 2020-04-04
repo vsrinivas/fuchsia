@@ -113,4 +113,4 @@ void Cobalt::GetNewEventsOfType(const fuchsia::cobalt::test::LoggerQuerier_Watch
 }  // namespace fakes
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKE_COBALT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_COBALT_H_

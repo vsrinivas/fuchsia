@@ -20,9 +20,9 @@ namespace stubs {
 
 class CrashReporter : public fuchsia::feedback::testing::CrashReporter_TestBase {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
-      binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::CrashReporter>>(
+  ::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+      binding_ = std::make_unique<::fidl::Binding<fuchsia::feedback::CrashReporter>>(
           this, std::move(request));
     };
   }
@@ -42,7 +42,7 @@ class CrashReporter : public fuchsia::feedback::testing::CrashReporter_TestBase 
   const std::optional<zx::duration>& uptime() { return uptime_; };
 
  private:
-  std::unique_ptr<fidl::Binding<fuchsia::feedback::CrashReporter>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::feedback::CrashReporter>> binding_;
   std::string crash_signature_;
   std::string reboot_log_;
   std::optional<zx::duration> uptime_;

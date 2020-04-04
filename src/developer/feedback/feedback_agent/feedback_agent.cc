@@ -57,7 +57,7 @@ void FeedbackAgent::SpawnSystemLogRecorder() {
 }
 
 void FeedbackAgent::HandleComponentDataRegisterRequest(
-    fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
+    ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
   data_register_connections_.AddBinding(&data_register_, std::move(request), dispatcher_,
                                         [this](const zx_status_t status) {
                                           inspect_manager_.UpdateComponentDataRegisterProtocolStats(
@@ -67,7 +67,7 @@ void FeedbackAgent::HandleComponentDataRegisterRequest(
 }
 
 void FeedbackAgent::HandleDataProviderRequest(
-    fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+    ::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
   data_provider_connections_.AddBinding(
       &data_provider_, std::move(request), dispatcher_, [this](const zx_status_t status) {
         inspect_manager_.UpdateDataProviderProtocolStats(&InspectProtocolStats::CloseConnection);
@@ -76,7 +76,7 @@ void FeedbackAgent::HandleDataProviderRequest(
 }
 
 void FeedbackAgent::HandleDeviceIdProviderRequest(
-    fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
+    ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
   device_id_provider_connections_.AddBinding(&device_id_provider_, std::move(request), dispatcher_,
                                              [this](const zx_status_t status) {
                                                inspect_manager_.UpdateDeviceIdProviderProtocolStats(

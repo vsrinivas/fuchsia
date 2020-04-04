@@ -22,9 +22,9 @@ class DeviceIdProvider : public fuchsia::feedback::testing::DeviceIdProvider_Tes
  public:
   DeviceIdProvider(const std::string& device_id) : device_id_(device_id) {}
 
-  fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
-      binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::DeviceIdProvider>>(
+  ::fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
+      binding_ = std::make_unique<::fidl::Binding<fuchsia::feedback::DeviceIdProvider>>(
           this, std::move(request));
     };
   }
@@ -44,7 +44,7 @@ class DeviceIdProvider : public fuchsia::feedback::testing::DeviceIdProvider_Tes
 
  private:
   std::string device_id_;
-  std::unique_ptr<fidl::Binding<fuchsia::feedback::DeviceIdProvider>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::feedback::DeviceIdProvider>> binding_;
 };
 
 class DeviceIdProviderReturnsError : public DeviceIdProvider {

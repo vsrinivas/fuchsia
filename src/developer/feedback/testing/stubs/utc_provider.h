@@ -43,9 +43,9 @@ class UtcProvider : public fuchsia::time::testing::Utc_TestBase {
 
   ~UtcProvider();
 
-  fidl::InterfaceRequestHandler<fuchsia::time::Utc> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::time::Utc> request) {
-      binding_ = std::make_unique<fidl::Binding<fuchsia::time::Utc>>(this, std::move(request));
+  ::fidl::InterfaceRequestHandler<fuchsia::time::Utc> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::time::Utc> request) {
+      binding_ = std::make_unique<::fidl::Binding<fuchsia::time::Utc>>(this, std::move(request));
     };
   }
 
@@ -61,7 +61,7 @@ class UtcProvider : public fuchsia::time::testing::Utc_TestBase {
   bool Done();
 
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<fidl::Binding<fuchsia::time::Utc>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::time::Utc>> binding_;
   std::vector<Response> responses_;
   std::vector<Response>::const_iterator next_reponse_;
 };

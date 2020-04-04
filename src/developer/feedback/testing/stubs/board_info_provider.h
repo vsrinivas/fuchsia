@@ -20,9 +20,10 @@ class BoardInfoProvider : public fuchsia::hwinfo::testing::Board_TestBase {
  public:
   BoardInfoProvider(fuchsia::hwinfo::BoardInfo&& info) : info_(std::move(info)) {}
 
-  fidl::InterfaceRequestHandler<fuchsia::hwinfo::Board> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::hwinfo::Board> request) {
-      binding_ = std::make_unique<fidl::Binding<fuchsia::hwinfo::Board>>(this, std::move(request));
+  ::fidl::InterfaceRequestHandler<fuchsia::hwinfo::Board> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::hwinfo::Board> request) {
+      binding_ =
+          std::make_unique<::fidl::Binding<fuchsia::hwinfo::Board>>(this, std::move(request));
     };
   }
 
@@ -37,7 +38,7 @@ class BoardInfoProvider : public fuchsia::hwinfo::testing::Board_TestBase {
   }
 
  private:
-  std::unique_ptr<fidl::Binding<fuchsia::hwinfo::Board>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::hwinfo::Board>> binding_;
   fuchsia::hwinfo::BoardInfo info_;
   bool has_been_called_ = false;
 };

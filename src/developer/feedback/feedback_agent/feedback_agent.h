@@ -44,12 +44,12 @@ class FeedbackAgent {
   //
   // fuchsia.feedback.ComponentDataRegister
   void HandleComponentDataRegisterRequest(
-      fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request);
+      ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request);
   // fuchsia.feedback.DataProvider
-  void HandleDataProviderRequest(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
+  void HandleDataProviderRequest(::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
   // fuchsia.feedback.DeviceIdProvider
   void HandleDeviceIdProviderRequest(
-      fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request);
+      ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request);
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -57,15 +57,15 @@ class FeedbackAgent {
   Cobalt cobalt_;
 
   DeviceIdProvider device_id_provider_;
-  fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;
+  ::fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;
 
   Datastore datastore_;
 
   DataProvider data_provider_;
-  fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
+  ::fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
 
   DataRegister data_register_;
-  fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
+  ::fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackAgent);
 };

@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   feedback::fakes::CrashReporter crash_reporter;
 
-  fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
+  ::fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
   context->outgoing()->AddPublicService(crash_reporter_bindings.GetHandler(&crash_reporter));
 
   loop.Run();

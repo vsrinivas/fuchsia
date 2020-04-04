@@ -17,10 +17,10 @@ namespace stubs {
 
 class NetworkReachabilityProvider : public fuchsia::net::testing::Connectivity_TestBase {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::net::Connectivity> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::net::Connectivity> request) {
+  ::fidl::InterfaceRequestHandler<fuchsia::net::Connectivity> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::net::Connectivity> request) {
       binding_ =
-          std::make_unique<fidl::Binding<fuchsia::net::Connectivity>>(this, std::move(request));
+          std::make_unique<::fidl::Binding<fuchsia::net::Connectivity>>(this, std::move(request));
     };
   }
 
@@ -35,7 +35,7 @@ class NetworkReachabilityProvider : public fuchsia::net::testing::Connectivity_T
   }
 
  private:
-  std::unique_ptr<fidl::Binding<fuchsia::net::Connectivity>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::net::Connectivity>> binding_;
 };
 
 }  // namespace stubs

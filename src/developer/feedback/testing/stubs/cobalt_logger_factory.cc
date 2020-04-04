@@ -40,32 +40,32 @@ void CobaltLoggerFactoryBase::CloseAllConnections() {
 }
 
 void CobaltLoggerFactory::CreateLoggerFromProjectId(uint32_t project_id,
-                                                    fidl::InterfaceRequest<Logger> logger,
+                                                    ::fidl::InterfaceRequest<Logger> logger,
                                                     CreateLoggerFromProjectIdCallback callback) {
   logger_binding_ =
-      std::make_unique<fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
+      std::make_unique<::fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
   callback(Status::OK);
 }
 
 void CobaltLoggerFactoryClosesConnection::CreateLoggerFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    uint32_t project_id, ::fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   CloseFactoryConnection();
 }
 
 void CobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    uint32_t project_id, ::fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   callback(Status::INVALID_ARGUMENTS);
 }
 
 void CobaltLoggerFactoryCreatesOnRetry::CreateLoggerFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    uint32_t project_id, ::fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   ++num_calls_;
   if (num_calls_ >= succeed_after_) {
-    logger_binding_ =
-        std::make_unique<fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
+    logger_binding_ = std::make_unique<::fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(),
+                                                                                 std::move(logger));
     callback(Status::OK);
     return;
   }
@@ -74,10 +74,10 @@ void CobaltLoggerFactoryCreatesOnRetry::CreateLoggerFromProjectId(
 }
 
 void CobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    uint32_t project_id, ::fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {
   logger_binding_ =
-      std::make_unique<fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
+      std::make_unique<::fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
   async::PostDelayedTask(
       dispatcher_, [cb = std::move(callback)]() { cb(Status::OK); }, delay_);
 }

@@ -41,22 +41,22 @@ int main(int argc, const char** argv) {
 
   // fuchsia.feedback.ComponentDataRegister
   context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::feedback::ComponentDataRegister>(
-          [&agent](fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
+      ::fidl::InterfaceRequestHandler<fuchsia::feedback::ComponentDataRegister>(
+          [&agent](::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
             agent->HandleComponentDataRegisterRequest(std::move(request));
           }));
 
   // fuchsia.feedback.DataProvider
   context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider>(
-          [&agent](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+      ::fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider>(
+          [&agent](::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
             agent->HandleDataProviderRequest(std::move(request));
           }));
 
   // fuchsia.feedback.DevideIdProvider
   context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider>(
-          [&agent](fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
+      ::fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider>(
+          [&agent](::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
             agent->HandleDeviceIdProviderRequest(std::move(request));
           }));
 

@@ -73,7 +73,7 @@ void Cobalt::Shutdown() {
   logger_.Unbind();
 }
 
-void Cobalt::ConnectToLogger(fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request) {
+void Cobalt::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request) {
   // Connect to the LoggerFactory.
   logger_factory_ = services_->Connect<LoggerFactory>();
 

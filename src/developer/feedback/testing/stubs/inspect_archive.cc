@@ -14,20 +14,20 @@ void InspectArchive::CloseConnection() {
 }
 
 void InspectArchive::StreamDiagnostics(
-    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
     fuchsia::diagnostics::StreamParameters stream_parameters) {
-  batch_iterator_binding_ = std::make_unique<fidl::Binding<fuchsia::diagnostics::BatchIterator>>(
+  batch_iterator_binding_ = std::make_unique<::fidl::Binding<fuchsia::diagnostics::BatchIterator>>(
       batch_iterator_.get(), std::move(request));
 }
 
 void InspectArchiveClosesArchiveConnection::StreamDiagnostics(
-    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
     fuchsia::diagnostics::StreamParameters stream_parameters) {
   CloseConnection();
 }
 
 void InspectArchiveClosesIteratorConnection::StreamDiagnostics(
-    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
     fuchsia::diagnostics::StreamParameters stream_parameters) {
   request.Close(ZX_ERR_PEER_CLOSED);
 }

@@ -27,10 +27,10 @@ namespace fakes {
 class PrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
  public:
   // Returns a request handler for binding to this fake service.
-  fidl::InterfaceRequestHandler<fuchsia::settings::Privacy> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::settings::Privacy> request) {
+  ::fidl::InterfaceRequestHandler<fuchsia::settings::Privacy> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::settings::Privacy> request) {
       binding_ =
-          std::make_unique<fidl::Binding<fuchsia::settings::Privacy>>(this, std::move(request));
+          std::make_unique<::fidl::Binding<fuchsia::settings::Privacy>>(this, std::move(request));
     };
   }
 
@@ -52,7 +52,7 @@ class PrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
   // We use a Binding (single connection) and not a BindingSet (multiple connections in parallel) as
   // we don't want to have to maintain a separate handler per connection to implement the hanging
   // get pattern.
-  std::unique_ptr<fidl::Binding<fuchsia::settings::Privacy>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::settings::Privacy>> binding_;
   fuchsia::settings::PrivacySettings settings_;
 
  protected:

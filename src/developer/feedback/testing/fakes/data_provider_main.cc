@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   feedback::fakes::DataProvider data_provider;
 
-  fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_bindings;
+  ::fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_bindings;
   context->outgoing()->AddPublicService(data_provider_bindings.GetHandler(&data_provider));
 
   loop.Run();

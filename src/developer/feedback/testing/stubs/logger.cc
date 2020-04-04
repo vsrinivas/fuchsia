@@ -42,7 +42,7 @@ void Logger::CloseConnection() {
   }
 }
 
-void Logger::Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void Logger::Listen(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
@@ -51,7 +51,7 @@ void Logger::Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_list
   }
 }
 
-void Logger::DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void Logger::DumpLogs(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                       std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
@@ -60,17 +60,17 @@ void Logger::DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_li
 }
 
 void LoggerClosesConnection::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   CloseConnection();
 }
 
 void LoggerNeverBindsToLogListener::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {}
 
 void LoggerUnbindsFromLogListenerAfterOneMessage::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FX_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
@@ -83,7 +83,7 @@ void LoggerUnbindsFromLogListenerAfterOneMessage::DumpLogs(
 }
 
 void LoggerNeverCallsLogManyBeforeDone::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
@@ -91,14 +91,14 @@ void LoggerNeverCallsLogManyBeforeDone::DumpLogs(
 }
 
 void LoggerBindsToLogListenerButNeverCalls::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
   FX_CHECK(log_listener_ptr_.is_bound());
 }
 
 void LoggerDelaysAfterOneMessage::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FX_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
@@ -120,7 +120,7 @@ void LoggerDelaysAfterOneMessage::DumpLogs(
 }
 
 void LoggerDelayedResponses::Listen(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
   size_t i = 0;
@@ -133,7 +133,7 @@ void LoggerDelayedResponses::Listen(
 }
 
 void LoggerDelayedResponses::DumpLogs(
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
 

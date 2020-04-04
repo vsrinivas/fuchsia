@@ -16,7 +16,7 @@ SystemLogListener::SystemLogListener(std::shared_ptr<sys::ServiceDirectory> serv
     : services_(services), store_(store), binding_(this) {}
 
 void SystemLogListener::StartListening() {
-  fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
+  ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
 
   binding_.Bind(log_listener.NewRequest());
   binding_.set_error_handler([](zx_status_t status) {
@@ -45,7 +45,7 @@ void SystemLogListener::LogMany(std::vector<fuchsia::logger::LogMessage> message
 }
 
 void SystemLogListener::Done() {
-  fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
+  ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
 
   binding_.Bind(log_listener.NewRequest());
 

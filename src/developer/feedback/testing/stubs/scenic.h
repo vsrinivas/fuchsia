@@ -41,8 +41,8 @@ struct TakeScreenshotResponse {
 
 class Scenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
+  ::fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
       total_num_bindings_++;
       bindings_.AddBinding(this, std::move(request));
     };
@@ -70,7 +70,7 @@ class Scenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   }
 
  private:
-  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
+  ::fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
   uint64_t total_num_bindings_ = 0;
   std::vector<TakeScreenshotResponse> take_screenshot_responses_;
 };

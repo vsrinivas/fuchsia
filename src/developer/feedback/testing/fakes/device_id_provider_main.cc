@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   feedback::fakes::DeviceIdProvider device_id_provider;
 
-  fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_bindings;
+  ::fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_bindings;
   context->outgoing()->AddPublicService(
       device_id_provider_bindings.GetHandler(&device_id_provider));
 

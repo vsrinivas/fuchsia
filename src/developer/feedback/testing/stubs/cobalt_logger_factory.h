@@ -27,10 +27,10 @@ class CobaltLoggerFactoryBase : public fuchsia::cobalt::testing::LoggerFactory_T
   virtual ~CobaltLoggerFactoryBase() {}
 
   // Returns a request handler for binding to this stub service.
-  fidl::InterfaceRequestHandler<fuchsia::cobalt::LoggerFactory> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
-      factory_binding_ =
-          std::make_unique<fidl::Binding<fuchsia::cobalt::LoggerFactory>>(this, std::move(request));
+  ::fidl::InterfaceRequestHandler<fuchsia::cobalt::LoggerFactory> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
+      factory_binding_ = std::make_unique<::fidl::Binding<fuchsia::cobalt::LoggerFactory>>(
+          this, std::move(request));
     };
   }
 
@@ -60,8 +60,8 @@ class CobaltLoggerFactoryBase : public fuchsia::cobalt::testing::LoggerFactory_T
 
  protected:
   std::unique_ptr<CobaltLoggerBase> logger_;
-  std::unique_ptr<fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
-  std::unique_ptr<fidl::Binding<fuchsia::cobalt::LoggerFactory>> factory_binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::cobalt::LoggerFactory>> factory_binding_;
 };
 
 // Always succeed in setting up the logger.
@@ -73,7 +73,7 @@ class CobaltLoggerFactory : public CobaltLoggerFactoryBase {
  private:
   // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
-      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
@@ -86,7 +86,7 @@ class CobaltLoggerFactoryClosesConnection : public CobaltLoggerFactoryBase {
  private:
   // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
-      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
@@ -99,7 +99,7 @@ class CobaltLoggerFactoryFailsToCreateLogger : public CobaltLoggerFactoryBase {
  private:
   // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
-      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
@@ -112,7 +112,7 @@ class CobaltLoggerFactoryCreatesOnRetry : public CobaltLoggerFactoryBase {
  private:
   // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
-      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 
   const uint64_t succeed_after_;
@@ -129,7 +129,7 @@ class CobaltLoggerFactoryDelaysCallback : public CobaltLoggerFactoryBase {
  private:
   // |fuchsia::cobalt::LoggerFactory|
   void CreateLoggerFromProjectId(
-      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 
   async_dispatcher_t* dispatcher_;

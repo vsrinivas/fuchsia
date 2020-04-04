@@ -30,7 +30,7 @@ std::optional<AnnotationValue> GetBoardName() {
     return std::nullopt;
   }
 
-  fidl::StringPtr out_board_name;
+  ::fidl::StringPtr out_board_name;
   zx_status_t out_status;
   if (const zx_status_t status = sysinfo->GetBoardName(&out_status, &out_board_name);
       status != ZX_OK) {

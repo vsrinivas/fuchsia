@@ -21,10 +21,10 @@ class ProductInfoProvider : public fuchsia::hwinfo::testing::Product_TestBase {
   ProductInfoProvider(fuchsia::hwinfo::ProductInfo&& info) : info_(std::move(info)) {}
 
   // Returns a request handler for a binding to this stub service.
-  fidl::InterfaceRequestHandler<fuchsia::hwinfo::Product> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::hwinfo::Product> request) {
+  ::fidl::InterfaceRequestHandler<fuchsia::hwinfo::Product> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::hwinfo::Product> request) {
       binding_ =
-          std::make_unique<fidl::Binding<fuchsia::hwinfo::Product>>(this, std::move(request));
+          std::make_unique<::fidl::Binding<fuchsia::hwinfo::Product>>(this, std::move(request));
     };
   }
 
@@ -39,7 +39,7 @@ class ProductInfoProvider : public fuchsia::hwinfo::testing::Product_TestBase {
   }
 
  private:
-  std::unique_ptr<fidl::Binding<fuchsia::hwinfo::Product>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::hwinfo::Product>> binding_;
   fuchsia::hwinfo::ProductInfo info_;
   bool has_been_called_ = false;
 };

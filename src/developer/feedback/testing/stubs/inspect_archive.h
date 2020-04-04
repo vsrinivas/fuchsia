@@ -22,17 +22,17 @@ class InspectArchive : public fuchsia::diagnostics::testing::Archive_TestBase {
   InspectArchive(std::unique_ptr<InspectBatchIteratorBase> batch_iterator)
       : batch_iterator_(std::move(batch_iterator)) {}
 
-  fidl::InterfaceRequestHandler<fuchsia::diagnostics::Archive> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::diagnostics::Archive> request) {
-      archive_binding_ =
-          std::make_unique<fidl::Binding<fuchsia::diagnostics::Archive>>(this, std::move(request));
+  ::fidl::InterfaceRequestHandler<fuchsia::diagnostics::Archive> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::diagnostics::Archive> request) {
+      archive_binding_ = std::make_unique<::fidl::Binding<fuchsia::diagnostics::Archive>>(
+          this, std::move(request));
     };
   }
 
   void CloseConnection();
 
   // |fuchsia::diagnostics::Archive|
-  void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+  void StreamDiagnostics(::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                          fuchsia::diagnostics::StreamParameters stream_parameters) override;
 
   // |fuchsia::diagnostics::testing::Archive_TestBase|
@@ -41,9 +41,9 @@ class InspectArchive : public fuchsia::diagnostics::testing::Archive_TestBase {
   }
 
  protected:
-  std::unique_ptr<fidl::Binding<fuchsia::diagnostics::Archive>> archive_binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::diagnostics::Archive>> archive_binding_;
   std::unique_ptr<InspectBatchIteratorBase> batch_iterator_;
-  std::unique_ptr<fidl::Binding<fuchsia::diagnostics::BatchIterator>> batch_iterator_binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::diagnostics::BatchIterator>> batch_iterator_binding_;
 };
 
 class InspectArchiveClosesArchiveConnection : public InspectArchive {
@@ -51,7 +51,7 @@ class InspectArchiveClosesArchiveConnection : public InspectArchive {
   InspectArchiveClosesArchiveConnection() {}
 
   // |fuchsia::diagnostics::Archive|
-  void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+  void StreamDiagnostics(::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                          fuchsia::diagnostics::StreamParameters stream_parameters) override;
 };
 
@@ -60,7 +60,7 @@ class InspectArchiveClosesIteratorConnection : public InspectArchive {
   InspectArchiveClosesIteratorConnection() {}
 
   // |fuchsia::diagnostics::Archive|
-  void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+  void StreamDiagnostics(::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                          fuchsia::diagnostics::StreamParameters stream_parameters) override;
 };
 

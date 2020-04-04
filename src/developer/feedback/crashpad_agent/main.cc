@@ -39,8 +39,8 @@ int main(int argc, const char** argv) {
 
   // fuchsia.feedback.CrashReporter
   context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter>(
-          [&agent](fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+      ::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter>(
+          [&agent](::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
             agent->HandleCrashReporterRequest(std::move(request));
           }));
 

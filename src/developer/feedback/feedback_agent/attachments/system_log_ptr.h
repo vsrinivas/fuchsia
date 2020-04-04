@@ -50,7 +50,7 @@ class LogListener : public fuchsia::logger::LogListener {
   void Done() override;
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
   Cobalt* cobalt_;
 
   // Enforces the one-shot nature of CollectLogs().

@@ -42,7 +42,8 @@ class CrashpadAgent {
   // FIDL protocol handlers.
   //
   // fuchsia.feedback.CrashReporter
-  void HandleCrashReporterRequest(fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request);
+  void HandleCrashReporterRequest(
+      ::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request);
 
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
@@ -54,7 +55,7 @@ class CrashpadAgent {
   const Config config_;
 
   std::unique_ptr<CrashReporter> crash_reporter_;
-  fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_connections_;
+  ::fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_connections_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

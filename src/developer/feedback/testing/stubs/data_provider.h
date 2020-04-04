@@ -22,10 +22,10 @@ namespace stubs {
 
 class DataProviderBase : public fuchsia::feedback::testing::DataProvider_TestBase {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+  ::fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
+    return [this](::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
       total_num_connections_++;
-      binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::DataProvider>>(
+      binding_ = std::make_unique<::fidl::Binding<fuchsia::feedback::DataProvider>>(
           this, std::move(request));
     };
   }
@@ -40,7 +40,7 @@ class DataProviderBase : public fuchsia::feedback::testing::DataProvider_TestBas
   void CloseConnection() { binding_->Close(ZX_ERR_PEER_CLOSED); }
 
  private:
-  std::unique_ptr<fidl::Binding<fuchsia::feedback::DataProvider>> binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::feedback::DataProvider>> binding_;
   uint64_t total_num_connections_ = 0;
 };
 
