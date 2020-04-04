@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
-#define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
+#ifndef SRC_GRAPHICS_DISPLAY_TESTING_IMAGE_H_
+#define SRC_GRAPHICS_DISPLAY_TESTING_IMAGE_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -21,6 +21,9 @@
 // Indicies into event and event_ids
 #define WAIT_EVENT 0
 #define SIGNAL_EVENT 1
+
+namespace testing {
+namespace display {
 
 typedef struct image_import {
   uint64_t id;
@@ -64,4 +67,7 @@ class Image {
   bool use_intel_y_tiling_;
 };
 
-#endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
+}  // namespace display
+}  // namespace testing
+
+#endif  // SRC_GRAPHICS_DISPLAY_TESTING_IMAGE_H_

@@ -33,6 +33,9 @@ static constexpr uint32_t kRenderPeriod = 120;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 
+namespace testing {
+namespace display {
+
 Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
              uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
              bool use_intel_y_tiling)
@@ -345,3 +348,6 @@ bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
   dc->ReleaseBufferCollection(collection_id_);
   return true;
 }
+
+}  // namespace display
+}  // namespace testing

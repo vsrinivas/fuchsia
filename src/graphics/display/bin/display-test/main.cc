@@ -32,15 +32,21 @@
 #include <fbl/vector.h>
 
 #include "ddk/driver.h"
-#include "display.h"
 #include "fuchsia/hardware/display/llcpp/fidl.h"
 #include "lib/fdio/directory.h"
 #include "lib/fzl/vmo-mapper.h"
-#include "virtual-layer.h"
+#include "src/graphics/display/testing/display.h"
+#include "src/graphics/display/testing/virtual-layer.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 namespace sysinfo = ::llcpp::fuchsia::sysinfo;
+
+using testing::display::ColorLayer;
+using testing::display::CursorLayer;
+using testing::display::Display;
+using testing::display::PrimaryLayer;
+using testing::display::VirtualLayer;
 
 static zx_handle_t device_handle;
 static std::unique_ptr<fhd::Controller::SyncClient> dc;

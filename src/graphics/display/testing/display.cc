@@ -10,6 +10,9 @@
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 
+namespace testing {
+namespace display {
+
 Display::Display(const fhd::Info& info) {
   id_ = info.id;
 
@@ -82,3 +85,6 @@ void Display::Init(fhd::Controller::SyncClient* dc) {
     ZX_ASSERT(dc->SetDisplayColorConversion(id_, preoffsets, grayscale, postoffsets).ok());
   }
 }
+
+}  // namespace display
+}  // namespace testing

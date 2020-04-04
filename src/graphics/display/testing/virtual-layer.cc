@@ -15,6 +15,9 @@
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 
+namespace testing {
+namespace display {
+
 static constexpr uint32_t kSrcFrameBouncePeriod = 90;
 static constexpr uint32_t kDestFrameBouncePeriod = 60;
 static constexpr uint32_t kRotationPeriod = 24;
@@ -414,3 +417,6 @@ bool ColorLayer::Init(fhd::Controller::SyncClient* dc) {
 
   return true;
 }
+
+}  // namespace display
+}  // namespace testing

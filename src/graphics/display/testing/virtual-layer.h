@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_VIRTUAL_LAYER_H_
-#define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_VIRTUAL_LAYER_H_
+#ifndef SRC_GRAPHICS_DISPLAY_TESTING_VIRTUAL_LAYER_H_
+#define SRC_GRAPHICS_DISPLAY_TESTING_VIRTUAL_LAYER_H_
 
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-//#include <ddk/protocol/display/controller.h>
-#include <fuchsia/hardware/display/llcpp/fidl.h>
-
 #include "display.h"
 #include "image.h"
+
+namespace testing {
+namespace display {
 
 typedef struct custom_layer {
   uint64_t id;
@@ -231,4 +232,7 @@ class ColorLayer : public VirtualLayer {
   virtual bool is_done() const override { return true; }
 };
 
-#endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_VIRTUAL_LAYER_H_
+}  // namespace display
+}  // namespace testing
+
+#endif  // SRC_GRAPHICS_DISPLAY_TESTING_VIRTUAL_LAYER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_
-#define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
+#define SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/fidl/txn_header.h>
@@ -11,6 +11,9 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
+
+namespace testing {
+namespace display {
 
 class Display {
  public:
@@ -58,4 +61,7 @@ class Display {
   bool using_fallback_sizes_;
 };
 
-#endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_
+}  // namespace display
+}  // namespace testing
+
+#endif  // SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
