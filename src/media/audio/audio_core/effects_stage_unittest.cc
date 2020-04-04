@@ -182,17 +182,20 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   });
   auto effects_stage = EffectsStage::Create(effects, stream);
 
-  // Since our effect is introducing 13 frames of latency, the frame at time 0 is now actually frame
-  // -13, and the actual frame 0 will occur once it makes its way through the effect.
-  auto timeline_function = effects_stage->ReferenceClockToFractionalFrames().timeline_function;
-  EXPECT_EQ(FractionalFrames<int64_t>::FromRaw(timeline_function.Apply(0)),
-            FractionalFrames<int64_t>(-13));
+  // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
+  // emerge from the effect in output frame 13.
+  // Conversely, output frame 0 was produced based on the source frame at time -13.
+  auto ref_clock_to_output_frac_frame =
+      effects_stage->ReferenceClockToFractionalFrames().timeline_function;
+  EXPECT_EQ(FractionalFrames<int64_t>::FromRaw(ref_clock_to_output_frac_frame.Apply(0)),
+            FractionalFrames<int64_t>(13));
 
-  // Similarly, at the time we'd normally expect frame 13, we should instead be seeing frame 0. Use
-  // a fuzzy compare to allow for slight rounding errors.
-  int64_t frame_13_time = (zx::sec(13).to_nsecs()) / kDefaultFormat.frames_per_second();
+  // Similarly, at the time we produce output frame 0, we had to draw upon the source frame from
+  // time -13. Use a fuzzy compare to allow for slight rounding errors.
+  int64_t frame_13_time = (zx::sec(-13).to_nsecs()) / kDefaultFormat.frames_per_second();
   auto frame_13_frac_frames =
-      FractionalFrames<int64_t>::FromRaw(timeline_function.Apply(frame_13_time)).Absolute();
+      FractionalFrames<int64_t>::FromRaw(ref_clock_to_output_frac_frame.Apply(frame_13_time))
+          .Absolute();
   EXPECT_LE(frame_13_frac_frames.raw_value(), 1);
 }
 
