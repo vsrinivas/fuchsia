@@ -63,7 +63,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pretty_assertions",
   ]
 
-  non_rust_deps = [ "//zircon/public/lib/sysconfig-sync-client-c" ]
+  non_rust_deps =
+      [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
 }
 
 package("omaha-client") {

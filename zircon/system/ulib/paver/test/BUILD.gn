@@ -72,7 +72,6 @@ test("paver-test") {
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/ramdevice-client-static",
     "//zircon/public/lib/svc",
-    "//zircon/public/lib/sysconfig-sync-client",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device:llcpp",
@@ -83,6 +82,7 @@ test("paver-test") {
     "//zircon/system/fidl/fuchsia-paver:llcpp",
     "//zircon/system/ulib/libabr",
     "//zircon/system/ulib/paver",
+    "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
 }
 
@@ -99,13 +99,13 @@ fuzzer("paver-validation-fuzzer") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/svc",
-    "//zircon/public/lib/sysconfig-sync-client",
     "//zircon/system/fidl/fuchsia-boot:llcpp.headers",
     "//zircon/system/fidl/fuchsia-device:llcpp.headers",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp.headers",
     "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp.headers",
     "//zircon/system/fidl/fuchsia-paver:llcpp.headers",
     "//zircon/system/ulib/paver",
+    "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
 
   include_dirs = [

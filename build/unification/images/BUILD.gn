@@ -544,7 +544,6 @@ aggregate_manifest("legacy-aux") {
     "ramdevice-client",
 #------------------
 #------------------
-    "sysconfig-sync-client-c",
 #------------------
 #------------------
     "syslog",

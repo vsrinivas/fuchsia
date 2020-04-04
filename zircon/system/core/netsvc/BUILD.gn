@@ -96,13 +96,13 @@ source_set("netsvc_common") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/libzbi",
-    "//zircon/public/lib/sysconfig-sync-client",
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-kernel:c",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
   public_deps = [
     "//zircon/public/lib/fbl",
