@@ -27,9 +27,9 @@ source_set("virtio") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/virtio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/ulib/virtio",
   ]
 }
