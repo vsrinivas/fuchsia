@@ -44,8 +44,8 @@ if (is_fuchsia) {
       "//zircon/public/lib/fidl-async",
       "//zircon/public/lib/fidl-async-cpp",
       "//zircon/public/lib/fs",
-      "//zircon/public/lib/service-llcpp",
       "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/service:service-llcpp",
     ]
   }
 

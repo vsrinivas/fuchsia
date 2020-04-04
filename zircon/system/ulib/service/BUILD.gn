@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("service-llcpp") {
   sdk = "source"
   sdk_headers = [
@@ -15,14 +27,13 @@ zx_library("service-llcpp") {
     "llcpp/service.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp.headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/fidl:fidl-llcpp",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/fs",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }

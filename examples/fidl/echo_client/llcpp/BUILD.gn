@@ -16,7 +16,7 @@ executable("echo_client") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/service-llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
