@@ -143,7 +143,7 @@ void CreateBlobfsInspector(std::unique_ptr<FakeTransactionHandler> handler,
   auto buffer_factory = std::make_unique<ArrayBufferFactory>(kBlobfsBlockSize);
   auto result = BlobfsInspector::Create(std::move(handler), std::move(buffer_factory));
   ASSERT_TRUE(result.is_ok());
-  *out = result.take_value();
+  *out = std::move(result.value());
 }
 
 TEST(BlobfsInspector, CreateWithoutError) {
@@ -176,14 +176,14 @@ TEST(BlobfsInspector, InspectSuperblock) {
 
   Superblock sb = inspector->InspectSuperblock();
 
-  EXPECT_EQ(sb.magic0, kBlobfsMagic0);
-  EXPECT_EQ(sb.magic1, kBlobfsMagic1);
-  EXPECT_EQ(sb.version, kBlobfsVersion);
-  EXPECT_EQ(sb.flags, kBlobFlagClean);
-  EXPECT_EQ(sb.block_size, kBlobfsBlockSize);
-  EXPECT_EQ(sb.alloc_block_count, 1);
-  EXPECT_EQ(sb.alloc_inode_count, 0);
-  EXPECT_EQ(sb.blob_header_next, 0);
+  EXPECT_EQ(kBlobfsMagic0, sb.magic0);
+  EXPECT_EQ(kBlobfsMagic1, sb.magic1);
+  EXPECT_EQ(kBlobfsVersion, sb.version);
+  EXPECT_EQ(kBlobFlagClean, sb.flags);
+  EXPECT_EQ(kBlobfsBlockSize, sb.block_size);
+  EXPECT_EQ(1, sb.alloc_block_count);
+  EXPECT_EQ(0, sb.alloc_inode_count);
+  EXPECT_EQ(0, sb.blob_header_next);
 }
 
 TEST(BlobfsInspector, GetInodeCount) {
@@ -193,7 +193,7 @@ TEST(BlobfsInspector, GetInodeCount) {
   CreateBlobfsInspector(std::move(handler), &inspector);
 
   Superblock sb = inspector->InspectSuperblock();
-  EXPECT_EQ(inspector->GetInodeCount(), sb.inode_count);
+  EXPECT_EQ(sb.inode_count, inspector->GetInodeCount());
 }
 
 TEST(BlobfsInspector, InspectInode) {
@@ -223,20 +223,20 @@ TEST(BlobfsInspector, InspectInode) {
 
   Superblock sb = inspector->InspectSuperblock();
   // The fresh Blobfs device should have 2 allocated inodes.
-  ASSERT_EQ(sb.alloc_inode_count, 2);
+  ASSERT_EQ(2, sb.alloc_inode_count);
 
   auto result = inspector->InspectInodeRange(0, 3);
   ASSERT_TRUE(result.is_ok());
-  std::vector<Inode> inodes = result.take_value();
+  std::vector<Inode> inodes = std::move(result.value());
   EXPECT_TRUE(inodes[0].header.IsAllocated());
   EXPECT_TRUE(inodes[0].header.IsInode());
-  EXPECT_EQ(inodes[0].block_count, 5);
-  EXPECT_EQ(inodes[0].extent_count, 42);
+  EXPECT_EQ(5, inodes[0].block_count);
+  EXPECT_EQ(42, inodes[0].extent_count);
 
   EXPECT_TRUE(inodes[1].header.IsAllocated());
   EXPECT_FALSE(inodes[1].header.IsInode());
-  EXPECT_EQ(inodes[1].AsExtentContainer()->previous_node, 10);
-  EXPECT_EQ(inodes[1].AsExtentContainer()->extent_count, 123);
+  EXPECT_EQ(10, inodes[1].AsExtentContainer()->previous_node);
+  EXPECT_EQ(123, inodes[1].AsExtentContainer()->extent_count);
 
   EXPECT_FALSE(inodes[2].header.IsAllocated());
 }
@@ -249,10 +249,10 @@ TEST(BlobfsInspector, InspectJournalSuperblock) {
 
   auto result = inspector->InspectJournalSuperblock();
   ASSERT_TRUE(result.is_ok());
-  fs::JournalInfo journal_info = result.take_value();
+  fs::JournalInfo journal_info = std::move(result.value());
 
-  EXPECT_EQ(journal_info.magic, fs::kJournalMagic);
-  EXPECT_EQ(journal_info.start_block, 0);
+  EXPECT_EQ(fs::kJournalMagic, journal_info.magic);
+  EXPECT_EQ(0, journal_info.start_block);
 }
 
 TEST(BlobfsInspector, GetJournalEntryCount) {
@@ -263,7 +263,7 @@ TEST(BlobfsInspector, GetJournalEntryCount) {
 
   Superblock sb = inspector->InspectSuperblock();
   uint64_t expected_count = JournalBlocks(sb) - fs::kJournalMetadataBlocks;
-  EXPECT_EQ(inspector->GetJournalEntryCount(), expected_count);
+  EXPECT_EQ(expected_count, inspector->GetJournalEntryCount());
 }
 
 // This ends up being a special case because we group both the journal superblock
@@ -275,14 +275,14 @@ TEST(BlobfsInspector, GetJournalEntryCountWithNoJournalBlocks) {
   CreateBadFakeBlobfsHandler(&handler);
   std::unique_ptr<BlobfsInspector> inspector;
   CreateBlobfsInspector(std::move(handler), &inspector);
-  EXPECT_EQ(inspector->GetJournalEntryCount(), 0);
+  EXPECT_EQ(0, inspector->GetJournalEntryCount());
 }
 
 template <typename T>
 void LoadAndUnwrapJournalEntry(BlobfsInspector* inspector, uint64_t index, T* out_value) {
   auto result = inspector->InspectJournalEntryAs<T>(index);
   ASSERT_TRUE(result.is_ok());
-  *out_value = result.take_value();
+  *out_value = std::move(result.value());
 }
 
 TEST(BlobfsInspector, InspectJournalEntryAs) {
@@ -315,23 +315,50 @@ TEST(BlobfsInspector, InspectJournalEntryAs) {
   // First four entry blocks should be header, payload, payload, commit.
   fs::JournalHeaderBlock header;
   LoadAndUnwrapJournalEntry(inspector.get(), 0, &header);
-  EXPECT_EQ(header.prefix.magic, fs::kJournalEntryMagic);
-  EXPECT_EQ(header.prefix.sequence_number, 0);
-  EXPECT_EQ(header.prefix.flags, fs::kJournalPrefixFlagHeader);
-  EXPECT_EQ(header.payload_blocks, 2);
+  EXPECT_EQ(fs::kJournalEntryMagic, header.prefix.magic);
+  EXPECT_EQ(0, header.prefix.sequence_number);
+  EXPECT_EQ(fs::kJournalPrefixFlagHeader, header.prefix.flags);
+  EXPECT_EQ(2, header.payload_blocks);
 
   fs::JournalPrefix prefix;
   LoadAndUnwrapJournalEntry(inspector.get(), 1, &prefix);
-  EXPECT_NE(prefix.magic, fs::kJournalEntryMagic);
+  EXPECT_NE(fs::kJournalEntryMagic, prefix.magic);
 
   LoadAndUnwrapJournalEntry(inspector.get(), 2, &prefix);
-  EXPECT_NE(prefix.magic, fs::kJournalEntryMagic);
+  EXPECT_NE(fs::kJournalEntryMagic, prefix.magic);
 
   fs::JournalCommitBlock commit;
   LoadAndUnwrapJournalEntry(inspector.get(), 3, &commit);
-  EXPECT_EQ(commit.prefix.magic, fs::kJournalEntryMagic);
-  EXPECT_EQ(commit.prefix.sequence_number, 0);
-  EXPECT_EQ(commit.prefix.flags, fs::kJournalPrefixFlagCommit);
+  EXPECT_EQ(fs::kJournalEntryMagic, commit.prefix.magic);
+  EXPECT_EQ(0, commit.prefix.sequence_number);
+  EXPECT_EQ(fs::kJournalPrefixFlagCommit, commit.prefix.flags);
+}
+
+TEST(BlobfsInspector, InspectDataBlockAllocatedInRange) {
+  std::unique_ptr<FakeTransactionHandler> handler;
+  CreateFakeBlobfsHandler(&handler);
+  Superblock superblock =
+      *reinterpret_cast<Superblock*>(handler->GetDeviceBuffer()->Data(kSuperblockOffset));
+
+  uint64_t bytes_to_set = 10;
+  uint64_t bits_to_sample = bytes_to_set * 8;
+
+  // Set alternating bits to true.
+  void* block_map_start = handler->GetDeviceBuffer()->Data(BlockMapStartBlock(superblock));
+  memset(block_map_start, 0xaa, bytes_to_set);
+
+  std::unique_ptr<BlobfsInspector> inspector;
+  CreateBlobfsInspector(std::move(handler), &inspector);
+
+  auto result = inspector->InspectDataBlockAllocatedInRange(0, bits_to_sample);
+  ASSERT_TRUE(result.is_ok());
+
+  std::vector<uint64_t> allocated_indices = std::move(result.value());
+
+  ASSERT_EQ(allocated_indices.size(), bits_to_sample / 2);
+  for (uint32_t i = 0; i < allocated_indices.size(); ++i) {
+    EXPECT_EQ((2 * i) + 1, allocated_indices[i]);
+  }
 }
 
 TEST(BlobfsInspector, WriteSuperblock) {
@@ -342,9 +369,9 @@ TEST(BlobfsInspector, WriteSuperblock) {
 
   Superblock sb = inspector->InspectSuperblock();
   // Test original values are correct.
-  EXPECT_EQ(sb.magic0, kBlobfsMagic0);
-  EXPECT_EQ(sb.magic1, kBlobfsMagic1);
-  EXPECT_EQ(sb.version, kBlobfsVersion);
+  EXPECT_EQ(kBlobfsMagic0, sb.magic0);
+  EXPECT_EQ(kBlobfsMagic1, sb.magic1);
+  EXPECT_EQ(kBlobfsVersion, sb.version);
 
   // Edit values and write.
   sb.magic0 = 0;
@@ -354,16 +381,242 @@ TEST(BlobfsInspector, WriteSuperblock) {
 
   // Test if superblock is saved in memory.
   Superblock edit_sb = inspector->InspectSuperblock();
-  EXPECT_EQ(edit_sb.magic0, 0);
-  EXPECT_EQ(edit_sb.magic1, kBlobfsMagic1);
-  EXPECT_EQ(edit_sb.version, 0);
+  EXPECT_EQ(0, edit_sb.magic0);
+  EXPECT_EQ(kBlobfsMagic1, edit_sb.magic1);
+  EXPECT_EQ(0, edit_sb.version);
 
   // Test reloading from disk.
   ASSERT_OK(inspector->ReloadSuperblock());
   Superblock reload_sb = inspector->InspectSuperblock();
-  EXPECT_EQ(reload_sb.magic0, 0);
-  EXPECT_EQ(reload_sb.magic1, kBlobfsMagic1);
-  EXPECT_EQ(reload_sb.version, 0);
+  EXPECT_EQ(0, reload_sb.magic0);
+  EXPECT_EQ(kBlobfsMagic1, reload_sb.magic1);
+  EXPECT_EQ(0, reload_sb.version);
+}
+
+std::vector<Inode> AlternateAddInodesAndExtentContainers(uint64_t inode_count) {
+  std::vector<Inode> write_inodes;
+  for (uint32_t i = 0; i < inode_count; ++i) {
+    Inode inode = {};
+    if (i % 2 == 0) {
+      inode.header.flags = kBlobFlagAllocated;
+      inode.block_count = i;
+    } else {
+      inode.AsExtentContainer()->header.flags = kBlobFlagAllocated | kBlobFlagExtentContainer;
+      inode.AsExtentContainer()->previous_node = i;
+    }
+    write_inodes.emplace_back(inode);
+  }
+  return write_inodes;
+}
+
+TEST(BlobfsInspector, WriteInodes) {
+  std::unique_ptr<FakeTransactionHandler> handler;
+  CreateFakeBlobfsHandler(&handler);
+  std::unique_ptr<BlobfsInspector> inspector;
+  CreateBlobfsInspector(std::move(handler), &inspector);
+  uint64_t start_index = 12;
+  // Test inodes in multiple blocks.
+  uint64_t inode_count = 2 * kBlobfsInodesPerBlock;
+  uint64_t end_index = start_index + inode_count;
+
+  // Sanity check that nothing is allocated at the start.
+  auto inspect_result = inspector->InspectInodeRange(0, end_index);
+  ASSERT_TRUE(inspect_result.is_ok());
+  std::vector<Inode> initial_inodes = std::move(inspect_result.value());
+  ASSERT_EQ(initial_inodes.size(), end_index);
+
+  for (uint64_t i = 0; i < end_index; ++i) {
+    ASSERT_FALSE(initial_inodes[i].header.IsAllocated());
+  }
+
+  // Actual write.
+  std::vector<Inode> write_inodes = AlternateAddInodesAndExtentContainers(inode_count);
+  auto write_result = inspector->WriteInodes(write_inodes, start_index);
+  ASSERT_TRUE(write_result.is_ok());
+
+  // Test reading back the written inodes.
+  auto final_inspect_result = inspector->InspectInodeRange(0, start_index + inode_count);
+  ASSERT_TRUE(final_inspect_result.is_ok());
+  std::vector<Inode> final_inodes = std::move(final_inspect_result.value());
+  ASSERT_EQ(final_inodes.size(), end_index);
+
+  for (uint64_t i = 0; i < start_index; ++i) {
+    EXPECT_FALSE(final_inodes[i].header.IsAllocated());
+  }
+
+  for (uint64_t i = 0; i < inode_count; ++i) {
+    Inode inode = final_inodes[start_index + i];
+    EXPECT_TRUE(inode.header.IsAllocated());
+    if (i % 2 == 0) {
+      ASSERT_TRUE(inode.header.IsInode());
+      EXPECT_EQ(inode.block_count, i);
+    } else {
+      ASSERT_TRUE(inode.header.IsExtentContainer());
+      EXPECT_EQ(inode.AsExtentContainer()->previous_node, i);
+    }
+  }
+}
+
+TEST(BlobfsInspector, WriteJournalSuperblock) {
+  std::unique_ptr<FakeTransactionHandler> handler;
+  CreateFakeBlobfsHandler(&handler);
+  std::unique_ptr<BlobfsInspector> inspector;
+  CreateBlobfsInspector(std::move(handler), &inspector);
+
+  uint64_t magic = 1234;
+  uint64_t start_block = 42;
+
+  // Make sure superblock original values are correct.
+  auto inspect_result = inspector->InspectJournalSuperblock();
+  ASSERT_TRUE(inspect_result.is_ok());
+  fs::JournalInfo journal_info = std::move(inspect_result.value());
+  ASSERT_EQ(fs::kJournalMagic, journal_info.magic);
+  ASSERT_EQ(0, journal_info.start_block);
+
+  fs::JournalInfo new_journal_info = {};
+  new_journal_info.magic = magic;
+  new_journal_info.start_block = start_block;
+  auto write_result = inspector->WriteJournalSuperblock(new_journal_info);
+  ASSERT_TRUE(write_result.is_ok());
+
+  // Re-inspect that values have changed.
+  inspect_result = inspector->InspectJournalSuperblock();
+  ASSERT_TRUE(inspect_result.is_ok());
+  journal_info = std::move(inspect_result.value());
+  ASSERT_EQ(magic, journal_info.magic);
+  ASSERT_EQ(start_block, journal_info.start_block);
+}
+
+TEST(BlobfsInspector, WriteJournalEntryBlocks) {
+  std::unique_ptr<FakeTransactionHandler> handler;
+  CreateFakeBlobfsHandler(&handler);
+  std::unique_ptr<BlobfsInspector> inspector;
+  CreateBlobfsInspector(std::move(handler), &inspector);
+
+  uint64_t start_index = 0;
+  uint64_t payload_blocks = 2;
+
+  // Make sure original values are zero.
+  // First four entry blocks should be header, payload, payload, commit.
+  fs::JournalHeaderBlock header;
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index, &header);
+  EXPECT_EQ(0, header.prefix.magic);
+
+  fs::JournalPrefix prefix;
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 1, &prefix);
+  EXPECT_EQ(0, prefix.magic);
+
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 2, &prefix);
+  EXPECT_EQ(0, prefix.magic);
+
+  fs::JournalCommitBlock commit;
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 3, &commit);
+  EXPECT_EQ(0, commit.prefix.magic);
+
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 4, &commit);
+  EXPECT_EQ(0, commit.prefix.magic);
+
+  auto buffer_result = inspector->GetBufferFactory()->CreateBuffer(4);
+  ASSERT_TRUE(buffer_result.is_ok());
+  std::unique_ptr<storage::BlockBuffer> buffer = buffer_result.take_value();
+
+  // Write header to backing buffer.
+  auto header_ptr = reinterpret_cast<fs::JournalHeaderBlock*>(buffer->Data(0));
+  header_ptr->prefix.magic = fs::kJournalEntryMagic;
+  header_ptr->prefix.flags = fs::kJournalPrefixFlagHeader;
+  header_ptr->payload_blocks = payload_blocks;
+
+  // Write commit to backing buffer.
+  auto commit_ptr = reinterpret_cast<fs::JournalCommitBlock*>(buffer->Data(3));
+  commit_ptr->prefix.magic = fs::kJournalEntryMagic;
+  commit_ptr->prefix.flags = fs::kJournalPrefixFlagCommit;
+
+  auto write_result = inspector->WriteJournalEntryBlocks(buffer.get(), start_index);
+  ASSERT_TRUE(write_result.is_ok());
+
+  // Re-read written blocks and the block after to make sure it has not changed.
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index, &header);
+  EXPECT_EQ(header.prefix.magic, fs::kJournalEntryMagic);
+  EXPECT_EQ(header.prefix.flags, fs::kJournalPrefixFlagHeader);
+  EXPECT_EQ(payload_blocks, header.payload_blocks);
+
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 1, &prefix);
+  EXPECT_EQ(0, prefix.magic);
+
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 2, &prefix);
+  EXPECT_EQ(0, prefix.magic);
+
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 3, &commit);
+  EXPECT_EQ(fs::kJournalEntryMagic, commit.prefix.magic);
+  EXPECT_EQ(fs::kJournalPrefixFlagCommit, commit.prefix.flags);
+
+  LoadAndUnwrapJournalEntry(inspector.get(), start_index + 4, &prefix);
+  EXPECT_EQ(0, prefix.magic);
+}
+
+TEST(BlobfsInspector, WriteBlockAllocationBits) {
+  std::unique_ptr<FakeTransactionHandler> handler;
+  CreateFakeBlobfsHandler(&handler);
+  std::unique_ptr<BlobfsInspector> inspector;
+  CreateBlobfsInspector(std::move(handler), &inspector);
+
+  uint64_t start_index = 25;
+  uint64_t bits_to_sample = 100;
+  uint64_t end_index = start_index + bits_to_sample;
+  uint64_t bits_to_write = 50;
+
+  // Make sure original values are not set.
+  {
+    auto inspect_result = inspector->InspectDataBlockAllocatedInRange(start_index, end_index);
+    ASSERT_TRUE(inspect_result.is_ok());
+    // No values should be set.
+    ASSERT_EQ(0, std::move(inspect_result.value()).size());
+  }
+
+  // Write bits.
+  {
+    auto write_result =
+        inspector->WriteDataBlockAllocationBits(true, start_index, start_index + bits_to_write);
+    ASSERT_TRUE(write_result.is_ok());
+  }
+
+  // Re-inspect for changes.
+  {
+    auto inspect_result = inspector->InspectDataBlockAllocatedInRange(start_index, end_index);
+    ASSERT_TRUE(inspect_result.is_ok());
+    std::vector<uint64_t> allocated_indices = std::move(inspect_result.value());
+    ASSERT_EQ(bits_to_write, allocated_indices.size());
+
+    for (uint64_t i = 0; i < allocated_indices.size(); ++i) {
+      EXPECT_EQ(start_index + i, allocated_indices[i]);
+    }
+  }
+}
+
+TEST(BlobfsInspector, WriteDataBlocks) {
+  std::unique_ptr<FakeTransactionHandler> handler;
+  CreateFakeBlobfsHandler(&handler);
+
+  Superblock superblock =
+      *reinterpret_cast<Superblock*>(handler->GetDeviceBuffer()->Data(kSuperblockOffset));
+  uint64_t start_offset = 25;
+  uint64_t blocks_to_write = 10;
+  storage::BlockBuffer* device = handler->GetDeviceBuffer();
+
+  std::unique_ptr<BlobfsInspector> inspector;
+  CreateBlobfsInspector(std::move(handler), &inspector);
+
+  auto buffer_result = inspector->GetBufferFactory()->CreateBuffer(blocks_to_write);
+  ASSERT_TRUE(buffer_result.is_ok());
+  std::unique_ptr<storage::BlockBuffer> buffer = buffer_result.take_value();
+
+  memset(buffer->Data(0), 0xab, blocks_to_write * kBlobfsBlockSize);
+
+  auto write_result = inspector->WriteDataBlocks(buffer.get(), start_offset);
+  ASSERT_TRUE(write_result.is_ok());
+
+  EXPECT_BYTES_EQ(buffer->Data(0), device->Data(DataStartBlock(superblock) + start_offset),
+                  blocks_to_write * kBlobfsBlockSize);
 }
 
 }  // namespace

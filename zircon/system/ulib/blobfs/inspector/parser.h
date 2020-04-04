@@ -31,6 +31,17 @@ bool GetBitmapElement(storage::BlockBuffer* buffer, uint64_t index);
 // functionality.
 Inode GetInodeElement(storage::BlockBuffer* buffer, uint64_t index);
 
+// Writes the bit at specified index in the buffer following
+// the ulib/bitmap implementation, differing in that this function
+// uses uint64_t unlike size_t for the bitmap implementation. Assumes
+// the data in the entire buffer is part of the bitmap.
+void WriteBitmapElement(storage::BlockBuffer* buffer, bool value, uint64_t index);
+
+// Writes the inode at the specified index in the buffer following
+// on-disk format. Assumes the data in the entire buffer is the
+// inode table.
+void WriteInodeElement(storage::BlockBuffer* buffer, Inode inode, uint64_t index);
+
 }  // namespace blobfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_INSPECTOR_PARSER_H_

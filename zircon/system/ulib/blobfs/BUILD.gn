@@ -56,6 +56,7 @@ zx_library("blobfs") {
     "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/range:headers",
     "$zx/system/ulib/storage/buffer:headers",
+    "$zx/system/ulib/zxc:headers",
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
     "$zx/third_party/ulib/zstd:zstdseek.headers",
@@ -76,7 +77,9 @@ zx_library("blobfs") {
     "$zx/system/ulib/range",
     "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/storage/operation",
+    "$zx/system/ulib/zircon:zircon-headers",
     "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxc",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/safemath",

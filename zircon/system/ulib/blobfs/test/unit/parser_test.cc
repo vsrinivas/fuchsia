@@ -58,8 +58,98 @@ TEST(InspectorParser, ParseInodeTable) {
   }
   for (uint32_t i = 0; i < inode_count; ++i) {
     Inode out_inode = GetInodeElement(&device, i);
-    ASSERT_EQ(out_inode.blob_size, i);
-    ASSERT_EQ(out_inode.block_count, expected_block_count);
+    ASSERT_EQ(i, out_inode.blob_size);
+    ASSERT_EQ(expected_block_count, out_inode.block_count);
+  }
+}
+
+TEST(InspectorParser, WriteBitmapElement) {
+  uint32_t start_block = 0;
+  uint32_t block_length = 1;
+  storage::ArrayBuffer device(block_length, kBlobfsBlockSize);
+  memset(device.Data(start_block), 0xFF, device.capacity() * device.BlockSize());
+
+  for (uint32_t i = 0; i < block_length * kBlobfsBlockSize * CHAR_BIT; ++i) {
+    ASSERT_TRUE(GetBitmapElement(&device, i));
+  }
+
+  // Write the |write_element| bit to false.
+  uint64_t write_element = 25;
+  bool write_value = false;
+  WriteBitmapElement(&device, write_value, write_element);
+
+  for (uint32_t i = 0; i < block_length * kBlobfsBlockSize * CHAR_BIT; ++i) {
+    bool is_set = (i == write_element) ? write_value : !write_value;
+    ASSERT_EQ(is_set, GetBitmapElement(&device, i));
+  }
+
+  // Write the bit back to true.
+  WriteBitmapElement(&device, true, write_element);
+
+  for (uint32_t i = 0; i < block_length * kBlobfsBlockSize * CHAR_BIT; ++i) {
+    ASSERT_TRUE(GetBitmapElement(&device, i));
+  }
+}
+
+TEST(InspectorParser, WriteSingleInodeElement) {
+  uint32_t block_length = 2;
+  storage::ArrayBuffer device(block_length, kBlobfsBlockSize);
+  memset(device.Data(0), 0x00, block_length * kBlobfsBlockSize);
+
+  uint32_t expected_block_count = 42;
+  uint32_t inode_count = block_length * kBlobfsInodesPerBlock;
+
+  // Sanity check zeroed out ok.
+  for (uint32_t i = 0; i < inode_count; ++i) {
+    Inode out_inode = GetInodeElement(&device, i);
+    ASSERT_EQ(0, out_inode.blob_size);
+    ASSERT_EQ(0, out_inode.block_count);
+  }
+
+  // Test writing a single inode.
+  Inode inode = {};
+  inode.blob_size = 0;
+  inode.block_count = expected_block_count;
+  WriteInodeElement(&device, inode, 0);
+  Inode out_inode = GetInodeElement(&device, 0);
+
+  ASSERT_EQ(inode.blob_size, out_inode.blob_size);
+  ASSERT_EQ(inode.block_count, out_inode.block_count);
+
+  // Make sure rest of device is not set.
+  for (uint64_t i = 1; i < inode_count; ++i) {
+    Inode out_inode = GetInodeElement(&device, i);
+    ASSERT_EQ(0, out_inode.blob_size);
+    ASSERT_EQ(0, out_inode.block_count);
+  }
+}
+
+TEST(InspectorParser, WriteManyInodeElements) {
+  uint32_t block_length = 2;
+  storage::ArrayBuffer device(block_length, kBlobfsBlockSize);
+  memset(device.Data(0), 0x00, block_length * kBlobfsBlockSize);
+
+  uint32_t expected_block_count = 42;
+  uint32_t inode_count = block_length * kBlobfsInodesPerBlock;
+
+  // Sanity check zeroed out ok.
+  for (uint32_t i = 0; i < inode_count; ++i) {
+    Inode out_inode = GetInodeElement(&device, i);
+    ASSERT_EQ(0, out_inode.blob_size);
+    ASSERT_EQ(0, out_inode.block_count);
+  }
+
+  // Test setting all the inodes.
+  for (uint64_t i = 0; i < inode_count; ++i) {
+    Inode inode = {};
+    inode.blob_size = i;
+    inode.block_count = expected_block_count;
+    WriteInodeElement(&device, inode, i);
+  }
+  for (uint64_t i = 0; i < inode_count; ++i) {
+    Inode out_inode = GetInodeElement(&device, i);
+    ASSERT_EQ(i, out_inode.blob_size);
+    ASSERT_EQ(expected_block_count, out_inode.block_count);
   }
 }
 
