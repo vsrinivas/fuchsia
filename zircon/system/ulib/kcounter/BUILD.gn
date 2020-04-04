@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("kcounter") {
   sdk = "source"
   sdk_headers = [ "lib/kcounter/provider.h" ]
@@ -10,17 +22,16 @@ zx_library("kcounter") {
     "provider.cc",
   ]
   deps = [
-    "$zx/kernel/lib/counters",
-    "$zx/system/fidl/fuchsia-kernel:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/inspect",
-    "$zx/system/ulib/svc",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/counters",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/inspect",
+    "//zircon/public/lib/svc",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-kernel:c",
   ]
 }
