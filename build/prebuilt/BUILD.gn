@@ -4,7 +4,10 @@
 
 import("//build/prebuilt_binaries.gni")
 
-prebuilt_binaries(".build-id") {
+# The //prebuilt directory contains only the binary artifacts managed by
+# jiri.  So this directory represents it in the build.
+
+prebuilt_binaries("prebuilt") {
   testonly = true
-  build_id_dir = ".build-id"
+  build_id_dir = "//prebuilt/.build-id"
 }

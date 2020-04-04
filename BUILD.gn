@@ -335,7 +335,7 @@ build_api_module("prebuilt_binaries") {
   data_keys = [ "prebuilt_binaries" ]
   deps = [
     "//build/images:packages",
-    "//prebuilt:.build-id",
+    "//build/prebuilt",
     "//sdk",
   ]
 }
