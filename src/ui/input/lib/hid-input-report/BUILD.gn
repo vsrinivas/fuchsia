@@ -22,7 +22,7 @@ source_set("hid-input-report") {
     "//src/ui/lib/key_util",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -52,10 +52,10 @@ test("lib-hid-input-report-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
-    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zxtest",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 
   # TODO(46730): Fix the leaks and remove this.

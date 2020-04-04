@@ -40,7 +40,7 @@ source_set("button_checker") {
   ]
   public_deps = [
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
     "//zircon/system/fidl/fuchsia-hardware-input",
+    "//zircon/system/ulib/hid-parser",
   ]
 }

@@ -53,7 +53,7 @@ source_set("end_to_end_tests") {
     "//src/ui/lib/input_reader",
     "//src/ui/testing:mock_input_device",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -68,7 +68,7 @@ source_set("interface_tests") {
     "//sdk/fidl/fuchsia.ui.input",
     "//src/ui/testing:mock_input_device",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -82,7 +82,7 @@ source_set("mock_device_watcher") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -100,7 +100,7 @@ source_set("mock_hid_decoder") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -122,7 +122,7 @@ executable("input_reader_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/input_reader",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 
   # TODO(46730): Fix the leaks and remove this.

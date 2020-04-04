@@ -40,7 +40,7 @@ executable("integration_tests") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -52,7 +52,7 @@ source_set("mock_device_watcher") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/hid-parser",
   ]
 }

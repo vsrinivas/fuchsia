@@ -38,8 +38,8 @@ test("hid-parser") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid-parser",
   ]
 
   # TODO(47348): Fix the leaks and remove this.
@@ -50,7 +50,7 @@ fuzzer("hid-parser-fuzzer") {
   sources = [ "hid-parser-fuzztest.cc" ]
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 

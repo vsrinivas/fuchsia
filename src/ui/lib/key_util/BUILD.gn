@@ -14,7 +14,7 @@ source_set("key_util") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input2",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
