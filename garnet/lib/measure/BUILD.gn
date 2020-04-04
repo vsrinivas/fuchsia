@@ -19,7 +19,7 @@ source_set("measure") {
 
   public_deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/trace-reader",
+    "//zircon/system/ulib/trace-reader",
   ]
 }
 

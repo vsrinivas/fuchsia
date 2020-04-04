@@ -34,8 +34,8 @@ test("trace-reader-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-engine-headers-for-reader",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/trace-reader",
   ]
   if (is_fuchsia) {
     deps += [

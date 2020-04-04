@@ -38,10 +38,10 @@ source_set("test-common") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-handler",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/trace-vthread",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/trace-test-utils",
   ]
 }

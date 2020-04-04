@@ -493,7 +493,6 @@ group("ulib") {
     "trace-provider:trace-provider-with-static-engine",
 #------------------
 #------------------
-    "trace-reader",
 #------------------
 #------------------
 #------------------
@@ -680,7 +679,6 @@ group("ulib-host") {
     "trace-engine:trace-engine-headers-for-reader",
 #------------------
 #------------------
-    "trace-reader",
 #------------------
 #------------------
     "unittest:unittest-static",

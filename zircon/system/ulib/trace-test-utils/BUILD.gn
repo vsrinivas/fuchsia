@@ -36,7 +36,7 @@ zx_library("trace-test-utils") {
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/trace-reader",
+    "//zircon/system/ulib/trace-reader",
   ]
   deps = [
     # The kind of engine to use is up to the client, so we don't provide any
@@ -46,7 +46,7 @@ zx_library("trace-test-utils") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-handler",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-reader",
   ]
 }

@@ -40,9 +40,9 @@ source_set("common") {
 
     # The engine is chosen by the binary, we just need engine headers here.
     "//zircon/public/lib/trace-engine-headers-for-reader",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/trace-test-utils",
 
     # fdio is here so that things like printf work.

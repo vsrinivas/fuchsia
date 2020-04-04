@@ -124,7 +124,7 @@ source_set("integration_test_utils") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-reader",
+    "//zircon/system/ulib/trace-reader",
   ]
 }
 
@@ -152,8 +152,8 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/trace-with-static-engine",
+    "//zircon/system/ulib/trace-reader",
   ]
 }
 
@@ -354,8 +354,8 @@ executable("ktrace_integration_tests") {
     ":run_test",
     "//src/developer/tracing/lib/test_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-reader",
   ]
 }
 
@@ -385,8 +385,8 @@ executable("shared_provider_integration_tests") {
     ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-reader",
   ]
 }
 
@@ -416,8 +416,8 @@ executable("provider_destruction_tests") {
     ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-reader",
   ]
 }
 
