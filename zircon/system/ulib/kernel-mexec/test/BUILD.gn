@@ -38,12 +38,12 @@ test("kernel-mexec-test") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/kernel-mexec",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/svc",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/ulib/kernel-mexec",
   ]
 }
 

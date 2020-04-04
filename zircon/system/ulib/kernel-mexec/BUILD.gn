@@ -2,23 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("kernel-mexec") {
   sdk = "source"
   sdk_headers = [ "lib/kernel-mexec/kernel-mexec.h" ]
   sources = [ "kernel-mexec.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-kernel:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/libzbi",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/libzbi",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-kernel:c",
   ]
-  public_deps = [ "$zx/system/ulib/svc:headers" ]
+  public_deps = [ "//zircon/public/lib/svc" ]
 }
