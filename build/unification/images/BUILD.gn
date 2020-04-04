@@ -617,7 +617,6 @@ aggregate_manifest("legacy-aux") {
     "backtrace",
 #------------------
 #------------------
-    "blktest",
 #------------------
 #------------------
     "devmgr-integration-test",
