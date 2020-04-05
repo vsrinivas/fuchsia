@@ -6,7 +6,6 @@ import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/images/args.gni")
 import("//build/images/manifest.gni")
-import("//build/json/validate_json.gni")
 import("//build/package/component.gni")
 import("//build/testing/test_spec.gni")
 
