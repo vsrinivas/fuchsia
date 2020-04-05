@@ -38,7 +38,6 @@
 #define ANSI_CLEARLINE "\33[2K\r"
 
 #define MAX_FVM_IMAGES 4
-#define MAX_FIRMWARE_IMAGES 4
 
 #define ANSI(name) (use_color == false || is_redirected) ? "" : ANSI_##name
 
@@ -65,11 +64,6 @@ static struct timeval start_time, end_time;
 static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
 static bool no_bind = false;
-
-struct firmware {
-  const char* type;
-  const char* image;
-};
 
 char* date_string(void) {
   static char date_buf[80];
@@ -253,8 +247,6 @@ void usage(void) {
       "  --boot <file>            use the supplied file as a kernel\n"
       "  --fvm <file>             use the supplied file as a sparse FVM image (up to 4 times)\n"
       "  --bootloader <file>      use the supplied file as a BOOTLOADER image\n"
-      "  --firmware <file>        use the supplied file as a FIRMWARE image of default type\n"
-      "  --firmware-<type> <file> use the supplied file as a FIRMWARE image of the given type\n"
       "  --zircona <file>         use the supplied file as a ZIRCON-A ZBI\n"
       "  --zirconb <file>         use the supplied file as a ZIRCON-B ZBI\n"
       "  --zirconr <file>         use the supplied file as a ZIRCON-R ZBI\n"
@@ -382,14 +374,12 @@ int main(int argc, char** argv) {
   char* nodename = NULL;
   int s = 1;
   size_t num_fvms = 0;
-  size_t num_firmware = 0;
   char board_info_template[] = "/tmp/board_info.XXXXXX";
   const char block_device_path_template[] = "/tmp/block_device_path.XXXXXX";
   char block_device_path[] = "/tmp/block_device_path.XXXXXX";
   const char* board_name = NULL;
   const char* board_info_file = NULL;
   const char* bootloader_image = NULL;
-  struct firmware firmware_images[MAX_FIRMWARE_IMAGES];
   const char* zircona_image = NULL;
   const char* zirconb_image = NULL;
   const char* zirconr_image = NULL;
@@ -443,42 +433,6 @@ int main(int argc, char** argv) {
         return -1;
       }
       bootloader_image = argv[1];
-    } else if (!strncmp(argv[1], "--firmware", strlen("--firmware"))) {
-      argc--;
-      argv++;
-      if (argc <= 1) {
-        fprintf(stderr, "'--firmware' options require an argument (FIRMWARE image)\n");
-        return -1;
-      }
-      if (num_firmware == MAX_FIRMWARE_IMAGES) {
-        // It's fine to increase MAX_FIRMWARE_IMAGES if necessary, it's just
-        // used for simplicity to avoid implementing a growable list in C.
-        fprintf(stderr, "'--firmware' supplied too many times\n");
-        return -1;
-      }
-
-      // Extract the type from the argument name.
-      const char* type = argv[0] + strlen("--firmware");
-      if (type[0] == '\0') {
-        // No type given, use the current (empty) string.
-      } else if (type[0] == '-') {
-        // Skip the '-' delimiter and use the remainder as the type.
-        type++;
-
-        if (strlen(type) > NB_FIRMWARE_TYPE_MAX_LENGTH) {
-          fprintf(stderr, "firmware type '%s' is too long (max %d characters)\n", type,
-                  NB_FIRMWARE_TYPE_MAX_LENGTH);
-          return -1;
-        }
-      } else {
-        fprintf(stderr, "invalid argument '%s', use '--firmware[-type]'\n", argv[0]);
-        fprintf(stderr, "examples: '--firmware', '--firmware-foo'\n");
-        return -1;
-      }
-
-      firmware_images[num_firmware].type = type;
-      firmware_images[num_firmware].image = argv[1];
-      num_firmware++;
     } else if (!strcmp(argv[1], "--zircona")) {
       argc--;
       argv++;
@@ -680,9 +634,9 @@ int main(int argc, char** argv) {
     argc--;
     argv++;
   }
-  if (!kernel_fn && !bootloader_image && !num_firmware && !zircona_image && !zirconb_image &&
-      !zirconr_image && !vbmetaa_image && !vbmetab_image && !fvm_images[0] &&
-      !init_partition_tables_device_path && !wipe_partition_tables_device_path) {
+  if (!kernel_fn && !bootloader_image && !zircona_image && !zirconb_image && !zirconr_image &&
+      !vbmetaa_image && !vbmetab_image && !fvm_images[0] && !init_partition_tables_device_path &&
+      !wipe_partition_tables_device_path) {
     usage();
   }
   if (!nodename) {
@@ -905,38 +859,6 @@ int main(int argc, char** argv) {
     if (status == 0 && bootloader_image) {
       status = xfer(&ra, bootloader_image, NB_BOOTLOADER_FILENAME);
     }
-    for (size_t i = 0; i < num_firmware; i++) {
-      if (status == 0) {
-        char filename[strlen(NB_FIRMWARE_FILENAME_PREFIX) + NB_FIRMWARE_TYPE_MAX_LENGTH + 1];
-        int result = snprintf(filename, sizeof(filename), "%s%s", NB_FIRMWARE_FILENAME_PREFIX,
-                              firmware_images[i].type);
-        if (result < 0 || (size_t)result >= sizeof(filename)) {
-          fprintf(stderr, "error creating firmware filename for type '%s'\n",
-                  firmware_images[i].type);
-          status = -1;
-        } else {
-          status = xfer(&ra, firmware_images[i].image, filename);
-
-          // In order to keep updates as stable as possible in the near future,
-          // keep going even if we fail to flash the firmware. It's OK to have
-          // older bootloaders on a newer OS, and this will allow paving to
-          // succeed even if the device netsvc doesn't yet know how to handle
-          // firmware files.
-          //
-          // TODO(45606): once we bump the version past "0.7.22" and force a
-          // hard-transition anyway we can remove this workaround.
-          if (status != 0) {
-            fprintf(
-                stderr,
-                "Failed to transfer firmware type '%s' (err=%d), skipping and continuing.\n"
-                "This is expected until zedboot has been updated to the newest version.\n"
-                "If you continue to see this after updating zedboot, please file a Firmware bug.\n",
-                firmware_images[i].type, status);
-            status = 0;
-          }
-        }
-      }
-    }
     if (status == 0 && zircona_image) {
       status = xfer(&ra, zircona_image, NB_ZIRCONA_FILENAME);
     }
@@ -964,8 +886,8 @@ int main(int argc, char** argv) {
     if (status == 0) {
       log("Transfer ends successfully.");
       // Only reboot if we actually paved an image.
-      if (kernel_fn || bootloader_image || num_firmware || zircona_image || zirconb_image ||
-          zirconr_image || vbmetaa_image || vbmetab_image || fvm_images[0]) {
+      if (kernel_fn || bootloader_image || zircona_image || zirconb_image || zirconr_image ||
+          vbmetaa_image || vbmetab_image || fvm_images[0]) {
         if (kernel_fn) {
           send_boot_command(&ra);
         } else {

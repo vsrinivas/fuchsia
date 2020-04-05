@@ -2,25 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_NETSVC_PAVER_H_
-#define ZIRCON_SYSTEM_CORE_NETSVC_PAVER_H_
+#pragma once
 
+#include <atomic>
+#include <optional>
+#include <threads.h>
+
+#include <limits.h>
+
+#include <fbl/unique_fd.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
-#include <limits.h>
-#include <threads.h>
-#include <zircon/boot/netboot.h>
-#include <zircon/types.h>
-
-#include <atomic>
-#include <optional>
-#include <string_view>
-
-#include <fbl/unique_fd.h>
 #include <tftp/tftp.h>
+#include <zircon/types.h>
 
 #include "tftp.h"
 
@@ -34,7 +31,7 @@ class PaverInterface {
 
   // TODO: Explore returning an object which implements write and when it goes
   // out of scope, closes.
-  virtual tftp_status OpenWrite(std::string_view filename, size_t size) = 0;
+  virtual tftp_status OpenWrite(const char* filename, size_t size) = 0;
   virtual tftp_status Write(const void* data, size_t* length, off_t offset) = 0;
   virtual void Close() = 0;
 };
@@ -48,7 +45,7 @@ class Paver : public PaverInterface {
   zx_status_t exit_code() final;
   void reset_exit_code() final;
 
-  tftp_status OpenWrite(std::string_view filename, size_t size) final;
+  tftp_status OpenWrite(const char* filename, size_t size) final;
   tftp_status Write(const void* data, size_t* length, off_t offset) final;
   void Close() final;
 
@@ -63,7 +60,7 @@ class Paver : public PaverInterface {
   // these commands translate to.
   enum class Command {
     kAsset,
-    kFirmware,
+    kBootloader,
     kDataFile,
     kFvm,
     kInitPartitionTables,
@@ -113,8 +110,6 @@ class Paver : public PaverInterface {
     };
     // Only valid when command == Command::kDataFile.
     char path_[PATH_MAX];
-    // Only valid when command == Command::kFirmware.
-    char firmware_type_[NB_FIRMWARE_TYPE_MAX_LENGTH + 1];
   };
 
   // Buffer used for stashing data from tftp until it can be written out to the paver.
@@ -130,5 +125,3 @@ class Paver : public PaverInterface {
 };
 
 }  // namespace netsvc
-
-#endif  // ZIRCON_SYSTEM_CORE_NETSVC_PAVER_H_

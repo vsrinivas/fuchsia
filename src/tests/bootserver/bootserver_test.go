@@ -45,13 +45,6 @@ func toolPath(t *testing.T, name string) string {
 	return filepath.Join(exPath, "test_data", "bootserver_tools", name)
 }
 
-func firmwarePath(t *testing.T) string {
-	// QEMU doesn't know how to write firmware so the contents don't matter,
-	// it just has to be a real file. It does get sent over the network though
-	// so use netls which we already need elsewhere and is fairly small.
-	return toolPath(t, "netls")
-}
-
 func matchPattern(t *testing.T, pattern string, reader *bufio.Reader) bool {
 	for {
 		line, err := reader.ReadString('\n')
@@ -292,45 +285,3 @@ func TestInitPartitionTables(t *testing.T) {
 		toolPath(t, "bootserver"), "-n", defaultNodename,
 		"--init-partition-tables", "/dev/class/block/000", "-1", "--fail-fast")
 }
-
-func TestWriteFirmwareNoType(t *testing.T) {
-	i, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
-	defer cleanup()
-
-	logPattern := []logMatch{
-		{"Received request from ", true},
-		{"Proceeding with nodename ", true},
-		{"Transfer starts", true},
-		{"Transfer ends successfully", true},
-		{"Issued reboot command to", true},
-	}
-
-	cmdSearchLog(
-		t, logPattern,
-		toolPath(t, "bootserver"), "-n", defaultNodename,
-		"--firmware", firmwarePath(t), "-1", "--fail-fast")
-
-	i.WaitForLogMessage("netsvc: Running FIRMWARE Paver (firmware type '')")
-}
-
-func TestWriteFirmwareWithType(t *testing.T) {
-	i, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
-	defer cleanup()
-
-	logPattern := []logMatch{
-		{"Received request from ", true},
-		{"Proceeding with nodename ", true},
-		{"Transfer starts", true},
-		{"Transfer ends successfully", true},
-		{"Issued reboot command to", true},
-	}
-
-	cmdSearchLog(
-		t, logPattern,
-		toolPath(t, "bootserver"), "-n", defaultNodename,
-		"--firmware-foo", firmwarePath(t), "-1", "--fail-fast")
-
-	i.WaitForLogMessage("netsvc: Running FIRMWARE Paver (firmware type 'foo')")
-}
-
-// Warning: when adding new tests, also increase the timeout in BUILD.gn.

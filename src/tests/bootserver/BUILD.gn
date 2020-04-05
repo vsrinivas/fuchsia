@@ -63,12 +63,5 @@ if (is_linux) {
       ":main_zbi",
       ":bootserver_user_tools",
     ]
-
-    # Each test spins up a new QEMU instance which on ASAN builds takes a
-    # decent chunk of time, so the 5-minute default isn't enough.
-    #
-    # It looks like it takes a little over 1 minute to get into Zedboot on
-    # the test bots, so 2 minutes per test is probably safe.
-    timeout = "12m"
   }
 }

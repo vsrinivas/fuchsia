@@ -194,7 +194,6 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     using ::llcpp::fuchsia::paver::WriteFirmwareResult;
 
     last_command_ = Command::kWriteFirmware;
-    last_firmware_type_ = std::string(type.data(), type.size());
 
     // Reply varies depending on whether we support |type| or not.
     if (supported_firmware_type_ == std::string_view(type.data(), type.size())) {
@@ -295,9 +294,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     sync_completion_reset(&done_signal_);
   }
 
-  Command last_command() const { return last_command_; }
-  const std::string& last_firmware_type() const { return last_firmware_type_; }
-
+  Command last_command() { return last_command_; }
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
   void set_supported_firmware_type(std::string type) { supported_firmware_type_ = type; }
   void set_abr_supported(bool supported) { abr_supported_ = supported; }
@@ -313,8 +310,6 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   std::atomic<size_t> signal_size_;
 
   Command last_command_ = Command::kUnknown;
-  std::string last_firmware_type_;
-
   size_t expected_payload_size_ = 0;
   std::string expected_block_device_;
   std::string supported_firmware_type_;

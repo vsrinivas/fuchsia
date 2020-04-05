@@ -11,7 +11,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <memory>
-#include <string_view>
 
 #include <zxtest/zxtest.h>
 
@@ -23,7 +22,7 @@ class FakePaver : public netsvc::PaverInterface {
   zx_status_t exit_code() override { return exit_code_; }
   void reset_exit_code() override { exit_code_ = ZX_OK; }
 
-  tftp_status OpenWrite(std::string_view filename, size_t size) override {
+  tftp_status OpenWrite(const char* filename, size_t size) override {
     in_progress_ = true;
     return TFTP_NO_ERROR;
   }
