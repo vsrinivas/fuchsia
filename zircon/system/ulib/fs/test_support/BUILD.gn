@@ -26,7 +26,7 @@ zx_library("fs_test_support") {
     "$zx/system/ulib/fs-management:headers",
     "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/ramdevice-client:headers",
-    "$zx/system/ulib/storage/buffer/test_support:headers",
+    "$zx/system/ulib/storage/buffer:headers",
     "$zx/system/ulib/zxtest:headers",
   ]
 
@@ -42,7 +42,7 @@ zx_library("fs_test_support") {
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/storage/buffer/test_support",
+    "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]

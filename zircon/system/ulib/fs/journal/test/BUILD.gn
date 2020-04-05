@@ -61,7 +61,6 @@ test("journal-unit") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/journal",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/test_support",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

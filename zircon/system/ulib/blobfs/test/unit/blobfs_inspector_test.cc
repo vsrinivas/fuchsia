@@ -9,7 +9,7 @@
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
-#include <buffer/test_support/array_buffer.h>
+#include <storage/buffer/array_buffer.h>
 #include <disk_inspector/buffer_factory.h>
 #include <fs/journal/format.h>
 #include <fs/journal/initializer.h>

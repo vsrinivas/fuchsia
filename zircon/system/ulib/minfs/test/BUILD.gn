@@ -69,7 +69,6 @@ test("minfs-unit") {
     "//zircon/public/lib/minfs",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/test_support",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-minfs:c",

@@ -2586,7 +2586,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/storage/buffer/test:storage_buffer-manifest",
 #------------------
-    "//zircon/system/ulib/storage/buffer/test_support/test:storage_buffer_test_support-manifest",
     "//zircon/system/ulib/storage/operation/test:storage_operation-manifest",
 #------------------
 #------------------
@@ -3096,7 +3095,6 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/storage/buffer/test:storage_buffer-manifest",
 #------------------
-    "//zircon/system/ulib/storage/buffer/test_support/test:storage_buffer_test_support-manifest",
     "//zircon/system/ulib/storage/operation/test:storage_operation-manifest",
 #------------------
 #------------------

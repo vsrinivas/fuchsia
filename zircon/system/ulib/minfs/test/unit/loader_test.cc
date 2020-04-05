@@ -4,10 +4,10 @@
 
 #include "inspector/loader.h"
 
-#include <buffer/test_support/array_buffer.h>
 #include <fs/journal/format.h>
 #include <fs/transaction/block_transaction.h>
 #include <minfs/format.h>
+#include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace minfs {

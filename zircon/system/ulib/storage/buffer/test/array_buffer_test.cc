@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "buffer/test_support/array_buffer.h"
+#include "storage/buffer/array_buffer.h"
 
 #include <lib/zx/vmo.h>
 

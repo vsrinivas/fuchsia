@@ -46,7 +46,6 @@ test("fs_test_support") {
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/ramdevice-client",
-    "//zircon/public/lib/test_support",
     "//zircon/public/lib/zxtest",
   ]
   include_dirs = [ "../include" ]

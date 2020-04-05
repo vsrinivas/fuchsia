@@ -5,7 +5,7 @@
 #include "inspector/parser.h"
 
 #include <blobfs/format.h>
-#include <buffer/test_support/array_buffer.h>
+#include <storage/buffer/array_buffer.h>
 #include <fs/transaction/block_transaction.h>
 #include <zxtest/zxtest.h>
 

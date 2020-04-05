@@ -4,9 +4,9 @@
 
 #include <inttypes.h>
 
-#include <buffer/test_support/array_buffer.h>
 #include <fs/journal/format.h>
 #include <fs/journal/internal/inspector_parser.h>
+#include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace fs {

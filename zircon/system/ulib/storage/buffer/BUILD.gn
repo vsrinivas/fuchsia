@@ -12,9 +12,10 @@ zx_library("buffer") {
     "storage/buffer/ring_buffer.h",
     "storage/buffer/vmo_buffer.h",
     "storage/buffer/vmoid_registry.h",
+    "storage/buffer/array_buffer.h",
   ]
   host = true
-  sources = []
+  sources = [ "array_buffer.cc" ]
   static = true
 
   if (is_fuchsia) {
