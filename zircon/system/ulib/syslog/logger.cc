@@ -67,20 +67,14 @@ zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out
     return ZX_ERR_INVALID_ARGS;
   }
   fx_logger_config_t c = *config;
-  // In the SYSLOG_STATIC mode, we cannot connect to the logging service. We should continue to
-  // instantiate the logger and the client will provide the appropriate channel / fd later.
+  // In the SYSLOG_STATIC mode, we cannot connect to the logging service. We
+  // should continue to instantiate the logger (which defaults to using stderr)
+  // and the client can provide the appropriate channel / fd later.
 #ifndef SYSLOG_STATIC
   if (config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID) {
     zx::socket sock = connect_to_logger();
-    if (sock.is_valid()) {
+    if (sock.is_valid())
       c.log_service_channel = sock.release();
-    } else {
-      int newfd = dup(STDERR_FILENO);
-      if (newfd < 0) {
-        return ZX_ERR_INTERNAL;
-      }
-      c.console_fd = newfd;
-    }
   }
 #endif
   *out_logger = new fx_logger(&c);

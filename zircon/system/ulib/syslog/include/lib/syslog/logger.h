@@ -10,7 +10,6 @@
 
 #include <stdarg.h>
 #include <unistd.h>
-
 #include <zircon/types.h>
 
 // Max no of tags associated with a logger.
@@ -62,7 +61,7 @@ typedef struct fx_logger fx_logger_t;
 // Creates a logger object from the specified configuration.
 //
 // This will return ZX_ERR_INVALID_ARGS if |num_tags| is more than
-// |FX_LOG_MAX_TAGS| and return |ZX_ERR_INTERNAL} if dup fails.
+// |FX_LOG_MAX_TAGS|.
 // |config| can be safely deleted after this function returns.
 zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger);
 

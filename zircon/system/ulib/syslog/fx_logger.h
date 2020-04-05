@@ -43,6 +43,8 @@ struct fx_logger {
     pid_ = GetCurrentProcessKoid();
     dropped_logs_.store(0, std::memory_order_relaxed);
     Reconfigure(config);
+    if (config->log_service_channel == ZX_HANDLE_INVALID && config->console_fd == -1)
+      ActivateFallback(-1);
   }
 
   ~fx_logger() = default;

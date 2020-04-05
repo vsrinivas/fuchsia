@@ -42,16 +42,10 @@ void FxLogFatal() { abort(); }
 
 LogMessage::~LogMessage() {
   fx_logger_t* logger = fx_log_get_logger();
-  if (logger) {
-    if (status_ != INT32_MAX) {
-      stream_ << ": " << status_ << " (" << zx_status_get_string(status_) << ")";
-    }
-
-    fx_logger_log(logger, severity_, tag_, stream_.str().c_str());
-  } else if (severity_ == FX_LOG_FATAL) {
-    // FX_LOG_FATAL should abort regardless of whether a logger exists
-    FxLogFatal();
+  if (status_ != INT32_MAX) {
+    stream_ << ": " << status_ << " (" << zx_status_get_string(status_) << ")";
   }
+  fx_logger_log(logger, severity_, tag_, stream_.str().c_str());
 }
 
 // Note that this implementation allows a data race on counter_, but

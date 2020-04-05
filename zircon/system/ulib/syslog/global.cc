@@ -27,7 +27,9 @@ fx_logger_t* MakeDefaultLogger() {
                                .tags = &tag,
                                .num_tags = 1};
   fx_logger_t* logger = NULL;
-  fx_logger_create(&config, &logger);
+  status = fx_logger_create(&config, &logger);
+  // Making the default logger should never fail.
+  ZX_DEBUG_ASSERT(status == ZX_OK);
   return logger;
 }
 
@@ -40,18 +42,11 @@ fx_logger_t* fx_log_get_logger() {
 }
 
 SYSLOG_EXPORT
-zx_status_t fx_log_init(void) {
-  if (!fx_log_get_logger())
-    return ZX_ERR_INTERNAL;
-  return ZX_OK;
-}
+zx_status_t fx_log_init(void) { return ZX_OK; }
 
 SYSLOG_EXPORT
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config) {
-  fx_logger_t* logger = fx_log_get_logger();
-  if (!logger)
-    return ZX_ERR_INTERNAL;
-  return logger->Reconfigure(config);
+  return fx_log_get_logger()->Reconfigure(config);
 }
 
 // This is here to force a definition to be included here for C99.

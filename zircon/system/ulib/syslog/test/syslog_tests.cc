@@ -7,6 +7,7 @@
 #include <lib/syslog/global.h>
 #include <lib/zx/socket.h>
 #include <poll.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <unittest/unittest.h>
@@ -26,6 +27,16 @@ static bool ends_with(const char* str, const char* suffix) {
   size_t l = strlen(suffix);
   str += strlen(str) - l;
   return strcmp(str, suffix) == 0;
+}
+
+static int smallest_unused_fd() {
+  char name[] = "/tmp/syslog_test.XXXXXX";
+  int fd = mkstemp(name);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  int status = remove(name);
+  ASSERT_EQ(0, status);
+  return fd;
 }
 
 bool test_log_init(void) {
@@ -304,6 +315,32 @@ bool test_log_reconfiguration(void) {
   END_TEST;
 }
 
+bool test_log_dont_dup(void) {
+  BEGIN_TEST;
+
+  // Remember the current lowest ununsed fd.
+  int fd = smallest_unused_fd();
+
+  // Create a logger
+  fx_logger_t* logger;
+  zx_status_t status;
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+  status = fx_logger_create(&config, &logger);
+  ASSERT_EQ(ZX_OK, status);
+
+  // No fd must be taken by the logger.
+  EXPECT_EQ(fd, smallest_unused_fd());
+
+  // Cleanup
+  fx_logger_destroy(logger);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(syslog_tests)
 RUN_TEST(test_log_init)
 RUN_TEST(test_log_init_with_socket)
@@ -318,6 +355,7 @@ RUN_TEST(test_log_enabled_macro)
 RUN_TEST(test_vlog_simple_write)
 RUN_TEST(test_vlog_write)
 RUN_TEST(test_log_reconfiguration)
+RUN_TEST(test_log_dont_dup)
 END_TEST_CASE(syslog_tests)
 
 BEGIN_TEST_CASE(syslog_tests_edge_cases)

@@ -13,14 +13,16 @@
 __BEGIN_CDECLS
 
 // Gets the global logger for the process to which log messages emitted
-// using the FX_LOG macros will be written. This function is thread-safe.
+// using the FX_LOG macros will be written. This function returns the same
+// logger on all threads and is thread-safe. The returned pointer is never
+// null and it does not get invalidated when the logger is reconfigured.
 fx_logger_t* fx_log_get_logger(void);
 
 // Returns true if writing messages with the given severity is enabled in the
 // global logger.
 static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
   fx_logger_t* logger = fx_log_get_logger();
-  return logger && severity >= fx_logger_get_min_severity(logger);
+  return severity >= fx_logger_get_min_severity(logger);
 }
 
 // Reconfigures the global logger for this process with the specified
@@ -31,15 +33,13 @@ static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
 // This function is NOT thread-safe and must be called early in the program
 // before other threads are spawned.
 // Returns:
-// - ZX_INTERNAL_ERR if the global logger had failed to instantiate,
 // - ZX_ERR_INVALID_ARGS if config is invalid (i.e. is null or has more than
 //   FX_LOG_MAX_TAGS tags),
 // - ZX_OK if the reconfiguration succeeds.
 // TODO(samans): Rename this function. https://fxbug.dev/49001
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
 
-// Deprecated. Doesn't do anything. Returns ZX_INTERNAL_ERR if the global logger
-// had failed to instantiate, and ZX_OK otherwise.
+// Deprecated. Doesn't do anything and always returns ZX_OK.
 // TODO(samans): Remove this function. https://fxbug.dev/49001
 zx_status_t fx_log_init(void);
 
@@ -67,28 +67,28 @@ zx_status_t fx_log_init(void);
 // |verbosity| is positive number. Logger severity is set to -verbosity
 #define FX_LOG_SET_VERBOSITY(verbosity) _FX_LOG_SET_SEVERITY(-(verbosity))
 
-#define _FX_LOG(severity, tag, message)                               \
-  do {                                                                \
-    fx_logger_t* logger = fx_log_get_logger();                        \
-    if (logger && fx_logger_get_min_severity(logger) <= (severity)) { \
-      fx_logger_log(logger, (severity), (tag), (message));            \
-    }                                                                 \
+#define _FX_LOG(severity, tag, message)                     \
+  do {                                                      \
+    fx_logger_t* logger = fx_log_get_logger();              \
+    if (fx_logger_get_min_severity(logger) <= (severity)) { \
+      fx_logger_log(logger, (severity), (tag), (message));  \
+    }                                                       \
   } while (0)
 
 #define _FX_LOGF(severity, tag, message, ...)                            \
   do {                                                                   \
     fx_logger_t* logger = fx_log_get_logger();                           \
-    if (logger && fx_logger_get_min_severity(logger) <= (severity)) {    \
+    if (fx_logger_get_min_severity(logger) <= (severity)) {              \
       fx_logger_logf(logger, (severity), (tag), (message), __VA_ARGS__); \
     }                                                                    \
   } while (0)
 
-#define _FX_LOGVF(severity, tag, message, args)                       \
-  do {                                                                \
-    fx_logger_t* logger = fx_log_get_logger();                        \
-    if (logger && fx_logger_get_min_severity(logger) <= (severity)) { \
-      fx_logger_logvf(logger, (severity), (tag), (message), (args));  \
-    }                                                                 \
+#define _FX_LOGVF(severity, tag, message, args)                      \
+  do {                                                               \
+    fx_logger_t* logger = fx_log_get_logger();                       \
+    if (fx_logger_get_min_severity(logger) <= (severity)) {          \
+      fx_logger_logvf(logger, (severity), (tag), (message), (args)); \
+    }                                                                \
   } while (0)
 
 // Writes a message to the global logger.
