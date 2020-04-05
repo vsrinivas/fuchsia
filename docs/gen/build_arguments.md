@@ -109,7 +109,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:71
+From //BUILD.gn:72
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -124,7 +124,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:20
+From //BUILD.gn:21
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/developer/remote-control:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//build/rust:cargo_toml_gen", "//src/sys/pkg:tools", "//tools/cargo-gnaw", "//bundles:kitchen_sink"]`
 
@@ -132,7 +132,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:20
+From //BUILD.gn:21
 
 ### blob_blobfs_maximum_bytes
 For build/images:fvm.blob.sparse.blk, use this argument.
@@ -410,7 +410,7 @@ From //products/core.gni:94
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:28
+From //BUILD.gn:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -418,7 +418,7 @@ From //products/core.gni:94
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:28
+From //BUILD.gn:29
 
 ### camera_debug
 
@@ -2179,7 +2179,7 @@ and causes infra to schedule tests as if each one has the same duration.
 
 **Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:34
+From //BUILD.gn:35
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2281,7 +2281,7 @@ From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:42
+From //BUILD.gn:43
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//tools/net/dev_finder:host", "//bundles:tools"]`
 
@@ -2289,7 +2289,7 @@ From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:42
+From //BUILD.gn:43
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2598,7 +2598,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:92
+From //BUILD.gn:93
 
 ### zircon_asserts
 
@@ -2623,7 +2623,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:66
+From //BUILD.gn:67
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2640,14 +2640,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:55
+From //BUILD.gn:56
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 ### zircon_r_partition
 
@@ -2661,7 +2661,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:63
+From //BUILD.gn:64
 
 ### zvb_partition_name
 Partition name from where image will be verified
