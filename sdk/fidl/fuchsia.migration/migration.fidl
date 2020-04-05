@@ -38,6 +38,11 @@ protocol DisplayProvider {
     compose Provider;
 };
 
+[Discoverable]
+protocol UltrasoundProvider {
+    compose Provider;
+};
+
 /// Protocol to watch for changes when a migration of system data is started.
 [Discoverable]
 protocol State {
