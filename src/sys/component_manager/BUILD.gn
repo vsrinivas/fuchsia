@@ -139,17 +139,22 @@ generate_manifest("component_manager.bootfs") {
            rebase_path("$root_build_dir/component_manager", root_build_dir) ]
 }
 
-deprecated_fuchsia_component("component_manager_as_v1_component") {
-  deps = [ ":bin" ]
-  manifest = rebase_path("meta/component_manager.cmx")
-  binary = "component_manager"
-}
-
 # Note that this package and the component it contains wrap component_manager
 # as a v1 Component for interactive testing purposes through the shell. This
 # will eventually go away.
 package("component_manager") {
-  components = [ ":component_manager_as_v1_component" ]
+  deps = [ ":bin" ]
+  binaries = [
+    {
+      name = "component_manager"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/component_manager.cmx")
+      dest = "component_manager.cmx"
+    },
+  ]
 }
 
 test_package("component_manager_tests") {
@@ -159,13 +164,11 @@ test_package("component_manager_tests") {
   deps = [
     ":lib_test",
     "//examples/components/basic:hello_world_bin",
+    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
   ]
-
-  components =
-      [ "//garnet/examples/fidl/echo_server_rust:echo_server_rust_component" ]
 
   tests = [
     {
@@ -192,6 +195,10 @@ test_package("component_manager_tests") {
       path = rebase_path("meta/component_manager_tests_hello_world.cml")
       dest = "component_manager_tests_hello_world.cm"
     },
+    {
+      path = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
+      dest = "echo_server_rust.cmx"
+    },
   ]
 
   binaries = [
@@ -203,6 +210,10 @@ test_package("component_manager_tests") {
     },
     {
       name = "root_job_test_runner"
+    },
+    {
+      name = "echo_server_rust"
+      dest = "bin/echo_server"
     },
   ]
 }

@@ -185,7 +185,6 @@ template("test_package") {
     forward_variables_from(invoker,
                            [
                              "binaries",
-                             "components",
                              "data_deps",
                              "deprecated_shell",
                              "deps",
@@ -361,7 +360,6 @@ template("unittest_package") {
     forward_variables_from(invoker,
                            [
                              "binaries",
-                             "components",
                              "data_deps",
                              "extra",
                              "public_deps",

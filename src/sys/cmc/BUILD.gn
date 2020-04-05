@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
-import("//build/package/component.gni")
 import("//build/rust/rustc_binary_sdk.gni")
 import("//build/test/test_package.gni")
 
@@ -63,16 +61,11 @@ rustc_binary("example_bin") {
   source_root = "tests/example.rs"
 }
 
-deprecated_fuchsia_component("example_component") {
-  manifest = rebase_path("meta/example.cml")
-  deps = [ ":example_bin" ]
-  binary = "example"
-  testonly = true
-}
-
 test_package("cmc_integration_test") {
-  deps = [ ":cmc_integration_test_bin" ]
-  components = [ ":example_component" ]
+  deps = [
+    ":cmc_integration_test_bin",
+    ":example_bin",
+  ]
 
   resources = [
     {
@@ -82,6 +75,13 @@ test_package("cmc_integration_test") {
         path = rebase_path("tests/golden_release.cm")
       }
       dest = "golden.cm"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cml")
+      dest = "example.cm"
     },
   ]
 

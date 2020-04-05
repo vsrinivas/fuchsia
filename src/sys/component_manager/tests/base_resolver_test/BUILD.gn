@@ -46,10 +46,8 @@ test_package("base_resolver_test") {
     ":base_resolver_test_bin",
     ":root_component_bin",
     "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
+    "//src/sys/component_manager:bin",
   ]
-
-  components =
-      [ "//src/sys/component_manager:component_manager_as_v1_component" ]
 
   binaries = [
     {
@@ -58,6 +56,9 @@ test_package("base_resolver_test") {
     {
       name = "echo_server_rust"
       dest = "echo_server"
+    },
+    {
+      name = "component_manager"
     },
   ]
 
@@ -73,6 +74,11 @@ test_package("base_resolver_test") {
     {
       path = rebase_path("//examples/components/routing/meta/echo_server.cml")
       dest = "echo_server.cm"
+    },
+    {
+      path =
+          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
+      dest = "component_manager.cmx"
     },
   ]
 

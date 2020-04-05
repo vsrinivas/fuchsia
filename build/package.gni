@@ -6,7 +6,6 @@ import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/images/args.gni")
 import("//build/images/manifest.gni")
-import("//build/package/component.gni")
 import("//build/testing/test_spec.gni")
 
 # Generate a list of package metadata exported from all packages in the
@@ -305,10 +304,6 @@ template("pm_build_package") {
 #         [boolean] (default: false) When true, the binary is runnable from the shell.
 #         Shell binaries are run in the shell namespace and are not run as components.
 #
-#   components (optional)
-#     [list of fuchsia_component targets] Defines all the components this
-#     package should include in assembled package.
-#
 #   tests (optional)
 #     [list of scopes] Defines the test binaries in the package. A test is
 #     typically produced by the build system and is placed in the `test/`
@@ -427,7 +422,6 @@ template("package") {
           [
             "binaries",
             "binary",
-            "components",
             "data_deps",
             "deprecated_misc_storage",
             "deprecated_shell",
@@ -461,9 +455,6 @@ template("package") {
       if (!defined(deps)) {
         deps = []
       }
-      if (!defined(components)) {
-        components = []
-      }
       if (!defined(data_deps)) {
         data_deps = []
       }
@@ -488,9 +479,6 @@ template("package") {
       if (!defined(package_name)) {
         package_name = pkg_target_name
       }
-      foreach(component, components) {
-        deps += [ component ]
-      }
       if (!defined(resources)) {
         resources = []
       }
@@ -512,9 +500,6 @@ template("package") {
       assert(
           pkg.meta == [],
           "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with meta")
-      assert(
-          pkg.components == [],
-          "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with components")
       assert(
           !defined(pkg.binary),
           "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with binary")
@@ -947,7 +932,7 @@ template("package") {
 
     # An empty package() target doesn't actually generate a package at all.
     # Conveniently, an empty system_image package has exactly that effect.
-    if (manifest_sources == [] && pkg.components == []) {
+    if (manifest_sources == []) {
       pkg.__deprecated_system_image = true
     }
 
@@ -1005,16 +990,6 @@ template("package") {
                             rebase_path(pkg_meta_package, "", target_out_dir) ]
       deps = pkg.deps + [ ":$pkg_meta_package" ]
       public_deps = pkg.public_deps
-
-      foreach(component, pkg.components) {
-        # TODO(CF-162): Add to component_indices
-        deps += [ component ]
-        component_name = get_label_info(component, "name")
-        dir = get_label_info(component, "target_out_dir")
-        rsp_file = "${dir}/${component_name}.rsp"
-        sources += [ rsp_file ]
-        args += [ "@" + rebase_path(rsp_file) ]
-      }
     }
 
     # Next generate a sealed package file.

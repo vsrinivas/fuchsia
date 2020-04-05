@@ -107,6 +107,7 @@ test_package("integration_tests") {
     ":service_startup_test",
     ":sysmgr_integration_test_observer_config",
     ":test_sysmgr_service",
+    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
     "//src/diagnostics/archivist:bin",
     "//src/sys/sysmgr:bin",
   ]
@@ -123,6 +124,10 @@ test_package("integration_tests") {
     },
     {
       name = "sysmgr"
+    },
+    {
+      name = "echo_server_rust"
+      dest = "echo_server"
     },
   ]
 
@@ -154,6 +159,10 @@ test_package("integration_tests") {
       path = "//src/sys/sysmgr/meta/sysmgr.cmx"
       dest = "sysmgr.cmx"
     },
+    {
+      path = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
+      dest = "echo_server_rust.cmx"
+    },
   ]
 
   resources = [
@@ -162,7 +171,4 @@ test_package("integration_tests") {
       dest = "observer_config.json"
     },
   ]
-
-  components =
-      [ "//garnet/examples/fidl/echo_server_rust:echo_server_rust_component" ]
 }
