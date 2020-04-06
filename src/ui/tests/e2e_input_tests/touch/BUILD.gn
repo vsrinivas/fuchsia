@@ -11,6 +11,11 @@ group("tests") {
   testonly = true
   deps = [
     ":touch-input-test",
+
+    # The deps below are necessary on minimal product configs.
+    "//src/graphics/bin/vulkan_loader",
+    "//src/ui/bin/root_presenter",
+    "//src/ui/scenic",
     "//src/ui/tests/e2e_input_tests/touch/one-flutter",
   ]
 }
