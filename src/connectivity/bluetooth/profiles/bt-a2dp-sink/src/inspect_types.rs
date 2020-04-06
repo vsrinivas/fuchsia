@@ -64,7 +64,8 @@ struct StreamInspect {
 }
 
 impl StreamInspect {
-    pub fn new(inspect: inspect::Node) -> StreamInspect {
+    pub fn new(inspect: inspect::Node, seid: &avdtp::StreamEndpointId) -> StreamInspect {
+        inspect.record_string("stream_endpoint_id", seid.to_string());
         StreamInspect { inspect }
     }
 
@@ -118,7 +119,7 @@ pub(crate) struct RemotePeerInspect {
 impl RemotePeerInspect {
     pub fn new(inspect: inspect::Node) -> RemotePeerInspect {
         let remote_capabilities =
-            RemoteCapabilitiesInspect::new(inspect.create_child("remote stream capabilities"));
+            RemoteCapabilitiesInspect::new(inspect.create_child("remote_stream_capabilities"));
         RemotePeerInspect { inspect, remote_capabilities, streams: HashMap::new() }
     }
 
@@ -127,8 +128,8 @@ impl RemotePeerInspect {
     fn stream_inspect(&mut self, seid: &avdtp::StreamEndpointId) -> &StreamInspect {
         let node = &mut self.inspect;
         self.streams.entry(seid.clone()).or_insert_with(|| {
-            let inspect = node.create_child(format!("stream {}", seid));
-            StreamInspect::new(inspect)
+            let inspect = node.create_child(inspect::unique_name("stream_"));
+            StreamInspect::new(inspect, seid)
         })
     }
 

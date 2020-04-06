@@ -47,6 +47,10 @@ impl Peer {
         inspect: inspect::Node,
         cobalt_sender: CobaltSender,
     ) -> Self {
+        // populate the higher level "id" inspect field before passing the inspect node to
+        // `PeerInner` because the concept of a `PeerId` does not exist at that level.
+        inspect.record_string("id", id.to_string());
+
         let res = Self {
             id,
             inner: Arc::new(Mutex::new(PeerInner::new(peer, streams, inspect, cobalt_sender))),
@@ -560,7 +564,8 @@ mod tests {
 
         let avdtp = avdtp::Peer::new(signaling).expect("peer should be creatable");
         let inspect = inspect::Inspector::new();
-        let inspect = inspect.root().create_child(format!("peer {}", id));
+
+        let inspect = inspect.root().create_child(inspect::unique_name("peer_"));
 
         let peer = Peer::create(id, avdtp, Streams::new(), proxy, inspect, cobalt_sender);
 
@@ -587,7 +592,7 @@ mod tests {
         let id = PeerId(1);
         let (avdtp, remote) = setup_avdtp_peer();
         let inspect = inspect::Inspector::new();
-        let inspect = inspect.root().create_child(format!("peer {}", id));
+        let inspect = inspect.root().create_child(inspect::unique_name("peer_"));
         let streams = create_streams();
         let peer = Peer::create(id, avdtp, streams, proxy, inspect, cobalt_sender);
 

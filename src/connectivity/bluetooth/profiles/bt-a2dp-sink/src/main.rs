@@ -258,7 +258,8 @@ impl Streams {
         for stream in self.0.values() {
             let id = stream.endpoint.local_id();
             let capabilities = stream.endpoint.capabilities();
-            let mut writer = writer.create_child(&format!("stream {}", id));
+            let mut writer = writer.create_child(inspect::unique_name("stream_"));
+            writer.create_string("stream_endpoint_id", id.to_string());
             writer.create_string("encoding", stream.encoding().unwrap_or("Unknown"));
             writer.create_string("capabilities", capabilities.debug());
         }
@@ -533,7 +534,7 @@ async fn main() -> Result<(), Error> {
     };
 
     let mut stream_inspect =
-        ManagedNode::new(inspect.root().create_child("local stream endpoints"));
+        ManagedNode::new(inspect.root().create_child("local_stream_endpoints"));
     let streams = Streams::build(&mut stream_inspect).await?;
 
     if streams.len() == 0 {
@@ -835,7 +836,7 @@ mod tests {
 
         let inspect = inspect::Inspector::new();
         let mut stream_inspect =
-            ManagedNode::new(inspect.root().create_child("local stream endpoints"));
+            ManagedNode::new(inspect.root().create_child("local_stream_endpoints"));
         let mut streams_fut = Box::pin(Streams::build(&mut stream_inspect));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);

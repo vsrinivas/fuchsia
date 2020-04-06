@@ -214,7 +214,7 @@ impl ConnectedPeers {
                     avdtp_peer,
                     self.streams.clone(),
                     self.profile.clone(),
-                    self.inspect.create_child(&format!("peer {}", id)),
+                    self.inspect.create_child(inspect::unique_name("peer_")),
                     self.cobalt_sender.clone(),
                 );
 
