@@ -21,6 +21,13 @@
 namespace feedback {
 namespace fidl {
 
+// Fetches the current update channel.
+//
+// fuchsia.update.channel.Provider is expected to be in |services|.
+fit::promise<std::string> GetCurrentChannel(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    zx::duration timeout, fit::closure if_timeout = [] {});
+
 // Wraps around fuchsia::update::channel::ProviderPtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
 //

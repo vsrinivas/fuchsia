@@ -37,9 +37,8 @@ class ChannelProviderPtrTest : public UnitTestFixture {
 
   std::optional<std::string> GetCurrentChannel(fit::closure if_timeout = [] {}) {
     const zx::duration timeout = zx::sec(1);
-
-    ChannelProviderPtr ptr(dispatcher(), services());
-    auto promise = ptr.GetCurrentChannel(timeout, std::move(if_timeout));
+    auto promise =
+        fidl::GetCurrentChannel(dispatcher(), services(), timeout, std::move(if_timeout));
 
     bool was_called = false;
     std::optional<std::string> channel;

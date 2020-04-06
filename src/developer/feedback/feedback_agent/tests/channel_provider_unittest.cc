@@ -95,7 +95,7 @@ TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
   EXPECT_EQ(result.value(), "");
 }
 
-TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNotAvailable) {
+TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {
   SetUpChannelProviderServer(nullptr);
 
   const auto result = GetCurrentChannel();
@@ -103,7 +103,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNotAvailable) {
   ASSERT_FALSE(result);
 }
 
-TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrClosesConnection) {
+TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderClosesConnection>());
 
   const auto result = GetCurrentChannel();
@@ -111,7 +111,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrClosesConnection) {
   ASSERT_FALSE(result);
 }
 
-TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
+TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderNeverReturns>());
 
   const auto result = GetCurrentChannel();
