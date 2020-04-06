@@ -22,6 +22,7 @@ use {
     fidl_fuchsia_update as fidl_update, files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
+    futures::stream::TryStreamExt,
     std::{
         convert::{TryFrom, TryInto},
         fs::File,
@@ -72,9 +73,9 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .await?;
             zx::Status::ok(res)?;
 
-            let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None).await?;
             println!("package contents:");
-            for entry in entries {
+            let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);
+            while let Some(entry) = stream.try_next().await? {
                 println!("/{}", entry.name);
             }
 
@@ -151,7 +152,9 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .await?;
             zx::Status::ok(res)?;
 
-            let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None).await?;
+            let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None)
+                .try_collect::<Vec<_>>()
+                .await?;
             println!("package contents:");
             for entry in entries {
                 println!("/{}", entry.name);

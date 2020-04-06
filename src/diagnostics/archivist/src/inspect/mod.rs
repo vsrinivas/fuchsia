@@ -24,10 +24,11 @@ use {
     },
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::future::{join_all, BoxFuture},
-    futures::stream::FusedStream,
+    futures::stream::{FusedStream, StreamExt},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect, io_util,
     parking_lot::{Mutex, RwLock},
+    pin_utils::pin_mut,
     selectors,
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
@@ -112,13 +113,21 @@ impl InspectDataCollector {
     pub async fn populate_data_map(&mut self, inspect_proxy: &DirectoryProxy) -> Result<(), Error> {
         // TODO(36762): Use a streaming and bounded readdir API when available to avoid
         // being hung.
-        for entry in files_async::readdir_recursive(
+        let entries = files_async::readdir_recursive(
             inspect_proxy,
             Some(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds()),
         )
-        .await?
-        .into_iter()
-        {
+        .filter_map(|result| async move {
+            match result {
+                Ok(dir_entry) => Some(dir_entry),
+                Err(_) => {
+                    // TODO(fxb/49157): decide how to show directories that we failed to read.
+                    None
+                }
+            }
+        });
+        pin_mut!(entries);
+        while let Some(entry) = entries.next().await {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.
             if let Some(proxy) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry)? {

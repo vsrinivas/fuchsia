@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_zircon as zx,
-    futures::FutureExt,
+    futures::{FutureExt, StreamExt},
     std::{collections::BTreeMap, path::PathBuf},
 };
 
@@ -59,25 +59,28 @@ async fn get_data_directory_stats(
     .or(Err(zx::Status::INTERNAL))?;
 
     let mut file_and_size = files_async::readdir_recursive(&proxy, None)
-        .await
-        .or(Err(zx::Status::INTERNAL))?
-        .into_iter()
-        .map(|val| {
-            let pb = PathBuf::from(val.name);
-            let meta = path.join(&pb).metadata().ok();
-            (pb, meta)
-        })
-        .filter_map(|entry| match entry {
-            (pb, Some(meta)) => {
-                if meta.is_file() {
-                    Some((pb, meta.len()))
-                } else {
+        .filter_map(|result| async {
+            match result {
+                Ok(entry) => {
+                    let pb = PathBuf::from(entry.name);
+                    let maybe_meta = path.join(&pb).metadata().ok();
+                    if let Some(meta) = maybe_meta {
+                        if meta.is_file() {
+                            return Some((pb, meta.len()));
+                        }
+                    }
+                    None
+                }
+                _ => {
+                    // Errors occur when reading dirs. We skip reading this dir.
+                    // TODO(fxb/49157): consider showing an error in the output if we failed to
+                    // read this dir.
                     None
                 }
             }
-            _ => None,
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+        .await;
 
     file_and_size.sort_by(|a, b| a.0.cmp(&b.0));
 

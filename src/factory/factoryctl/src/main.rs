@@ -15,6 +15,7 @@ use {
     files_async::{self, DirentKind},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    futures::stream::TryStreamExt,
     io_util,
     nom::HexDisplay,
     std::path::PathBuf,
@@ -65,8 +66,8 @@ fn hexdump(data: &[u8]) {
 
 /// Walks the given `dir`, printing the full path to every file.
 async fn print_files(dir_proxy: &DirectoryProxy) -> Result<(), Error> {
-    let dir_entries = files_async::readdir_recursive(dir_proxy, /*timeout=*/ None).await?;
-    for entry in dir_entries.iter() {
+    let mut stream = files_async::readdir_recursive(dir_proxy, /*timeout=*/ None);
+    while let Some(entry) = stream.try_next().await? {
         if entry.kind == DirentKind::File {
             println!("{}", entry.name);
         }

@@ -16,6 +16,7 @@ use fidl_fuchsia_factory::{
 use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE};
 use files_async::{readdir_recursive, DirentKind};
 use fuchsia_component::client::connect_to_service;
+use futures::stream::TryStreamExt;
 use io_util;
 use serde_json::{from_value, to_value, Value};
 use std::path::Path;
@@ -44,12 +45,13 @@ impl FactoryStoreFacade {
         let req: ListFilesRequest = from_value(args)?;
         let dir_proxy = self.get_directory_for_provider(req.provider)?;
 
-        let dir_entries = readdir_recursive(&dir_proxy, /*timeout=*/ None).await?;
-        let file_paths: Vec<String> = dir_entries
-            .into_iter()
-            .filter(|entry| entry.kind == DirentKind::File)
-            .map(|entry| entry.name)
-            .collect();
+        let mut file_paths = Vec::new();
+        let mut stream = readdir_recursive(&dir_proxy, /*timeout=*/ None);
+        while let Some(entry) = stream.try_next().await? {
+            if entry.kind == DirentKind::File {
+                file_paths.push(entry.name);
+            }
+        }
 
         Ok(to_value(file_paths)?)
     }

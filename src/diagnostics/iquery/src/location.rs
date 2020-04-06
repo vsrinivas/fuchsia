@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     files_async,
     fuchsia_zircon::DurationNum,
+    futures::stream::StreamExt,
     io_util,
     lazy_static::lazy_static,
     std::{convert::TryFrom, path::PathBuf, str::FromStr},
@@ -35,34 +36,30 @@ pub async fn all_locations(root: &str) -> Result<Vec<InspectLocation>, Error> {
         io_util::OPEN_RIGHT_READABLE,
     )?;
 
-    let entries =
-        match files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds()))
-            .await
-        {
-            Err(files_async::Error::ReadDirRecursive { partial_results, errors }) => {
-                for error in errors {
-                    eprintln!("Error: {}", error)
+    let locations =
+        files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds()))
+            .filter_map(|result| async move {
+                match result {
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        None
+                    }
+                    Ok(entry) => {
+                        let mut path = PathBuf::from(&root);
+                        path.push(&entry.name);
+                        EXPECTED_FILES
+                            .iter()
+                            .find(|(filename, _)| entry.name.ends_with(filename))
+                            .map(|(_, inspect_type)| InspectLocation {
+                                inspect_type: inspect_type.clone(),
+                                path,
+                                parts: vec![],
+                            })
+                    }
                 }
-                Ok(partial_results)
-            }
-            Ok(results) => Ok(results),
-            e => e,
-        }?;
-
-    let locations = entries
-        .into_iter()
-        .filter_map(|entry| {
-            let mut path = PathBuf::from(&root);
-            path.push(&entry.name);
-            EXPECTED_FILES.iter().find(|(filename, _)| entry.name.ends_with(filename)).map(
-                |(_, inspect_type)| InspectLocation {
-                    inspect_type: inspect_type.clone(),
-                    path,
-                    parts: vec![],
-                },
-            )
-        })
-        .collect::<Vec<InspectLocation>>();
+            })
+            .collect::<Vec<InspectLocation>>()
+            .await;
     Ok(locations)
 }
 

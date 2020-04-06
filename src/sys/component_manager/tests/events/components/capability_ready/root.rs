@@ -17,11 +17,9 @@ use {
 
 async fn list_entries(directory: &DirectoryProxy) -> Vec<String> {
     files_async::readdir_recursive(&directory, /*timeout=*/ None)
-        .await
-        .expect("read entries")
-        .into_iter()
-        .map(|entry| entry.name)
+        .map(|entry_result| entry_result.expect("entry ok").name)
         .collect::<Vec<_>>()
+        .await
 }
 
 async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
