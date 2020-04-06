@@ -715,7 +715,10 @@ Vcpu::~Vcpu() {
     return;
   }
   local_apic_state_.timer.Cancel();
-  thread_->SetMigrateFn(Thread::MigrateFn());
+
+  // Clear the migration function, so that |thread_| does not reference |this|
+  // after destruction of the VCPU.
+  thread_->SetMigrateFn(nullptr);
 
   // The destructor may be called from a different thread, therefore we must
   // pin the current thread to the same CPU as the VCPU thread.
