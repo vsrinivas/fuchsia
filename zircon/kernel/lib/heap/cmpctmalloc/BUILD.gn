@@ -7,5 +7,5 @@
 zx_library("cmpctmalloc") {
   kernel = true
   sources = [ "cmpctmalloc.cc" ]
-  deps = [ "$zx/kernel/lib/counters" ]
+  include_dirs = [ "include/lib" ]
 }

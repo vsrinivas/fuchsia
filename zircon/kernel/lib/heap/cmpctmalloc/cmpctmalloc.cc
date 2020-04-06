@@ -5,22 +5,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "cmpctmalloc.h"
+
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <lib/cmpctmalloc.h>
-#include <lib/counters.h>
 #include <lib/heap.h>
-#include <platform.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 
-#include <kernel/mutex.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
 #include <ktl/algorithm.h>
 #include <vm/vm.h>
 
@@ -111,6 +106,8 @@
 //   returning it to the OS. See cached_os_alloc.
 
 #if defined(DEBUG) || LK_DEBUGLEVEL > 2
+#include <platform.h>
+
 #define CMPCT_DEBUG
 #endif
 
@@ -443,6 +440,7 @@ static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLo
   right->left = (header_t*)(((uintptr_t)new_left & ~1) | tag);
 }
 
+#ifdef CMPCT_DEBUG
 [[maybe_unused]] static void check_free_fill(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
   // The first 16 bytes of the region won't have free fill due to overlap
   // with the allocator bookkeeping.
@@ -457,6 +455,7 @@ static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLo
     }
   }
 }
+#endif
 
 static void add_to_heap(void* new_area, size_t size) TA_REQ(TheHeapLock::Get()) {
   char* top = (char*)new_area + size;

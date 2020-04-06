@@ -8,12 +8,11 @@
 #ifndef ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_
 #define ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_
 
-#include <lib/zircon-internal/thread_annotations.h>
-#include <stdbool.h>
 #include <stddef.h>
-#include <zircon/compiler.h>
 
 #include <kernel/mutex.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
 
 DECLARE_SINGLETON_MUTEX(TheHeapLock);
 
