@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cml/cml.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/images/args.gni")
@@ -687,7 +688,7 @@ template("package") {
         compiled = "compiled_" + pkg_target_name + "_" +
                    get_path_info(meta.dest, "file")
 
-        cm_compile(compiled) {
+        cm(compiled) {
           data = rebase_path(meta.path)
           deps = pkg.deps
           public_deps = pkg.public_deps

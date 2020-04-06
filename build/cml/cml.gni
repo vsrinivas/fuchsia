@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Compiles a cml file into a cm file.
+# If is_debug is true, pretty-prints the generated cm file.
+#
+# Parameters
+#
+#   data (required)
+#     [file] The path to the cml file that is to be compiled.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   cm(format) {
+#     data = rebase_path(meta.path)
+#   }
+template("cm") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    tool = "//src/sys/cmc"
+    tool_output_name = "cmc"
+
+    compiled_output = "$target_out_dir/$target_name"
+    inputs = [ invoker.data ]
+    outputs = [ compiled_output ]
+
+    args = [
+      "compile",
+      "--output",
+      rebase_path(compiled_output),
+      invoker.data,
+    ]
+
+    if (is_debug) {
+      args += [ "--pretty" ]
+    }
+  }
+}

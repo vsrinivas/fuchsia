@@ -2,29 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cmx/cmx.gni")
+import("//build/cml/cml.gni")
 import("//build/images/manifest.gni")
 
-cm_compile("root.cm") {
+cm("root.cm") {
   data = rebase_path("meta/root.cml")
 }
-cm_compile("bootstrap.cm") {
+cm("bootstrap.cm") {
   data = rebase_path("meta/bootstrap.cml")
 }
 
 # TODO(BLD-448): These should move into their appropriate packages that are
-# included in bootfs along with the binaries and other resources/libraries. For
-# now they here since cm_compile doesn't exist in //zircon.
-cm_compile("console.cm") {
+# included in bootfs along with the binaries and other resources/libraries.
+cm("console.cm") {
   data = rebase_path("meta/console.cml")
 }
-cm_compile("ptysvc.cm") {
+cm("ptysvc.cm") {
   data = rebase_path("meta/ptysvc.cml")
 }
-cm_compile("sysinfo.cm") {
+cm("sysinfo.cm") {
   data = rebase_path("meta/sysinfo.cml")
 }
-cm_compile("fshost.cm") {
+cm("fshost.cm") {
   data = rebase_path("meta/fshost.cml")
 }
 
