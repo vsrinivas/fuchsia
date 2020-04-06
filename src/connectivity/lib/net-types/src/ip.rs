@@ -55,7 +55,6 @@ use core::ops::Deref;
 #[cfg(std)]
 use std::net;
 
-use never::Never;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::{
@@ -354,6 +353,24 @@ impl Ipv6 {
         MulticastAddr::new_unchecked(Ipv6Addr::new([
             0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
         ]))
+    };
+
+    /// The (deprecated) subnet of site-local unicast addresses, defined in [RFC
+    /// 3513 Section 2.5.6].
+    ///
+    /// The site-local unicast subnet was deprecated in [RFC 3879]:
+    ///
+    /// > The special behavior of this prefix MUST no longer be supported in new
+    /// > implementations. The prefix MUST NOT be reassigned for other use
+    /// > except by a future IETF standards action... However, router
+    /// > implementations SHOULD be configured to prevent routing of this prefix
+    /// > by default.
+    ///
+    /// [RFC 3513 Section 2.5.6]: https://tools.ietf.org/html/rfc3513#section-2.5.6
+    /// [RFC 3879]: https://tools.ietf.org/html/rfc3879
+    pub const SITE_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
+        network: Ipv6Addr::new([0xfe, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        prefix: 10,
     };
 
     /// The length, in bits, of the interface identifier portion of unicast IPv6
@@ -705,48 +722,179 @@ impl LinkLocalAddress for IpAddr {
 }
 
 impl ScopeableAddress for Ipv4Addr {
-    type NonGlobalScope = Never;
+    type Scope = ();
 
     /// The scope of this address.
     ///
-    /// Although IPv4 defines a link local subnet, IPv4 addresses are never
-    /// scopeable, and so are always in the global scope.
-    fn scope(&self) -> Scope<Never> {
-        Scope::Global
+    /// Although IPv4 defines a link local subnet, IPv4 addresses are always
+    /// considered to be in the global scope.
+    fn scope(&self) -> () {
+        ()
     }
 }
 
-/// The list of non-global IPv6 scopes.
-pub enum Ipv6NonGlobalScope {
+/// The list of IPv6 scopes.
+///
+/// These scopes are defined by [RFC 4291 Section 2.7].
+///
+/// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Ipv6Scope {
+    /// The interface-local scope.
+    InterfaceLocal,
     /// The link-local scope.
     LinkLocal,
+    /// The admin-local scope.
+    AdminLocal,
+    /// The (deprecated) site-local scope.
+    ///
+    /// The site-local scope was deprecated in [RFC 3879]. While this scope
+    /// is returned for both site-local unicast and site-local multicast
+    /// addresses, RFC 3879 says the following about site-local unicast addresses
+    /// in particular ("this prefix" refers to the [site-local unicast subnet]):
+    ///
+    /// > The special behavior of this prefix MUST no longer be supported in new
+    /// > implementations. The prefix MUST NOT be reassigned for other use
+    /// > except by a future IETF standards action... However, router
+    /// > implementations SHOULD be configured to prevent routing of this prefix
+    /// > by default.
+    ///
+    /// [RFC 3879]: https://tools.ietf.org/html/rfc3879
+    /// [site-local unicast subnet]: Ipv6::SITE_LOCAL_UNICAST_SUBNET
+    SiteLocal,
+    /// The organization-local scope.
+    OrganizationLocal,
+    /// The global scope.
+    Global,
+    /// Scopes which are reserved for future use by [RFC 4291 Section 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    Reserved(Ipv6ReservedScope),
+    /// Scopes which are available for local definition by administrators.
+    Unassigned(Ipv6UnassignedScope),
+}
+
+/// The list of IPv6 scopes which are reserved for future use by [RFC 4291
+/// Section 2.7].
+///
+/// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Ipv6ReservedScope {
+    /// The scope with numerical value 0.
+    Scope0 = 0,
+    /// The scope with numerical value 3.
+    Scope3 = 3,
+    /// The scope with numerical value 0xF.
+    ScopeF = 0xF,
+}
+
+/// The list of IPv6 scopes which are available for local definition by
+/// administrators.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Ipv6UnassignedScope {
+    /// The scope with numerical value 6.
+    Scope6 = 6,
+    /// The scope with numerical value 7.
+    Scope7 = 7,
+    /// The scope with numerical value 9.
+    Scope9 = 9,
+    /// The scope with numerical value 0xA.
+    ScopeA = 0xA,
+    /// The scope with numerical value 0xB.
+    ScopeB = 0xB,
+    /// The scope with numerical value 0xC.
+    ScopeC = 0xC,
+    /// The scope with numerical value 0xD.
+    ScopeD = 0xD,
+}
+
+impl Scope for Ipv6Scope {
+    #[inline]
+    fn can_have_zone(&self) -> bool {
+        // Per RFC 6874 Section 4:
+        //
+        // > [I]mplementations MUST NOT allow use of this format except for
+        // > well-defined usages, such as sending to link-local addresses under
+        // > prefix fe80::/10.  At the time of writing, this is the only
+        // > well-defined usage known.
+        //
+        // While this directive applies particularly to the human-readable
+        // string representation of IPv6 addresses and zone identifiers, it
+        // seems reasonable to limit the in-memory representation in the same
+        // way.
+        //
+        // Note that, if interpreted literally, this quote would bar the use of
+        // zone identifiers on link-local multicast addresses (they are not
+        // under the prefix fe80::/10). However, it seems clear that this is not
+        // the interpretation that was intended. Link-local multicast addresses
+        // have the same need for a zone-identifier as link-local unicast
+        // addresses, and indeed, real systems like Linux allow link-local
+        // multicast addresses to be accompanied by zone identifiers.
+        matches!(self, Ipv6Scope::LinkLocal)
+    }
 }
 
 impl ScopeableAddress for Ipv6Addr {
-    type NonGlobalScope = Ipv6NonGlobalScope;
+    type Scope = Ipv6Scope;
 
     /// The scope of this address.
-    fn scope(&self) -> Scope<Ipv6NonGlobalScope> {
-        // NOTE(brunodalbo): Our is_linklocal implementation correctly supports
-        // detecting link local multicasts. So just using is_linklocal is fine.
-        // We may need to add more scopes here in the future for other IPv6
-        // scopes that can have scoping information.
-        if self.is_linklocal() {
-            Scope::NonGlobal(Ipv6NonGlobalScope::LinkLocal)
+    #[inline]
+    fn scope(&self) -> Ipv6Scope {
+        if self.is_multicast() {
+            use Ipv6ReservedScope::*;
+            use Ipv6Scope::*;
+            use Ipv6UnassignedScope::*;
+
+            // The "scop" field of a multicast address is the last 4 bits of the
+            // second byte of the address (see
+            // https://tools.ietf.org/html/rfc4291#section-2.7).
+            match self.0[1] & 0xF {
+                0 => Reserved(Scope0),
+                1 => InterfaceLocal,
+                2 => LinkLocal,
+                3 => Reserved(Scope3),
+                4 => AdminLocal,
+                5 => SiteLocal,
+                6 => Unassigned(Scope6),
+                7 => Unassigned(Scope7),
+                8 => OrganizationLocal,
+                9 => Unassigned(Scope9),
+                0xA => Unassigned(ScopeA),
+                0xB => Unassigned(ScopeB),
+                0xC => Unassigned(ScopeC),
+                0xD => Unassigned(ScopeD),
+                0xE => Global,
+                0xF => Reserved(ScopeF),
+                _ => unreachable!(),
+            }
+        } else if self.is_linklocal() {
+            Ipv6Scope::LinkLocal
+        } else if self.is_site_local() {
+            Ipv6Scope::SiteLocal
         } else {
-            Scope::Global
+            Ipv6Scope::Global
+        }
+    }
+}
+
+impl Scope for IpAddr<(), Ipv6Scope> {
+    #[inline]
+    fn can_have_zone(&self) -> bool {
+        match self {
+            IpAddr::V4(scope) => scope.can_have_zone(),
+            IpAddr::V6(scope) => scope.can_have_zone(),
         }
     }
 }
 
 impl ScopeableAddress for IpAddr {
-    type NonGlobalScope = IpAddr<Never, Ipv6NonGlobalScope>;
+    type Scope = IpAddr<(), Ipv6Scope>;
 
     #[inline]
-    fn scope(&self) -> Scope<IpAddr<Never, Ipv6NonGlobalScope>> {
+    fn scope(&self) -> IpAddr<(), Ipv6Scope> {
         match self {
-            IpAddr::V4(addr) => addr.scope().map(IpAddr::V4),
-            IpAddr::V6(addr) => addr.scope().map(IpAddr::V6),
+            IpAddr::V4(addr) => IpAddr::V4(addr.scope()),
+            IpAddr::V6(addr) => IpAddr::V6(addr.scope()),
         }
     }
 }
@@ -974,6 +1122,17 @@ impl Ipv6Addr {
     #[inline]
     pub fn is_valid_unicast(&self) -> bool {
         !(self.is_loopback() || !self.is_specified() || self.is_multicast())
+    }
+
+    /// Is this address in the (deprecated) site-local unicast subnet?
+    ///
+    /// `is_site_local` returns true if `self` is in the (deprecated)
+    /// [`Ipv6::SITE_LOCAL_UNICAST_SUBNET`]. See that constant's documentation
+    /// for more details on deprecation and how the subnet should be used in
+    /// light of deprecation.
+    #[inline]
+    pub fn is_site_local(&self) -> bool {
+        Ipv6::SITE_LOCAL_UNICAST_SUBNET.contains(self)
     }
 }
 
@@ -1725,5 +1884,41 @@ mod tests {
         assert!(Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS.0.is_multicast());
         assert!(Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.0.is_multicast());
         assert!(Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.0.is_multicast());
+    }
+
+    #[test]
+    fn test_ipv6_scope() {
+        use Ipv6ReservedScope::*;
+        use Ipv6Scope::*;
+        use Ipv6UnassignedScope::*;
+
+        // Test unicast scopes.
+        assert_eq!(Ipv6::SITE_LOCAL_UNICAST_SUBNET.network.scope(), SiteLocal);
+        assert_eq!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.scope(), LinkLocal);
+        assert_eq!(Ipv6::UNSPECIFIED_ADDRESS.scope(), Global);
+
+        // Test multicast scopes.
+        let assert_scope = |value, scope| {
+            let mut addr = Ipv6::MULTICAST_SUBNET.network;
+            // Set the "scop" field manually.
+            addr.0[1] |= value;
+            assert_eq!(addr.scope(), scope);
+        };
+        assert_scope(0, Reserved(Scope0));
+        assert_scope(1, InterfaceLocal);
+        assert_scope(2, LinkLocal);
+        assert_scope(3, Reserved(Scope3));
+        assert_scope(4, AdminLocal);
+        assert_scope(5, SiteLocal);
+        assert_scope(6, Unassigned(Scope6));
+        assert_scope(7, Unassigned(Scope7));
+        assert_scope(8, OrganizationLocal);
+        assert_scope(9, Unassigned(Scope9));
+        assert_scope(0xA, Unassigned(ScopeA));
+        assert_scope(0xB, Unassigned(ScopeB));
+        assert_scope(0xC, Unassigned(ScopeC));
+        assert_scope(0xD, Unassigned(ScopeD));
+        assert_scope(0xE, Global);
+        assert_scope(0xF, Reserved(ScopeF));
     }
 }
