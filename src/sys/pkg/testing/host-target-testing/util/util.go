@@ -124,8 +124,12 @@ func AtomicallyWriteFile(path string, mode os.FileMode, writeFileFunc func(*os.F
 	basename := filepath.Base(path)
 
 	tmpfile, err := ioutil.TempFile(dir, basename)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		if tmpfile != nil {
+			tmpfile.Close()
 			os.Remove(tmpfile.Name())
 		}
 	}()
@@ -140,6 +144,9 @@ func AtomicallyWriteFile(path string, mode os.FileMode, writeFileFunc func(*os.F
 
 	// Now that we've written the file, do an atomic swap of the filename into place.
 	if err := os.Rename(tmpfile.Name(), path); err != nil {
+		return err
+	}
+	if err := tmpfile.Close(); err != nil {
 		return err
 	}
 	tmpfile = nil
