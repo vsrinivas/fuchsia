@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("logger") {
   sdk = "source"
   sdk_headers = [
@@ -13,20 +25,19 @@ zx_library("logger") {
     "provider.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-logger:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/syslog",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-logger:c",
   ]
   public_deps = [
     # <lib/logger/logger.h> has #include <lib/fidl/cpp/message_buffer.h>.
-    "$zx/system/ulib/fidl",
+    "//zircon/public/lib/fidl",
 
     # <lib/logger/provider.h> has #include <lib/svc/service.h>.
-    "$zx/system/ulib/svc:headers",
+    "//zircon/public/lib/svc",
 
     # <lib/logger/logger.h> has #include <lib/async/cpp/wait.h>.
-    "$zx/system/ulib/async:async-cpp.headers",
+    "//zircon/public/lib/async-cpp",
   ]
 }
