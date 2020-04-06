@@ -23,13 +23,15 @@ ProfilerLogListener::ProfilerLogListener(fit::function<void()> all_done)
 
 ProfilerLogListener::~ProfilerLogListener() {}
 
-void ProfilerLogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> logs) {
+void ProfilerLogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> logs,
+                                  LogManyCallback received) {
   for (auto&& log_entry : logs) {
     log_entry_kind token = parse_log_entry(std::move(log_entry.msg));
     if (token == DONE) {
       all_done_();
     }
   }
+  received();
 }
 
 static const char termination_message[] = "{{{done}}}";
@@ -122,11 +124,12 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(
   }
 }
 
-void ProfilerLogListener::Log(fuchsia::logger::LogMessage log) {
+void ProfilerLogListener::Log(fuchsia::logger::LogMessage log, LogCallback received) {
   log_entry_kind token = parse_log_entry(std::move(log.msg));
   if (token == DONE) {
     all_done_();
   }
+  received();
 }
 
 void ProfilerLogListener::Done() {}
@@ -141,7 +144,7 @@ bool ProfilerLogListener::ConnectToLogger(sys::ComponentContext* component_conte
   options->pid = pid;
   // make tags non-null.
   options->tags.resize(0);
-  log_service->Listen(std::move(log_listener_), std::move(options));
+  log_service->ListenSafe(std::move(log_listener_), std::move(options));
   return true;
 }
 

@@ -18,7 +18,7 @@ namespace internal {
  */
 
 LogListenerLogSinkImpl::LogListenerLogSinkImpl(
-    fidl::InterfaceRequest<fuchsia::logger::LogListener> request, std::string prefix,
+    fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request, std::string prefix,
     zx::socket log_sink, async_dispatcher_t* dispatcher)
     : LogListenerImpl(std::move(request), "@" + prefix, dispatcher) {
   if (log_sink.is_valid()) {

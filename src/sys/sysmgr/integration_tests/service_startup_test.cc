@@ -25,9 +25,9 @@ namespace {
 
 using TestSysmgr = ::gtest::RealLoopFixture;
 
-class SimpleLogCollector : public fuchsia::logger::LogListener {
+class SimpleLogCollector : public fuchsia::logger::LogListenerSafe {
  public:
-  explicit SimpleLogCollector(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
+  explicit SimpleLogCollector(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request,
                               async_dispatcher_t* dispatcher)
       : binding_(this, std::move(request), dispatcher) {
     binding_.set_error_handler([this](zx_status_t s) {
@@ -37,20 +37,23 @@ class SimpleLogCollector : public fuchsia::logger::LogListener {
     });
   }
 
-  virtual void Log(fuchsia::logger::LogMessage message) override {
+  virtual void Log(fuchsia::logger::LogMessage message, LogCallback received) override {
     messages_.emplace_back(message.msg);
+    received();
   };
 
-  virtual void LogMany(std::vector<fuchsia::logger::LogMessage> messages) override {
+  virtual void LogMany(std::vector<fuchsia::logger::LogMessage> messages,
+                       LogManyCallback received) override {
     for (auto& l : messages) {
-      Log(std::move(l));
+      Log(std::move(l), []() {});
     }
+    received();
   }
 
   virtual void Done() override { done_ = true; }
 
   bool done_;
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
   std::vector<std::string> messages_;
 };
 
@@ -93,7 +96,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
   ASSERT_EQ(ZX_OK, sysmgr_svc.Connect(interface_ptr.NewRequest(dispatcher())));
 
   fuchsia::logger::LogPtr log_ptr;
-  fidl::InterfaceHandle<fuchsia::logger::LogListener> listener_handle;
+  fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> listener_handle;
   SimpleLogCollector collector(listener_handle.NewRequest(), dispatcher());
   ASSERT_EQ(ZX_OK, sysmgr_svc.Connect(log_ptr.NewRequest(dispatcher())));
 
@@ -122,7 +125,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
       "test_sysmgr_service.cc\\([0-9]{1,4}\\): Received ping.",
   };
   // FIXME(45589) can't use DumpLogs without a fence
-  log_ptr->Listen(std::move(listener_handle), std::move(filter_options));
+  log_ptr->ListenSafe(std::move(listener_handle), std::move(filter_options));
   RunLoopUntil([&collector, &expected_patterns] {
     return (collector.messages_.size() == expected_patterns.size());
   });

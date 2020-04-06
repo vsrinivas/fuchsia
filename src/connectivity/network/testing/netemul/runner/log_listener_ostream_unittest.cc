@@ -55,7 +55,7 @@ class LogListenerOStreamImplTest : public gtest::RealLoopFixture {
   }
 
   std::unique_ptr<internal::LogListenerImpl> log_listener;
-  fuchsia::logger::LogListenerPtr proxy;
+  fuchsia::logger::LogListenerSafePtr proxy;
   std::stringstream stream;
   std::string prefix;
 };
@@ -63,26 +63,30 @@ class LogListenerOStreamImplTest : public gtest::RealLoopFixture {
 TEST_F(LogListenerOStreamImplTest, SimpleLog) {
   Init("netemul");
 
-  proxy->Log(CreateLogMessage({"tag"}, "Hello"));
+  bool called = false;
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
 
   auto message = ExpectedLog({"tag"}, "Hello");
   RunLoopUntil([this, &message]() {
     // Keep looping while the message doesn't match
     return message == stream.str();
   });
+  EXPECT_TRUE(called);
 }
 
 TEST_F(LogListenerOStreamImplTest, SimpleLogs) {
   Init("netemul");
 
-  proxy->Log(CreateLogMessage({"tag1"}, "Hello1"));
-  proxy->Log(CreateLogMessage({"tag2.1", "tag2.2"}, "Hello2"));
+  int called = 0;
+  proxy->Log(CreateLogMessage({"tag1"}, "Hello1"), [&called]() { called++; });
+  proxy->Log(CreateLogMessage({"tag2.1", "tag2.2"}, "Hello2"), [&called]() { called++; });
 
   auto message = ExpectedLogs({{"tag1"}, {"tag2.1", "tag2.2"}}, {"Hello1", "Hello2"});
   RunLoopUntil([this, &message]() {
     // Keep looping while the message doesn't match
     return message == stream.str();
   });
+  EXPECT_EQ(called, 2);
 }
 
 }  // namespace testing

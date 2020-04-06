@@ -20,20 +20,21 @@ namespace internal {
 
 // LogListenerImpl
 //
-// Implement the fuchsia::logger::LogListener interface.
+// Implement the fuchsia::logger::LogListenerSafe interface.
 // This is not a replacement for ManagedLogger, as ManagedLogger
 // is used to handle the stdout and stderr of processes. This is
 // used to handle the logs sent to the LogSink service
-class LogListenerImpl : public fuchsia::logger::LogListener {
+class LogListenerImpl : public fuchsia::logger::LogListenerSafe {
  public:
-  LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request, std::string prefix,
-                  async_dispatcher_t* dispatcher = nullptr);
+  LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request,
+                  std::string prefix, async_dispatcher_t* dispatcher = nullptr);
 
-  /* Actual implementation (overrides) of fuchsia::logger::LogListener stubs */
+  /* Actual implementation (overrides) of fuchsia::logger::LogListenerSafe stubs */
 
-  virtual void Log(fuchsia::logger::LogMessage m) override;
+  virtual void Log(fuchsia::logger::LogMessage m, LogCallback received) override;
 
-  virtual void LogMany(std::vector<fuchsia::logger::LogMessage> ms) override;
+  virtual void LogMany(std::vector<fuchsia::logger::LogMessage> ms,
+                       LogManyCallback received) override;
 
   virtual void Done() override;
 
@@ -45,7 +46,7 @@ class LogListenerImpl : public fuchsia::logger::LogListener {
   // Binding object that will listen for messages from a
   // channel and handle dispatching (call the appropriate
   // stub implemenation in this class).
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
 
   // prefix_
   //
@@ -73,7 +74,7 @@ class LogListener final {
   //
   // Constructs the LogListener object.
   LogListener(std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options,
-              fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle,
+              fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> loglistener_handle,
               std::shared_ptr<internal::LogListenerImpl> impl);
 
   // Returns true if we can bind to a LogSink in a managed environment.
@@ -106,9 +107,9 @@ class LogListener final {
   std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options_;
 
   // Client handle for log listener.
-  fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle_;
+  fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> loglistener_handle_;
 
-  // Implementation of the LogListener interface (fuchsia.logger.LogListener)
+  // Implementation of the LogListenerSafe interface (fuchsia.logger.LogListenerSafe)
   std::shared_ptr<internal::LogListenerImpl> loglistener_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogListener);

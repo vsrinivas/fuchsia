@@ -58,14 +58,14 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";
   has_called_collect_logs_ = true;
 
-  ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
+  ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
     if (bridge_.IsAlreadyDone()) {
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "LogListener error";
+    FX_PLOGS(ERROR, status) << "LogListenerSafe error";
     bridge_.CompleteError();
   });
 
@@ -80,7 +80,7 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   });
   // Resets |log_many_called_| for the new call to DumpLogs().
   log_many_called_ = false;
-  logger_->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
+  logger_->DumpLogsSafe(std::move(log_listener_h), /*options=*/nullptr);
 
   return bridge_
       .WaitForDone(timeout,
@@ -91,7 +91,8 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
       });
 }
 
-void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
+void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages,
+                          LogManyCallback done) {
   log_many_called_ = true;
 
   if (messages.empty()) {
@@ -100,11 +101,15 @@ void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
   }
 
   for (auto& message : messages) {
-    Log(std::move(message));
+    Log(std::move(message), []() {});
   }
+  done();
 }
 
-void LogListener::Log(fuchsia::logger::LogMessage message) { logs_ += Format(message); }
+void LogListener::Log(fuchsia::logger::LogMessage message, LogCallback done) {
+  logs_ += Format(message);
+  done();
+}
 
 void LogListener::Done() {
   if (bridge_.IsAlreadyDone()) {

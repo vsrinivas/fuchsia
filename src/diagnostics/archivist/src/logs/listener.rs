@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerProxy, LogMessage};
+use fidl_fuchsia_logger::{
+    LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
+};
 use thiserror::Error;
 
+mod asbestos;
 mod filter;
 pub mod pool;
 
+pub use asbestos::pretend_scary_listener_is_safe;
 use filter::MessageFilter;
 
 /// An individual log listener. Wraps the FIDL type `LogListenerProxy` in filtering options provided
 /// when connecting.
 pub struct Listener {
-    listener: LogListenerProxy,
+    listener: LogListenerSafeProxy,
     filter: MessageFilter,
     status: Status,
 }
@@ -25,8 +29,10 @@ enum Status {
 }
 
 impl Listener {
+    /// Create a new `Listener`. Fails if `client` can't be converted into a `LogListenerProxy` or
+    /// if `LogFilterOptions` are invalid.
     pub fn new(
-        log_listener: ClientEnd<LogListenerMarker>,
+        log_listener: ClientEnd<LogListenerSafeMarker>,
         options: Option<Box<LogFilterOptions>>,
     ) -> Result<Self, ListenerError> {
         Ok(Self {
@@ -70,13 +76,17 @@ impl Listener {
 
     /// Send a batch of pre-filtered log messages to this listener.
     pub async fn send_filtered_logs(&mut self, log_messages: &mut Vec<LogMessage>) {
-        self.check_result(self.listener.log_many(&mut log_messages.iter_mut()));
+        self.check_result({
+            let mut log_messages = log_messages.iter_mut();
+            let fut = self.listener.log_many(&mut log_messages);
+            fut.await
+        });
     }
 
     /// Send a single log message if it should be sent according to this listener's filter settings.
     pub async fn send_log(&mut self, mut log_message: LogMessage) {
         if self.filter.should_send(&log_message) {
-            self.check_result(self.listener.log(&mut log_message));
+            self.check_result(self.listener.log(&mut log_message).await);
         }
     }
 

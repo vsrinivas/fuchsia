@@ -20,7 +20,7 @@ namespace internal {
 // be tagged with the supplied prefix.
 class LogListenerLogSinkImpl : public LogListenerImpl {
  public:
-  LogListenerLogSinkImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
+  LogListenerLogSinkImpl(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request,
                          std::string prefix, zx::socket log_sink,
                          async_dispatcher_t* dispatcher = nullptr);
 

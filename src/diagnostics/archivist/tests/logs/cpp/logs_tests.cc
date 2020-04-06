@@ -21,14 +21,14 @@
 
 namespace {
 
-class StubLogListener : public fuchsia::logger::LogListener {
+class StubLogListener : public fuchsia::logger::LogListenerSafe {
  public:
   using DoneCallback = fit::function<void()>;
   StubLogListener();
   ~StubLogListener() override;
 
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log) override;
-  void Log(fuchsia::logger::LogMessage Log) override;
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log, LogManyCallback done) override;
+  void Log(fuchsia::logger::LogMessage Log, LogCallback done) override;
   void Done() override;
 
   const std::vector<fuchsia::logger::LogMessage>& GetLogs() { return log_messages_; }
@@ -41,8 +41,8 @@ class StubLogListener : public fuchsia::logger::LogListener {
   bool Listen(fuchsia::logger::LogPtr log_service);
 
  private:
-  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
-  fuchsia::logger::LogListenerPtr log_listener_;
+  ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
+  fuchsia::logger::LogListenerSafePtr log_listener_;
   std::vector<fuchsia::logger::LogMessage> log_messages_;
   DoneCallback done_callback_;
 };
@@ -51,12 +51,15 @@ StubLogListener::StubLogListener() : binding_(this) { binding_.Bind(log_listener
 
 StubLogListener::~StubLogListener() {}
 
-void StubLogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> logs) {
+void StubLogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> logs,
+                              LogManyCallback done) {
   std::move(logs.begin(), logs.end(), std::back_inserter(log_messages_));
+  done();
 }
 
-void StubLogListener::Log(fuchsia::logger::LogMessage log) {
+void StubLogListener::Log(fuchsia::logger::LogMessage log, LogCallback done) {
   log_messages_.push_back(std::move(log));
+  done();
 }
 
 void StubLogListener::Done() {
@@ -69,7 +72,7 @@ bool StubLogListener::Listen(fuchsia::logger::LogPtr log_service) {
   if (!log_listener_) {
     return false;
   }
-  log_service->Listen(std::move(log_listener_), nullptr);
+  log_service->ListenSafe(std::move(log_listener_), nullptr);
   return true;
 }
 
@@ -83,7 +86,7 @@ bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory
   options->filter_by_pid = true;
   options->pid = pid;
   options->tags = {tag};
-  log_service->Listen(std::move(log_listener_), std::move(options));
+  log_service->ListenSafe(std::move(log_listener_), std::move(options));
   return true;
 }
 
@@ -92,7 +95,7 @@ bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback
     return false;
   }
   auto options = fuchsia::logger::LogFilterOptions::New();
-  log_service->DumpLogs(std::move(log_listener_), std::move(options));
+  log_service->DumpLogsSafe(std::move(log_listener_), std::move(options));
   done_callback_ = std::move(done_callback);
   return true;
 }

@@ -17,21 +17,21 @@
 namespace feedback {
 
 // Listens to incoming logs and immediately adds them to a store.
-class SystemLogListener : public fuchsia::logger::LogListener {
+class SystemLogListener : public fuchsia::logger::LogListenerSafe {
  public:
   SystemLogListener(std::shared_ptr<sys::ServiceDirectory> services, LogMessageStore* store);
 
   void StartListening();
 
  private:
-  // |fuchsia::logger::LogListener|
-  void Log(fuchsia::logger::LogMessage message) override;
-  void LogMany(std::vector<fuchsia::logger::LogMessage> messages) override;
+  // |fuchsia::logger::LogListenerSafe|
+  void Log(fuchsia::logger::LogMessage message, LogCallback done) override;
+  void LogMany(std::vector<fuchsia::logger::LogMessage> messages, LogManyCallback done) override;
   void Done() override;
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
   LogMessageStore* store_;
-  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
+  ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
 
   fuchsia::logger::LogPtr logger_;
 };

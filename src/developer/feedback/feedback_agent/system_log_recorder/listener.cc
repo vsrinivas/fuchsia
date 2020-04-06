@@ -16,7 +16,7 @@ SystemLogListener::SystemLogListener(std::shared_ptr<sys::ServiceDirectory> serv
     : services_(services), store_(store), binding_(this) {}
 
 void SystemLogListener::StartListening() {
-  ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
+  ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener;
 
   binding_.Bind(log_listener.NewRequest());
   binding_.set_error_handler([](zx_status_t status) {
@@ -31,25 +31,28 @@ void SystemLogListener::StartListening() {
   // We first ask the logger to send all of the logs it has cached and then we begin listening for
   // new log messages. It's possible that we could be missing messages the logger receives between
   // when it calls Done() and our call to Listen().
-  logger_->DumpLogs(std::move(log_listener), /*options=*/nullptr);
+  logger_->DumpLogsSafe(std::move(log_listener), /*options=*/nullptr);
 }
 
-void SystemLogListener::Log(fuchsia::logger::LogMessage message) {
+void SystemLogListener::Log(fuchsia::logger::LogMessage message, LogCallback received) {
   store_->Add(Format(std::move(message)));
+  received();
 }
 
-void SystemLogListener::LogMany(std::vector<fuchsia::logger::LogMessage> messages) {
+void SystemLogListener::LogMany(std::vector<fuchsia::logger::LogMessage> messages,
+                                LogManyCallback received) {
   for (const auto& message : messages) {
     store_->Add(Format(std::move(message)));
   }
+  received();
 }
 
 void SystemLogListener::Done() {
-  ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
+  ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener;
 
   binding_.Bind(log_listener.NewRequest());
 
-  logger_->Listen(std::move(log_listener), /*options=*/nullptr);
+  logger_->ListenSafe(std::move(log_listener), /*options=*/nullptr);
 }
 
 }  // namespace feedback

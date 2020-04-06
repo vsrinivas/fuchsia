@@ -26,7 +26,7 @@ class ManagedLogger {
   using ClosedCallback = fit::function<void(ManagedLogger*)>;
 
   ManagedLogger(std::string name, bool is_err,
-                std::shared_ptr<fuchsia::logger::LogListener> loglistener);
+                std::shared_ptr<fuchsia::logger::LogListenerSafe> loglistener);
 
   zx::handle CreateHandle();
 
@@ -50,13 +50,13 @@ class ManagedLogger {
   std::unique_ptr<char[]> buffer_;
   size_t buffer_pos_;
   async::WaitMethod<ManagedLogger, &ManagedLogger::OnRx> wait_;
-  std::shared_ptr<fuchsia::logger::LogListener> loglistener_;
+  std::shared_ptr<fuchsia::logger::LogListenerSafe> loglistener_;
 };
 
 class ManagedLoggerCollection {
  public:
   explicit ManagedLoggerCollection(std::string environment_name,
-                                   std::shared_ptr<fuchsia::logger::LogListener> loglistener)
+                                   std::shared_ptr<fuchsia::logger::LogListenerSafe> loglistener)
       : environment_name_(std::move(environment_name)),
         counter_(0),
         loglistener_(std::move(loglistener)) {}
@@ -67,7 +67,7 @@ class ManagedLoggerCollection {
  private:
   std::string environment_name_;
   uint32_t counter_;
-  std::shared_ptr<fuchsia::logger::LogListener> loglistener_;
+  std::shared_ptr<fuchsia::logger::LogListenerSafe> loglistener_;
   std::vector<ManagedLogger::Ptr> loggers_;
 };
 

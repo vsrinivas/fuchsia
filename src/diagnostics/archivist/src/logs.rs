@@ -5,8 +5,8 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogListenerMarker, LogMessage, LogRequest, LogRequestStream, LogSinkRequest,
-    LogSinkRequestStream,
+    LogFilterOptions, LogListenerSafeMarker, LogMessage, LogRequest, LogRequestStream,
+    LogSinkRequest, LogSinkRequestStream,
 };
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
@@ -20,7 +20,7 @@ mod logger;
 mod stats;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
-use listener::{pool::Pool, Listener};
+use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
 use stats::LogSource;
 
 /// Store 4 MB of log messages and delete on FIFO basis.
@@ -138,15 +138,32 @@ impl LogManager {
         });
     }
 
-    /// Async request handler for a `fuchsia.logger.Log` client.
+    /// Handle requests to `fuchsia.logger.Log`. All request types read the whole backlog from
+    /// memory, `DumpLogs(Safe)` stops listening after that though.
     async fn handle_log_requests(self, mut stream: LogRequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
-            let (listener, options, should_dump) = match request {
-                LogRequest::Listen { log_listener, options, .. } => (log_listener, options, false),
-                LogRequest::DumpLogs { log_listener, options, .. } => (log_listener, options, true),
+            let (listener, options, dump_logs) = match request {
+                LogRequest::ListenSafe { log_listener, options, .. } => {
+                    (log_listener, options, false)
+                }
+                LogRequest::DumpLogsSafe { log_listener, options, .. } => {
+                    (log_listener, options, true)
+                }
+
+                // TODO(fxb/48758) delete these methods!
+                LogRequest::Listen { log_listener, options, .. } => {
+                    eprintln!("WARNING: use of fuchsia.logger.Log.Listen. Use ListenSafe.");
+                    let listener = pretend_scary_listener_is_safe(log_listener)?;
+                    (listener, options, false)
+                }
+                LogRequest::DumpLogs { log_listener, options, .. } => {
+                    eprintln!("WARNING: use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
+                    let listener = pretend_scary_listener_is_safe(log_listener)?;
+                    (listener, options, true)
+                }
             };
 
-            self.handle_listener(listener, options, should_dump).await?;
+            self.handle_listener(listener, options, dump_logs).await?;
         }
         Ok(())
     }
@@ -155,7 +172,7 @@ impl LogManager {
     /// `dump_logs` is true or adding it to the pool of ongoing listeners if not.
     async fn handle_listener(
         &self,
-        log_listener: ClientEnd<LogListenerMarker>,
+        log_listener: ClientEnd<LogListenerSafeMarker>,
         options: Option<Box<LogFilterOptions>>,
         dump_logs: bool,
     ) -> Result<(), Error> {

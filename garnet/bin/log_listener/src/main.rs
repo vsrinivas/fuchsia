@@ -799,7 +799,7 @@ fn main() {
     thread::sleep(sleep_time);
 
     if let Err(e) = run_log_listener(Some(&mut options)) {
-        eprintln!("LogListener: Error: {:?}", e);
+        eprintln!("LogListenerSafe: Error: {:?}", e);
     }
 }
 

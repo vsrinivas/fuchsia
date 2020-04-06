@@ -54,25 +54,31 @@ using fuchsia::hwinfo::ProductInfo;
 using fuchsia::hwinfo::ProductPtr;
 using testing::UnorderedElementsAreArray;
 
-class LogListener : public fuchsia::logger::LogListener {
+class LogListener : public fuchsia::logger::LogListenerSafe {
  public:
   LogListener(std::shared_ptr<sys::ServiceDirectory> services) : binding_(this) {
     binding_.Bind(log_listener_.NewRequest());
 
     fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
-    logger->Listen(std::move(log_listener_), /*options=*/nullptr);
+    logger->ListenSafe(std::move(log_listener_), /*options=*/nullptr);
   }
 
   bool HasLogs() { return has_logs_; }
 
  private:
-  // |fuchsia::logger::LogListener|
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) { has_logs_ = true; }
-  void Log(fuchsia::logger::LogMessage log) { has_logs_ = true; }
+  // |fuchsia::logger::LogListenerSafe|
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> log, LogManyCallback done) {
+    has_logs_ = true;
+    done();
+  }
+  void Log(fuchsia::logger::LogMessage log, LogCallback done) {
+    has_logs_ = true;
+    done();
+  }
   void Done() { FXL_NOTIMPLEMENTED(); }
 
-  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
-  fuchsia::logger::LogListenerPtr log_listener_;
+  ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
+  fuchsia::logger::LogListenerSafePtr log_listener_;
   bool has_logs_ = false;
 };
 

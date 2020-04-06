@@ -15,12 +15,12 @@
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/syslog/cpp/logger.h"
 
-class ProfilerLogListener : public fuchsia::logger::LogListener {
+class ProfilerLogListener : public fuchsia::logger::LogListenerSafe {
  public:
   ProfilerLogListener(fit::function<void()> all_done);
 
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log) override;
-  void Log(fuchsia::logger::LogMessage Log) override;
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log, LogManyCallback received) override;
+  void Log(fuchsia::logger::LogMessage Log, LogCallback received) override;
   void Done() override;
   ~ProfilerLogListener() override;
 
@@ -34,8 +34,8 @@ class ProfilerLogListener : public fuchsia::logger::LogListener {
   log_entry_kind parse_log_entry(const std::string& log_line);
 
   fit::function<void()> all_done_;
-  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
-  fuchsia::logger::LogListenerPtr log_listener_;
+  ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
+  fuchsia::logger::LogListenerSafePtr log_listener_;
   std::stringbuf log_buffer_;
   std::ostream log_os_;
   std::vector<std::vector<std::string>> mmap_entry_;

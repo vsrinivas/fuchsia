@@ -48,13 +48,13 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     syslog.set_error_handler([](zx_status_t err) { FAIL() << "Lost connection to syslog"; });
 
     env->ConnectToService(syslog.NewRequest(dispatcher()));
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> test_handle;
+    fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> test_handle;
     test_listener = std::make_unique<TestListener>(test_handle.NewRequest());
     test_listener->SetObserver([](const fuchsia::logger::LogMessage& log) {
       // shouldn't receive any klog
       ASSERT_EQ(std::find(log.tags.begin(), log.tags.end(), "klog"), log.tags.end());
     });
-    syslog->Listen(std::move(test_handle), nullptr);
+    syslog->ListenSafe(std::move(test_handle), nullptr);
   }
 
   void ValidateMessage(const fuchsia::logger::LogMessage& msg, const std::vector<std::string>& tags,
@@ -82,15 +82,17 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<sys::testing::EnclosingEnvironment> env;
   std::unique_ptr<internal::LogListenerImpl> log_listener;
   std::unique_ptr<TestListener> test_listener;
-  fuchsia::logger::LogListenerPtr proxy;
+  fuchsia::logger::LogListenerSafePtr proxy;
 };
 
 TEST_F(LoggerTest, SyslogRedirect) {
   Init("netemul");
   std::string env_name = "@netemul";
 
-  proxy->Log(CreateLogMessage({"tag"}, "Hello"));
+  bool called = false;
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
+  EXPECT_TRUE(called);
   ValidateMessage(msgs[0], {"tag", env_name}, "Hello");
 }
 
@@ -104,8 +106,10 @@ TEST_F(LoggerTest, TooManyTags) {
     tags.emplace_back(fxl::StringPrintf("t%d", i));
   }
 
-  proxy->Log(CreateLogMessage(tags, "Hello"));
+  bool called = false;
+  proxy->Log(CreateLogMessage(tags, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
+  EXPECT_TRUE(called);
   ValidateMessage(msgs[0], tags, "[@netemul] Hello");
 }
 
@@ -118,8 +122,10 @@ TEST_F(LoggerTest, LongEnvironmentName) {
   Init(env_name);
   std::string expect_tag = "@" + env_name.substr(0, FX_LOG_MAX_TAG_LEN - 2);
 
-  proxy->Log(CreateLogMessage({"tag"}, "Hello"));
+  bool called = false;
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
+  EXPECT_TRUE(called);
   ValidateMessage(msgs[0], {"tag", expect_tag}, "Hello");
 }
 
@@ -139,8 +145,10 @@ TEST_F(LoggerTest, VeryLongEnvironmentName) {
   // if environment name is too long to fit in message,
   // we'll just not add it.
 
-  proxy->Log(CreateLogMessage(tags, "Hello"));
+  bool called = false;
+  proxy->Log(CreateLogMessage(tags, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
+  EXPECT_TRUE(called);
   ValidateMessage(msgs[0], tags, "Hello");
 }
 
@@ -164,9 +172,11 @@ TEST_F(LoggerTest, LongMessageLongTags) {
   // If message is really long, the environment name will
   // take some of the space when tags are full
 
-  proxy->Log(CreateLogMessage(tags, msg));
+  bool called = false;
+  proxy->Log(CreateLogMessage(tags, msg), [&called]() { called = true; });
 
   auto msgs = WaitForMessages();
+  EXPECT_TRUE(called);
   ValidateMessage(
       msgs[0], tags,
       prefix + msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - prefix.length() - 1));
@@ -185,12 +195,14 @@ TEST_F(LoggerTest, LongMessage) {
   std::string tag = "tag";
   size_t tags_len = 1 + (1 + tag.length()) + (1 + env_name.length());
 
-  proxy->Log(CreateLogMessage({tag}, msg));
+  bool called = false;
+  proxy->Log(CreateLogMessage({tag}, msg), [&called]() { called = true; });
 
   // Since we're adding more tags with environment name,
   // long messages neeed to be trimmed.
 
   auto msgs = WaitForMessages();
+  EXPECT_TRUE(called);
   ValidateMessage(msgs[0], {tag, env_name},
                   msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - 1));
 }
@@ -200,8 +212,10 @@ TEST_F(LoggerTest, MultipleMessages) {
   Init("netemul");
 
   constexpr int messages = 10;
+  int called = 0;
   for (int i = 0; i < messages; i++) {
-    proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%d", i)));
+    proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%d", i)),
+               [&called]() { called++; });
   }
 
   std::vector<fuchsia::logger::LogMessage> consumed;
@@ -209,6 +223,7 @@ TEST_F(LoggerTest, MultipleMessages) {
     auto msgs = WaitForMessages();
     consumed.insert(consumed.end(), msgs.begin(), msgs.end());
   }
+  EXPECT_EQ(called, messages);
 
   // sort the received messages by their contents to account for out-of-order delivery by logger
   std::sort(consumed.begin(), consumed.end(), [](auto a, auto b) { return a.msg < b.msg; });

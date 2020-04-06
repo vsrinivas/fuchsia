@@ -42,105 +42,106 @@ void Logger::CloseConnection() {
   }
 }
 
-void Logger::Listen(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-                    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+void Logger::ListenSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
+                        std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  fuchsia::logger::LogListenerSafePtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
   for (const auto& message : messages_) {
-    log_listener_ptr->Log(message);
+    log_listener_ptr->Log(message, []() {});
   }
 }
 
-void Logger::DumpLogs(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-                      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+void Logger::DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
+                          std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  fuchsia::logger::LogListenerSafePtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
-  log_listener_ptr->LogMany(messages_);
+  log_listener_ptr->LogMany(messages_, []() {});
   log_listener_ptr->Done();
 }
 
-void LoggerClosesConnection::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerClosesConnection::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   CloseConnection();
 }
 
-void LoggerNeverBindsToLogListener::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerNeverBindsToLogListener::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {}
 
-void LoggerUnbindsFromLogListenerAfterOneMessage::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerUnbindsFromLogListenerAfterOneMessage::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FX_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
 
-  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+  fuchsia::logger::LogListenerSafePtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->LogMany(
-      std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1));
+      std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1), []() {});
   log_listener_ptr.Unbind();
 }
 
-void LoggerNeverCallsLogManyBeforeDone::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerNeverCallsLogManyBeforeDone::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+  fuchsia::logger::LogListenerSafePtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->Done();
 }
 
-void LoggerBindsToLogListenerButNeverCalls::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerBindsToLogListenerButNeverCalls::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
   FX_CHECK(log_listener_ptr_.is_bound());
 }
 
-void LoggerDelaysAfterOneMessage::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerDelaysAfterOneMessage::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FX_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
 
-  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+  fuchsia::logger::LogListenerSafePtr log_listener_ptr = log_listener.Bind();
   FX_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->LogMany(
-      std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1));
+      std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1), []() {});
 
   FX_LOGS(INFO) << " logger delaying the remaining messages for " << delay_.to_msecs() << "ms";
   FX_CHECK(async::PostDelayedTask(
                dispatcher_,
                [this, log_listener_ptr = std::move(log_listener_ptr)] {
                  log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
-                     messages_.begin() + 1, messages_.end()));
+                                               messages_.begin() + 1, messages_.end()),
+                                           []() {});
                  log_listener_ptr->Done();
                },
                delay_) == ZX_OK);
 }
 
-void LoggerDelayedResponses::Listen(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerDelayedResponses::ListenSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
   size_t i = 0;
   for (const auto& message : messages_) {
     async::PostDelayedTask(
-        dispatcher_, [this, message]() { log_listener_ptr_->Log(message); },
+        dispatcher_, [this, message]() { log_listener_ptr_->Log(message, []() {}); },
         delay_between_responses_ * i);
     ++i;
   }
 }
 
-void LoggerDelayedResponses::DumpLogs(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+void LoggerDelayedResponses::DumpLogsSafe(
+    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   log_listener_ptr_ = log_listener.Bind();
 
   size_t i = 0;
   for (const auto& dump : dumps_) {
     async::PostDelayedTask(
-        dispatcher_, [this, dump]() { log_listener_ptr_->LogMany(dump); },
+        dispatcher_, [this, dump]() { log_listener_ptr_->LogMany(dump, []() {}); },
         delay_between_responses_ * i);
     ++i;
   }

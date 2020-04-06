@@ -12,7 +12,7 @@ use fuchsia_component::client::connect_to_service;
 use futures::TryStreamExt;
 // Include the generated FIDL bindings for the `Logger` service.
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogListenerRequest, LogListenerRequestStream, LogMarker, LogMessage,
+    LogFilterOptions, LogListenerSafeRequest, LogListenerSafeRequestStream, LogMarker, LogMessage,
 };
 
 /// This trait is used to pass log message back to client.
@@ -28,19 +28,21 @@ pub trait LogProcessor {
 
 async fn log_listener(
     mut processor: impl LogProcessor,
-    mut stream: LogListenerRequestStream,
+    mut stream: LogListenerSafeRequestStream,
 ) -> Result<(), fidl::Error> {
     while let Some(request) = stream.try_next().await? {
         match request {
-            LogListenerRequest::Log { log, control_handle: _ } => {
+            LogListenerSafeRequest::Log { log, responder } => {
                 processor.log(log);
+                responder.send().ok();
             }
-            LogListenerRequest::LogMany { log, control_handle: _ } => {
+            LogListenerSafeRequest::LogMany { log, responder } => {
                 for msg in log {
                     processor.log(msg);
                 }
+                responder.send().ok();
             }
-            LogListenerRequest::Done { control_handle: _ } => {
+            LogListenerSafeRequest::Done { control_handle: _ } => {
                 processor.done();
                 return Ok(());
             }
@@ -61,9 +63,9 @@ pub async fn run_log_listener<'a>(
 
     let options = options;
     if dump_logs {
-        logger.dump_logs(listener_ptr, options).context("failed to register log dumper")?;
+        logger.dump_logs_safe(listener_ptr, options).context("failed to register log dumper")?;
     } else {
-        logger.listen(listener_ptr, options).context("failed to register listener")?;
+        logger.listen_safe(listener_ptr, options).context("failed to register listener")?;
     }
 
     log_listener(processor, listener_stream).await?;

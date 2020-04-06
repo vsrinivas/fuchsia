@@ -4,8 +4,8 @@
 
 use {
     fidl_fuchsia_logger::{
-        LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
-        LogMessage, LogProxy,
+        LogFilterOptions, LogListenerSafeMarker, LogListenerSafeRequest,
+        LogListenerSafeRequestStream, LogMessage, LogProxy,
     },
     fuchsia_async as fasync,
     futures::{
@@ -26,9 +26,7 @@ pub async fn validate_log_stream(
     proxy: LogProxy,
     filter_options: Option<LogFilterOptions>,
 ) {
-    ValidatingListener::new(expected)
-        .run(proxy, filter_options, false)
-        .await;
+    ValidatingListener::new(expected).run(proxy, filter_options, false).await;
 }
 
 /// Test that all of the expected message arrive over `proxy` after requesting a log dump, with no
@@ -43,9 +41,7 @@ pub async fn validate_log_dump(
     proxy: LogProxy,
     filter_options: Option<LogFilterOptions>,
 ) {
-    ValidatingListener::new(expected)
-        .run(proxy, filter_options, true)
-        .await;
+    ValidatingListener::new(expected).run(proxy, filter_options, true).await;
 }
 
 enum Outcome {
@@ -67,7 +63,7 @@ impl ValidatingListener {
         Self { expected: expected.into_iter().collect(), send_outcomes, outcomes: Some(outcomes) }
     }
 
-    /// Drive a LogListener request stream. Signals for channel close and test completion are
+    /// Drive a LogListenerSafe request stream. Signals for channel close and test completion are
     /// send on the futures-aware channels with which ValidatingListener is constructed.
     async fn run(
         mut self,
@@ -76,13 +72,13 @@ impl ValidatingListener {
         dump_logs: bool,
     ) {
         let (client_end, stream) =
-            fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
+            fidl::endpoints::create_request_stream::<LogListenerSafeMarker>().unwrap();
         let filter_options = filter_options.as_mut();
 
         if dump_logs {
-            proxy.dump_logs(client_end, filter_options).expect("failed to register listener");
+            proxy.dump_logs_safe(client_end, filter_options).expect("failed to register listener");
         } else {
-            proxy.listen(client_end, filter_options).expect("failed to register listener");
+            proxy.listen_safe(client_end, filter_options).expect("failed to register listener");
         }
 
         let mut sink_says_done = false;
@@ -113,23 +109,25 @@ impl ValidatingListener {
         }
     }
 
-    async fn handle_stream(mut self, mut stream: LogListenerRequestStream) {
+    async fn handle_stream(mut self, mut stream: LogListenerSafeRequestStream) {
         while let Some(Ok(req)) = stream.next().await {
             self.handle_request(req).await;
         }
     }
 
-    async fn handle_request(&mut self, req: LogListenerRequest) {
+    async fn handle_request(&mut self, req: LogListenerSafeRequest) {
         match req {
-            LogListenerRequest::Log { log, .. } => {
+            LogListenerSafeRequest::Log { log, responder } => {
                 self.log(log).await;
+                responder.send().ok();
             }
-            LogListenerRequest::LogMany { log, .. } => {
+            LogListenerSafeRequest::LogMany { log, responder } => {
                 for msg in log {
                     self.log(msg).await;
                 }
+                responder.send().ok();
             }
-            LogListenerRequest::Done { .. } => {
+            LogListenerSafeRequest::Done { .. } => {
                 self.send_outcomes.send(Outcome::LogSentDone).await.unwrap();
             }
         }

@@ -25,7 +25,7 @@ static std::string ExtractLabel(const std::string& url) {
 }
 
 ManagedLogger::ManagedLogger(std::string name, bool is_err,
-                             std::shared_ptr<fuchsia::logger::LogListener> loglistener)
+                             std::shared_ptr<fuchsia::logger::LogListenerSafe> loglistener)
     : dispatcher_(async_get_default_dispatcher()),
       name_(std::move(name)),
       is_err_(is_err),
@@ -130,7 +130,7 @@ void ManagedLogger::LogMessage(std::string msg) {
 
   // Should never end up here if loglistener_ is a nullptr
   ZX_ASSERT(loglistener_);
-  loglistener_->Log(std::move(m));
+  loglistener_->Log(std::move(m), []() {});
 }
 
 void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {

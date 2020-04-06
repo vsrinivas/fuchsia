@@ -42,13 +42,13 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
     sandbox.SetRootEnvironmentCreatedCallback([this](ManagedEnvironment* env) {
       if (log_event_) {
-        fidl::InterfaceHandle<fuchsia::logger::LogListener> listener;
+        fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> listener;
         log_listener_ = std::make_unique<TestListener>(listener.NewRequest());
         log_listener_->SetObserver(
             [this](const fuchsia::logger::LogMessage& msg) { log_event_(msg); });
         fidl::InterfacePtr<fuchsia::logger::Log> log;
         env->ConnectToService(fuchsia::logger::Log::Name_, log.NewRequest().TakeChannel());
-        log->Listen(std::move(listener), nullptr);
+        log->ListenSafe(std::move(listener), nullptr);
       }
     });
 

@@ -28,11 +28,11 @@ fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                std::shared_ptr<sys::ServiceDirectory> services,
                                                zx::duration timeout, Cobalt* cobalt);
 
-// Wraps around fuchsia::logger::LogListenerPtr to handle establishing the connection, losing the
-// connection, waiting for the callback, enforcing a timeout, etc.
+// Wraps around fuchsia::logger::LogListenerSafePtr to handle establishing the connection, losing
+// the connection, waiting for the callback, enforcing a timeout, etc.
 //
 // CollectLogs() is expected to be called only once.
-class LogListener : public fuchsia::logger::LogListener {
+class LogListener : public fuchsia::logger::LogListenerSafe {
  public:
   explicit LogListener(async_dispatcher_t* dispatcher,
                        std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt);
@@ -44,13 +44,13 @@ class LogListener : public fuchsia::logger::LogListener {
   std::string CurrentLogs() { return logs_; }
 
  private:
-  // |fuchsia::logger::LogListener|
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) override;
-  void Log(fuchsia::logger::LogMessage log) override;
+  // |fuchsia::logger::LogListenerSafe|
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> log, LogManyCallback done) override;
+  void Log(fuchsia::logger::LogMessage log, LogCallback done) override;
   void Done() override;
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
+  ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
   Cobalt* cobalt_;
 
   // Enforces the one-shot nature of CollectLogs().

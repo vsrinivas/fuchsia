@@ -19,7 +19,7 @@ namespace internal {
  * public
  */
 
-LogListenerImpl::LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
+LogListenerImpl::LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request,
                                  std::string prefix, async_dispatcher_t* dispatcher)
     : binding_(this, std::move(request), dispatcher), prefix_(std::move(prefix)), dropped_logs_(0) {
   binding_.set_error_handler([](zx_status_t status) {
@@ -27,15 +27,18 @@ LogListenerImpl::LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogList
   });
 }
 
-void LogListenerImpl::Log(fuchsia::logger::LogMessage m) {
+void LogListenerImpl::Log(fuchsia::logger::LogMessage m, LogCallback received) {
   // Actually process the log
   LogImpl(std::move(m));
+  received();
 }
 
-void LogListenerImpl::LogMany(std::vector<fuchsia::logger::LogMessage> ms) {
+void LogListenerImpl::LogMany(std::vector<fuchsia::logger::LogMessage> ms,
+                              LogManyCallback received) {
   for (auto& m : ms) {
-    Log(std::move(m));
+    Log(std::move(m), []() {});
   }
+  received();
 }
 
 void LogListenerImpl::Done() { return; }
@@ -49,7 +52,7 @@ void LogListenerImpl::Done() { return; }
  */
 
 LogListener::LogListener(std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options,
-                         fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle,
+                         fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> loglistener_handle,
                          std::shared_ptr<internal::LogListenerImpl> loglistener_impl)
     : log_filter_options_(std::move(log_filter_options)),
       loglistener_handle_(std::move(loglistener_handle)),
@@ -67,7 +70,7 @@ void LogListener::BindToLogService(fuchsia::netemul::environment::ManagedEnviron
 
   env->ConnectToService(fuchsia::logger::Log::Name_, log_service.NewRequest().TakeChannel());
 
-  log_service->Listen(std::move(loglistener_handle_), std::move(log_filter_options_));
+  log_service->ListenSafe(std::move(loglistener_handle_), std::move(log_filter_options_));
 }
 
 std::shared_ptr<internal::LogListenerImpl> LogListener::GetLogListenerImpl() const {
@@ -81,9 +84,9 @@ std::unique_ptr<LogListener> LogListener::Create(
     return nullptr;
   }
 
-  // Create an instance of the LogListener implementation
+  // Create an instance of the LogListenerSafe implementation
   // and start listening for logs
-  fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_h;
+  fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> loglistener_h;
   std::shared_ptr<internal::LogListenerImpl> impl;
 
   if (logger_options.has_syslog_output() && logger_options.syslog_output()) {

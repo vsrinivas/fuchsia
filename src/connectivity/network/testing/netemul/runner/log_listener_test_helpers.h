@@ -18,10 +18,10 @@ constexpr uint64_t kDummyPid = 0xBB;
 constexpr int64_t kDummyTime = 0xCCAACC;
 constexpr int32_t kDummySeverity = 3;
 
-class TestListener : public fuchsia::logger::LogListener {
+class TestListener : public fuchsia::logger::LogListenerSafe {
  public:
   using ObserverCallback = fit::function<void(const fuchsia::logger::LogMessage&)>;
-  explicit TestListener(fidl::InterfaceRequest<fuchsia::logger::LogListener> req)
+  explicit TestListener(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> req)
       : binding_(this, std::move(req)) {
     binding_.set_error_handler(
         [](zx_status_t s) { FAIL() << "Connection to test listener closed"; });
@@ -29,17 +29,19 @@ class TestListener : public fuchsia::logger::LogListener {
 
   TestListener() : binding_(this) {}
 
-  void Log(fuchsia::logger::LogMessage log) override {
+  void Log(fuchsia::logger::LogMessage log, LogCallback received) override {
     if (observer_callback_) {
       observer_callback_(log);
     }
     messages_.emplace_back(std::move(log));
+    received();
   }
 
-  void LogMany(std::vector<fuchsia::logger::LogMessage> log) override {
+  void LogMany(std::vector<fuchsia::logger::LogMessage> log, LogManyCallback received) override {
     for (auto& l : log) {
-      Log(std::move(l));
+      Log(std::move(l), []() {});
     }
+    received();
   }
 
   void Done() override {}
@@ -49,7 +51,7 @@ class TestListener : public fuchsia::logger::LogListener {
   void SetObserver(ObserverCallback observer) { observer_callback_ = std::move(observer); }
 
  private:
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
   std::vector<fuchsia::logger::LogMessage> messages_;
   ObserverCallback observer_callback_;
 };
