@@ -20,7 +20,12 @@ test_package("e2e_input_tests") {
   tests = [
     {
       name = "minimal_input_test"
-      environments = [ nuc_env ]
+      environments = [
+        {
+          dimensions = nuc_env.dimensions
+          tags = [ "flaky" ]  # Bug 49361
+        },
+      ]
     },
     {
       name = "mediabuttons_listener_test"
