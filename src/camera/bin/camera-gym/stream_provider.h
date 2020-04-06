@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_CAMERA_GYM_STREAM_PROVIDER_H_
-#define SRC_CAMERA_EXAMPLES_CAMERA_GYM_STREAM_PROVIDER_H_
+#ifndef SRC_CAMERA_BIN_CAMERA_GYM_STREAM_PROVIDER_H_
+#define SRC_CAMERA_BIN_CAMERA_GYM_STREAM_PROVIDER_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>  // TODO(48124) - camera2 going away
 #include <fuchsia/camera3/cpp/fidl.h>
@@ -67,4 +67,4 @@ class StreamProvider {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_EXAMPLES_CAMERA_GYM_STREAM_PROVIDER_H_
+#endif  // SRC_CAMERA_BIN_CAMERA_GYM_STREAM_PROVIDER_H_

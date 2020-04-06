@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_CAMERA_GYM_DISPLAY_VIEW_H_
-#define SRC_CAMERA_EXAMPLES_CAMERA_GYM_DISPLAY_VIEW_H_
+#ifndef SRC_CAMERA_BIN_CAMERA_GYM_DISPLAY_VIEW_H_
+#define SRC_CAMERA_BIN_CAMERA_GYM_DISPLAY_VIEW_H_
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -16,7 +16,7 @@
 #include <trace/event.h>
 
 #include "lib/ui/scenic/cpp/session.h"
-#include "src/camera/examples/camera-gym/stream_provider.h"
+#include "src/camera/bin/camera-gym/stream_provider.h"
 #include "src/camera/examples/camera_display/text_node/text_node.h"
 
 namespace camera {
@@ -70,4 +70,4 @@ class DisplayView : public scenic::BaseView {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_EXAMPLES_CAMERA_GYM_DISPLAY_VIEW_H_
+#endif  // SRC_CAMERA_BIN_CAMERA_GYM_DISPLAY_VIEW_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/examples/camera-gym/display_view.h"
+#include "src/camera/bin/camera-gym/display_view.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -28,7 +28,7 @@ DisplayView::DisplayView(scenic::ViewContext context, async::Loop* loop)
       trace_provider_(loop_->dispatcher()) {}
 
 DisplayView::~DisplayView() {
-  for (auto& ipp: image_pipe_properties_) {
+  for (auto& ipp : image_pipe_properties_) {
     for (auto& waiter : ipp.waiters) {
       waiter.second.first->Cancel();
     }

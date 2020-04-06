@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/examples/camera-gym/stream_provider.h"
+#include "src/camera/bin/camera-gym/stream_provider.h"
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>  // TODO(48124) - camera2 going away
 #include <fuchsia/camera3/cpp/fidl.h>

@@ -4,6 +4,7 @@
 
 group("bin") {
   public_deps = [
+    "camera-gym",
     "device",
     "device_watcher",
   ]
