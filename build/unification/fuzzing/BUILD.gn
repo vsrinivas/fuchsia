@@ -13,7 +13,6 @@ fuzzer_names = [
   "hermetic-decompressor",
   "lz4",
   "lz4-decompress",
-  "zbi-bootfs",
 ]
 known_fuzzers = []
 foreach(fuzzer, fuzzer_names) {

@@ -2,9 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
-import("$zx/public/gn/resource.gni")
-import("$zx/public/gn/zbi.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
+import("//build/unification/zbi/migrated_zbi_test.gni")
+import("//build/unification/zbi/resource.gni")
 
 group("test") {
   testonly = true
@@ -14,12 +27,26 @@ group("test") {
   ]
 }
 
-zx_test("zbi-bootfs-test") {
+test("zbi-bootfs-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "zbi-bootfs-test.cc" ]
   deps = [
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zbi-bootfs",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zbi-bootfs",
+    "//zircon/public/lib/zxtest",
   ]
   data_deps = [
     ":generated-lz4f-zbi",
@@ -31,37 +58,46 @@ resource("generated-lz4f-zbi") {
   sources = [ "$target_out_dir/generated-lz4f.zbi" ]
   outputs = [ "testdata/zbi-bootfs/generated-lz4f.zbi" ]
   deps = [ ":generated-lz4f" ]
-  testonly = true
+  # TODO(44278): Restore to true when converting this file to GN build idioms.
+  testonly = false
 }
 
 resource("generated-zstd-zbi") {
   sources = [ "$target_out_dir/generated-zstd.zbi" ]
   outputs = [ "testdata/zbi-bootfs/generated-zstd.zbi" ]
   deps = [ ":generated-zstd" ]
-  testonly = true
+  # TODO(44278): Restore to true when converting this file to GN build idioms.
+  testonly = false
 }
 
 # Generate zbi images for tests.
-zbi("generated-zstd") {
+migrated_zbi("generated-zstd") {
   compress = "zstd"
-  testonly = true
+  # TODO(44278): Restore to true when converting this file to GN build idioms.
+  testonly = false
   cpu = ""
   deps = [ ":create-zbi-image" ]
 }
 
-zbi("generated-lz4f") {
+migrated_zbi("generated-lz4f") {
   compress = "lz4f"
-  testonly = true
+  # TODO(44278): Restore to true when converting this file to GN build idioms.
+  testonly = false
   cpu = ""
   deps = [ ":create-zbi-image" ]
 }
 
 zbi_input("create-zbi-image") {
-  testonly = true
-  sources = [ "$zx/system/ulib/zbi-bootfs/test/payload/" ]
+  # TODO(44278): Restore to true when converting this file to GN build idioms.
+  testonly = false
+  sources = [ "//zircon/system/ulib/zbi-bootfs/test/payload/" ]
 }
 
-zx_fuzzer("zbi-bootfs-fuzzer") {
+fuzzer("zbi-bootfs-fuzzer") {
   sources = [ "zbi-bootfs-fuzzer.cc" ]
-  deps = [ "$zx/system/ulib/zbi-bootfs" ]
+  deps = [ "//zircon/public/lib/zbi-bootfs" ]
+}
+
+migrated_manifest("zbi-bootfs-test-manifest") {
+  deps = [ ":zbi-bootfs-test" ]
 }

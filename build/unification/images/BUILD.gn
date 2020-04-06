@@ -147,13 +147,10 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.zbi-bootfs-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zbi-bootfs-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -456,7 +453,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.zbi-bootfs-test-test",
 #------------------
 #------------------
 #------------------
@@ -681,13 +677,10 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":bin.zbi-bootfs-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zbi-bootfs-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -990,7 +983,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.zbi-bootfs-test-test",
 #------------------
 #------------------
 #------------------
@@ -1610,13 +1602,10 @@ aggregate_manifest("migrated-aux") {
     #":bin.vdso-variant-helper",
 #------------------
 #------------------
-    #":bin.zbi-bootfs-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.zbi-bootfs-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -2813,7 +2802,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
 #------------------
 #------------------
-    #":test.sys.zbi-bootfs-test-test",
+    "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
 #------------------
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
 #------------------
@@ -2904,13 +2893,10 @@ aggregate_manifest("migrated-tests") {
     #":bin.null-namespace-child",
 #------------------
 #------------------
-    #":bin.zbi-bootfs-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.zbi-bootfs-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -3319,7 +3305,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
 #------------------
-    #":test.sys.zbi-bootfs-test-test",
+    "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
 #------------------
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
 #------------------

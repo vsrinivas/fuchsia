@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zbi.gni")
-import("//build/config/fuchsia/zircon.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
 import("//build/unification/zbi/tests.gni")
 import("//build/unification/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
@@ -26,16 +24,13 @@ import("//zircon/public/gn/test/zbi_test_success.gni")
 #     Defaults to [ "QEMU" ].
 #
 #   replace, complete, compress
-#     See zbi.gni.
+#     See migrated_zbi.gni.
 template("migrated_zbi_test") {
   main_target = target_name
   input_target = "${target_name}_input"
-  rsp_target = "${target_name}_rsp"
   zbi_target = "${target_name}_zbi"
 
   group_deps = []
-
-  rsp_file = "$target_gen_dir/$target_name.zbi.rsp"
 
   entries = []
   if (defined(invoker.args)) {
@@ -53,14 +48,16 @@ template("migrated_zbi_test") {
     }
   }
 
-  generated_file(rsp_target) {
+  migrated_zbi(zbi_target) {
+    forward_variables_from(invoker, "*", ["args", "reference", "device_types"])
     testonly = true
-    deps = [ ":$input_target" ]
-    data_keys = [ "migrated_zbi_input_args" ]
-    walk_keys = [ "migrated_zbi_barrier" ]
-    output_conversion = "list lines"
-    outputs = [ rsp_file ]
+    if (!defined(output_name)) {
+      output_name = main_target
+    }
+    deps += [ ":$input_target" ]
   }
+
+  group_deps += [ ":$zbi_target" ]
 
   output_file = target_name
   if (defined(invoker.output_name)) {
@@ -79,63 +76,6 @@ template("migrated_zbi_test") {
     output_file = "$target_out_dir/$output_file"
   }
 
-  zbi_tool = "$zircon_tools_dir/zbi"
-
-  action(zbi_target) {
-    forward_variables_from(invoker, [ "visibility" ])
-
-    testonly = true
-
-    script = "//build/unification/zbi/run_zbi.py"
-
-    deps = [
-      ":$rsp_target",
-      "//zircon/public/tool/zbi($host_toolchain)",
-    ]
-
-    inputs = [
-      rsp_file,
-      zbi_tool,
-    ]
-    outputs = [
-      output_file,
-      "$output_file.intermediate.d",
-    ]
-    depfile = "$output_file.d"
-
-    args = [
-      "--zbi",
-      rebase_path(zbi_tool, root_build_dir),
-      "--original-depfile",
-      rebase_path(outputs[1], root_build_dir),
-      "--final-depfile",
-      rebase_path(depfile, root_build_dir),
-      "--rspfile",
-      rebase_path(rsp_file, root_build_dir),
-
-      # The remaining arguments are passed to the zbi tool along with the
-      # contents of the response file.
-      "--output",
-      rebase_path(outputs[0], root_build_dir),
-    ]
-
-    if (defined(invoker.replace) && invoker.replace) {
-      args += [ "--replace" ]
-    }
-
-    if (!defined(invoker.complete) || invoker.complete) {
-      args += [ "--complete=" + current_cpu ]
-    }
-
-    if (defined(invoker.compress) && !invoker.compress) {
-      args += [ "--uncompressed" ]
-    } else {
-      args += [ "--compressed=$zbi_compression" ]
-    }
-  }
-
-  group_deps += [ ":$zbi_target" ]
-
   if (defined(invoker.reference)) {
     reference = invoker.reference
     reference_zbi = false
@@ -148,6 +88,8 @@ template("migrated_zbi_test") {
     assert(reference_zbi != false, "Could not find zbi test $reference")
 
     reference_target = "${target_name}_reference"
+
+    zbi_tool = "$zircon_tools_dir/zbi"
 
     action(reference_target) {
       forward_variables_from(invoker, [ "visibility" ])

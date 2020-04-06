@@ -12,16 +12,18 @@ zx_library("zbi-bootfs") {
 
   sources = [ "zbi-bootfs.cc" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
-    "$zx/system/ulib/zx",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:c.headers",
+    "$zx/system/ulib/zx:headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hermetic-decompressor:headers",
+    "$zx/system/ulib/zx",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",
   ]
