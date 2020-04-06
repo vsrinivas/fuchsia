@@ -20,7 +20,7 @@ int64_t TimelineFunction::Apply(int64_t subject_time, int64_t reference_time,
 TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc, const TimelineFunction& ab,
                                            bool exact) {
   // TODO(dalesat): Improve this implementation.
-  // This particular approach to composing two timeline functions comprimises
+  // This particular approach to composing two timeline functions compromises
   // range and accuracy (in some cases) for simplicity. It should be replaced
   // with something that provides maximum range and accuracy without adding a
   // lot of runtime cost.
