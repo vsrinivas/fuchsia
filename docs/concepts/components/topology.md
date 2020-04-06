@@ -26,7 +26,7 @@ when the context is clear. For example, it would be more precise to talk about
 can easily infer that "starting a component" requires an instance of that
 component to be created first so that the instance can be started.
 
-![Diagram of component instances](images/topology_instances.png)
+<br>![Diagram of component instances](images/topology_instances.png)<br>
 
 ## Component Instance Tree {#composition}
 
@@ -53,7 +53,7 @@ Children can be created in two ways:
 The component topology represents the structure of these parent-child
 relationships as a [component instance tree][glossary-component-instance-tree].
 
-![Diagram of component instance tree](images/topology_instance_tree.png)
+<br>![Diagram of component instance tree](images/topology_instance_tree.png)<br>
 
 ## Monikers {#monikers}
 
@@ -63,7 +63,7 @@ persistence.
 
 See the [monikers documentation][doc-monikers] for details.
 
-![Diagram of component instance child monikers](images/topology_child_monikers.png)
+<br>![Diagram of component instance child monikers](images/topology_child_monikers.png)<br>
 
 ## Encapsulation {#encapsulation}
 
@@ -77,7 +77,7 @@ of its children.
 This model resembles [composition][wiki-object-composition]{:.external} in object-oriented
 programming languages.
 
-![Diagram of component instance encapsulation](images/topology_encapsulation.png)
+<br>![Diagram of component instance encapsulation](images/topology_encapsulation.png)<br>
 
 ## Realms {#realms}
 
@@ -95,7 +95,7 @@ influence the behavior of components, such as:
 
 See the [realms documentation][doc-realms] for more information.
 
-![Diagram of component instance realms](images/topology_realms.png)
+<br>![Diagram of component instance realms](images/topology_realms.png)<br>
 
 ## Capability Routing Graph {#capability-routing}
 
@@ -105,7 +105,7 @@ capabilities exposed and offered by other components in the component topology.
 See the [capability routing documentation][doc-capability-routing]
 for more information.
 
-![Diagram of component instance realms](images/topology_capability_routing.png)
+<br>![Diagram of component instance realms](images/topology_capability_routing.png)<br>
 
 [doc-collections]: /docs/concepts/components/realms.md#collections
 [doc-manifests]: /docs/concepts/components/component_manifests.md
