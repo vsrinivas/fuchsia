@@ -33,6 +33,9 @@ class GicRedistributor : public IoHandler {
 
   // Tracks whether SGIs and PPIs are enabled.
   uint32_t enabled_;
+
+  // Tracks whether SGIs and PPIs are activated.
+  uint32_t is_active_;
 };
 
 // Implements GIC distributor.
@@ -76,6 +79,9 @@ class GicDistributor : public IoHandler, public PlatformDevice {
 
   // Configuration registers. We skip ICFGR0 (for SGIs) as it is RAO/WI.
   uint32_t cfg_[31] __TA_GUARDED(mutex_) = {};
+
+  // Tracks whether SPIs are activated.
+  uint32_t is_active_[31] __TA_GUARDED(mutex_) = {};
 
   zx_status_t TargetInterrupt(uint32_t vector, uint8_t cpu_mask);
   zx_status_t BindVcpus(uint32_t vector, uint8_t cpu_mask);

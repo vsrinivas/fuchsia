@@ -77,8 +77,12 @@ enum class GicdRegister : uint64_t {
     ICFG0         = 0xc00,
     ICFG1         = 0xc04,
     ICFG31        = 0xc7c,
+    ISACTIVE0     = 0x300,
+    ISACTIVE1     = 0x304,
+    ISACTIVE31    = 0x37c,
     ICACTIVE0     = 0x380,
-    ICACTIVE15    = 0x3bc,
+    ICACTIVE1     = 0x384,
+    ICACTIVE31    = 0x3fc,
     IPRIORITY0    = 0x400,
     IPRIORITY63   = 0x4fc,
     ITARGETS0     = 0x800,
@@ -109,6 +113,7 @@ enum class GicrRegister : uint64_t {
     ISENABLE0     = 0x10100,
     ICENABLE0     = 0x10180,
     ICPEND0       = 0x10280,
+    ISACTIVE0     = 0X10300,
     ICACTIVE0     = 0x10380,
     IPRIORITY0    = 0x10400,
     IPRIORITY63   = 0x104fc,
@@ -378,6 +383,29 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       }
       return ZX_OK;
     }
+    case GicdRegister::ISACTIVE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Read(
+          static_cast<uint64_t>(GicrRegister::ISACTIVE0), value);
+    }
+    case GicdRegister::ISACTIVE1... GicdRegister::ISACTIVE31: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      size_t index = (addr - static_cast<uint64_t>(GicdRegister::ISACTIVE1)) / value->access_size;
+      value->u32 = is_active_[index];
+      return ZX_OK;
+    }
+    case GicdRegister::ICACTIVE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Read(static_cast<uint64_t>(GicrRegister::ICACTIVE0), value);
+    }
+    case GicdRegister::ICACTIVE1... GicdRegister::ICACTIVE31: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      size_t index = (addr - static_cast<uint64_t>(GicdRegister::ICACTIVE1)) / value->access_size;
+      value->u32 = is_active_[index];
+      return ZX_OK;
+    }
     default:
       FX_LOGS(ERROR) << "Unhandled GIC distributor address read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
@@ -481,7 +509,28 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       cfg_[index] = value.u32;
       return ZX_OK;
     }
-    case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
+    case GicdRegister::ISACTIVE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Write(static_cast<uint64_t>(GicrRegister::ISACTIVE0), value);
+    }
+    case GicdRegister::ISACTIVE1... GicdRegister::ISACTIVE31: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      size_t index = (addr - static_cast<uint64_t>(GicdRegister::ISACTIVE1)) / value.access_size;
+      is_active_[index] |= value.u32;
+      return ZX_OK;
+    }
+    case GicdRegister::ICACTIVE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Write(static_cast<uint64_t>(GicrRegister::ICACTIVE0), value);
+    }
+    case GicdRegister::ICACTIVE1... GicdRegister::ICACTIVE31: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      size_t index = (addr - static_cast<uint64_t>(GicdRegister::ICACTIVE1)) / value.access_size;
+      is_active_[index] &= (~value.u32);
+      return ZX_OK;
+    }
     case GicdRegister::ICFG0:
     case GicdRegister::ICPEND0... GicdRegister::ICPEND15:
     case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY63:
@@ -589,6 +638,11 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
     case GicrRegister::ISENABLE0:
       value->u32 = enabled_;
       return ZX_OK;
+      // Read SGIs and PPIs activate state.
+    case GicrRegister::ISACTIVE0:
+    case GicrRegister::ICACTIVE0:
+      value->u32 = is_active_;
+      return ZX_OK;
     case GicrRegister::CTL:
     case GicrRegister::WAKE:
     case GicrRegister::ICFG0:
@@ -634,10 +688,17 @@ zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
     case GicrRegister::ICENABLE0:
       enabled_ &= ~value.u32;
       return ZX_OK;
+    //Set SGI and PPIs active state.
+    case GicrRegister::ISACTIVE0:
+      is_active_ |= value.u32;
+      return ZX_OK;
+    //Set SGI and PPIs active state.
+    case GicrRegister::ICACTIVE0:
+      is_active_ &= ~value.u32;
+      return ZX_OK;
     case GicrRegister::WAKE:
     case GicrRegister::IGROUP0:
     case GicrRegister::ICPEND0:
-    case GicrRegister::ICACTIVE0:
     case GicrRegister::IPRIORITY0... GicrRegister::IPRIORITY63:
     case GicrRegister::ICFG0:
     case GicrRegister::ICFG1:
