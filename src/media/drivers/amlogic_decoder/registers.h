@@ -184,6 +184,12 @@ REGISTER_NAME(VldMemVififoBufCntl, DosRegisterIo, 0x0c48)
 };
 DEFINE_REGISTER(VldMemVififoWrapCount, DosRegisterIo, 0x0c51)
 DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52)
+DEFINE_REGISTER(VldMemSwapAddr, DosRegisterIo, 0x0c55)
+REGISTER_NAME(VldMemSwapCtrl, DosRegisterIo, 0x0c56)
+  DEF_BIT(0, enable);
+  DEF_BIT(1, save); // 0 means restore
+  DEF_BIT(7, in_progress);
+};
 
 DEFINE_REGISTER(PowerCtlVld, DosRegisterIo, 0x0c08)
 REGISTER_NAME(DosGenCtrl0, DosRegisterIo, 0x3f02)

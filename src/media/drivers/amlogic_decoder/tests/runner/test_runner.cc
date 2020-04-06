@@ -62,7 +62,7 @@ class TestDeviceBase {
     constexpr uint32_t kRecreateDelayMs = 1000;
     zx::nanosleep(zx::deadline_after(zx::msec(kRecreateDelayMs)));
 
-    constexpr uint32_t kMaxRetryCount = 5000;
+    constexpr uint32_t kMaxRetryCount = 5;
     uint32_t retry_count = 0;
     while (retry_count++ < kMaxRetryCount) {
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have

@@ -6,6 +6,7 @@
 #include <zircon/compiler.h>
 
 #include "amlogic-video.h"
+#include "bear_h264_hashes.h"
 #include "gtest/gtest.h"
 #include "h264_multi_decoder.h"
 #include "h264_utils.h"
@@ -15,6 +16,7 @@
 #include "test_frame_allocator.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
+#include "video_frame_helpers.h"
 
 class TestH264Multi {
  public:
@@ -44,12 +46,13 @@ class TestH264Multi {
     std::promise<void> wait_valid;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      frame_allocator.SetFrameReadyNotifier([&video, &frame_count,
-                                             &wait_valid](std::shared_ptr<VideoFrame> frame) {
+      frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid,
+                                             filename](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         DLOG("Got frame %d\n", frame_count);
         EXPECT_EQ(320u, frame->coded_width);
         EXPECT_EQ(192u, frame->coded_height);
+        (void)filename;
 #if DUMP_VIDEO_TO_FILE
         DumpVideoFrameToFile(frame.get(), filename);
 #endif
@@ -65,10 +68,18 @@ class TestH264Multi {
             EXPECT_EQ(kExpectedData[i], buf_start[i]) << " index " << i;
           }
         }
+        if (frame_count < 4) {
+          // Later frames seems to gradually be getting corrupted, so don't check them for now.
+          // TODO(fxb/13483): Test later frames once they're fixed.
+          uint8_t md[SHA256_DIGEST_LENGTH];
+          HashFrame(frame.get(), md);
+          EXPECT_EQ(0, memcmp(md, bear_h264_hashes[frame_count - 1], sizeof(md)))
+              << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+        }
 
         video->AssertVideoDecoderLockHeld();
         video->video_decoder()->ReturnFrame(frame);
-        if (frame_count == 1) {
+        if (frame_count == 26) {
           wait_valid.set_value();
         }
       });
@@ -87,14 +98,15 @@ class TestH264Multi {
       multi_decoder->ProcessNalUnit(std::move(nal_unit));
     }
 
-    EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+    EXPECT_EQ(std::future_status::ready,
+              wait_valid.get_future().wait_for(std::chrono::seconds(10)));
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
       multi_decoder->DumpStatus();
     }
 
-    EXPECT_LE(1u, frame_count);
+    EXPECT_LE(26u, frame_count);
 
     video->ClearDecoderInstance();
     video.reset();

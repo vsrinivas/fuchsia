@@ -96,6 +96,8 @@ if (target_cpu == "arm64") {
       "h264_decoder.h",
       "h264_multi_decoder.cc",
       "h264_multi_decoder.h",
+      "h264_utils.cc",
+      "h264_utils.h",
       "hevcdec.cc",
       "hevcdec.h",
       "internal_buffer.cc",
@@ -138,6 +140,7 @@ if (target_cpu == "arm64") {
       "local_codec_factory.h",
     ]
     public_deps = [
+      "h264:h264_parser",
       "//sdk/banjo/ddk.protocol.composite",
       "//src/devices/lib/driver",
       "//zircon/public/lib/async-cpp",
@@ -163,7 +166,6 @@ if (target_cpu == "arm64") {
     ]
     deps = [
       ":test_support",
-      "h264:h264_parser",
       "third_party/libvpx",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
@@ -185,7 +187,6 @@ if (target_cpu == "arm64") {
       "//third_party/googletest:gtest",
     ]
     sources = [
-      "tests/integration/h264_utils.cc",
       "tests/integration/test_h264.cc",
       "tests/integration/test_h264_multi.cc",
       "tests/integration/test_mpeg2.cc",

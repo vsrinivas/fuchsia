@@ -10,6 +10,7 @@
 
 #include "macros.h"
 #include "memory_barriers.h"
+#include "registers.h"
 #include "util.h"
 #include "video_decoder.h"
 
@@ -291,4 +292,53 @@ uint32_t Vdec1::GetReadOffset() {
   uint32_t buffer_start = VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
   assert(read_ptr >= buffer_start);
   return read_ptr - buffer_start;
+}
+
+zx_status_t Vdec1::InitializeInputContext(InputContext* context, bool is_secure) {
+  constexpr uint32_t kInputContextSize = 4096;
+  auto create_result = InternalBuffer::Create("VDec1InputCtx", &owner_->SysmemAllocatorSyncPtr(),
+                                              owner_->bti(), kInputContextSize, is_secure,
+                                              /*is_writable=*/true, /*is_mapping_needed_=*/false);
+  if (!create_result.is_ok()) {
+    LOG(ERROR, "Failed to allocate input context - status: %d", create_result.error());
+    return create_result.error();
+  }
+  // Sysmem has already written zeroes, flushed the zeroes, fenced the flush, to the extent
+  // possible.
+  context->buffer.emplace(create_result.take_value());
+  return ZX_OK;
+}
+
+void Vdec1::SaveInputContext(InputContext* context) {
+  // No idea what this does.
+  VldMemVififoControl::Get().FromValue(1 << 15).WriteTo(mmio()->dosbus);
+  VldMemSwapAddr::Get()
+      .FromValue(truncate_to_32(context->buffer->phys_base()))
+      .WriteTo(mmio()->dosbus);
+  VldMemSwapCtrl::Get().FromValue(0).set_enable(true).set_save(true).WriteTo(mmio()->dosbus);
+  bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
+    return !VldMemSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
+  });
+  // TODO: return error on failure.
+  ZX_ASSERT(finished);
+  VldMemSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+}
+
+void Vdec1::RestoreInputContext(InputContext* context) {
+  VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+  VldMemSwapAddr::Get()
+      .FromValue(truncate_to_32(context->buffer->phys_base()))
+      .WriteTo(mmio()->dosbus);
+  VldMemSwapCtrl::Get().FromValue(0).set_enable(true).set_save(false).WriteTo(mmio()->dosbus);
+  bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
+    return !VldMemSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
+  });
+  // TODO: return error on failure.
+  ZX_ASSERT(finished);
+  VldMemSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+  auto fifo_control =
+      VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(true);
+  // Expect input to be in normal byte order.
+  fifo_control.set_endianness(7);
+  fifo_control.WriteTo(mmio()->dosbus);
 }

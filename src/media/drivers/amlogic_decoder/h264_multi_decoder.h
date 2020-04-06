@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "macros.h"
+#include "media/video/h264_parser.h"
+#include "media/video/h264_poc.h"
 #include "registers.h"
 #include "video_decoder.h"
 
@@ -17,6 +19,7 @@ namespace media {
 class H264Decoder;
 class H264DPB;
 struct H264PPS;
+class H264Picture;
 struct H264SPS;
 class DecoderBuffer;
 }  // namespace media
@@ -33,8 +36,20 @@ class H264MultiDecoder : public VideoDecoder {
 
     // TODO (use one per reference frame, rather than one per DPB frame)
     InternalBuffer reference_mv_buffer;
+
+    uint32_t info0{};
+    uint32_t info1{};
+    uint32_t info2{};
+    bool is_long_term_reference{};
   };
-  struct SliceData {};
+  struct SliceData {
+    media::H264SPS sps;
+    media::H264PPS pps;
+    media::H264SliceHeader header;
+    std::shared_ptr<media::H264Picture> pic;
+    std::vector<std::shared_ptr<media::H264Picture>> ref_pic_list0;
+    std::vector<std::shared_ptr<media::H264Picture>> ref_pic_list1;
+  };
 
   H264MultiDecoder(Owner* owner, Client* client);
   H264MultiDecoder(const H264MultiDecoder&) = delete;
@@ -61,7 +76,7 @@ class H264MultiDecoder : public VideoDecoder {
 
   // For use by MultiAccelerator.
   void SubmitDataToHardware(const uint8_t* data, size_t length);
-  void SubmitSliceData(const SliceData& data);
+  void SubmitSliceData(SliceData data);
   void SubmitFrameMetadata(ReferenceFrame* reference_frame, const media::H264SPS* sps,
                            const media::H264PPS* pps, const media::H264DPB& dpb);
   void OutputFrame(ReferenceFrame* reference_frame);
@@ -86,6 +101,8 @@ class H264MultiDecoder : public VideoDecoder {
   void HandlePicDataDone();
   void OnFatalError();
   void PumpDecoder();
+  void InitializeRefPics(const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list,
+                         uint32_t reg_offset);
 
   bool fatal_error_ = false;
   std::unique_ptr<media::H264Decoder> media_decoder_;
@@ -112,6 +129,10 @@ class H264MultiDecoder : public VideoDecoder {
   ReferenceFrame* current_metadata_frame_ = nullptr;
 
   std::list<uint32_t> frames_to_output_;
+  std::list<SliceData> slice_data_list_;
+  media::H264POC poc_;
+  bool have_initialized_ = false;
+  uint32_t seq_info2_{};
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MULTI_DECODER_H_

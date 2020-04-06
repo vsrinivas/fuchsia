@@ -35,12 +35,15 @@ std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data, uint3
   }
 }
 
-uint8_t GetNalUnitType(const std::vector<uint8_t>& nal_unit) {
+uint8_t GetNalUnitType(fbl::Span<const uint8_t> nal_unit) {
   // Also works with 4-byte startcodes.
   uint8_t start_code[3] = {0, 0, 1};
   uint8_t* this_start = static_cast<uint8_t*>(
       memmem(nal_unit.data(), nal_unit.size(), start_code, sizeof(start_code)));
   if (!this_start)
+    return 0;
+  // Check that there's room after the 1 for the nal unit.
+  if (this_start - nal_unit.data() + sizeof(start_code) >= nal_unit.size())
     return 0;
   return this_start[sizeof(start_code)] & 0xf;
 }

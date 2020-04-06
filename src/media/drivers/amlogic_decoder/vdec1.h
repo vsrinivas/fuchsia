@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VDEC1_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VDEC1_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VDEC1_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VDEC1_H_
 
 #include <assert.h>
 
@@ -34,6 +34,9 @@ class Vdec1 : public DecoderCore {
   void UpdateWritePointer(uint32_t write_pointer) override;
   uint32_t GetStreamInputOffset() override;
   uint32_t GetReadOffset() override;
+  [[nodiscard]] zx_status_t InitializeInputContext(InputContext* context, bool is_secure) override;
+  void SaveInputContext(InputContext* context) override;
+  void RestoreInputContext(InputContext* context) override;
 
  private:
   MmioRegisters* mmio() const { return owner_->mmio(); }
@@ -43,4 +46,4 @@ class Vdec1 : public DecoderCore {
   bool decoding_started_ = false;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VDEC1_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VDEC1_H_
