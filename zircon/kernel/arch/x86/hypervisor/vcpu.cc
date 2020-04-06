@@ -333,8 +333,6 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                           kProcbasedCtlsIoExiting |
                           // Enable use of MSR bitmaps.
                           kProcbasedCtlsMsrBitmaps |
-                          // Enable VM exit on pause instruction.
-                          kProcbasedCtlsPauseExiting |
                           // Enable secondary processor-based controls.
                           kProcbasedCtlsProcbasedCtls2,
                       // Disable VM exit on CR3 load.
@@ -360,6 +358,8 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                            // exit. On VM exit CS.L, IA32_EFER.LME, and
                            // IA32_EFER.LMA is set to true.
                            kExitCtls64bitMode |
+                               // Acknowledge external interrupt on exit.
+                               kExitCtlsAckIntOnExit |
                                // Save the guest IA32_PAT MSR on exit.
                                kExitCtlsSaveIa32Pat |
                                // Load the host IA32_PAT MSR on exit.
@@ -367,9 +367,7 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                                // Save the guest IA32_EFER MSR on exit.
                                kExitCtlsSaveIa32Efer |
                                // Load the host IA32_EFER MSR on exit.
-                               kExitCtlsLoadIa32Efer |
-                               // Acknowledge external interrupt on exit.
-                               kExitCtlsAckIntOnExit,
+                               kExitCtlsLoadIa32Efer,
                            0);
   if (status != ZX_OK) {
     return status;
@@ -386,6 +384,32 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
                            read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), entry_ctls, 0);
   if (status != ZX_OK) {
     return status;
+  }
+
+  // Enable use of PAUSE-loop exiting if available.
+  status =
+      vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
+                      vmcs.Read(VmcsField32::PROCBASED_CTLS2), kProcbasedCtls2PauseLoopExiting, 0);
+  if (status == ZX_OK) {
+    // From Volume 3, Section 25.1.3: The processor determines the amount of
+    // time between this execution of PAUSE and the previous execution of PAUSE
+    // at CPL 0. If this amount of time exceeds the value of the VM-execution
+    // control field PLE_Gap, the processor considers this execution to be the
+    // first execution of PAUSE in a loop. (It also does so for the first
+    // execution of PAUSE at CPL 0 after VM entry.)
+    //
+    // Otherwise, the processor determines the amount of time since the most
+    // recent execution of PAUSE that was considered to be the first in a loop.
+    // If this amount of time exceeds the value of the VM-execution control
+    // field PLE_Window, a VM exit occurs.
+    //
+    // For purposes of these computations, time is measured based on a counter
+    // that runs at the same rate as the timestamp counter (TSC).
+    //
+    // NOTE: These values are based on KVM, which was based on empirical
+    // analysis.
+    vmcs.Write(VmcsField32::PLE_GAP, 1u << 7);
+    vmcs.Write(VmcsField32::PLE_WINDOW, 1u << 12);
   }
 
   // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field

@@ -27,6 +27,7 @@ static const uint32_t kProcbasedCtls2Rdtscp             = 1u << 3;
 static const uint32_t kProcbasedCtls2x2Apic             = 1u << 4;
 static const uint32_t kProcbasedCtls2Vpid               = 1u << 5;
 static const uint32_t kProcbasedCtls2UnrestrictedGuest  = 1u << 7;
+static const uint32_t kProcbasedCtls2PauseLoopExiting   = 1u << 10;
 static const uint32_t kProcbasedCtls2Invpcid            = 1u << 12;
 
 // PROCBASED_CTLS flags.
@@ -39,7 +40,6 @@ static const uint32_t kProcbasedCtlsCr8StoreExiting     = 1u << 20;
 static const uint32_t kProcbasedCtlsTprShadow           = 1u << 21;
 static const uint32_t kProcbasedCtlsIoExiting           = 1u << 24;
 static const uint32_t kProcbasedCtlsMsrBitmaps          = 1u << 28;
-static const uint32_t kProcbasedCtlsPauseExiting        = 1u << 30;
 static const uint32_t kProcbasedCtlsProcbasedCtls2      = 1u << 31;
 
 // PINBASED_CTLS flags.
@@ -130,6 +130,8 @@ enum class VmcsField32 : uint64_t {
     ENTRY_INTERRUPTION_INFORMATION                      = 0x4016,
     ENTRY_EXCEPTION_ERROR_CODE                          = 0x4018,
     PROCBASED_CTLS2                                     = 0x401e,
+    PLE_GAP                                             = 0x4020,
+    PLE_WINDOW                                          = 0x4022,
     INSTRUCTION_ERROR                                   = 0x4400,
     EXIT_REASON                                         = 0x4402,
     EXIT_INTERRUPTION_INFORMATION                       = 0x4404,
