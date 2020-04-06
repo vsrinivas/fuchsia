@@ -36,7 +36,8 @@ struct DeviceIds {
     uint32 version;
 };
 
-[Layout = "Simple"]
+// TODO(fxb/49329): This API doesn't follow best practices and needs to be
+// cleaned up.
 protocol Device {
     /// Get the HID boot interface protocol this device supports
     GetBootProtocol() -> (BootProtocol protocol);
