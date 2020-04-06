@@ -144,4 +144,25 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   cmd_buf->EndRenderPass();
 }
 
+vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Format& vk_format) {
+  vk::ImageCreateInfo create_info;
+  create_info.imageType = vk::ImageType::e2D;
+  create_info.extent = vk::Extent3D{1, 1, 1};
+
+  // Specifies that the image can be used to create a VkImageView with a different
+  // format from the image. Clients may need to have strict needs regarding acceptable
+  // image formats that we don't necessarily need to follow ourselves when creating
+  // ImageViews from those images.
+  create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+  create_info.format = vk_format;
+  create_info.mipLevels = 1;
+  create_info.arrayLayers = 1;
+  create_info.samples = vk::SampleCountFlagBits::e1;
+  create_info.tiling = vk::ImageTiling::eOptimal;
+  create_info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+  create_info.sharingMode = vk::SharingMode::eExclusive;
+  create_info.initialLayout = vk::ImageLayout::eUndefined;
+  return create_info;
+}
+
 }  // namespace escher

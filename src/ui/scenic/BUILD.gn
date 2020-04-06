@@ -38,6 +38,7 @@ group("fuzzers") {
 test_package("scenic_tests") {
   deps = [
     "lib/display/tests",
+    "lib/flatland/renderer/tests",
     "lib/flatland/tests",
     "lib/gfx/tests",
     "lib/gfx/util/tests",
@@ -53,6 +54,10 @@ test_package("scenic_tests") {
     },
     {
       name = "flatland_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "flatland_renderer_unittests"
       environments = basic_envs
     },
     {

@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":unittests" ]
+}
+
+executable("unittests") {
+  output_name = "flatland_renderer_unittests"
+  testonly = true
+  sources = [
+    "buffer_collection_unittest.cc",
+    "gpu_mem_unittest.cc",
+
+    # Registers a global Escher environment for testing.
+    "run_all_unittests.cc",
+  ]
+
+  deps = [
+    "//src/ui/lib/escher/test/common:gtest_escher",
+    "//src/ui/scenic/lib/flatland/renderer",
+  ]
+}

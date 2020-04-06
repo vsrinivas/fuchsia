@@ -70,6 +70,13 @@ ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format, uint32_t 
 ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, uint32_t height,
                                  vk::ImageUsageFlags additional_flags);
 
+// Returns new image bound to the provided gpu memory, with the specified create info. This
+// should only be called in a scenario where we know the |gpu_mem| buffer passed in will be
+// compatible with the Vulkan image memory requirements such as being of a sufficiently large
+// size to back the image. Otherwise, this function returns nullptr.
+ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_info,
+                  escher::GpuMemPtr gpu_mem, escher::ResourceRecycler* resource_recycler);
+
 // Return new Image containing the provided pixels. Uses transfer queue to
 // efficiently transfer image data to GPU.
 // |image_factory| is a generic interface that could be an Image cache (in which

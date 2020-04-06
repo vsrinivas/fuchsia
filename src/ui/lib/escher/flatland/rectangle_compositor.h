@@ -7,6 +7,7 @@
 
 #include "src/ui/lib/escher/flatland/rectangle_renderable.h"
 #include "src/ui/lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/vk/shader_program.h"
 
 namespace escher {
 
@@ -33,6 +34,9 @@ class RectangleCompositor {
   // vector, with the first entry being the furthest back, and the last the closest.
   void DrawBatch(CommandBuffer* cmd_buf, const std::vector<RectangleRenderable>& renderables,
                  const ImagePtr& output_image, const TexturePtr& depth_buffer);
+
+  // Minimal image constraints to be set on textures passed into DrawBatch.
+  static vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format);
 
  private:
   RectangleCompositor(const RectangleCompositor&) = delete;

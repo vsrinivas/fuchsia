@@ -40,6 +40,7 @@ source_set("flatland") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//zircon/public/lib/trace",
   ]

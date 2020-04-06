@@ -182,6 +182,38 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, ui
   return image_factory->NewImage(info);
 }
 
+ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_info,
+                  escher::GpuMemPtr gpu_mem, escher::ResourceRecycler* resource_recycler) {
+  FXL_DCHECK(resource_recycler);
+  FXL_DCHECK(gpu_mem);
+
+  // Vulkan.hpp DCHECKs if this is false, so don't do any extra checking at this point here.
+  auto image_result = device.createImage(create_info);
+
+  // Make sure that the image is within range of its associated memory.
+  vk::MemoryRequirements memory_reqs;
+  device.getImageMemoryRequirements(image_result.value, &memory_reqs);
+  if (memory_reqs.size > gpu_mem->size()) {
+    FXL_LOG(ERROR) << "Memory requirements for image exceed available memory: " << memory_reqs.size
+                   << " " << gpu_mem->size();
+    return nullptr;
+  }
+
+  escher::ImageInfo image_info;
+  image_info.format = create_info.format;
+  image_info.width = create_info.extent.width;
+  image_info.height = create_info.extent.height;
+  image_info.usage = create_info.usage;
+  image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+  if (create_info.flags & vk::ImageCreateFlagBits::eProtected) {
+    image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
+  }
+  image_info.is_external = true;
+
+  return escher::impl::NaiveImage::AdoptVkImage(resource_recycler, image_info, image_result.value,
+                                                std::move(gpu_mem), create_info.initialLayout);
+}
+
 ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
                   vk::ImageUsageFlags additional_flags, vk::MemoryPropertyFlags memory_flags) {
   FXL_DCHECK(image_factory);

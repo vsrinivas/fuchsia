@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Keep the renderer source set separate from the rest of Flatland
+# due to its dependencies on Escher which we do not want exposed.
+source_set("renderer") {
+  sources = [
+    "buffer_collection.cc",
+    "buffer_collection.h",
+    "gpu_mem.cc",
+    "gpu_mem.h",
+  ]
+
+  deps = [ "//src/ui/lib/escher" ]
+}

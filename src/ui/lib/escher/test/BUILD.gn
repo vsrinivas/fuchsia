@@ -76,6 +76,7 @@ if (is_mac) {
       "util/hash_unittest.cc",
       "util/hashable_unittest.cc",
       "util/hashmap_unittest.cc",
+      "util/image_util_unittest.cc",
       "util/intrusive_list_unittest.cc",
       "util/object_pool_unittest.cc",
       "util/stack_allocator_unittest.cc",
