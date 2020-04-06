@@ -15,6 +15,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
+    fuchsia_trace as trace,
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     futures::{
         future::{join, ready, Join, Ready},
@@ -372,6 +373,7 @@ async fn run(
 
             // A new snoop packet has been received from an hci device.
             (packet, snooper) = snoopers.select_next_some() => {
+                trace::duration!("bluetooth", "Snoop::ProcessPacket");
                 handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
                     &mut packet_logs, config.truncate_payload);
             },
@@ -395,6 +397,7 @@ fn init_logging(verbosity: u16) {
 async fn main() {
     let args: Args = argh::from_env();
 
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     init_logging(args.verbosity);
 
     let mut fs = ServiceFs::new();
