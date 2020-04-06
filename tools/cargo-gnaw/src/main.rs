@@ -8,6 +8,7 @@ use {
     crate::{build::BuildScript, graph::GnBuildGraph, target::GnTarget, types::*},
     anyhow::{anyhow, Error},
     argh::FromArgs,
+    cargo_metadata::DependencyKind,
     serde_derive::{Deserialize, Serialize},
     std::collections::HashMap,
     std::{
@@ -134,11 +135,16 @@ pub fn generate_from_manifest<W: io::Write>(
                     .expect("top level node not in node graph");
                 for dep in &top_level_node.deps {
                     build_graph.add_cargo_package(dep.pkg.clone())?;
-                    gn::write_top_level_rule(&mut output, &metadata[&dep.pkg])?;
+                    for kinds in dep.dep_kinds.iter() {
+                        if kinds.kind == DependencyKind::Normal {
+                            let platform = kinds.target.as_ref().map(|t| format!("{}", t));
+                            gn::write_top_level_rule(&mut output, platform, &metadata[&dep.pkg])?;
+                        }
+                    }
                 }
             } else {
                 build_graph.add_cargo_package(top_level_id.clone())?;
-                gn::write_top_level_rule(&mut output, &metadata[&top_level_id])?;
+                gn::write_top_level_rule(&mut output, None, &metadata[&top_level_id])?;
             }
         }
         None => return Err(anyhow!("Failed to resolve a build graph for the package tree")),

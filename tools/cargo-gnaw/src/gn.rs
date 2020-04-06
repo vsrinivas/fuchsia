@@ -35,19 +35,33 @@ pub fn write_header<W: io::Write>(output: &mut W, _cargo_file: &Path) -> Result<
 }
 
 /// Writes rules at the top of the GN file that don't have the version appended
-pub fn write_top_level_rule<'a, W: io::Write>(output: &mut W, pkg: &Package) -> Result<(), Error> {
+pub fn write_top_level_rule<'a, W: io::Write>(
+    output: &mut W,
+    platform: Option<String>,
+    pkg: &Package,
+) -> Result<(), Error> {
     let target_name = if pkg.is_proc_macro() {
         format!("{}($host_toolchain)", pkg.gn_name())
     } else {
         pkg.gn_name()
     };
+    if let Some(ref platform) = platform {
+        writeln!(
+            output,
+            "if ({conditional}) {{\n",
+            conditional = cfg_to_gn_conditional(&platform)?
+        )?;
+    }
     writeln!(
         output,
         include_str!("../templates/entry_gn_rules.template"),
         crate_name = pkg.name,
         target_name = target_name,
-    )
-    .map_err(Into::into)
+    )?;
+    if platform.is_some() {
+        writeln!(output, "}}")?;
+    }
+    Ok(())
 }
 
 struct GnField {
