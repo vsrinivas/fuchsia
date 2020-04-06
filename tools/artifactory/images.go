@@ -5,6 +5,7 @@
 package artifactory
 
 import (
+	"path"
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
@@ -22,7 +23,7 @@ func imageUploads(mods imgModules, namespace string) []Upload {
 	files := []Upload{
 		{
 			Source:      mods.ImageManifest(),
-			Destination: filepath.Join(namespace, manifestName),
+			Destination: path.Join(namespace, manifestName),
 		},
 	}
 
@@ -32,7 +33,7 @@ func imageUploads(mods imgModules, namespace string) []Upload {
 		if _, ok := seen[img.Path]; !ok && isActualImage(img) {
 			files = append(files, Upload{
 				Source:      filepath.Join(mods.BuildDir(), img.Path),
-				Destination: filepath.Join(namespace, img.Path),
+				Destination: path.Join(namespace, img.Path),
 				Compress:    true,
 			})
 			seen[img.Path] = true

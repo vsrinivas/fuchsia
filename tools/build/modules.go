@@ -5,12 +5,15 @@
 package build
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
 
 const (
+	apiModuleName            = "api.json"
 	binaryModuleName         = "binaries.json"
 	imageModuleName          = "images.json"
 	platformModuleName       = "platforms.json"
@@ -23,6 +26,7 @@ const (
 // modules associated with a build.
 type Modules struct {
 	buildDir      string
+	apis          []string
 	binaries      []Binary
 	images        []Image
 	platforms     []DimensionSet
@@ -36,6 +40,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	var errMsgs []string
 	var err error
 	m := &Modules{buildDir: buildDir}
+
+	m.apis, err = loadAPIs(m.APIManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
 
 	m.binaries, err = loadBinaries(m.BinaryManifest())
 	if err != nil {
@@ -76,6 +85,16 @@ func NewModules(buildDir string) (*Modules, error) {
 // BuildDir returns the fuchsia build directory root.
 func (m Modules) BuildDir() string {
 	return m.buildDir
+}
+
+// APIs returns the build API module of available build API modules.
+func (m Modules) APIs() []string {
+	return m.apis
+}
+
+// APIManifest returns the path to the manifest of build API modules present in the build.
+func (m Modules) APIManifest() string {
+	return filepath.Join(m.BuildDir(), apiModuleName)
 }
 
 // Binaries returns the build API module of binaries.
@@ -136,4 +155,17 @@ func (m Modules) TestSpecs() []TestSpec {
 // TestManifest returns the path to the manifest of tests in the build.
 func (m Modules) TestManifest() string {
 	return filepath.Join(m.BuildDir(), testModuleName)
+}
+
+func loadAPIs(manifest string) ([]string, error) {
+	f, err := os.Open(manifest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
+	}
+	defer f.Close()
+	var apis []string
+	if err := json.NewDecoder(f).Decode(&apis); err != nil {
+		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
+	}
+	return apis, nil
 }

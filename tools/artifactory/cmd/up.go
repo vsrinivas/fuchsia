@@ -42,10 +42,11 @@ const (
 	targetDirName   = "targets"
 
 	// Names of directories to be uploaded to in GCS.
-	buildsDirName  = "builds"
-	debugDirName   = "debug"
-	imageDirName   = "images"
-	packageDirName = "packages"
+	buildsDirName   = "builds"
+	buildAPIDirName = "build_api"
+	debugDirName    = "debug"
+	imageDirName    = "images"
+	packageDirName  = "packages"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -170,6 +171,9 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 
 	images := artifactory.ImageUploads(m, path.Join(buildsUUIDDir, imageDirName))
 	files = append(files, images...)
+
+	buildAPIs := artifactory.BuildAPIModuleUploads(m, path.Join(buildsUUIDDir, buildAPIDirName))
+	files = append(files, buildAPIs...)
 
 	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName)
 	if err != nil {
