@@ -249,9 +249,10 @@ func saveReport(report *codecoverage.CoverageReport, filename string) error {
 // SaveReport saves compresses coverage data to disk, optionally sharding the
 // data into multiple files each of the same size.
 func SaveReport(report *codecoverage.CoverageReport, shardSize int, dir string) (*codecoverage.CoverageReport, error) {
-	numFiles := len(report.Files)
-	if numFiles > shardSize {
+	if numFiles := len(report.Files); numFiles > shardSize {
+		const filename = "files%0*d.json.gz"
 		numShards := int(math.Ceil(float64(numFiles) / float64(shardSize)))
+		width := 1 + int(math.Log10(float64(numShards)))
 		fileShards := make([]string, numShards)
 		// TODO(phosek): Use goroutines to process slices in parallel.
 		for i := 0; i < numShards; i++ {
@@ -261,13 +262,13 @@ func SaveReport(report *codecoverage.CoverageReport, shardSize int, dir string) 
 				to = numFiles
 			}
 			report := codecoverage.CoverageReport{Files: report.Files[from:to]}
-			filename := fmt.Sprintf("files%d.json.gz", i)
+			filename := fmt.Sprintf(filename, width, i+1)
 			if err := saveReport(&report, filepath.Join(dir, filename)); err != nil {
 				return nil, fmt.Errorf("failed to save report %q: %w", filename, err)
 			}
 			fileShards[i] = filename
 		}
-		report = &codecoverage.CoverageReport{FileShards: fileShards}
+		report.FileShards = fileShards
 	}
 	const filename = "all.json.gz"
 	if err := saveReport(report, filepath.Join(dir, filename)); err != nil {

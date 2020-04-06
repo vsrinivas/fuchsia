@@ -210,15 +210,16 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	tests := []struct{
-		numReports int
-		shardSize int
-		numShards int
+	tests := []struct {
+		numFiles   int
+		shardSize  int
+		numShards  int
+		fileShards []string
 	}{
-		{1, 1, 0},
-		{3, 3, 0},
-		{6, 3, 2},
-		{8, 3, 3},
+		{1, 1, 0, nil},
+		{3, 3, 0, nil},
+		{6, 3, 2, []string{"files1.json.gz", "files2.json.gz"}},
+		{8, 3, 3, []string{"files1.json.gz", "files2.json.gz", "files3.json.gz"}},
 	}
 
 	dir, err := ioutil.TempDir("", "covargs")
@@ -235,7 +236,7 @@ func TestSave(t *testing.T) {
 		}
 
 		report := &codecoverage.CoverageReport{}
-		for i := 0; i < tt.numReports; i++ {
+		for i := 0; i < tt.numFiles; i++ {
 			report.Files = append(report.Files, &codecoverage.File{})
 		}
 
@@ -244,8 +245,14 @@ func TestSave(t *testing.T) {
 			t.Error("unexpected error", err)
 		}
 
-		if fileShards := len(report.FileShards); fileShards != tt.numShards {
-			t.Error("expected", tt.numShards, "but got", fileShards)
+		if numFiles := len(report.Files); numFiles != tt.numFiles {
+			t.Error("expected", tt.numFiles, "but got", numFiles)
+		}
+		if numShards := len(report.FileShards); numShards != tt.numShards {
+			t.Error("expected", tt.numShards, "but got", numShards)
+		}
+		if !reflect.DeepEqual(report.FileShards, tt.fileShards) {
+			t.Error("expected", tt.fileShards, "but got", report.FileShards)
 		}
 	}
 }
