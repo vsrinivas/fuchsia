@@ -141,10 +141,8 @@ type StackOfBoundsTag struct {
 
 // String generates a string representation for the tag.
 func (t StackOfBoundsTag) String() string {
-	var (
-		elems    []string
-		allEmpty = true
-	)
+	elems := make([]string, 0, len(t.reverseOfBounds))
+	allEmpty := true
 	for i := len(t.reverseOfBounds) - 1; 0 <= i; i-- {
 		bound := t.reverseOfBounds[i]
 		if bound == math.MaxInt32 {
@@ -157,7 +155,7 @@ func (t StackOfBoundsTag) String() string {
 	if allEmpty {
 		return ""
 	}
-	return fmt.Sprintf(`%s`, strings.Join(elems, ","))
+	return strings.Join(elems, ",")
 }
 
 func (t StackOfBoundsTag) IsEmpty() bool {
@@ -210,7 +208,7 @@ func (t Tags) String() string {
 	var tagPairs []string
 	for tag := StartTag; tag < EndTag; tag++ {
 		if val, ok := t[tag]; ok {
-			tagPairs = append(tagPairs, fmt.Sprintf("%s:%q", tag, fmt.Sprintf("%v", val)))
+			tagPairs = append(tagPairs, fmt.Sprintf(`%s:"%v"`, tag, val))
 		}
 	}
 	return strings.Join(tagPairs, " ")
@@ -655,7 +653,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 	switch val.Kind {
 	case types.ArrayType:
 		e, et := c.compileType(*val.ElementType)
-		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), e))
+		r = Type(fmt.Sprintf("[%d]%s", *val.ElementCount, e))
 		t = et
 	case types.StringType:
 		if val.ElementCount == nil {
@@ -885,11 +883,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func (c *compiler) compileTable(val types.Table) Table {
 	var members []TableMember
 	for _, member := range val.SortedMembersNoReserved() {
-		var (
-			ty, rbtag   = c.compileType(member.Type)
-			name        = c.compileIdentifier(member.Name, true, "")
-			privateName = c.compileIdentifier(member.Name, false, "")
-		)
+		ty, rbtag := c.compileType(member.Type)
 		tags := Tags{
 			FidlOrdinalTag: member.Ordinal,
 		}
@@ -902,10 +896,11 @@ func (c *compiler) compileTable(val types.Table) Table {
 		if handleSubtype, ok := c.computeHandleSubtype(member.Type); ok {
 			tags[FidlHandleSubtypeTag] = handleSubtype
 		}
+		name := c.compileIdentifier(member.Name, true, "")
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,
 			DataField:         name,
-			PrivateDataField:  privateName,
+			PrivateDataField:  c.compileIdentifier(member.Name, false, ""),
 			PresenceField:     name + "Present",
 			Setter:            "Set" + name,
 			Getter:            "Get" + name,
