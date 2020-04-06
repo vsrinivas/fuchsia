@@ -157,6 +157,7 @@ source_set("inspect") {
 
   deps = [
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
 
@@ -265,6 +266,7 @@ source_set("utc_provider") {
 
   deps = [
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 

@@ -104,6 +104,7 @@ executable("archive_unittest") {
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
@@ -201,6 +202,7 @@ executable("inspect_node_manager_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

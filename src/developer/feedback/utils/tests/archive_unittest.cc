@@ -17,7 +17,7 @@
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -46,7 +46,7 @@ const std::map<std::string, std::string> kAttachments = {
 Attachment BuildAttachment(const std::string& key, const std::string& value) {
   Attachment attachment;
   attachment.key = key;
-  FXL_CHECK(fsl::VmoFromString(value, &attachment.value));
+  FX_CHECK(fsl::VmoFromString(value, &attachment.value));
   return attachment;
 }
 

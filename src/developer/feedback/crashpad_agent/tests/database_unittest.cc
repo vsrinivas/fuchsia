@@ -8,10 +8,11 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 
-#include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/tests/crashpad_database_gremlin.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
@@ -21,7 +22,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -71,7 +72,7 @@ constexpr char kCrashpadUUIDString[] = "00000000-0000-0000-0000-000000000001";
 
 fuchsia::mem::Buffer BuildAttachment(const std::string& value) {
   fuchsia::mem::Buffer attachment;
-  FXL_CHECK(fsl::VmoFromString(value, &attachment));
+  FX_CHECK(fsl::VmoFromString(value, &attachment));
   return attachment;
 }
 
@@ -171,14 +172,14 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
 
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FXL_CHECK(result.is_ok());
+    FX_CHECK(result.is_ok());
     return result.take_value();
   }
 
  private:
   std::vector<std::string> GetDirectoryContents(const std::string& path) {
     std::vector<std::string> contents;
-    FXL_CHECK(files::ReadDirContents(path, &contents));
+    FX_CHECK(files::ReadDirContents(path, &contents));
     RemoveCurrentDirectory(&contents);
     return contents;
   }

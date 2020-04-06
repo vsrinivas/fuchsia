@@ -12,7 +12,6 @@
 #include <memory>
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -96,11 +95,11 @@ std::vector<EventCodeType> Cobalt::GetAllEventsOfType(size_t num_expected,
 template <typename EventCodeType>
 void Cobalt::GetNewEventsOfType(const fuchsia::cobalt::test::LoggerQuerier_WatchLogs_Result& result,
                                 std::vector<EventCodeType>* all_events) {
-  FXL_CHECK(result.is_response());
+  FX_CHECK(result.is_response());
 
   const auto& response = result.response();
   for (const auto& event : response.events) {
-    FXL_CHECK(event.metric_id == MetricIDForEventCode(static_cast<EventCodeType>(0)))
+    FX_CHECK(event.metric_id == MetricIDForEventCode(static_cast<EventCodeType>(0)))
         << "Expected metric id: "
         << std::to_string(MetricIDForEventCode(static_cast<EventCodeType>(0))) << "\n"
         << "Actual metic id:    " << std::to_string(event.metric_id);

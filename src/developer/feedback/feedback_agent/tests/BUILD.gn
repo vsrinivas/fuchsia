@@ -534,7 +534,7 @@ source_set("zx_object_util") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }

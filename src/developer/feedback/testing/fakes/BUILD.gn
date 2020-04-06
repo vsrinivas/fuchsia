@@ -159,5 +159,8 @@ source_set("privacy_settings") {
     "//src/lib/fxl",
   ]
 
-  deps = [ "//zircon/public/lib/fit" ]
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
 }

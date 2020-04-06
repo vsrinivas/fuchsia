@@ -10,7 +10,6 @@
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/lib/files/directory.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
@@ -52,7 +51,7 @@ Database::Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
     : database_(std::move(database)),
       max_crashpad_database_size_in_kb_(max_crashpad_database_size_in_kb),
       info_(std::move(info_context)) {
-  FXL_DCHECK(database_);
+  FX_CHECK(database_);
   info_.LogMaxCrashpadDatabaseSize(max_crashpad_database_size_in_kb_);
 }
 

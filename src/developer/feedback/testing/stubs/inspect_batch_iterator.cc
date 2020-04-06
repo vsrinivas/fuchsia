@@ -7,8 +7,8 @@
 #include <lib/fit/result.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {
@@ -20,7 +20,7 @@ std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
   json_batch_vmo.reserve(json_batch.size());
   for (const auto& json_chunk : json_batch) {
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(json_chunk, &vmo));
+    FX_CHECK(fsl::VmoFromString(json_chunk, &vmo));
     fuchsia::diagnostics::FormattedContent content;
     content.set_json(std::move(vmo).ToTransport());
     json_batch_vmo.push_back(std::move(content));
@@ -31,14 +31,14 @@ std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
 }  // namespace
 
 InspectBatchIterator::~InspectBatchIterator() {
-  FXL_CHECK(!ExpectCall()) << fxl::StringPrintf(
+  FX_CHECK(!ExpectCall()) << fxl::StringPrintf(
       "Expected %ld more calls to GetNext() (%ld/%lu calls made)",
       std::distance(next_json_batch_, json_batches_.cend()),
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 }
 
 void InspectBatchIterator::GetNext(GetNextCallback callback) {
-  FXL_CHECK(ExpectCall()) << fxl::StringPrintf(
+  FX_CHECK(ExpectCall()) << fxl::StringPrintf(
       "No more calls to GetNext() expected (%lu/%lu calls made)",
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 

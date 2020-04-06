@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fakes {
@@ -20,7 +20,7 @@ void PrivacySettings::CloseConnection() {
 }
 
 void PrivacySettings::Watch(WatchCallback callback) {
-  FXL_CHECK(!watcher_);
+  FX_CHECK(!watcher_);
   watcher_ = std::make_unique<WatchCallback>(std::move(callback));
   if (dirty_bit_) {
     NotifyWatcher();
@@ -52,7 +52,7 @@ void PrivacySettingsClosesConnectionOnFirstWatch::Watch(WatchCallback callback) 
     return;
   }
 
-  FXL_CHECK(!watcher_);
+  FX_CHECK(!watcher_);
   watcher_ = std::make_unique<WatchCallback>(std::move(callback));
   if (dirty_bit_) {
     NotifyWatcher();

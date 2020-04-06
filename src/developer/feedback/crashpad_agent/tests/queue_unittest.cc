@@ -23,6 +23,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -63,7 +64,7 @@ constexpr char kMinidumpValue[] = "minidump";
 
 fuchsia::mem::Buffer BuildAttachment(const std::string& value) {
   fuchsia::mem::Buffer attachment;
-  FXL_CHECK(fsl::VmoFromString(value, &attachment));
+  FX_CHECK(fsl::VmoFromString(value, &attachment));
   return attachment;
 }
 
@@ -181,20 +182,20 @@ class QueueTest : public UnitTestFixture, CobaltTestFixture {
   }
 
   void CheckAnnotationsOnServer() {
-    FXL_CHECK(crash_server_);
+    FX_CHECK(crash_server_);
     EXPECT_THAT(crash_server_->latest_annotations(),
                 UnorderedElementsAre(testing::Pair(kAnnotationKey, kAnnotationValue)));
   }
 
   void CheckAttachmentKeysOnServer() {
-    FXL_CHECK(crash_server_);
+    FX_CHECK(crash_server_);
     EXPECT_THAT(crash_server_->latest_attachment_keys(),
                 UnorderedElementsAre(kAttachmentKey, kMinidumpKey));
   }
 
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FXL_CHECK(result.is_ok());
+    FX_CHECK(result.is_ok());
     return result.take_value();
   }
 

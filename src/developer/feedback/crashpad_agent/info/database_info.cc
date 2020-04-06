@@ -4,12 +4,12 @@
 
 #include "src/developer/feedback/crashpad_agent/info/database_info.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
 DatabaseInfo::DatabaseInfo(std::shared_ptr<InfoContext> context) : context_(context) {
-  FXL_CHECK(context);
+  FX_CHECK(context_);
 }
 
 void DatabaseInfo::CrashpadError(const CrashpadFunctionError function) {

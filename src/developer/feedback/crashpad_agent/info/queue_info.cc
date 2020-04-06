@@ -4,12 +4,12 @@
 
 #include "src/developer/feedback/crashpad_agent/info/queue_info.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
 QueueInfo::QueueInfo(std::shared_ptr<InfoContext> context) : context_(context) {
-  FXL_CHECK(context);
+  FX_CHECK(context_);
 }
 
 void QueueInfo::LogReport(const std::string& program_name, const std::string& local_report_id) {

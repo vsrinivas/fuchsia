@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {
@@ -20,9 +20,9 @@ std::vector<zx_koid_t> GetChildKoids(const zx_handle_t parent, zx_object_info_to
   std::vector<zx_koid_t> result(100);  // 100 ought to be enough for tests.
   size_t actual = 0;
   size_t available = 0;
-  FXL_CHECK(zx_object_get_info(parent, child_kind, result.data(), result.size() * sizeof(result[0]),
-                               &actual, &available) == ZX_OK);
-  FXL_CHECK(actual == available);
+  FX_CHECK(zx_object_get_info(parent, child_kind, result.data(), result.size() * sizeof(result[0]),
+                              &actual, &available) == ZX_OK);
+  FX_CHECK(actual == available);
   result.resize(actual);
   return result;
 }

@@ -6,8 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {
@@ -16,14 +16,14 @@ using fuchsia::time::UtcSource;
 using fuchsia::time::UtcState;
 
 UtcProvider::~UtcProvider() {
-  FXL_CHECK(Done()) << fxl::StringPrintf(
+  FX_CHECK(Done()) << fxl::StringPrintf(
       "Expected %ld more calls to WatchState() (%ld/%lu calls made)",
       std::distance(next_reponse_, responses_.cend()),
       std::distance(responses_.cbegin(), next_reponse_), responses_.size());
 }
 
 void UtcProvider::WatchState(WatchStateCallback callback) {
-  FXL_CHECK(!Done()) << fxl::StringPrintf(
+  FX_CHECK(!Done()) << fxl::StringPrintf(
       "No more calls to WatchState() expected (%lu/%lu calls made)", responses_.size(),
       responses_.size());
 

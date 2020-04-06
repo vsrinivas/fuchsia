@@ -29,10 +29,7 @@ source_set("info") {
     "//src/lib/timekeeper",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-  ]
+  deps = [ "//src/lib/syslog/cpp" ]
 }
 
 source_set("inspect_manager") {

@@ -14,8 +14,8 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fakes {
@@ -46,13 +46,13 @@ Attachment CreateBundleAttachment() {
 
   fsl::SizedVmo vmo;
 
-  FXL_CHECK(fsl::VmoFromString("attachment_value_1", &vmo)) << "Failed to create attachment vmo";
+  FX_CHECK(fsl::VmoFromString("attachment_value_1", &vmo)) << "Failed to create attachment vmo";
   attachments.emplace_back(Attachment{
       .key = "attachment_key_1",
       .value = std::move(vmo).ToTransport(),
   });
 
-  FXL_CHECK(fsl::VmoFromString(AnnotationsToJSON(CreateAnnotations()), &vmo))
+  FX_CHECK(fsl::VmoFromString(AnnotationsToJSON(CreateAnnotations()), &vmo))
       << "Failed to create attachment vmo";
   attachments.emplace_back(Attachment{
       .key = "annotations.json",
@@ -68,7 +68,7 @@ Attachment CreateBundleAttachment() {
 
 std::unique_ptr<Screenshot> LoadPngScreenshot() {
   fsl::SizedVmo image;
-  FXL_CHECK(fsl::VmoFromFilename("/pkg/data/checkerboard_100.png", &image))
+  FX_CHECK(fsl::VmoFromFilename("/pkg/data/checkerboard_100.png", &image))
       << "Failed to create image vmo";
 
   const size_t image_dim_in_px = 100u;

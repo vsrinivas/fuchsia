@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -42,7 +42,7 @@ class InspectNodeManagerTest : public testing::Test {
  protected:
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FXL_CHECK(result.is_ok());
+    FX_CHECK(result.is_ok());
     return result.take_value();
   }
 

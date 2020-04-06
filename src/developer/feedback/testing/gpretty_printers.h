@@ -14,6 +14,7 @@
 #include <ostream>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace fit {
 
@@ -67,7 +68,7 @@ namespace mem {
 // expectations.
 void PrintTo(const Buffer& vmo, std::ostream* os) {
   std::string value;
-  FXL_CHECK(fsl::StringFromVmo(vmo, &value));
+  FX_CHECK(fsl::StringFromVmo(vmo, &value));
   *os << "'" << value << "'";
 }
 

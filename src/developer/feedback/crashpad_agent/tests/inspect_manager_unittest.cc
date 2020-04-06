@@ -16,8 +16,8 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -65,7 +65,7 @@ class InspectManagerTest : public testing::Test {
  protected:
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
-    FXL_CHECK(result.is_ok());
+    FX_CHECK(result.is_ok());
     return result.take_value();
   }
 
