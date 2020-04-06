@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn signed_arg_roundtrip() {
         assert_roundtrips(
-            Argument { name: String::from("signed"), value: Value::Signed(-1999) },
+            Argument { name: String::from("signed"), value: Value::SignedInt(-1999) },
             Encoder::write_argument,
             parse_argument,
             None,
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn unsigned_arg_roundtrip() {
         assert_roundtrips(
-            Argument { name: String::from("unsigned"), value: Value::Unsigned(42) },
+            Argument { name: String::from("unsigned"), value: Value::UnsignedInt(42) },
             Encoder::write_argument,
             parse_argument,
             None,
@@ -276,8 +276,8 @@ mod tests {
             Record {
                 timestamp: zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
                 arguments: vec![
-                    Argument { name: String::from("signed"), value: Value::Signed(-10) },
-                    Argument { name: String::from("unsigned"), value: Value::Signed(7) },
+                    Argument { name: String::from("signed"), value: Value::SignedInt(-10) },
+                    Argument { name: String::from("unsigned"), value: Value::SignedInt(7) },
                     Argument { name: String::from("float"), value: Value::Floating(3.14159) },
                     Argument {
                         name: String::from("msg"),

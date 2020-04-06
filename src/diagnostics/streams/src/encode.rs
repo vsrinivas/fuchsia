@@ -62,11 +62,11 @@ where
         header.set_name_ref(StringRef::Inline(&argument.name).mask());
 
         match &argument.value {
-            Value::Signed(s) => {
+            Value::SignedInt(s) => {
                 header.set_type(ArgType::I64 as u8);
                 self.write_i64(*s)
             }
-            Value::Unsigned(u) => {
+            Value::UnsignedInt(u) => {
                 header.set_type(ArgType::U64 as u8);
                 self.write_u64(*u)
             }

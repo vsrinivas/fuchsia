@@ -47,14 +47,14 @@ pub(super) fn parse_argument(buf: &[u8]) -> ParseResult<'_, Argument> {
     let (after_name, name) = string_ref(header.name_ref(), after_header)?;
 
     let (value, after_value) = match arg_ty {
-        ArgType::Null => (Value::Unsigned(1), after_name),
+        ArgType::Null => (Value::UnsignedInt(1), after_name),
         ArgType::I64 => {
             let (rem, n) = le_i64(after_name)?;
-            (Value::Signed(n), rem)
+            (Value::SignedInt(n), rem)
         }
         ArgType::U64 => {
             let (rem, n) = le_u64(after_name)?;
-            (Value::Unsigned(n), rem)
+            (Value::UnsignedInt(n), rem)
         }
         ArgType::F64 => {
             let (rem, n) = le_f64(after_name)?;

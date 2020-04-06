@@ -39,9 +39,9 @@ struct Argument {
 [MaxHandles = "0"]
 flexible union Value {
     /// A signed integral argument.
-    1: int64 signed;
+    1: int64 signed_int;
     /// An unsigned integral argument.
-    2: uint64 unsigned;
+    2: uint64 unsigned_int;
     /// A double-precision floating-point argument.
     3: float64 floating;
     /// A UTF8 text argument.
