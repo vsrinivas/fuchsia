@@ -11,9 +11,11 @@
 use alloc::vec::Vec;
 use core::time::Duration;
 
-use log::{debug, error};
-use net_types::ip::{Ip, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
+use log::{debug, error, trace};
+use net_types::ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope};
+use net_types::{
+    LinkLocalAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, SpecifiedAddress, Witness,
+};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 use thiserror::Error;
@@ -309,10 +311,30 @@ fn run_actions<C: MldContext>(
     actions: Actions<MldProtocolSpecific>,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) {
-    for action in actions {
-        if let Err(err) = run_action(ctx, device, action, group_addr) {
-            error!("Error performing action on {} on device {}: {}", group_addr, device, err);
+    // Per [RFC 3810 Section 6]:
+    //
+    // > No MLD messages are ever sent regarding neither the link-scope
+    // > all-nodes multicast address, nor any multicast address of scope 0
+    // > (reserved) or 1 (node-local).
+    //
+    // We abide by this requirement by not executing [`Actions`] on these
+    // addresses. Executing [`Actions`] only produces externally-visible side
+    // effects, and is not required to maintain the correctness of the MLD state
+    // machines.
+    //
+    // [RFC 3810 Section 6]: https://tools.ietf.org/html/rfc3810#section-6
+    let skip_mld = group_addr == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
+        || group_addr.scope() == Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0)
+        || group_addr.scope() == Ipv6Scope::InterfaceLocal;
+
+    if !skip_mld {
+        for action in actions {
+            if let Err(err) = run_action(ctx, device, action, group_addr) {
+                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
+            }
         }
+    } else {
+        trace!("skipping executing MLD actions for group {}", group_addr);
     }
 }
 
@@ -498,59 +520,63 @@ mod tests {
     };
     const MY_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
     const ROUTER_MAC: Mac = Mac::new([6, 5, 4, 3, 2, 1]);
-    const GROUP_ADDR: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]);
+    const GROUP_ADDR: MulticastAddr<Ipv6Addr> = unsafe {
+        MulticastAddr::new_unchecked(Ipv6Addr::new([
+            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+        ]))
+    };
 
-    fn receive_mld_query<C: MldContext>(ctx: &mut C, device: C::DeviceId, resp_time: Duration) {
-        let my_addr = MY_IP;
+    fn receive_mld_query<C: MldContext>(
+        ctx: &mut C,
+        device: C::DeviceId,
+        resp_time: Duration,
+        group_addr: MulticastAddr<Ipv6Addr>,
+    ) {
         let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
         let mut buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
-            GROUP_ADDR,
+            group_addr.into_addr(),
             resp_time.try_into().unwrap(),
         )
         .into_serializer()
         .encapsulate(IcmpPacketBuilder::<_, &[u8], _>::new(
             router_addr,
-            my_addr,
+            MY_IP,
             IcmpUnusedCode,
             MulticastListenerQuery,
         ))
         .serialize_vec_outer()
         .unwrap();
         match buffer
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(router_addr, my_addr))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(router_addr, MY_IP))
             .unwrap()
         {
-            Icmpv6Packet::Mld(packet) => {
-                ctx.receive_mld_packet(device, router_addr, my_addr, packet)
-            }
+            Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(device, router_addr, MY_IP, packet),
             _ => panic!("serialized icmpv6 message is not an mld message"),
         }
     }
 
-    fn receive_mld_report<C: MldContext>(ctx: &mut C, device: C::DeviceId) {
-        let my_addr = MY_IP;
+    fn receive_mld_report<C: MldContext>(
+        ctx: &mut C,
+        device: C::DeviceId,
+        group_addr: MulticastAddr<Ipv6Addr>,
+    ) {
         let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
-        let mut buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(
-            MulticastAddr::new(GROUP_ADDR).unwrap(),
-        )
-        .into_serializer()
-        .encapsulate(IcmpPacketBuilder::<_, &[u8], _>::new(
-            router_addr,
-            my_addr,
-            IcmpUnusedCode,
-            MulticastListenerReport,
-        ))
-        .serialize_vec_outer()
-        .unwrap()
-        .unwrap_b();
+        let mut buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(group_addr)
+            .into_serializer()
+            .encapsulate(IcmpPacketBuilder::<_, &[u8], _>::new(
+                router_addr,
+                MY_IP,
+                IcmpUnusedCode,
+                MulticastListenerReport,
+            ))
+            .serialize_vec_outer()
+            .unwrap()
+            .unwrap_b();
         match buffer
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(router_addr, my_addr))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(router_addr, MY_IP))
             .unwrap()
         {
-            Icmpv6Packet::Mld(packet) => {
-                ctx.receive_mld_packet(device, router_addr, my_addr, packet)
-            }
+            Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(device, router_addr, MY_IP, packet),
             _ => panic!("serialized icmpv6 message is not an mld message"),
         }
     }
@@ -577,7 +603,12 @@ mod tests {
     }
 
     // ensure a sent frame meets the requirement
-    fn ensure_frame(frame: &[u8], op: u8, dst: Ipv6Addr, multicast: Ipv6Addr) {
+    fn ensure_frame(
+        frame: &[u8],
+        op: u8,
+        dst: MulticastAddr<Ipv6Addr>,
+        multicast: MulticastAddr<Ipv6Addr>,
+    ) {
         ensure_ttl(frame);
         assert_eq!(frame[48], op);
         // Ensure the length our payload is 32 = 8 (hbh_ext_hdr) + 24 (mld)
@@ -587,16 +618,16 @@ mod tests {
         // Ensure there is a RouterAlert HopByHopOption in our sent frame
         assert_eq!(&frame[40..48], &[58, 0, 5, 2, 0, 0, 1, 0]);
         ensure_ttl(&frame[..]);
-        ensure_dst_addr(&frame[..], dst);
-        ensure_multicast_addr(&frame[..], multicast);
+        ensure_dst_addr(&frame[..], dst.into_addr());
+        ensure_multicast_addr(&frame[..], multicast.into_addr());
     }
 
     #[test]
     fn test_mld_simple_integration() {
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
 
-        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
+        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10), GROUP_ADDR);
         assert!(ctx.trigger_next_timer());
 
         // We should get two MLD reports - one for the unsolicited one for the
@@ -614,10 +645,10 @@ mod tests {
     fn test_mld_immediate_query() {
         testutil::set_logger_for_test();
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
-        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(0));
+        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(0), GROUP_ADDR);
         // the query says that it wants to hear from us immediately
         assert_eq!(ctx.frames().len(), 2);
         // there should be no timers set
@@ -632,20 +663,18 @@ mod tests {
     #[test]
     fn test_mld_integration_fallback_from_idle() {
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 2);
 
-        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
+        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10), GROUP_ADDR);
 
         // We have received a query, hence we are falling back to Delay Member
         // state.
-        let MldGroupState(group_state) = ctx
-            .get_state_with(DummyDeviceId)
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let MldGroupState(group_state) =
+            ctx.get_state_with(DummyDeviceId).get(&GROUP_ADDR).unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(_) => {}
             _ => panic!("Wrong State!"),
@@ -663,20 +692,18 @@ mod tests {
     #[test]
     fn test_mld_integration_immediate_query_wont_fallback() {
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 2);
 
-        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(0));
+        receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(0), GROUP_ADDR);
 
         // Since it is an immediate query, we will send a report immediately and
         // turn into Idle state again
-        let MldGroupState(group_state) = ctx
-            .get_state_with(DummyDeviceId)
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let MldGroupState(group_state) =
+            ctx.get_state_with(DummyDeviceId).get(&GROUP_ADDR).unwrap();
         match group_state.get_inner() {
             MemberState::Idle(_) => {}
             _ => panic!("Wrong State!"),
@@ -700,13 +727,13 @@ mod tests {
     #[ignore]
     fn test_mld_integration_delay_reset_timer() {
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
         let start = ctx.now();
         let duration = instant1 - start;
 
-        receive_mld_query(&mut ctx, DummyDeviceId, duration);
+        receive_mld_query(&mut ctx, DummyDeviceId, duration, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 2);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -718,15 +745,14 @@ mod tests {
     #[test]
     fn test_mld_integration_last_send_leave() {
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report
         assert_eq!(ctx.frames().len(), 1);
         assert!(ctx.trigger_next_timer());
         // The report after the delay
         assert_eq!(ctx.frames().len(), 2);
-        assert!(mld_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
-            .is_ok());
+        assert!(mld_leave_group(&mut ctx, DummyDeviceId, GROUP_ADDR).is_ok());
         // Our leave message
         assert_eq!(ctx.frames().len(), 3);
         // The first two messages should be reports
@@ -738,7 +764,7 @@ mod tests {
         ensure_frame(
             &ctx.frames()[2].1,
             132,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
             GROUP_ADDR,
         );
         ensure_slice_addr(&ctx.frames()[2].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
@@ -747,15 +773,14 @@ mod tests {
     #[test]
     fn test_mld_integration_not_last_dont_send_leave() {
         let mut ctx = DummyContext::default();
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
-        receive_mld_report(&mut ctx, DummyDeviceId);
+        receive_mld_report(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 0);
         // The report should be discarded because we have received from someone else.
         assert_eq!(ctx.frames().len(), 1);
-        assert!(mld_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
-            .is_ok());
+        assert!(mld_leave_group(&mut ctx, DummyDeviceId, GROUP_ADDR).is_ok());
         // A leave message is not sent
         assert_eq!(ctx.frames().len(), 1);
         // The frames are all reports.
@@ -769,11 +794,63 @@ mod tests {
     fn test_mld_with_link_local() {
         let mut ctx = DummyContext::default();
         ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
-        mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        mld_join_group(&mut ctx, DummyDeviceId, GROUP_ADDR);
         assert!(ctx.trigger_next_timer());
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
             ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().addr().get());
         }
+    }
+
+    #[test]
+    fn test_skip_mld() {
+        // Test that we properly skip executing any `Actions` for addresses that
+        // we're supposed to skip (see the comment in `run_actions`).
+        let test = |group| {
+            let mut ctx = DummyContext::default();
+            ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
+
+            // Assert that no observable effects have taken place.
+            let assert_no_effect = |ctx: &DummyContext| {
+                assert!(ctx.timers().is_empty());
+                assert!(ctx.frames().is_empty());
+            };
+            mld_join_group(&mut ctx, DummyDeviceId, group);
+            // We should have joined the group but not executed any `Actions`.
+            assert!(matches!(
+                ctx.get_ref().groups.get(&group).unwrap().0.inner.as_ref().unwrap(),
+                MemberState::Delaying(_)
+            ));
+            assert_no_effect(&ctx);
+            receive_mld_report(&mut ctx, DummyDeviceId, group);
+            // We should have executed the transition but not executed any `Actions`.
+            assert!(matches!(
+                ctx.get_ref().groups.get(&group).unwrap().0.inner.as_ref().unwrap(),
+                MemberState::Idle(_)
+            ));
+            assert_no_effect(&ctx);
+            receive_mld_query(&mut ctx, DummyDeviceId, Duration::from_secs(10), group);
+            // We should have executed the transition but not executed any `Actions`.
+            assert!(matches!(
+                ctx.get_ref().groups.get(&group).unwrap().0.inner.as_ref().unwrap(),
+                MemberState::Delaying(_)
+            ));
+            assert_no_effect(&ctx);
+            let _ = mld_leave_group(&mut ctx, DummyDeviceId, group);
+            // We should have left the group but not executed any `Actions`.
+            assert!(ctx.get_ref().groups.get(&group).is_none());
+            assert_no_effect(&ctx);
+        };
+
+        test(Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
+        let mut bytes = Ipv6::MULTICAST_SUBNET.network().ipv6_bytes();
+        // Manually set the "scop" field to 0.
+        bytes[1] = bytes[1] & 0xF0;
+        let reserved0 = MulticastAddr::new(Ipv6Addr::new(bytes)).unwrap();
+        // Manually set the "scop" field to 1 (interface-local).
+        bytes[1] = (bytes[1] & 0xF0) | 1;
+        let iface_local = MulticastAddr::new(Ipv6Addr::new(bytes)).unwrap();
+        test(reserved0);
+        test(iface_local);
     }
 }
