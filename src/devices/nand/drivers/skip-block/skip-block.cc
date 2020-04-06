@@ -558,7 +558,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace nand
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(skip_block, nand::driver_ops, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(skip_block, nand::driver_ops, "zircon", "0.1", 5)
+    BI_GOTO_IF(NE, BIND_AUTOBIND, 0, 758),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+    BI_LABEL(758),
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
     BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_BBS),
 ZIRCON_DRIVER_END(skip_block)
