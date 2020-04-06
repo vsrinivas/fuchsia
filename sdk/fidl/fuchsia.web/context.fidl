@@ -190,4 +190,10 @@ table CreateFrameParams {
     /// `ERR_INVALID_ARGS` if `remote_debugging_port` was not set in
     /// [`fuchsia.web.CreateContextParams`].
     1: bool enable_remote_debugging;
+
+    /// Set to give the Frame a name to help distinguish it in debug contexts , such as system log
+    /// output. For example, the name may be added to messages from web content when they are logged
+    /// to the system logger. The name does not affect user- or web-visible behavior.
+    /// Popup Frames created by the Frame will have a name derived from the parent Frame's name.
+    2: string:MAX debug_name;
 };
