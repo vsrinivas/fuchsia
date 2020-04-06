@@ -251,12 +251,6 @@ template("environment") {
   # Name construction logic must match environment_redirect.gni.
   toolchain_base_name = "${environment}-${invoker.cpu}"
 
-  # For host environments include the OS to distinguish one from another.
-  # For other environments, the OS is implicit (i.e. "fuchsia" modulo EFI).
-  if (base_environment == "host") {
-    toolchain_base_name += "-${invoker.os}"
-  }
-
   # These will be seen by c_toolchain() below.
   shlib = defined(invoker.shlib) && invoker.shlib
 
@@ -264,6 +258,14 @@ template("environment") {
     env_os = invoker.os
   } else {
     env_os = "fuchsia"
+  }
+
+  # For all host environments include the OS to distinguish one from
+  # another.  For other environments, it's implicit when it's "fuchsia"
+  # and when it exactly matches the base environment name (e.g. "efi").
+  if (base_environment == "host" ||
+      (env_os != "fuchsia" && env_os != base_environment)) {
+    toolchain_base_name += "-${invoker.os}"
   }
 
   # The canonicalized list of selectors.  Each element is in the schema of
@@ -1055,9 +1057,7 @@ template("standard_environments") {
         testonly = true
         environment_label = ":$env_name"
         forward_variables_from(target, "*")
-        deps = [
-          "$zx/system/ulib/c/test:noop-tests",
-        ]
+        deps = [ "$zx/system/ulib/c/test:noop-tests" ]
         direct = true
       }
     }

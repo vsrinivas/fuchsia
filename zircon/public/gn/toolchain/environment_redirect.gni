@@ -235,9 +235,11 @@ template("environment_redirect") {
       # Name construction logic must match environment.gni.
       toolchain_base_name = "${environment_label}-${cpu}"
 
-      # For host environments include the OS to distinguish one from another.
-      # For other environments, the OS is implicit (i.e. "fuchsia" modulo EFI).
-      if (base_environment == "host") {
+      # For all host environments include the OS to distinguish one from
+      # another.  For other environments, it's implicit when it's "fuchsia"
+      # and when it exactly matches the base environment name (e.g. "efi").
+      if (base_environment == "host" ||
+          (os != "fuchsia" && os != base_environment)) {
         toolchain_base_name += "-${os}"
       }
 
