@@ -13,6 +13,8 @@
 #include <ddktl/protocol/network/device.h>
 #include <fbl/span.h>
 
+#include "src/lib/vmo_store/vmo_store.h"
+
 namespace network {
 namespace tun {
 
@@ -27,7 +29,14 @@ class Buffer;
 // `ddk.protocol.network.device`.
 class VmoStore {
  public:
+  VmoStore()
+      : store_(vmo_store::Options{
+            vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+                                  nullptr},
+            fit::nullopt}) {}
+
   ~VmoStore() = default;
+
   // Reads `len` bytes at `offset` from the VMO identified by `id` into `data`, which must be a
   // `uint8_t` iterator.
   // Returns an error if the specified region is invalid or `id` is not registered.
@@ -61,6 +70,7 @@ class VmoStore {
     std::copy_n(data, len, vmo_data.begin() + offset);
     return ZX_OK;
   }
+
   // Registers and maps `vmo` identified by `id`.
   // `id` comes from a `NetworkDeviceInterface` and is part of the NetworkDevice contract.
   // Returns an error if the identifier is invalid or already in use, or the mapping fails.
@@ -84,12 +94,8 @@ class VmoStore {
   Buffer MakeRxSpaceBuffer(const rx_space_buffer_t* space);
 
  private:
-  struct StoredVmo {
-    zx::vmo vmo;
-    fzl::VmoMapper mapper;
-  };
   zx_status_t GetMappedVmo(uint8_t id, fbl::Span<uint8_t>* out_span);
-  std::array<fit::optional<StoredVmo>, MAX_VMOS> vmos_;
+  vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>> store_;
 };
 
 // A device buffer.

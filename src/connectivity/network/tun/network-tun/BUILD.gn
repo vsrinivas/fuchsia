@@ -31,6 +31,7 @@ source_set("src") {
     "//src/connectivity/network/drivers/network-device/mac",
     "//src/connectivity/network/tun/fidl",
     "//src/lib/fxl",
+    "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

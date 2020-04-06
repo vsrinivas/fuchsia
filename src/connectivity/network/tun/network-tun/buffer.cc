@@ -11,43 +11,25 @@ namespace network {
 namespace tun {
 
 zx_status_t VmoStore::GetMappedVmo(uint8_t id, fbl::Span<uint8_t>* out_span) {
-  auto& stored_vmo = vmos_[id];
-  if (!stored_vmo.has_value()) {
+  auto* stored_vmo = store_.GetVmo(id);
+  if (!stored_vmo) {
     return ZX_ERR_NOT_FOUND;
   }
-  *out_span = fbl::Span<uint8_t>(static_cast<uint8_t*>(stored_vmo->mapper.start()),
-                                 stored_vmo->mapper.size());
+  *out_span = stored_vmo->data();
   return ZX_OK;
 }
 
 zx_status_t VmoStore::RegisterVmo(uint8_t id, zx::vmo vmo) {
-  if (id >= MAX_VMOS) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (vmos_[id].has_value()) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  StoredVmo stored_vmo{std::move(vmo), fzl::VmoMapper()};
-  zx_status_t status =
-      stored_vmo.mapper.Map(stored_vmo.vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  // Lazily reserve storage space.
+  // Reserve will be a no-op if we already have `MAX_VMOS` capacity.
+  zx_status_t status = store_.Reserve(MAX_VMOS);
   if (status != ZX_OK) {
     return status;
   }
-  vmos_[id] = std::move(stored_vmo);
-  return ZX_OK;
+  return store_.RegisterWithKey(id, std::move(vmo));
 }
 
-zx_status_t VmoStore::UnregisterVmo(uint8_t id) {
-  if (id >= MAX_VMOS) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  auto& stored_vmo = vmos_[id];
-  if (!stored_vmo.has_value()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  stored_vmo.reset();
-  return ZX_OK;
-}
+zx_status_t VmoStore::UnregisterVmo(uint8_t id) { return store_.Unregister(id); }
 
 zx_status_t VmoStore::Copy(VmoStore* src_store, uint8_t src_id, size_t src_offset,
                            VmoStore* dst_store, uint8_t dst_id, size_t dst_offset, size_t len) {
