@@ -47,6 +47,7 @@ const (
 	debugDirName    = "debug"
 	imageDirName    = "images"
 	packageDirName  = "packages"
+	toolDirName     = "tools"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -174,6 +175,9 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 
 	buildAPIs := artifactory.BuildAPIModuleUploads(m, path.Join(buildsUUIDDir, buildAPIDirName))
 	files = append(files, buildAPIs...)
+
+	tools := artifactory.ToolUploads(m, path.Join(buildsUUIDDir, toolDirName))
+	files = append(files, tools...)
 
 	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName)
 	if err != nil {

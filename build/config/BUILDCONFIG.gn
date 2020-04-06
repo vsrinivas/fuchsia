@@ -1258,7 +1258,7 @@ template("executable") {
             label = get_label_info(":$target_name", "label_with_toolchain")
             name = output_name
             os = current_os
-            path = rebase_path(output_file)
+            path = rebase_path(output_file, root_build_dir)
           },
         ]
       }

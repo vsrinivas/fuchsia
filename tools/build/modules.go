@@ -20,6 +20,7 @@ const (
 	prebuiltBinaryModuleName = "prebuilt_binaries.json"
 	testDurationsName        = "test_durations.json"
 	testModuleName           = "tests.json"
+	toolModuleName           = "tool_paths.json"
 )
 
 // Modules is a convenience interface for accessing the various build API
@@ -33,6 +34,7 @@ type Modules struct {
 	prebuiltBins  []PrebuiltBinaries
 	testSpecs     []TestSpec
 	testDurations []TestDuration
+	tools         []Tool
 }
 
 // NewModules returns a Modules associated with a given build directory.
@@ -72,6 +74,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	m.testDurations, err = LoadTestDurations(m.TestDurationsManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.tools, err = loadTools(m.ToolManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -155,6 +162,16 @@ func (m Modules) TestSpecs() []TestSpec {
 // TestManifest returns the path to the manifest of tests in the build.
 func (m Modules) TestManifest() string {
 	return filepath.Join(m.BuildDir(), testModuleName)
+}
+
+// Tools returns the build API module of tools.
+func (m Modules) Tools() []Tool {
+	return m.tools
+}
+
+// ToolManifest returns the path to the manifest of tools in the build.
+func (m Modules) ToolManifest() string {
+	return filepath.Join(m.BuildDir(), toolModuleName)
 }
 
 func loadAPIs(manifest string) ([]string, error) {
