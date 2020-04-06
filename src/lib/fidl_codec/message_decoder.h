@@ -60,11 +60,6 @@ class DecodedMessage {
                      const zx_handle_info_t* handles, uint32_t num_handles, SyscallFidlType type,
                      std::ostream& error_stream);
 
-  // Displays a decoded message using the fields. Returns true if we have been able to display
-  // correctly the message.
-  bool Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
-               std::string_view line_header, int tabs);
-
  private:
   const fidl_message_header_t* header_ = nullptr;
   zx_txid_t txid_ = 0;
@@ -104,11 +99,6 @@ class MessageDecoderDispatcher {
   bool IsLaunchedProcess(uint64_t process_koid) {
     return launched_processes_.find(process_koid) != launched_processes_.end();
   }
-
-  bool DecodeAndDisplayMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
-                               uint32_t num_bytes, const zx_handle_info_t* handles,
-                               uint32_t num_handles, SyscallFidlType type, std::ostream& os,
-                               std::string_view line_header = "", int tabs = 0);
 
   // Heuristic which computes the direction of a message (outgoing request, incomming response,
   // ...).

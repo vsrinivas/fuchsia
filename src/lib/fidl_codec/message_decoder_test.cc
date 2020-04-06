@@ -72,11 +72,22 @@ class MessageDecoderTest : public ::testing::Test {
         handle_infos[i].rights = 0;
       }
     }
-    std::stringstream result;
-    decoder()->DecodeAndDisplayMessage(process_koid(), ZX_HANDLE_INVALID, message.bytes().data(),
-                                       message.bytes().size(), handle_infos.get(),
-                                       message.handles().size(), syscall_type, result);
-    ASSERT_EQ(result.str(), expected) << "expected = " << expected << " actual = " << result.str();
+
+    DecodedMessage decoded_message;
+    std::stringstream error_stream;
+    decoded_message.DecodeMessage(decoder(), process_koid(), ZX_HANDLE_INVALID,
+                                  message.bytes().data(), message.bytes().size(), nullptr, 0,
+                                  syscall_type, error_stream);
+    auto result = std::make_unique<fidl_codec::FidlMessageValue>(
+        &decoded_message, error_stream.str(), message.bytes().data(), message.bytes().size(),
+        nullptr, 0);
+
+    std::stringstream output;
+    PrettyPrinter printer(output, decoder()->colors(), /*pretty_print=*/true, /*line_header=*/"",
+                          /*max_line_size=*/kColumns,
+                          /*header_on_every_line=*/false);
+    result->PrettyPrint(nullptr, printer);
+    ASSERT_EQ(output.str(), expected) << "expected = " << expected << " actual = " << output.str();
   }
 
   MessageDecoderDispatcher* decoder() const { return decoder_.get(); }

@@ -1149,9 +1149,6 @@ class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
                                                    Stage stage) const override;
-
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
-                      std::string_view line_header, int tabs, std::ostream& os) const override;
 };
 
 class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t> {
@@ -1173,9 +1170,6 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
                                                    Stage stage) const override;
-
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
-                      std::string_view line_header, int tabs, std::ostream& os) const override;
 };
 
 // Defines a syscall we want to decode/display.

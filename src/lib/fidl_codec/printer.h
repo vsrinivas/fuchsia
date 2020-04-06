@@ -46,18 +46,19 @@ extern const Colors WithColors;
 
 class PrettyPrinter {
  public:
-  PrettyPrinter(std::ostream& os, const Colors& colors, std::string_view line_header,
-                int max_line_size, bool header_on_every_line, int tabulations = 0);
+  PrettyPrinter(std::ostream& os, const Colors& colors, bool pretty_print,
+                std::string_view line_header, int max_line_size, bool header_on_every_line,
+                int tabulations = 0);
 
   std::ostream& os() const { return os_; }
   const Colors& colors() const { return colors_; }
+  bool pretty_print() const { return pretty_print_; }
   int max_line_size() const { return max_line_size_; }
   int remaining_size() const { return remaining_size_; }
 
   bool LineEmpty() const { return need_to_print_header_; }
 
   virtual bool DumpMessages() const { return false; }
-  virtual bool PrettyPrint() const { return false; }
 
   // Displays a handle. This allows the caller to also display some infered data we have inferered
   // for this handle (if any).
@@ -148,6 +149,7 @@ class PrettyPrinter {
  private:
   std::ostream& os_;
   const Colors& colors_;
+  const bool pretty_print_;
   const std::string_view line_header_;
   const int max_line_size_;
   const bool header_on_every_line_ = false;

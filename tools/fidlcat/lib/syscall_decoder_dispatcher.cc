@@ -18,81 +18,6 @@
 
 namespace fidlcat {
 
-constexpr int kPatternColorSize = 4;
-constexpr int kPatternSize = 8;
-constexpr int kLineSize = 16;
-constexpr int kLineHandleSize = 4;
-
-void DumpMessage(bool error, const uint8_t* bytes, uint32_t num_bytes,
-                 const zx_handle_info_t* handles, uint32_t num_handles,
-                 SyscallDisplayDispatcher* dispatcher, std::string_view line_header, int tabs,
-                 std::ostream& os) {
-  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ');
-  if (error) {
-    os << dispatcher->colors().red << "Can't decode message: ";
-  } else {
-    os << "Message: ";
-  }
-  os << "num_bytes=" << num_bytes << " num_handles=" << num_handles;
-  if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
-    auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
-    os << " ordinal=" << std::hex << header->ordinal << std::dec;
-    if (dispatcher->message_decoder_dispatcher().loader() != nullptr) {
-      const std::vector<const fidl_codec::InterfaceMethod*>* methods =
-          dispatcher->message_decoder_dispatcher().loader()->GetByOrdinal(header->ordinal);
-      if ((methods != nullptr) && !methods->empty()) {
-        const fidl_codec::InterfaceMethod* method = (*methods)[0];
-        os << '(' << method->enclosing_interface().name() << '.' << method->name() << ')';
-      }
-    }
-  }
-  os << dispatcher->colors().reset << '\n';
-  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "data=";
-  const char* separator = "";
-  for (uint32_t i = 0; i < num_bytes; ++i) {
-    // Display 16 bytes per line.
-    if (i % kLineSize == 0) {
-      std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%04x", i);
-      os << separator << "\n"
-         << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "  "
-         << buffer.data() << ": ";
-      separator = "";
-    }
-    // Display 4 bytes in red then four bytes in black ...
-    if (i % kPatternSize == 0) {
-      os << dispatcher->colors().red;
-    } else if (i % kPatternColorSize == 0) {
-      os << dispatcher->colors().reset;
-    }
-    std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
-    snprintf(buffer.data(), buffer.size(), "%02x", bytes[i]);
-    os << separator << buffer.data();
-    separator = ", ";
-  }
-  os << dispatcher->colors().reset << '\n';
-  if (num_handles > 0) {
-    os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "handles=";
-    const char* separator = "";
-    for (uint32_t i = 0; i < num_handles; ++i) {
-      // Display 4 bytes per line.
-      if (i % kLineHandleSize == 0) {
-        std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
-        snprintf(buffer.data(), buffer.size(), "%04x", i);
-        os << separator << "\n"
-           << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "  "
-           << buffer.data() << ": ";
-        separator = "";
-      }
-      std::vector<char> buffer(sizeof(zx_handle_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%08x", handles[i].handle);
-      os << separator << buffer.data();
-      separator = ", ";
-    }
-    os << '\n';
-  }
-}
-
 void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t size,
                    std::ostream& os) {
   if (string == nullptr) {
@@ -249,36 +174,6 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(Sysca
   return result;
 }
 
-void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                              SyscallDecoder* decoder, Stage stage,
-                                              std::string_view line_header, int tabs,
-                                              std::ostream& os) const {
-  zx_handle_t handle_value = handle()->Value(decoder, stage);
-  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
-  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
-  const zx_handle_t* handles_value = handles()->Content(decoder, stage);
-  uint32_t num_handles_value = num_handles()->Value(decoder, stage);
-  zx_handle_info_t* handle_infos_value = nullptr;
-  if (num_handles_value > 0) {
-    handle_infos_value = new zx_handle_info_t[num_handles_value];
-    for (uint32_t i = 0; i < num_handles_value; ++i) {
-      handle_infos_value[i].handle = handles_value[i];
-      handle_infos_value[i].type = ZX_OBJ_TYPE_NONE;
-      handle_infos_value[i].rights = 0;
-    }
-  }
-  if (!dispatcher->message_decoder_dispatcher().DecodeAndDisplayMessage(
-          decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
-          num_handles_value, type(), os, line_header, tabs)) {
-    DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
-                dispatcher, line_header, tabs, os);
-  } else if (dispatcher->dump_messages()) {
-    DumpMessage(/*error=*/false, bytes_value, num_bytes_value, handle_infos_value,
-                num_handles_value, dispatcher, line_header, tabs, os);
-  }
-  delete[] handle_infos_value;
-}
-
 std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleInfo::ComputeType() const {
   return std::make_unique<fidl_codec::FidlMessageType>();
 }
@@ -309,26 +204,6 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
     }
   }
   return result;
-}
-
-void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                  SyscallDecoder* decoder, Stage stage,
-                                                  std::string_view line_header, int tabs,
-                                                  std::ostream& os) const {
-  zx_handle_t handle_value = handle()->Value(decoder, stage);
-  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
-  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
-  const zx_handle_info_t* handle_infos_value = handles()->Content(decoder, stage);
-  uint32_t num_handles_value = num_handles()->Value(decoder, stage);
-  if (!dispatcher->message_decoder_dispatcher().DecodeAndDisplayMessage(
-          decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
-          num_handles_value, type(), os, line_header, tabs)) {
-    DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
-                dispatcher, line_header, tabs, os);
-  } else if (dispatcher->dump_messages()) {
-    DumpMessage(/*error=*/false, bytes_value, num_bytes_value, handle_infos_value,
-                num_handles_value, dispatcher, line_header, tabs, os);
-  }
 }
 
 bool ComputeTypes(const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fields,

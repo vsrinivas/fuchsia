@@ -58,17 +58,25 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
         ptr->TwoStringArrayInt(TwoStringArrayFromVals("harpo", "chico"), 1);
       });
 
+  DecodedMessage decoded_message;
+  std::stringstream error_stream;
+  decoded_message.DecodeMessage(dispatcher(), kProcessKoid, kHandle, message.bytes().data(),
+                                message.bytes().size(), nullptr, 0, SyscallFidlType::kOutputMessage,
+                                error_stream);
+  auto result = std::make_unique<fidl_codec::FidlMessageValue>(&decoded_message, error_stream.str(),
+                                                               message.bytes().data(),
+                                                               message.bytes().size(), nullptr, 0);
+
   std::stringstream output;
-  bool result = dispatcher()->DecodeAndDisplayMessage(
-      kProcessKoid, kHandle, message.bytes().data(), message.bytes().size(), nullptr, 0,
-      SyscallFidlType::kOutputMessage, output, "", 2);
-  ASSERT_TRUE(result);
-  ASSERT_EQ(
-      output.str(),
-      "    sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
-      "      arr: array<string> = [ \"harpo\", \"chico\" ]\n"
-      "      i32: int32 = 1\n"
-      "    }\n");
+  PrettyPrinter printer(output, dispatcher()->colors(), /*pretty_print=*/true, /*line_header=*/"",
+                        /*max_line_size=*/dispatcher()->columns(),
+                        /*header_on_every_line=*/false);
+  result->PrettyPrint(nullptr, printer);
+  ASSERT_EQ(output.str(),
+            "sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
+            "  arr: array<string> = [ \"harpo\", \"chico\" ]\n"
+            "  i32: int32 = 1\n"
+            "}\n");
 }
 
 TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
@@ -79,20 +87,27 @@ TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
         ptr->TwoStringArrayInt(TwoStringArrayFromVals("harpo", "chico"), 1);
       });
 
+  DecodedMessage decoded_message;
+  std::stringstream error_stream;
+  decoded_message.DecodeMessage(dispatcher(), kProcessKoid, kHandle, message.bytes().data(),
+                                message.bytes().size() - 1, nullptr, 0,
+                                SyscallFidlType::kOutputMessage, error_stream);
+  auto result = std::make_unique<fidl_codec::FidlMessageValue>(&decoded_message, error_stream.str(),
+                                                               message.bytes().data(),
+                                                               message.bytes().size(), nullptr, 0);
+
   std::stringstream output;
-  bool result = dispatcher()->DecodeAndDisplayMessage(
-      kProcessKoid, kHandle, message.bytes().data(), message.bytes().size() - 1, nullptr, 0,
-      SyscallFidlType::kOutputMessage, output, "", 2);
-  ASSERT_FALSE(result);
-  ASSERT_EQ(
-      output.str(),
-      "    Can't decode message.\n"
-      "      sent request errors:\n"
-      "        40: Not enough data to decode (needs 8, remains 7)\n"
-      "      sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
-      "        arr: array<string> = [ \"harpo\", \"chico\" ]\n"
-      "        i32: int32 = 1\n"
-      "      }\n");
+  PrettyPrinter printer(output, dispatcher()->colors(), /*pretty_print=*/true, /*line_header=*/"",
+                        /*max_line_size=*/100,
+                        /*header_on_every_line=*/false);
+  result->PrettyPrint(nullptr, printer);
+  ASSERT_EQ(output.str(),
+            "sent request errors:\n"
+            "  40: Not enough data to decode (needs 8, remains 7)\n"
+            "sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
+            "  arr: array<string> = [ \"harpo\", \"chico\" ]\n"
+            "  i32: int32 = 1\n"
+            "}\n");
 }
 
 }  // namespace fidl_codec

@@ -8,7 +8,7 @@ namespace fidl_codec {
 
 TEST(PrettyPrinter, uint64_print) {
   std::stringstream out;
-  PrettyPrinter printer(out, WithoutColors, "", 100, false);
+  PrettyPrinter printer(out, WithoutColors, false, "", 100, false);
   // We use variables to get the proper type to <<.
   constexpr uint64_t n = 255;
   constexpr uint64_t zero = 0;

@@ -22,13 +22,12 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
   FidlcatPrinter(SyscallDecoder* decoder, bool dump_messages, bool pretty_print, std::ostream& os,
                  const fidl_codec::Colors& colors, std::string_view line_header, int max_line_size,
                  bool header_on_every_line, int tabulations = 0)
-      : PrettyPrinter(os, colors, line_header, max_line_size, header_on_every_line, tabulations),
+      : PrettyPrinter(os, colors, pretty_print, line_header, max_line_size, header_on_every_line,
+                      tabulations),
         decoder_(decoder),
-        dump_messages_(dump_messages),
-        pretty_print_(pretty_print) {}
+        dump_messages_(dump_messages) {}
 
   bool DumpMessages() const override { return dump_messages_; }
-  bool PrettyPrint() const override { return pretty_print_; }
 
   void DisplayHandle(const zx_handle_info_t& handle) override;
   void DisplayStatus(zx_status_t status);
@@ -43,7 +42,6 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
  private:
   SyscallDecoder* decoder_;
   const bool dump_messages_;
-  const bool pretty_print_;
 };
 
 class Process {

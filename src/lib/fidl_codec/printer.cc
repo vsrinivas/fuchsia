@@ -15,10 +15,12 @@ const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_white_on_magenta=*/"\u001b[45m\u001b[37m",
                         /*new_yellow_background=*/"\u001b[103m");
 
-PrettyPrinter::PrettyPrinter(std::ostream& os, const Colors& colors, std::string_view line_header,
-                             int max_line_size, bool header_on_every_line, int tabulations)
+PrettyPrinter::PrettyPrinter(std::ostream& os, const Colors& colors, bool pretty_print,
+                             std::string_view line_header, int max_line_size,
+                             bool header_on_every_line, int tabulations)
     : os_(os),
       colors_(colors),
+      pretty_print_(pretty_print),
       line_header_(line_header),
       max_line_size_(max_line_size),
       header_on_every_line_(header_on_every_line),

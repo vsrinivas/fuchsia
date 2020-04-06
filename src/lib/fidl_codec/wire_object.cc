@@ -458,7 +458,7 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
             << fidl_codec::ResetColor << ' ' << fidl_codec::Green
             << method_->enclosing_interface().name() << '.' << method_->name()
             << fidl_codec::ResetColor << " = ";
-    if (printer.PrettyPrint()) {
+    if (printer.pretty_print()) {
       decoded_request_->PrettyPrint(nullptr, printer);
       printer << '\n';
     } else {
@@ -474,7 +474,7 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
             << fidl_codec::ResetColor << ' ' << fidl_codec::Green
             << method_->enclosing_interface().name() << '.' << method_->name()
             << fidl_codec::ResetColor << " = ";
-    if (printer.PrettyPrint()) {
+    if (printer.pretty_print()) {
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
     } else {
@@ -528,7 +528,8 @@ void FidlMessageValue::DumpMessage(PrettyPrinter& printer) const {
   constexpr int kLineSize = 16;
   constexpr int kLineHandleSize = 4;
   constexpr int kCharactersPerByte = 2;
-  if ((decoded_request_ == nullptr) && (decoded_response_ == nullptr)) {
+  if ((decoded_request_ == nullptr) && (decoded_response_ == nullptr) &&
+      (ordinal_ != kFidlOrdinalEpitaph)) {
     printer << fidl_codec::Red << "Can't decode message: ";
   } else if (printer.DumpMessages()) {
     printer << "Message: ";
