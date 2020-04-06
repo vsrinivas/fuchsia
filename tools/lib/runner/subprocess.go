@@ -39,15 +39,14 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		// meaning the process and any of its children.
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
-	logger.Tracef(ctx, "environment of subprocess:\n%v", cmd.Env)
-	logger.Tracef(ctx, "starting:\n%v", cmd.Args)
+	logger.Debugf(ctx, "environment of subprocess:\n%v", cmd.Env)
+	logger.Debugf(ctx, "starting:\n%v", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	done := make(chan error)
 	go func() {
 		done <- cmd.Wait()
-		logger.Tracef(ctx, "finished:\n%v", cmd.Args)
 	}()
 	select {
 	case err := <-done:
