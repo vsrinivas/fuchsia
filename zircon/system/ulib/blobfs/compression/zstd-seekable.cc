@@ -21,9 +21,11 @@
 
 namespace blobfs {
 
-constexpr int kSeekableCompressionLevel = 18;
+constexpr int kSeekableCompressionLevel = 5;
+constexpr unsigned kSeekableMaxFrameSize = 128 * kBlobfsBlockSize;
+
+// TODO(49551): Consider disabling checksums if cryptographic verification suffices.
 constexpr int kSeekableChecksumFlag = 1;
-constexpr unsigned kSeekableMaxFrameSize = 4 * kBlobfsBlockSize;
 
 ZSTDSeekableCompressor::ZSTDSeekableCompressor(ZSTD_seekable_CStream* stream,
                                                void* compressed_buffer,
