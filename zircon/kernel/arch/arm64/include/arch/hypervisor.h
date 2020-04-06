@@ -118,9 +118,9 @@ class Vcpu {
   zx_status_t WriteState(const zx_vcpu_io_t& io_state) { return ZX_ERR_INVALID_ARGS; }
 
  private:
-  Guest* guest_;
+  Guest* const guest_;
   const uint8_t vpid_;
-  const Thread* thread_;
+  const Thread* const thread_;
   ktl::atomic<bool> running_;
   // We allocate El2State in its own page as it is passed between EL1 and EL2,
   // which have different address space mappings. This ensures that El2State
