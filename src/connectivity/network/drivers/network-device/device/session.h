@@ -107,12 +107,12 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   }
   inline void StopRx() { rx_valid_ = false; }
   inline bool CanDestroy() { return in_flight_rx_ == 0 && in_flight_tx_ == 0; }
+  // Clears internal references to data VMO, returning the vmo_id that was associated with this
+  // session.
+  uint8_t ReleaseDataVmo();
 
   const fbl::RefPtr<RefCountedFifo>& rx_fifo() { return fifo_rx_; }
   const char* name() const { return name_.data(); }
-  void SetVmoId(uint8_t vmo_id) { vmo_id_ = vmo_id; }
-  uint8_t vmo_id() const { return vmo_id_; }
-  zx::unowned_vmo data_vmo() const { return zx::unowned_vmo(vmo_data_); }
 
  private:
   enum class FetchResult { OK, OVERRUN, SHOULD_WAIT, FAILED };
@@ -126,6 +126,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
   FetchResult FetchTx();
   buffer_descriptor_t* descriptor(uint16_t index);
+
   const buffer_descriptor_t* descriptor(uint16_t index) const;
   fbl::Span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
   // Loads a completed rx buffer information back into the descriptor with the provided index.
@@ -137,15 +138,19 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
   async_dispatcher_t* dispatcher_;
   std::array<char, netdev::MAX_SESSION_NAME + 1> name_{};
+  // `MAX_VMOS` is used as a marker for invalid VMO identifier.
+  // The destructor checks that vmo_id is set to `MAX_VMOS`, which verifies that `ReleaseDataVmo`
+  // was called before destruction.
   uint8_t vmo_id_ = MAX_VMOS;
-  zx::vmo vmo_data_;
+  // Unowned pointer to data VMO stored in DeviceInterface.
+  // Set by Session::Create.
+  DataVmoStore::StoredVmo* data_vmo_ = nullptr;
   zx::port tx_port_;
   fit::optional<fidl::BindingRef> binding_;
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
   // the `binding_` BindingRef.
   fit::optional<zx::channel> control_channel_;
-  fzl::VmoMapper mapped_data_;
   zx::vmo vmo_descriptors_;
   fzl::VmoMapper descriptors_;
   fbl::RefPtr<RefCountedFifo> fifo_rx_;

@@ -76,6 +76,11 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo 
     return status;
   }
 
+  if ((status = parent->RegisterDataVmo(std::move(info.data), &session->vmo_id_,
+                                        &session->data_vmo_)) != ZX_OK) {
+    return status;
+  }
+
   *out_session = std::move(session);
   return ZX_OK;
 }
@@ -83,7 +88,6 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo 
 Session::Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, const char* name,
                  DeviceInterface* parent)
     : dispatcher_(dispatcher),
-      vmo_data_(std::move(info->data)),
       vmo_descriptors_(std::move(info->descriptors)),
       paused_(true),
       descriptor_count_(info->descriptor_count),
@@ -118,16 +122,6 @@ zx_status_t Session::Init(netdev::Fifos* out) {
   // Map the data and descriptors VMO:
 
   zx_status_t status;
-  if ((status = mapped_data_.Map(vmo_data_, 0, 0,
-                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
-                                 nullptr)) != ZX_OK) {
-    LOGF_ERROR("network-device(%s): failed to map data VMO: %s", name(),
-               zx_status_get_string(status));
-    return status;
-  }
-
-  fbl::AllocChecker ac;
-
   if ((status = descriptors_.Map(vmo_descriptors_, 0, descriptor_count_ * descriptor_length_,
                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                  nullptr)) != ZX_OK) {
@@ -137,6 +131,7 @@ zx_status_t Session::Init(netdev::Fifos* out) {
   }
 
   // create the FIFOs
+  fbl::AllocChecker ac;
   auto* rx_fifo = new (&ac) RefCountedFifo;
   if (!ac.check()) {
     LOGF_ERROR("network-device(%s): failed to allocate ", name());
@@ -461,10 +456,11 @@ const buffer_descriptor_t* Session::descriptor(uint16_t index) const {
 }
 
 fbl::Span<uint8_t> Session::data_at(uint64_t offset, uint64_t len) const {
-  uint64_t max_len = mapped_data_.size();
+  auto mapped = data_vmo_->data();
+  uint64_t max_len = mapped.size();
   offset = std::min(offset, max_len);
   len = std::min(len, max_len - offset);
-  return fbl::Span<uint8_t>(static_cast<uint8_t*>(mapped_data_.start()) + offset, len);
+  return mapped.subspan(offset, len);
 }
 
 void Session::ResumeTx() {
@@ -874,6 +870,15 @@ bool Session::IsSubscribedToFrameType(uint8_t frame_type) {
     }
   }
   return false;
+}
+
+uint8_t Session::ReleaseDataVmo() {
+  uint8_t id = vmo_id_;
+  // Reset identifier to the marker value. The destructor will assert that `ReleaseDataVmo` was
+  // called by checking the value.
+  vmo_id_ = MAX_VMOS;
+  data_vmo_ = nullptr;
+  return id;
 }
 
 }  // namespace network::internal

@@ -98,6 +98,12 @@ class DeviceInterface : public netdev::Device::Interface,
   // Destroys all dead sessions that report they can be destroyed through `Session::CanDestroy`.
   void PruneDeadSessions();
 
+  // Registers `vmo` as a data vmo that will be shared with the device implementation. On success,
+  // `out_id` contains the generated identifier and `out_stored_vmo` contains an unowned pointer to
+  // the `StoredVmo` holder.
+  zx_status_t RegisterDataVmo(zx::vmo vmo, uint8_t* out_id,
+                              DataVmoStore::StoredVmo** out_stored_vmo);
+
   // Fidl protocol implementation.
   void GetInfo(GetInfoCompleter::Sync completer) override;
   void GetStatus(GetStatusCompleter::Sync completer) override;
@@ -123,7 +129,12 @@ class DeviceInterface : public netdev::Device::Interface,
 
   explicit DeviceInterface(async_dispatcher_t* dispatcher,
                            ddk::NetworkDeviceImplProtocolClient parent)
-      : dispatcher_(dispatcher), device_(parent) {}
+      : dispatcher_(dispatcher),
+        device_(parent),
+        vmo_store_(vmo_store::Options{
+            vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+                                  nullptr},
+            fit::nullopt}) {}
   zx_status_t Init(const char* parent_name);
   // Serves the OpenSession FIDL handle method synchronously.
   zx_status_t OpenSession(const char* name, netdev::SessionInfo session_info,
@@ -192,6 +203,7 @@ class DeviceInterface : public netdev::Device::Interface,
   fbl::Mutex vmos_lock_;
   // We don't need to keep any data associated with the VMO ids, we use the slab to guarantee
   // non-overlapping unique identifiers within a set of valid IDs.
+  DataVmoStore vmo_store_ __TA_GUARDED(vmos_lock_);
   std::unique_ptr<IndexedSlab<nullptr_t>> vmo_ids_ __TA_GUARDED(vmos_lock_);
 
   fbl::Mutex bindings_lock_;

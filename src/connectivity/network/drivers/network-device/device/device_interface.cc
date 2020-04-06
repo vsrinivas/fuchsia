@@ -118,7 +118,7 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   }
   {
     fbl::AutoLock lock(&vmos_lock_);
-    if ((status = IndexedSlab<nullptr_t>::Create(MAX_VMOS, &vmo_ids_)) != ZX_OK) {
+    if ((status = vmo_store_.Reserve(MAX_VMOS)) != ZX_OK) {
       LOGF_ERROR("network-device: bind: failed to init session identifiers %s",
                  zx_status_get_string(status));
       return status;
@@ -313,27 +313,6 @@ zx_status_t DeviceInterface::OpenSession(const char* name, netdev::SessionInfo s
                                 &session, &rsp->fifos)) != ZX_OK) {
     return status;
   }
-
-  zx::vmo device_vmo;
-  if ((status = session->data_vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo)) != ZX_OK) {
-    return status;
-  }
-
-  uint8_t vmo_id;
-  {
-    fbl::AutoLock lock_vmos(&vmos_lock_);
-    if (vmo_ids_->available() == 0) {
-      return ZX_ERR_NO_RESOURCES;
-    }
-    // NOTE: vmo_ids_ is allocated with MAX_VMOs so this cast is safe as long as MAX_VMOs fits an
-    // uint8_t, which we verify with the static assertion.
-    vmo_id = static_cast<uint8_t>(vmo_ids_->Push(nullptr));
-    static_assert(MAX_VMOS < 256);
-  }
-
-  session->SetVmoId(vmo_id);
-
-  device_.PrepareVmo(vmo_id, std::move(device_vmo));
 
   if (session->ShouldTakeOverPrimary(primary_session_.get())) {
     // Set this new session as the primary session.
@@ -686,9 +665,16 @@ void DeviceInterface::ReleaseVmo(Session* session) {
   uint8_t vmo;
   {
     fbl::AutoLock lock(&vmos_lock_);
-    vmo = session->vmo_id();
-    session->SetVmoId(MAX_VMOS);
-    vmo_ids_->Free(vmo);
+    vmo = session->ReleaseDataVmo();
+    zx_status_t status = vmo_store_.Unregister(vmo);
+    if (status != ZX_OK) {
+      // Avoid notifying the device implementation if unregistration fails.
+      // A non-ok return here means we're either attempting to double-release a VMO or the sessions
+      // didn't have a registered VMO.
+      LOGF_WARN("network-device(%s): Failed to unregister VMO %d: %s", session->name(), vmo,
+                zx_status_get_string(status));
+      return;
+    }
   }
   device_.ReleaseVmo(vmo);
 }
@@ -782,6 +768,32 @@ void DeviceInterface::PruneDeadSessions() {
       LOGF_TRACE("network-device: PruneDeadSessions: %s still pending", session.name());
     }
   }
+}
+
+zx_status_t DeviceInterface::RegisterDataVmo(zx::vmo vmo, uint8_t* out_id,
+                                             DataVmoStore::StoredVmo** out_stored_vmo) {
+  zx::vmo device_vmo;
+  {
+    fbl::AutoLock lock_vmos(&vmos_lock_);
+    if (vmo_store_.is_full()) {
+      return ZX_ERR_NO_RESOURCES;
+    }
+    // Duplicate the VMO to share with device implementation.
+    zx_status_t status;
+    if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo)) != ZX_OK) {
+      return status;
+    }
+
+    auto result = vmo_store_.Register(std::move(vmo));
+    if (result.is_error()) {
+      return result.error();
+    }
+    *out_id = result.value();
+    *out_stored_vmo = vmo_store_.GetVmo(*out_id);
+  }
+
+  device_.PrepareVmo(*out_id, std::move(device_vmo));
+  return ZX_OK;
 }
 
 void DeviceInterface::CommitAllSessions() {

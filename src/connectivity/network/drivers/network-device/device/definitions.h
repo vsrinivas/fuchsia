@@ -11,12 +11,15 @@
 
 #include <ddk/protocol/network/device.h>
 
+#include "src/lib/vmo_store/vmo_store.h"
+
 namespace network {
 namespace netdev = llcpp::fuchsia::hardware::network;
 constexpr uint32_t kMaxFifoDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
 
 namespace internal {
 using BufferParts = std::array<buffer_region_t, MAX_BUFFER_PARTS>;
+using DataVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>>;
 }  // namespace internal
 
 }  // namespace network
