@@ -693,7 +693,10 @@ impl App {
                 fasync::spawn_local(
                     stream
                         .try_for_each(move |req| {
-                            let ViewProviderRequest::CreateView { token, .. } = req;
+                            let token = match req {
+                                ViewProviderRequest::CreateView { token, .. } => token,
+                                ViewProviderRequest::CreateViewWithViewRef { token, .. } => token,
+                            };
                             let view_token = ViewToken { value: token };
                             sender
                                 .unbounded_send(MessageInternal::CreateView(view_token))
