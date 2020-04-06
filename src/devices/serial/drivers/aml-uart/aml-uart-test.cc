@@ -248,6 +248,7 @@ class AmlUartHarness : public zxtest::Test {
     auto device = device_.release();
     ddk::UnbindTxn txn(device->zxdev());
     device->DdkUnbindNew(std::move(txn));
+    device->DdkRelease();
   }
 
   serial::AmlUart& Device() { return *device_.get(); }

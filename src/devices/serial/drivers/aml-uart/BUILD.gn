@@ -67,9 +67,6 @@ test("aml-uart-test") {
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/fake-mmio-reg",
   ]
-
-  # TODO(46403): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("aml-uart-manifest") {
