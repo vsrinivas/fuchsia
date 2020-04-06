@@ -45,6 +45,7 @@ InternalBuffer::InternalBuffer(InternalBuffer&& other)
       virt_base_(other.virt_base_),
       real_size_(other.real_size_),
       real_virt_base_(other.real_virt_base_),
+      alignment_offset_(other.alignment_offset_),
       pin_(std::move(other.pin_)),
       phys_base_(other.phys_base_),
       buffer_collection_(std::move(other.buffer_collection_)),
@@ -69,6 +70,7 @@ InternalBuffer& InternalBuffer::operator=(InternalBuffer&& other) {
   virt_base_ = other.virt_base_;
   real_size_ = other.real_size_;
   real_virt_base_ = other.real_virt_base_;
+  alignment_offset_ = other.alignment_offset_;
   phys_base_ = other.phys_base_;
   buffer_collection_ = std::move(other.buffer_collection_);
   vmo_ = std::move(other.vmo_);
@@ -121,7 +123,7 @@ void InternalBuffer::CacheFlushPossibleInvalidate(size_t offset, size_t length, 
       ZX_PANIC("InternalBuffer::CacheFlush() zx_cache_flush() failed: %d\n", status);
     }
   } else {
-    status = vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, offset, length, nullptr, 0);
+    status = vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, alignment_offset_ + offset, length, nullptr, 0);
     if (status != ZX_OK) {
       ZX_PANIC("InternalBuffer::CacheFlush() op_range(CACHE_CLEAN) failed: %d", status);
     }
@@ -248,8 +250,11 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   if (alignment) {
     // Shift the base addresses so the physical address is aligned correctly.
     zx_paddr_t new_phys_base = fbl::round_up(phys_base, alignment);
-    virt_base += new_phys_base - phys_base;
-    phys_base = new_phys_base;
+    alignment_offset_ = new_phys_base - phys_base;
+    if (is_mapping_needed_) {
+      virt_base_ += alignment_offset_;
+    }
+    phys_base_ = new_phys_base;
   }
   pin_ = std::move(pin);
   // We keep the buffer_collection_ channel alive, but we don't listen for channel failure.  This

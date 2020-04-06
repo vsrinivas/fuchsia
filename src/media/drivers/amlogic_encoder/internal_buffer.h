@@ -77,6 +77,7 @@ class InternalBuffer {
   // Include size for alignment.
   size_t real_size_{};
   uint8_t* real_virt_base_{};
+  uintptr_t alignment_offset_{};
   zx::pmt pin_;
   zx_paddr_t phys_base_{};
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollection> buffer_collection_;
