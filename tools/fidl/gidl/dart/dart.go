@@ -137,7 +137,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		valueStr := visit(encodeSuccess.Value, decl)
 		valueType := typeName(decl.(*gidlmixer.StructDecl))
 		for _, encoding := range encodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -165,7 +165,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueStr := visit(decodeSuccess.Value, decl)
 		valueType := typeName(decl.(*gidlmixer.StructDecl))
 		for _, encoding := range decodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -197,7 +197,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		valueStr := visit(encodeFailure.Value, decl)
 		valueType := typeName(decl.(*gidlmixer.StructDecl))
 		for _, wireFormat := range encodeFailure.WireFormats {
-			if wireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(wireFormat) {
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
@@ -221,7 +221,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure) ([]decodeFail
 		}
 		valueType := dartTypeName(decodeFailure.Type)
 		for _, encoding := range decodeFailure.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -234,6 +234,10 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure) ([]decodeFail
 		}
 	}
 	return decodeFailureCases, nil
+}
+
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	return wireFormat == gidlir.V1WireFormat
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
@@ -259,19 +263,18 @@ func dartTypeName(inputType string) string {
 }
 
 func bytesBuilder(bytes []byte) string {
-	var sb strings.Builder
-	sb.WriteString("Uint8List.fromList([\n")
+	var builder strings.Builder
+	builder.WriteString("Uint8List.fromList([\n")
 	for i, b := range bytes {
-		sb.WriteString(fmt.Sprintf("0x%02x", b))
-		sb.WriteString(",")
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 		if i%8 == 7 {
 			// Note: empty comments are written to preserve formatting. See:
 			// https://github.com/dart-lang/dart_style/wiki/FAQ#why-does-the-formatter-mess-up-my-collection-literals
-			sb.WriteString(" //\n")
+			builder.WriteString(" //\n")
 		}
 	}
-	sb.WriteString("])")
-	return sb.String()
+	builder.WriteString("])")
+	return builder.String()
 }
 
 func visit(value interface{}, decl gidlmixer.Declaration) string {
@@ -315,7 +318,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	var args []string
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		fieldDecl, _ := decl.ForKey(field.Key)
@@ -327,7 +330,7 @@ func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 
 func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		fieldDecl, _ := decl.ForKey(field.Key)
@@ -344,8 +347,9 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 	for _, item := range value {
 		elements = append(elements, visit(item, elemDecl))
 	}
-	if numberDecl, ok := elemDecl.(*gidlmixer.NumberDecl); ok {
-		return fmt.Sprintf("%sList.fromList([%s])", fidlcommon.ToUpperCamelCase(string(numberDecl.Typ)), strings.Join(elements, ", "))
+	if numberDecl, ok := elemDecl.(*gidlmixer.IntegerDecl); ok {
+		typeName := fidlcommon.ToUpperCamelCase(string(numberDecl.Subtype()))
+		return fmt.Sprintf("%sList.fromList([%s])", typeName, strings.Join(elements, ", "))
 	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }

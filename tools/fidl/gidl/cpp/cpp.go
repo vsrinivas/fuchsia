@@ -26,9 +26,7 @@ var tmpl = template.Must(template.New("tmpl").Parse(`
 {{ range .EncodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Encode) {
 	{{ .ValueBuild }}
-	const auto expected = std::vector<uint8_t>{
-		{{ .Bytes }}
-	};
+	const auto expected = {{ .Bytes }};
 	{{/* Must use a variable because macros don't understand commas in template args. */}}
 	const auto result =
 		fidl::test::util::ValueToBytes<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
@@ -40,9 +38,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 {{ range .DecodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{ .ValueBuild }}
-	auto bytes = std::vector<uint8_t>{
-		{{ .Bytes }}
-	};
+	auto bytes = {{ .Bytes }};
 	EXPECT_TRUE(fidl::Equals(
 		fidl::test::util::DecodedBytes<decltype({{ .ValueVar }})>(bytes),
 		{{ .ValueVar }}));
@@ -51,18 +47,16 @@ TEST(Conformance, {{ .Name }}_Decode) {
 
 {{ range .EncodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Encode_Failure) {
-  {{ .ValueBuild }}
-  fidl::test::util::CheckEncodeFailure<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
-	  {{ .ValueVar }}, {{ .ErrorCode }});
+	{{ .ValueBuild }}
+	fidl::test::util::CheckEncodeFailure<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
+		{{ .ValueVar }}, {{ .ErrorCode }});
 }
 {{ end }}
 
 {{ range .DecodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Decode_Failure) {
-  auto bytes = std::vector<uint8_t>{
-    {{ .Bytes }}
-  };
-  fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(bytes, {{ .ErrorCode }});
+	auto bytes = {{ .Bytes }};
+	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(bytes, {{ .ErrorCode }});
 }
 {{ end }}
 `))
@@ -132,7 +126,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, encoding := range encodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -162,7 +156,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, encoding := range decodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -195,7 +189,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		valueVar := valueBuilder.lastVar
 		errorCode := cppErrorCode(encodeFailure.Err)
 		for _, wireFormat := range encodeFailure.WireFormats {
-			if wireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(wireFormat) {
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
@@ -216,7 +210,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		valueType := cppType(decodeFailure.Type)
 		errorCode := cppErrorCode(decodeFailure.Err)
 		for _, encoding := range decodeFailure.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -230,6 +224,10 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		}
 	}
 	return decodeFailureCases, nil
+}
+
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	return wireFormat == gidlir.V1WireFormat
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
@@ -270,16 +268,16 @@ func cppType(gidlTypeString string) string {
 	return "conformance::" + gidlTypeString
 }
 
-// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
+	builder.WriteString("std::vector<uint8_t>{")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x", b))
-		builder.WriteString(", ")
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}
 	}
+	builder.WriteString("}")
 	return builder.String()
 }
 
@@ -366,7 +364,7 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecl
 	}
 
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		b.Builder.WriteString("\n")
@@ -431,12 +429,8 @@ func (b *cppValueBuilder) OnNull(decl gidlmixer.Declaration) {
 
 func typeName(decl gidlmixer.Declaration) string {
 	switch decl := decl.(type) {
-	case *gidlmixer.BoolDecl:
-		return "bool"
-	case *gidlmixer.NumberDecl:
-		return numberName(decl.Typ)
-	case *gidlmixer.FloatDecl:
-		return numberName(decl.Typ)
+	case gidlmixer.PrimitiveDeclaration:
+		return numberName(decl.Subtype())
 	case *gidlmixer.StringDecl:
 		if decl.IsNullable() {
 			return "::fidl::StringPtr"

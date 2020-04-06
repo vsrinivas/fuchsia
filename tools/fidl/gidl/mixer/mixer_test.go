@@ -199,9 +199,9 @@ func TestBoolDeclConforms(t *testing.T) {
 	)
 }
 
-func TestNumberDeclConforms(t *testing.T) {
+func TestIntegerDeclConforms(t *testing.T) {
 	checkConforms(t,
-		&NumberDecl{Typ: fidlir.Uint8, lower: 0, upper: 255},
+		&IntegerDecl{subtype: fidlir.Uint8, lower: 0, upper: 255},
 		[]conformTest{
 			conformOk{uint64(0)},
 			conformOk{uint64(128)},
@@ -219,7 +219,7 @@ func TestNumberDeclConforms(t *testing.T) {
 		},
 	)
 	checkConforms(t,
-		&NumberDecl{Typ: fidlir.Int64, lower: -5, upper: 10},
+		&IntegerDecl{subtype: fidlir.Int64, lower: -5, upper: 10},
 		[]conformTest{
 			conformOk{int64(-5)},
 			conformOk{int64(10)},
@@ -244,8 +244,8 @@ func TestFloatDeclConforms(t *testing.T) {
 		conformFail{math.Inf(-1)},
 		conformFail{math.NaN()},
 	}
-	checkConforms(t, &FloatDecl{Typ: fidlir.Float32}, tests)
-	checkConforms(t, &FloatDecl{Typ: fidlir.Float64}, tests)
+	checkConforms(t, &FloatDecl{subtype: fidlir.Float32}, tests)
+	checkConforms(t, &FloatDecl{subtype: fidlir.Float64}, tests)
 }
 
 func TestStringDeclConforms(t *testing.T) {
@@ -494,9 +494,9 @@ func TestVisit(t *testing.T) {
 		expected string
 	}{
 		{false, &BoolDecl{}, "Bool"},
-		{int64(1), &NumberDecl{Typ: fidlir.Int8}, "Int64"},
-		{uint64(1), &NumberDecl{Typ: fidlir.Uint8}, "Uint64"},
-		{1.23, &FloatDecl{Typ: fidlir.Float32}, "Float64"},
+		{int64(1), &IntegerDecl{subtype: fidlir.Int8}, "Int64"},
+		{uint64(1), &IntegerDecl{subtype: fidlir.Uint8}, "Uint64"},
+		{1.23, &FloatDecl{subtype: fidlir.Float32}, "Float64"},
 		{"foo", &StringDecl{}, "String"},
 		{nil, &StringDecl{nullable: true}, "Null"},
 		// These values and decls are not fully initialized, but for the

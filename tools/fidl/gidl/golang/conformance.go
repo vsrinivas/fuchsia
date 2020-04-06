@@ -175,7 +175,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, encoding := range encodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -206,7 +206,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, encoding := range decodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -241,7 +241,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, wireFormat := range encodeFailure.WireFormats {
-			if wireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(wireFormat) {
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
@@ -266,7 +266,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 
 		valueType := "conformance." + decodeFailure.Type
 		for _, encoding := range decodeFailure.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -279,6 +279,10 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		}
 	}
 	return decodeFailureCases, nil
+}
+
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	return wireFormat == gidlir.V1WireFormat
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {

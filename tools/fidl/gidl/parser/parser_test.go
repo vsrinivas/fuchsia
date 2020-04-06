@@ -55,7 +55,7 @@ func TestParseValues(t *testing.T) {
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
-						Ordinal: 0x01020304,
+						UnknownOrdinal: 0x01020304,
 					},
 					Value: uint64(5),
 				},

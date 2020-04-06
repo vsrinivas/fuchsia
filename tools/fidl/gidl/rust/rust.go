@@ -29,7 +29,7 @@ fn test_{{ .Name }}_encode() {
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
 	Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value).unwrap();
-	assert_eq!(*bytes, &[{{ .Bytes }}][..]);
+	assert_eq!(*bytes, &{{ .Bytes }}[..]);
 }
 {{ end }}
 
@@ -37,7 +37,7 @@ fn test_{{ .Name }}_encode() {
 #[test]
 fn test_{{ .Name }}_decode() {
 	let value = &mut {{ .ValueType }}::new_empty();
-	let bytes = &mut [{{ .Bytes }}];
+	let bytes = &mut {{ .Bytes }};
 	Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value).unwrap();
 	assert_eq!(*value, {{ .Value }});
 }
@@ -60,7 +60,7 @@ fn test_{{ .Name }}_encode_failure() {
 #[test]
 fn test_{{ .Name }}_decode_failure() {
 	let value = &mut {{ .ValueType }}::new_empty();
-	let bytes = &mut [{{ .Bytes }}];
+	let bytes = &mut {{ .Bytes }};
 	match Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value) {
 		Err({{ .ErrorCode }} { .. }) => (),
 		Err(err) => panic!("unexpected error: {}", err),
@@ -126,8 +126,6 @@ func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 
 func encodingContext(wireFormat gidlir.WireFormat) string {
 	switch wireFormat {
-	case gidlir.OldWireFormat:
-		return "OLD_CONTEXT"
 	case gidlir.V1WireFormat:
 		return "V1_CONTEXT"
 	default:
@@ -147,7 +145,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		}
 		value := visit(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -174,7 +172,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueType := rustType(decodeSuccess.Value.(gidlir.Object).Name)
 		value := visit(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -206,7 +204,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		value := visit(encodeFailure.Value, decl)
 
 		for _, wireFormat := range encodeFailure.WireFormats {
-			if wireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(wireFormat) {
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
@@ -229,7 +227,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		}
 		valueType := rustType(decodeFailure.Type)
 		for _, encoding := range decodeFailure.Encodings {
-			if encoding.WireFormat == gidlir.OldWireFormat {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -244,16 +242,20 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 	return decodeFailureCases, nil
 }
 
-// TODO(fxb/39685) extract out to common library
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	return wireFormat == gidlir.V1WireFormat
+}
+
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
+	builder.WriteString("[\n")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x", b))
-		builder.WriteString(",")
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}
 	}
+	builder.WriteString("]")
 	return builder.String()
 }
 
@@ -334,7 +336,7 @@ func wrapNullable(decl gidlmixer.Declaration, valueStr string) string {
 		return fmt.Sprintf("Some(%s)", valueStr)
 	case *gidlmixer.StructDecl, *gidlmixer.UnionDecl:
 		return fmt.Sprintf("Some(Box::new(%s))", valueStr)
-	case *gidlmixer.BoolDecl, *gidlmixer.NumberDecl, *gidlmixer.FloatDecl, *gidlmixer.TableDecl:
+	case *gidlmixer.BoolDecl, *gidlmixer.IntegerDecl, *gidlmixer.FloatDecl, *gidlmixer.TableDecl:
 		panic(fmt.Sprintf("decl %v should not be nullable", decl))
 	}
 	panic(fmt.Sprintf("unexpected decl %v", decl))
@@ -344,7 +346,7 @@ func onStruct(value gidlir.Object, decl *gidlmixer.StructDecl) string {
 	var structFields []string
 	providedKeys := make(map[string]struct{}, len(value.Fields))
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		providedKeys[field.Key.Name] = struct{}{}
@@ -372,7 +374,7 @@ func onTable(value gidlir.Object, decl *gidlmixer.TableDecl) string {
 	var tableFields []string
 	providedKeys := make(map[string]struct{}, len(value.Fields))
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		providedKeys[field.Key.Name] = struct{}{}
@@ -398,7 +400,7 @@ func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
 		panic(fmt.Sprintf("union has %d fields, expected 1", len(value.Fields)))
 	}
 	field := value.Fields[0]
-	if field.Key.Name == "" {
+	if field.Key.IsUnknown() {
 		panic("unknown field not supported")
 	}
 	unionName := rustType(value.Name)
@@ -434,8 +436,6 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {
-	// TODO: Add `use fidl::Error` to the tmpl string when there is at least one
-	// failure case generated.
 	if str, ok := rustErrorCodeNames[code]; ok {
 		return fmt.Sprintf("Error::%s", str), nil
 	}

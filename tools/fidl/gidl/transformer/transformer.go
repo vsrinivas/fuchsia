@@ -21,7 +21,7 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 #include "transformer_conformance_utils.h"
 
 {{ range .TestArrays }}
-alignas(8) static uint8_t {{ .Name }}[] = { {{ .Bytes }} };
+alignas(8) static uint8_t {{ .Name }}[] = {{ .Bytes }};
 {{ end }}
 
 {{ range .CodingTables }}
@@ -225,15 +225,15 @@ func fidlTypeName(wireFormat gidlir.WireFormat, typeName string) string {
 	}
 }
 
-// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
+	builder.WriteString("{\n")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x", b))
-		builder.WriteString(",")
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 		if i%8 == 7 {
-			builder.WriteString("//\n")
+			builder.WriteString("\n")
 		}
 	}
+	builder.WriteString("}")
 	return builder.String()
 }

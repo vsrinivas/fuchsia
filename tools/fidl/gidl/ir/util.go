@@ -101,7 +101,7 @@ func ContainsUnknownField(value Value) bool {
 	switch value := value.(type) {
 	case Object:
 		for _, f := range value.Fields {
-			if f.Key.Name == "" {
+			if f.Key.IsUnknown() {
 				return true
 			}
 			if ContainsUnknownField(f.Value) {

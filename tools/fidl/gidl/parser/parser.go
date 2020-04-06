@@ -482,7 +482,7 @@ func (p *Parser) parseObject(name string) (interface{}, error) {
 // Field can be referenced by either name or ordinal.
 func decodeFieldKey(field string) ir.FieldKey {
 	if ord, err := strconv.ParseInt(field, 0, 64); err == nil {
-		return ir.FieldKey{Ordinal: uint64(ord)}
+		return ir.FieldKey{UnknownOrdinal: uint64(ord)}
 	}
 	return ir.FieldKey{Name: field}
 }

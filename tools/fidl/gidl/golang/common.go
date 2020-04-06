@@ -15,13 +15,11 @@ import (
 	gidlmixer "gidl/mixer"
 )
 
-// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("[]byte{\n")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x", b))
-		builder.WriteString(",")
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}
@@ -90,7 +88,7 @@ func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecla
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("%s := %s{}\n", containerVar, typeLiteral(decl)))
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		fieldDecl, _ := decl.ForKey(field.Key)
@@ -157,12 +155,8 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 	}
 
 	switch decl := decl.(type) {
-	case *gidlmixer.BoolDecl:
-		return "bool"
-	case *gidlmixer.NumberDecl:
-		return string(decl.Typ)
-	case *gidlmixer.FloatDecl:
-		return string(decl.Typ)
+	case gidlmixer.PrimitiveDeclaration:
+		return string(decl.Subtype())
 	case *gidlmixer.StringDecl:
 		return pointerPrefix + "string"
 	case *gidlmixer.StructDecl:

@@ -119,7 +119,7 @@ type Declaration interface {
 // Assert that wrappers conform to the Declaration interface.
 var _ = []Declaration{
 	&BoolDecl{},
-	&NumberDecl{},
+	&IntegerDecl{},
 	&FloatDecl{},
 	&StringDecl{},
 	&StructDecl{},
@@ -138,7 +138,7 @@ type PrimitiveDeclaration interface {
 // Assert that wrappers conform to the PrimitiveDeclaration interface.
 var _ = []PrimitiveDeclaration{
 	&BoolDecl{},
-	&NumberDecl{},
+	&IntegerDecl{},
 	&FloatDecl{},
 }
 
@@ -191,18 +191,18 @@ func (decl *BoolDecl) conforms(value interface{}) error {
 	}
 }
 
-type NumberDecl struct {
+type IntegerDecl struct {
 	NeverNullable
-	Typ   fidlir.PrimitiveSubtype
-	lower int64
-	upper uint64
+	subtype fidlir.PrimitiveSubtype
+	lower   int64
+	upper   uint64
 }
 
-func (decl *NumberDecl) Subtype() fidlir.PrimitiveSubtype {
-	return decl.Typ
+func (decl *IntegerDecl) Subtype() fidlir.PrimitiveSubtype {
+	return decl.subtype
 }
 
-func (decl *NumberDecl) conforms(value interface{}) error {
+func (decl *IntegerDecl) conforms(value interface{}) error {
 	switch value := value.(type) {
 	default:
 		return fmt.Errorf("expecting int64 or uint64, found %T (%s)", value, value)
@@ -227,11 +227,11 @@ func (decl *NumberDecl) conforms(value interface{}) error {
 
 type FloatDecl struct {
 	NeverNullable
-	Typ fidlir.PrimitiveSubtype
+	subtype fidlir.PrimitiveSubtype
 }
 
 func (decl *FloatDecl) Subtype() fidlir.PrimitiveSubtype {
-	return decl.Typ
+	return decl.subtype
 }
 
 func (decl *FloatDecl) conforms(value interface{}) error {
@@ -293,9 +293,11 @@ func (decl *StructDecl) IsNullable() bool {
 }
 
 func (decl *StructDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
-	for _, member := range decl.Members {
-		if string(member.Name) == key.Name {
-			return member.Type, true
+	if key.IsKnown() {
+		for _, member := range decl.Members {
+			if string(member.Name) == key.Name {
+				return member.Type, true
+			}
 		}
 	}
 	return fidlir.Type{}, false
@@ -356,9 +358,17 @@ type TableDecl struct {
 }
 
 func (decl *TableDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
-	for _, member := range decl.Members {
-		if string(member.Name) == key.Name || uint64(member.Ordinal) == key.Ordinal {
-			return member.Type, true
+	if key.IsKnown() {
+		for _, member := range decl.Members {
+			if string(member.Name) == key.Name {
+				return member.Type, true
+			}
+		}
+	} else {
+		for _, member := range decl.Members {
+			if uint64(member.Ordinal) == key.UnknownOrdinal {
+				return member.Type, true
+			}
 		}
 	}
 	return fidlir.Type{}, false
@@ -381,9 +391,9 @@ func (decl *TableDecl) conforms(value interface{}) error {
 		panic("tables cannot be nullable")
 	}
 	for _, field := range object.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			if _, ok := decl.ForKey(field.Key); ok {
-				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
+				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.UnknownOrdinal)
 			}
 			continue
 		}
@@ -408,9 +418,17 @@ func (decl *UnionDecl) IsNullable() bool {
 }
 
 func (decl *UnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
-	for _, member := range decl.Members {
-		if string(member.Name) == key.Name || uint64(member.Ordinal) == key.Ordinal {
-			return member.Type, true
+	if key.IsKnown() {
+		for _, member := range decl.Members {
+			if string(member.Name) == key.Name {
+				return member.Type, true
+			}
+		}
+	} else {
+		for _, member := range decl.Members {
+			if uint64(member.Ordinal) == key.UnknownOrdinal {
+				return member.Type, true
+			}
 		}
 	}
 	return fidlir.Type{}, false
@@ -436,9 +454,9 @@ func (decl UnionDecl) conforms(value interface{}) error {
 		return fmt.Errorf("must have one field, found %d", num)
 	}
 	for _, field := range object.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			if _, ok := decl.ForKey(field.Key); ok {
-				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
+				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.UnknownOrdinal)
 			}
 			continue
 		}
@@ -584,25 +602,25 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 		case fidlir.Bool:
 			return &BoolDecl{}, true
 		case fidlir.Int8:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: math.MinInt8, upper: math.MaxInt8}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt8, upper: math.MaxInt8}, true
 		case fidlir.Int16:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: math.MinInt16, upper: math.MaxInt16}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt16, upper: math.MaxInt16}, true
 		case fidlir.Int32:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: math.MinInt32, upper: math.MaxInt32}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt32, upper: math.MaxInt32}, true
 		case fidlir.Int64:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: math.MinInt64, upper: math.MaxInt64}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt64, upper: math.MaxInt64}, true
 		case fidlir.Uint8:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint8}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint8}, true
 		case fidlir.Uint16:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint16}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint16}, true
 		case fidlir.Uint32:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint32}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint32}, true
 		case fidlir.Uint64:
-			return &NumberDecl{Typ: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint64}, true
+			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint64}, true
 		case fidlir.Float32:
-			return &FloatDecl{Typ: typ.PrimitiveSubtype}, true
+			return &FloatDecl{subtype: typ.PrimitiveSubtype}, true
 		case fidlir.Float64:
-			return &FloatDecl{Typ: typ.PrimitiveSubtype}, true
+			return &FloatDecl{subtype: typ.PrimitiveSubtype}, true
 		default:
 			panic(fmt.Sprintf("unsupported primitive subtype: %s", typ.PrimitiveSubtype))
 		}

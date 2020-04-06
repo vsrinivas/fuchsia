@@ -31,9 +31,7 @@ var tmpl = template.Must(template.New("tmpl").Parse(`
 {{ range .EncodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Encode) {
 	{{ .ValueBuild }}
-	const auto expected = std::vector<uint8_t>{
-		{{ .Bytes }}
-	};
+	const auto expected = {{ .Bytes }};
 	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&{{ .ValueVar }}, expected));
 }
 {{ end }}
@@ -41,9 +39,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 {{ range .DecodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{ .ValueBuild }}
-	auto bytes = std::vector<uint8_t>{
-		{{ .Bytes }}
-	};
+	auto bytes = {{ .Bytes }};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&{{ .ValueVar }}, std::move(bytes)));
 }
 {{ end }}
@@ -51,17 +47,13 @@ TEST(Conformance, {{ .Name }}_Decode) {
 {{ range .EncodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	{{ .ValueBuild }}
-
 	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&{{ .ValueVar }}, {{ .ErrorCode }}));
 }
 {{ end }}
 
 {{ range .DecodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Decode_Failure) {
-	auto bytes = std::vector<uint8_t>{
-		{{ .Bytes }}
-	};
-
+	auto bytes = {{ .Bytes }};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(std::move(bytes), {{ .ErrorCode }}));
 }
 {{ end }}
@@ -217,16 +209,16 @@ func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("%s_%s", baseName, fidlcommon.ToUpperCamelCase(wireFormat.String()))
 }
 
-// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
+	builder.WriteString("std::vector<uint8_t>{\n")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x", b))
-		builder.WriteString(",")
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}
 	}
+	builder.WriteString("}")
 	return builder.String()
 }
 
@@ -256,24 +248,30 @@ func (b *llcppValueBuilder) OnBool(value bool) {
 	b.lastVar = newVar
 }
 
-func integerTypeName(subtype fidlir.PrimitiveSubtype) string {
+func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 	switch subtype {
-	case "int8":
+	case fidlir.Bool:
+		return "bool"
+	case fidlir.Int8:
 		return "int8_t"
-	case "uint8":
+	case fidlir.Uint8:
 		return "uint8_t"
-	case "int16":
+	case fidlir.Int16:
 		return "int16_t"
-	case "uint16":
+	case fidlir.Uint16:
 		return "uint16_t"
-	case "int32":
+	case fidlir.Int32:
 		return "int32_t"
-	case "uint32":
+	case fidlir.Uint32:
 		return "uint32_t"
-	case "int64":
+	case fidlir.Int64:
 		return "int64_t"
-	case "uint64":
+	case fidlir.Uint64:
 		return "uint64_t"
+	case fidlir.Float32:
+		return "float"
+	case fidlir.Float64:
+		return "double"
 	default:
 		panic(fmt.Sprintf("Unexpected subtype %s", string(subtype)))
 	}
@@ -284,10 +282,10 @@ func (b *llcppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
 	if value == -9223372036854775808 {
 		// There are no negative integer literals in C++, so need to use arithmetic to create the minimum value.
 		// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = -9223372036854775807ll - 1;\n", integerTypeName(typ), newVar))
+		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = -9223372036854775807ll - 1;\n", primitiveTypeName(typ), newVar))
 	} else {
 		// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dll;\n", integerTypeName(typ), newVar, value))
+		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dll;\n", primitiveTypeName(typ), newVar, value))
 	}
 	b.lastVar = newVar
 }
@@ -295,23 +293,14 @@ func (b *llcppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
 func (b *llcppValueBuilder) OnUint64(value uint64, subtype fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dull;\n", integerTypeName(subtype), newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dull;\n", primitiveTypeName(subtype), newVar, value))
 	b.lastVar = newVar
 }
 
 func (b *llcppValueBuilder) OnFloat64(value float64, subtype fidlir.PrimitiveSubtype) {
-	var typename string
-	switch subtype {
-	case fidlir.Float32:
-		typename = "float"
-	case fidlir.Float64:
-		typename = "double"
-	default:
-		panic("unknown floating point type")
-	}
 	newVar := b.newVar()
 	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %g;\n", typename, newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %g;\n", primitiveTypeName(subtype), newVar, value))
 	b.lastVar = newVar
 }
 
@@ -356,7 +345,7 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		"auto %s = llcpp::conformance::%s::Builder(fidl::unowned_ptr(&%s));\n", builderVar, value.Name, frameVar))
 
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		fieldDecl, _ := decl.ForKey(field.Key)
@@ -382,7 +371,7 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		"llcpp::conformance::%s %s;\n", value.Name, containerVar))
 
 	for _, field := range value.Fields {
-		if field.Key.Name == "" {
+		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
 		fieldDecl, _ := decl.ForKey(field.Key)
@@ -441,10 +430,8 @@ func (b *llcppValueBuilder) OnNull(decl gidlmixer.Declaration) {
 
 func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 	switch decl := decl.(type) {
-	case *gidlmixer.BoolDecl:
-		return "bool"
-	case *gidlmixer.NumberDecl:
-		return numberName(decl.Typ)
+	case gidlmixer.PrimitiveDeclaration:
+		return primitiveTypeName(decl.Subtype())
 	case *gidlmixer.StringDecl:
 		return "fidl::StringView"
 	case *gidlmixer.StructDecl:
@@ -486,10 +473,6 @@ func elemName(parent gidlmixer.ListDeclaration) string {
 		return typeName(elemDecl)
 	}
 	panic("missing element")
-}
-
-func numberName(primitiveSubtype fidlir.PrimitiveSubtype) string {
-	return fmt.Sprintf("%s_t", primitiveSubtype)
 }
 
 func llcppType(gidlTypeString string) string {
