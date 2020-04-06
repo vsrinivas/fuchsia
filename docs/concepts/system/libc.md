@@ -72,7 +72,7 @@ be comprehensive.
 
 Fuchsia does not have Unix-style signals. Zircon provides no way to
 directly implement them (the kernel provides no way to cause another
-thread to jump off its thread of execution). Fuchsia's libc does not,
+thread to jump off its context of execution). Fuchsia's libc does not,
 therefore, have a notion of signal-safe functions, and is not
 implemented internally to be aware of mechanisms like signals.
 
