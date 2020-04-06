@@ -132,6 +132,20 @@ func addEndpointToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NIC
 	}})
 }
 
+func newZeroJitterClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquisition, backoff, retransmission time.Duration, acquiredFunc AcquiredFunc) *Client {
+	c := NewClient(s, nicid, linkAddr, acquisition, backoff, retransmission, acquiredFunc)
+	// Stub out random generator to remove random jitter added to backoff time.
+	//
+	// When used to add jitter to backoff, 1s is subtracted from random number to
+	// map [0s, +2s] -> [-1s, +1s], so add 1s here to compensate for that.
+	//
+	// Otherwise the added jitter can result in close-to-zero timeouts, causing
+	// the client to miss responses in acquisition due to either server response
+	// delays or channel select races.
+	c.rand = rand.New(&randSourceStub{src: int64(time.Second)})
+	return c
+}
+
 // TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP tests that the IPv4
 // unspecified address is not a primary address when doing DHCP.
 func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
@@ -147,7 +161,7 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 	}
 	s := createTestStack()
 	addEndpointToStack(t, nil, testNICID, s, &e)
-	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -240,7 +254,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	for i := range clientLinkEPs {
 		clientNICID := tcpip.NICID(i + 1)
 		addEndpointToStack(t, nil, clientNICID, clientStack, &clientLinkEPs[i])
-		c := NewClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+		c := newZeroJitterClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 		info := c.Info()
 		go func() {
 			_, err := c.acquire(ctx, &info)
@@ -287,9 +301,6 @@ type randSourceStub struct {
 
 func (s *randSourceStub) Int63() int64 { return s.src }
 
-// When used to add jitter to backoff, 1s is substracted from random number to map [0s, +2s] -> [-1s, +1s].
-var zeroJitterSource = &randSourceStub{src: int64(time.Second)}
-
 func TestDHCP(t *testing.T) {
 	s := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
@@ -311,9 +322,7 @@ func TestDHCP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c0 := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
-	// Stub out random generator to remove random jitter added to backoff time.
-	c0.rand = rand.New(zeroJitterSource)
+	c0 := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 	info := c0.Info()
 	{
 		{
@@ -345,9 +354,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		c1 := NewClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
-		// Stub out random generator to remove random jitter added to backoff time.
-		c1.rand = rand.New(zeroJitterSource)
+		c1 := newZeroJitterClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 		info := c1.Info()
 		cfg, err := c1.acquire(ctx, &info)
 		if err != nil {
@@ -492,7 +499,7 @@ func TestDelayRetransmission(t *testing.T) {
 				}
 			}
 
-			c := NewClient(clientStack, testNICID, linkAddr1, 0, 0, math.MaxInt64, nil)
+			c := newZeroJitterClient(clientStack, testNICID, linkAddr1, 0, 0, math.MaxInt64, nil)
 			info := c.Info()
 			cfg, err := c.acquire(ctx, &info)
 			if tc.success {
@@ -535,7 +542,9 @@ func TestExponentialBackoff(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("baseRetransmission=%s,jitter=%s,iteration=%d", v.retran, v.jitter, v.iteration), func(t *testing.T) {
 			c := NewClient(nil, 0, "", 0, 0, v.retran, nil)
-			c.rand = rand.New(&randSourceStub{src: zeroJitterSource.src + int64(v.jitter)})
+			// When used to add jitter to backoff, 1s is subtracted from random number
+			// to map [0s, +2s] -> [-1s, +1s], so add 1s here to compensate for that.
+			c.rand = rand.New(&randSourceStub{src: int64(time.Second + v.jitter)})
 			if got := c.exponentialBackoff(v.iteration); got != v.want {
 				t.Errorf("c.exponentialBackoff(%d) = %s, want: %s", v.iteration, got, v.want)
 			}
@@ -610,9 +619,7 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			c := NewClient(clientStack, testNICID, linkAddr1, 0, 0, v.baseRetran, nil)
-			// Stub out random generator to remove random jitter added to backoff time.
-			c.rand = rand.New(zeroJitterSource)
+			c := newZeroJitterClient(clientStack, testNICID, linkAddr1, 0, 0, v.baseRetran, nil)
 			info := c.Info()
 			if _, err := c.acquire(ctx, &info); err != nil {
 				t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
@@ -732,9 +739,7 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := NewClient(clientStack, testNICID, linkAddr1, 0, 0, retransmissionDelay, nil)
-	// Stub out random generator to remove random jitter added to backoff time.
-	c.rand = rand.New(zeroJitterSource)
+	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, 0, 0, retransmissionDelay, nil)
 	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
@@ -916,8 +921,7 @@ func TestStateTransition(t *testing.T) {
 				}
 			}
 
-			c := NewClient(clientStack, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
-
+			c := newZeroJitterClient(clientStack, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
 			c.Run(ctx)
 
 			var addr tcpip.AddressWithPrefix
@@ -1047,7 +1051,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		}
 	}
 
-	c := NewClient(clientStack, testNICID, linkAddr1, acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
+	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
 	c.Run(ctx)
 
 	select {
@@ -1227,7 +1231,7 @@ func TestTwoServers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatal(err)
