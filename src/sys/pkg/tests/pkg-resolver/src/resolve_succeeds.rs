@@ -298,6 +298,7 @@ async fn many_blobs() {
 }
 
 #[fasync::run_singlethreaded(test)]
+#[ignore] // TODO(49497): This should be replaced with at test over fewer large blobs.
 async fn identity() {
     verify_resolve(Package::identity().await.unwrap()).await
 }
