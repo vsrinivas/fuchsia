@@ -118,8 +118,12 @@ TEST_F(MetricsUnitTest, Inspect) {
   // [END get_hierarchy]
 
   // [START assertions]
-  auto* metric_memory = hierarchy.value().GetByPath({"metrics_memory_usages"});
+  auto* metric_node = hierarchy.value().GetByPath({Metrics::kInspectPlatformNodeName});
+  ASSERT_TRUE(metric_node);
+
+  auto* metric_memory = metric_node->GetByPath({Metrics::kMemoryNodeName});
   ASSERT_TRUE(metric_memory);
+
   auto* usage_readings = metric_memory->node().get_property<inspect::UintPropertyValue>("Graphics");
   ASSERT_TRUE(usage_readings);
   EXPECT_EQ(2u, usage_readings->value());

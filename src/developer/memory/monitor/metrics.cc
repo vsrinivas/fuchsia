@@ -70,8 +70,17 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher, sy
           {"Context", MemoryMetricDimensionBucket::Context},
       }),
       inspector_(context),
-      metric_memory_node_(inspector_.root().CreateChild(kInspectNodeName)),
-      inspect_memory_timestamp_(metric_memory_node_.CreateInt(kInspectTimestampName, 0)) {
+      platform_metric_node_(inspector_.root().CreateChild(kInspectPlatformNodeName)),
+      // Diagram of hierarchy can be seen below:
+      // root
+      // - platform_metrics
+      //   - memory_usages
+      //     - Amber
+      //     - Amlogic
+      //     - ...
+      //     - timestamp
+      metric_memory_node_(platform_metric_node_.CreateChild(kMemoryNodeName)),
+      inspect_memory_timestamp_(metric_memory_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
   for (auto& element : bucket_name_to_code_) {
     inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(element.first, metric_memory_node_.CreateUint(element.first, 0)));
   }

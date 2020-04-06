@@ -24,8 +24,10 @@ class Metrics {
 
   // Reader side must use the exact name to read from Inspect.
   // Design doc in go/fuchsia-metrics-to-inspect-design.
-  static constexpr const char* kInspectNodeName = "metrics_memory_usages";
-  static constexpr const char* kInspectTimestampName = "metrics_memory_timestamp";
+  static constexpr const char* kInspectPlatformNodeName = "platform_metrics";
+  // Details about config file are in b/151984065#comment16
+  static constexpr const char* kMemoryNodeName = "memory_usages";
+  static constexpr const char* kReadingMemoryTimestamp = "timestamp";
   inspect::Inspector Inspector(){ return *(inspector_.inspector()); }
 
  private:
@@ -49,6 +51,7 @@ class Metrics {
   FXL_DISALLOW_COPY_AND_ASSIGN(Metrics);
 
   sys::ComponentInspector inspector_;
+  inspect::Node platform_metric_node_;
   inspect::Node metric_memory_node_;
   std::map<std::string, inspect::UintProperty> inspect_memory_usages_;
   inspect::IntProperty inspect_memory_timestamp_;
