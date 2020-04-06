@@ -124,11 +124,27 @@ impl InspectDataFetcher {
     /// Connects to the archivist observer.cmx and returns inspect data associated with the given
     /// component under the relative realm path given.
     pub async fn get(self) -> Result<Vec<NodeHierarchy>, Error> {
-        let timeout = self.timeout;
-        self.get_inspect_data().on_timeout(timeout.after_now(), || Ok(Vec::new())).await
+        let raw_json = self.get_raw_json().await?;
+        match raw_json {
+            serde_json::Value::Array(values) => values
+                .into_iter()
+                .map(|tree_json| RawJsonNodeHierarchySerializer::deserialize(tree_json))
+                .collect::<Result<Vec<_>, _>>(),
+            _ => unreachable!("No other json value type is expected here"),
+        }
     }
 
-    async fn get_inspect_data(self) -> Result<Vec<NodeHierarchy>, Error> {
+    /// Connects to the archivist observer.cmx and returns inspect data associated with the given
+    /// component under the relative realm path given. Returns the raw json for each hierarchy
+    /// fetched.
+    pub async fn get_raw_json(self) -> Result<serde_json::Value, Error> {
+        let timeout = self.timeout;
+        let data =
+            self.get_inspect_data().on_timeout(timeout.after_now(), || Ok(Vec::new())).await?;
+        Ok(serde_json::Value::Array(data))
+    }
+
+    async fn get_inspect_data(self) -> Result<Vec<serde_json::Value>, Error> {
         let archive =
             client::connect_to_service::<ArchiveMarker>().context("connect to archive")?;
 
@@ -174,7 +190,7 @@ impl InspectDataFetcher {
                                 serde_json::from_str(&hierarchy_json).context("valid json")?;
                             let tree_json =
                                 output.get_mut("contents").context("contents are there")?.take();
-                            result.push(RawJsonNodeHierarchySerializer::deserialize(tree_json)?);
+                            result.push(tree_json);
                         }
                         _ => unreachable!(
                             "JSON was requested, no other data type should be received"
@@ -255,7 +271,7 @@ mod tests {
             }
         });
 
-        let hierarchies = InspectDataFetcher::new()
+        let mut response = InspectDataFetcher::new()
             .add_selector(
                 ComponentSelector::new(vec![
                     "test-ok".to_string(),
@@ -264,10 +280,15 @@ mod tests {
                 .with_tree_selector("root:int")
                 .with_tree_selector("root/lazy-node:a"),
             )
-            .get()
+            .get_raw_json()
             .await?;
+
+        let hierarchies = response.as_array_mut().expect("as array ok");
         assert_eq!(hierarchies.len(), 1);
-        assert_inspect_tree!(hierarchies[0], root: {
+        let hierarchy = RawJsonNodeHierarchySerializer::deserialize(hierarchies[0].take())
+            .expect("deserialize ok");
+
+        assert_inspect_tree!(hierarchy, root: {
             int: 3i64,
             "lazy-node": {
                 a: "test"

@@ -25,7 +25,7 @@ class Modular {
 
   Modular(Sl4f sl4f)
       : _request = sl4f.request,
-        _inspect = Inspect(sl4f.ssh);
+        _inspect = Inspect(sl4f);
 
   /// Restarts a Modular session.
   ///
@@ -53,10 +53,10 @@ class Modular {
 
   /// Whether basemgr is running on the DUT.
   Future<bool> get isRunning async {
-    final basemgr = await _inspect.retrieveHubEntries(filter: 'basemgr');
-    final running = basemgr != null && basemgr.isNotEmpty;
+    final response = await _inspect.snapshotRoot('basemgr.cmx');
+    final running = response != null;
     if (running) {
-      _log.fine('basemgr inspect found at [${basemgr.join(',')}]');
+      _log.fine('basemgr inspect found');
     }
     return running;
   }

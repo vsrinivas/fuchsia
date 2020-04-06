@@ -43,6 +43,9 @@ use crate::common_utils::error::Sl4fError;
 // Device related includes
 use crate::device::facade::DeviceFacade;
 
+// Diagnostics related includes
+use crate::diagnostics::facade::DiagnosticsFacade;
+
 // Factory related includes
 use crate::factory_store::facade::FactoryStoreFacade;
 
@@ -135,6 +138,7 @@ impl Sl4f {
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),
+                "diagnostics_facade" => DiagnosticsFacade::new(),
                 "device_facade" => DeviceFacade::new(),
                 "factory_store_facade" => FactoryStoreFacade::new(),
                 "file_facade" => FileFacade::new(),

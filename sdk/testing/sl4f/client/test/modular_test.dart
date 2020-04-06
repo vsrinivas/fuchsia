@@ -1,4 +1,3 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -43,21 +42,47 @@ void main(List<String> args) {
   });
 
   test('isRunning: no', () {
-    when(ssh.run(any))
-        .thenAnswer((_) => Future.value(ProcessResult(31337, 0, '', '')));
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], ['basemgr.cmx:root']);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': [],
+        'error': null,
+      }));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
     expect(Modular(sl4f).isRunning, completion(equals(false)));
   });
 
   test('isRunning: yes', () {
-    when(ssh.run(any)).thenAnswer(
-        (_) => Future.value(ProcessResult(31337, 0, 'basemgr', '')));
-    expect(Modular(sl4f).isRunning, completion(equals(true)));
-  });
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], ['basemgr.cmx:root']);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': [
+          {
+            'contents': {
+              'root': {'some_prop': 1}
+            }
+          }
+        ],
+        'error': null,
+      }));
+      await req.response.close();
+    }
 
-  test('isRunning: error', () {
-    when(ssh.run(any)).thenAnswer(
-        (_) => Future.value(ProcessResult(31337, -1, '', 'blaah!')));
-    expect(Modular(sl4f).isRunning, completion(equals(false)));
+    fakeServer.listen(handler);
+
+    expect(Modular(sl4f).isRunning, completion(equals(true)));
   });
 
   test('call KillBasemgr facade with no params', () {

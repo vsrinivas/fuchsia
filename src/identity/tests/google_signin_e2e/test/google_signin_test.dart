@@ -38,7 +38,7 @@ void main() {
   setUp(() async {
     sl4fDriver = Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
-    inspect = Inspect(sl4fDriver.ssh);
+    inspect = Inspect(sl4fDriver);
     webdriverConnector = WebDriverConnector(_chromedriverPath, sl4fDriver);
     await webdriverConnector.initialize();
     await startLoginTester(sl4fDriver);
@@ -140,7 +140,7 @@ Future<WebElement> getElementWhenReady(WebDriver webdriver, By by) async {
 /// Asserts success by checking the inspect state of the tester mod.
 Future<void> assertSuccessful(Inspect inspect) async {
   for (;;) {
-    var inspectJson = await inspect.inspectComponentRoot(_testerComponent);
+    var inspectJson = await inspect.snapshotRoot(_testerComponent);
     var authStatus = inspectJson['auth-status'];
     if (authStatus == 'success') {
       return;

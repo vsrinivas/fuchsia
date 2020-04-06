@@ -13,18 +13,105 @@ const _iqueryFindCommand = 'iquery --find /hub';
 const _iqueryRecursiveInspectCommandPrefix = 'iquery --format=json --recursive';
 
 void main(List<String> args) {
+  HttpServer fakeServer;
+  Sl4f sl4f;
+
+  setUp(() async {
+    fakeServer = await HttpServer.bind('127.0.0.1', 18080);
+    sl4f = Sl4f('127.0.0.1', null, 18080);
+  });
+
+  tearDown(() async {
+    await fakeServer.close();
+  });
+
+  test('snapshot inspect', () async {
+    final selectors = ['test.cmx:root', 'other.cmx:root/node:prop'];
+    final expectedHierarchies = [
+      {
+        'contents': {
+          'root': {'a': 1}
+        },
+        'path': 'test.cmx'
+      },
+      {
+        'contents': {
+          'root': {
+            'node': {'prop': 2}
+          }
+        },
+        'path': 'other.cmx'
+      }
+    ];
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], selectors);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': expectedHierarchies,
+        'error': null,
+      }));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    final result = await Inspect(sl4f).snapshot(selectors);
+    expect(result, equals(expectedHierarchies));
+  });
+
+  test('snapshot inspect root', () async {
+    final resultHierarchies = [
+      {
+        'contents': {
+          'root': {'a': 1}
+        },
+        'path': 'test.cmx'
+      },
+      {
+        'contents': {
+          'root': {
+            'node': {'prop': 2}
+          }
+        },
+        'path': 'other.cmx'
+      }
+    ];
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], ['test.cmx:root']);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': resultHierarchies,
+        'error': null,
+      }));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    final result = await Inspect(sl4f).snapshotRoot('test.cmx');
+    expect(result, equals({'a': 1}));
+  });
+
   test('inspectComponentRoot returns json decoded stdout', () async {
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
 
-    final inspect = Inspect(FakeSsh(
-        findCommandStdOut: 'one\n$componentName\nthree\n',
-        inspectCommandContentsRoot: [
-          {
-            'contents': {'root': contentsRoot}
-          },
-        ],
-        expectedInspectSuffix: componentName));
+    final inspect = Inspect(
+      FakeSsh(
+          findCommandStdOut: 'one\n$componentName\nthree\n',
+          inspectCommandContentsRoot: [
+            {
+              'contents': {'root': contentsRoot}
+            },
+          ],
+          expectedInspectSuffix: componentName),
+    );
 
     final result = await inspect.inspectComponentRoot(componentName);
 
@@ -35,16 +122,18 @@ void main(List<String> args) {
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
 
-    final inspect = Inspect(FakeSsh(
-        findCommandStdOut: 'one\n$componentName\nthree\n',
-        inspectCommandContentsRoot: [
-          {
-            'contents': {
-              'root': {'root': contentsRoot}
-            }
-          },
-        ],
-        expectedInspectSuffix: componentName));
+    final inspect = Inspect(
+      FakeSsh(
+          findCommandStdOut: 'one\n$componentName\nthree\n',
+          inspectCommandContentsRoot: [
+            {
+              'contents': {
+                'root': {'root': contentsRoot}
+              }
+            },
+          ],
+          expectedInspectSuffix: componentName),
+    );
 
     final result = await inspect.inspectComponentRoot(componentName);
 
@@ -56,17 +145,19 @@ void main(List<String> args) {
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
 
-    final inspect = Inspect(FakeSsh(
-        findCommandStdOut: 'one\n$componentName\n$componentName\n',
-        inspectCommandContentsRoot: [
-          {
-            'contents': {'root': contentsRoot}
-          },
-          {
-            'contents': {'root': contentsRoot}
-          }
-        ],
-        expectedInspectSuffix: '$componentName $componentName'));
+    final inspect = Inspect(
+      FakeSsh(
+          findCommandStdOut: 'one\n$componentName\n$componentName\n',
+          inspectCommandContentsRoot: [
+            {
+              'contents': {'root': contentsRoot}
+            },
+            {
+              'contents': {'root': contentsRoot}
+            }
+          ],
+          expectedInspectSuffix: '$componentName $componentName'),
+    );
 
     try {
       await inspect.inspectComponentRoot(componentName);
@@ -79,10 +170,12 @@ void main(List<String> args) {
   });
 
   test('inspectComponentRoot fails if there is stderr data', () async {
-    final inspect = Inspect(FakeSsh(
-        findCommandStdOut: '',
-        findCommandStdErr: 'Error: blah!',
-        inspectCommandContentsRoot: null));
+    final inspect = Inspect(
+      FakeSsh(
+          findCommandStdOut: '',
+          findCommandStdErr: 'Error: blah!',
+          inspectCommandContentsRoot: null),
+    );
 
     final result = await inspect.inspectComponentRoot('anything.cmx');
     expect(result, isNull);
@@ -148,7 +241,10 @@ void main(List<String> args) {
 
 class FakeInspect implements Inspect {
   @override
-  final Ssh ssh = null;
+  Ssh ssh;
+
+  @override
+  Sl4f sl4f;
 
   Duration delay;
 
@@ -164,6 +260,18 @@ class FakeInspect implements Inspect {
 
   @override
   Future<List<String>> retrieveHubEntries({Pattern filter}) async {
+    await Future.delayed(delay);
+    return null;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> snapshot(List<String> selectors) async {
+    await Future.delayed(delay);
+    return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> snapshotRoot(String componentName) async {
     await Future.delayed(delay);
     return null;
   }

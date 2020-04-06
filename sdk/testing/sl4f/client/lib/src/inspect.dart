@@ -8,15 +8,56 @@ import 'dart:convert';
 import 'package:pedantic/pedantic.dart';
 import 'package:logging/logging.dart';
 
+import 'sl4f_client.dart';
 import 'ssh.dart';
 
 final _log = Logger('inspect');
 
 class Inspect {
-  final Ssh ssh;
+  Ssh ssh;
+  Sl4f sl4f;
 
   /// Construct an [Inspect] object.
-  Inspect(this.ssh);
+  // TODO(fxb/48733): make this take only Sl4f once all clients have been migrated.
+  Inspect(dynamic sl4fOrSsh) {
+    if (sl4fOrSsh is Sl4f) {
+      sl4f = sl4fOrSsh;
+      ssh = sl4f.ssh;
+    } else if (sl4fOrSsh is Ssh) {
+      sl4f = null;
+      ssh = sl4fOrSsh;
+    } else {
+      throw ArgumentError('Expect `Ssh` or `Sl4f` for `sl4fOrSsh`');
+    }
+  }
+
+  /// Gets the inspect data filtering using the given selectors.
+  ///
+  /// A selector consists of the realm path, component name and a path to a node
+  /// or property.
+  /// It accepts wildcards.
+  /// For example:
+  ///   a/*/test.cmx:path/to/*/node:prop
+  ///   a/*/test.cmx:root
+  ///
+  /// See: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.diagnostics/selector.fidl
+  Future<List<Map<String, dynamic>>> snapshot(List<String> selectors) async {
+    final hierarchyList =
+        await sl4f.request('diagnostics_facade.SnapshotInspect', {
+      'selectors': selectors,
+    });
+    return hierarchyList.cast<Map<String, dynamic>>();
+  }
+
+  /// Gets the data of the first found hierarchy matching the given selectors
+  /// under root. Returns null of no hierarchy was found.
+  Future<Map<String, dynamic>> snapshotRoot(String componentName) async {
+    final hierarchies = await snapshot(['$componentName:root']);
+    if (hierarchies.isEmpty) {
+      return null;
+    }
+    return hierarchies[0]['contents']['root'];
+  }
 
   /// Obtains the root inspect object for a component whose path includes
   /// [componentName].
@@ -24,6 +65,7 @@ class Inspect {
   /// This is equivalent to calling retrieveHubEntries and inspectRecursively in
   /// series.
   /// Returns null when there are no entries matching.
+  /// DEPRECATED.
   Future<dynamic> inspectComponentRoot(Pattern componentName) async {
     final entries = await retrieveHubEntries(filter: componentName);
     if (entries.isEmpty) {
@@ -51,6 +93,7 @@ class Inspect {
   /// Otherwise a parsed JSON as formated by
   /// //src/lib/inspect_deprecated/query/json_formatter.cc is
   /// returned.
+  /// DEPRECATED.
   Future<dynamic> inspectRecursively(List<String> entries) async {
     final hubEntries = entries.join(' ');
     final stringInspectResult = await _stdOutForSshCommand(
@@ -65,6 +108,7 @@ class Inspect {
   ///
   /// If [filter] is set, only those entries containing [filter] are returned.
   /// If there are no matches, an empty list is returned.
+  /// DEPRECATED.
   Future<List<String>> retrieveHubEntries({Pattern filter}) async {
     final stringFindResult = await _stdOutForSshCommand('iquery --find /hub');
     return stringFindResult == null
