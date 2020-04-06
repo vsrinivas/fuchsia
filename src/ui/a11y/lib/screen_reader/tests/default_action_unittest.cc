@@ -50,21 +50,6 @@ class DefaultActionTest : public gtest::TestLoopFixture {
   accessibility_test::MockSemanticProvider semantic_provider_;
 };
 
-// Create a test node with only a node id and a label.
-Node CreateTestNode(uint32_t node_id, std::string label) {
-  Node node = Node();
-  node.set_node_id(node_id);
-  node.set_child_ids({});
-  node.set_role(Role::UNKNOWN);
-  node.set_attributes(Attributes());
-  node.mutable_attributes()->set_label(std::move(label));
-  fuchsia::ui::gfx::BoundingBox box;
-  node.set_location(box);
-  fuchsia::ui::gfx::mat4 transform;
-  node.set_transform(transform);
-  return node;
-}
-
 // Tests the case when Hit testing results a valid node and OnAccessibilityActionRequested is
 // called.
 TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {

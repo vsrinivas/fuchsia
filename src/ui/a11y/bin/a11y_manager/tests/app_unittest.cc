@@ -114,21 +114,6 @@ class AppUnitTest : public gtest::TestLoopFixture {
   uint64_t input_event_time_ = 0;
 };
 
-// Create a test node with only a node id and a label.
-Node CreateTestNode(uint32_t node_id, std::string label) {
-  Node node = Node();
-  node.set_node_id(node_id);
-  node.set_child_ids({});
-  node.set_role(Role::UNKNOWN);
-  node.set_attributes(Attributes());
-  node.mutable_attributes()->set_label(std::move(label));
-  fuchsia::ui::gfx::BoundingBox box;
-  node.set_location(std::move(box));
-  fuchsia::ui::gfx::mat4 transform;
-  node.set_transform(std::move(transform));
-  return node;
-}
-
 // Test to make sure ViewManager Service is exposed by A11y.
 // Test sends a node update to ViewManager and then compare the expected
 // result using log file created by semantics manager.

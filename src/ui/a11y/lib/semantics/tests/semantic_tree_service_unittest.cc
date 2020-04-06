@@ -20,6 +20,7 @@
 
 #include "gmock/gmock.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -103,17 +104,6 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(
         std::move(tree), koid_, fuchsia::accessibility::semantics::SemanticListenerPtr() /*unused*/,
         debug_dir(), std::move(close_channel_callback));
-  }
-
-  static Node CreateTestNode(uint32_t node_id, std::string label,
-                             std::vector<uint32_t> child_ids = std::vector<uint32_t>()) {
-    Node node;
-    node.set_node_id(node_id);
-    node.mutable_attributes()->set_label(std::move(label));
-    if (!child_ids.empty()) {
-      node.set_child_ids(std::move(child_ids));
-    }
-    return node;
   }
 
   std::vector<Node> BuildUpdatesFromFile(const std::string& file_path) {

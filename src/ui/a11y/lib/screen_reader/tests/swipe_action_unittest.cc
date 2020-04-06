@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "lib/sys/cpp/testing/component_context_provider.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
@@ -58,22 +59,6 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
   std::unique_ptr<MockSemanticTree> semantic_tree_;
   MockSemanticTree* semantic_tree_ptr_ = nullptr;
 };
-
-// TODO(fxb/49284): Move CreateTestNode() to MockSemanticsProvider.
-// Create a test node with only a node id and a label.
-Node CreateTestNode(uint32_t node_id, std::string label) {
-  Node node = Node();
-  node.set_node_id(node_id);
-  node.set_child_ids({});
-  node.set_role(Role::UNKNOWN);
-  node.set_attributes(Attributes());
-  node.mutable_attributes()->set_label(std::move(label));
-  fuchsia::ui::gfx::BoundingBox box;
-  node.set_location(box);
-  fuchsia::ui::gfx::mat4 transform;
-  node.set_transform(transform);
-  return node;
-}
 
 class SwipeActionTest : public gtest::TestLoopFixture {
  public:

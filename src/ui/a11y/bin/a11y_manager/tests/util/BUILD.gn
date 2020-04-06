@@ -11,6 +11,7 @@ source_set("util") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/lib/vfs/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",

@@ -59,7 +59,7 @@ class ExploreActionTest : public gtest::TestLoopFixture {
 
     // Creating test node to update.
     std::vector<Node> update_nodes;
-    Node node = CreateTestNode(0, "Label A");
+    Node node = accessibility_test::CreateTestNode(0, "Label A");
     update_nodes.push_back(std::move(node));
 
     // Update the node created above.
@@ -71,22 +71,7 @@ class ExploreActionTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  ~ExploreActionTest() = default;
-
-  // Create a test node with only a node id and a label.
-  Node CreateTestNode(uint32_t node_id, std::string label) {
-    Node node;
-    node.set_node_id(node_id);
-    node.set_child_ids({});
-    node.set_role(Role::UNKNOWN);
-    node.set_attributes(Attributes());
-    node.mutable_attributes()->set_label(std::move(label));
-    fuchsia::ui::gfx::BoundingBox box;
-    node.set_location(std::move(box));
-    fuchsia::ui::gfx::mat4 transform;
-    node.set_transform(std::move(transform));
-    return node;
-  }
+  ~ExploreActionTest() override = default;
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 

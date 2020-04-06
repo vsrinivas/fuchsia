@@ -19,6 +19,7 @@
 
 #include "gmock/gmock.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -75,18 +76,6 @@ class SemanticTreeTest : public gtest::TestLoopFixture {
       updates.emplace_back(std::move(node));
     }
     return updates;
-  }
-
-  // If empty child_ids, the value is unchanged.
-  static Node CreateTestNode(uint32_t node_id, std::string label,
-                             std::vector<uint32_t> child_ids = std::vector<uint32_t>()) {
-    Node node;
-    node.set_node_id(node_id);
-    node.mutable_attributes()->set_label(std::move(label));
-    if (!child_ids.empty()) {
-      node.set_child_ids(std::move(child_ids));
-    }
-    return node;
   }
 
   SemanticTreeParser semantic_tree_parser_;
