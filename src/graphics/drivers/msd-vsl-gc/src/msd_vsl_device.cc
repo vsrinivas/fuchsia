@@ -287,8 +287,10 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
   auto mmu_exception = irq_status.mmu_exception().get();
   auto bus_error = irq_status.bus_error().get();
   auto value = irq_status.value().get();
+  bool do_dump = false;
   if (mmu_exception) {
     DMESSAGE("Interrupt thread received mmu_exception");
+    do_dump = true;
   }
   if (bus_error) {
     DMESSAGE("Interrupt thread received bus error");
@@ -309,6 +311,7 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
             "Ignoring interrupt, event %u did not have an associated mapped batch, allocated: %d "
             "submitted: %d",
             i, events_[i].allocated, events_[i].submitted);
+        do_dump = true;
         continue;
       }
 
@@ -328,6 +331,14 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
     max_completed_sequence_number_ = max_seq_num;
   } else {
     DMESSAGE("Interrupt thread did not find any interrupt events");
+    do_dump = true;
+  }
+  if (do_dump) {
+    std::vector<std::string> dump;
+    DumpToString(&dump, mmu_exception /* fault_present */);
+    for (auto& str : dump) {
+      MAGMA_LOG(WARNING, "%s", str.c_str());
+    }
   }
   interrupt_->Complete();
 
@@ -338,7 +349,8 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
 
 magma::Status MsdVslDevice::ProcessDumpStatusToLog() {
   std::vector<std::string> dump;
-  DumpToString(&dump);
+  // Faults are detected on the interrupt thread.
+  DumpToString(&dump, false /* fault_present */);
   for (auto& str : dump) {
     MAGMA_LOG(INFO, "%s", str.c_str());
   }

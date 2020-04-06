@@ -61,10 +61,15 @@ class MsdVslDevice : public msd_device_t,
     uint32_t exec_addr;
 
     std::vector<MappedBatch*> inflight_batches;
+
+    bool fault_present;
+    uint32_t fault_type;
+    uint64_t fault_gpu_address;
   };
 
-  void Dump(DumpState* dump_state);
-  void DumpToString(std::vector<std::string>* dump_out);
+  // Since the mmu exception register resets on read, we need to pass it on to the dump functions.
+  void Dump(DumpState* dump_state, bool fault_present);
+  void DumpToString(std::vector<std::string>* dump_out, bool fault_present);
   void DumpStatusToLog();
 
   std::vector<MappedBatch*> GetInflightBatches();
@@ -251,6 +256,8 @@ class MsdVslDevice : public msd_device_t,
   friend class TestCommandBuffer;
   friend class TestDeviceDump_DumpBasic_Test;
   friend class TestDeviceDump_DumpCommandBuffer_Test;
+  friend class TestDeviceDump_DumpCommandBufferMultipleResources_Test;
+  friend class TestDeviceDump_DumpCommandBufferWithFault_Test;
   friend class TestDeviceDump_DumpEventBatch_Test;
   friend class TestExec;
   friend class TestExec_Backlog_Test;

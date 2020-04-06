@@ -10,18 +10,48 @@
 #include "msd_vsl_device.h"
 #include "registers.h"
 
-void MsdVslDevice::Dump(DumpState* dump_out) {
+namespace {
+
+const char* FaultTypeToString(uint32_t mmu_status) {
+  switch (mmu_status) {
+    case 1:
+      return "slave not present";
+    case 2:
+      return "page not present";
+    case 3:
+      return "write violation";
+    case 4:
+      return "out of bound";
+    case 5:
+      return "read security violation";
+    case 6:
+      return "write security violation";
+  }
+  return "unknown mmu status";
+}
+
+}  // namespace
+
+void MsdVslDevice::Dump(DumpState* dump_out, bool fault_present) {
   dump_out->max_completed_sequence_number = max_completed_sequence_number_;
   dump_out->next_sequence_number = next_sequence_number_;
   dump_out->idle = IsIdle();
   dump_out->page_table_arrays_enabled = page_table_arrays_->IsEnabled(register_io());
   dump_out->exec_addr = registers::DmaAddress::Get().ReadFrom(register_io_.get()).reg_value();
   dump_out->inflight_batches = GetInflightBatches();
+
+  dump_out->fault_present = fault_present;
+  if (fault_present) {
+    dump_out->fault_type =
+        registers::MmuSecureStatus::Get().ReadFrom(register_io_.get()).reg_value();
+    dump_out->fault_gpu_address =
+        registers::MmuSecureExceptionAddress::Get().ReadFrom(register_io_.get()).reg_value();
+  }
 }
 
-void MsdVslDevice::DumpToString(std::vector<std::string>* dump_out) {
+void MsdVslDevice::DumpToString(std::vector<std::string>* dump_out, bool fault_present) {
   DumpState dump_state;
-  Dump(&dump_state);
+  Dump(&dump_state, fault_present);
   FormatDump(&dump_state, dump_out);
 }
 
@@ -59,9 +89,20 @@ void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* d
     dump_out->push_back("current_execution_address: N/A (page table arrays not yet enabled)");
   }
 
-  // TODO(fxb/48016): add info for faults.
+  if (dump_state->fault_present) {
+    fmt =
+        "MMU EXCEPTION DETECTED\n"
+        "type 0x%x (%s) gpu_address 0x%lx";
+    OutputFormattedString(dump_out, fmt, dump_state->fault_type,
+                          FaultTypeToString(dump_state->fault_type), dump_state->fault_gpu_address);
+  } else {
+    dump_out->push_back("No mmu exception detected.");
+  }
 
   std::vector<GpuMappingView*> mappings;
+  GpuMappingView* fault_mapping = nullptr;
+  GpuMappingView* closest_mapping = nullptr;
+  uint64_t closest_mapping_distance = UINT64_MAX;
 
   if (!dump_state->inflight_batches.empty()) {
     dump_out->push_back("Inflight Batches:");
@@ -72,6 +113,16 @@ void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* d
       auto connection = context ? context->connection().lock() : nullptr;
       OutputFormattedString(dump_out, fmt, batch->GetSequenceNumber(), batch_type, batch, context,
                             connection ? connection->client_id() : 0u);
+
+      auto batch_mapping = batch->GetBatchMapping();
+      if (!batch_mapping) {
+        continue;
+      }
+
+      if (dump_state->fault_present && dump_state->exec_addr >= batch_mapping->gpu_addr() &&
+          dump_state->exec_addr < batch_mapping->gpu_addr() + batch_mapping->length()) {
+        dump_out->push_back("  FAULTING BATCH (current exec addr within this batch)");
+      }
 
       if (!batch->IsCommandBuffer()) {
         continue;
@@ -91,7 +142,37 @@ void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* d
         uint64_t mapping_end = mapping->gpu_addr() + mapping->length();
         OutputFormattedString(dump_out, fmt, mapping, mapping->BufferId(), mapping_start,
                               mapping_end, mapping->offset(), mapping->length());
+
+        if (!dump_state->fault_present) {
+          continue;
+        }
+
+        if (dump_state->fault_gpu_address >= mapping_start &&
+            dump_state->fault_gpu_address < mapping_end) {
+          fault_mapping = mapping;
+        } else if (dump_state->fault_gpu_address > mapping_end &&
+                   dump_state->fault_gpu_address - mapping_end < closest_mapping_distance) {
+          closest_mapping_distance = dump_state->fault_gpu_address - mapping_end;
+          closest_mapping = mapping;
+        }
       }
+    }
+  }
+
+  if (fault_mapping) {
+    fmt = "Fault address appears to be within mapping %p addr [0x%lx, 0x%lx)";
+    OutputFormattedString(dump_out, fmt, fault_mapping, fault_mapping->gpu_addr(),
+                          fault_mapping->gpu_addr() + fault_mapping->length());
+  } else if (dump_state->fault_present) {
+    dump_out->push_back("Fault address does not appear to be mapped for any outstanding batch");
+    if (closest_mapping_distance < UINT64_MAX) {
+      fmt =
+          "Fault address is 0x%lx past the end of mapping %p addr [0x%08lx, 0x%08lx), size "
+          "0x%lx, buffer size 0x%lx";
+      OutputFormattedString(dump_out, fmt, closest_mapping_distance, closest_mapping,
+                            closest_mapping->gpu_addr(),
+                            closest_mapping->gpu_addr() + closest_mapping->length(),
+                            closest_mapping->length(), closest_mapping->BufferSize());
     }
   }
 
