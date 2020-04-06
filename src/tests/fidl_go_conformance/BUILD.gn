@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/test/test_package.gni")
-import("//tools/fidl/gidl-conformance-suite/gidl-conformance-suite.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 generated_dir = "$target_gen_dir"

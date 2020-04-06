@@ -9,7 +9,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//tools/fidl/gidl-conformance-suite/gidl-conformance-suite.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 sdk_source_set("cpp") {

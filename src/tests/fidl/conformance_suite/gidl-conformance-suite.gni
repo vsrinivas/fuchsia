@@ -1,0 +1,14 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+conformance_suite_gidl_files = [
+  "//src/tests/fidl/conformance_suite/alignment.gidl",
+  "//src/tests/fidl/conformance_suite/conformance.gidl",
+  "//src/tests/fidl/conformance_suite/primitives.gidl",
+  "//src/tests/fidl/conformance_suite/transformer.gidl",
+  "//src/tests/fidl/conformance_suite/union.gidl",
+]
+
+conformance_suite_fidl_target =
+    "//src/tests/fidl/conformance_suite:conformance_fidl"
