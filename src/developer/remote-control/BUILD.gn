@@ -115,7 +115,10 @@ test_package("remote-control-lib-tests") {
 
 package("pkg") {
   package_name = "remote-control"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//build/validate:non_production_tag",
+  ]
 
   binaries = [
     {
