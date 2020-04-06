@@ -19,7 +19,7 @@ mod listener;
 mod logger;
 mod stats;
 
-pub use debuglog::KernelDebugLog;
+pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 use listener::{pool::Pool, Listener};
 use stats::LogSource;
 

@@ -59,7 +59,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
     async fn read_log(&mut self) -> Result<(LogMessage, usize), zx::Status> {
         loop {
             self.debug_log.read(&mut self.buf).await?;
-            if let Some((message, size)) = convert_to_log_message(self.buf.as_slice()) {
+            if let Some((message, size)) = convert_debuglog_to_log_message(self.buf.as_slice()) {
                 return Ok((message, size));
             }
         }
@@ -99,7 +99,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
 
 /// Parses a raw debug log read from the kernel.  Returns the parsed message and
 /// its size in memory on success, and None if parsing fails.
-fn convert_to_log_message(buf: &[u8]) -> Option<(LogMessage, usize)> {
+pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<(LogMessage, usize)> {
     if buf.len() < 32 {
         return None;
     }
@@ -233,9 +233,9 @@ pub mod tests {
     }
 
     #[test]
-    fn convert_to_log_message_test() {
+    fn convert_debuglog_to_log_message_test() {
         let klog = TestDebugEntry::new("test log".as_bytes());
-        let (log_message, size) = convert_to_log_message(&klog.to_vec()).unwrap();
+        let (log_message, size) = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
             LogMessage {
@@ -252,7 +252,7 @@ pub mod tests {
 
         // maximum allowed klog size
         let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]);
-        let (log_message, size) = convert_to_log_message(&klog.to_vec()).unwrap();
+        let (log_message, size) = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
             LogMessage {
@@ -269,7 +269,7 @@ pub mod tests {
 
         // empty message
         let klog = TestDebugEntry::new(&vec![]);
-        let (log_message, size) = convert_to_log_message(&klog.to_vec()).unwrap();
+        let (log_message, size) = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
             LogMessage {
@@ -286,15 +286,15 @@ pub mod tests {
 
         // truncated header
         let klog = vec![3u8; 4];
-        assert!(convert_to_log_message(&klog).is_none());
+        assert!(convert_debuglog_to_log_message(&klog).is_none());
 
         // invalid utf-8
         let klog = TestDebugEntry::new(&vec![0, 159, 146, 150]);
-        assert!(convert_to_log_message(&klog.to_vec()).is_none());
+        assert!(convert_debuglog_to_log_message(&klog.to_vec()).is_none());
 
         // malformed
         let klog = vec![0xffu8; 64];
-        assert!(convert_to_log_message(&klog).is_none());
+        assert!(convert_debuglog_to_log_message(&klog).is_none());
     }
 
     #[fasync::run_until_stalled(test)]

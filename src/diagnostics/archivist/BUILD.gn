@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/config.gni")
+import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -136,6 +138,18 @@ group("with_default_config") {
   ]
 }
 
+rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
+  deps = [
+    ":lib",
+    "//src/lib/fuzzing/rust:fuzz",
+  ]
+  source_root = "src/fuzzer.rs"
+}
+
+fuzzers_package("archivist-fuzzers") {
+  rust_fuzzers = [ ":convert_debuglog_to_log_message_fuzzer" ]
+}
+
 test_package("archivist_tests") {
   deps = [ ":lib_test" ]
 
@@ -151,6 +165,7 @@ test_package("archivist_tests") {
 group("tests") {
   testonly = true
   public_deps = [
+    ":archivist-fuzzers",
     ":archivist_tests",
     "tests",
   ]
