@@ -67,13 +67,16 @@ pub mod non_fuchsia_handles {
     use crate::invoke_for_handle_types;
 
     use fuchsia_zircon_status as zx_status;
-    use futures::{
-        future::poll_fn,
-        task::{AtomicWaker, Context},
-    };
+    use futures::future::poll_fn;
     use parking_lot::Mutex;
     use slab::Slab;
-    use std::{borrow::BorrowMut, collections::VecDeque, pin::Pin, sync::Arc, task::Poll};
+    use std::{
+        borrow::BorrowMut,
+        collections::VecDeque,
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll, Waker},
+    };
 
     /// Invalid handle value
     pub const INVALID_HANDLE: u32 = 0xffff_ffff;
@@ -89,21 +92,8 @@ pub mod non_fuchsia_handles {
         Socket,
     }
 
-    #[derive(Debug)]
-    struct HdlWaker {
-        hdl: u32,
-        waker: AtomicWaker,
-    }
-
-    impl HdlWaker {
-        fn sched(&self, cx: &mut Context<'_>) {
-            self.waker.register(cx.waker());
-            hdl_need_read(self.hdl);
-        }
-    }
-
     lazy_static::lazy_static! {
-        static ref HANDLE_WAKEUPS: Mutex<Vec<Arc<HdlWaker>>> = Mutex::new(Vec::new());
+        static ref HANDLE_WAKEUPS: Mutex<Vec<Option<Waker>>> = Mutex::new(Vec::new());
     }
 
     /// Awaken a handle by index.
@@ -112,17 +102,23 @@ pub mod non_fuchsia_handles {
     ///   There are no wakeups issued unless hdl_need_read is called.
     ///   hdl_need_read arms the wakeup, and no wakeups will occur until that call is made.
     fn hdl_awaken(hdl: u32) {
-        HANDLE_WAKEUPS.lock()[hdl as usize].waker.wake();
+        let mut w = HANDLE_WAKEUPS.lock();
+        let i = hdl as usize;
+        if i >= w.len() {
+            return;
+        }
+        w[i].take().map(Waker::wake);
     }
 
-    fn get_or_create_arc_waker(hdl: u32) -> Arc<HdlWaker> {
-        assert_ne!(hdl, INVALID_HANDLE);
-        let mut wakers = HANDLE_WAKEUPS.lock();
-        while wakers.len() <= (hdl as usize) {
-            let index = wakers.len();
-            wakers.push(Arc::new(HdlWaker { hdl: index as u32, waker: AtomicWaker::new() }));
+    #[must_use]
+    fn hdl_need_wakeup<R>(hdl: u32, cx: &mut Context<'_>) -> Poll<R> {
+        let mut w = HANDLE_WAKEUPS.lock();
+        let i = hdl as usize;
+        while w.len() <= i {
+            w.push(None);
         }
-        wakers[hdl as usize].clone()
+        w[i] = Some(cx.waker().clone());
+        Poll::Pending
     }
 
     /// A borrowed reference to an underlying handle
@@ -420,9 +416,7 @@ pub mod non_fuchsia_handles {
                 bytes: b,
                 handles: std::mem::replace(handles, Vec::new()),
             });
-            let wakeup = st.need_read;
-            st.need_read = false;
-            Ok(if wakeup { peer } else { INVALID_HANDLE })
+            Ok(peer)
         }
     }
 
@@ -430,7 +424,6 @@ pub mod non_fuchsia_handles {
     #[derive(Debug)]
     pub struct AsyncChannel {
         channel: Channel,
-        waker: Arc<HdlWaker>,
     }
 
     impl AsyncChannel {
@@ -461,10 +454,7 @@ pub mod non_fuchsia_handles {
             handles: &mut Vec<Handle>,
         ) -> Poll<Result<(), zx_status::Status>> {
             match self.channel.read_split(bytes, handles) {
-                Err(zx_status::Status::SHOULD_WAIT) => {
-                    self.waker.sched(cx);
-                    Poll::Pending
-                }
+                Err(zx_status::Status::SHOULD_WAIT) => hdl_need_wakeup(self.channel.0, cx),
                 x => Poll::Ready(x),
             }
         }
@@ -491,7 +481,7 @@ pub mod non_fuchsia_handles {
 
         /// Creates a new `AsyncChannel` from a previously-created `Channel`.
         pub fn from_channel(channel: Channel) -> std::io::Result<AsyncChannel> {
-            Ok(AsyncChannel { waker: get_or_create_arc_waker(channel.0), channel })
+            Ok(AsyncChannel { channel })
         }
     }
 
@@ -606,9 +596,7 @@ pub mod non_fuchsia_handles {
         ) -> Result<(usize, u32), zx_status::Status> {
             if bytes.len() > 0 {
                 st.bytes.extend(bytes);
-                let wakeup = st.need_read;
-                st.need_read = false;
-                Ok((bytes.len(), if wakeup { peer } else { INVALID_HANDLE }))
+                Ok((bytes.len(), peer))
             } else {
                 Ok((bytes.len(), INVALID_HANDLE))
             }
@@ -620,9 +608,7 @@ pub mod non_fuchsia_handles {
             bytes: &[u8],
         ) -> Result<(usize, u32), zx_status::Status> {
             st.bytes.push_back(bytes.to_vec());
-            let wakeup = st.need_read;
-            st.need_read = false;
-            Ok((bytes.len(), if wakeup { peer } else { INVALID_HANDLE }))
+            Ok((bytes.len(), peer))
         }
 
         /// Return how many bytes are buffered in the socket
@@ -727,13 +713,12 @@ pub mod non_fuchsia_handles {
     #[derive(Debug)]
     pub struct AsyncSocket {
         socket: Socket,
-        waker: Arc<HdlWaker>,
     }
 
     impl AsyncSocket {
         /// Construct an `AsyncSocket` from an existing `Socket`
         pub fn from_socket(socket: Socket) -> std::io::Result<AsyncSocket> {
-            Ok(AsyncSocket { waker: get_or_create_arc_waker(socket.0), socket })
+            Ok(AsyncSocket { socket })
         }
 
         /// Convert AsyncSocket back into a regular socket
@@ -754,13 +739,8 @@ pub mod non_fuchsia_handles {
             out.resize(len + avail, 0);
             let (_, mut tail) = out.split_at_mut(len);
             match self.socket.read(&mut tail) {
-                Err(zx_status::Status::SHOULD_WAIT) => {
-                    self.waker.sched(cx);
-                    Poll::Pending
-                }
-                Err(zx_status::Status::PEER_CLOSED) => {
-                    return Poll::Ready(Ok(0));
-                }
+                Err(zx_status::Status::SHOULD_WAIT) => hdl_need_wakeup(self.socket.0, cx),
+                Err(zx_status::Status::PEER_CLOSED) => Poll::Ready(Ok(0)),
                 Err(e) => Poll::Ready(Err(e)),
                 Ok(bytes) => {
                     if bytes == avail {
@@ -814,13 +794,8 @@ pub mod non_fuchsia_handles {
             bytes: &mut [u8],
         ) -> Poll<Result<usize, std::io::Error>> {
             match self.socket.read(bytes) {
-                Err(zx_status::Status::SHOULD_WAIT) => {
-                    self.waker.sched(cx);
-                    Poll::Pending
-                }
-                Err(zx_status::Status::PEER_CLOSED) => {
-                    return Poll::Ready(Ok(0));
-                }
+                Err(zx_status::Status::SHOULD_WAIT) => hdl_need_wakeup(self.socket.0, cx),
+                Err(zx_status::Status::PEER_CLOSED) => Poll::Ready(Ok(0)),
                 Ok(x) => Poll::Ready(Ok(x)),
                 Err(x) => Poll::Ready(Err(x.into())),
             }
@@ -926,12 +901,11 @@ pub mod non_fuchsia_handles {
 
     struct HalfChannelState {
         messages: VecDeque<ChannelMessage>,
-        need_read: bool,
     }
 
     impl HalfChannelState {
         fn new() -> HalfChannelState {
-            HalfChannelState { messages: VecDeque::new(), need_read: false }
+            HalfChannelState { messages: VecDeque::new() }
         }
     }
 
@@ -943,23 +917,21 @@ pub mod non_fuchsia_handles {
 
     struct HalfStreamSocketState {
         bytes: VecDeque<u8>,
-        need_read: bool,
     }
 
     impl HalfStreamSocketState {
         fn new() -> HalfStreamSocketState {
-            HalfStreamSocketState { bytes: VecDeque::new(), need_read: false }
+            HalfStreamSocketState { bytes: VecDeque::new() }
         }
     }
 
     struct HalfDatagramSocketState {
         bytes: VecDeque<Vec<u8>>,
-        need_read: bool,
     }
 
     impl HalfDatagramSocketState {
         fn new() -> HalfDatagramSocketState {
-            HalfDatagramSocketState { bytes: VecDeque::new(), need_read: false }
+            HalfDatagramSocketState { bytes: VecDeque::new() }
         }
     }
 
@@ -1000,10 +972,7 @@ pub mod non_fuchsia_handles {
         let wakeup = match HANDLES.lock().remove(hdl as usize) {
             FidlHandle::LeftChannel(cs, peer) => {
                 let st = &mut *cs.lock();
-                let wakeup = match st {
-                    ChannelState { open: false, .. } => false,
-                    ChannelState { right: st, .. } => st.need_read,
-                };
+                let wakeup = st.open;
                 st.open = false;
                 if wakeup {
                     peer
@@ -1013,10 +982,7 @@ pub mod non_fuchsia_handles {
             }
             FidlHandle::RightChannel(cs, peer) => {
                 let st = &mut *cs.lock();
-                let wakeup = match st {
-                    ChannelState { open: false, .. } => false,
-                    ChannelState { left: st, .. } => st.need_read,
-                };
+                let wakeup = st.open;
                 st.open = false;
                 if wakeup {
                     peer
@@ -1026,10 +992,7 @@ pub mod non_fuchsia_handles {
             }
             FidlHandle::LeftStreamSocket(cs, peer) => {
                 let st = &mut *cs.lock();
-                let wakeup = match st {
-                    StreamSocketState { open: false, .. } => false,
-                    StreamSocketState { right: st, .. } => st.need_read,
-                };
+                let wakeup = st.open;
                 st.open = false;
                 if wakeup {
                     peer
@@ -1039,10 +1002,7 @@ pub mod non_fuchsia_handles {
             }
             FidlHandle::RightStreamSocket(cs, peer) => {
                 let st = &mut *cs.lock();
-                let wakeup = match st {
-                    StreamSocketState { open: false, .. } => false,
-                    StreamSocketState { left: st, .. } => st.need_read,
-                };
+                let wakeup = st.open;
                 st.open = false;
                 if wakeup {
                     peer
@@ -1052,10 +1012,7 @@ pub mod non_fuchsia_handles {
             }
             FidlHandle::LeftDatagramSocket(cs, peer) => {
                 let st = &mut *cs.lock();
-                let wakeup = match st {
-                    DatagramSocketState { open: false, .. } => false,
-                    DatagramSocketState { right: st, .. } => st.need_read,
-                };
+                let wakeup = st.open;
                 st.open = false;
                 if wakeup {
                     peer
@@ -1065,10 +1022,7 @@ pub mod non_fuchsia_handles {
             }
             FidlHandle::RightDatagramSocket(cs, peer) => {
                 let st = &mut *cs.lock();
-                let wakeup = match st {
-                    DatagramSocketState { open: false, .. } => false,
-                    DatagramSocketState { left: st, .. } => st.need_read,
-                };
+                let wakeup = st.open;
                 st.open = false;
                 if wakeup {
                     peer
@@ -1079,81 +1033,6 @@ pub mod non_fuchsia_handles {
         };
         if wakeup != INVALID_HANDLE {
             hdl_awaken(wakeup);
-        }
-    }
-
-    /// Signal that a read is required
-    fn hdl_need_read(hdl: u32) {
-        let wakeup = with_handle(hdl, |obj| match obj {
-            FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
-                ChannelState { open: false, .. } => true,
-                ChannelState { left: ref mut st, .. } => {
-                    if st.messages.is_empty() {
-                        st.need_read = true;
-                        false
-                    } else {
-                        true
-                    }
-                }
-            },
-            FidlHandle::RightChannel(cs, _) => match *cs.lock() {
-                ChannelState { open: false, .. } => true,
-                ChannelState { right: ref mut st, .. } => {
-                    if st.messages.is_empty() {
-                        st.need_read = true;
-                        false
-                    } else {
-                        true
-                    }
-                }
-            },
-            FidlHandle::LeftStreamSocket(cs, _) => match *cs.lock() {
-                StreamSocketState { open: false, .. } => true,
-                StreamSocketState { left: ref mut st, .. } => {
-                    if st.bytes.is_empty() {
-                        st.need_read = true;
-                        false
-                    } else {
-                        true
-                    }
-                }
-            },
-            FidlHandle::RightStreamSocket(cs, _) => match *cs.lock() {
-                StreamSocketState { open: false, .. } => true,
-                StreamSocketState { right: ref mut st, .. } => {
-                    if st.bytes.is_empty() {
-                        st.need_read = true;
-                        false
-                    } else {
-                        true
-                    }
-                }
-            },
-            FidlHandle::LeftDatagramSocket(cs, _) => match *cs.lock() {
-                DatagramSocketState { open: false, .. } => true,
-                DatagramSocketState { left: ref mut st, .. } => {
-                    if st.bytes.is_empty() {
-                        st.need_read = true;
-                        false
-                    } else {
-                        true
-                    }
-                }
-            },
-            FidlHandle::RightDatagramSocket(cs, _) => match *cs.lock() {
-                DatagramSocketState { open: false, .. } => true,
-                DatagramSocketState { right: ref mut st, .. } => {
-                    if st.bytes.is_empty() {
-                        st.need_read = true;
-                        false
-                    } else {
-                        true
-                    }
-                }
-            },
-        });
-        if wakeup {
-            hdl_awaken(hdl);
         }
     }
 }
