@@ -30,9 +30,9 @@
 #include <fs/trace.h>
 #include <safemath/checked_math.h>
 
+#include "compression/chunked.h"
 #include "compression/compressor.h"
 #include "compression/decompressor.h"
-#include "compression/zstd-seekable.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
@@ -46,8 +46,8 @@ namespace {
 // TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
 // choosing from multiple strategies. This has already been done in non-host code but host tools do
 // not use |BlobCompressor| the same way.
-using HostCompressor = ZSTDSeekableCompressor;
-using HostDecompressor = ZSTDSeekableDecompressor;
+using HostCompressor = ChunkedCompressor;
+using HostDecompressor = ChunkedDecompressor;
 
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
   off_t off = offset + bno * kBlobfsBlockSize;
@@ -95,8 +95,13 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
 
   zx_status_t status;
   std::unique_ptr<HostCompressor> compressor;
-  if ((status = HostCompressor::Create(mapping.length(), out_info->compressed_data.get(), max,
+  size_t output_limit;
+  if ((status = HostCompressor::Create(mapping.length(), &output_limit,
                                        &compressor)) != ZX_OK) {
+    FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
+    return status;
+  }
+  if ((status = compressor->SetOutput(out_info->compressed_data.get(), max)) != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
     return status;
   }

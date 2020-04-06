@@ -5,7 +5,6 @@
 #include "chunked.h"
 
 #include <zircon/errors.h>
-#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <fs/trace.h>
@@ -45,6 +44,13 @@ zx_status_t ChunkedCompressor::Create(size_t input_size, size_t* output_limit_ou
       std::unique_ptr<ChunkedCompressor>(new ChunkedCompressor(std::move(compressor), input_size));
 
   return ZX_OK;
+}
+
+size_t ChunkedCompressor::BufferMax(size_t input_length) {
+  chunked_compression::CompressionParams params;
+  params.compression_level = kDefaultLevel;
+  params.chunk_size = chunked_compression::CompressionParams::ChunkSizeForInputSize(input_length);
+  return params.ComputeOutputSizeLimit(input_length);
 }
 
 zx_status_t ChunkedCompressor::SetOutput(void* dst, size_t dst_len) {
@@ -152,8 +158,7 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
         decompressor_.DecompressFrame(seek_table_, i, src, max_compressed_size - src_offset, dst,
                                       *uncompressed_size - dst_offset, &bytes_in_frame);
     if (status != chunked_compression::kStatusOk) {
-      FS_TRACE_ERROR("blobfs DecompressFrame failed: %s\n",
-                     zx_status_get_string(ToZxStatus(status)));
+      FS_TRACE_ERROR("blobfs DecompressFrame failed: %d\n", status);
       return ToZxStatus(status);
     }
     src_offset += entry.compressed_size;

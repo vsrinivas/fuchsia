@@ -34,6 +34,10 @@ class ChunkedCompressor : public Compressor {
   static zx_status_t Create(size_t input_size, size_t* output_limit_out,
                             std::unique_ptr<ChunkedCompressor>* out);
 
+  // Returns the maximum possible size a buffer would need to be
+  // in order to compress data of size |input_length|.
+  static size_t BufferMax(size_t input_length);
+
   // Registers |dst| as the output for compression.
   // Must be called before |Update()| or |End()| are called.
   zx_status_t SetOutput(void* dst, size_t dst_len);

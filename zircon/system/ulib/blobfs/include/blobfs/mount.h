@@ -51,7 +51,7 @@ struct MountOptions {
   // Compression algorithm to use when storing blobs.
   // Blobs that are already stored on disk using another compression algorithm from disk are not
   // affected by this flag.
-  CompressionAlgorithm write_compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
+  CompressionAlgorithm write_compression_algorithm = CompressionAlgorithm::CHUNKED;
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|. If
