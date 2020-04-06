@@ -2,13 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-testing/test_loop_dispatcher.h>
-
-#include <list>
-#include <memory>
-#include <set>
-
 #include <lib/async-testing/dispatcher_stub.h>
+#include <lib/async-testing/test_loop_dispatcher.h>
 #include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
@@ -16,12 +11,17 @@
 #include <lib/fit/defer.h>
 #include <lib/zx/port.h>
 #include <lib/zx/time.h>
-
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
+
+#include <list>
+#include <memory>
+#include <mutex>
+#include <set>
 
 namespace async {
 namespace {
@@ -36,18 +36,24 @@ class TestLoopDispatcher : public DispatcherStub, public async_test_subloop_t {
   TestLoopDispatcher& operator=(const TestLoopDispatcher&) = delete;
 
   // async_dispatcher_t operation implementations.
-  zx::time Now() override;
-  zx_status_t BeginWait(async_wait_t* wait) override;
-  zx_status_t CancelWait(async_wait_t* wait) override;
-  zx_status_t PostTask(async_task_t* task) override;
-  zx_status_t CancelTask(async_task_t* task) override;
+  zx::time Now() override __TA_EXCLUDES(&dispatcher_mtx_) {
+    std::lock_guard<std::mutex> lock(dispatcher_mtx_);
+    return NowLocked();
+  }
+  zx_status_t BeginWait(async_wait_t* wait) __TA_EXCLUDES(&dispatcher_mtx_) override;
+  zx_status_t CancelWait(async_wait_t* wait) __TA_EXCLUDES(&dispatcher_mtx_) override;
+  zx_status_t PostTask(async_task_t* task) __TA_EXCLUDES(&dispatcher_mtx_) override;
+  zx_status_t CancelTask(async_task_t* task) __TA_EXCLUDES(&dispatcher_mtx_) override;
 
   // async_test_loop_provider_t operations implementations.
-  static void AdvanceTimeTo(async_test_subloop_t* subloop, zx_time_t time);
-  static uint8_t DispatchNextDueMessage(async_test_subloop_t* subloop);
-  static uint8_t HasPendingWork(async_test_subloop_t* subloop);
-  static zx_time_t GetNextTaskDueTime(async_test_subloop_t* subloop);
-  static void Finalize(async_test_subloop_t* subloop);
+  static void AdvanceTimeTo(async_test_subloop_t* subloop, zx_time_t time)
+      __TA_EXCLUDES(&dispatcher_mtx_);
+  static uint8_t DispatchNextDueMessage(async_test_subloop_t* subloop)
+      __TA_EXCLUDES(&dispatcher_mtx_);
+  static uint8_t HasPendingWork(async_test_subloop_t* subloop) __TA_EXCLUDES(&dispatcher_mtx_);
+  static zx_time_t GetNextTaskDueTime(async_test_subloop_t* subloop)
+      __TA_EXCLUDES(&dispatcher_mtx_);
+  static void Finalize(async_test_subloop_t* subloop) __TA_EXCLUDES(&dispatcher_mtx_);
 
  private:
   class Activated;
@@ -62,35 +68,40 @@ class TestLoopDispatcher : public DispatcherStub, public async_test_subloop_t {
   };
 
   // async_test_loop_provider_t operations implementations.
-  void AdvanceTimeTo(zx::time time);
-  bool DispatchNextDueMessage();
-  bool HasPendingWork();
-  zx::time GetNextTaskDueTime();
+  void AdvanceTimeTo(zx::time time) __TA_EXCLUDES(&dispatcher_mtx_);
+  bool DispatchNextDueMessage() __TA_EXCLUDES(&dispatcher_mtx_);
+  bool HasPendingWork() __TA_EXCLUDES(&dispatcher_mtx_);
+  zx::time GetNextTaskDueTime() __TA_EXCLUDES(&dispatcher_mtx_);
+
+  zx::time NowLocked() const __TA_REQUIRES(&dispatcher_mtx_) { return now_; }
 
   // Extracts activated tasks and waits to |activated_|.
-  void ExtractActivated();
+  void ExtractActivatedLocked() __TA_REQUIRES(&dispatcher_mtx_);
 
   // Removes the given task or wait from |activables_| and |activated_|.
-  zx_status_t CancelActivatedTaskOrWait(void* task_or_wait);
+  zx_status_t CancelActivatedTaskOrWaitLocked(void* task_or_wait) __TA_REQUIRES(&dispatcher_mtx_);
 
   // Dispatches all remaining posted waits and tasks, invoking their handlers
   // with status ZX_ERR_CANCELED.
-  void Shutdown();
-
-  // The current time.
-  zx::time now_ = zx::time::infinite_past();
+  void Shutdown() __TA_EXCLUDES(&dispatcher_mtx_);
 
   // Whether the loop is shutting down.
-  bool in_shutdown_ = false;
+  bool in_shutdown_ __TA_GUARDED(&dispatcher_mtx_) = false;
+
+  std::mutex dispatcher_mtx_;
+
+  // The current time.
+  zx::time now_ __TA_GUARDED(&dispatcher_mtx_) = zx::time::infinite_past();
+
   // Pending tasks activable in the future.
   // The ordering of the set is based on the task timeline. Multiple tasks
   // with the same deadline will be equivalent, and be ordered by order of
   // insertion.
-  std::multiset<async_task_t*, AsyncTaskComparator> future_tasks_;
+  std::multiset<async_task_t*, AsyncTaskComparator> future_tasks_ __TA_GUARDED(&dispatcher_mtx_);
   // Pending waits.
-  std::set<async_wait_t*> pending_waits_;
+  std::set<async_wait_t*> pending_waits_ __TA_GUARDED(&dispatcher_mtx_);
   // Activated elements, ready to be dispatched.
-  std::list<std::unique_ptr<Activated>> activated_;
+  std::list<std::unique_ptr<Activated>> activated_ __TA_GUARDED(&dispatcher_mtx_);
   // Port used to register waits.
   zx::port port_;
 };
@@ -157,18 +168,17 @@ class TestLoopDispatcher::WaitActivated : public Activated {
   zx_port_packet_t const packet_;
 };
 
-TestLoopDispatcher::TestLoopDispatcher() : async_test_subloop_t{&subloop_ops} {
+TestLoopDispatcher::TestLoopDispatcher() : async_test_subloop_t{&subloop_ops}, in_shutdown_(false) {
   zx_status_t status = zx::port::create(0u, &port_);
   ZX_ASSERT_MSG(status == ZX_OK, "zx_port_create: %s", zx_status_get_string(status));
 }
 
 TestLoopDispatcher::~TestLoopDispatcher() { Shutdown(); }
 
-zx::time TestLoopDispatcher::Now() { return now_; }
-
 zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
   ZX_DEBUG_ASSERT(wait);
 
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
   if (in_shutdown_) {
     return ZX_ERR_CANCELED;
   }
@@ -184,25 +194,26 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
 
 zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
   ZX_DEBUG_ASSERT(wait);
-
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
   auto it = pending_waits_.find(wait);
   if (it != pending_waits_.end()) {
     pending_waits_.erase(it);
     return zx_port_cancel(port_.get(), wait->object, reinterpret_cast<uintptr_t>(wait));
   }
 
-  return CancelActivatedTaskOrWait(wait);
+  return CancelActivatedTaskOrWaitLocked(wait);
 }
 
 zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
   ZX_DEBUG_ASSERT(task);
 
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
   if (in_shutdown_) {
     return ZX_ERR_CANCELED;
   }
 
-  if (task->deadline <= Now().get()) {
-    ExtractActivated();
+  if (task->deadline <= NowLocked().get()) {
+    ExtractActivatedLocked();
     activated_.push_back(std::make_unique<TaskActivated>(this, task));
     return ZX_OK;
   }
@@ -213,22 +224,24 @@ zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
 
 zx_status_t TestLoopDispatcher::CancelTask(async_task_t* task) {
   ZX_DEBUG_ASSERT(task);
-
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
   auto task_it = std::find(future_tasks_.begin(), future_tasks_.end(), task);
   if (task_it != future_tasks_.end()) {
     future_tasks_.erase(task_it);
     return ZX_OK;
   }
 
-  return CancelActivatedTaskOrWait(task);
+  return CancelActivatedTaskOrWaitLocked(task);
 }
 
 void TestLoopDispatcher::AdvanceTimeTo(zx::time time) {
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
   ZX_DEBUG_ASSERT(now_ <= time);
   now_ = time;
 }
 
 zx::time TestLoopDispatcher::GetNextTaskDueTime() {
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
   for (const auto& activated : activated_) {
     if (activated->DueTime() < zx::time::infinite()) {
       return activated->DueTime();
@@ -241,26 +254,32 @@ zx::time TestLoopDispatcher::GetNextTaskDueTime() {
 }
 
 bool TestLoopDispatcher::HasPendingWork() {
-  ExtractActivated();
+  std::lock_guard<std::mutex> lock(dispatcher_mtx_);
+  ExtractActivatedLocked();
   return !activated_.empty();
 }
 
 bool TestLoopDispatcher::DispatchNextDueMessage() {
-  ExtractActivated();
-  if (activated_.empty()) {
-    return false;
+  std::unique_ptr<Activated> activated_element = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(dispatcher_mtx_);
+    ExtractActivatedLocked();
+    if (activated_.empty()) {
+      return false;
+    }
+    activated_element = std::move(activated_.front());
+    activated_.erase(activated_.begin());
   }
+  // Release the lock to avoid deadlocking on reentrant tasks.
   async_dispatcher_t* previous_dispatcher = async_get_default_dispatcher();
   async_set_default_dispatcher(this);
-  auto restore = fit::defer([=] { async_set_default_dispatcher(previous_dispatcher); });
-
-  auto activated_element = std::move(activated_.front());
-  activated_.erase(activated_.begin());
   activated_element->Dispatch();
+  async_set_default_dispatcher(previous_dispatcher);
+
   return true;
 }
 
-void TestLoopDispatcher::ExtractActivated() {
+void TestLoopDispatcher::ExtractActivatedLocked() {
   zx_port_packet_t packet;
   while (port_.wait(zx::time(0), &packet) == ZX_OK) {
     async_wait_t* wait = reinterpret_cast<async_wait_t*>(packet.key);
@@ -269,33 +288,49 @@ void TestLoopDispatcher::ExtractActivated() {
   }
 
   // Move all tasks that reach their deadline to the activated list.
-  while (!future_tasks_.empty() && (*future_tasks_.begin())->deadline <= Now().get()) {
+  while (!future_tasks_.empty() && (*future_tasks_.begin())->deadline <= NowLocked().get()) {
     activated_.push_back(std::make_unique<TaskActivated>(this, (*future_tasks_.begin())));
     future_tasks_.erase(future_tasks_.begin());
   }
 }
 
-void TestLoopDispatcher::Shutdown() {
+// Unique lock does not support TA annotations.
+// Lock needs to be released for reentrant handlers.
+void TestLoopDispatcher::Shutdown() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  std::unique_lock<std::mutex> lock(dispatcher_mtx_);
+
+  if (in_shutdown_) {
+    return;
+  }
+
   in_shutdown_ = true;
 
   while (!future_tasks_.empty()) {
     auto task = *future_tasks_.begin();
     future_tasks_.erase(future_tasks_.begin());
+    lock.unlock();
     task->handler(this, task, ZX_ERR_CANCELED);
+    lock.lock();
   }
+
   while (!pending_waits_.empty()) {
     auto wait = *pending_waits_.begin();
     pending_waits_.erase(pending_waits_.begin());
+    lock.unlock();
     wait->handler(this, wait, ZX_ERR_CANCELED, nullptr);
+    lock.lock();
   }
+
   while (!activated_.empty()) {
     auto activated = std::move(activated_.front());
     activated_.erase(activated_.begin());
+    lock.unlock();
     activated->Cancel();
+    lock.lock();
   }
 }
 
-zx_status_t TestLoopDispatcher::CancelActivatedTaskOrWait(void* task_or_wait) {
+zx_status_t TestLoopDispatcher::CancelActivatedTaskOrWaitLocked(void* task_or_wait) {
   auto activated_it =
       std::find_if(activated_.begin(), activated_.end(),
                    [&](const auto& activated) { return activated->Matches(task_or_wait); });

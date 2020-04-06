@@ -7,11 +7,15 @@
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async/task.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
+#include <sys/socket.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <memory>
@@ -829,6 +833,90 @@ TEST(TestLoopTest, BlockCurrentSubLoopAndRunOthersUntilFalse) {
 
   loop.RunUntilIdle();
   EXPECT_FALSE(block_current_subloop);
+}
+
+struct Task {
+  async_task_t task;
+  bool handled = false;
+};
+
+void ReentrantHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t result) {
+  // This is reentrant.
+  auto* typed_task = reinterpret_cast<Task*>(task);
+  typed_task->handled = true;
+  async::Now(dispatcher);
+}
+
+// This test just verifies that reentrant tasks dont hang and that proper lock releases exists.
+TEST(TestLoopTest, TaskHandlerIsReentrant) {
+  async::TestLoop loop;
+
+  auto task_factory = [] {
+    Task task;
+    task.task.state = ASYNC_STATE_INIT;
+    task.task.handler = &ReentrantHandler;
+    return task;
+  };
+
+  auto dispatched_task = task_factory();
+  // Dispatching it
+  EXPECT_OK(async_post_task(loop.dispatcher(), &dispatched_task.task));
+  loop.RunUntilIdle();
+  EXPECT_TRUE(dispatched_task.handled);
+
+  // Cancelling it.
+  auto cancelled_task = task_factory();
+  EXPECT_OK(async_post_task(loop.dispatcher(), &cancelled_task.task));
+  EXPECT_OK(async_cancel_task(loop.dispatcher(), &cancelled_task.task));
+
+  // On Shutdown
+  auto shutdown_task = task_factory();
+  {
+    async::TestLoop shutdown_loop;
+    EXPECT_OK(async_post_task(shutdown_loop.dispatcher(), &shutdown_task.task));
+  }
+  EXPECT_TRUE(shutdown_task.handled);
+}
+
+void ReentrantWaitHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal) {
+  async::Now(dispatcher);
+}
+
+TEST(TestLoopTest, WaitHandlerIsReentrant) {
+  async::TestLoop loop;
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  auto wait_factory = [&event] {
+    async_wait_t wait;
+    wait.state = ASYNC_STATE_INIT;
+    wait.handler = &ReentrantWaitHandler;
+    wait.object = event.borrow()->get();
+    wait.trigger = ZX_USER_SIGNAL_0;
+    wait.options = 0;
+    return wait;
+  };
+
+  auto dispatched_wait = wait_factory();
+  // Dispatching activated wait.
+  ASSERT_OK(async_begin_wait(loop.dispatcher(), &dispatched_wait));
+  event.signal(0, ZX_USER_SIGNAL_0);
+  loop.RunUntilIdle();
+
+  // Cancelling it.
+  auto cancelled_wait = wait_factory();
+  ASSERT_OK(async_begin_wait(loop.dispatcher(), &cancelled_wait));
+  ASSERT_OK(async_cancel_wait(loop.dispatcher(), &cancelled_wait));
+  loop.RunUntilIdle();
+
+  // On Shutdown
+  auto shutdown_wait = wait_factory();
+  {
+    async::TestLoop shutdown_loop;
+
+    ASSERT_OK(async_begin_wait(shutdown_loop.dispatcher(), &shutdown_wait));
+  }
 }
 
 }  // namespace
