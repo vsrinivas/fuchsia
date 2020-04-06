@@ -57,7 +57,7 @@ zx_status_t InitLoggerFromCommandLine(const fxl::CommandLine& command_line,
                                       std::initializer_list<std::string> tags) {
   syslog::LogSettings settings = {FX_LOG_INFO, -1};
   std::string error = ParseLoggerSettings(command_line, &settings);
-  auto status = syslog::InitLogger(settings, tags);
+  auto status = syslog::SetSettings(settings, tags);
   if (status == ZX_OK && !error.empty()) {
     FX_LOGST(ERROR, "logger_init_error") << error;
   } else if (status != ZX_OK && settings.fd != -1) {

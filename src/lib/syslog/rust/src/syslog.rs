@@ -28,7 +28,7 @@ pub const FX_LOG_ERROR: fx_log_severity_t = 2;
 extern "C" {
     pub fn fx_log_init() -> zx_status_t;
 
-    pub fn fx_log_init_with_config(config: *const fx_logger_config_t) -> zx_status_t;
+    pub fn fx_log_reconfigure(config: *const fx_logger_config_t) -> zx_status_t;
 
     pub fn fx_log_get_logger() -> *mut fx_logger_t;
 

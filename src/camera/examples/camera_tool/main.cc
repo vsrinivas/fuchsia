@@ -19,7 +19,7 @@
 #include "src/camera/lib/virtual_camera/virtual_camera.h"
 
 int main(int argc, char* argv[]) {
-  syslog::InitLogger({"camera"});
+  syslog::SetTags({"camera"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

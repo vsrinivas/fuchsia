@@ -55,7 +55,7 @@ class TestCasesImpl : public fuchsia::io::test::TestCases {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  syslog::InitLogger({"io_conformance_harness_sdkcpp"});
+  syslog::SetTags({"io_conformance_harness_sdkcpp"});
 
   auto context = sys::ComponentContext::Create();
   sys::ServiceHandler handler;

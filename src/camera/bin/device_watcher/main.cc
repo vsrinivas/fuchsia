@@ -22,7 +22,8 @@ constexpr auto kCameraPath = "/dev/class/camera";
 static fit::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCamera(
     std::string path) {
   fuchsia::hardware::camera::DeviceHandle camera;
-  zx_status_t status = fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
@@ -54,7 +55,7 @@ class DeviceWatcherTesterImpl : public fuchsia::camera::test::DeviceWatcherTeste
 };
 
 int main(int argc, char* argv[]) {
-  syslog::InitLogger({"camera", "camera_device_watcher"});
+  syslog::SetTags({"camera", "camera_device_watcher"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

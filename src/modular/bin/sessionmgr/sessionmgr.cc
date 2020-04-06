@@ -29,7 +29,7 @@ fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
 }
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"sessionmgr"});
+  syslog::SetTags({"sessionmgr"});
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
   auto config_reader = modular::ModularConfigReader::CreateFromNamespace();

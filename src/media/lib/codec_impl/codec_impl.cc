@@ -3103,7 +3103,7 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // official way, especially if doing so would print a timestamp automatically
   // and/or provide filtering goodness etc.
   const char* message = is_fatal ? "devhost will fail" : "Codec channel will close async";
-  // Logs to syslog if syslog::InitLogger called by non-driver client
+  // Logs to syslog for non-driver clients
   FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
   // Default logging to stderr for both driver and non-driver clients
   LOG(ERROR, "%s -- %s", buffer.get(), message);
@@ -3259,7 +3259,8 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // This failure is async, in the sense that the client may still be sending
     // input data, and the core codec is expected to just hold onto those
     // packets until the client has moved on from this stream.
-    LOG(ERROR, "onStreamFailed() - stream_lifetime_ordinal_: %lu error code: 0x%08x", stream_lifetime_ordinal_, error);
+    LOG(ERROR, "onStreamFailed() - stream_lifetime_ordinal_: %lu error code: 0x%08x",
+        stream_lifetime_ordinal_, error);
     if (!is_on_stream_failed_enabled_) {
       FailLocked(
           "onStreamFailed() with a client that didn't send "

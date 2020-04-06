@@ -58,14 +58,19 @@ struct LogSettings {
   int fd;
 };
 
-// Creates default logger from provided tags and settings.
-// Returns zx_status_t if it is not able to create logger.
+// Sets the settings and tags for the global logger.
+zx_status_t SetSettings(const syslog::LogSettings& settings,
+                        const std::initializer_list<std::string>& tags);
+
+// Sets the tags for the global logger.
+zx_status_t SetTags(const std::initializer_list<std::string>& tags);
+
+// DEPRECATED. Do not use.
+zx_status_t InitLogger(const std::initializer_list<std::string>& tags);
+
+// DEPRECATED. Do not use.
 zx_status_t InitLogger(const syslog::LogSettings& settings,
                        const std::initializer_list<std::string>& tags);
-
-// Creates default logger from provided tags.
-// Returns zx_status_t if it is not able to create logger.
-zx_status_t InitLogger(const std::initializer_list<std::string>& tags);
 
 // Creates default logger.
 // Returns zx_status_t if it is not able to create logger.

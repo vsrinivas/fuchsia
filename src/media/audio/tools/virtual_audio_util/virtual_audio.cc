@@ -1137,7 +1137,7 @@ void VirtualAudioUtil::PositionCallback(zx_time_t time_for_pos, uint32_t rb_pos)
 }  // namespace virtual_audio
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"virtual_audio_util"});
+  syslog::SetTags({"virtual_audio_util"});
 
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

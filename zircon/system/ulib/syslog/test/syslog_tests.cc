@@ -56,7 +56,7 @@ bool test_log_init_with_socket(void) {
                                .tags = nullptr,
                                .num_tags = 0};
   fx_log_reset_global_for_testing();
-  EXPECT_EQ(ZX_OK, fx_log_init_with_config(&config), "");
+  EXPECT_EQ(ZX_OK, fx_log_reconfigure(&config), "");
   END_TEST;
 }
 
@@ -70,7 +70,7 @@ bool test_log_enabled_macro(void) {
                                .log_service_channel = socket1.release(),
                                .tags = nullptr,
                                .num_tags = 0};
-  EXPECT_EQ(ZX_OK, fx_log_init_with_config(&config), "");
+  EXPECT_EQ(ZX_OK, fx_log_reconfigure(&config), "");
   if (FX_VLOG_IS_ENABLED(1)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
@@ -91,7 +91,7 @@ static inline zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
                                .tags = tags,
                                .num_tags = ntags};
 
-  return fx_log_init_with_config(&config);
+  return fx_log_reconfigure(&config);
 }
 
 bool test_log_simple_write(void) {

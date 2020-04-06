@@ -308,7 +308,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_net"});
+  syslog::SetTags({"virtio_net"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

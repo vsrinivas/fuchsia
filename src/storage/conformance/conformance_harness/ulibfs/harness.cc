@@ -159,7 +159,7 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  syslog::InitLogger({"io_conformance_harness_ulibfs"});
+  syslog::SetTags({"io_conformance_harness_ulibfs"});
 
   UlibfsHarness harness;
   fidl::BindingSet<fuchsia::io::test::Io1Harness> bindings;

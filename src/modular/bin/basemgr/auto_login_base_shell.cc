@@ -124,8 +124,8 @@ class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseSh
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"auto_login_base_shell"});
-  
+  syslog::SetTags({"auto_login_base_shell"});
+
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   modular::Settings settings(command_line);
 

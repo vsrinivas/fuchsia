@@ -464,7 +464,7 @@ zx_status_t ArmIspDevice::Init(void** ctx_out) {
   fx_logger_config_t config{};
   config.min_severity = FX_LOG_INFO;
   config.console_fd = STDERR_FILENO;
-  return fx_log_init_with_config(&config);  // Used by submodules
+  return fx_log_reconfigure(&config);  // Used by submodules
 }
 
 // static

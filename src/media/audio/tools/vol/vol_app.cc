@@ -606,7 +606,7 @@ class VolApp {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"vol_util"});
+  syslog::SetTags({"vol_util"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   media::VolApp app(argc, argv,

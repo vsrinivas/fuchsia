@@ -6,7 +6,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"shell", "interpreter"});
+  syslog::SetTags({"shell", "interpreter"});
 
   shell::interpreter::server::Server server;
   if (!server.Listen()) {

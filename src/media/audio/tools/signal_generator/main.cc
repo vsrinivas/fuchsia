@@ -165,7 +165,7 @@ void usage(const char* prog_name) {
 }
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"signal_generator"});
+  syslog::SetTags({"signal_generator"});
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 

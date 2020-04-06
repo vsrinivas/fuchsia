@@ -13,8 +13,6 @@
 
 #include <src/lib/syslog/cpp/logger.h>
 
-using syslog::InitLogger;
-
 class FizzBuzz final : public fuchsia::examples::inspect::FizzBuzz {
  public:
   FizzBuzz(inspect::Node node) : node_(std::move(node)) {
@@ -67,7 +65,7 @@ class FizzBuzz final : public fuchsia::examples::inspect::FizzBuzz {
 };
 
 int main(int argc, char** argv) {
-  InitLogger({"inspect_cpp_codelab", "fizzbuzz"});
+  syslog::SetTags({"inspect_cpp_codelab", "fizzbuzz"});
 
   FX_LOGS(INFO) << "Starting up...";
 

@@ -13,10 +13,8 @@
 
 #include "reverser.h"
 
-using syslog::InitLogger;
-
 int main(int argc, char** argv) {
-  InitLogger({"inspect_cpp_codelab", "part2"});
+  syslog::SetTags({"inspect_cpp_codelab", "part2"});
 
   FX_LOGS(INFO) << "Starting up...";
 

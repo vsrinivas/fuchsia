@@ -228,8 +228,8 @@ bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
 }
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"sessionctl"});
-  
+  syslog::SetTags({"sessionctl"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

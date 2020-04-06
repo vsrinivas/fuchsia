@@ -226,7 +226,7 @@ zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources(
 }
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_magma"});
+  syslog::SetTags({"virtio_magma"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

@@ -163,7 +163,7 @@ void MediaApp::Shutdown() {
 }  // namespace examples
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"simple_sine"});
+  syslog::SetTags({"simple_sine"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_context = sys::ComponentContext::Create();

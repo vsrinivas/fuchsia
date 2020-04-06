@@ -12,7 +12,7 @@
 #include "src/ui/a11y/bin/a11y_tts_log_engine/log_engine.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"a11y_tts_log_engine"});
+  syslog::SetTags({"a11y_tts_log_engine"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   auto context = sys::ComponentContext::Create();

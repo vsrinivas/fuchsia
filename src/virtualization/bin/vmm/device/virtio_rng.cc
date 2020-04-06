@@ -60,7 +60,7 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_rng"});
+  syslog::SetTags({"virtio_rng"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

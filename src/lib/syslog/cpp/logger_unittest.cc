@@ -42,7 +42,7 @@ inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t nta
                                .tags = tags,
                                .num_tags = ntags};
 
-  return fx_log_init_with_config(&config);
+  return fx_log_reconfigure(&config);
 }
 
 // This version of output_compare_helper takes |local| by pointer so that
@@ -75,7 +75,7 @@ TEST(LogInit, Init) {
   Cleanup cleanup;
   ASSERT_EQ(ZX_OK, syslog::InitLogger());
   fx_log_reset_global_for_testing();
-  ASSERT_EQ(ZX_OK, syslog::InitLogger({"tag1", "tag2"}));
+  ASSERT_EQ(ZX_OK, syslog::SetTags({"tag1", "tag2"}));
 }
 
 TEST(Logger, LogSimple) {

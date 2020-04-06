@@ -36,7 +36,9 @@ static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
 // - ZX_ERR_INVALID_ARGS if config is invalid (i.e. is null or has more than
 //   FX_LOG_MAX_TAGS tags),
 // - ZX_OK if the reconfiguration succeeds.
-// TODO(samans): Rename this function. https://fxbug.dev/49001
+zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
+
+// DEPRECATED. Do not use.
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
 
 // Deprecated. Doesn't do anything and always returns ZX_OK.

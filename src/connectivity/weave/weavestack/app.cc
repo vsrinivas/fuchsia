@@ -29,7 +29,7 @@ void App::Quit() {
 }
 
 zx_status_t App::Init() {
-  syslog::InitLogger({"weavestack"});
+  syslog::SetTags({"weavestack"});
 
   if (initialized_) {
     return ZX_ERR_BAD_STATE;
@@ -41,9 +41,7 @@ zx_status_t App::Init() {
     return ZX_ERR_INTERNAL;
   }
 
-  sleep_task_ = std::make_unique<async::TaskClosure>([this]{
-    FdHandler(ZX_OK, 0);
-  });
+  sleep_task_ = std::make_unique<async::TaskClosure>([this] { FdHandler(ZX_OK, 0); });
   initialized_ = true;
 
   return ZX_OK;
@@ -92,7 +90,7 @@ zx_status_t App::StartFdWaiters(void) {
     }
   }
 
-  zx::duration duration( ZX_SEC(sleep_time.tv_sec) + ZX_USEC(sleep_time.tv_usec) );
+  zx::duration duration(ZX_SEC(sleep_time.tv_sec) + ZX_USEC(sleep_time.tv_usec));
   return sleep_task_->PostDelayed(loop_.dispatcher(), duration);
 }
 void App::ClearWaiters() {

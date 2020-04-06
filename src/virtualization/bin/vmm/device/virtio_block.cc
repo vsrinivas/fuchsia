@@ -292,7 +292,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_block"});
+  syslog::SetTags({"virtio_block"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

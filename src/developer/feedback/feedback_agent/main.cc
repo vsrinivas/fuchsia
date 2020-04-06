@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"feedback"});
+  syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

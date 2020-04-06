@@ -258,7 +258,7 @@ class TunTest : public gtest::RealLoopFixture {
         .tags = nullptr,
         .num_tags = 0,
     };
-    fx_log_init_with_config(&log_cfg);
+    fx_log_reconfigure(&log_cfg);
     ASSERT_OK(loop_.StartThread("tun-test"));
   }
 

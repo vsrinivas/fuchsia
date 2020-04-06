@@ -39,7 +39,7 @@ void ConnectToIsolate(fidl::InterfaceRequest<Interface> request, fuchsia::sys::L
 }
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"mediaplayer"});
+  syslog::SetTags({"mediaplayer"});
 
   bool transient = false;
   for (int arg_index = 0; arg_index < argc; ++arg_index) {

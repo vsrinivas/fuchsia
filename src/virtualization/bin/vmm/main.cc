@@ -92,7 +92,7 @@ static zx_status_t read_guest_cfg(const char* cfg_path, fuchsia::virtualization:
 }
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"vmm"});
+  syslog::SetTags({"vmm"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Loop device_loop(&kAsyncLoopConfigNoAttachToCurrentThread);

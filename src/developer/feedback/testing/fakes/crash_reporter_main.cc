@@ -12,7 +12,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"feedback", "test"});
+  syslog::SetTags({"feedback", "test"});
 
   FX_LOGS(INFO) << "Starting FakeCrashReporter";
 

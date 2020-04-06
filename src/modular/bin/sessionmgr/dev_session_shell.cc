@@ -170,8 +170,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 }  // namespace
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"dev_session_shell"});
-  
+  syslog::SetTags({"dev_session_shell"});
+
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 

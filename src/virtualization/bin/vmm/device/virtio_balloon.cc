@@ -221,7 +221,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_balloon"});
+  syslog::SetTags({"virtio_balloon"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

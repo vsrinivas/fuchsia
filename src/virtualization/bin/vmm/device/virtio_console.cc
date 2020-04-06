@@ -157,7 +157,7 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_console"});
+  syslog::SetTags({"virtio_console"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

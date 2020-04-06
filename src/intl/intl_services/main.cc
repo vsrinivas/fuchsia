@@ -13,7 +13,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main() {
-  syslog::InitLogger({"intl_services"});
+  syslog::SetTags({"intl_services"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 

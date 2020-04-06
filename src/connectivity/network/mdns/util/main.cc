@@ -12,7 +12,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"mdns-util"});
+  syslog::SetTags({"mdns-util"});
 
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   mdns::MdnsParams params(command_line);

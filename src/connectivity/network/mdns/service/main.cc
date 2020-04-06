@@ -10,7 +10,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"mdns"});
+  syslog::SetTags({"mdns"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

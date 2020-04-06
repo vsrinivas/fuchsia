@@ -689,7 +689,7 @@ void FxProcessor::UpdatePreampGain(float delta) {
 void usage(const char* prog_name) { printf("usage: %s [input_dev_num]\n", prog_name); }
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"fx"});
+  syslog::SetTags({"fx"});
 
   uint32_t input_num = 0;
 

@@ -262,7 +262,7 @@ pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
         tags: c_tags.as_ptr(),
         num_tags: c_tags.len(),
     };
-    let status = unsafe { syslog::fx_log_init_with_config(&config) };
+    let status = unsafe { syslog::fx_log_reconfigure(&config) };
     if status == zx::Status::OK.into_raw() {
         log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
         log::set_max_level(log::LevelFilter::Info);
@@ -311,7 +311,7 @@ mod test {
             tags: ptr::null(),
             num_tags: 0,
         };
-        let status = unsafe { syslog::fx_log_init_with_config(&config) };
+        let status = unsafe { syslog::fx_log_reconfigure(&config) };
         assert_eq!(status, zx::Status::OK.into_raw());
 
         fx_log_info!("info msg {}", 10);

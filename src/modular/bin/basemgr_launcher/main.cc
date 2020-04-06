@@ -125,7 +125,7 @@ fit::result<std::string, std::string> GetConfigFromArgs(fxl::CommandLine command
 }
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"basemgr_launcher"});
+  syslog::SetTags({"basemgr_launcher"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::string config_str = "";

@@ -174,7 +174,7 @@ class LifecycleImpl : public fuchsia::modular::Lifecycle {
 };
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"basemgr"});
+  syslog::SetTags({"basemgr"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fuchsia::modular::session::ModularConfig modular_config;

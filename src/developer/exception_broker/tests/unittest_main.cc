@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
 
   testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"exception-broker", "unittest"});
+  syslog::SetTags({"exception-broker", "unittest"});
 
   return RUN_ALL_TESTS();
 }

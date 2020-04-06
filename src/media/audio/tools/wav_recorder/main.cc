@@ -8,7 +8,7 @@
 #include "src/media/audio/tools/wav_recorder/wav_recorder.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"wav_recorder"});
+  syslog::SetTags({"wav_recorder"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();

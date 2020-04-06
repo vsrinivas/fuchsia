@@ -105,7 +105,7 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   auto pid = fsl::GetCurrentProcessKoid();
   auto tag = "logger_integration_cpp_test.ListenFiltered";
   auto message = "my message";
-  ASSERT_EQ(syslog::InitLogger({tag}), ZX_OK);
+  ASSERT_EQ(syslog::SetTags({tag}), ZX_OK);
   FX_LOGS(INFO) << message;
 
   // Start the log listener and the logger, and wait for the log message to

@@ -42,7 +42,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
                            bool is_secure_input, uint32_t min_output_buffer_count,
                            std::string golden_sha256) {
   syslog::LogSettings settings = {.fd = STDERR_FILENO, .severity = FX_LOG_INFO};
-  zx_status_t status = syslog::InitLogger(settings, {"use_video_decoder_test"});
+  zx_status_t status = syslog::SetSettings(settings, {"use_video_decoder_test"});
   ZX_ASSERT(status == ZX_OK);
   fx_logger_t* logger = fx_log_get_logger();
   ZX_ASSERT(logger);

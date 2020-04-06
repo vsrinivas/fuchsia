@@ -45,8 +45,13 @@ SYSLOG_EXPORT
 zx_status_t fx_log_init(void) { return ZX_OK; }
 
 SYSLOG_EXPORT
-zx_status_t fx_log_init_with_config(const fx_logger_config_t* config) {
+zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
   return fx_log_get_logger()->Reconfigure(config);
+}
+
+SYSLOG_EXPORT
+zx_status_t fx_log_init_with_config(const fx_logger_config_t* config) {
+  return fx_log_reconfigure(config);
 }
 
 // This is here to force a definition to be included here for C99.

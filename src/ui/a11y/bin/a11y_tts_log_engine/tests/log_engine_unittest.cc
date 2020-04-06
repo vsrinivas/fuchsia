@@ -46,7 +46,7 @@ class LogEngineTest : public gtest::TestLoopFixture {
                                  .tags = nullptr,
                                  .num_tags = 0};
 
-    return fx_log_init_with_config(&config);
+    return fx_log_reconfigure(&config);
   }
 
   // Reads log packets from |log_socket_local_| and outputs each message to |log_output_|.

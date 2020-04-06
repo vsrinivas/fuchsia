@@ -9,7 +9,7 @@
 #include "src/media/audio/virtual_audio_service/virtual_audio_service_impl.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"virtual_audio_service"});
+  syslog::SetTags({"virtual_audio_service"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

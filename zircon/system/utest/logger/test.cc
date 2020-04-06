@@ -86,7 +86,7 @@ class Fixture {
                                  .tags = tags,
                                  .num_tags = ntags};
 
-    ASSERT_EQ(ZX_OK, fx_log_init_with_config(&config));
+    ASSERT_EQ(ZX_OK, fx_log_reconfigure(&config));
     return true;
   }
 

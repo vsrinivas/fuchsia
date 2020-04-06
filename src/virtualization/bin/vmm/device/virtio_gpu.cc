@@ -371,7 +371,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_gpu"});
+  syslog::SetTags({"virtio_gpu"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

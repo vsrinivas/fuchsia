@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/wire_format.h>
 #include <lib/zx/socket.h>
-#include <unittest/unittest.h>
-
-#include <errno.h>
-#include <fcntl.h>
 #include <poll.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <utility>
+
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
 
 __BEGIN_CDECLS
 
@@ -32,7 +32,7 @@ inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t nta
                                .tags = tags,
                                .num_tags = ntags};
 
-  return fx_log_init_with_config(&config);
+  return fx_log_reconfigure(&config);
 }
 
 namespace {

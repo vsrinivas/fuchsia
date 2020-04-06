@@ -40,7 +40,7 @@ static constexpr uint32_t kNumVmos = 4;
 class AudioConsumerTests : public sys::testing::TestWithEnvironment {
  protected:
   void SetUp() override {
-    syslog::InitLogger({"mediaplayer"});
+    syslog::SetTags({"mediaplayer"});
 
     auto services = CreateServices();
 

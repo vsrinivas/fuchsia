@@ -21,7 +21,7 @@ constexpr size_t kMaxWriteSizeInBytes = 8 * 1024;
 int main(int argc, const char** argv) {
   using namespace feedback;
 
-  syslog::InitLogger({"feedback"});
+  syslog::SetTags({"feedback"});
 
   async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Loop write_loop(&kAsyncLoopConfigNoAttachToCurrentThread);

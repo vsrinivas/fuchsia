@@ -926,7 +926,7 @@ bool VirtioWl::AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
 }
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_wl"});
+  syslog::SetTags({"virtio_wl"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

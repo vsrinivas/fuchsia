@@ -12,7 +12,7 @@
 namespace shell::console {
 
 int ConsoleMain(int argc, const char** argv) {
-  syslog::InitLogger({"cliff"});
+  syslog::SetTags({"cliff"});
   ScopedInterpreter interpreter;
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);

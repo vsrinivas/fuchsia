@@ -28,7 +28,7 @@ void LogProcessLimboStatus(const fuchsia::exception::ProcessLimboManager& limbo)
 }  // namespace
 
 int main() {
-  syslog::InitLogger({"exception-broker"});
+  syslog::SetTags({"exception-broker"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

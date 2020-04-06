@@ -12,8 +12,8 @@
 
 namespace syslog {
 
-zx_status_t InitLogger(const syslog::LogSettings& settings,
-                       const std::initializer_list<std::string>& tags) {
+zx_status_t SetSettings(const syslog::LogSettings& settings,
+                        const std::initializer_list<std::string>& tags) {
   if (tags.size() > FX_LOG_MAX_TAGS) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -27,13 +27,21 @@ zx_status_t InitLogger(const syslog::LogSettings& settings,
                                .log_service_channel = ZX_HANDLE_INVALID,
                                .tags = ctags,
                                .num_tags = tags.size()};
-  return fx_log_init_with_config(&config);
+  return fx_log_reconfigure(&config);
 }
 
-zx_status_t InitLogger(const std::initializer_list<std::string>& tags) {
-  LogSettings settings = {.severity = FX_LOG_INFO, .fd = -1};
-  return InitLogger(settings, tags);
+zx_status_t SetTags(const std::initializer_list<std::string>& tags) {
+  fx_logger_t* logger = fx_log_get_logger();
+  LogSettings settings = {.severity = fx_logger_get_min_severity(logger), .fd = -1};
+  return SetSettings(settings, tags);
 }
+
+zx_status_t InitLogger(const syslog::LogSettings& settings,
+                       const std::initializer_list<std::string>& tags) {
+  return SetSettings(settings, tags);
+}
+
+zx_status_t InitLogger(const std::initializer_list<std::string>& tags) { return SetTags(tags); }
 
 zx_status_t InitLogger() { return fx_log_init(); }
 

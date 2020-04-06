@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
 
   testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"exception-broker", "integration-test"});
+  syslog::SetTags({"exception-broker", "integration-test"});
 
   return RUN_ALL_TESTS();
 }

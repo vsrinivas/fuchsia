@@ -42,7 +42,7 @@ bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) {
                                .tags = nullptr,
                                .num_tags = 0};
 
-  status = fx_log_init_with_config(&config);
+  status = fx_log_reconfigure(&config);
   if (status != ZX_OK)
     return false;
 

@@ -126,7 +126,7 @@ int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunctio
 int video_fuzzer_test(std::string input_file_path, UseVideoDecoderFunction use_video_decoder,
                       uint32_t iteration_count, fxl::CommandLine command_line) {
   syslog::LogSettings settings = {.severity = FX_LOG_INFO, .fd = STDERR_FILENO};
-  zx_status_t status = syslog::InitLogger(settings, {"video_decoder_fuzzer_test"});
+  zx_status_t status = syslog::SetSettings(settings, {"video_decoder_fuzzer_test"});
   ZX_ASSERT(status == ZX_OK);
   fx_logger_t* logger = fx_log_get_logger();
   ZX_ASSERT(logger);

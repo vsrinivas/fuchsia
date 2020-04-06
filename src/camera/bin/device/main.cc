@@ -14,7 +14,7 @@
 #include "src/camera/bin/device/device_impl.h"
 
 int main(int argc, char* argv[]) {
-  syslog::InitLogger({"camera", "camera_device"});
+  syslog::SetTags({"camera", "camera_device"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

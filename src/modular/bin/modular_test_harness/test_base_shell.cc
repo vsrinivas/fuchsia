@@ -82,8 +82,8 @@ class TestBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> 
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"test_base_shell"});
-  
+  syslog::SetTags({"test_base_shell"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();

@@ -14,7 +14,7 @@ int main(int argc, const char** argv) {
   runThirdPartyFunc();
   otstack::OtStackApp app;
 
-  syslog::InitLogger({"ot-stack"});
+  syslog::SetTags({"ot-stack"});
 
   if (argc < 2) {
     FX_LOGS(ERROR) << "invalid number of arguments provided\n";

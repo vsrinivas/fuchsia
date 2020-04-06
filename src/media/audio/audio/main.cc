@@ -11,7 +11,7 @@
 #include "src/media/audio/audio/audio_core_client.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"audio_core_client"});
+  syslog::SetTags({"audio_core_client"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

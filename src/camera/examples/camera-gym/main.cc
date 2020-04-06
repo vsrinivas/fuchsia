@@ -4,13 +4,14 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
 #include <src/lib/syslog/cpp/logger.h>
 #include <src/lib/ui/base_view/view_provider_component.h>
 
 #include "display_view.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"camera-gym"});
+  syslog::SetTags({"camera-gym"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   scenic::ViewProviderComponent component(
       [&](scenic::ViewContext context) {

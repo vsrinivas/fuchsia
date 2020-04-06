@@ -167,8 +167,8 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"dev_bse_shell"});
-  
+  syslog::SetTags({"dev_bse_shell"});
+
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   modular::Settings settings(command_line);
 

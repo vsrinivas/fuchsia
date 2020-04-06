@@ -25,7 +25,7 @@ constexpr char kFloatFormatSwitch[] = "float";
 }  // namespace
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"sync_sine"});
+  syslog::SetTags({"sync_sine"});
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 

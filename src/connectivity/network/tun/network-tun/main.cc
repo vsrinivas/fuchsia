@@ -19,7 +19,7 @@ int main(int argc, const char** argv) {
       nullptr,            // tags
       0,                  // num_tags
   };
-  fx_log_init_with_config(&config);
+  fx_log_reconfigure(&config);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   network::tun::TunCtl ctl(loop.dispatcher());

@@ -9,7 +9,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main() {
-  syslog::InitLogger({"camera_manager"});
+  syslog::SetTags({"camera_manager"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

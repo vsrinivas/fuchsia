@@ -11,7 +11,7 @@
 #include "src/media/audio/examples/tones/tones.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"tones"});
+  syslog::SetTags({"tones"});
 
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

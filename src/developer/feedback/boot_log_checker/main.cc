@@ -16,7 +16,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"feedback"});
+  syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());

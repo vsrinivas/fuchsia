@@ -135,8 +135,8 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  syslog::InitLogger({"dev_story_shell"});
-  
+  syslog::SetTags({"dev_story_shell"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();

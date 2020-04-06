@@ -409,7 +409,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
 };
 
 int main(int argc, char** argv) {
-  syslog::InitLogger({"virtio_input"});
+  syslog::SetTags({"virtio_input"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

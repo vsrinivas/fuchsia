@@ -25,7 +25,7 @@ class MacDeviceTest : public zxtest::Test {
         .tags = nullptr,
         .num_tags = 0,
     };
-    fx_log_init_with_config(&log_cfg);
+    fx_log_reconfigure(&log_cfg);
   }
 
   void TearDown() override {
