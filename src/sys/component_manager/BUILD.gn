@@ -98,6 +98,7 @@ rustc_binary("bin") {
   name = "component_manager"
   with_unit_tests = true
   edition = "2018"
+  force_opt = "z"
 
   # Component manager must always be small (even in debug builds) since it
   # is part of the Zircon boot image.
@@ -110,8 +111,6 @@ rustc_binary("bin") {
   configs += [ "//build/config/lto:thinlto" ]
   configs -= [ "//build/config/lto:thinlto" ]
   configs += [ "//build/config/lto:thinlto" ]
-
-  force_opt = "z"
 
   deps = [
     ":lib",

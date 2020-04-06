@@ -11,9 +11,6 @@ rustc_binary("merge_sdk") {
   source_root = "src/main.rs"
   force_opt = "3"
 
-  configs -= [ "//build/config/lto:default" ]
-  configs += [ "//build/config/lto:lto" ]
-
   deps = [
     "//build/sdk/meta:rust",
     "//third_party/rust_crates:anyhow",

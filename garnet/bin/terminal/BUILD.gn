@@ -59,10 +59,6 @@ rustc_binary("bin") {
   source_root = "src/bin/terminal.rs"
   with_unit_tests = true
 
-  configs += [ "//build/config/lto" ]
-  configs -= [ "//build/config/lto" ]
-  configs += [ "//build/config/lto" ]
-
   deps = [
     ":lib",
     "//src/lib/trace/rust:trace-provider",

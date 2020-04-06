@@ -24,10 +24,6 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2018"
 
-  configs += [ "//build/config/lto" ]
-  configs -= [ "//build/config/lto" ]
-  configs += [ "//build/config/lto" ]
-
   deps = [
     ":wlan_metrics_registry_rustlib",
     "////sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
