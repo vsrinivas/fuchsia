@@ -45,6 +45,9 @@ type Target interface {
 	// IPv4Addr returns the IPv4 address of the target.
 	IPv4Addr() (net.IP, error)
 
+	// IPv6Addr returns the global unicast IPv6 address of the target.
+	IPv6Addr() string
+
 	// Serial returns the serial device associated with the target for serial i/o.
 	Serial() io.ReadWriteCloser
 
@@ -271,6 +274,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 	subprocessEnv := map[string]string{
 		"FUCHSIA_NODENAME":      t.Nodename(),
 		"FUCHSIA_SERIAL_SOCKET": socketPath,
+		"FUCHSIA_IPV6_ADDR":     t.IPv6Addr(),
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned

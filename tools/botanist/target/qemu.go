@@ -37,11 +37,10 @@ const (
 	// DefaultInterfaceName is the name given to the emulated tap interface.
 	defaultInterfaceName = "qemu"
 
-	// DefaultMACAddr is the default MAC address given to a QEMU target.
-	defaultMACAddr = "52:54:00:63:5e:7a"
-
-	// DefaultNodename is the default nodename given to an target with the default QEMU MAC address.
-	defaultNodename = "step-atom-yard-juicy"
+	// Default networking values.
+	defaultMACAddr       = "52:54:00:63:5e:7a"
+	defaultLinkLocalAddr = "fe80::5054:ff:fe63:5e7a"
+	defaultNodename      = "step-atom-yard-juicy"
 )
 
 // qemuTargetMapping maps the Fuchsia target name to the name recognized by QEMU.
@@ -138,6 +137,11 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 // Nodename returns the name of the target node.
 func (t *QEMUTarget) Nodename() string {
 	return defaultNodename
+}
+
+// IPv6Addr returns the global unicast IPv6 address of the qemu instance.
+func (t *QEMUTarget) IPv6Addr() string {
+	return fmt.Sprintf("%s%%%s", defaultLinkLocalAddr, defaultInterfaceName)
 }
 
 // IPv4Addr returns a nil address, as DHCP is not currently configured.

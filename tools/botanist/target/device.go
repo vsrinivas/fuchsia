@@ -75,6 +75,7 @@ type DeviceTarget struct {
 	signers []ssh.Signer
 	serial  io.ReadWriteCloser
 	tftp    tftp.Client
+	addr    *net.UDPAddr
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
@@ -117,6 +118,7 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 		signers: signers,
 		serial:  s,
 		tftp:    t,
+		addr:    addr,
 	}, nil
 }
 
@@ -128,6 +130,11 @@ func (t *DeviceTarget) Tftp() tftp.Client {
 // Nodename returns the name of the node.
 func (t *DeviceTarget) Nodename() string {
 	return t.config.Network.Nodename
+}
+
+// IPv6Addr returns the global unicast IPv6 address of the device.
+func (t *DeviceTarget) IPv6Addr() string {
+	return fmt.Sprintf("%s%%%s", t.addr.IP, t.addr.Zone)
 }
 
 // IPv4Addr returns the IPv4 address of the node. If not provided in the config, then it
