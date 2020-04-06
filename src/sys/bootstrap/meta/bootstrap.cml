@@ -1,4 +1,12 @@
 {
+  "environments": [
+    {
+      "name": "fshost-env",
+      "extends": "realm",
+      // 20 minutes
+      "__stop_timeout_ms": 1200000,
+    },
+  ],
   "children": [
     {
       "name": "driver_manager",
@@ -7,6 +15,7 @@
     {
       "name": "fshost",
       "url": "fuchsia-boot:///#meta/fshost.cm",
+      "environment": "#fshost-env",
     },
     {
       "name": "console",
