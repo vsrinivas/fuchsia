@@ -24,7 +24,7 @@ namespace fidl {
 // Wraps around fuchsia::update::channel::ProviderPtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
 //
-// GetCurrentChannel() is expected to be called only once.
+// Supports only one call to GetCurrentChannel().
 class ChannelProviderPtr {
  public:
   // fuchsia.update.channel.Provider is expected to be in |services|.
@@ -41,7 +41,7 @@ class ChannelProviderPtr {
   bool has_called_get_current_channel_ = false;
 
   fuchsia::update::channel::ProviderPtr connection_;
-  Bridge<std::string> bridge_;
+  Bridge<std::string> pending_call_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProviderPtr);
 };

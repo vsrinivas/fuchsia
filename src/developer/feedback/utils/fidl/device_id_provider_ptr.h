@@ -21,13 +21,14 @@
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
+namespace fidl {
 
 // Wraps around fuchsia::feedback::DeviceIdProviderPtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
-class FeedbackDeviceIdProvider {
+class DeviceIdProviderPtr {
  public:
-  FeedbackDeviceIdProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services);
+  DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
+                      std::shared_ptr<sys::ServiceDirectory> services);
 
   fit::promise<std::string> GetId(zx::duration timeout);
 
@@ -40,21 +41,22 @@ class FeedbackDeviceIdProvider {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  fuchsia::feedback::DeviceIdProviderPtr device_id_provider_;
+
+  fuchsia::feedback::DeviceIdProviderPtr connection_;
+  BridgeMap<> pending_calls_;
 
   // The std::unique_ptr<> indicates whether the value is cached, the std::optional<> indicates
   // whether the cached value is an actual id.
   std::unique_ptr<std::optional<std::string>> device_id_;
 
-  BridgeMap<> pending_get_id_;
-
   // We need to be able to cancel a posted retry task when |this| is destroyed.
   fxl::CancelableClosure cache_id_task_;
   backoff::ExponentialBackoff cache_id_backoff_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackDeviceIdProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceIdProviderPtr);
 };
 
+}  // namespace fidl
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DEVICE_ID_PROVIDER_H_

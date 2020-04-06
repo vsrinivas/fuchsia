@@ -31,6 +31,12 @@ test_package("feedback_utils_tests") {
       name = "cobalt_unittest"
     },
     {
+      name = "data_provider_ptr_unittest"
+    },
+    {
+      name = "device_id_provider_ptr_unittest"
+    },
+    {
       name = "inspect_node_manager_unittest"
     },
     {
@@ -69,6 +75,8 @@ test_package("feedback_utils_tests") {
     ":bridge_unittest",
     ":channel_provider_ptr_unittest",
     ":cobalt_unittest",
+    ":data_provider_ptr_unittest",
+    ":device_id_provider_ptr_unittest",
     ":inspect_node_manager_unittest",
     ":inspect_protocol_stats_unittest",
     ":log_format_unittest",
@@ -150,6 +158,37 @@ executable("cobalt_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("data_provider_ptr_unittest") {
+  testonly = true
+
+  sources = [ "data_provider_ptr_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:data_provider",
+    "//src/developer/feedback/utils/fidl:data_provider_ptr",
+    "//src/lib/fsl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("device_id_provider_ptr_unittest") {
+  testonly = true
+
+  sources = [ "device_id_provider_ptr_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:device_id_provider",
+    "//src/developer/feedback/utils/fidl:device_id_provider_ptr",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

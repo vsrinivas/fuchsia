@@ -97,8 +97,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       queue_(std::move(queue)),
       info_(std::move(info_context)),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
-      data_provider_(dispatcher_, services_),
-      device_id_provider_(dispatcher_, services_),
+      data_provider_ptr_(dispatcher_, services_),
+      device_id_provider_ptr_(dispatcher_, services_),
       build_version_(ReadStringFromFile("/config/build-info/version")) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
@@ -127,8 +127,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
-  auto data_promise = data_provider_.GetData(kCrashReportGenerationTimeout);
-  auto device_id_promise = device_id_provider_.GetId(kCrashReportGenerationTimeout);
+  auto data_promise = data_provider_ptr_.GetData(kCrashReportGenerationTimeout);
+  auto device_id_promise = device_id_provider_ptr_.GetId(kCrashReportGenerationTimeout);
 
   auto promise = fit::join_promises(std::move(data_promise), std::move(device_id_promise))
                      .then([this, report = std::move(report)](

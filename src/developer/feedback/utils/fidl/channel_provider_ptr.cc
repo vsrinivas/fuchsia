@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
 
+#include <zircon/types.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -11,7 +13,7 @@ namespace fidl {
 
 ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<sys::ServiceDirectory> services)
-    : services_(services), bridge_(dispatcher, "Current update channel retrieval") {}
+    : services_(services), pending_call_(dispatcher, "Current update channel retrieval") {}
 
 fit::promise<std::string> ChannelProviderPtr::GetCurrentChannel(const zx::duration timeout,
                                                                 fit::closure if_timeout) {
@@ -22,23 +24,23 @@ fit::promise<std::string> ChannelProviderPtr::GetCurrentChannel(const zx::durati
   connection_ = services_->Connect<fuchsia::update::channel::Provider>();
 
   connection_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
+    if (pending_call_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.update.channel.Provider";
-    bridge_.CompleteError();
+    pending_call_.CompleteError();
   });
 
   connection_->GetCurrent([this](std::string channel) {
-    if (bridge_.IsAlreadyDone()) {
+    if (pending_call_.IsAlreadyDone()) {
       return;
     }
 
-    bridge_.CompleteOk(std::move(channel));
+    pending_call_.CompleteOk(std::move(channel));
   });
 
-  return bridge_.WaitForDone(timeout, std::move(if_timeout));
+  return pending_call_.WaitForDone(timeout, std::move(if_timeout));
 }
 
 }  // namespace fidl

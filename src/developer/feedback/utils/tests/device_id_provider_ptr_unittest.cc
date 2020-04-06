@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/crashpad_agent/feedback_device_id_provider.h"
+#include "src/developer/feedback/utils/fidl/device_id_provider_ptr.h"
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
@@ -16,23 +16,26 @@
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
+namespace fidl {
 namespace {
 
 constexpr zx::duration kDefaultTimeout = zx::sec(35);
 
 constexpr char kDefaultDeviceId[] = "device_id";
 
-class FeedbackDeviceIdProviderTest : public UnitTestFixture {
+class DeviceIdProviderPtrTest : public UnitTestFixture {
  public:
-  FeedbackDeviceIdProviderTest()
-      : UnitTestFixture(), executor_(dispatcher()), device_id_provider_(dispatcher(), services()) {}
+  DeviceIdProviderPtrTest()
+      : UnitTestFixture(),
+        executor_(dispatcher()),
+        device_id_provider_ptr_(dispatcher(), services()) {}
 
  protected:
-  void SetUpDeviceIdProvider(
-      std::unique_ptr<stubs::DeviceIdProvider> stub_feedback_device_id_provider) {
-    stub_feedback_device_id_provider_ = std::move(stub_feedback_device_id_provider);
-    if (stub_feedback_device_id_provider_) {
-      InjectServiceProvider(stub_feedback_device_id_provider_.get());
+  void SetUpDeviceIdProviderServer(
+      std::unique_ptr<stubs::DeviceIdProvider> device_id_provider_server) {
+    device_id_provider_server_ = std::move(device_id_provider_server);
+    if (device_id_provider_server_) {
+      InjectServiceProvider(device_id_provider_server_.get());
     }
   }
 
@@ -40,7 +43,7 @@ class FeedbackDeviceIdProviderTest : public UnitTestFixture {
     bool is_called = false;
     std::optional<std::string> device_id = std::nullopt;
     executor_.schedule_task(
-        device_id_provider_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
+        device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
           is_called = true;
 
           if (result.is_ok()) {
@@ -55,17 +58,18 @@ class FeedbackDeviceIdProviderTest : public UnitTestFixture {
 
   async::Executor executor_;
 
-  FeedbackDeviceIdProvider device_id_provider_;
-  std::unique_ptr<stubs::DeviceIdProvider> stub_feedback_device_id_provider_;
+  DeviceIdProviderPtr device_id_provider_ptr_;
+  std::unique_ptr<stubs::DeviceIdProvider> device_id_provider_server_;
 };
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_DeviceIsCachedInConstructor) {
-  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderExpectsOneCall>(kDefaultDeviceId));
+TEST_F(DeviceIdProviderPtrTest, Check_DeviceIsCachedInConstructor) {
+  SetUpDeviceIdProviderServer(
+      std::make_unique<stubs::DeviceIdProviderExpectsOneCall>(kDefaultDeviceId));
   RunLoopUntilIdle();
 }
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_CachedDeviceIdReturned) {
-  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+TEST_F(DeviceIdProviderPtrTest, Check_CachedDeviceIdReturned) {
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   RunLoopUntilIdle();
 
   const std::optional<std::string> id = GetId();
@@ -73,25 +77,26 @@ TEST_F(FeedbackDeviceIdProviderTest, Check_CachedDeviceIdReturned) {
   EXPECT_EQ(id.value(), kDefaultDeviceId);
 }
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_ErrorCachedInConstructor) {
-  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderReturnsError>());
+TEST_F(DeviceIdProviderPtrTest, Check_ErrorCachedInConstructor) {
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderReturnsError>());
   RunLoopUntilIdle();
 }
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_CachedErrorReturned) {
-  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderReturnsError>());
+TEST_F(DeviceIdProviderPtrTest, Check_CachedErrorReturned) {
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderReturnsError>());
   RunLoopUntilIdle();
 
   EXPECT_FALSE(GetId().has_value());
 }
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_ErrorOnTimeout) {
-  SetUpDeviceIdProvider(std::make_unique<stubs::DeviceIdProviderNeverReturns>(kDefaultDeviceId));
+TEST_F(DeviceIdProviderPtrTest, Check_ErrorOnTimeout) {
+  SetUpDeviceIdProviderServer(
+      std::make_unique<stubs::DeviceIdProviderNeverReturns>(kDefaultDeviceId));
 
   bool is_called = false;
   std::optional<std::string> device_id = std::nullopt;
   executor_.schedule_task(
-      device_id_provider_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
+      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
         is_called = true;
 
         if (result.is_ok()) {
@@ -104,8 +109,8 @@ TEST_F(FeedbackDeviceIdProviderTest, Check_ErrorOnTimeout) {
   EXPECT_FALSE(device_id.has_value());
 }
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_SuccessOnSecondAttempt) {
-  SetUpDeviceIdProvider(
+TEST_F(DeviceIdProviderPtrTest, Check_SuccessOnSecondAttempt) {
+  SetUpDeviceIdProviderServer(
       std::make_unique<stubs::DeviceIdProviderClosesFirstConnection>(kDefaultDeviceId));
   RunLoopUntilIdle();
 
@@ -117,11 +122,11 @@ TEST_F(FeedbackDeviceIdProviderTest, Check_SuccessOnSecondAttempt) {
   EXPECT_EQ(id.value(), kDefaultDeviceId);
 }
 
-TEST_F(FeedbackDeviceIdProviderTest, Check_ReturnErrorOnNoStub) {
+TEST_F(DeviceIdProviderPtrTest, Check_ReturnErrorOnNoServer) {
   bool is_called = false;
   std::optional<std::string> device_id = std::nullopt;
   executor_.schedule_task(
-      device_id_provider_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
+      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
         is_called = true;
 
         if (result.is_ok()) {
@@ -135,4 +140,5 @@ TEST_F(FeedbackDeviceIdProviderTest, Check_ReturnErrorOnNoStub) {
 }
 
 }  // namespace
+}  // namespace fidl
 }  // namespace feedback

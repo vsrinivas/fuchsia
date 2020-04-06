@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DATA_PROVIDER_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DATA_PROVIDER_PTR_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -17,28 +17,30 @@
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
+namespace fidl {
 
 // Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
-class FeedbackDataProvider {
+//
+// Supports multiple calls to GetData(). Only one connection exists at a time.
+class DataProviderPtr {
  public:
-  FeedbackDataProvider(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<sys::ServiceDirectory> services);
+  DataProviderPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   fit::promise<fuchsia::feedback::Data> GetData(zx::duration timeout);
 
  private:
-  void ConnectToDataProvider();
+  void Connect();
 
-  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  fuchsia::feedback::DataProviderPtr data_provider_;
 
-  BridgeMap<fuchsia::feedback::Data> pending_get_data_;
+  fuchsia::feedback::DataProviderPtr connection_;
+  BridgeMap<fuchsia::feedback::Data> pending_calls_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackDataProvider);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DataProviderPtr);
 };
 
+}  // namespace fidl
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DATA_PROVIDER_PTR_H_

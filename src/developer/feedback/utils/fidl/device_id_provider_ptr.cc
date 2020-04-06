@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/crashpad_agent/feedback_device_id_provider.h"
+#include "src/developer/feedback/utils/fidl/device_id_provider_ptr.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/bridge.h>
@@ -12,21 +12,22 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace fidl {
 
-FeedbackDeviceIdProvider::FeedbackDeviceIdProvider(async_dispatcher_t* dispatcher,
-                                                   std::shared_ptr<sys::ServiceDirectory> services)
+DeviceIdProviderPtr::DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
+                                         std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher),
       services_(services),
-      pending_get_id_(dispatcher_),
+      pending_calls_(dispatcher_),
       cache_id_backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u,
                         /*max_delay=*/zx::hour(1)) {
   CacheId();
 }
 
-void FeedbackDeviceIdProvider::CacheId() {
-  device_id_provider_ = services_->Connect<fuchsia::feedback::DeviceIdProvider>();
+void DeviceIdProviderPtr::CacheId() {
+  connection_ = services_->Connect<fuchsia::feedback::DeviceIdProvider>();
 
-  device_id_provider_.set_error_handler([this](zx_status_t status) {
+  connection_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection with fuchsia.feedback.DeviceIdProvider";
 
     cache_id_task_.Reset([this]() { CacheId(); });
@@ -35,16 +36,16 @@ void FeedbackDeviceIdProvider::CacheId() {
         cache_id_backoff_.GetNext());
   });
 
-  device_id_provider_->GetId([this](fuchsia::feedback::DeviceIdProvider_GetId_Result result) {
+  connection_->GetId([this](fuchsia::feedback::DeviceIdProvider_GetId_Result result) {
     device_id_ = std::make_unique<std::optional<std::string>>(std::nullopt);
     if (result.is_response()) {
       *device_id_ = result.response().ResultValue_();
     }
 
     // Complete all of the bridges, indicating a value is now cached.
-    pending_get_id_.CompleteAllOk();
+    pending_calls_.CompleteAllOk();
 
-    device_id_provider_.Unbind();
+    connection_.Unbind();
 
     // We never need to make another call nor re-connect.
     cache_id_backoff_.Reset();
@@ -52,24 +53,25 @@ void FeedbackDeviceIdProvider::CacheId() {
   });
 }
 
-fit::promise<std::string> FeedbackDeviceIdProvider::GetId(const zx::duration timeout) {
+fit::promise<std::string> DeviceIdProviderPtr::GetId(const zx::duration timeout) {
   if (device_id_) {
     return fit::make_result_promise(DeviceIdToResult());
   }
 
-  const uint64_t id = pending_get_id_.NewBridgeForTask("Getting Feedback device id");
+  const uint64_t id = pending_calls_.NewBridgeForTask("Getting Feedback device id");
 
-  return pending_get_id_.WaitForDone(id, timeout).then([id, this](const fit::result<>& result) {
-    pending_get_id_.Delete(id);
+  return pending_calls_.WaitForDone(id, timeout).then([id, this](const fit::result<>& result) {
+    pending_calls_.Delete(id);
     return DeviceIdToResult();
   });
 }
 
-fit::result<std::string> FeedbackDeviceIdProvider::DeviceIdToResult() {
+fit::result<std::string> DeviceIdProviderPtr::DeviceIdToResult() {
   if (device_id_ && device_id_->has_value()) {
     return fit::ok(device_id_->value());
   }
   return fit::error();
 }
 
+}  // namespace fidl
 }  // namespace feedback

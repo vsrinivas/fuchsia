@@ -14,13 +14,13 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
-#include "src/developer/feedback/crashpad_agent/feedback_data_provider.h"
-#include "src/developer/feedback/crashpad_agent/feedback_device_id_provider.h"
 #include "src/developer/feedback/crashpad_agent/info/crash_reporter_info.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 #include "src/developer/feedback/crashpad_agent/queue.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/developer/feedback/utils/fidl/data_provider_ptr.h"
+#include "src/developer/feedback/utils/fidl/device_id_provider_ptr.h"
 #include "src/developer/feedback/utils/utc_time_provider.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
@@ -64,8 +64,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporterInfo info_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
-  FeedbackDataProvider data_provider_;
-  FeedbackDeviceIdProvider device_id_provider_;
+  fidl::DataProviderPtr data_provider_ptr_;
+  fidl::DeviceIdProviderPtr device_id_provider_ptr_;
   const std::string build_version_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);

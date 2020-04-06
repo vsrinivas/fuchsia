@@ -135,8 +135,6 @@ source_set("crash_reporter") {
 
   public_deps = [
     ":crash_server",
-    ":feedback_data_provider",
-    ":feedback_device_id_provider",
     ":privacy_settings_ptr",
     ":queue",
     ":settings",
@@ -144,6 +142,8 @@ source_set("crash_reporter") {
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crashpad_agent/info",
     "//src/developer/feedback/utils:utc_time_provider",
+    "//src/developer/feedback/utils/fidl:data_provider_ptr",
+    "//src/developer/feedback/utils/fidl:device_id_provider_ptr",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -193,51 +193,6 @@ source_set("database") {
     ":report_util",
     "//src/lib/files",
     "//src/lib/syslog/cpp",
-  ]
-}
-
-source_set("feedback_data_provider") {
-  sources = [
-    "feedback_data_provider.cc",
-    "feedback_data_provider.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:libfit",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-cpp",
-  ]
-}
-
-source_set("feedback_device_id_provider") {
-  sources = [
-    "feedback_device_id_provider.cc",
-    "feedback_device_id_provider.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:libfit",
-    "//src/lib/backoff",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-cpp",
   ]
 }
 

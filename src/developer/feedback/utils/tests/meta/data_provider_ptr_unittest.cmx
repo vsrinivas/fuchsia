@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/feedback_device_id_provider_unittest"
+        "binary": "test/data_provider_ptr_unittest"
     },
     "sandbox": {
         "services": [
