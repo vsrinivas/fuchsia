@@ -7,6 +7,7 @@ use {
     crate::registry::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
     crate::switchboard::base::*,
     fuchsia_async as fasync,
+    futures::future::BoxFuture,
     futures::StreamExt,
     parking_lot::RwLock,
     std::sync::Arc,
@@ -21,8 +22,8 @@ impl DeviceStorageCompatible for SystemInfo {
 }
 
 pub fn spawn_system_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let storage_handle = context.environment.storage_factory_handle.clone();
     let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
@@ -86,5 +87,5 @@ pub fn spawn_system_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
             }
         }
     });
-    system_handler_tx
+    Box::pin(async move { system_handler_tx })
 }

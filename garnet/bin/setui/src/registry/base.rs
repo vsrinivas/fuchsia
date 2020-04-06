@@ -5,7 +5,9 @@
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingRequestResponder, SettingType};
+use async_trait::async_trait;
 use futures::channel::mpsc::UnboundedSender;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -13,7 +15,8 @@ use std::sync::Arc;
 pub type Notifier = UnboundedSender<SettingType>;
 pub type SettingHandler = UnboundedSender<Command>;
 
-pub type GenerateHandler<T> = Box<dyn Fn(&Context<T>) -> SettingHandler + Send + Sync + 'static>;
+pub type GenerateHandler<T> =
+    Box<dyn Fn(Context<T>) -> BoxFuture<'static, SettingHandler> + Send + Sync>;
 
 /// An command represents messaging from the registry to take a
 /// particular action.
@@ -30,8 +33,9 @@ pub enum State {
 
 /// A factory capable of creating a handler for a given setting on-demand. If no
 /// viable handler can be created, None will be returned.
+#[async_trait]
 pub trait SettingHandlerFactory {
-    fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler>;
+    async fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler>;
 }
 
 pub struct Environment<T: DeviceStorageFactory> {

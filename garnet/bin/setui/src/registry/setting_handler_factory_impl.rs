@@ -7,6 +7,7 @@ use crate::registry::base::{
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::SettingType;
+use async_trait::async_trait;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -14,26 +15,27 @@ use std::sync::Arc;
 
 /// SettingHandlerFactoryImpl houses registered closures for generating setting
 /// handlers.
-pub struct SettingHandlerFactoryImpl<T: DeviceStorageFactory> {
+pub struct SettingHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
     environment: Environment<T>,
     generators: HashMap<SettingType, GenerateHandler<T>>,
 }
 
-impl<T: DeviceStorageFactory> SettingHandlerFactory for SettingHandlerFactoryImpl<T> {
-    fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler> {
+#[async_trait]
+impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHandlerFactoryImpl<T> {
+    async fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler> {
         if !self.environment.settings.contains(&setting_type) {
             return None;
         }
 
         if let Some(generate_function) = self.generators.get(&setting_type) {
-            return Some((generate_function)(&Context::new(self.environment.clone())));
+            return Some((generate_function)(Context::new(self.environment.clone())).await);
         }
 
         None
     }
 }
 
-impl<T: DeviceStorageFactory> SettingHandlerFactoryImpl<T> {
+impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,

@@ -13,6 +13,7 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Duration,
     futures::channel::mpsc::{unbounded, UnboundedReceiver},
+    futures::future::BoxFuture,
     futures::future::{AbortHandle, Abortable},
     futures::prelude::*,
     parking_lot::RwLock,
@@ -25,8 +26,8 @@ const SCAN_DURATION_MS: i64 = 1000;
 /// Launches a new controller for the light sensor which periodically scans the light sensor
 /// for values, and sends out values on change.
 pub fn spawn_light_sensor_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let service_context_handle = context.environment.service_context_handle.clone();
     let (light_sensor_handler_tx, light_sensor_handler_rx) = unbounded::<Command>();
 
@@ -60,7 +61,7 @@ pub fn spawn_light_sensor_controller<T: DeviceStorageFactory + Send + Sync + 'st
             fx_log_err!("Couldn't connect to light sensor controller");
         }
     });
-    light_sensor_handler_tx
+    Box::pin(async move { light_sensor_handler_tx })
 }
 
 /// Listens to commands from the registry; doesn't return until stream ends.

@@ -11,6 +11,7 @@ use crate::switchboard::base::{
     SettingType, SetupInfo, SwitchboardError,
 };
 use fuchsia_async as fasync;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use parking_lot::RwLock;
@@ -32,8 +33,8 @@ pub struct SetupController {
 
 impl SetupController {
     pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
-        context: &Context<T>,
-    ) -> SettingHandler {
+        context: Context<T>,
+    ) -> BoxFuture<'static, SettingHandler> {
         let storage_handle = context.environment.storage_factory_handle.clone();
 
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -57,7 +58,7 @@ impl SetupController {
             }
         });
 
-        return ctrl_tx;
+        return Box::pin(async move { ctrl_tx });
     }
 
     fn process_command(&mut self, command: Command) {

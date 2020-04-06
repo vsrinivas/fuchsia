@@ -8,6 +8,7 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
     fuchsia_async as fasync,
+    futures::future::BoxFuture,
     futures::StreamExt,
 };
 
@@ -44,8 +45,8 @@ async fn schedule_clear_accounts(
 }
 
 pub fn spawn_account_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let service_context_handle = context.environment.service_context_handle.clone();
 
     let (account_handler_tx, mut account_handler_rx) =
@@ -84,5 +85,5 @@ pub fn spawn_account_controller<T: DeviceStorageFactory + Send + Sync + 'static>
             }
         }
     });
-    account_handler_tx
+    Box::pin(async move { account_handler_tx })
 }

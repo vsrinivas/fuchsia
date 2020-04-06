@@ -11,6 +11,7 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 use parking_lot::RwLock;
 
+use futures::future::BoxFuture;
 use rust_icu_uenum as uenum;
 
 use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
@@ -49,8 +50,8 @@ pub struct IntlController {
 /// protocol, backed by a number of services, including TimeZone.
 impl IntlController {
     pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
-        context: &Context<T>,
-    ) -> SettingHandler {
+        context: Context<T>,
+    ) -> BoxFuture<'static, SettingHandler> {
         let service_context_handle = context.environment.service_context_handle.clone();
         let storage_handle = context.environment.storage_factory_handle.clone();
 
@@ -80,7 +81,7 @@ impl IntlController {
             }
         });
 
-        return ctrl_tx;
+        return Box::pin(async move { ctrl_tx });
     }
 
     /// Loads the set of valid time zones from resources.

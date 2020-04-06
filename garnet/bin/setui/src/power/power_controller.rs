@@ -8,6 +8,7 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
     fuchsia_async as fasync,
+    futures::future::BoxFuture,
     futures::StreamExt,
 };
 
@@ -23,8 +24,8 @@ async fn reboot(service_context_handle: ServiceContextHandle) {
 }
 
 pub fn spawn_power_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let service_context_handle = context.environment.service_context_handle.clone();
     let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
@@ -55,5 +56,5 @@ pub fn spawn_power_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
             }
         }
     });
-    system_handler_tx
+    Box::pin(async move { system_handler_tx })
 }

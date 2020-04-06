@@ -116,7 +116,7 @@ impl RegistryImpl {
             return Some(handler.clone());
         }
 
-        let new_handler = self.handler_factory.lock().await.generate(setting_type);
+        let new_handler = self.handler_factory.lock().await.generate(setting_type).await;
         if let Some(handler) = new_handler {
             self.command_sender_map.insert(setting_type, handler.clone());
             return Some(handler);
@@ -227,6 +227,7 @@ mod tests {
     use crate::internal::core::{create_message_hub, Address, Payload};
     use crate::message::base::MessengerType;
     use crate::registry::base::SettingHandler;
+    use async_trait::async_trait;
 
     struct FakeFactory {
         handlers: HashMap<SettingType, SettingHandler>,
@@ -251,8 +252,9 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl SettingHandlerFactory for FakeFactory {
-        fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler> {
+        async fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler> {
             let existing_count = self.get_request_count(setting_type);
 
             if let Some(handler) = self.handlers.get(&setting_type) {

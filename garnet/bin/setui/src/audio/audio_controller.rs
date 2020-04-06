@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::future::BoxFuture,
     futures::StreamExt,
     parking_lot::RwLock,
     std::collections::HashMap,
@@ -33,8 +34,8 @@ fn get_streams_array_from_map(
 /// Controller that handles commands for SettingType::Audio.
 /// TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
 pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let service_context_handle = context.environment.service_context_handle.clone();
     let storage_factory_handle = context.environment.storage_factory_handle.clone();
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -183,7 +184,7 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
         }
         fx_log_err!("[audio_controller] exited service event loop");
     });
-    audio_handler_tx
+    Box::pin(async move { audio_handler_tx })
 }
 
 // Updates |stored_audio_streams| and then update volume via the AudioCore service.

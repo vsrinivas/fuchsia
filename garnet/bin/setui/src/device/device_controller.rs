@@ -4,6 +4,7 @@ use {
     crate::switchboard::base::{DeviceInfo, SettingResponse},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
+    futures::future::BoxFuture,
     futures::StreamExt,
     parking_lot::RwLock,
     std::fs,
@@ -12,8 +13,8 @@ use {
 const BUILD_TAG_FILE_PATH: &str = "/config/build-info/version";
 
 pub fn spawn_device_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    _context: &Context<T>,
-) -> SettingHandler {
+    _context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let (device_handler_tx, mut device_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = RwLock::<Option<Notifier>>::new(None);
@@ -43,5 +44,5 @@ pub fn spawn_device_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
             }
         }
     });
-    device_handler_tx
+    Box::pin(async move { device_handler_tx })
 }

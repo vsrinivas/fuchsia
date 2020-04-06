@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {
     crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
     crate::registry::device_storage::{
@@ -14,6 +13,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::stream::StreamExt,
     futures::TryFutureExt,
@@ -38,8 +38,8 @@ impl DeviceStorageCompatible for AccessibilityInfo {
 
 /// Controller that handles commands for SettingType::Accessibility.
 pub fn spawn_accessibility_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let storage_factory_handle = context.environment.storage_factory_handle.clone();
     let (accessibility_handler_tx, mut accessibility_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
@@ -114,7 +114,8 @@ pub fn spawn_accessibility_controller<T: DeviceStorageFactory + Send + Sync + 's
             fx_log_err!("Error processing accessibility command: {:?}", e)
         }),
     );
-    accessibility_handler_tx
+
+    Box::pin(async move { accessibility_handler_tx })
 }
 
 async fn persist_accessibility_info(

@@ -11,6 +11,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::StreamExt,
     parking_lot::RwLock,
@@ -26,8 +27,8 @@ impl DeviceStorageCompatible for DisplayInfo {
 }
 
 pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let storage_handle = context.environment.storage_factory_handle.clone();
     let service_context_handle = context.environment.service_context_handle.clone();
     let (display_handler_tx, mut display_handler_rx) =
@@ -144,7 +145,7 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
             }
         }
     });
-    display_handler_tx
+    Box::pin(async move { display_handler_tx })
 }
 
 async fn set_brightness(

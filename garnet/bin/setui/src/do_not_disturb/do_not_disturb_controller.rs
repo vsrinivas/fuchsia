@@ -10,6 +10,7 @@ use {
     anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::StreamExt,
     parking_lot::RwLock,
@@ -26,8 +27,8 @@ impl DeviceStorageCompatible for DoNotDisturbInfo {
 
 // Controller that handles commands for SettingType::DoNotDisturb
 pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: &Context<T>,
-) -> SettingHandler {
+    context: Context<T>,
+) -> BoxFuture<'static, SettingHandler> {
     let storage_handle = context.environment.storage_factory_handle.clone();
     let (do_not_disturb_handler_tx, mut do_not_disturb_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
@@ -86,7 +87,7 @@ pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + '
             }
         }
     });
-    do_not_disturb_handler_tx
+    Box::pin(async move { do_not_disturb_handler_tx })
 }
 
 async fn write_value(

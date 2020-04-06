@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use futures::TryFutureExt;
@@ -39,8 +40,8 @@ pub struct PrivacyController {
 /// Controller for processing switchboard messages for the Privacy protocol.
 impl PrivacyController {
     pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
-        context: &Context<T>,
-    ) -> SettingHandler {
+        context: Context<T>,
+    ) -> BoxFuture<'static, SettingHandler> {
         let storage_handle = context.environment.storage_factory_handle.clone();
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
@@ -70,7 +71,7 @@ impl PrivacyController {
             }),
         );
 
-        return ctrl_tx;
+        return Box::pin(async move { ctrl_tx });
     }
 
     fn process_command(&mut self, command: Command) -> Result<(), anyhow::Error> {
