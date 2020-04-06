@@ -4,9 +4,13 @@
 
 There are two GN target templates which should be used for Rust projects:
 
-- [`rustc_library`][target-library-rustc] defines a library which can be used by
-  other targets.
-- [`rustc_binary`][target-binary-rustc] defines an executable.
+- [`rustc_library`][target-library-rustc] defines a library and optionally a
+  unit test target. The library can be depended on by other targets.
+- [`rustc_binary`][target-binary-rustc] defines an executable and optionally a
+  unit test target.
+- [`rustc_test`][target-test-rustc] defines a test-only target.
+- [`rustc_macro`][target-macro-rustc] defines a
+  [procedural macro][rust-proc-macros] target.
 
 The [examples/rust][rust-examples] directory has some examples of Rust
 packages that use these targets, as do the [Rust FIDL examples][fidl-tutorial].
@@ -62,6 +66,15 @@ fx rustdoc path/from/fuchsia/root/to/target:label --open
 You can run unit tests on connected devices using `fx`, with the `fx test
 {package name}` command.  See [Testing Rust code](testing.md) for information
 on adding and running tests.
+
+## Procedural macros
+
+Procedural macro targets are executed on the host at compile time. Therefore,
+they cannot depend on other crates which are only available on device, e.g.
+zircon.
+
+Negative tests, e.g. asserting that a macro fails to compile with a specific
+error, are currently not supported.
 
 ## Warnings & Errors
 
@@ -120,6 +133,8 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 
 [target-library-rustc]: /build/rust/rustc_library.gni "Rust library"
 [target-binary-rustc]: /build/rust/rustc_binary.gni "Rust binary"
+[target-test-rustc]: /build/rust/rustc_test.gni "Rust test"
+[target-macro-rustc]: /build/rust/rustc_macro.gni "Rust proc macro"
 [rust-examples]: /examples/rust/
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
@@ -127,3 +142,4 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 [fidl-tutorial]: /docs/development/languages/fidl/tutorial/tutorial-rust.md
 [rust@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
 [go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers
+[rust-proc-macros]: https://doc.rust-lang.org/reference/procedural-macros.html
