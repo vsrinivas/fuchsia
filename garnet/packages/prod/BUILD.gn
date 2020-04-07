@@ -274,8 +274,8 @@ group("bluetooth_drivers") {
 
 group("vboot_reference") {
   public_deps = [
-    "//garnet/tools/vboot_reference:cgpt_host",
-    "//garnet/tools/vboot_reference:futility_host",
+    "//tools/vboot_reference:cgpt_host",
+    "//tools/vboot_reference:futility_host",
   ]
 }
 

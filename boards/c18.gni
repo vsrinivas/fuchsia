@@ -13,4 +13,4 @@ custom_signing_script =
     "//zircon/kernel/target/arm64/board/c18/package-image.sh"
 
 # required tool for packaging script
-board_package_labels += [ "//garnet/tools/vboot_reference:futility_host" ]
+board_package_labels += [ "//tools/vboot_reference:futility_host" ]

@@ -41,7 +41,7 @@ template("vboot") {
                              "visibility",
                            ])
 
-    tool = "//garnet/tools/vboot_reference:futility"
+    tool = "//tools/vboot_reference:futility"
     outputs = [ output_file ]
 
     vboot_dir = "//third_party/vboot_reference"

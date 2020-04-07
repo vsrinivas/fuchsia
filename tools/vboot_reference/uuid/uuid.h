@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef VBOOT_STUB_UUID_H_
-#define VBOOT_STUB_UUID_H_
+#ifndef TOOLS_VBOOT_REFERENCE_UUID_UUID_H_
+#define TOOLS_VBOOT_REFERENCE_UUID_UUID_H_
 
 #include <stdint.h>
 #ifdef __cplusplus
@@ -14,4 +14,5 @@ void uuid_generate(uint8_t out[16]);
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif  // TOOLS_VBOOT_REFERENCE_UUID_UUID_H_
