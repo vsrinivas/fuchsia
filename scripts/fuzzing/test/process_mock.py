@@ -50,10 +50,7 @@ class MockPopen(object):
             self.response = ''
 
     def communicate(self, inputs=None):
-        # if inputs:
-        #     lines = inputs.split('\n')
-        # else:
-        #     lines = []
-        for line in inputs:
-            self.host.history.append(' < %s' % line)
+        if inputs:
+            for line in str(inputs).split('\n'):
+                self.host.history.append(' < %s' % line)
         return (self.response, '')

@@ -6,14 +6,14 @@
 import argparse
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser('Stops the named fuzzer.')
+    parser = ArgParser('Stops the named fuzzer.')
     args = parser.parse_args()
 
     host = Host.from_build()

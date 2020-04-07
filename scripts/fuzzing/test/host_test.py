@@ -129,8 +129,13 @@ class TestHost(unittest.TestCase):
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         executable = Host.join(host.get_host_out_dir(), 'symbolize')
         symbolizer = Host.join(
-            'prebuilt', 'third_party', 'clang', platform, 'bin',
-            'llvm-symbolizer')
+            'prebuilt',
+            'third_party',
+            'clang',
+            platform,
+            'bin',
+            'llvm-symbolizer',
+        )
         host.set_build_dir(build_dir)
         self.assertNotEqual(len(host._ids), 0)
         for id in host._ids:
@@ -159,17 +164,23 @@ class TestHost(unittest.TestCase):
 
     def test_symbolize(self):
         mock = MockHost()
-        stacktrace = ['a line', 'another line', 'yet another line']
+        stacktrace = [
+            'a line',
+            'another line',
+            'yet another line',
+        ]
         mock.symbolize('\n'.join(stacktrace))
         self.assertIn(
             ' '.join(
                 [
-                    'mock/symbolize', '-llvm-symbolizer',
-                    'mock/llvm_symbolizer', '-build-id-dir', 'mock/.build-id'
+                    'mock/symbolize',
+                    '-llvm-symbolizer',
+                    'mock/llvm_symbolizer',
+                    '-build-id-dir',
+                    'mock/.build-id',
                 ]), mock.history)
         for line in stacktrace:
-            for c in line:
-                self.assertIn(' < ' + c, mock.history)
+            self.assertIn(' < ' + line, mock.history)
 
     def test_notify_user(self):
         host = Host()

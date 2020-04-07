@@ -9,7 +9,7 @@ import unittest
 import tempfile
 
 import test_env
-from lib.args import Args
+from lib.args import ArgParser
 from lib.corpus import Corpus
 from lib.fuzzer import Fuzzer
 
@@ -20,7 +20,7 @@ class TestCorpus(unittest.TestCase):
 
     def test_from_args(self):
         fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target3')
-        parser = Args.make_parser('description')
+        parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
         corpus = Corpus.from_args(fuzzer, args)
@@ -37,7 +37,7 @@ class TestCorpus(unittest.TestCase):
     def test_push(self):
         mock = MockDevice()
         fuzzer = Fuzzer(mock, u'mock-package1', u'mock-target3')
-        parser = Args.make_parser('description')
+        parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
         corpus = Corpus.from_args(fuzzer, args)
@@ -53,7 +53,7 @@ class TestCorpus(unittest.TestCase):
     def test_pull(self):
         mock = MockDevice()
         fuzzer = Fuzzer(mock, u'mock-package1', u'mock-target3')
-        parser = Args.make_parser('description')
+        parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
         corpus = Corpus.from_args(fuzzer, args)

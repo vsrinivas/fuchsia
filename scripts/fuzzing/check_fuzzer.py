@@ -6,18 +6,18 @@
 import argparse
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
-        description='Reports status for the fuzzer matching NAME if ' +
+    parser = ArgParser(
+        'Reports status for the fuzzer matching NAME if ' +
         'provided, or for all running fuzzers.  Status includes execution ' +
-        'state, corpus size, and number of artifacts.',
-        name_required=False)
+        'state, corpus size, and number of artifacts.')
+    parser.require_name(False)
     args = parser.parse_args()
 
     host = Host.from_build()

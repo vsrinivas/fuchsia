@@ -7,7 +7,7 @@ import argparse
 import subprocess
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.cipd import Cipd
 from lib.corpus import Corpus
 from lib.device import Device
@@ -16,7 +16,7 @@ from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
+    parser = ArgParser(
         'Transfers a fuzzing corpus for a named fuzzer from a device to CIPD')
     args = parser.parse_args()
 

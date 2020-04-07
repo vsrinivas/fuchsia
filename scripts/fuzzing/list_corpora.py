@@ -6,7 +6,7 @@
 import argparse
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.cipd import Cipd
 from lib.corpus import Corpus
 from lib.device import Device
@@ -15,8 +15,7 @@ from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
-        description='Lists corpus instances in CIPD for the named fuzzer')
+    parser = ArgParser('Lists corpus instances in CIPD for the named fuzzer')
     args = parser.parse_args()
 
     host = Host.from_build()

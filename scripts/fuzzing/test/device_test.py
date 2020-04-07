@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 import test_env
-from lib.args import Args
+from lib.args import ArgParser
 from lib.device import Device
 from lib.host import Host
 
@@ -22,7 +22,8 @@ class TestDevice(unittest.TestCase):
 
     def test_from_args(self):
         host = MockHost()
-        parser = Args.make_parser('description', name_required=False)
+        parser = ArgParser('description')
+        parser.require_name(False)
         # netaddr should get called with 'just-four-random-words', and fail
         with self.assertRaises(RuntimeError):
             args = parser.parse_args(['--device', 'just-four-random-words'])

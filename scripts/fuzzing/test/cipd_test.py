@@ -9,7 +9,6 @@ import unittest
 import tempfile
 
 import test_env
-from lib.args import Args
 from lib.cipd import Cipd
 from lib.fuzzer import Fuzzer
 

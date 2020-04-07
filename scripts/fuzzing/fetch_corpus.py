@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.cipd import Cipd
 from lib.corpus import Corpus
 from lib.device import Device
@@ -16,11 +16,11 @@ from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
+    parser = ArgParser(
         'Transfers corpus for a named fuzzer to a device. By default, copies ' +
         'the latest corpus from CIPD. To copy a local directory instead, use ' +
-        'the --staging and --no-cipd options.',
-        label_present=True)
+        'the --staging and --no-cipd options.')
+    parser.allow_label(True)
     args = parser.parse_args()
 
     host = Host.from_build()

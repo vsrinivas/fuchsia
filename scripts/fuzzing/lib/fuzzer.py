@@ -102,7 +102,7 @@ class Fuzzer(object):
             args.foreground, args.debug)
 
     def __init__(
-            self, device, pkg, tgt, output=None, foreground=False, debug=False):
+        self, device, pkg, tgt, output=None, foreground=False, debug=False):
         self.device = device
         self.host = device.host
         self.pkg = pkg

@@ -6,15 +6,15 @@
 import argparse
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.fuzzer import Fuzzer
 from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
-        description='Lists fuzzers matching NAME if provided, or all fuzzers.',
-        name_required=False)
+    parser = ArgParser(
+        'Lists fuzzers matching NAME if provided, or all fuzzers.')
+    parser.require_name(False)
     args = parser.parse_args()
 
     host = Host.from_build()

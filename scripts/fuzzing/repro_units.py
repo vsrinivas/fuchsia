@@ -6,14 +6,14 @@
 import argparse
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
+    parser = ArgParser(
         'Runs the named fuzzer on provided test units, or all current test ' +
         'units for the fuzzer. Use \'check-fuzzer\' to see current tests units.'
     )

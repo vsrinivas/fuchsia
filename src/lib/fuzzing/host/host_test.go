@@ -24,7 +24,7 @@ func TestFxFuzzLib(t *testing.T) {
 	}
 	for _, test := range scriptsFuzzingTests {
 		pytest := path.Join(fuchsiaDir, "scripts", "fuzzing", "test", test)
-		cmd := exec.Command("python", pytest)
+		cmd := exec.Command("python", pytest, "-b")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Errorf("%s failed:: %v", test, err)

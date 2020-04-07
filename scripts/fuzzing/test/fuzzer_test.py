@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 import test_env
-from lib.args import Args
+from lib.args import ArgParser
 from lib.fuzzer import Fuzzer
 
 from device_mock import MockDevice
@@ -36,7 +36,7 @@ class TestFuzzer(unittest.TestCase):
 
     def test_from_args(self):
         mock_device = MockDevice()
-        parser = Args.make_parser('description')
+        parser = ArgParser('description')
         with self.assertRaises(SystemExit):
             args = parser.parse_args(['target4'])
             fuzzer = Fuzzer.from_args(mock_device, args)

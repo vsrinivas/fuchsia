@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 
-from lib.args import Args
+from lib.args import ArgParser
 from lib.cipd import Cipd
 from lib.corpus import Corpus
 from lib.device import Device
@@ -16,7 +16,7 @@ from lib.host import Host
 
 
 def main():
-    parser = Args.make_parser(
+    parser = ArgParser(
         'Minimizes the current corpus for the named fuzzer. This should be ' +
         'used after running the fuzzer for a while, or after incorporating a ' +
         'third-party corpus using \'fetch-corpus\'')
