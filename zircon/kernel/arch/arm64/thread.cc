@@ -75,17 +75,17 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   arch_set_current_thread(t);
 }
 
-static void arm64_tpidr_save_state(Thread* thread) {
+__NO_SAFESTACK static void arm64_tpidr_save_state(Thread* thread) {
   thread->arch_.tpidr_el0 = __arm_rsr64("tpidr_el0");
   thread->arch_.tpidrro_el0 = __arm_rsr64("tpidrro_el0");
 }
 
-static void arm64_tpidr_restore_state(Thread* thread) {
+__NO_SAFESTACK static void arm64_tpidr_restore_state(Thread* thread) {
   __arm_wsr64("tpidr_el0", thread->arch_.tpidr_el0);
   __arm_wsr64("tpidrro_el0", thread->arch_.tpidrro_el0);
 }
 
-static void arm64_debug_restore_state(Thread* thread) {
+__NO_SAFESTACK static void arm64_debug_restore_state(Thread* thread) {
   // If the thread has debug state, then install it, replacing the current contents.
   if (unlikely(thread->arch_.track_debug_state)) {
     arm64_write_hw_debug_regs(&thread->arch_.debug_state);
@@ -94,12 +94,16 @@ static void arm64_debug_restore_state(Thread* thread) {
 
 __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name_, newthread, newthread->name_);
-  __dsb(ARM_MB_SY); /* broadcast tlb operations in case the thread moves to another cpu */
 
-  /* set the current cpu pointer in the new thread's structure so it can be
-   * restored on exception entry.
-   */
-  newthread->arch_.current_percpu_ptr = arm64_read_percpu_ptr();
+  // DSB here to make sure any pending TLB or cache operations that we may be
+  // preempting are complete before the thread switch. This avoids a problem in
+  // case the thread is moved to a new cpu.
+  __dsb(ARM_MB_SY);
+
+  // Set the current cpu pointer in the new thread's structure so it can be
+  // restored on exception entry. Use the direct variable instead of the accessor here
+  // to avoid an extra function call to a non SAFESTACK accessor function
+  newthread->arch_.current_percpu_ptr = __arm64_percpu;
 
   if (likely(!oldthread->user_state_saved_)) {
     arm64_fpu_context_switch(oldthread, newthread);
@@ -129,6 +133,8 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
     arm64_debug_restore_state(newthread);
   }
 
+  // Call into the inner assembly context switch routine to save integer registers on the old stack
+  // and swap to the new stack.
 #if __has_feature(shadow_call_stack)
   arm64_context_switch(&oldthread->arch_.sp, newthread->arch_.sp, &oldthread->arch_.shadow_call_sp,
                        newthread->arch_.shadow_call_sp);
