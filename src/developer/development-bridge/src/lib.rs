@@ -125,7 +125,7 @@ impl Daemon {
                 let nodename = target.nodename.clone();
                 let mut tc_mut = tc.lock().await;
                 tc_mut.merge_insert(target).await;
-                let target_clone = Arc::clone(tc_mut.target_by_nodename(&nodename).unwrap());
+                let target_clone = Arc::clone(tc_mut.get(nodename.into()).await.unwrap());
                 let tc_clone = Arc::clone(&tc);
                 let hooks_clone = (*hooks.lock().await).clone();
                 spawn(async move {
@@ -179,7 +179,7 @@ impl Daemon {
                     {
                         continue;
                     }
-                    if tc.lock().await.target_by_overnet_id(&peer.id).await.is_some() {
+                    if tc.lock().await.get(peer.id.id.into()).await.is_some() {
                         continue;
                     }
                     let remote_control_proxy = ok_or_continue!(RCSConnection::new(&mut peer.id)
@@ -293,7 +293,7 @@ impl Daemon {
                 let targets = self.target_collection.lock().await;
                 let response = match value.as_ref() {
                     "" => format!("{:?}", *targets),
-                    _ => format!("{:?}", targets.target_by_nodename(&value)),
+                    _ => format!("{:?}", targets.get(value.into()).await),
                 };
                 responder.send(response.as_ref()).context("error sending response")?;
             }
@@ -595,7 +595,7 @@ mod test {
     impl DiscoveryHook for TestHookFirst {
         async fn on_new_target(&self, target: &Arc<Target>, tc: &GuardedTargetCollection) {
             // This will crash if the target isn't already inserted.
-            let t = Arc::clone(&tc.lock().await.target_by_nodename(&target.nodename).unwrap());
+            let t = Arc::clone(&tc.lock().await.get(target.nodename.clone().into()).await.unwrap());
             assert_eq!(t.nodename, "nothin");
             assert_eq!(*t.state.lock().await, TargetState::new());
             assert_eq!(*t.addrs.lock().await, HashSet::new());

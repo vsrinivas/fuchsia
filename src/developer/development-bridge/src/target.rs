@@ -190,6 +190,71 @@ impl Display for TargetAddr {
     }
 }
 
+pub enum TargetQuery {
+    Nodename(String),
+    Addr(TargetAddr),
+    OvernetId(u64),
+}
+
+impl TargetQuery {
+    pub async fn matches(&self, t: &Arc<Target>) -> bool {
+        match self {
+            Self::Nodename(nodename) => *nodename == t.nodename,
+            Self::Addr(addr) => {
+                let addrs = t.addrs.lock().await;
+                // Try to do the lookup if either the scope_id is non-zero (and
+                // the IP address is IPv6 OR if the address is just IPv4 (as the
+                // scope_id is always zero in this case).
+                if addr.scope_id != 0 || addr.ip.is_ipv4() {
+                    return addrs.contains(addr);
+                }
+
+                // Currently there's no way to parse an IP string w/ a scope_id,
+                // so if we're at this stage the address is IPv6 and has been
+                // probably parsed with a string (or it's a global IPv6 addr).
+                for target_addr in addrs.iter() {
+                    if target_addr.ip == addr.ip {
+                        return true;
+                    }
+                }
+
+                false
+            }
+            Self::OvernetId(id) => match &t.state.lock().await.rcs {
+                Some(rcs) => rcs.overnet_id.id == *id,
+                None => false,
+            },
+        }
+    }
+}
+
+impl From<&str> for TargetQuery {
+    fn from(s: &str) -> Self {
+        String::from(s).into()
+    }
+}
+
+impl From<String> for TargetQuery {
+    fn from(s: String) -> Self {
+        match s.parse::<IpAddr>() {
+            Ok(a) => Self::Addr((a, 0).into()),
+            Err(_) => Self::Nodename(s),
+        }
+    }
+}
+
+impl From<TargetAddr> for TargetQuery {
+    fn from(t: TargetAddr) -> Self {
+        Self::Addr(t)
+    }
+}
+
+impl From<u64> for TargetQuery {
+    fn from(id: u64) -> Self {
+        Self::OvernetId(id)
+    }
+}
+
 #[derive(Debug)]
 pub struct TargetCollection {
     map: HashMap<String, Arc<Target>>,
@@ -235,19 +300,10 @@ impl TargetCollection {
         }
     }
 
-    pub fn target_by_nodename(&self, n: &String) -> Option<&Arc<Target>> {
-        self.map.get(n)
-    }
-
-    pub async fn target_by_overnet_id(&self, node_id: &NodeId) -> Option<&Arc<Target>> {
-        for (_, target) in self.map.iter() {
-            match &target.state.lock().await.rcs {
-                Some(rcs) => {
-                    if rcs.overnet_id == *node_id {
-                        return Some(target);
-                    }
-                }
-                _ => (),
+    pub async fn get(&self, t: TargetQuery) -> Option<&Arc<Target>> {
+        for target in self.map.values() {
+            if t.matches(target).await {
+                return Some(target);
             }
         }
         None
@@ -328,8 +384,8 @@ mod test {
             let nodename = String::from("what");
             let t = Target::new(&nodename, fake_now());
             tc.merge_insert(t.clone()).await;
-            assert_eq!(&**tc.target_by_nodename(&nodename).unwrap(), &t.clone());
-            match tc.target_by_nodename(&"oihaoih".to_string()) {
+            assert_eq!(&**tc.get(nodename.clone().into()).await.unwrap(), &t.clone());
+            match tc.get("oihaoih".into()).await {
                 Some(_) => panic!("string lookup should return Nobne"),
                 _ => (),
             }
@@ -351,7 +407,7 @@ mod test {
             t2.addrs.lock().await.insert((a2.clone(), 1).into());
             tc.merge_insert(t2.clone()).await;
             tc.merge_insert(t1.clone()).await;
-            let merged_target: &Arc<Target> = tc.target_by_nodename(&nodename).unwrap();
+            let merged_target: &Arc<Target> = tc.get(nodename.clone().into()).await.unwrap();
             assert_ne!(&**merged_target, &t1);
             assert_ne!(&**merged_target, &t2);
             assert_eq!(merged_target.addrs.lock().await.len(), 2);
@@ -466,9 +522,18 @@ mod test {
     }
 
     #[test]
+    fn test_target_query_matches_nodename() {
+        hoist::run(async move {
+            let query = TargetQuery::from("foo");
+            let target = Arc::new(Target::new("foo", Utc::now()));
+            assert!(query.matches(&target).await);
+        });
+    }
+
+    #[test]
     fn test_target_by_overnet_id() {
         hoist::run(async move {
-            const ID: u64 = 1234;
+            const ID: u64 = 12345;
             let conn = RCSConnection::new_with_proxy(
                 setup_fake_remote_control_service(false, "foo".to_owned()),
                 &NodeId { id: ID },
@@ -476,7 +541,30 @@ mod test {
             let t = Target::from_rcs_connection(conn).await.unwrap();
             let mut tc = TargetCollection::new();
             tc.merge_insert(t.clone()).await;
-            assert_eq!(**tc.target_by_overnet_id(&NodeId { id: ID }).await.unwrap(), t);
+            assert_eq!(**tc.get(ID.into()).await.unwrap(), t);
+        });
+    }
+
+    #[test]
+    fn test_target_by_addr() {
+        hoist::run(async move {
+            let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
+            let t = Target::new("foo", Utc::now());
+            t.addrs.lock().await.insert(addr.clone());
+            let mut tc = TargetCollection::new();
+            tc.merge_insert(t.clone()).await;
+            assert_eq!(**tc.get(addr.into()).await.unwrap(), t);
+            assert_eq!(**tc.get("192.168.0.1".into()).await.unwrap(), t);
+            assert!(tc.get("fe80::dead:beef:beef:beef".into()).await.is_none());
+
+            let addr: TargetAddr =
+                (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
+            let t = Target::new("fooberdoober", Utc::now());
+            t.addrs.lock().await.insert(addr.clone());
+            tc.merge_insert(t.clone()).await;
+            assert_eq!(**tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
+            assert_eq!(**tc.get(addr.clone().into()).await.unwrap(), t);
+            assert_eq!(**tc.get("fooberdoober".into()).await.unwrap(), t);
         });
     }
 }
