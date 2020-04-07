@@ -202,9 +202,9 @@ mod tests {
         assert_eq!(mem::size_of::<fx_log_packet_t>(), FX_LOG_MAX_DATAGRAM_LEN);
 
         // Test that there is no padding
-        assert_eq!(mem::size_of::<fx_log_packet_t>(), mem::size_of::<fx_log_packet_t_packed>(),);
+        assert_eq!(mem::size_of::<fx_log_packet_t>(), mem::size_of::<fx_log_packet_t_packed>());
 
-        assert_eq!(mem::size_of::<fx_log_metadata_t>(), mem::size_of::<fx_log_metadata_t_packed>(),);
+        assert_eq!(mem::size_of::<fx_log_metadata_t>(), mem::size_of::<fx_log_metadata_t_packed>());
     }
 
     #[test]
@@ -266,150 +266,209 @@ mod tests {
         assert_eq!(2, calltimes.load(Ordering::Relaxed));
     }
 
-    #[test]
-    fn parse_test() {
-        // We use fx_log_packet_t and unsafe operations so that we can test that
-        // convert_to_log_message correctly parses all its fields.
+    fn test_packet() -> fx_log_packet_t {
         let mut p: fx_log_packet_t = Default::default();
         p.metadata.pid = 1;
         p.metadata.tid = 2;
         p.metadata.time = 3;
         p.metadata.severity = -1;
         p.metadata.dropped_logs = 10;
+        p
+    }
 
-        {
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE]), None);
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE - 1]), None);
-        }
+    #[test]
+    fn short_reads() {
+        let p = test_packet();
+        let buffer = p.as_bytes();
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE]), None);
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE - 1]), None);
+    }
 
-        // Test that there should be null byte at end
-        {
-            p.data[9] = 1;
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 10]), None);
-        }
-        // test tags but no message
-        {
-            p.data[0] = 11;
-            memset(&mut p.data[..], 1, 65, 11);
-            p.data[12] = 0;
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 13]), None);
-        }
+    #[test]
+    fn unterminated() {
+        let mut p = test_packet();
+        p.data[9] = 1;
+        let buffer = p.as_bytes();
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 10]), None);
+    }
 
-        // test tags with message
+    #[test]
+    fn tags_no_message() {
+        let mut p = test_packet();
+        p.data[0] = 11;
+        memset(&mut p.data[..], 1, 65, 11);
+        p.data[12] = 0;
+        let buffer = p.as_bytes();
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 13]), None);
+    }
 
-        let mut expected_p = LogMessage {
+    #[test]
+    fn tags_with_message() {
+        let mut p = test_packet();
+        p.data[0] = 11;
+        memset(&mut p.data[..], 1, 65, 11);
+        p.data[12] = 0;
+        memset(&mut p.data[..], 13, 66, 5);
+
+        let expected_p = LogMessage {
             pid: p.metadata.pid,
             tid: p.metadata.tid,
             time: p.metadata.time,
             severity: p.metadata.severity,
             dropped_logs: p.metadata.dropped_logs,
-            tags: Vec::with_capacity(1),
+            tags: vec![String::from("AAAAAAAAAAA")],
             msg: String::from("BBBBB"),
         };
-        expected_p.tags.push(String::from("AAAAAAAAAAA"));
-        let mut s = Some((expected_p, METADATA_SIZE + 18));
-        {
-            memset(&mut p.data[..], 13, 66, 5);
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), s);
+
+        let buffer = p.as_bytes();
+        let s = Some((expected_p, METADATA_SIZE + 18));
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), s);
+    }
+
+    #[test]
+    fn two_tags_no_message() {
+        let mut p = test_packet();
+        p.data[0] = 11;
+        memset(&mut p.data[..], 1, 65, 11);
+        p.data[12] = 5;
+        memset(&mut p.data[..], 13, 66, 5);
+
+        let buffer = p.as_bytes();
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), None);
+    }
+
+    #[test]
+    fn two_tags_with_message() {
+        let mut p = test_packet();
+        p.data[0] = 11;
+        memset(&mut p.data[..], 1, 65, 11);
+        p.data[12] = 5;
+        memset(&mut p.data[..], 13, 66, 5);
+        memset(&mut p.data[..], 19, 67, 5);
+
+        let expected_p = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            severity: p.metadata.severity,
+            dropped_logs: p.metadata.dropped_logs,
+            tags: vec![String::from("AAAAAAAAAAA"), String::from("BBBBB")],
+            msg: String::from("CCCCC"),
+        };
+        let s = Some((expected_p, METADATA_SIZE + 24));
+        let buffer = p.as_bytes();
+        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 25]), s);
+    }
+
+    #[test]
+    fn max_tags_with_message() {
+        let mut p = test_packet();
+
+        // fill the tags in the packet
+        for i in 0..FX_LOG_MAX_TAGS {
+            p.data[3 * i] = 2;
+            memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
         }
 
-        // test 2 tags with no message
-        {
-            p.data[0] = 11;
-            p.data[12] = 5;
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), None);
+        // fill the message in the packet
+        p.data[3 * FX_LOG_MAX_TAGS] = 0;
+        let ascii = (65 + FX_LOG_MAX_TAGS) as c_char;
+        memset(&mut p.data[..], 1 + 3 * FX_LOG_MAX_TAGS, ascii, 5);
+        p.data[1 + 3 * FX_LOG_MAX_TAGS + 5] = 0;
+
+        let expected_p = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            severity: p.metadata.severity,
+            dropped_logs: p.metadata.dropped_logs,
+            tags: (0..FX_LOG_MAX_TAGS as u8)
+                .map(|i| String::from_utf8(vec![65 + i as u8; 2]).unwrap())
+                .collect(),
+            msg: String::from_utf8(vec![65 + FX_LOG_MAX_TAGS as u8; 5]).unwrap(),
+        };
+
+        let s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5));
+        let buffer = p.as_bytes();
+
+        assert_eq!(
+            parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 6)],),
+            s
+        );
+
+        assert_eq!(parse_log_message(&buffer[..]), s);
+    }
+
+    #[test]
+    fn max_tags_no_message() {
+        let mut p = test_packet();
+        // fill the tags in the packet
+        for i in 0..FX_LOG_MAX_TAGS {
+            p.data[3 * i] = 2;
+            memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
         }
 
-        // test 2 tags with message
-        {
-            memset(&mut p.data[..], 19, 67, 5);
-            expected_p = s.unwrap().0;
-            expected_p.tags.push(String::from("BBBBB"));
-            expected_p.msg = String::from("CCCCC");
-            s = Some((expected_p, METADATA_SIZE + 24));
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 25]), s);
+        p.data[3 * FX_LOG_MAX_TAGS] = 0;
+
+        let buffer = p.as_bytes();
+        assert_eq!(
+            parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))],),
+            None
+        );
+    }
+
+    #[test]
+    fn max_tags_empty_message() {
+        let mut p = test_packet();
+        // fill the tags in the packet
+        for i in 0..FX_LOG_MAX_TAGS {
+            p.data[3 * i] = 2;
+            memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
         }
 
-        // test max tags with message
-        {
-            let data_len = p.data.len();
-            memset(&mut p.data[..], 0, 0, data_len);
-            let mut i: usize = 0;
-            while i < FX_LOG_MAX_TAGS as usize {
-                let ascii = (65 + i) as c_char;
-                p.data[3 * i] = 2;
-                memset(&mut p.data[..], 1 + 3 * i, ascii, 2);
-                i = i + 1;
-            }
-            p.data[3 * i] = 0;
-            let ascii = (65 + i) as c_char;
-            memset(&mut p.data[..], 1 + 3 * i, ascii, 5);
-            p.data[1 + 3 * i + 5] = 0;
-            expected_p = s.unwrap().0;
-            expected_p.tags.clear();
-            {
-                let mut i: u8 = 0;
-                while i < FX_LOG_MAX_TAGS as u8 {
-                    let tag = vec![65 + i, 65 + i];
-                    expected_p.tags.push(String::from_utf8(tag).unwrap());
-                    i = i + 1;
-                }
-                let msg = vec![65 + i, 65 + i, 65 + i, 65 + i, 65 + i];
-                expected_p.msg = String::from_utf8(msg).unwrap();
-            }
-            s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5));
-            let buffer = p.as_bytes();
-            assert_eq!(
-                parse_log_message(
-                    &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 6)],
-                ),
-                s
-            );
+        p.data[3 * FX_LOG_MAX_TAGS] = 0;
+        p.data[1 + 3 * FX_LOG_MAX_TAGS] = 0;
 
-            // test max tags with message and writing full bytes
-            assert_eq!(parse_log_message(&buffer[0..buffer.len()]), s);
-        }
+        let expected_p = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            severity: p.metadata.severity,
+            dropped_logs: p.metadata.dropped_logs,
+            tags: (0..FX_LOG_MAX_TAGS as u8)
+                .map(|i| String::from_utf8(vec![65 + i as u8; 2]).unwrap())
+                .collect(),
+            msg: String::new(),
+        };
 
-        // test max tags with no message
-        {
-            let buffer = p.as_bytes();
-            assert_eq!(
-                parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))],),
-                None
-            );
-        }
+        let s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize)));
+        let buffer = p.as_bytes();
+        assert_eq!(
+            parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)],),
+            s
+        );
+    }
 
-        // test max tags with empty message
-        {
-            p.data[1 + 3 * FX_LOG_MAX_TAGS as usize] = 0;
-            expected_p = s.unwrap().0;
-            expected_p.msg = String::from("");
-            s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize)));
-            let buffer = p.as_bytes();
-            assert_eq!(
-                parse_log_message(
-                    &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)],
-                ),
-                s
-            );
-        }
+    #[test]
+    fn no_tags_with_message() {
+        let mut p = test_packet();
+        p.data[0] = 0;
+        p.data[1] = 'A' as c_char;
+        p.data[2] = 'A' as c_char;
+        p.data[3] = 0;
 
-        // test zero tags with some message
-        {
-            p.data[0] = 0;
-            p.data[3] = 0;
-            expected_p = s.unwrap().0;
-            expected_p.msg = String::from("AA");
-            expected_p.tags.clear();
-            s = Some((expected_p, METADATA_SIZE + 3));
-            let buffer = p.as_bytes();
-            assert_eq!(parse_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
-        }
+        let expected_p = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            severity: p.metadata.severity,
+            dropped_logs: p.metadata.dropped_logs,
+            tags: vec![],
+            msg: String::from("AA"),
+        };
+
+        let s = Some((expected_p.clone(), METADATA_SIZE + 3));
+        let buffer = p.as_bytes();
+        assert_eq!(parse_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
     }
 }
