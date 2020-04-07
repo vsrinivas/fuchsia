@@ -4,6 +4,8 @@
 
 //! A networking stack.
 
+extern crate network_manager_core_interface as interface;
+
 #[macro_use]
 extern crate log;
 
@@ -11,7 +13,6 @@ pub mod address;
 pub mod config;
 pub mod error;
 pub mod hal;
-pub(crate) mod interface;
 pub mod lifmgr;
 pub mod oir;
 pub mod packet_filter;

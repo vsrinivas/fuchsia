@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::error;
-use crate::interface;
 
 const INTF_METRIC_WLAN: u32 = 90;
 const INTF_METRIC_ETH: u32 = 100;
