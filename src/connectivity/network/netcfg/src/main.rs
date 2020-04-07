@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+extern crate network_manager_core_interface as interface;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
@@ -20,7 +22,6 @@ use futures::{future::try_join, TryFutureExt, TryStreamExt};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use serde::Deserialize;
 
-mod interface;
 mod matchers;
 
 #[derive(Debug, Deserialize)]
@@ -267,8 +268,8 @@ fn main() -> Result<(), anyhow::Error> {
                                 .into_zx_channel();
 
                             let name = persisted_interface_config.get_stable_name(
-                                topological_path.clone(), /* TODO(tamird): we can probably do
-                                                           * better with std::borrow::Cow. */
+                                &topological_path, /* TODO(tamird): we can probably do
+                                                    * better with std::borrow::Cow. */
                                 device_info.mac,
                                 device_info.features.contains(
                                     fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN,

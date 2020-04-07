@@ -27,21 +27,19 @@ impl Config {
 
     fn generate_identifier(
         &self,
-        topological_path: String,
+        topological_path: &str,
         mac_address: MacAddress,
     ) -> PersistentIdentifier {
         if topological_path.contains("/pci/") {
             if topological_path.contains("/usb/") {
                 PersistentIdentifier::MacAddress(mac_address)
             } else {
-                PersistentIdentifier::TopologicalPath(topological_path)
+                PersistentIdentifier::TopologicalPath(topological_path.to_string())
             }
+        } else if topological_path.contains("/platform/") {
+            PersistentIdentifier::TopologicalPath(topological_path.to_string())
         } else {
-            if topological_path.contains("/platform/") {
-                PersistentIdentifier::TopologicalPath(topological_path)
-            } else {
-                PersistentIdentifier::MacAddress(mac_address)
-            }
+            PersistentIdentifier::MacAddress(mac_address)
         }
     }
 
@@ -83,15 +81,8 @@ impl Config {
     // "/dev/sys/platform/04:02:7/aml-ethernet/Designware MAC/ethernet"
     // Though it is not a sdio device, it has the vid:pid:did info following "/platform/",
     // it's handled the same way as a sdio device.
-    fn generate_name_from_mac(
-        &self,
-        octets: &[u8; 6],
-        wlan: bool,
-    ) -> Result<String, anyhow::Error> {
-        let prefix = match wlan {
-            true => "wlanx",
-            false => "ethx",
-        };
+    fn generate_name_from_mac(&self, octets: [u8; 6], wlan: bool) -> Result<String, anyhow::Error> {
+        let prefix = if wlan { "wlanx" } else { "ethx" };
         let last_byte = octets[octets.len() - 1];
         for i in 0u8..255u8 {
             let candidate = ((last_byte as u16 + i as u16) % 256 as u16) as u8;
@@ -106,7 +97,7 @@ impl Config {
         }
         Err(anyhow::format_err!(
             "could not find unique name for mac={}, wlan={}",
-            MacAddress { octets: *octets },
+            MacAddress { octets: octets },
             wlan
         ))
     }
@@ -122,17 +113,22 @@ impl Config {
             (if wlan { "wlans" } else { "eths" }, "/platform/")
         };
 
-        let index = topological_path.find(pat).ok_or(anyhow::format_err!(
-            "unexpected topological path {}: {} is not found",
-            topological_path,
-            pat
-        ))?;
+        let index = topological_path.find(pat).ok_or_else(|| {
+            anyhow::format_err!(
+                "unexpected topological path {}: {} is not found",
+                topological_path,
+                pat
+            )
+        })?;
         let topological_path = &topological_path[index + pat.len()..];
-        let index = topological_path.find('/').ok_or(anyhow::format_err!(
-            "unexpected topological path suffix {}: '/' is not found after {}",
-            topological_path,
-            pat
-        ))?;
+        let index = topological_path.find('/').ok_or_else(|| {
+            anyhow::format_err!(
+                "unexpected topological path suffix {}: '/' is not found after {}",
+                topological_path,
+                pat
+            )
+        })?;
+
         let mut name = String::from(prefix);
         for digit in topological_path[..index]
             .trim_end_matches(|c: char| !c.is_digit(16) || c == '0')
@@ -151,7 +147,7 @@ impl Config {
     ) -> Result<String, anyhow::Error> {
         match persistent_id {
             PersistentIdentifier::MacAddress(mac_addr) => {
-                self.generate_name_from_mac(&mac_addr.octets, wlan)
+                self.generate_name_from_mac(mac_addr.octets, wlan)
             }
             PersistentIdentifier::TopologicalPath(ref topological_path) => {
                 self.generate_name_from_topological_path(&topological_path, wlan)
@@ -218,7 +214,7 @@ impl<'a> FileBackedConfig<'a> {
 
     pub fn get_stable_name(
         &mut self,
-        topological_path: String,
+        topological_path: &str,
         mac_address: MacAddress,
         wlan: bool,
     ) -> Result<&str, anyhow::Error> {
@@ -317,7 +313,7 @@ mod tests {
         let config = Config { names: vec![] };
         for test in test_cases.into_iter() {
             let persistent_id =
-                config.generate_identifier(test.topological_path, MacAddress { octets: test.mac });
+                config.generate_identifier(&test.topological_path, MacAddress { octets: test.mac });
             let name = config
                 .generate_name(&persistent_id, test.wlan)
                 .expect("failed to generate the name");
@@ -347,7 +343,7 @@ mod tests {
             assert_eq!(interface_config.config.names.len(), i);
 
             let name = interface_config
-                .get_stable_name(test.topological_path, MacAddress { octets: test.mac }, test.wlan)
+                .get_stable_name(&test.topological_path, MacAddress { octets: test.mac }, test.wlan)
                 .expect("failed to get the interface name");
             assert_eq!(name, test.want_name);
             assert_eq!(interface_config.config.names.len(), 1);
@@ -364,7 +360,7 @@ mod tests {
         for n in 0u8..255u8 {
             let octets = [n, 0x01, 0x01, 0x01, 0x01, 00];
 
-            let persistent_id = config.generate_identifier(topo_usb.clone(), MacAddress { octets });
+            let persistent_id = config.generate_identifier(&topo_usb, MacAddress { octets });
 
             if let Some(index) = config.lookup_by_identifier(&persistent_id) {
                 assert_eq!(config.names[index].1, format!("{}{:x}", "wlanx", n));
@@ -377,7 +373,7 @@ mod tests {
             }
         }
         let octets = [0x00, 0x00, 0x01, 0x01, 0x01, 00];
-        let persistent_id = config.generate_identifier(topo_usb, MacAddress { octets });
+        let persistent_id = config.generate_identifier(&topo_usb, MacAddress { octets });
         assert!(config.generate_name(&persistent_id, true).is_err());
     }
 
@@ -393,7 +389,6 @@ mod tests {
         assert_eq!(
             FileBackedConfig::load(&path)
                 .unwrap_err()
-                .root_cause()
                 .downcast_ref::<serde_json::error::Error>()
                 .unwrap()
                 .classify(),
@@ -406,13 +401,7 @@ mod tests {
         let interface_config = FileBackedConfig::load(&"not/a/real/path")
             .expect("failed to load the interface config");
         assert_eq!(
-            interface_config
-                .store()
-                .unwrap_err()
-                .root_cause()
-                .downcast_ref::<io::Error>()
-                .unwrap()
-                .kind(),
+            interface_config.store().unwrap_err().downcast_ref::<io::Error>().unwrap().kind(),
             io::ErrorKind::NotFound
         );
     }
