@@ -77,7 +77,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_package_single_blob() {
-        let pkgfs = PkgfsRamdisk::start().unwrap();
+        let pkgfs =
+            PkgfsRamdisk::builder().enforce_packages_non_static_allowlist(false).start().unwrap();
         let root = pkgfs.root_dir_proxy().unwrap();
         let install = crate::install::Client::open_from_pkgfs_root(&root).unwrap();
         let client = Client::open_from_pkgfs_root(&root).unwrap();
@@ -99,7 +100,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_package_multiple_blobs() {
-        let pkgfs = PkgfsRamdisk::start().unwrap();
+        let pkgfs =
+            PkgfsRamdisk::builder().enforce_packages_non_static_allowlist(false).start().unwrap();
         let root = pkgfs.root_dir_proxy().unwrap();
         let install = crate::install::Client::open_from_pkgfs_root(&root).unwrap();
         let client = Client::open_from_pkgfs_root(&root).unwrap();

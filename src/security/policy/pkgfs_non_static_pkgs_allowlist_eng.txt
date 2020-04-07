@@ -11,3 +11,27 @@ system_monitor_harvester
 # Other debugging tools
 run
 
+# Needed by infrastructure until they convert to new devtools
+ls
+cat
+uname
+rm
+pkgctl
+amberctl
+
+# Needed to load trace specs for tests
+benchmark
+rust_inspect_benchmarks
+ledger_benchmarks
+netstack_benchmarks
+garnet_input_latency_benchmarks
+fuchsia_benchmarks
+fidl_benchmarks
+go_fidl_benchmarks
+
+# Needed by the peridot tests
+catapult_converter
+
+# fonts contains a v2 component, which goes directly to pkgfs.
+# We should move this to base: fxb/48944
+fonts

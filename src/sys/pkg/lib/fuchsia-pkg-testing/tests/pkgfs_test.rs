@@ -165,7 +165,11 @@ async fn example_package() -> Package {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_short_write() {
-    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
+        .start()
+        .unwrap();
+
     let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -270,7 +274,11 @@ async fn test_pkgfs_short_write() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install() {
-    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
+        .start()
+        .unwrap();
+
     let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -447,7 +455,11 @@ async fn test_pkgfs_restart_install() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install_already_done() {
-    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
+        .start()
+        .unwrap();
+
     let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -785,7 +797,8 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_install_update() {
     // GC doesn't work without a working system image
-    let system_image_package = SystemImageBuilder::new().build().await;
+    let system_image_package =
+        SystemImageBuilder::new().pkgfs_non_static_packages_allowlist(&["example"]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -871,7 +884,10 @@ async fn test_pkgfs_install_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
-    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::builder()
+        .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
+        .start()
+        .unwrap();
 
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -908,8 +924,11 @@ async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_cache_index() {
     let pkg = example_package().await;
-
-    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new()
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["example"])
+        .build()
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -1012,7 +1031,11 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_shadowed_cache_package() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new()
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["example"])
+        .build()
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1097,7 +1120,11 @@ async fn test_pkgfs_shadowed_cache_package() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     let pkg = example_package().await;
-    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new()
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["example"])
+        .build()
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1150,7 +1177,11 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs() {
-    let pkgfs = PkgfsRamdisk::start().unwrap();
+    let pkgfs = PkgfsRamdisk::builder()
+        .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
+        .start()
+        .unwrap();
+
     let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().unwrap();
 
@@ -1287,7 +1318,6 @@ async fn test_pkgfs_with_system_image() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
     let pkg = example_package().await;
-
     let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["example"])
@@ -1301,7 +1331,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
     let pkgfs = PkgfsRamdisk::builder()
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .enforce_packages_non_static_allowlist(true) // turn on allowlist enforcement
         .start()
         .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
@@ -1328,7 +1357,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     let pkg = example_package().await;
-
     let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["not_example"])
@@ -1342,7 +1370,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     let pkgfs = PkgfsRamdisk::builder()
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .enforce_packages_non_static_allowlist(true) // turn on allowlist enforcement
         .start()
         .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
@@ -1384,7 +1411,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
     let pkg = example_package().await;
-
     let system_image_package = SystemImageBuilder::new()
         .cache_packages(&[&pkg])
         .pkgfs_non_static_packages_allowlist(&["not_example"])
@@ -1502,7 +1528,11 @@ async fn verify_executable_package_rights(
 #[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_allows_base_package() {
     let pkg = executable_package().await;
-    let system_image_package = SystemImageBuilder::new().static_packages(&[&pkg]).build().await;
+    let system_image_package = SystemImageBuilder::new()
+        .static_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["execute"])
+        .build()
+        .await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1531,6 +1561,7 @@ async fn executability_enforcement_blocks_cache_package() {
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
         .enforce_non_base_executability_restrictions(true)
+        .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
 
@@ -1573,6 +1604,7 @@ async fn executability_enforcement_blocks_unknown_package() {
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
         .enforce_non_base_executability_restrictions(true)
+        .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
 
@@ -1594,6 +1626,7 @@ async fn executability_enforcement_allows_unknown_package_if_dynamically_disable
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
         .enforce_non_base_executability_restrictions(false)
+        .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
 
@@ -1657,6 +1690,7 @@ async fn open_executable_allowed_when_statically_disabled() {
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
         .enforce_non_base_executability_restrictions(true)
+        .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
     verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
@@ -1665,6 +1699,7 @@ async fn open_executable_allowed_when_statically_disabled() {
         .into_builder()
         .unwrap()
         .enforce_non_base_executability_restrictions(false)
+        .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
     verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;

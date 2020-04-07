@@ -21,7 +21,7 @@ func Main() {
 	var (
 		blob                                   = flag.String("blob", "/blob", "Path at which to store blobs")
 		enforcePkgfsPackagesNonStaticAllowlist = flag.Bool("enforcePkgfsPackagesNonStaticAllowlist",
-			false,
+			true,
 			"Whether to enforce the allowlist of non-static packages allowed to appear in /pkgfs/packages")
 		enforceNonBaseExecutabilityRestrictions = flag.Bool("enforceNonBaseExecutabilityRestrictions", false,
 			"Whether to enforce the restrictions to executability of files in packages to just packages in base or the allowlist")
