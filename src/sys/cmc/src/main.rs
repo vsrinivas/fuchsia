@@ -36,7 +36,12 @@ fn run_cmc() -> Result<(), Error> {
             validate::validate(&files, &extra_schemas)?
         }
         opts::Commands::Merge { files, output } => merge::merge(files, output)?,
-        opts::Commands::Format { file, pretty, output } => format::format(&file, pretty, output)?,
+        opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
+            if inplace {
+                output = Some(file.clone());
+            }
+            format::format(&file, pretty, cml, output)?;
+        }
         opts::Commands::Compile { file, pretty, output } => {
             compile::compile(&file, pretty, output)?
         }

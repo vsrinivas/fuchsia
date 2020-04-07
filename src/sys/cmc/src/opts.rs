@@ -54,8 +54,17 @@ pub enum Commands {
         file: PathBuf,
 
         #[structopt(short = "p", long = "pretty")]
-        /// whether to pretty-print the results, will minify if not provided
+        /// whether to pretty-print the results (otherwise minify JSON documents; ignored for JSON5)
         pretty: bool,
+
+        #[structopt(long = "cml")]
+        /// interpret input file as JSON5 CML, and output in the preferred style, preserving all
+        /// comments (this is the default for `.cml` files; implies `--pretty`)
+        cml: bool,
+
+        #[structopt(short = "i", long = "in-place")]
+        /// replace the input file with the formatted output (implies `--output <inputfile>`)
+        inplace: bool,
 
         #[structopt(short = "o", long = "output", parse(from_os_str))]
         /// file to write the formatted results to, will print to stdout if not provided

@@ -59,6 +59,7 @@ function format-cmd() {
         printf "${CLANG_CMD}" ;;
 
       *.cmx) printf "${JSON_FMT_CMD}" ;;
+      *.cml) printf "${CML_FMT_CMD}" ;;
       *.dart) printf "${DART_CMD}" ;;
       *.fidl) printf "${FIDL_CMD}" ;;
       *.gn) printf "${GN_CMD}" ;;
@@ -153,6 +154,8 @@ if [[ -n "${VERBOSE}" ]]; then
   printf "Files to be formatted:\n%s\n" "${FILES[@]}"
 fi
 
+#declare HOST_TOOLS_DIR="${FUCHSIA_BUILD_DIR}/${HOST_OUT_DIR}"
+
 declare CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
 declare DART_CMD="${PREBUILT_DART_DIR}/bin/dartfmt -w"
 declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
@@ -160,6 +163,7 @@ declare FIDL_CMD="${FIDL_BIN} -i"
 declare GN_CMD="${PREBUILT_GN} format"
 declare GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
 declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
+declare CML_FMT_CMD="${HOST_OUT_DIR}/cmc format --cml --in-place"
 declare PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
 declare RUST_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 declare RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
