@@ -89,10 +89,10 @@ static void erase_screen(textcon_t* tc, int arg) {
 
 static void erase_line(textcon_t* tc, int arg) {
   switch (arg) {
-    case 0:  // erase to eol
+    case 0:  // erase to EOL
       erase_region(tc, tc->x, tc->y, tc->w - 1, tc->y);
       break;
-    case 1:  // erase from bol
+    case 1:  // erase from BOL
       erase_region(tc, 0, tc->y, tc->x, tc->y);
       break;
     case 2:  // erase line
@@ -421,7 +421,7 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
       restorecursorpos(tc);
       break;
     case '@':  // (ICH) Insert Blank Character(s)
-    case 'T':  // Initiate Hilight Mouse Tracking (xterm)
+    case 'T':  // Initiate Highlight Mouse Tracking (xterm)
     case 'c':  // (DA) Send Device Attributes
     case 'g':  // (TBC) Tab Clear
     case 'h':  // (SM) Set Mode  (4=Insert,20=AutoNewline)
@@ -526,8 +526,8 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
         return;
       }
       if (tc->x >= tc->w) {
-        // apply deferred line wrap upon printing first character beyond
-        // end of current line
+        // Apply deferred line wrap upon printing first character beyond
+        // end of current line.
         putc_cr(tc);
         putc_lf(tc);
       }
@@ -562,7 +562,7 @@ void tc_seth(textcon_t* tc, int h) {
   int old_h = h;
   tc->h = h;
 
-  // move contents
+  // Move contents.
   int y = 0;
   if (old_h > h) {
     vc_char_t* dst = dataxy(tc, 0, tc->scroll_y0);
@@ -580,7 +580,7 @@ void tc_seth(textcon_t* tc, int h) {
   }
   tc->y = clampy(tc, tc->y);
 
-  // try to fixup the scroll region
+  // Try to fix up the scroll region.
   if (tc->scroll_y0 >= h) {
     tc->scroll_y0 = 0;
   }

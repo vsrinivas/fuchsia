@@ -61,14 +61,14 @@ zx_status_t vc_init_gfx(vc_gfx_t* gfx, gfx_surface* test) {
 
   gfx->vc_test_gfx = test;
 
-  // init the status bar
+  // Initialize the status bar.
   gfx->vc_status_bar_gfx =
       gfx_create_surface(NULL, test->width, font->height, test->stride, test->format, 0);
   if (!gfx->vc_status_bar_gfx) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // init the main surface
+  // Initialize the main surface.
   gfx->vc_gfx = gfx_create_surface(NULL, test->width, test->height, test->stride, test->format, 0);
   if (!gfx->vc_gfx) {
     gfx_surface_destroy(gfx->vc_status_bar_gfx);
@@ -149,13 +149,13 @@ zx_status_t vc_init_gfx(vc_gfx_t* gfx, zx_handle_t fb_vmo, int32_t width, int32_
   }
 
   r = ZX_ERR_NO_MEMORY;
-  // init the status bar
+  // Initialize the status bar.
   if ((gfx->vc_status_bar_gfx = gfx_create_surface((void*)gfx->vc_gfx_mem, width, font->height,
                                                    stride, format, 0)) == NULL) {
     goto fail;
   }
 
-  // init the main surface
+  // Initialize the main surface.
   ptr = gfx->vc_gfx_mem + stride * font->height * ZX_PIXEL_FORMAT_BYTES(format);
   if ((gfx->vc_gfx = gfx_create_surface((void*)ptr, width, height - font->height, stride, format,
                                         0)) == NULL) {

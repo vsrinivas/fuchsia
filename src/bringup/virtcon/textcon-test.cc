@@ -250,8 +250,8 @@ TEST(GfxConsoleTextbufTests, DisplayUpdateComparison) {
   EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0);
 }
 
-// This tests updating the display with all of the different colorschemes. This
-// catches that the tc and the vcs set their colorschemes correctly. If
+// This tests updating the display with all of the different color schemes. This
+// catches that the tc and the vcs set their color schemes correctly. If
 // something goes wrong, either all of the chars will appear to be changed or
 // none will be changed.
 TEST(GfxConsoleTextbufTests, DisplayColorSchemes) {
