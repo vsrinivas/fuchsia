@@ -9,7 +9,7 @@
 #include <zircon/status.h>
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -20,23 +20,23 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 }  // namespace
 
-fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
-                                            std::shared_ptr<sys::ServiceDirectory> services,
-                                            zx::duration timeout, Cobalt* cobalt) {
+::fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
+                                              std::shared_ptr<sys::ServiceDirectory> services,
+                                              zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services, cobalt);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
   auto screenshot = scenic->TakeScreenshot(timeout);
-  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(screenshot),
-                                         /*args=*/std::move(scenic));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(screenshot),
+                                              /*args=*/std::move(scenic));
 }
 
 Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                Cobalt* cobalt)
     : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Screenshot collection") {}
 
-fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) {
+::fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) {
   FXL_CHECK(!has_called_take_screenshot_) << "TakeScreenshot() is not intended to be called twice";
   has_called_take_screenshot_ = true;
 

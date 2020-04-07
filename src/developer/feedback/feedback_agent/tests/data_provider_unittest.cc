@@ -179,11 +179,11 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     return out_response;
   }
 
-  fit::result<Data, zx_status_t> GetData(
+  ::fit::result<Data, zx_status_t> GetData(
       zx::duration bugreport_flow_duration = kDefaultBugReportFlowDuration) {
     FX_CHECK(data_provider_ && clock_);
 
-    fit::result<Data, zx_status_t> out_result;
+    ::fit::result<Data, zx_status_t> out_result;
 
     // We can set |clock_|'s start and end times because the call to start the timer happens
     // independently of the loop while the call to end it happens in a task that is posted on the
@@ -191,7 +191,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     // recorded.
     clock_->Set(zx::time(0));
     data_provider_->GetData(
-        [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
+        [&out_result](::fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
     clock_->Set(zx::time(0) + bugreport_flow_duration);
     RunLoopUntilIdle();
     return out_result;
@@ -363,7 +363,7 @@ TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) 
 TEST_F(DataProviderTest, GetData_SmokeTest) {
   SetUpDataProvider();
 
-  fit::result<Data, zx_status_t> result = GetData();
+  ::fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
 
@@ -387,7 +387,7 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
 TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
   SetUpDataProvider();
 
-  fit::result<Data, zx_status_t> result = GetData();
+  ::fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
 
@@ -459,7 +459,7 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
 TEST_F(DataProviderTest, GetData_SingleAttachmentOnEmptyAttachmentAllowlist) {
   SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{});
 
-  fit::result<Data, zx_status_t> result = GetData();
+  ::fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
@@ -471,7 +471,7 @@ TEST_F(DataProviderTest, GetData_SingleAttachmentOnEmptyAttachmentAllowlist) {
 TEST_F(DataProviderTest, GetData_NoDataOnEmptyAllowlists) {
   SetUpDataProvider(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  fit::result<Data, zx_status_t> result = GetData();
+  ::fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();

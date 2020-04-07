@@ -12,8 +12,8 @@
 #include <zircon/time.h>
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
-#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -28,7 +28,7 @@ class ProductInfoProvider : public AnnotationProvider {
 
   static AnnotationKeys GetSupportedAnnotations();
 
-  fit::promise<Annotations> GetAnnotations() override;
+  ::fit::promise<Annotations> GetAnnotations() override;
 
  private:
   AnnotationKeys annotations_to_get_;
@@ -49,7 +49,7 @@ class ProductInfoPtr {
   ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                  Cobalt* cobalt);
 
-  fit::promise<Annotations> GetProductInfo(zx::duration timeout);
+  ::fit::promise<Annotations> GetProductInfo(zx::duration timeout);
 
  private:
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -59,7 +59,7 @@ class ProductInfoPtr {
   bool has_called_get_product_info_ = false;
 
   fuchsia::hwinfo::ProductPtr product_ptr_;
-  Bridge<Annotations> bridge_;
+  fit::Bridge<Annotations> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProductInfoPtr);
 };

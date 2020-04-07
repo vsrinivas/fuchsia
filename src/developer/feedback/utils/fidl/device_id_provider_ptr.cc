@@ -53,24 +53,24 @@ void DeviceIdProviderPtr::CacheId() {
   });
 }
 
-fit::promise<std::string> DeviceIdProviderPtr::GetId(const zx::duration timeout) {
+::fit::promise<std::string> DeviceIdProviderPtr::GetId(const zx::duration timeout) {
   if (device_id_) {
-    return fit::make_result_promise(DeviceIdToResult());
+    return ::fit::make_result_promise(DeviceIdToResult());
   }
 
   const uint64_t id = pending_calls_.NewBridgeForTask("Getting Feedback device id");
 
-  return pending_calls_.WaitForDone(id, timeout).then([id, this](const fit::result<>& result) {
+  return pending_calls_.WaitForDone(id, timeout).then([id, this](const ::fit::result<>& result) {
     pending_calls_.Delete(id);
     return DeviceIdToResult();
   });
 }
 
-fit::result<std::string> DeviceIdProviderPtr::DeviceIdToResult() {
+::fit::result<std::string> DeviceIdProviderPtr::DeviceIdToResult() {
   if (device_id_ && device_id_->has_value()) {
-    return fit::ok(device_id_->value());
+    return ::fit::ok(device_id_->value());
   }
-  return fit::error();
+  return ::fit::error();
 }
 
 }  // namespace fidl

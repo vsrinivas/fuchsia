@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_BRIDGE_MAP_H_
-#define SRC_DEVELOPER_FEEDBACK_UTILS_BRIDGE_MAP_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_FIT_BRIDGE_MAP_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_FIT_BRIDGE_MAP_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
@@ -11,9 +11,10 @@
 #include <cstdint>
 #include <map>
 
-#include "src/developer/feedback/utils/bridge.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 
 namespace feedback {
+namespace fit {
 
 // Manages access to multiple Bridge objects, allowing access through an id.
 template <typename V = void, typename E = void>
@@ -82,22 +83,22 @@ class BridgeMap {
 
   // Get the promise that will be ungated when the bridge at |id| is completed. An error is returned
   // if the bridge doesn't exist.
-  fit::promise<V, E> WaitForDone(uint64_t id) {
+  ::fit::promise<V, E> WaitForDone(uint64_t id) {
     if (Contains(id)) {
       return bridges_.at(id).WaitForDone();
     }
 
-    return fit::make_result_promise<V, E>(fit::error());
+    return ::fit::make_result_promise<V, E>(::fit::error());
   }
 
   // Start the timeout and get the promise that will be ungated when the bridge at |id| is
   // completed. An error if returned if the bridge doesn't exist.
-  fit::promise<V, E> WaitForDone(
-      uint64_t id, zx::duration timeout, fit::closure if_timeout = [] {}) {
+  ::fit::promise<V, E> WaitForDone(
+      uint64_t id, zx::duration timeout, ::fit::closure if_timeout = [] {}) {
     if (Contains(id)) {
       return bridges_.at(id).WaitForDone(timeout, std::move(if_timeout));
     }
-    return fit::make_result_promise<V, E>(fit::error());
+    return ::fit::make_result_promise<V, E>(::fit::error());
   }
 
  private:
@@ -106,6 +107,7 @@ class BridgeMap {
   uint64_t next_id_ = 1;
 };
 
+}  // namespace fit
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_BRIDGE_MAP_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIT_BRIDGE_MAP_H_

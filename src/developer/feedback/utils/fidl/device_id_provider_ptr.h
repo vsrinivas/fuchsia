@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DEVICE_ID_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DEVICE_ID_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DEVICE_ID_PROVIDER_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DEVICE_ID_PROVIDER_PTR_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -15,7 +15,7 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/utils/bridge_map.h"
+#include "src/developer/feedback/utils/fit/bridge_map.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
@@ -30,20 +30,20 @@ class DeviceIdProviderPtr {
   DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
                       std::shared_ptr<sys::ServiceDirectory> services);
 
-  fit::promise<std::string> GetId(zx::duration timeout);
+  ::fit::promise<std::string> GetId(zx::duration timeout);
 
  private:
   void CacheId();
 
-  // Turns the cached device id into a fit::result::ok() if an actual ID is cached, error()
+  // Turns the cached device id into a ::fit::result::ok() if an actual ID is cached, error()
   // otherwise.
-  fit::result<std::string> DeviceIdToResult();
+  ::fit::result<std::string> DeviceIdToResult();
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
 
   fuchsia::feedback::DeviceIdProviderPtr connection_;
-  BridgeMap<> pending_calls_;
+  fit::BridgeMap<> pending_calls_;
 
   // The std::unique_ptr<> indicates whether the value is cached, the std::optional<> indicates
   // whether the cached value is an actual id.
@@ -59,4 +59,4 @@ class DeviceIdProviderPtr {
 }  // namespace fidl
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DEVICE_ID_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIDL_DEVICE_ID_PROVIDER_PTR_H_

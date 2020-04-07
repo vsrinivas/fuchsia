@@ -28,8 +28,8 @@ namespace feedback {
 //
 // fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter and fuchsia.cobalt.LoggerFactory are
 // expected to be in |services|.
-fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
-                                   std::shared_ptr<sys::ServiceDirectory> services);
+::fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
+                                     std::shared_ptr<sys::ServiceDirectory> services);
 
 namespace internal {
 
@@ -48,10 +48,10 @@ class RebootLogHandler {
  public:
   RebootLogHandler(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  fit::promise<void> Handle(const std::string& filepath);
+  ::fit::promise<void> Handle(const std::string& filepath);
 
  private:
-  fit::promise<void> FileCrashReport(RebootInfo info);
+  ::fit::promise<void> FileCrashReport(RebootInfo info);
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -61,7 +61,7 @@ class RebootLogHandler {
   fsl::SizedVmo reboot_log_;
 
   fuchsia::feedback::CrashReporterPtr crash_reporter_;
-  fit::bridge<void> crash_reporting_done_;
+  ::fit::bridge<void> crash_reporting_done_;
   // We wrap the delayed task we post on the async loop to delay the crash reporting in a
   // CancelableClosure so we can cancel it if we are done another way.
   fxl::CancelableClosure delayed_crash_reporting_;

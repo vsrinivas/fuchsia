@@ -13,8 +13,8 @@
 
 #include <memory>
 
-#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -22,7 +22,7 @@ namespace feedback {
 // Asks Scenic to take the screenshot of the current view and return it.
 //
 // fuchsia.ui.scenic.Scenic is expected to be in |services|.
-fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
+::fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     zx::duration timeout, Cobalt* cobalt);
 
@@ -35,7 +35,7 @@ class Scenic {
   Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
          Cobalt* cobalt);
 
-  fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(zx::duration timeout);
+  ::fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(zx::duration timeout);
 
  private:
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -45,7 +45,7 @@ class Scenic {
   bool has_called_take_screenshot_ = false;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  Bridge<fuchsia::ui::scenic::ScreenshotData> bridge_;
+  fit::Bridge<fuchsia::ui::scenic::ScreenshotData> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);
 };

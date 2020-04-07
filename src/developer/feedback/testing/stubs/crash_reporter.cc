@@ -33,7 +33,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
   if (!fsl::StringFromVmo(report.attachments()[0].value, &reboot_log_)) {
     FX_LOGS(ERROR) << "error parsing feedback log VMO as string";
-    callback(fit::error(ZX_ERR_INTERNAL));
+    callback(::fit::error(ZX_ERR_INTERNAL));
     return;
   }
 
@@ -43,12 +43,12 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
     uptime_ = std::nullopt;
   }
 
-  callback(fit::ok());
+  callback(::fit::ok());
 }
 
 void CrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,
                                            FileCallback callback) {
-  callback(fit::error(ZX_ERR_INTERNAL));
+  callback(::fit::error(ZX_ERR_INTERNAL));
 }
 
 void CrashReporterNoFileExpected::File(fuchsia::feedback::CrashReport report,

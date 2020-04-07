@@ -32,8 +32,8 @@ namespace {
 using testing::ElementsAre;
 using testing::IsEmpty;
 
-constexpr fit::result_state kError = fit::result_state::error;
-constexpr fit::result_state kOk = fit::result_state::ok;
+constexpr ::fit::result_state kError = ::fit::result_state::error;
+constexpr ::fit::result_state kOk = ::fit::result_state::ok;
 
 struct TestParam {
   std::string test_name;
@@ -62,11 +62,11 @@ class RebootLogHandlerTest : public UnitTestFixture,
     ASSERT_TRUE(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
   }
 
-  fit::result<void> HandleRebootLog() {
-    fit::result<void> result;
+  ::fit::result<void> HandleRebootLog() {
+    ::fit::result<void> result;
     executor_.schedule_task(
         feedback::HandleRebootLog(reboot_log_path_, dispatcher(), services())
-            .then([&result](fit::result<void>& res) { result = std::move(res); }));
+            .then([&result](::fit::result<void>& res) { result = std::move(res); }));
     // TODO(fxb/46216): remove delay.
     RunLoopFor(zx::sec(30));
     return result;
@@ -160,7 +160,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   SetUpCrashReporter(std::make_unique<stubs::CrashReporter>());
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
+  ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
   EXPECT_STREQ(crash_reporter_->crash_signature().c_str(), param.output_crash_signature.c_str());
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), param.input_reboot_log.c_str());
@@ -173,7 +173,7 @@ TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
   WriteRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002");
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
+  ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kClean)));
@@ -182,7 +182,7 @@ TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
 TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
+  ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kCold)));
@@ -201,7 +201,7 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   SetUpCrashReporter(nullptr);
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
+  ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
@@ -212,7 +212,7 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
   SetUpCrashReporter(std::make_unique<stubs::CrashReporterClosesConnection>());
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
+  ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
@@ -223,7 +223,7 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
   SetUpCrashReporter(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
+  ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));

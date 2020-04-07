@@ -13,7 +13,7 @@
 
 #include <memory>
 
-#include "src/developer/feedback/utils/bridge_map.h"
+#include "src/developer/feedback/utils/fit/bridge_map.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -27,7 +27,7 @@ class DataProviderPtr {
  public:
   DataProviderPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  fit::promise<fuchsia::feedback::Data> GetData(zx::duration timeout);
+  ::fit::promise<fuchsia::feedback::Data> GetData(zx::duration timeout);
 
  private:
   void Connect();
@@ -35,7 +35,7 @@ class DataProviderPtr {
   const std::shared_ptr<sys::ServiceDirectory> services_;
 
   fuchsia::feedback::DataProviderPtr connection_;
-  BridgeMap<fuchsia::feedback::Data> pending_calls_;
+  fit::BridgeMap<fuchsia::feedback::Data> pending_calls_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DataProviderPtr);
 };

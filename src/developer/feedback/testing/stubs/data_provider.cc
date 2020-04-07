@@ -42,29 +42,29 @@ void DataProvider::GetData(GetDataCallback callback) {
   Data data;
   data.set_annotations(BuildAnnotations(annotations_));
   data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
-  callback(fit::ok(std::move(data)));
+  callback(::fit::ok(std::move(data)));
 }
 
 void DataProviderReturnsNoAnnotation::GetData(GetDataCallback callback) {
   Data data;
   data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
-  callback(fit::ok(std::move(data)));
+  callback(::fit::ok(std::move(data)));
 }
 
 void DataProviderReturnsNoAttachment::GetData(GetDataCallback callback) {
   Data data;
   data.set_annotations(BuildAnnotations(annotations_));
-  callback(fit::ok(std::move(data)));
+  callback(::fit::ok(std::move(data)));
 }
 
 void DataProviderReturnsNoData::GetData(GetDataCallback callback) {
-  callback(fit::error(ZX_ERR_INTERNAL));
+  callback(::fit::error(ZX_ERR_INTERNAL));
 }
 
 void DataProviderNeverReturning::GetData(GetDataCallback callback) {}
 
 void DataProviderBundleAttachment::GetData(GetDataCallback callback) {
-  callback(fit::ok(
+  callback(::fit::ok(
       std::move(fuchsia::feedback::Data().set_attachment_bundle(std::move(attachment_bundle_)))));
 }
 

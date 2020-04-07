@@ -26,7 +26,7 @@ class ChannelProvider : public AnnotationProvider {
 
   static AnnotationKeys GetSupportedAnnotations();
 
-  fit::promise<Annotations> GetAnnotations() override;
+  ::fit::promise<Annotations> GetAnnotations() override;
 
  private:
   async_dispatcher_t* dispatcher_;

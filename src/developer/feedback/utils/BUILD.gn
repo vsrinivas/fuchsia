@@ -121,24 +121,6 @@ source_set("logs") {
   ]
 }
 
-source_set("libfit") {
-  sources = [
-    "bridge.h",
-    "bridge_map.h",
-    "promise.h",
-  ]
-
-  public_deps = [
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
-  ]
-
-  visibility = [ "//src/developer/feedback/*" ]
-}
-
 source_set("time") {
   sources = [
     "time.cc",

@@ -12,7 +12,7 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -54,12 +54,13 @@ AnnotationKeys BoardInfoProvider::GetSupportedAnnotations() {
   };
 }
 
-fit::promise<Annotations> BoardInfoProvider::GetAnnotations() {
+::fit::promise<Annotations> BoardInfoProvider::GetAnnotations() {
   auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_, cobalt_);
 
   auto board_info = board_info_ptr->GetBoardInfo(timeout_);
 
-  return ExtendArgsLifetimeBeyondPromise(std::move(board_info), /*args=*/std::move(board_info_ptr))
+  return fit::ExtendArgsLifetimeBeyondPromise(std::move(board_info),
+                                              /*args=*/std::move(board_info_ptr))
       .and_then([annotations_to_get = annotations_to_get_](const Annotations& board_info) {
         Annotations annotations;
 
@@ -71,7 +72,7 @@ fit::promise<Annotations> BoardInfoProvider::GetAnnotations() {
           annotations[key] = board_info.at(key);
         }
 
-        return fit::ok(std::move(annotations));
+        return ::fit::ok(std::move(annotations));
       });
 }
 
@@ -80,7 +81,7 @@ BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
     : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Hardware board info collection") {}
 
-fit::promise<Annotations> BoardInfoPtr::GetBoardInfo(zx::duration timeout) {
+::fit::promise<Annotations> BoardInfoPtr::GetBoardInfo(zx::duration timeout) {
   FXL_CHECK(!has_called_get_board_info_) << "GetBoardInfo() is not intended to be called twice";
   has_called_get_board_info_ = true;
 

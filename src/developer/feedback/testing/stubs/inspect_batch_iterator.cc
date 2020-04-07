@@ -42,7 +42,7 @@ void InspectBatchIterator::GetNext(GetNextCallback callback) {
       "No more calls to GetNext() expected (%lu/%lu calls made)",
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 
-  callback(fit::ok(ToVmo(*next_json_batch_++)));
+  callback(::fit::ok(ToVmo(*next_json_batch_++)));
 }
 
 void InspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback callback) {
@@ -50,14 +50,14 @@ void InspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback cal
     return;
   }
 
-  callback(fit::ok(ToVmo(json_batch_)));
+  callback(::fit::ok(ToVmo(json_batch_)));
   has_returned_batch_ = true;
 }
 
 void InspectBatchIteratorNeverResponds::GetNext(GetNextCallback callback) {}
 
 void InspectBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
-  callback(fit::error(fuchsia::diagnostics::ReaderError::IO));
+  callback(::fit::error(fuchsia::diagnostics::ReaderError::IO));
 }
 
 }  // namespace stubs

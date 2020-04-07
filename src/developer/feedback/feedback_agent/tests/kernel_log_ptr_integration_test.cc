@@ -35,14 +35,14 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
 
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
-  fit::result<AttachmentValue> GetKernelLog() {
+  ::fit::result<AttachmentValue> GetKernelLog() {
     cobalt_ = std::make_unique<Cobalt>(dispatcher(), environment_services_);
-    fit::result<AttachmentValue> result;
+    ::fit::result<AttachmentValue> result;
     const zx::duration timeout(zx::sec(10));
     bool done = false;
     executor_.schedule_task(
         CollectKernelLog(dispatcher(), environment_services_, timeout, cobalt_.get())
-            .then([&result, &done](fit::result<AttachmentValue>& res) {
+            .then([&result, &done](::fit::result<AttachmentValue>& res) {
               result = std::move(res);
               done = true;
             }));
@@ -73,7 +73,7 @@ TEST_F(CollectKernelLogTest, Succeed_BasicCase) {
       fxl::StringPrintf("<<GetLogTest_Succeed_BasicCase: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  fit::result<AttachmentValue> result = GetKernelLog();
+  ::fit::result<AttachmentValue> result = GetKernelLog();
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
   EXPECT_THAT(logs, testing::HasSubstr(output));
@@ -86,12 +86,12 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
       fxl::StringPrintf("<<GetLogTest_Succeed_TwoRetrievals: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  fit::result<AttachmentValue> result = GetKernelLog();
+  ::fit::result<AttachmentValue> result = GetKernelLog();
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
   EXPECT_THAT(logs, testing::HasSubstr(output));
 
-  fit::result<AttachmentValue> second_result = GetKernelLog();
+  ::fit::result<AttachmentValue> second_result = GetKernelLog();
   ASSERT_TRUE(second_result.is_ok());
   AttachmentValue second_logs = second_result.take_value();
   EXPECT_THAT(second_logs, testing::HasSubstr(output));

@@ -39,11 +39,11 @@ class DataProviderPtrTest : public UnitTestFixture {
   size_t total_num_server_connections() { return data_provider_server_->total_num_connections(); }
   bool is_server_bound() { return data_provider_server_->is_bound(); }
 
-  std::vector<fit::result<Data>> GetFeedbackData(size_t num_parallel_calls) {
-    std::vector<fit::result<Data>> results(num_parallel_calls);
+  std::vector<::fit::result<Data>> GetFeedbackData(size_t num_parallel_calls) {
+    std::vector<::fit::result<Data>> results(num_parallel_calls);
     for (auto& result : results) {
       executor_.schedule_task(
-          data_provider_ptr_.GetData(kDefaultTimeout).then([&](fit::result<Data>& data) {
+          data_provider_ptr_.GetData(kDefaultTimeout).then([&](::fit::result<Data>& data) {
             result = std::move(data);
           }));
     }
@@ -65,7 +65,7 @@ TEST_F(DataProviderPtrTest, Check_ConnectionIsReused) {
   // different connections to the stub.
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsNoData>());
 
-  const std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
+  const std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
@@ -82,7 +82,7 @@ TEST_F(DataProviderPtrTest, Check_ReconnectsCorrectly) {
   // different connections to the stub.
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsNoData>());
 
-  std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
+  std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
@@ -110,7 +110,7 @@ TEST_F(DataProviderPtrTest, Fail_OnNoServer) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   SetUpDataProviderServer(nullptr);
 
-  std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
+  std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
   ASSERT_EQ(results.size(), num_calls);
   EXPECT_TRUE(results[0].is_error());
 }
@@ -120,7 +120,7 @@ TEST_F(DataProviderPtrTest, Fail_OnServerTakingTooLong) {
 
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderNeverReturning>());
 
-  std::vector<fit::result<Data>> results = GetFeedbackData(num_calls);
+  std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
   RunLoopFor(kDefaultTimeout);
 
   ASSERT_EQ(results.size(), num_calls);

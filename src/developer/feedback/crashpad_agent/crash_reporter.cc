@@ -121,7 +121,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
-    callback(fit::error(ZX_ERR_INVALID_ARGS));
+    callback(::fit::error(ZX_ERR_INVALID_ARGS));
     info_.LogCrashState(CrashState::kDropped);
     return;
   }
@@ -130,54 +130,55 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   auto data_promise = data_provider_ptr_.GetData(kCrashReportGenerationTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kCrashReportGenerationTimeout);
 
-  auto promise = fit::join_promises(std::move(data_promise), std::move(device_id_promise))
-                     .then([this, report = std::move(report)](
-                               fit::result<std::tuple<fit::result<Data>, fit::result<std::string>>>&
-                                   results) mutable -> fit::result<void> {
-                       if (results.is_error()) {
-                         return fit::error();
-                       }
+  auto promise =
+      ::fit::join_promises(std::move(data_promise), std::move(device_id_promise))
+          .then([this, report = std::move(report)](
+                    ::fit::result<std::tuple<::fit::result<Data>, ::fit::result<std::string>>>&
+                        results) mutable -> ::fit::result<void> {
+            if (results.is_error()) {
+              return ::fit::error();
+            }
 
-                       auto data_result = std::move(std::get<0>(results.value()));
-                       auto device_id_result = std::move(std::get<1>(results.value()));
+            auto data_result = std::move(std::get<0>(results.value()));
+            auto device_id_result = std::move(std::get<1>(results.value()));
 
-                       Data feedback_data;
-                       if (data_result.is_ok()) {
-                         feedback_data = data_result.take_value();
-                       }
+            Data feedback_data;
+            if (data_result.is_ok()) {
+              feedback_data = data_result.take_value();
+            }
 
-                       std::optional<std::string> device_id = std::nullopt;
-                       if (device_id_result.is_ok()) {
-                         device_id = device_id_result.take_value();
-                       }
+            std::optional<std::string> device_id = std::nullopt;
+            if (device_id_result.is_ok()) {
+              device_id = device_id_result.take_value();
+            }
 
-                       const std::string program_name = report.program_name();
+            const std::string program_name = report.program_name();
 
-                       std::map<std::string, std::string> annotations;
-                       std::map<std::string, fuchsia::mem::Buffer> attachments;
-                       std::optional<fuchsia::mem::Buffer> minidump;
-                       BuildAnnotationsAndAttachments(
-                           std::move(report), std::move(feedback_data), utc_provider_.CurrentTime(),
-                           device_id, build_version_, &annotations, &attachments, &minidump);
+            std::map<std::string, std::string> annotations;
+            std::map<std::string, fuchsia::mem::Buffer> attachments;
+            std::optional<fuchsia::mem::Buffer> minidump;
+            BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
+                                           utc_provider_.CurrentTime(), device_id, build_version_,
+                                           &annotations, &attachments, &minidump);
 
-                       if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
-                                        annotations)) {
-                         FX_LOGS(ERROR) << "Error adding new report to the queue";
-                         info_.LogCrashState(CrashState::kDropped);
-                         return fit::error();
-                       }
+            if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
+                             annotations)) {
+              FX_LOGS(ERROR) << "Error adding new report to the queue";
+              info_.LogCrashState(CrashState::kDropped);
+              return ::fit::error();
+            }
 
-                       info_.LogCrashState(CrashState::kFiled);
-                       return fit::ok();
-                     })
-                     .then([callback = std::move(callback)](fit::result<void>& result) {
-                       if (result.is_error()) {
-                         FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
-                         callback(fit::error(ZX_ERR_INTERNAL));
-                       } else {
-                         callback(fit::ok());
-                       }
-                     });
+            info_.LogCrashState(CrashState::kFiled);
+            return ::fit::ok();
+          })
+          .then([callback = std::move(callback)](::fit::result<void>& result) {
+            if (result.is_error()) {
+              FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
+              callback(::fit::error(ZX_ERR_INTERNAL));
+            } else {
+              callback(::fit::ok());
+            }
+          });
 
   executor_.schedule_task(std::move(promise));
 }

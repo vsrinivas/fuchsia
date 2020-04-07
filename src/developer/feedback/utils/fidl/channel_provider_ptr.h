@@ -15,7 +15,7 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/feedback/utils/bridge.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -24,9 +24,9 @@ namespace fidl {
 // Fetches the current update channel.
 //
 // fuchsia.update.channel.Provider is expected to be in |services|.
-fit::promise<std::string> GetCurrentChannel(
+::fit::promise<std::string> GetCurrentChannel(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout, fit::closure if_timeout = [] {});
+    zx::duration timeout, ::fit::closure if_timeout = [] {});
 
 // Wraps around fuchsia::update::channel::ProviderPtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
@@ -38,8 +38,8 @@ class ChannelProviderPtr {
   ChannelProviderPtr(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services);
 
-  fit::promise<std::string> GetCurrentChannel(
-      zx::duration timeout, fit::closure if_timeout = [] {});
+  ::fit::promise<std::string> GetCurrentChannel(
+      zx::duration timeout, ::fit::closure if_timeout = [] {});
 
  private:
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -48,7 +48,7 @@ class ChannelProviderPtr {
   bool has_called_get_current_channel_ = false;
 
   fuchsia::update::channel::ProviderPtr connection_;
-  Bridge<std::string> pending_call_;
+  fit::Bridge<std::string> pending_call_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProviderPtr);
 };

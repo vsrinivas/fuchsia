@@ -58,11 +58,12 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
     auto promise = provider.GetAnnotations();
 
     Annotations annotations;
-    executor_.schedule_task(std::move(promise).then([&annotations](fit::result<Annotations>& res) {
-      if (res.is_ok()) {
-        annotations = res.take_value();
-      }
-    }));
+    executor_.schedule_task(
+        std::move(promise).then([&annotations](::fit::result<Annotations>& res) {
+          if (res.is_ok()) {
+            annotations = res.take_value();
+          }
+        }));
     RunLoopFor(timeout);
 
     if (annotations.empty()) {

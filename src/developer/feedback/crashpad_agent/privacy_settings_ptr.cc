@@ -47,7 +47,7 @@ void PrivacySettingsWatcher::Connect() {
 
 void PrivacySettingsWatcher::Watch() {
   privacy_settings_ptr_->Watch(
-      [this](fit::result<fuchsia::settings::PrivacySettings, fuchsia::settings::Error> result) {
+      [this](::fit::result<fuchsia::settings::PrivacySettings, fuchsia::settings::Error> result) {
         retry_backoff_.Reset();
 
         if (result.is_error()) {

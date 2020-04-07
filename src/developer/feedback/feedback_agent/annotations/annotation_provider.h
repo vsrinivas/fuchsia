@@ -21,7 +21,7 @@ class AnnotationProvider {
  public:
   virtual ~AnnotationProvider() = default;
 
-  virtual fit::promise<Annotations> GetAnnotations() = 0;
+  virtual ::fit::promise<Annotations> GetAnnotations() = 0;
 };
 
 }  // namespace feedback

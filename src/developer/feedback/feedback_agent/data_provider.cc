@@ -82,8 +82,8 @@ void DataProvider::GetData(GetDataCallback callback) {
   const uint64_t timer_id = cobalt_->StartTimer();
 
   auto promise =
-      fit::join_promises(datastore_->GetAnnotations(), datastore_->GetAttachments())
-          .and_then([](std::tuple<fit::result<Annotations>, fit::result<Attachments>>&
+      ::fit::join_promises(datastore_->GetAnnotations(), datastore_->GetAttachments())
+          .and_then([](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
                            annotations_and_attachments) {
             Data data;
             std::vector<fuchsia::feedback::Attachment> attachments;
@@ -118,11 +118,11 @@ void DataProvider::GetData(GetDataCallback callback) {
               }
             }
 
-            return fit::ok(std::move(data));
+            return ::fit::ok(std::move(data));
           })
-          .or_else([]() { return fit::error(ZX_ERR_INTERNAL); })
+          .or_else([]() { return ::fit::error(ZX_ERR_INTERNAL); })
           .then([this, callback = std::move(callback),
-                 timer_id](fit::result<Data, zx_status_t>& result) {
+                 timer_id](::fit::result<Data, zx_status_t>& result) {
             if (result.is_error()) {
               cobalt_->LogElapsedTime(BugreportGenerationFlow::kFailure, timer_id);
             } else {
@@ -137,7 +137,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, cobalt_)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
-                                   -> fit::result<Screenshot> {
+                                   -> ::fit::result<Screenshot> {
                        Screenshot screenshot;
                        screenshot.dimensions_in_px.height = raw_screenshot.info.height;
                        screenshot.dimensions_in_px.width = raw_screenshot.info.width;
@@ -147,13 +147,13 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
                                          raw_screenshot.info.width, raw_screenshot.info.stride,
                                          raw_screenshot.info.pixel_format, &screenshot.image)) {
                              FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
-                             return fit::error();
+                             return ::fit::error();
                            }
                            break;
                        }
-                       return fit::ok(std::move(screenshot));
+                       return ::fit::ok(std::move(screenshot));
                      })
-                     .then([callback = std::move(callback)](fit::result<Screenshot>& result) {
+                     .then([callback = std::move(callback)](::fit::result<Screenshot>& result) {
                        if (!result.is_ok()) {
                          callback(/*screenshot=*/nullptr);
                        } else {

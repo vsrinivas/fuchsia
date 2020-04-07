@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -22,15 +22,15 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
-fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
-                                   std::shared_ptr<sys::ServiceDirectory> services) {
+::fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
+                                     std::shared_ptr<sys::ServiceDirectory> services) {
   auto handler = std::make_unique<internal::RebootLogHandler>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
   auto promise = handler->Handle(filepath);
-  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(promise),
-                                         /*args=*/std::move(handler));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(promise),
+                                              /*args=*/std::move(handler));
 }
 
 namespace internal {
@@ -162,7 +162,7 @@ std::string Signature(const RebootReason reboot_reason) {
 
 }  // namespace
 
-fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
+::fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   FXL_CHECK(!has_called_handle_) << "Handle() is not intended to be called twice";
   has_called_handle_ = true;
 
@@ -170,37 +170,37 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   if (!files::IsFile(filepath)) {
     FX_LOGS(INFO) << "No reboot reason found, assuming cold boot";
     cobalt_.LogOccurrence(RebootReason::kCold);
-    return fit::make_ok_promise();
+    return ::fit::make_ok_promise();
   }
 
   if (!fsl::VmoFromFilename(filepath, &reboot_log_)) {
     FX_LOGS(ERROR) << "Error loading reboot log into VMO";
-    return fit::make_result_promise<void>(fit::error());
+    return ::fit::make_result_promise<void>(::fit::error());
   }
 
   std::string reboot_log_str;
   if (!fsl::StringFromVmo(reboot_log_, &reboot_log_str)) {
     FX_LOGS(ERROR) << "Error parsing reboot log VMO as string";
-    return fit::make_result_promise<void>(fit::error());
+    return ::fit::make_result_promise<void>(::fit::error());
   }
   FX_LOGS(INFO) << "Found reboot log:\n" << reboot_log_str;
 
   RebootInfo info;
   if (!ExtractRebootInfo(reboot_log_str, &info)) {
-    return fit::make_result_promise<void>(fit::error());
+    return ::fit::make_result_promise<void>(::fit::error());
   }
 
   cobalt_.LogOccurrence(info.reboot_reason);
 
   // We don't want to file a crash report on clean reboots.
   if (info.reboot_reason == RebootReason::kClean) {
-    return fit::make_ok_promise();
+    return ::fit::make_ok_promise();
   }
 
   return FileCrashReport(info);
 }
 
-fit::promise<void> RebootLogHandler::FileCrashReport(const RebootInfo info) {
+::fit::promise<void> RebootLogHandler::FileCrashReport(const RebootInfo info) {
   crash_reporter_ = services_->Connect<fuchsia::feedback::CrashReporter>();
   crash_reporter_.set_error_handler([this](zx_status_t status) {
     if (!crash_reporting_done_.completer) {
@@ -236,7 +236,7 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const RebootInfo info) {
   // The data is critical to debug OOM crash reports.
   // TODO(fxb/46216): remove delay.
   delayed_crash_reporting_.Reset([this, report = std::move(report)]() mutable {
-    crash_reporter_->File(std::move(report), [this](fit::result<void, zx_status_t> result) {
+    crash_reporter_->File(std::move(report), [this](::fit::result<void, zx_status_t> result) {
       if (!crash_reporting_done_.completer) {
         return;
       }
@@ -257,8 +257,8 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const RebootInfo info) {
     crash_reporting_done_.completer.complete_error();
   }
 
-  return crash_reporting_done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<>& result) {
+  return crash_reporting_done_.consumer.promise_or(::fit::error())
+      .then([this](::fit::result<>& result) {
         delayed_crash_reporting_.Cancel();
         return std::move(result);
       });

@@ -22,7 +22,7 @@ class TimeProvider : public AnnotationProvider {
 
   static AnnotationKeys GetSupportedAnnotations();
 
-  fit::promise<Annotations> GetAnnotations() override;
+  ::fit::promise<Annotations> GetAnnotations() override;
 
  private:
   AnnotationKeys annotations_to_get_;

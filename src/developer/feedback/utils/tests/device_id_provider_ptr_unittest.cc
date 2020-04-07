@@ -42,14 +42,14 @@ class DeviceIdProviderPtrTest : public UnitTestFixture {
   std::optional<std::string> GetId() {
     bool is_called = false;
     std::optional<std::string> device_id = std::nullopt;
-    executor_.schedule_task(
-        device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
-          is_called = true;
+    executor_.schedule_task(device_id_provider_ptr_.GetId(kDefaultTimeout)
+                                .then([&](::fit::result<std::string>& result) {
+                                  is_called = true;
 
-          if (result.is_ok()) {
-            device_id = result.take_value();
-          }
-        }));
+                                  if (result.is_ok()) {
+                                    device_id = result.take_value();
+                                  }
+                                }));
     RunLoopUntilIdle();
     FX_CHECK(is_called) << "The promise chain was never executed";
 
@@ -96,7 +96,7 @@ TEST_F(DeviceIdProviderPtrTest, Check_ErrorOnTimeout) {
   bool is_called = false;
   std::optional<std::string> device_id = std::nullopt;
   executor_.schedule_task(
-      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
+      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](::fit::result<std::string>& result) {
         is_called = true;
 
         if (result.is_ok()) {
@@ -126,7 +126,7 @@ TEST_F(DeviceIdProviderPtrTest, Check_ReturnErrorOnNoServer) {
   bool is_called = false;
   std::optional<std::string> device_id = std::nullopt;
   executor_.schedule_task(
-      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](fit::result<std::string>& result) {
+      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](::fit::result<std::string>& result) {
         is_called = true;
 
         if (result.is_ok()) {

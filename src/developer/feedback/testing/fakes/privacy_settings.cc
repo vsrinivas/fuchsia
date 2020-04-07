@@ -29,7 +29,7 @@ void PrivacySettings::Watch(WatchCallback callback) {
 
 void PrivacySettings::Set(fuchsia::settings::PrivacySettings settings, SetCallback callback) {
   settings_ = std::move(settings);
-  callback(fit::ok());
+  callback(::fit::ok());
   dirty_bit_ = true;
 
   if (watcher_) {
@@ -40,7 +40,7 @@ void PrivacySettings::Set(fuchsia::settings::PrivacySettings settings, SetCallba
 void PrivacySettings::NotifyWatcher() {
   fuchsia::settings::PrivacySettings settings;
   settings_.Clone(&settings);
-  (*watcher_)(fit::ok(std::move(settings)));
+  (*watcher_)(::fit::ok(std::move(settings)));
   watcher_.reset();
   dirty_bit_ = false;
 }

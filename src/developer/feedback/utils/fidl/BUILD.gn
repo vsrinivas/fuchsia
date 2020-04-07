@@ -14,7 +14,7 @@ source_set("channel_provider_ptr") {
   public_deps = [
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:libfit",
+    "//src/developer/feedback/utils/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
@@ -31,7 +31,7 @@ source_set("data_provider_ptr") {
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:libfit",
+    "//src/developer/feedback/utils/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
@@ -53,7 +53,7 @@ source_set("device_id_provider_ptr") {
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:libfit",
+    "//src/developer/feedback/utils/fit",
     "//src/lib/backoff",
     "//src/lib/fxl",
     "//zircon/public/lib/async",

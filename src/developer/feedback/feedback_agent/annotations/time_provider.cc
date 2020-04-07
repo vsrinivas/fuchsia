@@ -56,7 +56,7 @@ AnnotationKeys TimeProvider::GetSupportedAnnotations() {
   };
 }
 
-fit::promise<Annotations> TimeProvider::GetAnnotations() {
+::fit::promise<Annotations> TimeProvider::GetAnnotations() {
   Annotations annotations;
 
   for (const auto& key : annotations_to_get_) {
@@ -73,7 +73,7 @@ fit::promise<Annotations> TimeProvider::GetAnnotations() {
       FX_LOGS(WARNING) << "Failed to build annotation " << key;
     }
   }
-  return fit::make_ok_promise(annotations);
+  return ::fit::make_ok_promise(annotations);
 }
 
 }  // namespace feedback

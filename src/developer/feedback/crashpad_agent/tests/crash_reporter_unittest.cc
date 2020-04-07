@@ -296,21 +296,21 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   // Files one crash report.
-  fit::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
+  ::fit::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
     FX_CHECK(crash_reporter_ != nullptr)
         << "crash_reporter_ is nullptr. Call SetUpCrashReporter() or one of its variants "
            "at the beginning of a test case.";
-    fit::result<void, zx_status_t> out_result;
-    crash_reporter_->File(std::move(report), [&out_result](fit::result<void, zx_status_t> result) {
-      out_result = std::move(result);
-    });
+    ::fit::result<void, zx_status_t> out_result;
+    crash_reporter_->File(
+        std::move(report),
+        [&out_result](::fit::result<void, zx_status_t> result) { out_result = std::move(result); });
     FX_CHECK(RunLoopUntilIdle());
     return out_result;
   }
 
   // Files one crash report.
-  fit::result<void, zx_status_t> FileOneCrashReport(const std::vector<Annotation>& annotations = {},
-                                                    std::vector<Attachment> attachments = {}) {
+  ::fit::result<void, zx_status_t> FileOneCrashReport(
+      const std::vector<Annotation>& annotations = {}, std::vector<Attachment> attachments = {}) {
     CrashReport report;
     report.set_program_name(kProgramName);
     if (!annotations.empty()) {
@@ -327,7 +327,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   // |attachment| is useful to control the lower bound of the size of the report by controlling the
   // size of some of the attachment(s). This comes in handy when testing the database size limit
   // enforcement logic for instance.
-  fit::result<void, zx_status_t> FileOneCrashReportWithSingleAttachment(
+  ::fit::result<void, zx_status_t> FileOneCrashReportWithSingleAttachment(
       const std::string& attachment = kSingleAttachmentValue) {
     std::vector<Attachment> attachments;
     attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, attachment));
@@ -336,7 +336,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   // Files one generic crash report.
-  fit::result<void, zx_status_t> FileOneGenericCrashReport(
+  ::fit::result<void, zx_status_t> FileOneGenericCrashReport(
       const std::optional<std::string>& crash_signature) {
     GenericCrashReport generic_report;
     if (crash_signature.has_value()) {
@@ -354,7 +354,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   // Files one native crash report.
-  fit::result<void, zx_status_t> FileOneNativeCrashReport(
+  ::fit::result<void, zx_status_t> FileOneNativeCrashReport(
       std::optional<fuchsia::mem::Buffer> minidump) {
     NativeCrashReport native_report;
     if (minidump.has_value()) {
@@ -372,7 +372,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   // Files one Dart crash report.
-  fit::result<void, zx_status_t> FileOneDartCrashReport(
+  ::fit::result<void, zx_status_t> FileOneDartCrashReport(
       const std::optional<std::string>& exception_type,
       const std::optional<std::string>& exception_message,
       std::optional<fuchsia::mem::Buffer> exception_stack_trace) {
@@ -398,7 +398,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   // Files one empty crash report.
-  fit::result<void, zx_status_t> FileOneEmptyCrashReport() {
+  ::fit::result<void, zx_status_t> FileOneEmptyCrashReport() {
     CrashReport report;
     return FileOneCrashReport(std::move(report));
   }
@@ -406,9 +406,9 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
     ASSERT_TRUE(privacy_settings_);
 
-    fit::result<void, fuchsia::settings::Error> set_result;
+    ::fit::result<void, fuchsia::settings::Error> set_result;
     privacy_settings_->Set(MakePrivacySettings(user_data_sharing_consent),
-                           [&set_result](fit::result<void, fuchsia::settings::Error> result) {
+                           [&set_result](::fit::result<void, fuchsia::settings::Error> result) {
                              set_result = std::move(result);
                            });
     EXPECT_TRUE(set_result.is_ok());
@@ -745,11 +745,11 @@ TEST_F(CrashReporterTest, Succeed_OnConcurrentReports) {
   // report filing doesn't clean up the concurrent crash reports being filed.
   const size_t kNumReports = 10;
 
-  std::vector<fit::result<void, zx_status_t>> results;
+  std::vector<::fit::result<void, zx_status_t>> results;
   for (size_t i = 0; i < kNumReports; ++i) {
     CrashReport report;
     report.set_program_name(kProgramName);
-    crash_reporter_->File(std::move(report), [&results](fit::result<void, zx_status_t> result) {
+    crash_reporter_->File(std::move(report), [&results](::fit::result<void, zx_status_t> result) {
       results.push_back(result);
     });
   }

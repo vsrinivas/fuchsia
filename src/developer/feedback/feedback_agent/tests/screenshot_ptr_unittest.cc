@@ -42,14 +42,14 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
+  ::fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
-    fit::result<ScreenshotData> result;
+    ::fit::result<ScreenshotData> result;
     executor_.schedule_task(
         feedback::TakeScreenshot(dispatcher(), services(), timeout, &cobalt)
-            .then([&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
+            .then([&result](::fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
@@ -69,7 +69,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   scenic->set_take_screenshot_responses(std::move(screenshot_provider_responses));
   SetUpScreenshotProvider(std::move(scenic));
 
-  fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_ok());
   ScreenshotData screenshot = result.take_value();
@@ -83,7 +83,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
 TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
   SetUpScreenshotProvider(nullptr);
 
-  fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -91,7 +91,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
   SetUpScreenshotProvider(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
 
-  fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -99,7 +99,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
 TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
   SetUpScreenshotProvider(std::make_unique<stubs::ScenicClosesConnection>());
 
-  fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -107,7 +107,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
 TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
   SetUpScreenshotProvider(std::make_unique<stubs::ScenicNeverReturns>());
 
-  fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({

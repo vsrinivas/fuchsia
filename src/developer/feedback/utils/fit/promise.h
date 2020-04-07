@@ -1,5 +1,5 @@
-#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_PROMISE_H_
-#define SRC_DEVELOPER_FEEDBACK_UTILS_PROMISE_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_FIT_PROMISE_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_FIT_PROMISE_H_
 
 #include <lib/fit/promise.h>
 
@@ -8,6 +8,7 @@
 #include <type_traits>
 
 namespace feedback {
+namespace fit {
 namespace internal {
 
 template <typename T>
@@ -60,6 +61,7 @@ Promise ExtendArgsLifetimeBeyondPromise(Promise promise, Arg&& head, Args&&... t
                       typename Promise::result_type { return std::move(result); });
 }
 
+}  // namespace fit
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_PROMISE_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_FIT_PROMISE_H_

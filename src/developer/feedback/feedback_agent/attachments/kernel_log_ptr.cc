@@ -7,29 +7,30 @@
 #include <zircon/syscalls/log.h>
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
-                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                               zx::duration timeout, Cobalt* cobalt) {
+::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services, cobalt);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
   auto logs = boot_log->GetLog(timeout);
-  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(logs), /*args=*/std::move(boot_log));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(logs),
+                                              /*args=*/std::move(boot_log));
 }
 
 BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                  Cobalt* cobalt)
     : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Kernel log collection") {}
 
-fit::promise<AttachmentValue> BootLog::GetLog(const zx::duration timeout) {
+::fit::promise<AttachmentValue> BootLog::GetLog(const zx::duration timeout) {
   FXL_CHECK(!has_called_get_log_) << "GetLog() is not intended to be called twice";
   has_called_get_log_ = true;
 

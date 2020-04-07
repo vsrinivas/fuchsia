@@ -35,7 +35,7 @@ class ChannelProviderPtrTest : public UnitTestFixture {
     }
   }
 
-  std::optional<std::string> GetCurrentChannel(fit::closure if_timeout = [] {}) {
+  std::optional<std::string> GetCurrentChannel(::fit::closure if_timeout = [] {}) {
     const zx::duration timeout = zx::sec(1);
     auto promise =
         fidl::GetCurrentChannel(dispatcher(), services(), timeout, std::move(if_timeout));
@@ -43,7 +43,7 @@ class ChannelProviderPtrTest : public UnitTestFixture {
     bool was_called = false;
     std::optional<std::string> channel;
     executor_.schedule_task(
-        std::move(promise).then([&was_called, &channel](fit::result<std::string>& res) {
+        std::move(promise).then([&was_called, &channel](::fit::result<std::string>& res) {
           was_called = true;
 
           if (res.is_error()) {

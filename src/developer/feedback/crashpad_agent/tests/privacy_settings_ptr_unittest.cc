@@ -55,10 +55,10 @@ class PrivacySettingsWatcherTest : public UnitTestFixture,
   }
 
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
-    fit::result<void, Error> set_result;
+    ::fit::result<void, Error> set_result;
     privacy_settings_provider_->Set(
         MakePrivacySettings(user_data_sharing_consent),
-        [&set_result](fit::result<void, Error> result) { set_result = std::move(result); });
+        [&set_result](::fit::result<void, Error> result) { set_result = std::move(result); });
     EXPECT_TRUE(set_result.is_ok());
   }
 

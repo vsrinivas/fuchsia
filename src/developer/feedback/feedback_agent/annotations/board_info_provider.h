@@ -13,8 +13,8 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
-#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -28,7 +28,7 @@ class BoardInfoProvider : public AnnotationProvider {
                     Cobalt* cobalt);
 
   static AnnotationKeys GetSupportedAnnotations();
-  fit::promise<Annotations> GetAnnotations() override;
+  ::fit::promise<Annotations> GetAnnotations() override;
 
  private:
   AnnotationKeys annotations_to_get_;
@@ -49,7 +49,7 @@ class BoardInfoPtr {
   BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                Cobalt* cobalt);
 
-  fit::promise<Annotations> GetBoardInfo(zx::duration timeout);
+  ::fit::promise<Annotations> GetBoardInfo(zx::duration timeout);
 
  private:
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -59,7 +59,7 @@ class BoardInfoPtr {
   bool has_called_get_board_info_ = false;
 
   fuchsia::hwinfo::BoardPtr board_ptr_;
-  Bridge<Annotations> bridge_;
+  fit::Bridge<Annotations> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoardInfoPtr);
 };

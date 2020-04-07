@@ -23,15 +23,15 @@
 
 namespace feedback {
 
-fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
-                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                               zx::duration timeout, Cobalt* cobalt) {
+::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<LogListener> log_listener =
       std::make_unique<LogListener>(dispatcher, services, cobalt);
 
   return log_listener->CollectLogs(timeout).then(
       [log_listener = std::move(log_listener)](
-          const fit::result<void>& result) -> fit::result<AttachmentValue> {
+          const ::fit::result<void>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING) << "System log collection was interrupted - "
                               "logs may be partial or missing";
@@ -40,10 +40,10 @@ fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
         const std::string logs = log_listener->CurrentLogs();
         if (logs.empty()) {
           FX_LOGS(WARNING) << "Empty system log";
-          return fit::error();
+          return ::fit::error();
         }
 
-        return fit::ok(logs);
+        return ::fit::ok(logs);
       });
 }
 
@@ -54,7 +54,7 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       bridge_(dispatcher, "System log collection") {}
 
-fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
+::fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";
   has_called_collect_logs_ = true;
 
@@ -85,7 +85,7 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   return bridge_
       .WaitForDone(timeout,
                    /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kSystemLog); })
-      .then([this](fit::result<void>& result) {
+      .then([this](::fit::result<void>& result) {
         binding_.Close(ZX_OK);
         return std::move(result);
       });

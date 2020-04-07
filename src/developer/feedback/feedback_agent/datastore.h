@@ -28,15 +28,15 @@ namespace feedback {
 // * pushed by other components, we called these "extra" to distinguish them from the "platform".
 //
 // Because of dynamic asynchronous data, the data requests can take some time and return a
-// fit::promise.
+// ::fit::promise.
 class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             Cobalt* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist, DeviceIdProvider* device_id_provider);
 
-  fit::promise<Annotations> GetAnnotations();
-  fit::promise<Attachments> GetAttachments();
+  ::fit::promise<Annotations> GetAnnotations();
+  ::fit::promise<Attachments> GetAttachments();
 
   // Returns whether the extra annotations were actually set as there is a cap on the number of
   // extra annotations.
@@ -61,8 +61,8 @@ class Datastore {
 
   Annotations extra_annotations_;
 
-  fit::promise<Attachment> BuildAttachment(const AttachmentKey& key);
-  fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key);
+  ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key);
+  ::fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key);
 };
 
 }  // namespace feedback

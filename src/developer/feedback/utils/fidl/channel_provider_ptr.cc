@@ -8,30 +8,30 @@
 
 #include <memory>
 
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace fidl {
 
-fit::promise<std::string> GetCurrentChannel(async_dispatcher_t* dispatcher,
-                                            std::shared_ptr<sys::ServiceDirectory> services,
-                                            zx::duration timeout, fit::closure if_timeout) {
+::fit::promise<std::string> GetCurrentChannel(async_dispatcher_t* dispatcher,
+                                              std::shared_ptr<sys::ServiceDirectory> services,
+                                              zx::duration timeout, ::fit::closure if_timeout) {
   auto ptr = std::make_unique<fidl::ChannelProviderPtr>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
   auto channel = ptr->GetCurrentChannel(timeout, std::move(if_timeout));
-  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
-                                         /*args=*/std::move(ptr));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
+                                              /*args=*/std::move(ptr));
 }
 
 ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services), pending_call_(dispatcher, "Current update channel retrieval") {}
 
-fit::promise<std::string> ChannelProviderPtr::GetCurrentChannel(const zx::duration timeout,
-                                                                fit::closure if_timeout) {
+::fit::promise<std::string> ChannelProviderPtr::GetCurrentChannel(const zx::duration timeout,
+                                                                  ::fit::closure if_timeout) {
   FXL_CHECK(!has_called_get_current_channel_)
       << "GetCurrentChannel() is not intended to be called twice";
   has_called_get_current_channel_ = true;

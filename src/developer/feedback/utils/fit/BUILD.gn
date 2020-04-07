@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("fit") {
+  sources = [
+    "bridge.h",
+    "bridge_map.h",
+    "promise.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}

@@ -24,14 +24,14 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services), pending_calls_(dispatcher) {}
 
-fit::promise<Data> DataProviderPtr::GetData(const zx::duration timeout) {
+::fit::promise<Data> DataProviderPtr::GetData(const zx::duration timeout) {
   if (!connection_) {
     Connect();
   }
 
   const uint64_t id = pending_calls_.NewBridgeForTask("Feedback data collection");
 
-  connection_->GetData([id, this](fit::result<Data, zx_status_t> result) {
+  connection_->GetData([id, this](::fit::result<Data, zx_status_t> result) {
     if (pending_calls_.IsAlreadyDone(id)) {
       return;
     }
@@ -44,10 +44,10 @@ fit::promise<Data> DataProviderPtr::GetData(const zx::duration timeout) {
     }
   });
 
-  return pending_calls_.WaitForDone(id, timeout).then([id, this](fit::result<Data>& result) {
+  return pending_calls_.WaitForDone(id, timeout).then([id, this](::fit::result<Data>& result) {
     // We need to move the result before erasing the bridge because |result| is passed as a
     // reference.
-    fit::result<Data> data = std::move(result);
+    ::fit::result<Data> data = std::move(result);
 
     pending_calls_.Delete(id);
 

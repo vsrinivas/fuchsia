@@ -16,17 +16,17 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/utils/bridge.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 
 namespace feedback {
 
 // Collects system log.
 //
 // fuchsia.logger.Log is expected to be in |services|.
-fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
-                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                               zx::duration timeout, Cobalt* cobalt);
+::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 zx::duration timeout, Cobalt* cobalt);
 
 // Wraps around fuchsia::logger::LogListenerSafePtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
@@ -38,7 +38,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
                        std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt);
 
   // Collects the logs and returns a promise to when the collection is done or the timeout over.
-  fit::promise<void> CollectLogs(zx::duration timeout);
+  ::fit::promise<void> CollectLogs(zx::duration timeout);
 
   // Returns the logs that have been collected so far.
   std::string CurrentLogs() { return logs_; }
@@ -64,7 +64,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
 
   std::string logs_;
 
-  Bridge<> bridge_;
+  fit::Bridge<> bridge_;
 };
 
 }  // namespace feedback

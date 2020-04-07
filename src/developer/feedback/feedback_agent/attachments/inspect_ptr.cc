@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -23,23 +23,23 @@
 
 namespace feedback {
 
-fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 zx::duration timeout, Cobalt* cobalt) {
+::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
+                                                   std::shared_ptr<sys::ServiceDirectory> services,
+                                                   zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<Inspect> inspect = std::make_unique<Inspect>(dispatcher, services, cobalt);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
   auto inspect_data = inspect->Collect(timeout);
-  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),
-                                         /*args=*/std::move(inspect));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),
+                                              /*args=*/std::move(inspect));
 }
 
 Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                  Cobalt* cobalt)
     : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Inspect data collection") {}
 
-fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
+::fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_) << "Collect() is not intended to be called twice";
   has_called_collect_ = true;
 
@@ -53,7 +53,7 @@ fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
   return bridge_
       .WaitForDone(timeout,
                    /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kInspect); })
-      .then([this](fit::result<>& result) -> fit::result<AttachmentValue> {
+      .then([this](::fit::result<>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING)
               << "Inspect data collection was interrupted - Inspect data may be partial or missing";
@@ -61,14 +61,14 @@ fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
 
         if (inspect_data_.empty()) {
           FX_LOGS(WARNING) << "Empty Inspect data";
-          return fit::error();
+          return ::fit::error();
         }
 
         std::string joined_data = "[\n";
         joined_data += fxl::JoinStrings(inspect_data_, ",\n");
         joined_data += "\n]";
 
-        return fit::ok(joined_data);
+        return ::fit::ok(joined_data);
       });
 }
 

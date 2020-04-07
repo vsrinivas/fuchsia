@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/utils/bridge.h"
+#include "src/developer/feedback/utils/fit/bridge.h"
 
 #include <lib/async/cpp/executor.h>
 
@@ -12,6 +12,7 @@
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
+namespace fit {
 namespace {
 
 constexpr zx::duration kTimeout = zx::sec(10);
@@ -27,11 +28,11 @@ class BridgeTest : public gtest::TestLoopFixture {
   }
 
   template <typename V, typename E>
-  fit::result<V, E> ExecutePromise(fit::promise<V, E> promise,
-                                   zx::duration run_time = zx::duration::infinite_past()) {
-    fit::result<V, E> out_result;
+  ::fit::result<V, E> ExecutePromise(::fit::promise<V, E> promise,
+                                     zx::duration run_time = zx::duration::infinite_past()) {
+    ::fit::result<V, E> out_result;
     executor_.schedule_task(std::move(promise).then(
-        [&](fit::result<V, E>& result) { out_result = std::move(result); }));
+        [&](::fit::result<V, E>& result) { out_result = std::move(result); }));
     if (run_time == zx::duration::infinite_past()) {
       RunLoopUntilIdle();
     } else {
@@ -90,10 +91,11 @@ TEST_F(BridgeTest, CompleteOk) {
 
   EXPECT_TRUE(bridge.IsAlreadyDone());
 
-  fit::result<std::string> result = ExecutePromise(bridge.WaitForDone());
+  ::fit::result<std::string> result = ExecutePromise(bridge.WaitForDone());
   EXPECT_TRUE(result.is_ok());
   EXPECT_EQ(result.value(), "ok");
 }
 
 }  // namespace
+}  // namespace fit
 }  // namespace feedback

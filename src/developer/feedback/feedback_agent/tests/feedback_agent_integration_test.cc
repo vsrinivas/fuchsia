@@ -156,9 +156,10 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
         {"inspect_test_app_environment/inspect_test_app.cmx:root"});
 
     bool done = false;
-    executor.schedule_task(reader.SnapshotInspectUntilPresent({"inspect_test_app.cmx"})
-                               .then([&](fit::result<std::vector<inspect::contrib::DiagnosticsData>,
-                                                     std::string>& unused) { done = true; }));
+    executor.schedule_task(
+        reader.SnapshotInspectUntilPresent({"inspect_test_app.cmx"})
+            .then([&](::fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
+                          unused) { done = true; }));
     RunLoopUntil([&done] { return done; });
   }
 
@@ -262,7 +263,7 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckKeys) {
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
 
-  fit::result<Data, zx_status_t> result = std::move(out_result);
+  ::fit::result<Data, zx_status_t> result = std::move(out_result);
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
@@ -365,7 +366,7 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckCobalt) {
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
 
-  fit::result<Data, zx_status_t> result = std::move(out_result);
+  ::fit::result<Data, zx_status_t> result = std::move(out_result);
   ASSERT_TRUE(result.is_ok());
   EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<BugreportGenerationFlow>(
                   /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME),
@@ -399,7 +400,7 @@ TEST_F(FeedbackAgentIntegrationTest,
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
 
-  fit::result<Data, zx_status_t> result = std::move(out_result);
+  ::fit::result<Data, zx_status_t> result = std::move(out_result);
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();

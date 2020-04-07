@@ -14,7 +14,7 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/utils/promise.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -72,14 +72,14 @@ AnnotationKeys ProductInfoProvider::GetSupportedAnnotations() {
   };
 }
 
-fit::promise<Annotations> ProductInfoProvider::GetAnnotations() {
+::fit::promise<Annotations> ProductInfoProvider::GetAnnotations() {
   auto product_info_ptr =
       std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_, cobalt_);
 
   auto product_info = product_info_ptr->GetProductInfo(timeout_);
 
-  return ExtendArgsLifetimeBeyondPromise(std::move(product_info),
-                                         /*args=*/std::move(product_info_ptr))
+  return fit::ExtendArgsLifetimeBeyondPromise(std::move(product_info),
+                                              /*args=*/std::move(product_info_ptr))
       .and_then([annotations_to_get = annotations_to_get_](const Annotations& product_info) {
         Annotations annotations;
 
@@ -93,7 +93,7 @@ fit::promise<Annotations> ProductInfoProvider::GetAnnotations() {
           annotations[key] = product_info.at(key);
         }
 
-        return fit::ok(std::move(annotations));
+        return ::fit::ok(std::move(annotations));
       });
 }
 
@@ -133,7 +133,7 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       bridge_(dispatcher, "Hardware product info retrieval") {}
 
-fit::promise<Annotations> ProductInfoPtr::GetProductInfo(zx::duration timeout) {
+::fit::promise<Annotations> ProductInfoPtr::GetProductInfo(zx::duration timeout) {
   FXL_CHECK(!has_called_get_product_info_) << "GetProductInfo() is not intended to be called twice";
   has_called_get_product_info_ = true;
 

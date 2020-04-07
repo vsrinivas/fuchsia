@@ -119,7 +119,7 @@ source_set("data_provider") {
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/feedback_agent/attachments:util",
     "//src/developer/feedback/utils:archive",
-    "//src/developer/feedback/utils:libfit",
+    "//src/developer/feedback/utils/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",

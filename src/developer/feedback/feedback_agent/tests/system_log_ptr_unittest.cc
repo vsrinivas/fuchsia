@@ -43,14 +43,14 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+  ::fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
-    fit::result<AttachmentValue> result;
+    ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
         feedback::CollectSystemLog(dispatcher(), services(), timeout, &cobalt)
-            .then([&result](fit::result<AttachmentValue>& res) { result = std::move(res); }));
+            .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
@@ -77,7 +77,7 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
   });
   SetUpLogger(std::move(logger));
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
@@ -103,7 +103,7 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage
   });
   SetUpLogger(std::move(logger));
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
@@ -127,7 +127,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   });
   SetUpLogger(std::move(logger));
 
-  fit::result<AttachmentValue> result = CollectSystemLog(log_collection_timeout);
+  ::fit::result<AttachmentValue> result = CollectSystemLog(log_collection_timeout);
 
   // First, we check that the log collection terminated with partial logs after the timeout.
   ASSERT_TRUE(result.is_ok());
@@ -146,7 +146,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
   SetUpLogger(std::make_unique<stubs::Logger>());
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -154,7 +154,7 @@ TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
 TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
   SetUpLogger(nullptr);
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -162,7 +162,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
 TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
   SetUpLogger(std::make_unique<stubs::LoggerClosesConnection>());
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -170,7 +170,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
   SetUpLogger(std::make_unique<stubs::LoggerNeverBindsToLogListener>());
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -178,7 +178,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
   SetUpLogger(std::make_unique<stubs::LoggerNeverCallsLogManyBeforeDone>());
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -186,7 +186,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
 TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
   SetUpLogger(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
 
-  fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -213,10 +213,10 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
-  fit::result<void> result;
+  ::fit::result<void> result;
   LogListener log_listener(dispatcher(), services(), &cobalt);
   executor_.schedule_task(log_listener.CollectLogs(timeout).then(
-      [&result](const fit::result<void>& res) { result = std::move(res); }));
+      [&result](const ::fit::result<void>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
 
   // First, we check we have had a successful flow.

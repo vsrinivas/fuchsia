@@ -49,7 +49,7 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
     bool was_called = false;
     std::optional<std::string> channel;
     executor_.schedule_task(
-        std::move(promise).then([&was_called, &channel](fit::result<Annotations>& res) {
+        std::move(promise).then([&was_called, &channel](::fit::result<Annotations>& res) {
           was_called = true;
 
           if (res.is_error()) {
