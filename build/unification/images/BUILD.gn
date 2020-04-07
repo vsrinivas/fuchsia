@@ -2543,11 +2543,17 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-integration-manifest",
 #------------------
-#------------------
-    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-fragmentation-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-no-space-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-short-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-use-second-bitmap-manifest",
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-integration-paged-manifest",
-    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-paged-manifest",
+#------------------
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-fragmentation-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-no-space-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-short-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-use-second-bitmap-paged-manifest",
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-unit-manifest",
 #------------------
@@ -3050,10 +3056,17 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/blobfs/test:blobfs-integration-manifest",
 #------------------
 #------------------
-    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-fragmentation-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-no-space-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-short-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-use-second-bitmap-manifest",
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-integration-paged-manifest",
-    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-paged-manifest",
+#------------------
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-fragmentation-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-no-space-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-short-paged-manifest",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-use-second-bitmap-paged-manifest",
 #------------------
     "//zircon/system/ulib/blobfs/test:blobfs-unit-manifest",
 #------------------

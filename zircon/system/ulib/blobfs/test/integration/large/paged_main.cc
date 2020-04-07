@@ -6,13 +6,17 @@
 
 int main() {
   // This is a temporary solution until we can support tests as packages on the bringup target,
-  // which the blobfs-large-integration-test runs on. There is no good alternative currently to run
-  // blobfs-large-integration-test with the additional --pager commandline arg.
+  // which the blobfs-integration-test runs on. There is no good alternative currently to run
+  // blobfs-integration-test with the additional --pager commandline arg.
   //
   // TODO(ZX-48961):
   // We might not need this test at all in the future, when we have paging enabled by default on all
   // platforms. The tests will then have the pager enabled by default as well.
-  const char* argv[] = {"/boot/test/fs/blobfs-large-integration-test", "--pager", nullptr};
+  //
+  // |BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE| is set by the build environment, allowing for
+  // multiple large integration test targets to be invoked with the pager enabled.
+  const char* argv[] = {"/boot/test/fs/" BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE, "--pager",
+                        nullptr};
 
   return Execute(argv);
 }
