@@ -122,6 +122,16 @@ test("use_vp9_decoder_test") {
   deps = [ ":use_media_decoder_source_set" ]
 }
 
+test("use_vp9_decoder_skip_first_frame_test") {
+  testonly = true
+
+  output_name = "use_vp9_decoder_skip_first_frame_test"
+
+  sources = [ "test/use_vp9_decoder_skip_first_frame_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
 test("use_vp9_decoder_24_output_frames_test") {
   testonly = true
 

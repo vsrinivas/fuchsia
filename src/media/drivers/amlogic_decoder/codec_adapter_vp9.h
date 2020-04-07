@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -50,6 +50,7 @@ class CodecAdapterVp9 : public CodecAdapter,
   void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
+  void CoreCodecResetStreamAfterCurrentFrame() override;
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
   void CoreCodecConfigureBuffers(CodecPort port,
                                  const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
@@ -67,6 +68,7 @@ class CodecAdapterVp9 : public CodecAdapter,
   void ReadMoreInputData(Vp9Decoder* decoder) override;
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override;
   bool HasMoreInputData() override;
+  void AsyncResetStreamAfterCurrentFrame() override;
 
   // |VideoDecoder::Client| implementation.
   void OnError() override;
@@ -98,8 +100,13 @@ class CodecAdapterVp9 : public CodecAdapter,
   bool IsPortSecurePermitted(CodecPort port);
   bool IsPortSecure(CodecPort port);
   bool IsOutputSecure();
-  void SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t paddr_size,
-                                const std::vector<uint8_t>& data);
+  // If paddr_size != 0, paddr_base is valid and is used to submit data directly to the HW by
+  // physical address.  Else vaddr_base and vaddr_size are valid and are used to submit data to the
+  // HW.
+  void SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t paddr_size, uint8_t* vaddr_base,
+                                uint32_t vaddr_size);
+
+  std::list<CodecInputItem> CoreCodecStopStreamInternal();
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
@@ -158,7 +165,12 @@ class CodecAdapterVp9 : public CodecAdapter,
   // frames.  This counts all bytes delivered to the amlogic firmware, including
   // start code bytes.
   uint64_t parsed_video_size_ = 0;
-  bool is_input_end_of_stream_queued_ = false;
+  bool is_input_end_of_stream_queued_to_core_ = false;
+  // For now, this is only ever true for non-DRM streams.  For now, for DRM streams, this stays
+  // false but we deliver all frames to Vp9Decoder.  In turn, Vp9Decoder will trigger skipping
+  // frames before the first keyframe using a much slower skip involving (repeated) use of
+  // AsyncResetStreamAfterCurrentFrame().
+  bool has_input_keyframe_ = false;
 
   bool is_stream_failed_ = false;
 
@@ -174,4 +186,4 @@ class CodecAdapterVp9 : public CodecAdapter,
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterVp9);
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_

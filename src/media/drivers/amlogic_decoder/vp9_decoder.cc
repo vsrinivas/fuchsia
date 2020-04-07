@@ -17,6 +17,7 @@
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 #include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
 #include "util.h"
+#include "vp9_utils.h"
 #include "watchdog.h"
 
 using HevcDecStatusReg = HevcAssistScratch0;
@@ -43,15 +44,14 @@ using HevcDecodeSize = HevcAssistScratchN;
 
 using DebugReg1 = HevcAssistScratchG;
 
-// The hardware takes some uncompressed header information and stores it in this
-// structure.
+// The hardware takes some uncompressed header information and stores it in this structure.
 union Vp9Decoder::HardwareRenderParams {
   uint16_t data_words[0x80];
   struct {
     uint16_t profile;
     uint16_t show_existing_frame;
     uint16_t frame_to_show;  // If show_existing frame is 1.
-    uint16_t frame_type;     // 0 is KEY_FRAME, 1 is INTER_FRAME
+    uint16_t frame_type;     // 0 is kVp9FrameTypeKeyFrame, 1 is kVp9FrameTypeNonKeyFrame
     uint16_t show_frame;
     uint16_t error_resilient_mode;
     uint16_t intra_only;
@@ -585,6 +585,17 @@ enum Vp9Command {
   // that the compressed frame body should be decoded.
   kVp9CommandDecodeSlice = 5,
 
+  // Presumably this could somehow be used when the host wants to tell the FW to
+  // skip a frame, but so far we haven't had any luck getting this command to do
+  // what it sounds/looks like.  This definition is here to warn off the next
+  // person who might consider trying to get this command to work.  Instead, we
+  // just parse the frame header enough to determine whether we have a keyframe
+  // or not before we send that input frame to the decoder.  We can do that even
+  // for DRM frames (clear portion of header) after some other changes.
+  //
+  // Don't expect this command to work.  Not presently used in this driver.
+  kVp9CommandDiscardNal = 6,
+
   // Sent from the device to the host to say that a frame has finished decoding.
   // This is only sent in multi-stream mode.
   kVp9CommandDecodingDataDone = 0xa,
@@ -700,17 +711,23 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
 void Vp9Decoder::HandleInterrupt() {
   TRACE_DURATION("media", "Vp9Decoder::HandleInterrupt");
   DLOG("%p Got VP9 interrupt", this);
-  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
-  owner_->watchdog()->Cancel();
-  already_got_watchdog_ = false;
-
-  HevcAssistMbox0ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
 
   uint32_t dec_status = HevcDecStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t adapt_prob_status = Vp9AdaptProbReg::Get().ReadFrom(owner_->dosbus()).reg_value();
-
   TRACE_INSTANT("media", "decoder status", TRACE_SCOPE_THREAD, "dec_status", dec_status);
   DLOG("Decoder state: %x %x", dec_status, adapt_prob_status);
+
+  HevcAssistMbox0ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
+
+  if (state_ == DecoderState::kFailed) {
+    // An interrupt can (finally) arrive (after all) immediately after watchdog triggers.
+    LOG(WARN, "state_ == DecoderState::kFailed - ignoring interrupt");
+    return;
+  }
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
+
+  owner_->watchdog()->Cancel();
+
   AdaptProbabilityCoefficients(adapt_prob_status);
 
   if (dec_status == kVp9InputBufferEmpty) {
@@ -1000,7 +1017,8 @@ bool Vp9Decoder::CanBeSwappedIn() {
 void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   Frame* frame = reference_frame_map_[params->frame_to_show];
   if (!frame) {
-    DECODE_ERROR("Showing existing frame that doesn't exist");
+    LOG(WARN, "Showing existing frame that doesn't exist");
+    SkipFrameAfterFirmwareSlow();
     return;
   }
   // stream_offset points to an offset within the header of the frame. With
@@ -1033,6 +1051,27 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   owner_->watchdog()->Start();
 }
 
+void Vp9Decoder::SkipFrameAfterFirmwareSlow() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
+  // This is a fairly heavy-weight way to skip a frame (~20-40 ms), but the upside is we share more
+  // code this way.
+  //
+  // In the long run we'll only use this method when the watchdog fires, as in that case it makes
+  // sense to reset the state of the HW from scratch, and it's worth the time cost of doing so
+  // (once).
+  //
+  // For now, for DRM streams only, we also use this method to skip frames if a client doesn't
+  // provide a keyframe as the first frame of a stream (possibly for several frames until a keyframe
+  // is encountered), and for several frames after the watchdog fired (again, only for DRM streams,
+  // and only temporarily).
+  //
+  // See CodecAdapterVp9::CoreCodecResetStreamAfterCurrentFrame() for comments on how we could make
+  // this faster, but we probably don't really need to.
+
+  state_ = DecoderState::kFailed;
+  frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
+}
+
 void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   if (!client_->IsOutputReady()) {
     // Becomes false when ReturnFrame() gets called, at which point
@@ -1056,14 +1095,49 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     }
   }
 
+  if (!has_keyframe_ && params.frame_type != kVp9FrameTypeKeyFrame) {
+    // This path is only used by protected content that has a watchdog fire during decode or that
+    // starts with a NAL that isn't a keyframe, and in any case only temporarily.
+    //
+    // The SkipFrameAfterFirmwareSlow() takes ~20-40 ms per frame, which isn't great.  That's why we
+    // prefer to skip by parsing the cleartext frame_type from the uncompressed_header_size bytes
+    // instead, which we currently do for non-DRM content.
+    //
+    // Since VP9 DRM packaging (see shaka-packager) does not encrypt any portion of the
+    // uncompressed_header_size of each frame, nor does it encrypt the superframe index, we can also
+    // do this for DRM content as soon as sysmem and decryptor changes are in.
+    LOG(WARN, "!has_keyframe_ && params.frame_type != kVp9FrameTypeKeyFrame --- frame_type: %u",
+        params.frame_type);
+    SkipFrameAfterFirmwareSlow();
+    return;
+  }
+  if (params.hw_width == 0 || params.hw_height == 0) {
+    // This path exists to mitigate _potential_ problems parsing the frame header.  We've only
+    // actually observed this for non-keyframe frames where we never delivered the preceding
+    // keyframe to the FW, so in that case most likely the frame size information wasn't availalbe
+    // to the FW.
+    LOG(WARN, "params.hw_width == 0 || params.hw_height == 0 --- hw_width: %u hw_height: %u",
+        params.hw_width, params.hw_height);
+    SkipFrameAfterFirmwareSlow();
+    return;
+  }
+
+  // Seems like these two together are _probably_ not ever expected...(?)
+  ZX_DEBUG_ASSERT(!(params.frame_type == kVp9FrameTypeKeyFrame && params.show_existing_frame));
+
+  if (!has_keyframe_) {
+    ZX_DEBUG_ASSERT(params.frame_type == kVp9FrameTypeKeyFrame);
+    has_keyframe_ = true;
+  }
+
   if (params.show_existing_frame) {
     DLOG("ShowExistingFrame()");
     ShowExistingFrame(&params);
     return;
   }
 
-  // If this is failing due to running out of buffers then the function will be retried once more
-  // are received.
+  // If this is returning false due to running out of buffers then the function will be retried once
+  // more are received.
   if (!FindNewFrameBuffer(&params, params_checked_previously)) {
     return;
   }
@@ -1072,6 +1146,9 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   // See comments about stream_offset above. Multiple frames will return the
   // same PTS if they're part of a superframe, but only one of the frames should
   // have show_frame set, so only that frame will be output with that PTS.
+  //
+  // TODO(49102): PtsManager needs to be able to help extend stream_offset from < 64 bits to 64
+  // bits.
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
@@ -1085,7 +1162,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     return;
   }
 
-  current_frame_data_.keyframe = params.frame_type == 0;
+  current_frame_data_.keyframe = params.frame_type == kVp9FrameTypeKeyFrame;
   current_frame_data_.intra_only = params.intra_only;
   current_frame_data_.refresh_frame_flags = params.refresh_frame_flags;
   if (current_frame_data_.keyframe) {
@@ -1183,7 +1260,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       DECODE_ERROR(
           "params_checked_previously - calling error_handler_, allocated %d width %d height %d",
           buffers_allocated, coded_width, coded_height);
-      client_->OnError();
+      CallErrorHandler();
       return false;
     }
     BarrierBeforeRelease();
@@ -1246,6 +1323,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
     if (dup_result != ZX_OK) {
       DECODE_ERROR("Failed to duplicate BTI - status: %d", dup_result);
+      CallErrorHandler();
       return false;
     }
     // VP9 doesn't have sample_aspect_ratio at ES (.ivf) layer, so here we
@@ -1260,7 +1338,11 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d", initialize_result);
+        CallErrorHandler();
+        return false;
       }
+      // EOS
+      ZX_DEBUG_ASSERT(initialize_result == ZX_ERR_STOP);
       return false;
     }
     waiting_for_new_frames_ = true;
@@ -1322,6 +1404,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         (1 << 16), is_secure(), /*is_writable=*/true, /*is_mapping_needed=*/false);
     if (!internal_buffer.is_ok()) {
       DECODE_ERROR("Alloc buffer error: %d", internal_buffer.error());
+      CallErrorHandler();
       return false;
     }
     current_mpred_buffer_->mv_mpred_buffer.emplace(internal_buffer.take_value());
@@ -1584,17 +1667,12 @@ void Vp9Decoder::OnSignaledWatchdog() {
   DLOG("HevcStreamLevel %d", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("HevcParserIntStatus 0x%x",
        HevcParserIntStatus::Get().ReadFrom(owner_->dosbus()).reg_value());
-  if (already_got_watchdog_ || !frame_data_provider_) {
-    DECODE_ERROR("Got Vp9 watchdog timeout - fatal error");
+  if (!frame_data_provider_) {
+    LOG(ERROR, "Got Vp9 watchdog timeout - fatal error");
     CallErrorHandler();
-  } else {
-    DECODE_ERROR("Got Vp9 watchdog timeout");
-    // The first watchdog timeout just stop the decoder and ask for more input data to be read -
-    // this will hopefully restart the decoder to allow it to resynchronize and continue.
-    owner_->core()->StopDecoding();
-    state_ = DecoderState::kStoppedWaitingForInput;
-    // ReadMoreInputData may restart the watchdog.
-    frame_data_provider_->ReadMoreInputData(this);
-    already_got_watchdog_ = true;
+    return;
   }
+  LOG(ERROR, "Got Vp9 watchdog timeout.  Doing async reset of the stream after current frame.");
+  state_ = DecoderState::kFailed;
+  frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
 }

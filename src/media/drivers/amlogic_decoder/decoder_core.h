@@ -77,11 +77,10 @@ class DecoderCore {
   virtual void UpdateWritePointer(uint32_t write_pointer) = 0;
   // This is the offset between the start of the stream buffer and the write
   // pointer.
-  virtual __WARN_UNUSED_RESULT uint32_t GetStreamInputOffset() = 0;
-  virtual __WARN_UNUSED_RESULT uint32_t GetReadOffset() = 0;
+  [[nodiscard]] virtual uint32_t GetStreamInputOffset() = 0;
+  [[nodiscard]] virtual uint32_t GetReadOffset() = 0;
 
-  virtual __WARN_UNUSED_RESULT zx_status_t InitializeInputContext(InputContext* context,
-                                                                  bool is_secure) {
+  [[nodiscard]] virtual zx_status_t InitializeInputContext(InputContext* context, bool is_secure) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual void SaveInputContext(InputContext* context) {}

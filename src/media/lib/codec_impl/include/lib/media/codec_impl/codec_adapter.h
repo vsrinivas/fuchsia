@@ -89,7 +89,7 @@ class CodecAdapter {
   // TODO(38650): At least the VP9 decoder isn't overriding this method yet.
   // Also we should enforce that this method be overridden when
   // IsCoreCodecHwBased() true.
-  virtual zx::unowned_bti CoreCodecBti() {return zx::unowned_bti();}
+  virtual zx::unowned_bti CoreCodecBti() { return zx::unowned_bti(); }
 
   // The initial input format details and later input format details will
   // _often_ remain the same overall format, and only differ in ways that are
@@ -129,7 +129,7 @@ class CodecAdapter {
   // constraints and BufferCollectionInfo_2 with the SecureMemoryMode specified
   // during codec creation.
   virtual void CoreCodecSetSecureMemoryMode(
-    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode);
+      CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode);
 
   // All codecs must implement this for both ports.  The returned structure will
   // be sent to sysmem in a SetConstraints() call.  This method can be called
@@ -256,6 +256,13 @@ class CodecAdapter {
   // Stop the core codec from processing any more data for the stream that was
   // active and is now stopping.
   virtual void CoreCodecStopStream() = 0;
+
+  // Reset the stream.  Used in processing a watchdog.  If an adapter never generates a watchdog, it
+  // doesn't need to override this method.
+  //
+  // Do not discard any input data or output data beyond what was being worked on at the time the
+  // watchdog fired.
+  virtual void CoreCodecResetStreamAfterCurrentFrame();
 
   // Add input or output buffer.
   //

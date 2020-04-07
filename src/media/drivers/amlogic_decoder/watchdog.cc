@@ -4,6 +4,8 @@
 
 #include "watchdog.h"
 
+#include "macros.h"
+
 Watchdog::Watchdog(Owner* owner) : owner_(owner), loop_(&kAsyncLoopConfigNeverAttachToThread) {
   ZX_ASSERT(ZX_OK == loop_.StartThread("Watchdog"));
   // Use late slack so the comparison in CheckAndResetTimeout works.

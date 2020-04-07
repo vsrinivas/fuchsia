@@ -29,6 +29,17 @@ class CodecAdapterEvents {
   // current stream, not between streams.
   virtual void onCoreCodecFailStream(fuchsia::media::StreamError error) = 0;
 
+  // The core codec should only call this method at times when there is a
+  // current stream, not between streams.  If the core codec calls this method,
+  // the core codec must also override CoreCodecResetStreamAfterCurrentFrame(),
+  // which _may_ be called async from the StreamControl thread, if the client
+  // hasn't already moved onto a new stream by then.
+  //
+  // This call requests a call to CoreCodecResetStreamAfterCurrentFrame() on the
+  // StreamControl thread (async with respect to this method call), if the
+  // current stream isn't obsoleted first.
+  virtual void onCoreCodecResetStreamAfterCurrentFrame() = 0;
+
   // "Mid-stream" can mean at the start of a stream also - it's just required
   // that a stream be active currently.  The core codec must ensure that this
   // call is propertly ordered with respect to onCoreCodecOutputPacket() and

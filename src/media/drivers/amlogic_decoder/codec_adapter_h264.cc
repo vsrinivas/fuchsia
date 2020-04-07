@@ -908,6 +908,8 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     ZX_DEBUG_ASSERT(item.is_packet());
+    auto return_input_packet =
+        fit::defer([this, &item] { events_->onCoreCodecInputPacketDone(item.packet()); });
 
     if (is_input_format_details_pending_) {
       is_input_format_details_pending_ = false;
@@ -936,12 +938,11 @@ void CodecAdapterH264::ProcessInput() {
       return;
     }
 
-    events_->onCoreCodecInputPacketDone(item.packet());
     // At this point CodecInputItem is holding a packet pointer which may get
     // re-used in a new CodecInputItem, but that's ok since CodecInputItem is
     // going away here.
     //
-    // ~item
+    // ~return_input_packet, ~item
   }
 }
 

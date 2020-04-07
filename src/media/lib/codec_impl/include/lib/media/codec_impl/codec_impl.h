@@ -918,6 +918,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // current stream, not between streams.
   void onCoreCodecFailStream(fuchsia::media::StreamError error) override;
 
+  void onCoreCodecResetStreamAfterCurrentFrame() override;
+
   // "Mid-stream" can mean at the start of a stream also - it's just required
   // that a stream be active currently.  The core codec must ensure that this
   // call is properly ordered with respect to onCoreCodecOutputPacket() and
@@ -980,6 +982,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void CoreCodecQueueInputEndOfStream() override;
 
   void CoreCodecStopStream() override;
+
+  void CoreCodecResetStreamAfterCurrentFrame() override;
 
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
 

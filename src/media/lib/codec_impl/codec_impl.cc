@@ -3229,7 +3229,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
       return;
     }
 
-    // We rely on the CodecAdapter to only call this method when there's a
+    // We rely on the CodecAdapter and the rest of CodecImpl to only call this method when there's a
     // current stream.
     ZX_DEBUG_ASSERT(stream_ && stream_->stream_lifetime_ordinal() == stream_lifetime_ordinal_);
 
@@ -3275,6 +3275,46 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
       if (binding_.is_bound()) {
         binding_.events().OnStreamFailed(stream_lifetime_ordinal, error);
       }
+    });
+  }  // ~lock
+}
+
+void CodecImpl::onCoreCodecResetStreamAfterCurrentFrame() {
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    // Calls to onCoreCodecResetStreamAfterCurrentFrame() must be fenced out (by the core codec)
+    // during CoreCodecStopStream(), so we know we still have the current stream here.
+    ZX_DEBUG_ASSERT(stream_);
+    // By the time we post over to StreamControl however, the current stream may no longer be
+    // current.  If we've moved on to another stream, it's fine to just ignore the reset stream
+    // request for a stream that's no longer current.
+    uint64_t stream_lifetime_ordinal = stream_->stream_lifetime_ordinal();
+    PostToStreamControl([this, stream_lifetime_ordinal] {
+      ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+      {  // scope lock
+        std::unique_lock<std::mutex> lock(lock_);
+
+        // Only StreamControl messes with stream_.
+        if (!stream_) {
+          return;
+        }
+        ZX_DEBUG_ASSERT(stream_);
+        if (stream_->stream_lifetime_ordinal() != stream_lifetime_ordinal) {
+          return;
+        }
+        ZX_DEBUG_ASSERT(stream_->stream_lifetime_ordinal() == stream_lifetime_ordinal);
+        if (stream_->future_discarded()) {
+          // Ignore since this stream will be gone soon anyway.
+          return;
+        }
+        if (stream_->failure_seen()) {
+          // Ignore since this stream has already failed anyway.
+          return;
+        }
+        ZX_DEBUG_ASSERT(is_core_codec_stream_started_);
+      }  // ~lock
+      CoreCodecResetStreamAfterCurrentFrame();
+      return;
     });
   }  // ~lock
 }
@@ -3868,6 +3908,11 @@ void CodecImpl::CoreCodecQueueInputEndOfStream() {
 void CodecImpl::CoreCodecStopStream() {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   codec_adapter_->CoreCodecStopStream();
+}
+
+void CodecImpl::CoreCodecResetStreamAfterCurrentFrame() {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  codec_adapter_->CoreCodecResetStreamAfterCurrentFrame();
 }
 
 bool CodecImpl::IsCoreCodecRequiringOutputConfigForFormatDetection() {

@@ -640,6 +640,7 @@ group("deprecated_package_underscore") {
     "//src/media/codec/examples:use_vp9_decoder_24_output_frames_test",
     "//src/media/codec/examples:use_vp9_decoder_secure_input_output_test",
     "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
+    "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_test",
     "//src/media/codec/examples:use_vp9_decoder_test",
     "//src/media/codec/examples:vp9_decoder_conformance_http",
     "//src/media/codec/examples:vp9_decoder_fuzzer_test",

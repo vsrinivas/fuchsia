@@ -460,8 +460,10 @@ void CodecAdapterVp9::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     parsed_video_size_ = 0;
-    is_input_end_of_stream_queued_ = false;
+    is_input_end_of_stream_queued_to_core_ = false;
+    has_input_keyframe_ = false;
     is_stream_failed_ = false;
+    ZX_DEBUG_ASSERT(queued_frame_sizes_.empty());
   }  // ~lock
 
   auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
@@ -511,17 +513,22 @@ void CodecAdapterVp9::CoreCodecQueueInputEndOfStream() {
   // or switches to a different stream first - in those cases it's fine for the
   // marker to never show up as output EndOfStream.
 
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    is_input_end_of_stream_queued_ = true;
-  }  // ~lock
-
   QueueInputItem(CodecInputItem::EndOfStream());
 }
 
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
 void CodecAdapterVp9::CoreCodecStopStream() {
+  std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
+  for (auto& input_item : leftover_input_items) {
+    if (input_item.is_packet()) {
+      events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+    }
+  }
+}
+
+std::list<CodecInputItem> CodecAdapterVp9::CoreCodecStopStreamInternal() {
+  std::list<CodecInputItem> input_items_result;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
 
@@ -530,19 +537,15 @@ void CodecAdapterVp9::CoreCodecStopStream() {
     std::condition_variable stop_input_processing_condition;
     // We know there won't be any new queuing of input, so once this posted work
     // runs, we know all previously-queued ProcessInput() calls have returned.
-    PostToInputProcessingThread([this, &stop_input_processing_condition] {
+    PostToInputProcessingThread([this, &stop_input_processing_condition, &input_items_result] {
       std::list<CodecInputItem> leftover_input_items;
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
         ZX_DEBUG_ASSERT(is_cancelling_input_processing_);
-        leftover_input_items = std::move(input_queue_);
+        ZX_DEBUG_ASSERT(input_items_result.empty());
+        input_items_result.swap(input_queue_);
         is_cancelling_input_processing_ = false;
       }  // ~lock
-      for (auto& input_item : leftover_input_items) {
-        if (input_item.is_packet()) {
-          events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
-        }
-      }
       stop_input_processing_condition.notify_all();
     });
     while (is_cancelling_input_processing_) {
@@ -568,10 +571,56 @@ void CodecAdapterVp9::CoreCodecStopStream() {
     {  // scope lock
       std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
       decoder_ = nullptr;
-    }
+    }  // ~lock
     // If the decoder's still running this will stop it as well.
     video_->RemoveDecoder(decoder_to_remove);
   }
+
+  queued_frame_sizes_.clear();
+
+  return input_items_result;
+}
+
+void CodecAdapterVp9::CoreCodecResetStreamAfterCurrentFrame() {
+  // Currently this takes ~20-40ms per reset.  We might be able to improve the performance by having
+  // a stop that doesn't deallocate followed by a start that doesn't allocate, but since we'll
+  // fairly soon only be using this method during watchdog processing, it's not worth optimizing for
+  // the temporary time interval during which we might potentially use this on multiple
+  // non-keyframes in a row before a keyframe, only in the case of protected input.
+  //
+  // If we were to optimize in that way, it'd increase the complexity of init and de-init code.  The
+  // current way we use that code exactly the same way for reset as for init and de-init, which is
+  // good from a test coverage point of view.
+
+  // This fences and quiesces the input processing thread, and the current StreamControl thread is
+  // the only other thread that modifies is_input_end_of_stream_queued_to_core_, so we know
+  // is_input_end_of_stream_queued_to_core_ won't be changing.
+  LOG(TRACE, "before CoreCodecStopStreamInternal()");
+  std::list<CodecInputItem> input_items = CoreCodecStopStreamInternal();
+  auto return_any_input_items = fit::defer([this, &input_items] {
+    for (auto& input_item : input_items) {
+      if (input_item.is_packet()) {
+        events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+      }
+    }
+  });
+
+  if (is_input_end_of_stream_queued_to_core_) {
+    // We don't handle this corner case of a corner case.  Fail the stream instead.
+    events_->onCoreCodecFailStream(fuchsia::media::StreamError::EOS_PROCESSING);
+    return;
+  }
+
+  LOG(TRACE, "after stop; before CoreCodecStartStream()");
+
+  CoreCodecStartStream();
+
+  LOG(TRACE, "re-queueing items...");
+  while (!input_items.empty()) {
+    QueueInputItem(std::move(input_items.front()));
+    input_items.pop_front();
+  }
+  LOG(TRACE, "done re-queueing items.");
 }
 
 void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -913,6 +962,22 @@ bool CodecAdapterVp9::HasMoreInputData() {
   return true;
 }
 
+void CodecAdapterVp9::AsyncResetStreamAfterCurrentFrame() {
+  LOG(ERROR, "async reset stream (after current frame) triggered");
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    // The current stream is temporarily failed, until CoreCodecResetStreamAfterCurrentFrame() soon
+    // on the StreamControl thread.  This prevents ReadMoreInputData() from queueing any more input
+    // data after any currently-running iteration.
+    //
+    // While Vp9Decoder::needs_more_input_data() may already be returning false which may serve a
+    // similar purpose depending on how/when Vp9Decoder calls this method, it's nice to directly
+    // mute queing any more input in this layer.
+    is_stream_failed_ = true;
+  }  // ~lock
+  events_->onCoreCodecResetStreamAfterCurrentFrame();
+}
+
 CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
@@ -925,8 +990,10 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
+// If paddr_size != 0, paddr_base is used to submit data to the HW directly by physical address.
+// Otherwise, vaddr_base and vaddr_size are valid, and are used to submit data to the HW.
 void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t paddr_size,
-                                               const std::vector<uint8_t>& data) {
+                                               uint8_t* vaddr_base, uint32_t vaddr_size) {
   ZX_DEBUG_ASSERT(paddr_size == 0 || use_parser_);
   video_->AssertVideoDecoderLockHeld();
   zx_status_t status;
@@ -945,7 +1012,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-    uint32_t size = paddr_size ? paddr_size : data.size();
+    uint32_t size = paddr_size ? paddr_size : vaddr_size;
     if (size + sizeof(kFlushThroughZeroes) > video_->GetStreamBufferEmptySpace()) {
       // We don't want the parser to hang waiting for output buffer space, since new space will
       // never be released to it since we need to manually update the read pointer. TODO(fxb/41825):
@@ -961,7 +1028,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
     if (paddr_size) {
       status = video_->parser()->ParseVideoPhysical(paddr_base, paddr_size);
     } else {
-      status = video_->parser()->ParseVideo(data.data(), data.size());
+      status = video_->parser()->ParseVideo(vaddr_base, vaddr_size);
     }
     if (status != ZX_OK) {
       DECODE_ERROR("Parsing video failed - status: %d", status);
@@ -992,7 +1059,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
     video_->parser()->SyncToDecoderInstance(video_->current_instance());
   } else {
     ZX_DEBUG_ASSERT(!paddr_size);
-    status = video_->ProcessVideoNoParser(data.data(), data.size());
+    status = video_->ProcessVideoNoParser(vaddr_base, vaddr_size);
     if (status != ZX_OK) {
       LOG(ERROR, "video_->ProcessVideoNoParser() (data) failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
@@ -1009,6 +1076,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
 
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
+  LOG(TRACE, "top");
   // Typically we only get one frame from the FW per UpdateDecodeSize(), but if we submitted more
   // than one frame of a superframe to the FW at once, we _sometimes_ get more than one frame from
   // the FW before the kVp9CommandNalDecodeDone (and before the subsequent UpdateDecodeSize() for
@@ -1063,6 +1131,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   while (true) {
     CodecInputItem item = DequeueInputItem();
     if (!item.is_valid()) {
+      LOG(TRACE, "!item.is_valid()");
       return;
     }
 
@@ -1081,7 +1150,12 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
                       new_stream_ivf_len - kHeaderSkipBytes, &split_data, &frame_sizes);
       ZX_DEBUG_ASSERT(frame_sizes.size() == 1);
-      SubmitDataToStreamBuffer(/*paddr_base=*/0, /*paddr_size=*/0, split_data);
+      {  // scope lock
+        std::lock_guard<std::mutex> lock(lock_);
+        is_input_end_of_stream_queued_to_core_ = true;
+      }  // ~lock
+      SubmitDataToStreamBuffer(/*paddr_base=*/0, /*paddr_size=*/0, split_data.data(),
+                               split_data.size());
       // Intentionally not including kFlushThroughZeroes - this only includes
       // data in AMLV frames.
       DLOG("UpdateDecodeSize() (EOS)");
@@ -1090,14 +1164,11 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     }
 
     ZX_DEBUG_ASSERT(item.is_packet());
+    auto return_input_packet =
+        fit::defer([this, &item] { events_->onCoreCodecInputPacketDone(item.packet()); });
 
     uint8_t* data = item.packet()->buffer()->base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
-
-    DLOG("InsertPts() - parsed_video_size_: 0x%lx has_timestamp_ish: %u timestamp_ish: %lu",
-         parsed_video_size_, item.packet()->has_timestamp_ish(), item.packet()->timestamp_ish());
-    video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
-                                     item.packet()->timestamp_ish());
 
     zx_paddr_t paddr_base = 0;
     uint32_t paddr_size = 0;
@@ -1125,14 +1196,122 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       }
 
       paddr_size = after_repack_len;
+
+      ZX_DEBUG_ASSERT(new_queued_frame_sizes.size() == 0);
     } else {
       // We split superframes essentially the same way TeeVp9AddHeaders() does, to share as much
       // handling as we can regardless of whether IsPortSecure(kInputPort).
       SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes, /*like_secmem=*/true);
+      ZX_DEBUG_ASSERT(!new_queued_frame_sizes.empty());
       after_repack_len = split_data.size();
       // Because like_sysmem true, the after_repack_len includes an extraneous superframe footer
       // size also, just like TeeVp9AddHeaders().
       ZX_DEBUG_ASSERT(after_repack_len == len + new_queued_frame_sizes.size() * kVp9AmlvHeaderSize);
+    }
+
+    uint8_t* vaddr_base = nullptr;
+    uint32_t vaddr_size = 0;
+    if (!paddr_base) {
+      vaddr_base = split_data.data();
+      vaddr_size = split_data.size();
+    }
+
+    // For now, we only have known frame header offsets for non-DRM streams.  In future we intend to
+    // have header offsets regardless of DRM or not.
+    ZX_DEBUG_ASSERT(!IsPortSecure(kInputPort) == !new_queued_frame_sizes.empty());
+    if (!has_input_keyframe_ && !new_queued_frame_sizes.empty()) {
+      // for now
+      ZX_DEBUG_ASSERT(vaddr_base && vaddr_size && !paddr_base && !paddr_size);
+      while (!new_queued_frame_sizes.empty()) {
+        uint8_t* vp9_frame_header = vaddr_base + kVp9AmlvHeaderSize;
+        if (vp9_frame_header >= vaddr_base + vaddr_size) {
+          LOG(ERROR, "frame_type parsing failed");
+          OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+          return;
+        }
+        // Yes, we could make a bit-shifter class, but ... not really parsing that much here...
+        uint8_t byte_0_shifter = *vp9_frame_header;
+        uint8_t frame_marker = byte_0_shifter >> 6;
+        byte_0_shifter <<= 2;
+        if (frame_marker != kVp9FrameMarker) {
+          LOG(ERROR, "frame marker not 2");
+          OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+          return;
+        }
+        uint8_t profile_low_bit = byte_0_shifter >> 7;
+        byte_0_shifter <<= 1;
+        uint8_t profile_high_bit = byte_0_shifter >> 7;
+        byte_0_shifter <<= 1;
+        uint8_t profile = (profile_high_bit << 1) | profile_low_bit;
+        if (profile == 3) {
+          uint8_t reserved_zero = byte_0_shifter >> 7;
+          byte_0_shifter <<= 1;
+          if (reserved_zero != 0) {
+            LOG(ERROR, "reserved_zero not zero");
+            OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+            return;
+          }
+        }
+
+        uint8_t show_existing_frame = byte_0_shifter >> 7;
+        byte_0_shifter <<= 1;
+        if (show_existing_frame) {
+          // without having seen a keyframe, a show_existing_frame isn't going to find the frame it
+          // wants to show.
+          ZX_DEBUG_ASSERT(!has_input_keyframe_);
+          LOG(TRACE, "show_existing_frame && !has_input_keyframe_");
+          goto skipFrame;
+        }
+        ZX_DEBUG_ASSERT(!show_existing_frame);
+
+        {  // scope frame_type so goto skipFrame above won't complain despite lack of use of
+           // frame_type in skipFrame.
+          uint8_t frame_type = byte_0_shifter >> 7;
+          byte_0_shifter <<= 1;
+          if (frame_type != kVp9FrameTypeKeyFrame) {
+            // without having seen a keyframe, a non-keyframe isn't going to be able to decode
+            // properly, so skip.
+            ZX_DEBUG_ASSERT(!has_input_keyframe_);
+            LOG(TRACE, "frame_type != kVp9FrameTypeKeyFrame && !has_input_keyframe_");
+            goto skipFrame;
+          }
+          ZX_DEBUG_ASSERT(frame_type == kVp9FrameTypeKeyFrame);
+        }
+
+        // We didn't find any reason to skip the (now) first frame which is a keyframe, so note we
+        // have a keyframe and break out of "!new_queued_frame_sizes.empty()" loop so it can be
+        // submitted to HW along with any subsequent frames of its superframe.
+        ZX_DEBUG_ASSERT(!new_queued_frame_sizes.empty());
+        has_input_keyframe_ = true;
+        break;
+
+      skipFrame:;
+        // Skip the first frame.
+        uint32_t amlv_frame_size = new_queued_frame_sizes.front();
+        ZX_DEBUG_ASSERT(vaddr_size >= amlv_frame_size);
+        ZX_DEBUG_ASSERT(after_repack_len >= amlv_frame_size);
+        vaddr_base += amlv_frame_size;
+        vaddr_size -= amlv_frame_size;
+        after_repack_len -= amlv_frame_size;
+        if (paddr_size) {
+          // This will become important later when we have both vaddr_base and paddr_base with valid
+          // data, with paddr_base protected and vaddr_base clear.
+          ZX_DEBUG_ASSERT(paddr_size >= amlv_frame_size);
+          paddr_base += amlv_frame_size;
+          paddr_size -= amlv_frame_size;
+        }
+        new_queued_frame_sizes.erase(new_queued_frame_sizes.begin());
+        // next frame of superframe, if any
+        continue;
+      }
+      if (new_queued_frame_sizes.empty()) {
+        // The vaddr_size can still be non-zero here, due to superframe header bytes, which is fine.
+        //
+        // next input item, if any
+        //
+        // ~return_input_packet, ~item
+        continue;
+      }
     }
 
     uint32_t increased_size = after_repack_len - len;
@@ -1141,8 +1320,18 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
+
+    //////////////////////////////
+    // No failures from here down.
+    //////////////////////////////
+
+    LOG(TRACE, "InsertPts() - parsed_video_size_: 0x%lx has_timestamp_ish: %u timestamp_ish: %lu",
+        parsed_video_size_, item.packet()->has_timestamp_ish(), item.packet()->timestamp_ish());
+    video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
+                                     item.packet()->timestamp_ish());
+
     uint32_t frame_count = increased_size / 16;
-    DLOG("frame_count: 0x%x protected: %u", frame_count, IsPortSecure(kInputPort));
+    LOG(TRACE, "frame_count: 0x%x protected: %u", frame_count, IsPortSecure(kInputPort));
 
     // Because TeeVp9AddHeaders() doesn't output the frame sizes within a superframe, we
     // intentionally ignore those, even when the input data is non-protected, to keep the handling
@@ -1154,25 +1343,19 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     }
 
     parsed_video_size_ += after_repack_len + kFlushThroughBytes;
-    SubmitDataToStreamBuffer(paddr_base, paddr_size, split_data);
+    SubmitDataToStreamBuffer(paddr_base, paddr_size, vaddr_base, vaddr_size);
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
+    ZX_DEBUG_ASSERT(!queued_frame_sizes_.empty());
 
-    if (queued_frame_sizes_.size() == 0) {
-      LOG(ERROR, "queued_frame_sizes_.size() == 0");
-      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-      return;
-    }
-
-    DLOG("UpdateDecodeSize() (new)");
+    LOG(TRACE, "UpdateDecodeSize() (new)");
     decoder->UpdateDecodeSize(queued_frame_sizes_.front());
     queued_frame_sizes_.erase(queued_frame_sizes_.begin());
 
-    events_->onCoreCodecInputPacketDone(item.packet());
     // At this point CodecInputItem is holding a packet pointer which may get
     // re-used in a new CodecInputItem, but that's ok since CodecInputItem is
     // going away here.
     //
-    // ~item
+    // ~return_input_packet, ~item
     return;
   }
 }
@@ -1300,7 +1483,7 @@ zx_status_t CodecAdapterVp9::InitializeFrames(::zx::bti bti, uint32_t min_frame_
     bool is_output_end_of_stream = false;
     {  // scope lock
       std::lock_guard<std::mutex> lock(lock_);
-      if (is_input_end_of_stream_queued_) {
+      if (is_input_end_of_stream_queued_to_core_) {
         is_output_end_of_stream = true;
       }
     }  // ~lock
@@ -1368,7 +1551,7 @@ zx_status_t CodecAdapterVp9::InitializeFrames(::zx::bti bti, uint32_t min_frame_
 void CodecAdapterVp9::OnCoreCodecEos() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    ZX_DEBUG_ASSERT(is_input_end_of_stream_queued_);
+    ZX_DEBUG_ASSERT(is_input_end_of_stream_queued_to_core_);
   }  // ~lock
   decoder_->SetPausedAtEndOfStream();
   video_->AssertVideoDecoderLockHeld();
@@ -1380,7 +1563,7 @@ void CodecAdapterVp9::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
-  }
+  }  // ~lock
   LOG(ERROR, "CodecAdapterVp9::OnCoreCodecFailStream()");
   events_->onCoreCodecFailStream(error);
 }

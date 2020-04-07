@@ -746,9 +746,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   if (status != ZX_OK) {
     // On systems where there's no protected memory it's fine if we can't get
     // a handle to the secure monitor.
-    zxlogf(INFO,
-           "amlogic-video: Unable to get secure monitor handle, assuming no "
-           "protected memory\n");
+    LOG(INFO, "amlogic-video: Unable to get secure monitor handle, assuming no protected memory");
   }
 
   mmio_buffer_t cbus_mmio;

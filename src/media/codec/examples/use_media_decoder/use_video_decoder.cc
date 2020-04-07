@@ -4,6 +4,7 @@
 
 #include "use_video_decoder.h"
 
+#include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -127,7 +128,8 @@ enum class Format {
 // TODO(dustingreen): Determine for .mp4 or similar which don't have SPS / PPS
 // in band whether .mp4 provides ongoing OOB data, or just at the start, and
 // document in codec.fidl how that's to be handled.
-void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp) {
+void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp,
+                     const UseVideoDecoderTestParams* test_params) {
   // We assign fake PTS values starting at 0 partly to verify that 0 is
   // treated as a valid PTS.
   uint64_t input_frame_pts_counter = 0;
@@ -255,15 +257,32 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
   // input thread done
 }
 
-void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp) {
-  uint64_t input_frame_pts_counter = 0;
-  auto queue_access_unit = [&codec_client, in_stream, &input_frame_pts_counter,
-                            tvp](size_t byte_count) {
+void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp,
+                    const UseVideoDecoderTestParams* test_params) {
+  int64_t skip_frame_ordinal = -1;
+  if (test_params && test_params->Get("skip_frame_ordinal", &skip_frame_ordinal)) {
+    printf("QueueVp9Frames sees skip_frame_ordinal: %" PRId64 "\n", skip_frame_ordinal);
+  }
+  int64_t input_frame_ordinal = 0;
+  auto queue_access_unit = [&codec_client, in_stream, &input_frame_ordinal, tvp,
+                            skip_frame_ordinal](size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
     if (!packet) {
       fprintf(stderr, "Returning because failed to get input packet\n");
       return false;
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // No more return false from here down.  Before we return true, we must have consumed the input
+    // data, and incremented the input_frame_ordinal, and returned the input packet to the
+    // codec_client.  The codec_client only wants the input packet back after its been filled out
+    // completely.
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    auto do_not_return_early_interval = fit::defer([] {
+      ZX_PANIC("don't return early until packet is set up and returned to codec_client\n");
+    });
+    auto increment_frame_ordinal = fit::defer([&input_frame_ordinal] { input_frame_ordinal++; });
+
     ZX_ASSERT(packet->has_header());
     ZX_ASSERT(packet->header().has_packet_index());
     const CodecBuffer& buffer = codec_client->BlockingGetFreeInputBufferForPacket(packet.get());
@@ -282,12 +301,12 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     // send through frame index in timestamp_ish field instead, for consistency
     // with .h264 files which don't have timestamps in them, and so tests can
     // assume frame index as timestamp_ish on output.
-    packet->set_timestamp_ish(input_frame_pts_counter++);
+    packet->set_timestamp_ish(input_frame_ordinal);
 
     packet->set_start_access_unit(true);
     packet->set_known_end_access_unit(true);
-    uint32_t actual_bytes_read;
 
+    uint32_t actual_bytes_read;
     std::unique_ptr<uint8_t[]> bytes;
     uint8_t* read_address = nullptr;
 
@@ -306,6 +325,20 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == byte_count);
 
+    /////////////////////////////////////////////////////////////////////////////////
+    // Switch from not being able to return early to being able to return true early.
+    /////////////////////////////////////////////////////////////////////////////////
+    do_not_return_early_interval.cancel();
+    auto fake_on_free_input_packet = fit::defer([codec_client, &packet] {
+      codec_client->DoNotQueueInputPacketAfterAll(std::move(packet));
+    });
+
+    if (input_frame_ordinal == skip_frame_ordinal) {
+      LOGF("skipping input frame: %" PRId64, input_frame_ordinal);
+      // ~fake_on_free_input_packet, ~increment_frame_ordinal
+      return true;
+    }
+
     if (tvp) {
       VLOGF("before DecryptVideo...");
       TEEC_Result result = tvp->DecryptVideo(bytes.get(), byte_count, buffer.vmo());
@@ -313,7 +346,10 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       ZX_ASSERT(result == TEEC_SUCCESS);
     }
 
+    fake_on_free_input_packet.cancel();
     codec_client->QueueInputPacket(std::move(packet));
+
+    // ~increment_frame_ordinal
     return true;
   };
   IvfHeader header;
@@ -438,15 +474,16 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
 
   VLOGF("before starting in_thread...");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
-      [&codec_client, in_stream = params.in_stream, format, copier = params.input_copier]() {
+      [&codec_client, in_stream = params.in_stream, format, copier = params.input_copier,
+       test_params = params.test_params]() {
         VLOGF("in_thread start");
         switch (format) {
           case Format::kH264:
-            QueueH264Frames(&codec_client, in_stream, copier);
+            QueueH264Frames(&codec_client, in_stream, copier, test_params);
             break;
 
           case Format::kVp9:
-            QueueVp9Frames(&codec_client, in_stream, copier);
+            QueueVp9Frames(&codec_client, in_stream, copier, test_params);
             break;
         }
         VLOGF("in_thread done");
@@ -569,7 +606,10 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
             size_t total_size = raw->secondary_start_offset +
                                 raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
             if (packet.valid_length_bytes() < total_size) {
-              Exit("packet.valid_length_bytes < total_size (1) - valid_length_bytes: %u total_size: %lu", packet.valid_length_bytes(), total_size);
+              Exit(
+                  "packet.valid_length_bytes < total_size (1) - valid_length_bytes: %u total_size: "
+                  "%lu",
+                  packet.valid_length_bytes(), total_size);
             }
             break;
           }

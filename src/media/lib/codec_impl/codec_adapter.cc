@@ -112,3 +112,9 @@ CodecAdapter::CoreCodecBuildNewInputConstraints() {
 
   return constraints;
 }
+
+void CodecAdapter::CoreCodecResetStreamAfterCurrentFrame() {
+  ZX_PANIC(
+      "onCoreCodecResetStreamAfterCurrentFrame() triggered by a CodecAdapter that doesn't override "
+      "CoreCodecResetStreamAfterCurrentFrame()\n");
+}

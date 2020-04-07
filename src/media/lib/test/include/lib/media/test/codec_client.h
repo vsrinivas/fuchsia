@@ -119,6 +119,13 @@ class CodecClient {
 
   void Stop();
 
+  // This can be used to return a packet and its buffer instead of sending the packet to the codec.
+  // This is useful in tests that intentionally skip input frames.  The packet must still be filled
+  // out for sending.  This method won't send the packet, and instead will skip sending the packet
+  // and put the packet and buffer back in free lists, as if the packet had been sent via
+  // QueueInputPacket and returned from codec with OnFreeInputPacket.
+  void DoNotQueueInputPacketAfterAll(std::unique_ptr<fuchsia::media::Packet> packet);
+
   void set_is_output_secure(bool is_output_secure) { is_output_secure_ = is_output_secure; }
   void set_is_input_secure(bool is_input_secure) { is_input_secure_ = is_input_secure; }
   void set_in_lax_mode(bool lax_mode) { in_lax_mode_ = lax_mode; }

@@ -54,10 +54,18 @@ enum StreamError : uint32 {
     /// be performed. An example of this would be if a Decoder received output
     /// buffers that are too small to decode a frame into.
     INCOMPATIBLE_BUFFERS_PROVIDED = 0x00000003;
+    /// Processing of input EOS (end of stream) failed, so the stream failed.
+    /// Currently this can occur if a core codec watchdog fires while processing
+    /// EOS.
+    EOS_PROCESSING = 0x00000004;
 
     // Decoder errors 0x01
     /// An internal decoder error with an unspecified reason.
     DECODER_UNKNOWN = 0x01000001;
+    /// Input data that can't be parsed.  Only some parsing problems/errors are
+    /// reported this way.  Corrupt input data may be reported as other
+    /// StreamError, or may not cause a StreamError.
+    DECODER_DATA_PARSING = 0x01000002;
 
     // Encoder errors 0x02
     /// An internal encoder error with an unspecified reason.

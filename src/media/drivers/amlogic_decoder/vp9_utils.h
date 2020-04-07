@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_UTILS_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_UTILS_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_UTILS_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_UTILS_H_
 
 #include <cstdint>
 #include <vector>
@@ -19,5 +19,8 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
                      bool like_secmem = false);
 
 const uint32_t kVp9AmlvHeaderSize = 16;
+const uint32_t kVp9FrameMarker = 2;
+const uint32_t kVp9FrameTypeKeyFrame = 0;
+const uint32_t kVp9FrameTypeNonKeyFrame = 1;
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_UTILS_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_UTILS_H_

@@ -10,6 +10,7 @@
 
 #include "use_video_decoder_test.h"
 
+#include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/fourcc.h>
@@ -40,7 +41,8 @@ constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
                            UseVideoDecoderFunction use_video_decoder, bool is_secure_output,
                            bool is_secure_input, uint32_t min_output_buffer_count,
-                           std::string golden_sha256) {
+                           std::string golden_sha256,
+                           const UseVideoDecoderTestParams* test_params) {
   syslog::LogSettings settings = {.fd = STDERR_FILENO, .severity = FX_LOG_INFO};
   zx_status_t status = syslog::SetSettings(settings, {"use_video_decoder_test"});
   ZX_ASSERT(status == ZX_OK);
@@ -82,14 +84,22 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
                                 in_stream_peeker.get(), use_video_decoder, 0,
                                 min_output_buffer_count, is_secure_output, is_secure_input,
-                                std::move(emit_frame))) {
+                                std::move(emit_frame), test_params)) {
     printf("decode_video_stream_test() failed.\n");
     return -1;
   }
 
   const int frame_count = expected_frame_count != -1 ? expected_frame_count : timestamps.size();
   std::set<uint64_t> expected_timestamps;
-  for (int i = 0; i < frame_count; i++) {
+
+  int64_t first_expected_output_frame_ordinal = 0;
+  if (test_params && test_params->Get("first_expected_output_frame_ordinal",
+                                      &first_expected_output_frame_ordinal)) {
+    printf("first_expected_output_frame_ordinal: %" PRId64 "\n",
+           first_expected_output_frame_ordinal);
+  }
+
+  for (int i = first_expected_output_frame_ordinal; i < frame_count; i++) {
     expected_timestamps.insert(i);
   }
   for (size_t i = 0; i < timestamps.size(); i++) {
@@ -119,7 +129,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   if (!expected_timestamps.empty()) {
     printf("not all expected_timestamps seen\n");
     for (uint64_t timestamp : expected_timestamps) {
-      printf("missing timestamp: %lx\n", timestamp);
+      printf("missing timestamp: %lu\n", timestamp);
     }
     exit(-1);
   }
@@ -161,7 +171,8 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                               InStreamPeeker* in_stream_peeker,
                               UseVideoDecoderFunction use_video_decoder,
                               uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
-                              bool is_secure_output, bool is_secure_input, EmitFrame emit_frame) {
+                              bool is_secure_output, bool is_secure_input, EmitFrame emit_frame,
+                              const UseVideoDecoderTestParams* test_params) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler(
       [](zx_status_t status) { FXL_PLOG(FATAL, status) << "codec_factory failed - unexpected"; });
@@ -186,7 +197,8 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                                .is_secure_output = is_secure_output,
                                .is_secure_input = is_secure_input,
                                .lax_mode = false,
-                               .emit_frame = std::move(emit_frame)};
+                               .emit_frame = std::move(emit_frame),
+                               .test_params = test_params};
   use_video_decoder(std::move(params));
 
   return true;

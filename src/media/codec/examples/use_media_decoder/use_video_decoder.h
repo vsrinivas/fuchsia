@@ -10,6 +10,8 @@
 #include <lib/async-loop/default.h>
 #include <stdint.h>
 
+#include <variant>
+
 #include <openssl/sha.h>
 
 class FrameSink;
@@ -22,6 +24,32 @@ class InputCopier;
 typedef fit::function<void(uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
                            bool has_timestamp_ish, uint64_t timestamp_ish)>
     EmitFrame;
+
+class UseVideoDecoderTestParams {
+ public:
+  template <typename T>
+  void Add(std::string param_name, T value) {
+    params_.insert({param_name, value});
+  }
+
+  template <typename T>
+  bool Get(std::string param_name, T* value) const {
+    if (!params_.count(param_name)) {
+      return false;
+    }
+    const T* maybe_value = std::get_if<T>(&params_.at(param_name));
+    // If present, type must match.
+    ZX_ASSERT(maybe_value);
+    if (value) {
+      *value = *maybe_value;
+    }
+    return true;
+  }
+
+ private:
+  using Value = std::variant<int64_t, uint64_t, std::string>;
+  std::map<std::string, Value> params_;
+};
 
 struct UseVideoDecoderParams {
   // the loop created and run/started by main().  The codec_factory is
@@ -46,6 +74,7 @@ struct UseVideoDecoderParams {
   // if set, is called to emit each frame in i420 format + timestamp
   //     info.
   EmitFrame emit_frame;
+  const UseVideoDecoderTestParams* test_params = nullptr;
 };
 // use_h264_decoder()
 //
