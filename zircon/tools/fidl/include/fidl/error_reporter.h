@@ -23,52 +23,6 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column);
 std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, size_t squiggle_size = 0u);
 
-constexpr std::string_view kFormatMarker = "{}";
-
-namespace internal {
-
-std::string Display(const std::string& s);
-std::string Display(const std::set<std::string>& s);
-std::string Display(const SourceSpan& s);
-std::string Display(const raw::Attribute& a);
-std::string Display(raw::AttributeList* a);
-std::string Display(const std::vector<std::string_view>& library_name);
-std::string Display(const flat::Constant* c);
-std::string Display(const flat::TypeConstructor* tc);
-std::string Display(const flat::Type* t);
-std::string Display(const flat::TypeTemplate* t);
-std::string Display(const flat::Name& n);
-template <typename T, typename = decltype(std::to_string(std::declval<T>()))>
-std::string Display(T val) {
-  return std::to_string(val);
-}
-
-inline std::string FormatErr(std::string_view msg) {
-  // This assert should never fail, because FormatErr is only called by
-  // ReportError -- and calls to ReportError fail at compile time if the # of
-  // args passed in != the number of args in the Error definition.
-  assert(msg.find(kFormatMarker) == std::string::npos &&
-         "number of format string parameters '{}' != number of supplied arguments");
-  return std::string(msg);
-}
-
-template <typename T, typename... Rest>
-std::string FormatErr(std::string_view msg, T t, Rest... rest) {
-  size_t i = msg.find(kFormatMarker);
-  // This assert should never fail (see non-template FormatErr)
-  assert(i != std::string::npos &&
-         "number of format string parameters '{}' != number of supplied arguments");
-
-  // Split string at marker, insert formatted parameter
-  std::stringstream s;
-  s << msg.substr(0, i) << Display(t)
-    << msg.substr(i + kFormatMarker.length(), msg.length() - i - kFormatMarker.length());
-
-  return FormatErr(s.str(), rest...);
-}
-
-}  // namespace internal
-
 class ErrorReporter {
  public:
   ErrorReporter(bool warnings_as_errors = false) : warnings_as_errors_(warnings_as_errors) {}
@@ -112,6 +66,21 @@ class ErrorReporter {
     const size_t num_warnings_;
   };
 
+  // Used to create a std::unique_ptr<ReportedError> rather than
+  // std::make_unique to avoid having to specify the Args... template parameters
+  // on ReportedError explicitly.
+  template <typename... Args>
+  static std::unique_ptr<ReportedError<Args...>> MakeReportedError(
+      const Error<Args...>* err, const std::optional<SourceSpan>& span, Args... args) {
+    return std::make_unique<ReportedError<Args...>>(err, span, args...);
+  }
+  template <typename... Args>
+  static std::unique_ptr<ReportedError<Args...>> MakeReportedError(
+      const Error<Args...>* err, Args... args) {
+    return std::make_unique<ReportedError<Args...>>(err, std::nullopt, args...);
+  }
+
+  void ReportError(std::unique_ptr<BaseReportedError> err);
   template <typename... Args>
   void ReportError(const Error<Args...> err, const Args&... args) {
     ReportErrorWithSpan(std::nullopt, internal::FormatErr(err.msg, args...));
@@ -121,6 +90,11 @@ class ErrorReporter {
                    const Args&... args) {
     ReportErrorWithSpan(span, internal::FormatErr(err.msg, args...));
   }
+  template <typename ...Args>
+  void ReportError(const Error<Args...> err, const Token& token, const Args& ...args) {
+    ReportErrorWithSpan(token.span(), internal::FormatErr(err.msg, args...));
+  }
+
   void ReportErrorWithSpan(const std::optional<SourceSpan>& span, std::string_view message) {
     size_t squiggle_size = span ? span.value().data().size() : 0;
     auto error = Format("error", span, message, squiggle_size);
@@ -129,24 +103,20 @@ class ErrorReporter {
 
   template <typename... Args>
   void ReportWarning(const Error<Args...> err, const std::optional<SourceSpan>& span,
-                     const Args&... args) {
+                     const Args& ...args) {
     ReportWarningWithSpan(span, internal::FormatErr(err.msg, args...));
   }
   template <typename... Args>
+  void ReportWarning(const Error<Args...> err, const Token& token, const Args& ...args) {
+    ReportWarningWithSpan(token.span(), internal::FormatErr(err.msg, args...));
+  }
+
   void ReportWarningWithSpan(const std::optional<SourceSpan>& span, std::string_view message) {
     size_t squiggle_size = span ? span.value().data().size() : 0;
     auto warning = Format("warning", span, message, squiggle_size);
     AddWarning(std::move(warning));
   }
-
-  void ReportErrorWithSquiggle(const SourceSpan& span, std::string_view message);
-  void ReportError(const std::optional<SourceSpan>& span, std::string_view message);
-  void ReportError(const Token& token, std::string_view message);
-  void ReportError(std::string_view message);
-
   void ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message);
-  void ReportWarning(const std::optional<SourceSpan>& span, std::string_view message);
-  void ReportWarning(const Token& token, std::string_view message);
 
   void PrintReports();
   Counts Checkpoint() const { return Counts(this); }

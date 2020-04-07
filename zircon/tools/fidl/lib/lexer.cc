@@ -338,10 +338,7 @@ Token Lexer::Lex() {
             return LexCommentOrDocComment();
           default: {
             SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
-            std::string msg("invalid character '");
-            msg.append(span.data());
-            msg.append("'");
-            error_reporter_->ReportError(span, msg);
+            error_reporter_->ReportError(ErrInvalidCharacter, span, std::string(span.data()));
             continue;
           }
         }  // switch
@@ -382,10 +379,7 @@ Token Lexer::Lex() {
 
       default: {
         SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
-        std::string msg("invalid character '");
-        msg.append(span.data());
-        msg.append("'");
-        error_reporter_->ReportError(span, msg);
+        error_reporter_->ReportError(ErrInvalidCharacter, span, std::string(span.data()));
         continue;
       }
     }  // switch

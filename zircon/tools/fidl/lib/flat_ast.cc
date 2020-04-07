@@ -106,12 +106,10 @@ class Compiling {
 };
 
 template <typename T>
-std::optional<Error<>> ValidateUnknownConstraints(const Decl& decl,
-                                                  types::Strictness decl_strictness,
-                                                  const std::vector<const T*>* members,
-                                                  SourceSpan* out_source_span) {
+std::unique_ptr<BaseReportedError> ValidateUnknownConstraints(
+    const Decl& decl, types::Strictness decl_strictness, const std::vector<const T*>* members) {
   if (!members)
-    return std::nullopt;
+    return nullptr;
 
   const bool is_transitional = decl.HasAttribute("Transitional");
 
@@ -131,19 +129,17 @@ std::optional<Error<>> ValidateUnknownConstraints(const Decl& decl,
       continue;
 
     if (is_strict && !is_transitional) {
-      *out_source_span = member->name;
-      return ErrUnknownAttributeOnInvalidType;
+      return ErrorReporter::MakeReportedError(&ErrUnknownAttributeOnInvalidType, member->name);
     }
 
     if (found_member) {
-      *out_source_span = member->name;
-      return ErrUnknownAttributeOnMultipleMembers;
+      return ErrorReporter::MakeReportedError(&ErrUnknownAttributeOnMultipleMembers, member->name);
     }
 
     found_member = true;
   }
 
-  return std::nullopt;
+  return nullptr;
 }
 
 }  // namespace
@@ -1149,13 +1145,8 @@ std::string LibraryName(const Library* library, std::string_view separator) {
   return std::string();
 }
 
-bool Library::Fail(std::string_view message) {
-  error_reporter_->ReportError(message);
-  return false;
-}
-
-bool Library::Fail(const std::optional<SourceSpan>& span, std::string_view message) {
-  error_reporter_->ReportError(span, message);
+bool Library::Fail(std::unique_ptr<BaseReportedError> err) {
+  error_reporter_->ReportError(std::move(err));
   return false;
 }
 
@@ -2855,13 +2846,12 @@ bool Library::CompileBits(Bits* bits_declaration) {
   }
 
   {
-    SourceSpan source_span;
     // In the line below, `nullptr` needs an explicit cast to the pointer type due to
     // C++ template mechanics.
-    std::optional<Error<>> error = ValidateUnknownConstraints<const Bits::Member>(
-        *bits_declaration, bits_declaration->strictness, nullptr, &source_span);
+    std::unique_ptr<BaseReportedError> error = ValidateUnknownConstraints<const Bits::Member>(
+        *bits_declaration, bits_declaration->strictness, nullptr);
     if (error) {
-      return Fail(error.value(), source_span);
+      return Fail(std::move(error));
     }
   }
 
@@ -3114,11 +3104,10 @@ bool Library::CompileUnion(Union* union_declaration) {
         used_members.push_back(member.maybe_used.get());
     }
 
-    SourceSpan source_span;
-    std::optional<Error<>> error = ValidateUnknownConstraints(
-        *union_declaration, union_declaration->strictness, &used_members, &source_span);
+    std::unique_ptr<BaseReportedError> error = ValidateUnknownConstraints(
+        *union_declaration, union_declaration->strictness, &used_members);
     if (error) {
-      return Fail(error.value(), source_span);
+      return Fail(std::move(error));
     }
   }
 
@@ -3257,9 +3246,10 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
                      decl->name);
     }
 
-    std::string validation_failure;
-    if (!validator(value, member.attributes.get(), &validation_failure)) {
-      success = Fail(member.name, validation_failure);
+    std::unique_ptr<BaseReportedError> error = validator(value, member.attributes.get());
+    if (error) {
+      error->span = member.name;
+      success = Fail(std::move(error));
     }
   }
 
@@ -3283,13 +3273,12 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
-  auto validator = [&mask](MemberType member, const raw::AttributeList*, std::string* out_error) {
+  auto validator = [&mask](MemberType member, const raw::AttributeList*) -> std::unique_ptr<BaseReportedError> {
     if (!IsPowerOfTwo(member)) {
-      *out_error = "bits members must be powers of two";
-      return false;
+      return ErrorReporter::MakeReportedError(&ErrBitsMemberMustBePowerOfTwo);
     }
     mask |= member;
-    return true;
+    return nullptr;
   };
   if (!ValidateMembers<Bits, MemberType>(bits_decl, validator)) {
     return false;
@@ -3303,37 +3292,27 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
 
-  auto validator = [enum_decl](MemberType member, const raw::AttributeList* attributes,
-                               std::string* out_error) {
+  auto validator = [enum_decl](MemberType member, const raw::AttributeList* attributes) -> std::unique_ptr<BaseReportedError> {
     switch (enum_decl->strictness) {
       case types::Strictness::kFlexible:
         break;
       case types::Strictness::kStrict:
         // Strict enums cannot have [Unknown] attributes on members, but that will be validated by
         // ValidateUnknownConstraints() (called later in this method).
-        return true;
+        return nullptr;
     }
 
     constexpr auto kMax = std::numeric_limits<MemberType>::max();
 
     if (member != kMax)
-      return true;
+      return nullptr;
 
     if (attributes && attributes->HasAttribute("Unknown"))
-      return true;
+      return nullptr;
 
-    std::string max_value_string = std::to_string(kMax);
-
-    *out_error = "flexible enums must not have a member with a value of " + max_value_string +
-                 ", which is reserved for the unknown value. either: remove the member with the " +
-                 max_value_string + " value, change the member with the " + max_value_string +
-                 " value to something other than " + max_value_string +
-                 ", or explicitly specify the unknown value "
-                 "with the [Unknown] attribute. see "
-                 "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
-                 "language#unions> for more info.";
-
-    return false;
+    return ErrorReporter::MakeReportedError(&ErrFlexibleEnumMemberWithMaxValue,
+                                    std::to_string(kMax), std::to_string(kMax),
+                                    std::to_string(kMax), std::to_string(kMax));
   };
 
   if (!ValidateMembers<Enum, MemberType>(enum_decl, validator))
@@ -3346,11 +3325,10 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
       members.push_back(&member);
     }
 
-    SourceSpan source_span;
-    std::optional<Error<>> error =
-        ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members, &source_span);
+    std::unique_ptr<BaseReportedError> error =
+        ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members);
     if (error) {
-      return Fail(error.value(), source_span);
+      return Fail(std::move(error));
     }
   }
 

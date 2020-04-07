@@ -109,22 +109,33 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
   return true;
 }
 
-decltype(nullptr) Parser::Fail() { return Fail("found unexpected token"); }
+decltype(nullptr) Parser::Fail() { return Fail(ErrUnexpectedToken); }
 
-decltype(nullptr) Parser::Fail(std::string_view message) {
-  return Fail(last_token_, std::move(message));
-}
-
-decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
+decltype(nullptr) Parser::Fail(std::unique_ptr<BaseReportedError> err) {
   if (Ok()) {
-    error_reporter_->ReportError(token, std::move(message));
+    err->span = last_token_.span();
+    error_reporter_->ReportError(std::move(err));
   }
   return nullptr;
 }
 
-std::nullptr_t Parser::Fail(const SourceSpan& span, std::string_view message) {
+template <typename ...Args>
+decltype(nullptr) Parser::Fail(const Error<Args...> err, const Args& ...args) {
+  return Fail(err, last_token_, args...);
+}
+
+template <typename ...Args>
+decltype(nullptr) Parser::Fail(const Error<Args...> err, Token token, const Args& ...args) {
   if (Ok()) {
-    error_reporter_->ReportErrorWithSquiggle(span, std::move(message));
+    error_reporter_->ReportError(err, token, args...);
+  }
+  return nullptr;
+}
+
+template <typename ...Args>
+decltype(nullptr) Parser::Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
+  if (Ok()) {
+    error_reporter_->ReportError(err, span, args...);
   }
   return nullptr;
 }
@@ -151,7 +162,7 @@ std::unique_ptr<raw::Identifier> Parser::ParseIdentifier(bool is_discarded) {
     return Fail();
   std::string identifier(token.data());
   if (!IsIdentifierValid(identifier))
-    return Fail("invalid identifier '" + identifier + "'");
+    return Fail(ErrInvalidIdentifier, identifier);
 
   return std::make_unique<raw::Identifier>(scope.GetSourceElement());
 }
@@ -194,7 +205,7 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseLibraryName() {
   for (const auto& component : library_name->components) {
     std::string component_data(component->start_.data());
     if (!IsValidLibraryComponentName(component_data)) {
-      return Fail(component->start_, "Invalid library name component " + component_data);
+      return Fail(ErrInvalidLibraryNameComponent, component->start_, component_data);
     }
   }
 
@@ -223,7 +234,7 @@ std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   ASTScope scope(this);
 
   if (!MaybeConsumeToken(OfKind(Token::Kind::kNumericLiteral)))
-    return Fail("missing ordinal before type");
+    return Fail(ErrMissingOrdinalBeforeType);
   if (!Ok())
     return Fail();
   auto data = scope.GetSourceElement().span().data();
@@ -232,10 +243,10 @@ std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   unsigned long long value = strtoull(string_data.data(), nullptr, 0);
   assert(errno == 0 && "unparsable number should not be lexed.");
   if (value > std::numeric_limits<uint32_t>::max())
-    return Fail("ordinal out-of-bound");
+    return Fail(ErrOrdinalOutOfBound);
   uint32_t ordinal = static_cast<uint32_t>(value);
   if (ordinal == 0u)
-    return Fail("ordinals must start at 1");
+    return Fail(ErrOrdinalsMustStartAtOne);
 
   ConsumeToken(OfKind(Token::Kind::kColon));
   if (!Ok())
@@ -346,8 +357,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
       // disallow any blank lines between this doc comment and the previous one
       std::string_view trailing_whitespace = last_token_.previous_end().data();
       if (std::count(trailing_whitespace.cbegin(), trailing_whitespace.cend(), '\n') > 1)
-        error_reporter_->ReportWarning(previous_token_,
-                                       "cannot have blank lines within doc comment block");
+        error_reporter_->ReportWarning(WarnBlankLinesWithinDocCommentBlock, previous_token_);
     }
 
     doc_line = ConsumeToken(OfKind(Token::Kind::kDocComment));
@@ -358,8 +368,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   }
 
   if (Peek().kind() == Token::Kind::kEndOfFile)
-    error_reporter_->ReportWarning(previous_token_,
-                                   "doc comment must be followed by a declaration");
+    error_reporter_->ReportWarning(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
   return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
 }
@@ -372,7 +381,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
     doc_comment = ParseDocComment();
   }
   if (for_parameter && doc_comment) {
-    error_reporter_->ReportError(previous_token_, "cannot have doc comment on parameters");
+    error_reporter_->ReportError(ErrDocCommentOnParameters, previous_token_);
     return Fail();
   }
   if (Peek().kind() == Token::Kind::kLeftSquare) {
@@ -458,7 +467,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
       return Fail();
   } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
     if (!Ok() || using_path->components.size() != 1u)
-      return Fail(using_path->span(), "alias identifiers cannot contain '.'");
+      return Fail(ErrCompoundAliasIdentifier, using_path->span());
     maybe_type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
@@ -588,7 +597,7 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
     Fail();
 
   if (members.empty())
-    return Fail("must have at least one bits member");
+    return Fail(ErrBitsMustHaveOneMember);
 
   return std::make_unique<raw::BitsDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                 std::move(identifier), std::move(maybe_type_ctor),
@@ -837,7 +846,7 @@ void Parser::ParseProtocolMember(
         break;
       } else if (identifier->span().data() == "compose") {
         if (attributes) {
-          Fail("Cannot attach attributes to compose stanza");
+          Fail(ErrCannotAttachAttributesToCompose);
           break;
         }
         auto protocol_name = ParseCompoundIdentifier();
@@ -847,12 +856,12 @@ void Parser::ParseProtocolMember(
             raw::SourceElement(identifier->start_, protocol_name->end_), std::move(protocol_name)));
         break;
       } else {
-        Fail("unrecognized protocol member");
+        Fail(ErrUnrecognizedProtocolMember);
         break;
       }
     }
     default:
-      Fail("expected protocol member");
+      Fail(ErrExpectedProtocolMember);
       break;
   }
 }
@@ -1031,7 +1040,7 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
     if (!Ok())
       return Fail();
     if (attributes != nullptr)
-      return Fail("Cannot attach attributes to reserved ordinals");
+      return Fail(ErrCannotAttachAttributesToReservedOrdinals);
     return std::make_unique<raw::TableMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
@@ -1082,9 +1091,7 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
         return More;
 
       default:
-        std::string msg = "Expected one of ordinal or '}', found ";
-        msg.append(Token::Name(Peek()));
-        Fail(msg);
+        Fail(ErrExpectedOrdinalOrCloseBrace, Peek());
         return Done;
     }
   };
@@ -1118,7 +1125,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     if (!Ok())
       return Fail();
     if (attributes)
-      return Fail("Cannot attach attributes to reserved ordinals");
+      return Fail(ErrCannotAttachAttributesToReservedOrdinals);
     return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
@@ -1172,9 +1179,7 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
     return Fail();
 
   if (!contains_non_reserved_member)
-    return Fail(
-        "must have at least one non reserved member; you can use an empty struct "
-        "to define a placeholder variant");
+    return Fail(ErrMustHaveNonReservedMember);
 
   return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                  std::move(identifier), std::move(members),
@@ -1227,8 +1232,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
           if (*maybe_strictness == types::Strictness::kFlexible &&
               !experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kFlexibleBitsAndEnums)) {
-            std::string msg = "cannot specify flexible for " + std::string(Token::Name(Peek()));
-            Fail(msg);
+            Fail(ErrCannotSpecifyFlexible, Peek());
             return More;
           }
           break;
@@ -1237,8 +1241,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
           break;
         default:
-          std::string msg = "cannot specify strictness for " + std::string(Token::Name(Peek()));
-          Fail(msg);
+          Fail(ErrCannotSpecifyStrict, Peek());
           return More;
       }
     }
@@ -1298,8 +1301,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         } else if (done_with_library_imports) {
           // TODO(FIDL-582): Give one week warning, then turn this into
           // an error.
-          error_reporter_->ReportWarning(using_decl->span(),
-                                         "library imports must be grouped at top-of-file");
+          error_reporter_->ReportWarning(WarnLibraryImportsMustBeGroupedAtTopOfFile,
+                                         using_decl->span());
         }
         using_list.emplace_back(std::move(using_decl));
         return More;
@@ -1316,12 +1319,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         auto strictness = maybe_strictness.value_or(types::Strictness::kFlexible);
         switch (strictness) {
           case types::Strictness::kFlexible:
-            error_reporter_->ReportError(
-                last_token_, "xunion is deprecated, please use `flexible union` instead");
+            error_reporter_->ReportError(ErrXunionDeprecated, last_token_);
             return More;
           case types::Strictness::kStrict:
-            error_reporter_->ReportError(
-                last_token_, "strict xunion is deprecated, please use `strict union` instead");
+            error_reporter_->ReportError(ErrStrictXunionDeprecated, last_token_);
             return More;
         }
     }

@@ -50,8 +50,7 @@ class Parser {
           break;
         case Token::Kind::kDocComment:
           if (state_ == State::kDocCommentThenComment)
-            error_reporter_->ReportWarning(last_token_,
-                                           "cannot have comment within doc comment block");
+            error_reporter_->ReportWarning(WarnCommentWithinDocCommentBlock, last_token_);
           state_ = State::kDocCommentLast;
           return token;
         default:
@@ -110,7 +109,7 @@ class Parser {
   void UpdateMarks(Token& token) {
     // There should always be at least one of these - the outermost.
     if (active_ast_scopes_.size() == 0) {
-      Fail("Internal compiler error: unbalanced parse tree");
+      Fail(ErrUnbalancedParseTree);
     }
 
     if (!suppress_gap_checks_) {
@@ -149,9 +148,9 @@ class Parser {
   // become interesting to the AST.
   template <class Predicate>
   Token ConsumeToken(Predicate p, bool is_discarded = false) {
-    std::unique_ptr<std::string> failure_message = p(Peek());
-    if (failure_message) {
-      Fail(*failure_message);
+    std::unique_ptr<BaseReportedError> error = p(Peek());
+    if (error) {
+      Fail(std::move(error));
     }
     auto token = last_token_;
     last_token_ = Lex();
@@ -165,8 +164,8 @@ class Parser {
   // See #OfKind, and #IdentifierOfSubkind for the two expected predicates.
   template <class Predicate>
   bool MaybeConsumeToken(Predicate p) {
-    std::unique_ptr<std::string> failure_message = p(Peek());
-    if (failure_message) {
+    std::unique_ptr<BaseReportedError> error = p(Peek());
+    if (error) {
       return false;
     }
     previous_token_ = last_token_;
@@ -176,28 +175,23 @@ class Parser {
   }
 
   static auto OfKind(Token::Kind expected_kind) {
-    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<std::string> {
+    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseReportedError> {
       if (actual.kind() != expected_kind) {
-        auto message = std::make_unique<std::string>("unexpected token ");
-        message->append(Token::Name(actual));
-        message->append(", was expecting ");
-        message->append(Token::Name(Token::KindAndSubkind(expected_kind, Token::Subkind::kNone)));
-        return message;
+        return ErrorReporter::MakeReportedError(
+            &ErrUnexpectedTokenOfKind, actual,
+            Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
       }
       return nullptr;
     };
   }
 
   static auto IdentifierOfSubkind(Token::Subkind expected_subkind) {
-    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<std::string> {
+    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseReportedError> {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
       if (actual.combined() != expected.combined()) {
-        auto message = std::make_unique<std::string>("unexpected identifier ");
-        message->append(Token::Name(actual));
-        message->append(", was expecting ");
-        message->append(
-            Token::Name(Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone)));
-        return message;
+        return ErrorReporter::MakeReportedError(
+            &ErrUnexpectedIdentifier, actual,
+            Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
       }
       return nullptr;
     };
@@ -207,9 +201,13 @@ class Parser {
                            std::optional<types::HandleSubtype>* out_handle_subtype);
 
   decltype(nullptr) Fail();
-  decltype(nullptr) Fail(std::string_view message);
-  decltype(nullptr) Fail(Token token, std::string_view message);
-  decltype(nullptr) Fail(const SourceSpan& span, std::string_view message);
+  decltype(nullptr) Fail(std::unique_ptr<BaseReportedError> err);
+  template <typename ...Args>
+  decltype(nullptr) Fail(const Error<Args...> err, const Args& ...args);
+  template <typename ...Args>
+  decltype(nullptr) Fail(const Error<Args...> err, Token token, const Args& ...args);
+  template <typename ...Args>
+  decltype(nullptr) Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args);
 
   std::optional<types::Strictness> MaybeParseStrictness();
 

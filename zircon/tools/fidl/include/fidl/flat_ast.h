@@ -691,6 +691,7 @@ class Library {
   const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
+  bool Fail(std::unique_ptr<BaseReportedError> err);
   template <typename... Args>
   bool Fail(const Error<Args...> err, const Args&... args);
   template <typename... Args>
@@ -703,11 +704,6 @@ class Library {
   bool Fail(const Error<Args...> err, const Decl& decl, const Args&... args) {
     return Fail(err, decl.name, args...);
   }
-
-  bool Fail(std::string_view message);
-  bool Fail(const std::optional<SourceSpan>& span, std::string_view message);
-  bool Fail(const Name& name, std::string_view message) { return Fail(name.span(), message); }
-  bool Fail(const Decl& decl, std::string_view message) { return Fail(decl.name, message); }
 
   void ValidateAttributesPlacement(AttributeSchema::Placement placement,
                                    const raw::AttributeList* attributes);
@@ -785,8 +781,8 @@ class Library {
   // Validates a single member of a bits or enum. On failure,
   // returns false and places an error message in the out parameter.
   template <typename MemberType>
-  using MemberValidator = fit::function<bool(
-      const MemberType& member, const raw::AttributeList* attributes, std::string* out_error)>;
+  using MemberValidator = fit::function<std::unique_ptr<BaseReportedError>(
+      const MemberType& member, const raw::AttributeList* attributes)>;
   template <typename DeclType, typename MemberType>
   bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
   template <typename MemberType>

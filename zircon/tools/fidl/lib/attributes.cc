@@ -12,10 +12,7 @@ bool AttributesBuilder::Insert(raw::Attribute attribute) {
   auto result = InsertHelper(std::move(attribute));
   switch (result.kind) {
     case InsertResult::Kind::kDuplicate: {
-      std::string message("duplicate attribute with name '");
-      message.append(attribute_name);
-      message.append("'");
-      error_reporter_->ReportError(attribute_span, message);
+      error_reporter_->ReportError(ErrDuplicateAttribute, attribute_span, attribute_name);
       return false;
     }
     case InsertResult::Kind::kOk:

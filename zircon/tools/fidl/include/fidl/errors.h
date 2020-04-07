@@ -5,50 +5,74 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERRORS_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERRORS_H_
 
-#include <cassert>
-#include <set>
-#include <string_view>
-
-#include "source_span.h"
+#include "error_types.h"
 
 namespace fidl {
 
-// Forward decls
-namespace raw {
-class Attribute;
-class AttributeList;
-}  // namespace raw
+// ---------------------------------------------------------------------------
+// Lexer
+// ---------------------------------------------------------------------------
+constexpr Error<std::string> ErrInvalidCharacter(
+    "invalid character '{}'");
 
-namespace flat {
-struct Constant;
-struct IdentifierConstant;
-struct LiteralConstant;
-struct TypeConstructor;
-struct Type;
-class TypeTemplate;
-class Name;
-}  // namespace flat
-
-constexpr int count_format_args(std::string_view s, size_t i = 0) {
-  if (i + 1 >= s.size()) {
-    return 0;
-  }
-  int extra = 0;
-  if (s[i] == '{' && s[i + 1] == '}') {
-    extra = 1;
-  }
-  return extra + count_format_args(s, i + 1);
-}
-
-template <typename... Args>
-struct Error {
-  std::string_view msg;
-
-  constexpr Error(std::string_view msg) : msg(msg) {
-    assert(sizeof...(Args) == count_format_args(msg) &&
-           "number of format string parameters '{}' != number of template arguments");
-  }
-};
+// ---------------------------------------------------------------------------
+// Parser
+// ---------------------------------------------------------------------------
+constexpr Error ErrUnbalancedParseTree(
+    "Internal compiler error: unbalanced parse tree");
+constexpr Error ErrUnexpectedToken(
+    "found unexpected token");
+constexpr Error<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
+    "unexpected token {}, was expecting {}");
+constexpr Error<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedIdentifier(
+    "unexpected identifier {}, was expecting {}");
+constexpr Error<std::string> ErrInvalidIdentifier(
+    "invalid identifier '{}'");
+constexpr Error<std::string> ErrInvalidLibraryNameComponent(
+    "Invalid library name component {}");
+constexpr Error<std::string> ErrDuplicateAttribute(
+    "duplicate attribute with name '{}'");
+constexpr Error ErrMissingOrdinalBeforeType(
+    "missing ordinal before type");
+constexpr Error ErrOrdinalOutOfBound(
+    "ordinal out-of-bound");
+constexpr Error ErrOrdinalsMustStartAtOne(
+    "ordinals must start at 1");
+constexpr Error ErrCompoundAliasIdentifier(
+    "alias identifiers cannot contain '.'");
+constexpr Error ErrBitsMustHaveOneMember(
+    "must have at least one bits member");
+constexpr Error ErrCannotAttachAttributesToCompose(
+    "Cannot attach attributes to compose stanza");
+constexpr Error ErrUnrecognizedProtocolMember(
+    "unrecognized protocol member");
+constexpr Error ErrExpectedProtocolMember(
+    "expected protocol member");
+constexpr Error ErrCannotAttachAttributesToReservedOrdinals(
+    "Cannot attach attributes to reserved ordinals");
+constexpr Error<Token::KindAndSubkind> ErrExpectedOrdinalOrCloseBrace(
+    "Expected one of ordinal or '}', found {}");
+constexpr Error ErrMustHaveNonReservedMember(
+    "must have at least one non reserved member; you can use an empty struct to "
+    "define a placeholder variant");
+constexpr Error<Token::KindAndSubkind> ErrCannotSpecifyFlexible(
+    "cannot specify flexible for {}");
+constexpr Error<Token::KindAndSubkind> ErrCannotSpecifyStrict(
+    "cannot specify strictness for {}");
+constexpr Error ErrDocCommentOnParameters(
+    "cannot have doc comment on parameters");
+constexpr Error ErrXunionDeprecated(
+    "xunion is deprecated, please use `flexible union` instead");
+constexpr Error ErrStrictXunionDeprecated(
+    "strict xunion is deprecated, please use `strict union` instead");
+constexpr Error WarnCommentWithinDocCommentBlock(
+    "cannot have comment within doc comment block");
+constexpr Error WarnBlankLinesWithinDocCommentBlock(
+    "cannot have blank lines within doc comment block");
+constexpr Error WarnDocCommentMustBeFollowedByDeclaration(
+    "doc comment must be followed by a declaration");
+constexpr Error WarnLibraryImportsMustBeGroupedAtTopOfFile(
+    "library imports must be grouped at top-of-file");
 
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration
@@ -115,6 +139,16 @@ constexpr Error<flat::LiteralConstant *, const flat::Type *> ErrConstantCannotBe
     "{} cannot be interpreted as type {}");
 constexpr Error ErrCouldNotResolveIdentifierToType(
     "could not resolve identifier to a type");
+constexpr Error ErrBitsMemberMustBePowerOfTwo(
+    "bits members must be powers of two");
+constexpr Error<std::string, std::string, std::string, std::string>
+ErrFlexibleEnumMemberWithMaxValue(
+    "flexible enums must not have a member with a value of {}, which is "
+    "reserved for the unknown value. either: remove the member with the {} "
+    "value, change the member with the {} value to something other than {}, or "
+    "explicitly specify the unknown value with the [Unknown] attribute. see "
+    "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
+    "language#unions> for more info.");
 constexpr Error<const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
     "bits may only be of unsigned integral primitive type, found {}");
 constexpr Error<const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(

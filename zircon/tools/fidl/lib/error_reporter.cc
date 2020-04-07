@@ -91,6 +91,10 @@ std::string Display(const std::set<std::string>& s) {
 
 std::string Display(const SourceSpan& s) { return s.position_str(); }
 
+std::string Display(const Token::KindAndSubkind& t) {
+  return std::string(Token::Name(t));
+}
+
 std::string Display(const raw::Attribute& a) { return a.name; }
 
 std::string Display(raw::AttributeList* a) {
@@ -136,57 +140,14 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
   }
 }
 
-// ReportError records an error with the span, message, source line, and
-// position indicator.
-//
-//     filename:line:col: error: message
-//     sourceline
-//        ^
-void ErrorReporter::ReportError(const std::optional<SourceSpan>& span, std::string_view message) {
-  auto error = Format("error", span, message);
-  AddError(std::move(error));
-}
-
-// Records an error with the span, message, source line,
-// position indicator, and tildes under the token reported.
+// Record an error with the span, message, source line, position indicator,
+// and, if span is not nullopt, tildes under the token reported.
 //
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportErrorWithSquiggle(const SourceSpan& span, std::string_view message) {
-  auto token_data = span.data();
-  auto error = Format("error", std::make_optional(span), message, token_data.size());
-  AddError(std::move(error));
-}
-
-// ReportError records an error with the span, message, source line,
-// position indicator, and tildes under the token reported.
-// Uses the given Token to get its span, and then calls
-// ReportErrorWithSquiggle()
-//
-//     filename:line:col: error: message
-//     sourceline
-//        ^~~~
-void ErrorReporter::ReportError(const Token& token, std::string_view message) {
-  ReportErrorWithSquiggle(token.span(), message);
-}
-
-// ReportError records the provided message.
-void ErrorReporter::ReportError(std::string_view message) {
-  std::string error("error: ");
-  error.append(message);
-  AddError(std::move(error));
-}
-
-// ReportWarning records a warning with the span, message, source line, and
-// position indicator.
-//
-//     filename:line:col: warning: message
-//     sourceline
-//        ^
-void ErrorReporter::ReportWarning(const std::optional<SourceSpan>& span, std::string_view message) {
-  auto warning = Format("warning", span, message);
-  AddWarning(std::move(warning));
+void ErrorReporter::ReportError(std::unique_ptr<BaseReportedError> err) {
+  ReportErrorWithSpan(err->span, err->Format());
 }
 
 // Records a warning with the span, message, source line,
@@ -199,10 +160,6 @@ void ErrorReporter::ReportWarningWithSquiggle(const SourceSpan& span, std::strin
   auto token_data = span.data();
   auto warning = Format("warning", std::make_optional(span), message, token_data.size());
   AddWarning(std::move(warning));
-}
-
-void ErrorReporter::ReportWarning(const Token& token, std::string_view message) {
-  ReportWarningWithSquiggle(token.span(), message);
 }
 
 void ErrorReporter::PrintReports() {
