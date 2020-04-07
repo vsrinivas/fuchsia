@@ -4,6 +4,81 @@
 
 library fuchsia.media.drm;
 
+using fuchsia.io;
+
+/// A sentinel value for use with [`KeySystem.CreateContentDecryptionModule2`]
+/// to create a [`ContentDecryptionModule`] without a client data store.
+const uint32 NO_DATA_STORE = 0;
+
+protocol KeySystem {
+    /// Adds a client data store to the `KeySystem`.
+    ///
+    /// DRM systems generate data on behalf of clients as part of provisioning
+    /// and license management. This data is only usable by the DRM system, but
+    /// the client is the owner of the data. The client controls the lifetime of
+    /// the data and can select which data set is to be used for a
+    /// [`ContentDecryptionModule`].
+    ///
+    /// + request `data_store_id` a client-assigned identifier for the data
+    ///   store. The identifier is scoped to the `KeySystem` channel. It is
+    ///   invalid for the client to provide [`NO_DATA_STORE`] or an already
+    ///   added `data_store_id` and the server should close the channel.
+    /// + request `data_store_params` the parameters to be used for this data
+    ///   store.
+    [Transitional]
+    AddDataStore(uint32 data_store_id,
+                 DataStoreParams data_store_params) -> () error Error;
+
+    /// Destroys the client data store.
+    ///
+    /// This method permanently removes this data store and all of its contents.
+    /// This means that all provisioning and license data will be removed and
+    /// any active [`ContentDecryptionModule`] using this data store will be
+    /// closed.
+    ///
+    /// + request `data_store_id` the client-assigned identifier for the data
+    ///  store to be removed. It is invalid for the client to provide
+    ///  [`NO_DATA_STORE`] or a `data_store_id` value that has not previously
+    ///  been added.
+    [Transitional]
+    DestroyDataStore(uint32 data_store_id);
+
+    /// Creates a new [`ContentDecryptionModule`].
+    ///
+    /// Creates a `ContentDecryptionModule` that will use the associated data
+    /// store, if provided. If [`NO_DATA_STORE`] is provided for the
+    /// `data_store_id`, then the created `ContentDecryptionModule` will only
+    /// support [`LicenseSession`]s of [`LicenseSessionType.TEMPORARY`] type.
+    /// If a `data_store_id` is provided, then the created
+    /// `ContentDecryptionModule` will persist data to that data store. If the
+    /// `KeySystem` requires a data store and `NO_DATA_STORE` was provided or
+    /// the `KeySystem` does not support data stores and one was provided, then
+    /// the server should close the `cdm`.
+    ///
+    /// + request `data_store_id` the data store that should be used by the
+    ///   `ContentDecryptionModule`.
+    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    [Transitional]
+    CreateContentDecryptionModule2(uint32 data_store_id,
+                                   request<ContentDecryptionModule> cdm);
+};
+
+table DataStoreParams {
+    /// Directory into which this data store should write persistent
+    /// provisioning and licenses, or their proxy. This field is required.
+    1: fuchsia.io.Directory data_directory;
+
+    /// Certificate to use for encrypting provisioning messages. This field is
+    /// optional.
+    2: bytes provision_server_certificate;
+
+    /// The client endpoint of the [`ProvisioningFetcher`] to be used when this
+    /// data store requires provisioning. If the DRM system requires data store
+    /// provisioning, then this field is required to be set. Otherwise, it is
+    /// optional.
+    3: ProvisioningFetcher provisioning_fetcher;
+};
+
 // TODO(MTWN-394): Convert these protocols to services once available.
 
 /// A service hub providing access to the ClearKey key system. This key system
@@ -17,31 +92,44 @@ library fuchsia.media.drm;
 ///   https://www.w3.org/TR/encrypted-media
 [Discoverable]
 protocol ClearKey {
+    compose KeySystem;
+
     /// Creates a new [`ContentDecryptionModule`].
     ///
+    /// DEPRECATED: See [`KeySystem.CreateContentDecryptionModule2`] instead.
+    ///
     /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    [Transitional, Deprecated]
     CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
 };
 
 /// A service hub providing access to the Widevine key system.
 ///
 /// If the client closes the `Widevine` channel, derived
-/// `ContentDecryptionModule`s and `Provision`s will remain active.
+/// `ContentDecryptionModule`s will remain active.
 [Discoverable]
 protocol Widevine {
+    compose KeySystem;
+
     /// Creates a new [`ContentDecryptionModule`].
     ///
     /// The `ContentDecryptionModule`s created will share their persistent
     /// state, but will not share active sessions.
     ///
+    /// DEPRECATED: See [`KeySystem.CreateContentDecryptionModule2`] instead.
+    ///
     /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    [Transitional, Deprecated]
     CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
 
     /// Creates a new [`Provisioner`].
     ///
     /// There can only be one active `Provisioner` for each service instance.
     ///
+    /// DEPRECATED: See [`KeySystem.AddDataStore`] instead.
+    ///
     /// + request `provisioner` the server endpoint of the `Provisioner`.
+    [Transitional, Deprecated]
     CreateProvisioner(request<Provisioner> provisioner);
 };
 
@@ -51,11 +139,16 @@ protocol Widevine {
 /// `ContentDecryptionModule`s will remain active.
 [Discoverable]
 protocol PlayReady {
+    compose KeySystem;
+
     /// Creates a new [`ContentDecryptionModule`].
     ///
     /// The `ContentDecryptionModule`s created will share their persistent
     /// state, but will not share active sessions.
     ///
+    /// DEPRECATED: See [`KeySystem.CreateContentDecryptionModule2`] instead.
+    ///
     /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    [Transitional, Deprecated]
     CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
 };

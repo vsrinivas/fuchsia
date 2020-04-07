@@ -5,30 +5,64 @@
 library fuchsia.media.drm;
 
 using fuchsia.mem;
+using fuchsia.url;
 
 enum ProvisioningStatus {
     NOT_PROVISIONED = 1;
     PROVISIONED = 2;
 };
 
-/// A message originating from the [`Provisioner`] that the caller must route to
+/// Message passed to a [`ProvisioningFetcher`] by a DRM system, to pass on to
 /// the provisioning server.
 struct ProvisioningRequest {
-    /// An optional server to send the [`ProvisioningRequest`] to. This field is
-    /// not required to be set and the client is not required to use it if one
-    /// is provided.
-    string? default_provisioning_server_url;
+    /// A suggested server to send the `message` to.
+    fuchsia.url.Url? default_provisioning_server_url;
+
+    /// The DRM system specific provisioning request message body to be
+    /// delivered to the provisioning server. The VMO must at least have the
+    /// following rights:
+    ///   ZX_RIGHT_READ
+    ///   ZX_RIGHT_TRANSFER
     fuchsia.mem.Buffer message;
 };
 
-/// A message originating from the provisioning server that the caller must
-/// provide to [`Provisioner.ProcessProvisioningResponse`].
+/// Message originating from the provisioning server that the
+/// [`ProvisioningFetcher`] must pass back to the DRM system.
 struct ProvisioningResponse {
+    /// The DRM system specific provisioning response message body received from
+    /// the provisioning server. The VMO must at least have the following
+    /// rights:
+    ///   ZX_RIGHT_READ
+    ///   ZX_RIGHT_TRANSFER
     fuchsia.mem.Buffer message;
+};
+
+/// Fetches provisioning from a server.
+///
+/// Some DRM systems require additional runtime provisioning (also known as
+/// individualization). This is a process by which a device receives DRM
+/// credentials (e.g. a certificate) to use for license acquisition for an
+/// individual content provider.
+///
+/// DRM systems use the [`ProvisioningFetcher`] to fetch the provisioning when
+/// the system determines that it is needed.
+protocol ProvisioningFetcher {
+    /// Fetches provisioning from a server.
+    ///
+    /// Called by the DRM system when it is in need of provisioning.
+    ///
+    /// + request `request` a [`ProvisioningRequest`] message to be provided to
+    ///   a provisioning server.
+    /// - response `response` a [`ProvisioningResponse`] message from the
+    ///   provisioning server.
+    Fetch(ProvisioningRequest request) -> (ProvisioningResponse response);
 };
 
 /// A protocol for exchanging messages pertaining to the establishment of a
 /// provisioning certificate.
+///
+/// DEPRECATED: See [`KeySystem.AddDataStore`] instead.
+[Deprecated]
 protocol Provisioner {
     /// Gets the current status of provisioning for this service instance.
     ///
