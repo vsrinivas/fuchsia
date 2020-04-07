@@ -72,11 +72,11 @@ type failureCase struct {
 
 // Generate generates transformer tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	successArrays, successCases, err := successTests(gidl.DecodeSuccess, fidl)
+	successArrays, successCases, err := successTests(gidl.DecodeSuccess)
 	if err != nil {
 		return err
 	}
-	failureArrays, failureCases, err := failureTests(gidl.DecodeFailure, fidl)
+	failureArrays, failureCases, err := failureTests(gidl.DecodeFailure)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	return tmpl.Execute(wr, input)
 }
 
-func successTests(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]testArray, []successCase, error) {
+func successTests(gidlDecodeSuccesses []gidlir.DecodeSuccess) ([]testArray, []successCase, error) {
 	var arrays []testArray
 	var cases []successCase
 	for _, decodeSuccess := range gidlDecodeSuccesses {
@@ -129,7 +129,7 @@ func successTests(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) 
 	return arrays, cases, nil
 }
 
-func failureTests(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.Root) ([]testArray, []failureCase, error) {
+func failureTests(gidlDecodeFailures []gidlir.DecodeFailure) ([]testArray, []failureCase, error) {
 	var arrays []testArray
 	var cases []failureCase
 	for _, decodeFailure := range gidlDecodeFailures {

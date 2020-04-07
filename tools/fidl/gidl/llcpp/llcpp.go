@@ -84,19 +84,20 @@ type decodeFailureCase struct {
 
 // Generate generates Low-Level C++ tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, fidl)
+	schema := gidlmixer.BuildSchema(fidl)
+	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
 		return err
 	}
-	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, fidl)
+	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
 	if err != nil {
 		return err
 	}
-	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, fidl)
+	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
 	if err != nil {
 		return err
 	}
-	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, fidl)
+	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, schema)
 	if err != nil {
 		return err
 	}
@@ -108,10 +109,10 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	})
 }
 
-func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
+func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
-		decl, err := gidlmixer.ExtractDeclaration(encodeSuccess.Value, fidl)
+		decl, err := schema.ExtractDeclaration(encodeSuccess.Value)
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
@@ -134,10 +135,10 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 	return encodeSuccessCases, nil
 }
 
-func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]decodeSuccessCase, error) {
+func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlmixer.Schema) ([]decodeSuccessCase, error) {
 	var decodeSuccessCases []decodeSuccessCase
 	for _, decodeSuccess := range gidlDecodeSuccesses {
-		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
+		decl, err := schema.ExtractDeclaration(decodeSuccess.Value)
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
@@ -160,14 +161,15 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 	return decodeSuccessCases, nil
 }
 
-func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
+func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlmixer.Schema) ([]encodeFailureCase, error) {
 	var encodeFailureCases []encodeFailureCase
 	for _, encodeFailure := range gidlEncodeFailurees {
-		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
+		decl, err := schema.ExtractDeclarationUnsafe(encodeFailure.Value)
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 		valueBuild, valueVar := buildValue(encodeFailure.Value, decl)
+		errorCode := llcppErrorCode(encodeFailure.Err)
 		for _, wireFormat := range encodeFailure.WireFormats {
 			if !wireFormatSupported(wireFormat) {
 				continue
@@ -176,25 +178,31 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, fidl fidlir.
 				Name:       encodeFailure.Name,
 				ValueBuild: valueBuild,
 				ValueVar:   valueVar,
-				ErrorCode:  llcppErrorCode(encodeFailure.Err),
+				ErrorCode:  errorCode,
 			})
 		}
 	}
 	return encodeFailureCases, nil
 }
 
-func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, fidl fidlir.Root) ([]decodeFailureCase, error) {
+func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailurees {
+		_, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		if err != nil {
+			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
+		}
+		valueType := llcppType(decodeFailure.Type)
+		errorCode := llcppErrorCode(decodeFailure.Err)
 		for _, encoding := range decodeFailure.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:      decodeFailure.Name,
-				ValueType: llcppType(decodeFailure.Type),
+				ValueType: valueType,
 				Bytes:     bytesBuilder(encoding.Bytes),
-				ErrorCode: llcppErrorCode(decodeFailure.Err),
+				ErrorCode: errorCode,
 			})
 		}
 	}

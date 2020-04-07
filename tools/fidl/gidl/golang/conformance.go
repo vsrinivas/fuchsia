@@ -117,19 +117,20 @@ type decodeFailureCase struct {
 
 // GenerateConformanceTests generates Go tests.
 func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, fidl)
+	schema := gidlmixer.BuildSchema(fidl)
+	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
 		return err
 	}
-	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, fidl)
+	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
 	if err != nil {
 		return err
 	}
-	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, fidl)
+	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
 	if err != nil {
 		return err
 	}
-	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, fidl)
+	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, schema)
 	if err != nil {
 		return err
 	}
@@ -159,12 +160,12 @@ func marshalerContext(wireFormat gidlir.WireFormat) string {
 	}
 }
 
-func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
+func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
-		decl, err := gidlmixer.ExtractDeclaration(encodeSuccess.Value, fidl)
+		decl, err := schema.ExtractDeclaration(encodeSuccess.Value)
 		if err != nil {
-			return nil, fmt.Errorf("encodeSuccess %s: %s", encodeSuccess.Name, err)
+			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
 
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
@@ -190,12 +191,12 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 	return encodeSuccessCases, nil
 }
 
-func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]decodeSuccessCase, error) {
+func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlmixer.Schema) ([]decodeSuccessCase, error) {
 	var decodeSuccessCases []decodeSuccessCase
 	for _, decodeSuccess := range gidlDecodeSuccesses {
-		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
+		decl, err := schema.ExtractDeclaration(decodeSuccess.Value)
 		if err != nil {
-			return nil, fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
+			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
 
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
@@ -221,19 +222,19 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 	return decodeSuccessCases, nil
 }
 
-func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
+func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmixer.Schema) ([]encodeFailureCase, error) {
 	var encodeFailureCases []encodeFailureCase
 	for _, encodeFailure := range gidlEncodeFailures {
-		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
+		decl, err := schema.ExtractDeclarationUnsafe(encodeFailure.Value)
 		if err != nil {
-			return nil, fmt.Errorf("encodeFailure %s: %s", encodeFailure.Name, err)
+			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 		if gidlir.ContainsUnknownField(encodeFailure.Value) {
 			continue
 		}
 		code, err := goErrorCode(encodeFailure.Err)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 
 		var valueBuilder goValueBuilder
@@ -256,12 +257,16 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 	return encodeFailureCases, nil
 }
 
-func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.Root) ([]decodeFailureCase, error) {
+func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
+		_, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		if err != nil {
+			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
+		}
 		code, err := goErrorCode(decodeFailure.Err)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
 
 		valueType := "conformance." + decodeFailure.Type

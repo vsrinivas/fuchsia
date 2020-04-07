@@ -91,11 +91,12 @@ type goDecodeBenchmark struct {
 
 // GenerateBenchmarks generates Go benchmarks.
 func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	encodeBenchmarks, err := goEncodeBenchmarks(gidl.EncodeBenchmark, fidl)
+	schema := gidlmixer.BuildSchema(fidl)
+	encodeBenchmarks, err := goEncodeBenchmarks(gidl.EncodeBenchmark, schema)
 	if err != nil {
 		return err
 	}
-	decodeBenchmarks, err := goDecodeBenchmarks(gidl.DecodeBenchmark, fidl)
+	decodeBenchmarks, err := goDecodeBenchmarks(gidl.DecodeBenchmark, schema)
 	if err != nil {
 		return err
 	}
@@ -106,12 +107,12 @@ func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	return benchmarkTmpl.Execute(wr, input)
 }
 
-func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, fidl fidlir.Root) ([]goEncodeBenchmark, error) {
+func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gidlmixer.Schema) ([]goEncodeBenchmark, error) {
 	var goEncodeBenchmarks []goEncodeBenchmark
 	for _, encodeBenchmark := range gidlEncodeBenchmarks {
-		decl, err := gidlmixer.ExtractDeclaration(encodeBenchmark.Value, fidl)
+		decl, err := schema.ExtractDeclaration(encodeBenchmark.Value)
 		if err != nil {
-			return nil, fmt.Errorf("encodeBenchmark %s: %s", encodeBenchmark.Name, err)
+			return nil, fmt.Errorf("encode benchmark %s: %s", encodeBenchmark.Name, err)
 		}
 		var valueBuilder goValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeBenchmark.Value, decl)
@@ -126,9 +127,13 @@ func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, fidl fidl
 	return goEncodeBenchmarks, nil
 }
 
-func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, fidl fidlir.Root) ([]goDecodeBenchmark, error) {
+func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gidlmixer.Schema) ([]goDecodeBenchmark, error) {
 	var goDecodeBenchmarks []goDecodeBenchmark
 	for _, decodeBenchmark := range gidlDecodeBenchmarks {
+		_, err := schema.ExtractDeclarationByName(decodeBenchmark.Type)
+		if err != nil {
+			return nil, fmt.Errorf("decode benchmark %s: %s", decodeBenchmark.Name, err)
+		}
 		for _, encoding := range decodeBenchmark.Encodings {
 			goDecodeBenchmarks = append(goDecodeBenchmarks, goDecodeBenchmark{
 				Name:      decodeBenchmark.Name,

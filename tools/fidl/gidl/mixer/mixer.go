@@ -7,40 +7,10 @@ package mixer
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 )
-
-// ExtractDeclaration extract the top-level declaration for the provided value,
-// and ensures the value conforms to the schema.
-func ExtractDeclaration(value interface{}, fidl fidlir.Root) (Declaration, error) {
-	decl, err := ExtractDeclarationUnsafe(value, fidl)
-	if err != nil {
-		return nil, err
-	}
-	if err := decl.conforms(value); err != nil {
-		return nil, fmt.Errorf("value %v failed to conform to declaration (type %T): %v", value, decl, err)
-	}
-	return decl, nil
-}
-
-// ExtractDeclarationUnsafe extract the top-level declaration for the provided value,
-// but does not ensure the value conforms to the schema. This is used in cases where
-// conformance is too strict (e.g. failure cases).
-func ExtractDeclarationUnsafe(value interface{}, fidl fidlir.Root) (Declaration, error) {
-	switch value := value.(type) {
-	case gidlir.Object:
-		decl, ok := schema(fidl).LookupDeclByName(value.Name, false)
-		if !ok {
-			return nil, fmt.Errorf("unknown declaration %s", value.Name)
-		}
-		return decl, nil
-	default:
-		return nil, fmt.Errorf("top-level message must be an object")
-	}
-}
 
 // ValueVisitor is an API that walks GIDL values.
 type ValueVisitor interface {
@@ -64,11 +34,11 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 	case bool:
 		visitor.OnBool(value)
 	case int64:
-		visitor.OnInt64(value, decl.(PrimitiveDeclaration).Subtype())
+		visitor.OnInt64(value, decl.(*IntegerDecl).Subtype())
 	case uint64:
-		visitor.OnUint64(value, decl.(PrimitiveDeclaration).Subtype())
+		visitor.OnUint64(value, decl.(*IntegerDecl).Subtype())
 	case float64:
-		visitor.OnFloat64(value, decl.(PrimitiveDeclaration).Subtype())
+		visitor.OnFloat64(value, decl.(*FloatDecl).Subtype())
 	case string:
 		switch decl := decl.(type) {
 		case *StringDecl:
@@ -106,7 +76,9 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 	}
 }
 
-// Declaration describes a FIDL declaration.
+// Declaration is the GIDL-level concept of a FIDL type. It is more convenient
+// to work with in GIDL backends than fidlir.Type. It also provides logic for
+// testing if a GIDL value conforms to the declaration.
 type Declaration interface {
 	// IsNullable returns true for nullable types. For example, it returns false
 	// for string and true for string?.
@@ -284,51 +256,43 @@ func (decl *StringDecl) conforms(value interface{}) error {
 // StructDecl describes a struct declaration.
 type StructDecl struct {
 	fidlir.Struct
-	schema   schema
 	nullable bool
+	schema   Schema
 }
 
 func (decl *StructDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *StructDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
+func (decl *StructDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if key.IsKnown() {
 		for _, member := range decl.Members {
 			if string(member.Name) == key.Name {
-				return member.Type, true
+				return decl.schema.lookupDeclByType(member.Type)
 			}
 		}
-	}
-	return fidlir.Type{}, false
-}
-
-// TODO(bprosnitz) Don't repeat this across types.
-func (decl *StructDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if typ, ok := decl.MemberType(key); ok {
-		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
 
 // objectConforms is a helper function for implementing Declarations.conforms on
 // types that expect a gidlir.Object value. It takes the kind ("struct", etc.),
-// expected type name, schema, and nullability, and returns the object or an
+// expected identifier, schema, and nullability, and returns the object or an
 // error. It can also return (nil, nil) when value is nil and nullable is true.
-func objectConforms(value interface{}, kind string, name fidlir.EncodedCompoundIdentifier, schema schema, nullable bool) (*gidlir.Object, error) {
+func objectConforms(value interface{}, kind string, identifier fidlir.EncodedCompoundIdentifier, schema Schema, nullable bool) (*gidlir.Object, error) {
 	switch value := value.(type) {
 	default:
 		return nil, fmt.Errorf("expecting %s, found %T (%v)", kind, value, value)
 	case gidlir.Object:
-		if actualName := schema.name(value.Name); actualName != name {
-			return nil, fmt.Errorf("expecting %s %s, found %s", kind, name, actualName)
+		if actualIdentifier := schema.nameToIdentifier(value.Name); actualIdentifier != identifier {
+			return nil, fmt.Errorf("expecting %s %s, found %s", kind, identifier, actualIdentifier)
 		}
 		return &value, nil
 	case nil:
 		if nullable {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("expecting non-null %s %s, found nil", kind, name)
+		return nil, fmt.Errorf("expecting non-null %s %s, found nil", kind, identifier)
 	}
 }
 
@@ -354,30 +318,22 @@ func (decl *StructDecl) conforms(value interface{}) error {
 type TableDecl struct {
 	NeverNullable
 	fidlir.Table
-	schema schema
+	schema Schema
 }
 
-func (decl *TableDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
+func (decl *TableDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if key.IsKnown() {
 		for _, member := range decl.Members {
 			if string(member.Name) == key.Name {
-				return member.Type, true
+				return decl.schema.lookupDeclByType(member.Type)
 			}
 		}
 	} else {
 		for _, member := range decl.Members {
 			if uint64(member.Ordinal) == key.UnknownOrdinal {
-				return member.Type, true
+				return decl.schema.lookupDeclByType(member.Type)
 			}
 		}
-	}
-	return fidlir.Type{}, false
-}
-
-// TODO(bprosnitz) Don't repeat this across types.
-func (decl *TableDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if typ, ok := decl.MemberType(key); ok {
-		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
@@ -409,40 +365,32 @@ func (decl *TableDecl) conforms(value interface{}) error {
 // UnionDecl describes a union declaration.
 type UnionDecl struct {
 	fidlir.Union
-	schema   schema
 	nullable bool
+	schema   Schema
 }
 
 func (decl *UnionDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *UnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
+func (decl *UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if key.IsKnown() {
 		for _, member := range decl.Members {
 			if string(member.Name) == key.Name {
-				return member.Type, true
+				return decl.schema.lookupDeclByType(member.Type)
 			}
 		}
 	} else {
 		for _, member := range decl.Members {
 			if uint64(member.Ordinal) == key.UnknownOrdinal {
-				return member.Type, true
+				return decl.schema.lookupDeclByType(member.Type)
 			}
 		}
-	}
-	return fidlir.Type{}, false
-}
-
-// TODO(bprosnitz) Don't repeat this across types.
-func (decl UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if typ, ok := decl.MemberType(key); ok {
-		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
 
-func (decl UnionDecl) conforms(value interface{}) error {
+func (decl *UnionDecl) conforms(value interface{}) error {
 	object, err := objectConforms(value, "union", decl.Name, decl.schema, decl.nullable)
 	if err != nil {
 		return err
@@ -471,20 +419,20 @@ func (decl UnionDecl) conforms(value interface{}) error {
 
 type ArrayDecl struct {
 	NeverNullable
-	schema schema
 	// The array has type `typ`, and it contains `typ.ElementType` elements.
-	typ fidlir.Type
+	typ    fidlir.Type
+	schema Schema
 }
 
-func (decl ArrayDecl) Elem() (Declaration, bool) {
-	return decl.schema.LookupDeclByType(*decl.typ.ElementType)
+func (decl *ArrayDecl) Elem() (Declaration, bool) {
+	return decl.schema.lookupDeclByType(*decl.typ.ElementType)
 }
 
-func (decl ArrayDecl) Size() int {
+func (decl *ArrayDecl) Size() int {
 	return *decl.typ.ElementCount
 }
 
-func (decl ArrayDecl) conforms(untypedValue interface{}) error {
+func (decl *ArrayDecl) conforms(untypedValue interface{}) error {
 	switch value := untypedValue.(type) {
 	default:
 		return fmt.Errorf("expecting array, found %T (%v)", untypedValue, untypedValue)
@@ -506,27 +454,27 @@ func (decl ArrayDecl) conforms(untypedValue interface{}) error {
 }
 
 type VectorDecl struct {
-	schema schema
 	// The vector has type `typ`, and it contains `typ.ElementType` elements.
-	typ fidlir.Type
+	typ    fidlir.Type
+	schema Schema
 }
 
-func (decl VectorDecl) IsNullable() bool {
+func (decl *VectorDecl) IsNullable() bool {
 	return decl.typ.Nullable
 }
 
-func (decl VectorDecl) Elem() (Declaration, bool) {
-	return decl.schema.LookupDeclByType(*decl.typ.ElementType)
+func (decl *VectorDecl) Elem() (Declaration, bool) {
+	return decl.schema.lookupDeclByType(*decl.typ.ElementType)
 }
 
-func (decl VectorDecl) MaxSize() (int, bool) {
+func (decl *VectorDecl) MaxSize() (int, bool) {
 	if decl.typ.ElementCount != nil {
 		return *decl.typ.ElementCount, true
 	}
 	return 0, false
 }
 
-func (decl VectorDecl) conforms(untypedValue interface{}) error {
+func (decl *VectorDecl) conforms(untypedValue interface{}) error {
 	switch value := untypedValue.(type) {
 	default:
 		return fmt.Errorf("expecting vector, found %T (%v)", untypedValue, untypedValue)
@@ -552,45 +500,118 @@ func (decl VectorDecl) conforms(untypedValue interface{}) error {
 	}
 }
 
-type schema fidlir.Root
+// Schema is the GIDL-level concept of a FIDL library. It provides functions to
+// lookup types and return the corresponding Declaration.
+type Schema struct {
+	library fidlir.EncodedLibraryIdentifier
+	// Maps identifiers to *fidlir.Struct, *fidlir.Table, or *fidlir.Union.
+	types map[fidlir.EncodedCompoundIdentifier]interface{}
+}
 
-// LookupDeclByName looks up a message declaration by name.
-func (s schema) LookupDeclByName(name string, nullable bool) (Declaration, bool) {
-	for _, decl := range s.Structs {
-		if decl.Name == s.name(name) {
-			return &StructDecl{
-				Struct:   decl,
-				schema:   s,
-				nullable: nullable,
-			}, true
-		}
+// BuildSchema builds a Schema from a FIDL library.
+// Note: The returned schema contains pointers into fidl.
+func BuildSchema(fidl fidlir.Root) Schema {
+	// TODO(fxb/43254): bits and enums
+	total := len(fidl.Structs) + len(fidl.Tables) + len(fidl.Unions)
+	types := make(map[fidlir.EncodedCompoundIdentifier]interface{}, total)
+	// These loops must use fidl.Structs[i], fidl.Tables[i], etc. rather than
+	// iterating `for i, decl := ...` and using &decl, because that would store
+	// the same local variable address in every entry.
+	for i := range fidl.Structs {
+		decl := &fidl.Structs[i]
+		types[decl.Name] = decl
 	}
-	for _, decl := range s.Tables {
-		if decl.Name == s.name(name) {
-			if nullable {
-				panic(fmt.Sprintf("nullable table %s is not allowed", name))
-			}
-			return &TableDecl{
-				Table:  decl,
-				schema: s,
-			}, true
-		}
+	for i := range fidl.Tables {
+		decl := &fidl.Tables[i]
+		types[decl.Name] = decl
 	}
-	for _, decl := range s.Unions {
-		if decl.Name == s.name(name) {
-			return &UnionDecl{
-				Union:    decl,
-				schema:   s,
-				nullable: nullable,
-			}, true
-		}
+	for i := range fidl.Unions {
+		decl := &fidl.Unions[i]
+		types[decl.Name] = decl
 	}
-	// TODO(pascallouis): add support missing declarations
+	return Schema{library: fidl.Name, types: types}
+}
+
+// ExtractDeclaration extract the top-level declaration for the provided value,
+// and ensures the value conforms to the schema.
+func (s Schema) ExtractDeclaration(value interface{}) (*StructDecl, error) {
+	decl, err := s.ExtractDeclarationUnsafe(value)
+	if err != nil {
+		return nil, err
+	}
+	if err := decl.conforms(value); err != nil {
+		return nil, fmt.Errorf("value %v failed to conform to declaration (type %T): %v", value, decl, err)
+	}
+	return decl, nil
+}
+
+// ExtractDeclarationUnsafe extracts the top-level declaration for the provided
+// value, but does not ensure the value conforms to the schema. This is used in
+// cases where conformance is too strict (e.g. failure cases).
+func (s Schema) ExtractDeclarationUnsafe(value interface{}) (*StructDecl, error) {
+	switch value := value.(type) {
+	case gidlir.Object:
+		return s.ExtractDeclarationByName(value.Name)
+	default:
+		return nil, fmt.Errorf("top-level message must be a struct; got %s (%T)", value, value)
+	}
+}
+
+// ExtractDeclarationByName extracts the top-level declaration for the given
+// type name. This is used in cases where only the type name is provided in the
+// test (e.g. decoding-only tests).
+func (s Schema) ExtractDeclarationByName(name string) (*StructDecl, error) {
+	decl, ok := s.lookupDeclByName(name, false)
+	if !ok {
+		return nil, fmt.Errorf("unknown declaration %s", name)
+	}
+	structDecl, ok := decl.(*StructDecl)
+	if !ok {
+		return nil, fmt.Errorf("top-level message must be a struct; got %s (%T)", name, decl)
+	}
+	return structDecl, nil
+}
+
+func (s Schema) lookupDeclByName(name string, nullable bool) (Declaration, bool) {
+	return s.lookupDeclByECI(s.nameToIdentifier(name), nullable)
+}
+
+func (s Schema) nameToIdentifier(name string) fidlir.EncodedCompoundIdentifier {
+	return fidlir.EncodedCompoundIdentifier(fmt.Sprintf("%s/%s", s.library, name))
+}
+
+func (s Schema) lookupDeclByECI(eci fidlir.EncodedCompoundIdentifier, nullable bool) (Declaration, bool) {
+	typ, ok := s.types[eci]
+	if !ok {
+		return nil, false
+	}
+	switch typ := typ.(type) {
+	case *fidlir.Struct:
+		return &StructDecl{
+			Struct:   *typ,
+			nullable: nullable,
+			schema:   s,
+		}, true
+	case *fidlir.Table:
+		if nullable {
+			panic(fmt.Sprintf("nullable table %s is not allowed", typ.Name))
+		}
+		return &TableDecl{
+			Table:  *typ,
+			schema: s,
+		}, true
+	case *fidlir.Union:
+		return &UnionDecl{
+			Union:    *typ,
+			nullable: nullable,
+			schema:   s,
+		}, true
+	}
+	// TODO(fxb/43254): bits and enums
 	return nil, false
 }
 
-// LookupDeclByType looks up a message declaration by type.
-func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
+func (s Schema) lookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 	switch typ.Kind {
 	case fidlir.StringType:
 		return &StringDecl{
@@ -625,21 +646,13 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 			panic(fmt.Sprintf("unsupported primitive subtype: %s", typ.PrimitiveSubtype))
 		}
 	case fidlir.IdentifierType:
-		parts := strings.Split(string(typ.Identifier), "/")
-		if len(parts) != 2 {
-			panic(fmt.Sprintf("malformed identifier: %s", typ.Identifier))
-		}
-		return s.LookupDeclByName(parts[1], typ.Nullable)
+		return s.lookupDeclByECI(typ.Identifier, typ.Nullable)
 	case fidlir.ArrayType:
 		return &ArrayDecl{schema: s, typ: typ}, true
 	case fidlir.VectorType:
 		return &VectorDecl{schema: s, typ: typ}, true
 	default:
-		// TODO(pascallouis): many more cases.
+		// TODO(fxb/36441): HandleType, RequestType
 		panic("not implemented")
 	}
-}
-
-func (s schema) name(name string) fidlir.EncodedCompoundIdentifier {
-	return fidlir.EncodedCompoundIdentifier(fmt.Sprintf("%s/%s", s.Name, name))
 }
