@@ -93,13 +93,10 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.hermetic-decompressor-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.hermetic-decompressor-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.hermetic-decompressor-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -133,8 +130,10 @@ aggregate_manifest("legacy-aux") {
     ":bin.null-namespace-child",
 #------------------
 #------------------
+    ":hermetic.decompress-lz4f",
 #------------------
 #------------------
+    ":hermetic.decompress-zstd",
 #------------------
 #------------------
 #------------------
@@ -362,7 +361,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
-    ":test.sys.hermetic-decompressor-test",
 #------------------
 #------------------
 #------------------
@@ -622,13 +620,10 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":bin.hermetic-decompressor-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.hermetic-decompressor-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.hermetic-decompressor-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -885,7 +880,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
-    ":test.sys.hermetic-decompressor-test",
 #------------------
 #------------------
 #------------------
@@ -2649,7 +2643,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
-    #":test.sys.hermetic-decompressor-test",
+    "//zircon/system/ulib/hermetic-decompressor/test:hermetic-decompressor-manifest",
 #------------------
     "//zircon/system/ulib/inspect/test:inspect-manifest",
     "//zircon/system/uapp/disk-pave:install-disk-image-test-manifest",
@@ -3156,7 +3150,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
-    #":test.sys.hermetic-decompressor-test",
+    "//zircon/system/ulib/hermetic-decompressor/test:hermetic-decompressor-manifest",
 #------------------
     "//zircon/system/ulib/inspect/test:inspect-manifest",
     "//zircon/system/uapp/disk-pave:install-disk-image-test-manifest",

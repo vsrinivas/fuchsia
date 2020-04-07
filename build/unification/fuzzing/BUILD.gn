@@ -9,9 +9,7 @@ zircon_fuzzers =
 
 # When removing an element from this list, add the GN build equivalent to:
 # _migrated_fuzzers in //garnet/tests/zircon/BUILD.gn.
-fuzzer_names = [
-  "hermetic-decompressor",
-]
+fuzzer_names = []
 known_fuzzers = []
 foreach(fuzzer, fuzzer_names) {
   known_fuzzers += [

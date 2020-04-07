@@ -77,7 +77,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/hermetic-compute/test",
 #------------------
 #------------------
-      "$zx/system/ulib/hermetic-decompressor/test",
 #------------------
 #------------------
 #------------------

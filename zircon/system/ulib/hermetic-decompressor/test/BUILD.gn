@@ -2,7 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -12,21 +24,39 @@ group("test") {
   ]
 }
 
-zx_test("hermetic-decompressor") {
+test("hermetic-decompressor") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "test.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hermetic-decompressor",
-    "$zx/system/ulib/zxtest",
-    "$zx/third_party/ulib/lz4",
-    "$zx/third_party/ulib/zstd",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hermetic-decompressor",
+    "//zircon/public/lib/zxtest",
+    "//zircon/public/lib/lz4",
+    "//third_party/zstd",
   ]
 }
 
-zx_fuzzer("hermetic-decompressor-fuzzer") {
+fuzzer("hermetic-decompressor-fuzzer") {
   sources = [ "fuzz.cc" ]
   deps = [
-    "$zx/system/ulib/hermetic-decompressor",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/hermetic-decompressor",
+    "//zircon/public/lib/zx",
   ]
+}
+
+migrated_manifest("hermetic-decompressor-manifest") {
+  deps = [ ":hermetic-decompressor" ]
 }
