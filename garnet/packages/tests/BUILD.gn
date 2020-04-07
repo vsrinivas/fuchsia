@@ -223,7 +223,7 @@ group("all") {
     "//third_party/boringssl:boringssl_tests",
     "//third_party/go:go_fidl_tests",
     "//third_party/go:go_stdlib_tests",
-    "//third_party/libc-tests",
+    "//third_party/libc-tests:nacl-libc-tests",
     "//tools/fidl/fidlgen_rust:fidlgen_rust_test($host_toolchain)",
     "//tools/fidl/gidl:gidl_golang_test($host_toolchain)",
     "//tools/fidl/gidl:gidl_mixer_test($host_toolchain)",
