@@ -37,10 +37,10 @@ test("libfs-pty-test") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/fs-pty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-pty:llcpp",
+    "//zircon/system/ulib/fs-pty",
   ]
 }
 

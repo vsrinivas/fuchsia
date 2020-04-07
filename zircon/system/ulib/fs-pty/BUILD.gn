@@ -2,7 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/package.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
 
 zx_library("fs-pty") {
   sdk = "source"
@@ -19,18 +29,17 @@ zx_library("fs-pty") {
   ]
   include_dirs = [ "include" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-pty:llcpp",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fs",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }

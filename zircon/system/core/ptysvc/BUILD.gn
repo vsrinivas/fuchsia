@@ -56,11 +56,11 @@ source_set("common") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/fs-pty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-pty:llcpp",
+    "//zircon/system/ulib/fs-pty",
   ]
 
   deps = [
