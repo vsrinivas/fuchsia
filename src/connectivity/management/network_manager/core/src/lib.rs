@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A networking stack.
+//! The logic for the Network Manager.
+//!
+//! This crate implements the logic for the Network Manager, not including
+//! the details of execution (serving FIDL, futures execution, etc).
 
 extern crate network_manager_core_interface as interface;
 
