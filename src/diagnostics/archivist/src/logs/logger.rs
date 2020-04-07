@@ -13,7 +13,7 @@ use {
         Stream,
     },
     libc::{c_char, c_int},
-    std::{cell::RefCell, marker::Unpin, mem, pin::Pin, str},
+    std::{mem, pin::Pin, str},
 };
 
 type FxLogSeverityT = c_int;
@@ -55,26 +55,37 @@ impl Default for fx_log_packet_t {
 }
 
 #[must_use = "futures/streams"]
-pub struct LoggerStream {
+pub struct LogMessageSocket {
     socket: fasync::Socket,
+    buffer: [u8; FX_LOG_MAX_DATAGRAM_LEN],
 }
 
-impl Unpin for LoggerStream {}
-
-thread_local! {
-    pub static BUFFER:
-        RefCell<[u8; FX_LOG_MAX_DATAGRAM_LEN]> = RefCell::new([0; FX_LOG_MAX_DATAGRAM_LEN]);
-}
-
-impl LoggerStream {
+impl LogMessageSocket {
     /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket) -> Result<LoggerStream, io::Error> {
-        let l = LoggerStream { socket: fasync::Socket::from_socket(socket)? };
-        Ok(l)
+    pub fn new(socket: zx::Socket) -> Result<Self, io::Error> {
+        Ok(Self {
+            socket: fasync::Socket::from_socket(socket)?,
+            buffer: [0; FX_LOG_MAX_DATAGRAM_LEN],
+        })
     }
 }
 
-fn convert_to_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
+impl Stream for LogMessageSocket {
+    /// It returns log message and the size of the packet received.
+    /// The size does not include the metadata size taken by
+    /// LogMessage data structure.
+    type Item = io::Result<(LogMessage, usize)>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let &mut Self { ref mut socket, ref mut buffer } = &mut *self;
+        let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
+
+        let parsed = if len > 0 { parse_log_message(&buffer[0..len]).map(Ok) } else { None };
+        Poll::Ready(parsed)
+    }
+}
+
+fn parse_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
     // Check that data has metadata and first 1 byte is integer and last byte is NULL.
     if bytes.len() < METADATA_SIZE + mem::size_of::<u8>() || bytes[bytes.len() - 1] != 0 {
         return None;
@@ -135,24 +146,6 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
         return None;
     }
     Some((l, pos))
-}
-
-impl Stream for LoggerStream {
-    /// It returns log message and the size of the packet received.
-    /// The size does not include the metadata size taken by
-    /// LogMessage data structure.
-    type Item = io::Result<(LogMessage, usize)>;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        BUFFER.with(|b| {
-            let mut b = b.borrow_mut();
-            let len = ready!(Pin::new(&mut self.socket).poll_read(cx, &mut *b)?);
-            if len == 0 {
-                return Poll::Ready(None);
-            }
-            Poll::Ready(convert_to_log_message(&b[0..len]).map(Ok))
-        })
-    }
 }
 
 #[cfg(test)]
@@ -226,7 +219,7 @@ mod tests {
         memset(&mut p.data[..], 1, 65, 5);
         memset(&mut p.data[..], 7, 66, 5);
 
-        let ls = LoggerStream::new(sout).unwrap();
+        let ls = LogMessageSocket::new(sout).unwrap();
         sin.write(to_u8_slice(&mut p)).unwrap();
         let mut expected_p = LogMessage {
             pid: p.metadata.pid,
@@ -276,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn convert_to_log_message_test() {
+    fn parse_test() {
         // We use fx_log_packet_t and unsafe operations so that we can test that
         // convert_to_log_message correctly parses all its fields.
         let mut p: fx_log_packet_t = Default::default();
@@ -288,15 +281,15 @@ mod tests {
 
         {
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE]), None);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE - 1]), None);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE]), None);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE - 1]), None);
         }
 
         // Test that there should be null byte at end
         {
             p.data[9] = 1;
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE + 10]), None);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 10]), None);
         }
         // test tags but no message
         {
@@ -304,7 +297,7 @@ mod tests {
             memset(&mut p.data[..], 1, 65, 11);
             p.data[12] = 0;
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE + 13]), None);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 13]), None);
         }
 
         // test tags with message
@@ -323,7 +316,7 @@ mod tests {
         {
             memset(&mut p.data[..], 13, 66, 5);
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE + 19]), s);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), s);
         }
 
         // test 2 tags with no message
@@ -331,7 +324,7 @@ mod tests {
             p.data[0] = 11;
             p.data[12] = 5;
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE + 19]), None);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), None);
         }
 
         // test 2 tags with message
@@ -342,7 +335,7 @@ mod tests {
             expected_p.msg = String::from("CCCCC");
             s = Some((expected_p, METADATA_SIZE + 24));
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE + 25]), s);
+            assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 25]), s);
         }
 
         // test max tags with message
@@ -375,23 +368,21 @@ mod tests {
             s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5));
             let buffer = to_u8_slice(&p);
             assert_eq!(
-                convert_to_log_message(
+                parse_log_message(
                     &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 6)],
                 ),
                 s
             );
 
             // test max tags with message and writing full bytes
-            assert_eq!(convert_to_log_message(&buffer[0..buffer.len()]), s);
+            assert_eq!(parse_log_message(&buffer[0..buffer.len()]), s);
         }
 
         // test max tags with no message
         {
             let buffer = to_u8_slice(&p);
             assert_eq!(
-                convert_to_log_message(
-                    &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))],
-                ),
+                parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))],),
                 None
             );
         }
@@ -404,7 +395,7 @@ mod tests {
             s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize)));
             let buffer = to_u8_slice(&p);
             assert_eq!(
-                convert_to_log_message(
+                parse_log_message(
                     &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)],
                 ),
                 s
@@ -420,7 +411,7 @@ mod tests {
             expected_p.tags.clear();
             s = Some((expected_p, METADATA_SIZE + 3));
             let buffer = to_u8_slice(&p);
-            assert_eq!(convert_to_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
+            assert_eq!(parse_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
         }
     }
 }

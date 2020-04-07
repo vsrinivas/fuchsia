@@ -21,6 +21,7 @@ mod stats;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
+use logger::LogMessageSocket;
 use stats::LogSource;
 
 /// Store 4 MB of log messages and delete on FIFO basis.
@@ -98,15 +99,14 @@ impl LogManager {
         while let Some(LogSinkRequest::Connect { socket, control_handle }) =
             stream.try_next().await?
         {
-            let log_stream = match logger::LoggerStream::new(socket)
-                .context("creating log stream from socket")
-            {
-                Ok(s) => s,
-                Err(e) => {
-                    control_handle.shutdown();
-                    return Err(e);
-                }
-            };
+            let log_stream =
+                match LogMessageSocket::new(socket).context("creating log stream from socket") {
+                    Ok(s) => s,
+                    Err(e) => {
+                        control_handle.shutdown();
+                        return Err(e);
+                    }
+                };
 
             fasync::spawn(self.clone().drain_messages(log_stream));
         }
@@ -114,7 +114,7 @@ impl LogManager {
     }
 
     /// Drain a `LoggerStream` which wraps a socket from a component generating logs.
-    async fn drain_messages(self, mut log_stream: logger::LoggerStream) {
+    async fn drain_messages(self, mut log_stream: LogMessageSocket) {
         while let Some(next) = log_stream.next().await {
             match next {
                 Ok((log_msg, size)) => {
