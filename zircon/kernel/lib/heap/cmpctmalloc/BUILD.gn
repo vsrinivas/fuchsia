@@ -8,4 +8,5 @@ zx_library("cmpctmalloc") {
   kernel = true
   sources = [ "cmpctmalloc.cc" ]
   include_dirs = [ "include/lib" ]
+  deps = [ "$zx/system/ulib/fbl" ]
 }

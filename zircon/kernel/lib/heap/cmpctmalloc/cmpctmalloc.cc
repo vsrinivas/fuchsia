@@ -7,7 +7,6 @@
 
 #include "cmpctmalloc.h"
 
-#include <assert.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
@@ -15,8 +14,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/assert.h>
 
-#include <ktl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <vm/vm.h>
 
 // Malloc implementation tuned for space.
@@ -224,7 +224,7 @@ static void cmpct_dump_locked() TA_REQ(TheHeapLock::Get()) {
     bool header_printed = false;
     free_t* free_area = theheap.free_lists[i];
     for (; free_area != NULL; free_area = free_area->next) {
-      ASSERT(free_area != free_area->next);
+      ZX_ASSERT(free_area != free_area->next);
       if (!header_printed) {
         dprintf(INFO, "\tbucket %d\n", i);
         header_printed = true;
@@ -272,7 +272,7 @@ static int size_to_index_helper(size_t size, size_t* rounded_up_out, int adjust,
   // 104, 112, 120.  Then we have row 4, sizes 128 and up, with the
   // row-column 8 and up.
   int answer = row_column + 15 - 32;
-  DEBUG_ASSERT(answer < NUMBER_OF_BUCKETS);
+  ZX_DEBUG_ASSERT(answer < NUMBER_OF_BUCKETS);
   return answer;
 }
 
@@ -361,8 +361,8 @@ static bool is_end_of_os_allocation(char* address) TA_REQ(TheHeapLock::Get()) {
 }
 
 static void free_to_os(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(ptr));
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+  ZX_DEBUG_ASSERT(IS_PAGE_ALIGNED(ptr));
+  ZX_DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
   heap_page_free(ptr, size >> PAGE_SIZE_SHIFT);
   theheap.size -= size;
 }
@@ -395,9 +395,9 @@ static void free_memory(void* address, void* left, size_t size) TA_REQ(TheHeapLo
   if (IS_PAGE_ALIGNED(left) && is_start_of_os_allocation((const header_t*)left) &&
       is_end_of_os_allocation((char*)address + size)) {
     // Assert that it's safe to do a simple 2*sizeof(header_t)) below.
-    DEBUG_ASSERT_MSG(((header_t*)left)->size == sizeof(header_t),
-                     "Unexpected left sentinel size %zu != header size %zu",
-                     ((header_t*)left)->size, sizeof(header_t));
+    ZX_DEBUG_ASSERT_MSG(((header_t*)left)->size == sizeof(header_t),
+                        "Unexpected left sentinel size %zu != header size %zu",
+                        ((header_t*)left)->size, sizeof(header_t));
     possibly_free_to_os((header_t*)left, size + 2 * sizeof(header_t));
   } else {
     create_free_area(address, left, size);
@@ -406,7 +406,7 @@ static void free_memory(void* address, void* left, size_t size) TA_REQ(TheHeapLo
 
 static void unlink_free(free_t* free_area, int bucket) TA_REQ(TheHeapLock::Get()) {
   theheap.remaining -= free_area->header.size;
-  ASSERT(theheap.remaining < 4000000000u);
+  ZX_ASSERT(theheap.remaining < 4000000000u);
   free_t* next = free_area->next;
   free_t* prev = free_area->prev;
   if (theheap.free_lists[bucket] == free_area) {
@@ -492,8 +492,8 @@ static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
               size);
       ptr = os_alloc;
       size = os_alloc->size;
-      DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(ptr), "0x%zx bytes @%p", size, ptr);
-      DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(size), "0x%zx bytes @%p", size, ptr);
+      ZX_DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(ptr), "0x%zx bytes @%p", size, ptr);
+      ZX_DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(size), "0x%zx bytes @%p", size, ptr);
     } else {
       // We need to allocate more from the OS. Return the cached OS
       // allocation, in case we're holding an unusually-small block
@@ -572,11 +572,11 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
 
   for (size_t s = 1; s < PAGE_SIZE * 4; s = static_cast<size_t>(static_cast<double>(s + 1) * 1.1)) {
     test_sizes[sizes++] = s;
-    ASSERT(sizes < 200);
+    ZX_ASSERT(sizes < 200);
   }
   for (ssize_t s = -32; s <= 32; s += 8) {
     test_sizes[sizes++] = PAGE_SIZE + s;
-    ASSERT(sizes < 200);
+    ZX_ASSERT(sizes < 200);
   }
 
   // Test allocations at the start of an OS allocation.
@@ -595,36 +595,36 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
           // allocations are certainly not smaller than a page, so
           // check in that case.
           uintptr_t limit = static_cast<uintptr_t>(static_cast<double>(s) * 1.13 + 48);
-          ASSERT((uintptr_t)(a2 - a) < limit);
+          ZX_ASSERT((uintptr_t)(a2 - a) < limit);
         }
       }
       cmpct_trim();
       size_t remaining = theheap.remaining;
       // We should have < 1 page on either side of the a allocation.
-      ASSERT(remaining < PAGE_SIZE * 2);
+      ZX_ASSERT(remaining < PAGE_SIZE * 2);
       cmpct_free(a);
       if (with_second_alloc) {
         // Now only a2 is holding onto the OS allocation.
-        ASSERT(theheap.remaining > remaining);
+        ZX_ASSERT(theheap.remaining > remaining);
       } else {
-        ASSERT(theheap.remaining == 0);
+        ZX_ASSERT(theheap.remaining == 0);
       }
       remaining = theheap.remaining;
       cmpct_trim();
-      ASSERT(theheap.remaining <= remaining);
+      ZX_ASSERT(theheap.remaining <= remaining);
       // If a was at least one page then the trim should have freed up
       // that page.
       if (s >= PAGE_SIZE && with_second_alloc) {
-        ASSERT(theheap.remaining < remaining);
+        ZX_ASSERT(theheap.remaining < remaining);
       }
       if (with_second_alloc) {
         cmpct_free(a2);
       }
     }
-    ASSERT(theheap.remaining == 0);
+    ZX_ASSERT(theheap.remaining == 0);
   }
 
-  ASSERT(theheap.remaining == 0);
+  ZX_ASSERT(theheap.remaining == 0);
 
   // Now test allocations near the end of an OS allocation.
   for (ssize_t wobble = -64; wobble <= 64; wobble += 8) {
@@ -661,11 +661,11 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
       // This trim should sometimes trim a page off the end of the OS
       // allocation.
       cmpct_trim();
-      ASSERT(theheap.remaining <= remaining);
+      ZX_ASSERT(theheap.remaining <= remaining);
       remaining = theheap.remaining;
 
       // We should have < 1 page on either side of the big allocation.
-      ASSERT(remaining < PAGE_SIZE * 2);
+      ZX_ASSERT(remaining < PAGE_SIZE * 2);
 
       TestTrimFreeHelper(big_bit_in_the_middle);
     }
@@ -680,18 +680,18 @@ static void cmpct_test_buckets(void) TA_EXCL(TheHeapLock::Get()) {
     // Round up when allocating.
     bucket = size_to_index_allocating(i, &rounded);
     unsigned expected = (ROUNDUP(i, 8) >> 3) - 1;
-    ASSERT(bucket == expected);
-    ASSERT(IS_ALIGNED(rounded, 8));
-    ASSERT(rounded >= i);
+    ZX_ASSERT(bucket == expected);
+    ZX_ASSERT(IS_ALIGNED(rounded, 8));
+    ZX_ASSERT(rounded >= i);
     if (i >= sizeof(free_t) - sizeof(header_t)) {
       // Once we get above the size of the free area struct (4 words), we
       // won't round up much for these small size.
-      ASSERT(rounded - i < 8);
+      ZX_ASSERT(rounded - i < 8);
     }
     // Only rounded sizes are freed.
     if ((i & 7) == 0) {
       // Up to size 128 we have exact buckets for each multiple of 8.
-      ASSERT(bucket == (unsigned)size_to_index_freeing(i));
+      ZX_ASSERT(bucket == (unsigned)size_to_index_freeing(i));
     }
   }
   int bucket_base = 7;
@@ -702,10 +702,10 @@ static void cmpct_test_buckets(void) TA_EXCL(TheHeapLock::Get()) {
       // Round up to j multiple in this range when allocating.
       bucket = size_to_index_allocating(i, &rounded);
       unsigned expected = bucket_base + ROUNDUP(i, j) / j;
-      ASSERT(bucket == expected);
-      ASSERT(IS_ALIGNED(rounded, j));
-      ASSERT(rounded >= i);
-      ASSERT(rounded - i < j);
+      ZX_ASSERT(bucket == expected);
+      ZX_ASSERT(IS_ALIGNED(rounded, j));
+      ZX_ASSERT(rounded >= i);
+      ZX_ASSERT(rounded - i < j);
       // Only 8-rounded sizes are freed or chopped off the end of a free
       // area when allocating.
       if ((i & 7) == 0) {
@@ -716,9 +716,9 @@ static void cmpct_test_buckets(void) TA_EXCL(TheHeapLock::Get()) {
         // don't have to traverse the free chains to find a big enough
         // one).
         if ((i % j) == 0) {
-          ASSERT((int)bucket == size_to_index_freeing(i));
+          ZX_ASSERT((int)bucket == size_to_index_freeing(i));
         } else {
-          ASSERT((int)bucket - 1 == size_to_index_freeing(i));
+          ZX_ASSERT((int)bucket - 1 == size_to_index_freeing(i));
         }
       }
     }
@@ -746,7 +746,7 @@ static void cmpct_test_get_back_newly_freed_helper(size_t size) TA_EXCL(TheHeapL
   void* allocated3 = cmpct_alloc(size);
   // To avoid churn and fragmentation we would want to get the newly freed
   // memory back again when we allocate the same size shortly after.
-  ASSERT(allocated3 == allocated);
+  ZX_ASSERT(allocated3 == allocated);
   cmpct_free(allocated2);
   cmpct_free(allocated3);
 }
@@ -783,7 +783,7 @@ static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
     return;
   }
   // No trim needed when the entire OS allocation is free.
-  ASSERT(remaining == cmpct_heap_remaining());
+  ZX_ASSERT(remaining == cmpct_heap_remaining());
 }
 #endif  // HEAP_ENABLE_TESTS
 
@@ -812,15 +812,15 @@ void* cmpct_alloc(size_t size) {
   int bucket = find_nonempty_bucket(start_bucket);
   if (bucket == -1) {
     // Grow heap by at least 12% if we can.
-    size_t growby = ktl::min(HEAP_LARGE_ALLOC_BYTES,
-                             ktl::max(theheap.size >> 3, ktl::max(HEAP_GROW_SIZE, rounded_up)));
+    size_t growby = fbl::min(HEAP_LARGE_ALLOC_BYTES,
+                             fbl::max(theheap.size >> 3, fbl::max(HEAP_GROW_SIZE, rounded_up)));
     // Try to add a new OS allocation to the heap, reducing the size until
     // we succeed or get too small.
     while (heap_grow(growby) < 0) {
       if (growby <= rounded_up) {
         return NULL;
       }
-      growby = ktl::max(growby >> 1, rounded_up);
+      growby = fbl::max(growby >> 1, rounded_up);
     }
     bucket = find_nonempty_bucket(start_bucket);
   }
@@ -862,7 +862,7 @@ void* cmpct_realloc(void* payload, size_t size) {
     return NULL;
   }
 
-  memcpy(new_payload, payload, ktl::min(size, old_size));
+  memcpy(new_payload, payload, fbl::min(size, old_size));
   cmpct_free(payload);
   return new_payload;
 }
@@ -875,7 +875,7 @@ void cmpct_free(void* payload) {
   Guard<Mutex> guard(TheHeapLock::Get());
 
   header_t* header = (header_t*)payload - 1;
-  DEBUG_ASSERT(!is_tagged_as_free(header));  // Double free!
+  ZX_DEBUG_ASSERT(!is_tagged_as_free(header));  // Double free!
   size_t size = header->size;
 
   header_t* left = header->left;
@@ -1025,7 +1025,7 @@ void cmpct_test(void) {
     ptr[index] = cmpct_memalign((unsigned int)rand() % 32768, align);
     // printf("ptr[0x%x] = %p, align 0x%x\n", index, ptr[index], align);
 
-    DEBUG_ASSERT(((vaddr_t)ptr[index] % align) == 0);
+    ZX_DEBUG_ASSERT(((vaddr_t)ptr[index] % align) == 0);
     // cmpct_dump(false);
   }
 
@@ -1050,7 +1050,7 @@ void cmpct_trim(void) {
   for (int bucket = size_to_index_freeing(PAGE_SIZE); bucket < NUMBER_OF_BUCKETS; bucket++) {
     free_t* next;
     for (free_t* free_area = theheap.free_lists[bucket]; free_area != NULL; free_area = next) {
-      DEBUG_ASSERT(free_area->header.size >= PAGE_SIZE + sizeof(header_t));
+      ZX_DEBUG_ASSERT(free_area->header.size >= PAGE_SIZE + sizeof(header_t));
       next = free_area->next;
       header_t* right = right_header(&free_area->header);
       if (is_end_of_os_allocation((char*)right)) {
@@ -1060,7 +1060,7 @@ void cmpct_trim(void) {
         char* new_os_allocation_end =
             (char*)ROUNDUP((uintptr_t)free_area + sizeof(header_t) + sizeof(free_t), PAGE_SIZE);
         size_t freed_up = old_os_allocation_end - new_os_allocation_end;
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(freed_up));
+        ZX_DEBUG_ASSERT(IS_PAGE_ALIGNED(freed_up));
         // Rare, because we only look at large freelist entries, but
         // unlucky rounding could mean we can't actually free anything
         // here.
@@ -1069,7 +1069,7 @@ void cmpct_trim(void) {
         }
         unlink_free(free_area, bucket);
         size_t new_free_size = free_area->header.size - freed_up;
-        DEBUG_ASSERT(new_free_size >= sizeof(free_t));
+        ZX_DEBUG_ASSERT(new_free_size >= sizeof(free_t));
         // Right sentinel, not free, stops attempts to coalesce right.
         create_allocation_header(free_area, new_free_size, 0, free_area);
         // Also puts it in the correct bucket.
@@ -1083,7 +1083,7 @@ void cmpct_trim(void) {
         // of the free area.
         char* new_os_allocation_start = (char*)ROUNDDOWN((uintptr_t)(right - 1), PAGE_SIZE);
         size_t freed_up = new_os_allocation_start - old_os_allocation_start;
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(freed_up));
+        ZX_DEBUG_ASSERT(IS_PAGE_ALIGNED(freed_up));
         // This should not happen because we only look at the large
         // free list buckets.
         if (freed_up == 0) {
@@ -1101,7 +1101,7 @@ void cmpct_trim(void) {
         if (new_free_size == 0) {
           FixLeftPointer(right, (header_t*)new_os_allocation_start);
         } else {
-          DEBUG_ASSERT(new_free_size >= sizeof(free_t));
+          ZX_DEBUG_ASSERT(new_free_size >= sizeof(free_t));
           char* new_free = new_os_allocation_start + sentinel_size;
           // Also puts it in the correct bucket.
           create_free_area(new_free, new_os_allocation_start, new_free_size);
