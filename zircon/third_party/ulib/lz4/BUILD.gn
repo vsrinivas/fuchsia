@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fuzzer.gni")
-
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 lz4_lib = "$zx/../third_party/lz4/lib"
 
@@ -40,22 +38,4 @@ zx_library("lz4") {
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs +=
       [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
-}
-
-group("test") {
-  testonly = true
-  deps = [
-    ":lz4-decompress-fuzzer",
-    ":lz4-fuzzer",
-  ]
-}
-
-zx_fuzzer("lz4-decompress-fuzzer") {
-  sources = [ "lz4-decompress-fuzzer.cc" ]
-  deps = [ ":lz4" ]
-}
-
-zx_fuzzer("lz4-fuzzer") {
-  sources = [ "lz4-fuzzer.cc" ]
-  deps = [ ":lz4" ]
 }

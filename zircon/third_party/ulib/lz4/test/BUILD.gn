@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/fuzzer.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":lz4-decompress-fuzzer",
+    ":lz4-fuzzer",
+  ]
+}
+
+zx_fuzzer("lz4-decompress-fuzzer") {
+  sources = [ "lz4-decompress-fuzzer.cc" ]
+  deps = [ "$zx/third_party/ulib/lz4" ]
+}
+
+zx_fuzzer("lz4-fuzzer") {
+  sources = [ "lz4-fuzzer.cc" ]
+  deps = [ "$zx/third_party/ulib/lz4" ]
+}
