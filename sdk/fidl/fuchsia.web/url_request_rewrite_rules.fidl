@@ -17,6 +17,18 @@ table UrlRequestRewriteRule {
 
     /// URL request rewrites to apply.
     3: vector<UrlRequestRewrite>:MAX_RULE_COUNT rewrites;
+
+    /// Specifies the action to take for requests matching the filter criteria.
+    /// Requests are allowed by default.
+    4: UrlRequestAction action;
+};
+
+enum UrlRequestAction : int32 {
+    /// Allow the request to be processed.
+    ALLOW = 1;
+
+    /// Block the request.
+    DENY = 2;
 };
 
 flexible union UrlRequestRewrite {
