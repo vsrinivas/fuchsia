@@ -45,4 +45,9 @@ std::optional<Stream::Buffer> TapStage::LockBuffer(zx::time ref_time, int64_t fr
   return input_buffer;
 }
 
+void TapStage::SetMinLeadTime(zx::duration min_lead_time) {
+  Stream::SetMinLeadTime(min_lead_time);
+  source_->SetMinLeadTime(min_lead_time);
+}
+
 }  // namespace media::audio

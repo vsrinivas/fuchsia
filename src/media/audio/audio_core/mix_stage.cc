@@ -28,6 +28,12 @@ TimelineFunction ReferenceClockToIntegralFrames(
                                    reference_clock_to_fractional_frames);
 }
 
+zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
+  auto delay_frames = mixer.pos_filter_width().Ceiling();
+  TimelineRate ticks_per_frame = format.frames_per_ns().Inverse();
+  return zx::duration(ticks_per_frame.Scale(delay_frames));
+}
+
 }  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
@@ -55,6 +61,7 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream,
     mixer = std::make_unique<audio::mixer::NoOp>();
   }
 
+  stream->SetMinLeadTime(GetMinLeadTime() + LeadTimeForMixer(stream->format(), *mixer));
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     streams_.emplace_back(StreamHolder{std::move(stream), mixer});
@@ -104,6 +111,21 @@ void MixStage::UnlockBuffer(bool release_buffer) {
 Stream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
   TRACE_DURATION("audio", "MixStage::ReferenceClockToFractionalFrames");
   return output_stream_->ReferenceClockToFractionalFrames();
+}
+
+void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
+  TRACE_DURATION("audio", "MixStage::SetMinLeadTime");
+  Stream::SetMinLeadTime(min_lead_time);
+
+  // Propogate our lead time to our inputs.
+  std::lock_guard<std::mutex> lock(stream_lock_);
+  for (const auto& holder : streams_) {
+    FX_DCHECK(holder.stream);
+    FX_DCHECK(holder.mixer);
+
+    zx::duration mixer_lead_time = LeadTimeForMixer(holder.stream->format(), *holder.mixer);
+    holder.stream->SetMinLeadTime(min_lead_time + mixer_lead_time);
+  }
 }
 
 void MixStage::Trim(zx::time time) {

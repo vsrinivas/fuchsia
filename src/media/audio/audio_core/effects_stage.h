@@ -20,10 +20,7 @@ class EffectsStage : public Stream {
   static std::shared_ptr<EffectsStage> Create(const std::vector<PipelineConfig::Effect>& effects,
                                               std::shared_ptr<Stream> source);
 
-  EffectsStage(std::shared_ptr<Stream> source, std::unique_ptr<EffectsProcessor> effects_processor)
-      : Stream(source->format()),
-        source_(std::move(source)),
-        effects_processor_(std::move(effects_processor)) {}
+  EffectsStage(std::shared_ptr<Stream> source, std::unique_ptr<EffectsProcessor> effects_processor);
 
   uint32_t block_size() const { return effects_processor_->block_size(); }
 
@@ -35,6 +32,7 @@ class EffectsStage : public Stream {
   void UnlockBuffer(bool release_buffer) override { source_->UnlockBuffer(release_buffer); }
   void Trim(zx::time trim_threshold) override { source_->Trim(trim_threshold); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  void SetMinLeadTime(zx::duration lead_time) override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
                        FractionalFrames<int64_t> frac_source_mix_point,
                        zx::duration underflow_duration) override {
@@ -46,6 +44,8 @@ class EffectsStage : public Stream {
   }
 
  private:
+  zx::duration ComputeIntrinsicMinLeadTime() const;
+
   std::shared_ptr<Stream> source_;
   std::unique_ptr<EffectsProcessor> effects_processor_;
   std::optional<Stream::Buffer> current_block_;

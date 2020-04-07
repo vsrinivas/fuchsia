@@ -91,12 +91,9 @@ void BaseRenderer::CleanupDestLink(const AudioObject& dest) {
 void BaseRenderer::RecomputeMinLeadTime() {
   TRACE_DURATION("audio", "BaseRenderer::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
-
-  context_.link_matrix().ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {
-    const auto& output = static_cast<const AudioDevice&>(*link.object);
-
-    cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
-  });
+  for (const auto& [_, packet_queue] : packet_queues_) {
+    cur_lead_time = std::max(cur_lead_time, packet_queue->GetMinLeadTime());
+  }
 
   if (min_lead_time_ != cur_lead_time) {
     REPORT(SettingRendererMinLeadTime(*this, cur_lead_time));

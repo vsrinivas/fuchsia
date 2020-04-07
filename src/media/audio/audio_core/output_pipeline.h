@@ -80,6 +80,10 @@ class OutputPipeline : public Stream {
     FX_DCHECK(stream_);
     return stream_->ReferenceClockToFractionalFrames();
   }
+  void SetMinLeadTime(zx::duration min_lead_time) override {
+    Stream::SetMinLeadTime(min_lead_time);
+    stream_->SetMinLeadTime(min_lead_time);
+  }
 
  private:
   std::shared_ptr<Stream> CreateMixStage(

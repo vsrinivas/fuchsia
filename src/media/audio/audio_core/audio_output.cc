@@ -124,6 +124,7 @@ void AudioOutput::SetupMixTask(const PipelineConfig& config, uint32_t channels,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
   pipeline_ = std::make_unique<OutputPipeline>(config, channels, max_block_size_frames,
                                                device_reference_clock_to_fractional_frame);
+  pipeline_->SetMinLeadTime(min_lead_time_);
 }
 
 void AudioOutput::Cleanup() {

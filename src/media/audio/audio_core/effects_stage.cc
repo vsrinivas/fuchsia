@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/effects_stage.h"
 
+#include <fbl/algorithm.h>
+
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
@@ -80,6 +82,16 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
   return std::make_shared<EffectsStage>(std::move(source), std::move(processor));
 }
 
+EffectsStage::EffectsStage(std::shared_ptr<Stream> source,
+                           std::unique_ptr<EffectsProcessor> effects_processor)
+    : Stream(source->format()),
+      source_(std::move(source)),
+      effects_processor_(std::move(effects_processor)) {
+  // Initialize our lead time. Setting 0 here will resolve our lead time to effect delay in our
+  // |SetMinLeadTime| override.
+  SetMinLeadTime(zx::duration(0));
+}
+
 std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_t frame,
                                                        uint32_t frame_count) {
   TRACE_DURATION("audio", "EffectsStage::LockBuffer", "frame", frame, "length", frame_count);
@@ -122,12 +134,33 @@ Stream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames(
   return snapshot;
 }
 
+void EffectsStage::SetMinLeadTime(zx::duration external_lead_time) {
+  // Add in any additional lead time required by our effects.
+  zx::duration intrinsic_lead_time = ComputeIntrinsicMinLeadTime();
+  zx::duration total_lead_time = external_lead_time + intrinsic_lead_time;
+
+  // Apply the total lead time to us and propagate that value to our source.
+  Stream::SetMinLeadTime(total_lead_time);
+  source_->SetMinLeadTime(total_lead_time);
+}
+
 void EffectsStage::SetEffectConfig(const std::string& instance_name, const std::string& config) {
   for (auto& effect : *effects_processor_) {
     if (effect.instance_name() == instance_name) {
       effect.UpdateConfiguration(config);
     }
   }
+}
+
+zx::duration EffectsStage::ComputeIntrinsicMinLeadTime() const {
+  TimelineRate ticks_per_frame = format().frames_per_ns().Inverse();
+  uint32_t lead_frames = effects_processor_->delay_frames();
+  uint32_t block_frames = effects_processor_->block_size();
+  if (block_frames > 0) {
+    // If we have a block size, add up to |block_frames - 1| of additional lead time.
+    lead_frames += block_frames - 1;
+  }
+  return zx::duration(ticks_per_frame.Scale(lead_frames));
 }
 
 }  // namespace media::audio

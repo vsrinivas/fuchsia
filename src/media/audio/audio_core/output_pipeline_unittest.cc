@@ -8,6 +8,7 @@
 
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/usage_settings.h"
@@ -342,6 +343,80 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
   ASSERT_EQ(buf->length().Floor(), 48u);
   float expected_sample = static_cast<float>(kConfig.size());
   CheckBuffer(buf->payload(), expected_sample, 96);
+}
+
+TEST_F(OutputPipelineTest, ReportMinLeadTime) {
+  auto test_effects = testing::TestEffectsModule::Open();
+  test_effects.AddEffect("effect_with_delay_300").WithSignalLatencyFrames(300);
+  test_effects.AddEffect("effect_with_delay_1000").WithSignalLatencyFrames(1000);
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .effects = {},
+      .inputs = {{
+                     .name = "default",
+                     .input_streams =
+                         {
+                             RenderUsage::MEDIA,
+                             RenderUsage::SYSTEM_AGENT,
+                             RenderUsage::INTERRUPTION,
+                         },
+                     .effects =
+                         {
+                             {
+                                 .lib_name = "test_effects.so",
+                                 .effect_name = "effect_with_delay_300",
+                                 .effect_config = "",
+                             },
+                         },
+                     .output_rate = 48000,
+                 },
+                 {
+                     .name = "communications",
+                     .input_streams =
+                         {
+                             RenderUsage::COMMUNICATION,
+                         },
+                     .effects =
+                         {
+                             {
+                                 .lib_name = "test_effects.so",
+                                 .effect_name = "effect_with_delay_1000",
+                                 .effect_config = "",
+                             },
+                         },
+                     .output_rate = 48000,
+                 }},
+      .output_rate = 48000,
+  };
+  auto pipeline_config = PipelineConfig(root);
+  auto pipeline = std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
+                                                   kDefaultTransform);
+
+  // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
+  // different lead times since they have different effects (with different latencies) applied.
+  auto default_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA));
+  auto communications_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  pipeline->AddInput(communications_stream,
+                     StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION));
+
+  // The pipeline itself requires no lead time.
+  EXPECT_EQ(zx::duration(0), pipeline->GetMinLeadTime());
+
+  // MEDIA streams require 300 frames of lead time since they run through an effect that introduces
+  // 300 frames of delay.
+  const auto default_lead_time = zx::duration(kDefaultFormat.frames_per_ns().Inverse().Scale(300));
+  EXPECT_EQ(default_lead_time, default_stream->GetMinLeadTime());
+
+  // COMMUNICATION streams require 1000 frames of lead time since they run through an effect that
+  // introduces 1000 frames of delay.
+  const auto communications_lead_time =
+      zx::duration(zx::sec(1000).to_nsecs() / kDefaultFormat.frames_per_second());
+  EXPECT_EQ(communications_lead_time, communications_stream->GetMinLeadTime());
 }
 
 TEST_F(OutputPipelineTest, DifferentMixRates) {

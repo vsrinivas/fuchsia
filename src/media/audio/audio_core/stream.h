@@ -88,8 +88,12 @@ class Stream {
 
   const Format& format() const { return format_; }
 
+  virtual void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_.store(min_lead_time); }
+  zx::duration GetMinLeadTime() const { return min_lead_time_.load(); }
+
  private:
   Format format_;
+  std::atomic<zx::duration> min_lead_time_{zx::duration(0)};
 };
 
 }  // namespace media::audio

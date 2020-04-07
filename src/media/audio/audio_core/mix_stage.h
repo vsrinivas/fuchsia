@@ -10,6 +10,7 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
@@ -36,6 +37,7 @@ class MixStage : public Stream {
   void UnlockBuffer(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  void SetMinLeadTime(zx::duration min_lead_time) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream,
                                   Mixer::Resampler sampler_hint = Mixer::Resampler::Default);
@@ -76,7 +78,7 @@ class MixStage : public Stream {
   };
 
   std::mutex stream_lock_;
-  std::vector<StreamHolder> streams_;
+  std::vector<StreamHolder> streams_ FXL_GUARDED_BY(stream_lock_);
 
   std::shared_ptr<Stream> output_stream_;
 

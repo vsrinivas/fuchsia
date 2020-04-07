@@ -26,6 +26,7 @@ class TapStage : public Stream {
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     return source_->ReferenceClockToFractionalFrames();
   }
+  void SetMinLeadTime(zx::duration min_lead_time) override;
 
  private:
   std::shared_ptr<Stream> source_;

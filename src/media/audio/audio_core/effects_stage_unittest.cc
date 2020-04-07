@@ -196,6 +196,42 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   EXPECT_LE(frame_13_frac_frames.raw_value(), 1);
 }
 
+TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+
+  // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
+  // streams format.
+  stream->timeline_function()->Update(TimelineFunction(
+      TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+
+  test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
+  test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
+
+  // Create the effects stage. We expect 13 total frames of latency (summed across the 2 effects).
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "effect_with_delay_10",
+      .effect_config = "",
+  });
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "effect_with_delay_3",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  // Check our initial lead time is only the effect delay.
+  auto effect_lead_time = zx::duration(zx::sec(13).to_nsecs() / kDefaultFormat.frames_per_second());
+  EXPECT_EQ(effect_lead_time, effects_stage->GetMinLeadTime());
+
+  // Check that setting an external min lead time includes our internal lead time.
+  const auto external_lead_time = zx::usec(100);
+  effects_stage->SetMinLeadTime(external_lead_time);
+  EXPECT_EQ(effect_lead_time + external_lead_time, effects_stage->GetMinLeadTime());
+}
+
 static const std::string kInstanceName = "instance_name";
 static const std::string kInitialConfig = "different size than kConfig";
 static const std::string kConfig = "config";
