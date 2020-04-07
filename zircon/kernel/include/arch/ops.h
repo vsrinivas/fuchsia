@@ -22,7 +22,6 @@
 #include <zircon/compiler.h>
 
 #include <arch/defines.h>
-#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 
 __BEGIN_CDECLS
