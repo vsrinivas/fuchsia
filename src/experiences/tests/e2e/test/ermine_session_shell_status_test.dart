@@ -50,8 +50,10 @@ void main() {
 
     // Get state of screen before launching status menu. Status should be
     // missing.
-    final inspect = Inspect(sl4fDriver.ssh);
-    var json = await inspect.inspectComponentRoot('ermine');
+    final inspect = Inspect(sl4fDriver);
+    // TODO(miguelfrde): the selector here might actually be `session-*/*/ermine.cmx`
+    // where session-* = session_realm, * = runner, component name = ermine.cmx
+    var json = await inspect.snapshotRoot('ermine.cmx');
     if (json['status'] != null) {
       fail('Status should not be visible at start');
     }
@@ -62,7 +64,7 @@ void main() {
     // allow time for status startup
     await Future.delayed(Duration(seconds: 1));
 
-    json = await inspect.inspectComponentRoot('ermine');
+    json = await inspect.snapshotRoot('ermine.cmx');
     if (json['status'] == null) {
       fail('Status did not launch');
     }
