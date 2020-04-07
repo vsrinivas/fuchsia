@@ -57,7 +57,6 @@ executable("svchost") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/svc",
-    "//zircon/public/lib/sysmem-connector",
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
@@ -82,6 +81,7 @@ executable("svchost") {
     "//zircon/system/ulib/kernel-mexec",
     "//zircon/system/ulib/logger",
     "//zircon/system/ulib/profile",
+    "//zircon/system/ulib/sysmem-connector",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
 }

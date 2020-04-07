@@ -2,20 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("sysmem-connector") {
   sdk = "source"
   sdk_headers = [ "lib/sysmem-connector/sysmem-connector.h" ]
   sources = [ "sysmem-connector.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
