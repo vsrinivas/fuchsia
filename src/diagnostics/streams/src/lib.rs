@@ -11,7 +11,7 @@ use {
     std::{array::TryFromSliceError, convert::TryFrom},
 };
 
-pub use fidl_fuchsia_diagnostics_streaming::{Argument, Record, Value};
+pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
 
 pub mod encode;
 pub mod parse;
@@ -169,7 +169,7 @@ mod tests {
             encode::Encoder,
             parse::{parse_argument, parse_record, ParseResult},
         },
-        fidl_fuchsia_diagnostics_streaming::{Argument, Record, Value},
+        fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
         fuchsia_zircon as zx,
         std::{fmt::Debug, io::Cursor},
     };

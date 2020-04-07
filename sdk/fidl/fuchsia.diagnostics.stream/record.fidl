@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.diagnostics.streaming;
+library fuchsia.diagnostics.stream;
 using zx;
 
 /// Maximum number of arguments that can be encoded per record, as specified by the tracing format:

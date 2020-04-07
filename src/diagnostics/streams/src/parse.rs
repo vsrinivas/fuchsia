@@ -3,7 +3,7 @@
 
 use {
     crate::{ArgType, Header, StreamError, StringRef},
-    fidl_fuchsia_diagnostics_streaming::{Argument, Record, Value},
+    fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
     nom::{
         bytes::complete::take,
         multi::many0,

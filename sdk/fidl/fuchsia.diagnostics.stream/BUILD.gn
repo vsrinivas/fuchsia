@@ -4,5 +4,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.diagnostics.stream") {
-  sources = [ "source.fidl" ]
+  sources = [
+    "record.fidl",
+    "source.fidl",
+  ]
 }
