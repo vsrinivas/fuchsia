@@ -15,6 +15,7 @@
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
+#include <kernel/cpu.h>
 
 // Forward declaration.
 struct Thread;
@@ -138,8 +139,27 @@ class SchedulerState {
   // in the runnable tree.
   uint64_t generation() const { return generation_; }
 
+  zx_time_t last_started_running() const { return last_started_running_.raw_value(); }
+  zx_duration_t remaining_time_slice() const { return remaining_time_slice_.raw_value(); }
+  zx_duration_t runtime_ns() const { return runtime_ns_.raw_value(); }
+
+  cpu_mask_t hard_affinity() const { return hard_affinity_; }
+  cpu_mask_t soft_affinity() const { return soft_affinity_; }
+
+  int base_priority() const { return base_priority_; }
+  int effective_priority() const { return effective_priority_; }
+  int inherited_priority() const { return inherited_priority_; }
+
+  cpu_num_t curr_cpu() const { return curr_cpu_; }
+
  private:
   friend class Scheduler;
+
+  // TODO(eieio): Remove these once all of the members accessed by Thread are
+  // moved to accessors.
+  friend Thread;
+  friend void thread_construct_first(Thread*, const char*);
+  friend void dump_thread_locked(Thread*, bool);
 
   // Returns true of the task state is currently enqueued in the run queue.
   bool InQueue() const { return run_queue_node_.InContainer(); }
@@ -165,6 +185,46 @@ class SchedulerState {
 
   // WAVLTree node state.
   fbl::WAVLTreeNodeState<Thread*> run_queue_node_;
+
+  // The time the thread last ran. The exact point in time this value represents
+  // depends on the thread state:
+  //   * THREAD_RUNNING: The time of the last reschedule that selected the thread.
+  //   * THREAD_READY: The time the thread entered the run queue.
+  //   * Otherwise: The time the thread last ran.
+  SchedTime last_started_running_{0};
+
+  // The duration from the last dequeue of the thread until the next preemption.
+  SchedDuration remaining_time_slice_{0};
+
+  // The total time in THREAD_RUNNING state. If the thread is currently in
+  // THREAD_RUNNING state, this excludes the time accrued since it last left the
+  // scheduler.
+  SchedDuration runtime_ns_{0};
+
+  // The legacy base, effective, and inherited priority values.
+  // TODO(eieio): Move initialization of these members to the constructor. It is
+  // currently handled by Scheduler::InitializeThread.
+  int base_priority_;
+  int effective_priority_;
+  int inherited_priority_;
+
+  // The current CPU the thread is READY or RUNNING on, INVALID_CPU otherwise.
+  cpu_num_t curr_cpu_{INVALID_CPU};
+
+  // The last CPU the thread ran on. INVALID_CPU before it first runs.
+  cpu_num_t last_cpu_{INVALID_CPU};
+
+  // The next CPU the thread should run on after the thread's migrate function
+  // is called.
+  cpu_num_t next_cpu_{INVALID_CPU};
+
+  // The set of CPUs the thread is permitted to run on. The thread is never
+  // assigned to CPUs outside of this set.
+  cpu_mask_t hard_affinity_{CPU_MASK_ALL};
+
+  // The set of CPUs the thread should run on if possible. The thread may be
+  // assigned to CPUs outside of this set if necessary.
+  cpu_mask_t soft_affinity_{CPU_MASK_ALL};
 
   // The scheduling discipline of this thread. Determines whether the thread is
   // enqueued on the fair or deadline run queues and whether the weight or

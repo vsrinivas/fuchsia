@@ -415,7 +415,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         stats.flags = mp_is_cpu_online(i) ? ZX_INFO_CPU_STATS_FLAG_ONLINE : 0;
 
         stats.vm_entries = cpu->gstats.vm_entries;
-        stats.vm_exits  = cpu->gstats.vm_exits;
+        stats.vm_exits = cpu->gstats.vm_exits;
 #ifdef __aarch64__
         stats.wfi_wfe_instructions = cpu->gstats.wfi_wfe_instructions;
         stats.system_instructions = cpu->gstats.system_instructions;
@@ -488,8 +488,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
           zx_time_t idle_time = cpu->stats.idle_time;
           bool is_idle = mp_is_cpu_idle(i);
           if (is_idle) {
-            zx_duration_t recent_idle =
-                zx_time_sub_time(current_time(), cpu->idle_thread.last_started_running_);
+            zx_duration_t recent_idle = zx_time_sub_time(
+                current_time(), cpu->idle_thread.scheduler_state_.last_started_running());
             idle_time = zx_duration_add_duration(idle_time, recent_idle);
           }
           stats.idle_time = idle_time;

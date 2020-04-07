@@ -46,7 +46,7 @@ class AutoPrioBooster {
  public:
   AutoPrioBooster() {
     Thread* t = Thread::Current::Get();
-    initial_base_prio_ = t->base_priority_;
+    initial_base_prio_ = t->scheduler_state_.base_priority();
     t->SetPriority(TEST_HIGHEST_PRIORITY);
   }
 
@@ -310,7 +310,7 @@ class TestThread {
     }
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    return thread_->inherited_priority_;
+    return thread_->scheduler_state_.inherited_priority();
   }
 
   int effective_priority() const {
@@ -319,7 +319,7 @@ class TestThread {
     }
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    return thread_->effec_priority_;
+    return thread_->scheduler_state_.effective_priority();
   }
 
   int base_priority() const {
@@ -328,7 +328,7 @@ class TestThread {
     }
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    return thread_->base_priority_;
+    return thread_->scheduler_state_.base_priority();
   }
 
   State state() const { return state_.load(); }

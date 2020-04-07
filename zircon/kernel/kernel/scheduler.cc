@@ -131,8 +131,8 @@ inline void TraceContextSwitch(const Thread* current_thread, const Thread* next_
   const auto next = static_cast<uint32_t>(raw_next);
   const auto user_tid = static_cast<uint32_t>(next_thread->user_tid_);
   const uint32_t context = current_cpu | (current_thread->state_ << 8) |
-                           (current_thread->base_priority_ << 16) |
-                           (next_thread->base_priority_ << 24);
+                           (current_thread->scheduler_state_.base_priority() << 16) |
+                           (next_thread->scheduler_state_.base_priority() << 24);
 
   ktrace(TAG_CONTEXT_SWITCH, user_tid, context, current, next);
 }
@@ -170,8 +170,8 @@ inline bool IsThreadAdjustable(const Thread* thread) {
 cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask, const Thread* thread) {
   // The thread may run on any active CPU allowed by both its hard and
   // soft CPU affinity.
-  const cpu_mask_t soft_affinity = thread->soft_affinity_;
-  const cpu_mask_t hard_affinity = thread->hard_affinity_;
+  const cpu_mask_t soft_affinity = thread->scheduler_state_.soft_affinity();
+  const cpu_mask_t hard_affinity = thread->scheduler_state_.hard_affinity();
   const cpu_mask_t available_mask = active_mask & soft_affinity & hard_affinity;
 
   // Return the mask honoring soft affinity if it is viable, otherwise ignore
@@ -317,9 +317,9 @@ Scheduler* Scheduler::Get(cpu_num_t cpu) { return &percpu::Get(cpu).scheduler; }
 
 void Scheduler::InitializeThread(Thread* thread, int priority) {
   new (&thread->scheduler_state_) SchedulerState{PriorityToWeight(priority)};
-  thread->base_priority_ = priority;
-  thread->effec_priority_ = priority;
-  thread->inherited_priority_ = -1;
+  thread->scheduler_state_.base_priority_ = priority;
+  thread->scheduler_state_.effective_priority_ = priority;
+  thread->scheduler_state_.inherited_priority_ = -1;
   thread->scheduler_state_.expected_runtime_ns_ = kDefaultTargetLatency;
 }
 
@@ -331,9 +331,9 @@ void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_
   // tasks during PI interactions.
   // TODO(eieio): Fix this with an abstraction that the higher layers can use
   // to express priority / deadline more abstractly for PI and etc...
-  thread->base_priority_ = HIGHEST_PRIORITY;
-  thread->effec_priority_ = HIGHEST_PRIORITY;
-  thread->inherited_priority_ = -1;
+  thread->scheduler_state_.base_priority_ = HIGHEST_PRIORITY;
+  thread->scheduler_state_.effective_priority_ = HIGHEST_PRIORITY;
+  thread->scheduler_state_.inherited_priority_ = -1;
   thread->scheduler_state_.expected_runtime_ns_ = SchedDuration{params.capacity};
 }
 
@@ -492,7 +492,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   // Returns true when the given thread requires active migration.
   const auto needs_migration = [active_mask, current_cpu_mask](Thread* const thread) {
     return (GetEffectiveCpuMask(active_mask, thread) & current_cpu_mask) == 0 ||
-           thread->next_cpu_ != INVALID_CPU;
+           thread->scheduler_state_.next_cpu_ != INVALID_CPU;
   };
 
   // If the next thread needs *active* migration, call the migration function,
@@ -518,18 +518,19 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
     // will schedule the thread to migrate to a specific CPU and return the
     // current CPU.
     cpu_num_t target_cpu = INVALID_CPU;
-    if (next_thread->next_cpu_ == INVALID_CPU) {
-        target_cpu = FindTargetCpu(next_thread);
-        DEBUG_ASSERT(target_cpu != this_cpu() || next_thread->next_cpu_ != INVALID_CPU);
+    if (next_thread->scheduler_state_.next_cpu_ == INVALID_CPU) {
+      target_cpu = FindTargetCpu(next_thread);
+      DEBUG_ASSERT(target_cpu != this_cpu() ||
+                   next_thread->scheduler_state_.next_cpu_ != INVALID_CPU);
     }
 
     // If the thread is scheduled to migrate to a specific CPU, set the target
     // to that CPU and call the migration function.
-    if (next_thread->next_cpu_ != INVALID_CPU) {
-      DEBUG_ASSERT(next_thread->last_cpu_ == this_cpu());
-      target_cpu = next_thread->next_cpu_;
+    if (next_thread->scheduler_state_.next_cpu_ != INVALID_CPU) {
+      DEBUG_ASSERT(next_thread->scheduler_state_.last_cpu_ == this_cpu());
+      target_cpu = next_thread->scheduler_state_.next_cpu_;
       next_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
-      next_thread->next_cpu_ = INVALID_CPU;
+      next_thread->scheduler_state_.next_cpu_ = INVALID_CPU;
     }
 
     // The target CPU must always be different than the current CPU.
@@ -554,7 +555,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
 cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"find_target: cpu,avail"_stringref};
 
-  const cpu_num_t last_cpu = thread->last_cpu_;
+  const cpu_num_t last_cpu = thread->scheduler_state_.last_cpu_;
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   const cpu_mask_t last_cpu_mask = cpu_num_to_mask(last_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
@@ -569,8 +570,9 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   DEBUG_ASSERT_MSG(available_mask != 0,
                    "thread=%s affinity=%#x soft_affinity=%#x active=%#x "
                    "idle=%#x arch_ints_disabled=%d",
-                   thread->name_, thread->hard_affinity_, thread->soft_affinity_, active_mask,
-                   mp_get_idle_mask(), arch_ints_disabled());
+                   thread->name_, thread->scheduler_state_.hard_affinity_,
+                   thread->scheduler_state_.soft_affinity_, active_mask, mp_get_idle_mask(),
+                   arch_ints_disabled());
 
   LOCAL_KTRACE(KTRACE_DETAILED, "target_mask: online,active", mp_get_online_mask(), active_mask);
 
@@ -639,7 +641,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU && thread->migrate_fn_ &&
                          (active_mask & last_cpu_mask) != 0;
   if (unlikely(delay_migration)) {
-    thread->next_cpu_ = target_cpu;
+    thread->scheduler_state_.next_cpu_ = target_cpu;
     return last_cpu;
   } else {
     return target_cpu;
@@ -680,11 +682,11 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   UpdateTimeline(now);
 
   const SchedDuration total_runtime_ns = now - start_of_current_time_slice_ns_;
-  const SchedDuration actual_runtime_ns = now - current_thread->last_started_running_;
-  current_thread->last_started_running_ = now.raw_value();
+  const SchedDuration actual_runtime_ns = now - current_state->last_started_running_;
+  current_state->last_started_running_ = now;
 
   // Update the runtime accounting for the thread that just ran.
-  current_thread->runtime_ns_ += actual_runtime_ns;
+  current_state->runtime_ns_ += actual_runtime_ns;
 
   // Adjust the rate of the current thread when demand changes. Changes in
   // demand could be due to threads entering or leaving the run queue, or due
@@ -720,6 +722,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   Thread* const next_thread =
       EvaluateNextThread(now, current_thread, timeslice_expired, total_runtime_ns);
   DEBUG_ASSERT(next_thread != nullptr);
+  SchedulerState* const next_state = &next_thread->scheduler_state_;
 
   SCHED_LTRACEF("current={%s, %s} next={%s, %s} expired=%d total_runtime_ns=%" PRId64
                 " fair_front=%s deadline_front=%s\n",
@@ -729,23 +732,22 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                 deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name_);
 
   // Call the migrate function if the thread has moved between CPUs.
-  if (next_thread->last_cpu_ != INVALID_CPU && next_thread->last_cpu_ != next_thread->curr_cpu_) {
+  if (next_state->last_cpu_ != INVALID_CPU && next_state->last_cpu_ != next_state->curr_cpu_) {
     next_thread->CallMigrateFnLocked(Thread::MigrateStage::After);
   }
 
   // Update the state of the current and next thread.
   current_thread->preempt_pending_ = false;
   next_thread->state_ = THREAD_RUNNING;
-  next_thread->last_cpu_ = current_cpu;
-  next_thread->curr_cpu_ = current_cpu;
+  next_state->last_cpu_ = current_cpu;
+  next_state->curr_cpu_ = current_cpu;
 
   active_thread_ = next_thread;
 
   // Update the expected runtime of the current thread and the per-CPU total.
   // Only update the thread and aggregate values if the current thread is still
   // associated with this CPU.
-  const bool current_is_active =
-      current_state->active() && current_thread->curr_cpu_ == current_cpu;
+  const bool current_is_active = current_state->active() && current_state->curr_cpu_ == current_cpu;
   if (!current_thread->IsIdle() && current_is_active &&
       (timeslice_expired || current_thread != next_thread)) {
     LocalTraceDuration<KTRACE_DETAILED> update_ema_trace{
@@ -792,7 +794,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     LocalTraceDuration<KTRACE_DETAILED> trace_stop_preemption{"idle"_stringref};
     SCHED_LTRACEF("Idle: current=%s next=%s\n", current_thread->name_, next_thread->name_);
     UpdateCounters(SchedDuration{0});
-    next_thread->last_started_running_ = now.raw_value();
+    next_state->last_started_running_ = now;
 
     // If there are no tasks to run in the future, disable the preemption timer.
     // Otherwise, set the preemption time to the earliest eligible time.
@@ -816,10 +818,10 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     // this method: when the current and next thread are the same, the queue
     // time is zero. Otherwise, last_started_running is the time the next thread
     // entered the run queue.
-    const SchedDuration queue_time_ns = now - next_thread->last_started_running_;
+    const SchedDuration queue_time_ns = now - next_state->last_started_running_;
     UpdateCounters(queue_time_ns);
 
-    next_thread->last_started_running_ = now.raw_value();
+    next_state->last_started_running_ = now;
     start_of_current_time_slice_ns_ = now;
     scheduled_weight_total_ = weight_total_;
 
@@ -1061,8 +1063,8 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
     // Reuse this member to track the time the thread enters the run queue.
     // It is not read outside of the scheduler unless the thread state is
     // THREAD_RUNNING.
-    thread->last_started_running_ = now.raw_value();
-    thread->scheduler_state_.generation_ = ++generation_count_;
+    state->last_started_running_ = now;
+    state->generation_ = ++generation_count_;
     LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(thread),
                             thread->user_tid_);
   }
@@ -1091,7 +1093,7 @@ void Scheduler::Insert(SchedTime now, Thread* thread) {
   if (state->OnInsert()) {
     // Insertion can happen from a different CPU. Set the thread's current
     // CPU to the one this scheduler instance services.
-    thread->curr_cpu_ = this_cpu();
+    state->curr_cpu_ = this_cpu();
 
     total_expected_runtime_ns_ += state->expected_runtime_ns_;
     DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
@@ -1127,7 +1129,7 @@ void Scheduler::Remove(Thread* thread) {
 
   // Ensure that removal happens only once, even if Block() is called multiple times.
   if (state->OnRemove()) {
-    thread->curr_cpu_ = INVALID_CPU;
+    state->curr_cpu_ = INVALID_CPU;
 
     total_expected_runtime_ns_ -= state->expected_runtime_ns_;
     DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
@@ -1234,14 +1236,15 @@ bool Scheduler::Unblock(list_node* list) {
 void Scheduler::UnblockIdle(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
+  SchedulerState* const state = &thread->scheduler_state_;
+
   DEBUG_ASSERT(thread->IsIdle());
-  DEBUG_ASSERT(thread->hard_affinity_ &&
-               (thread->hard_affinity_ & (thread->hard_affinity_ - 1)) == 0);
+  DEBUG_ASSERT(state->hard_affinity_ && (state->hard_affinity_ & (state->hard_affinity_ - 1)) == 0);
 
   SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name_, current_time());
 
   thread->state_ = THREAD_READY;
-  thread->curr_cpu_ = lowest_cpu_set(thread->hard_affinity_);
+  state->curr_cpu_ = lowest_cpu_set(state->hard_affinity_);
 }
 
 void Scheduler::Yield() {
@@ -1282,11 +1285,12 @@ void Scheduler::Preempt() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = Thread::Current::Get();
+  Thread* const current_thread = Thread::Current::Get();
+  SchedulerState* const current_state = &current_thread->scheduler_state_;
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
-  DEBUG_ASSERT(current_thread->curr_cpu_ == current_cpu);
-  DEBUG_ASSERT(current_thread->last_cpu_ == current_thread->curr_cpu_);
+  DEBUG_ASSERT(current_state->curr_cpu_ == current_cpu);
+  DEBUG_ASSERT(current_state->last_cpu_ == current_state->curr_cpu_);
 
   const SchedTime now = CurrentTime();
   SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name_, now.raw_value());
@@ -1300,7 +1304,8 @@ void Scheduler::Reschedule() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = Thread::Current::Get();
+  Thread* const current_thread = Thread::Current::Get();
+  SchedulerState* const current_state = &current_thread->scheduler_state_;
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
   if (current_thread->disable_counts_ != 0) {
@@ -1308,8 +1313,8 @@ void Scheduler::Reschedule() {
     return;
   }
 
-  DEBUG_ASSERT(current_thread->curr_cpu_ == current_cpu);
-  DEBUG_ASSERT(current_thread->last_cpu_ == current_thread->curr_cpu_);
+  DEBUG_ASSERT(current_state->curr_cpu_ == current_cpu);
+  DEBUG_ASSERT(current_state->last_cpu_ == current_state->curr_cpu_);
 
   const SchedTime now = CurrentTime();
   SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name_, now.raw_value());
@@ -1323,22 +1328,24 @@ void Scheduler::RescheduleInternal() { Get()->RescheduleCommon(CurrentTime()); }
 void Scheduler::Migrate(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_migrate"_stringref};
 
+  SchedulerState* const state = &thread->scheduler_state_;
+
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
   cpu_mask_t cpus_to_reschedule_mask = 0;
 
   if (thread->state_ == THREAD_RUNNING) {
-    const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(thread->curr_cpu_);
+    const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
     if (!(GetEffectiveCpuMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
       // Mark the CPU the thread is running on for reschedule. The
       // scheduler on that CPU will take care of the actual migration.
       cpus_to_reschedule_mask |= thread_cpu_mask;
     }
   } else if (thread->state_ == THREAD_READY) {
-    const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(thread->curr_cpu_);
+    const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
     if (!(GetEffectiveCpuMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
-      Scheduler* current = Get(thread->curr_cpu_);
+      Scheduler* current = Get(state->curr_cpu_);
 
-      DEBUG_ASSERT(thread->scheduler_state_.InQueue());
+      DEBUG_ASSERT(state->InQueue());
       current->GetRunQueue(thread).erase(*thread);
       current->Remove(thread);
 
@@ -1380,7 +1387,7 @@ void Scheduler::MigrateUnpinnedThreads() {
   while (!current->fair_run_queue_.is_empty()) {
     Thread* const thread = current->fair_run_queue_.pop_front();
 
-    if (thread->hard_affinity_ == current_cpu_mask) {
+    if (thread->scheduler_state_.hard_affinity_ == current_cpu_mask) {
       // Keep track of threads pinned to this CPU.
       pinned_threads.insert(thread);
     } else {
@@ -1403,7 +1410,7 @@ void Scheduler::MigrateUnpinnedThreads() {
   while (!current->deadline_run_queue_.is_empty()) {
     Thread* const thread = current->deadline_run_queue_.pop_front();
 
-    if (thread->hard_affinity_ == current_cpu_mask) {
+    if (thread->scheduler_state_.hard_affinity_ == current_cpu_mask) {
       // Keep track of threads pinned to this CPU.
       pinned_threads.insert(thread);
     } else {
@@ -1444,8 +1451,8 @@ void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, Sched
 
     case THREAD_RUNNING:
     case THREAD_READY: {
-      DEBUG_ASSERT(is_valid_cpu_num(thread->curr_cpu_));
-      Scheduler* const current = Get(thread->curr_cpu_);
+      DEBUG_ASSERT(is_valid_cpu_num(state->curr_cpu_));
+      Scheduler* const current = Get(state->curr_cpu_);
 
       // If the thread is in a run queue, remove it before making subsequent
       // changes to the properties of the thread. Erasing and enqueuing depend
@@ -1485,7 +1492,7 @@ void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, Sched
         current->QueueThread(thread, Placement::Adjustment);
       }
 
-      *cpus_to_reschedule_mask |= cpu_num_to_mask(thread->curr_cpu_);
+      *cpus_to_reschedule_mask |= cpu_num_to_mask(state->curr_cpu_);
       break;
     }
 
@@ -1523,8 +1530,8 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
 
     case THREAD_RUNNING:
     case THREAD_READY: {
-      DEBUG_ASSERT(is_valid_cpu_num(thread->curr_cpu_));
-      Scheduler* const current = Get(thread->curr_cpu_);
+      DEBUG_ASSERT(is_valid_cpu_num(state->curr_cpu_));
+      Scheduler* const current = Get(state->curr_cpu_);
 
       // If the thread is running or is already a deadline task, keep the
       // original arrival time. Otherwise, when moving a ready task from the
@@ -1573,7 +1580,7 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
         current->QueueThread(thread, Placement::Adjustment);
       }
 
-      *cpus_to_reschedule_mask |= cpu_num_to_mask(thread->curr_cpu_);
+      *cpus_to_reschedule_mask |= cpu_num_to_mask(state->curr_cpu_);
       break;
     }
 
@@ -1597,10 +1604,12 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
 void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_change_weight"_stringref};
 
+  SchedulerState* const state = &thread->scheduler_state_;
+
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
   SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
-                ToString(thread->state_), thread->base_priority_, thread->effec_priority_,
-                thread->inherited_priority_);
+                ToString(thread->state_), state->base_priority_, state->effective_priority_,
+                state->inherited_priority_);
 
   if (thread->IsIdle() || thread->state_ == THREAD_DEATH) {
     return;
@@ -1610,43 +1619,44 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
   // operate in those terms here. Abstract the notion of priority once the
   // deadline scheduler is available and remove this conversion once the
   // kernel uses the abstraction throughout.
-  const int original_priority_ = thread->effec_priority_;
-  thread->base_priority_ = priority;
-  thread->effec_priority_ = ktl::max(thread->base_priority_, thread->inherited_priority_);
+  const int original_priority_ = state->effective_priority_;
+  state->base_priority_ = priority;
+  state->effective_priority_ = ktl::max(state->base_priority_, state->inherited_priority_);
 
   // Perform the state-specific updates if the discipline or effective priority
   // changed.
-  if (IsDeadlineThread(thread) || thread->effec_priority_ != original_priority_) {
-    UpdateWeightCommon(thread, original_priority_, PriorityToWeight(thread->effec_priority_),
+  if (IsDeadlineThread(thread) || state->effective_priority_ != original_priority_) {
+    UpdateWeightCommon(thread, original_priority_, PriorityToWeight(state->effective_priority_),
                        cpus_to_reschedule_mask, PropagatePI::Yes);
   }
 
-  trace.End(original_priority_, thread->effec_priority_);
+  trace.End(original_priority_, state->effective_priority_);
 }
 
 void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params,
                                cpu_mask_t* cpus_to_reschedule_mask) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_change_deadline"_stringref};
 
+  SchedulerState* const state = &thread->scheduler_state_;
+
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
   SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
-                ToString(thread->state_), thread->base_priority_, thread->effec_priority_,
-                thread->inherited_priority_);
+                ToString(thread->state_), state->base_priority_, state->effective_priority_,
+                state->inherited_priority_);
 
   if (thread->IsIdle() || thread->state_ == THREAD_DEATH) {
     return;
   }
 
-  SchedulerState* const state = &thread->scheduler_state_;
   const bool changed = IsFairThread(thread) || state->deadline_ != params;
 
   // Always set deadline threads to the highest fair priority. This is a
   // workaround until deadline priority inheritance is worked out.
   // TODO(eieio): Replace this with actual deadline PI.
-  const int original_priority_ = thread->effec_priority_;
-  thread->base_priority_ = HIGHEST_PRIORITY;
-  thread->inherited_priority_ = -1;
-  thread->effec_priority_ = thread->base_priority_;
+  const int original_priority_ = state->effective_priority_;
+  state->base_priority_ = HIGHEST_PRIORITY;
+  state->inherited_priority_ = -1;
+  state->effective_priority_ = state->base_priority_;
 
   // Perform the state-specific updates if the discipline or deadline params changed.
   if (changed) {
@@ -1654,16 +1664,18 @@ void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params
                          PropagatePI::Yes);
   }
 
-  trace.End(original_priority_, thread->effec_priority_);
+  trace.End(original_priority_, state->effective_priority_);
 }
 
 void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_inherit_weight"_stringref};
 
+  SchedulerState* const state = &thread->scheduler_state_;
+
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
   SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
-                ToString(thread->state_), thread->base_priority_, thread->effec_priority_,
-                thread->inherited_priority_);
+                ToString(thread->state_), state->base_priority_, state->effective_priority_,
+                state->inherited_priority_);
 
   // For now deadline threads are logically max weight for the purposes of
   // priority inheritance.
@@ -1671,17 +1683,17 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
     return;
   }
 
-  const int original_priority_ = thread->effec_priority_;
-  thread->inherited_priority_ = priority;
-  thread->effec_priority_ = ktl::max(thread->base_priority_, thread->inherited_priority_);
+  const int original_priority_ = state->effective_priority_;
+  state->inherited_priority_ = priority;
+  state->effective_priority_ = ktl::max(state->base_priority_, state->inherited_priority_);
 
   // Perform the state-specific updates if the effective priority changed.
-  if (thread->effec_priority_ != original_priority_) {
-    UpdateWeightCommon(thread, original_priority_, PriorityToWeight(thread->effec_priority_),
+  if (state->effective_priority_ != original_priority_) {
+    UpdateWeightCommon(thread, original_priority_, PriorityToWeight(state->effective_priority_),
                        cpus_to_reschedule_mask, PropagatePI::No);
   }
 
-  trace.End(original_priority_, thread->effec_priority_);
+  trace.End(original_priority_, state->effective_priority_);
 }
 
 void Scheduler::TimerTick(SchedTime now) {

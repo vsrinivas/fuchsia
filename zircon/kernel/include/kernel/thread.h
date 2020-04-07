@@ -392,34 +392,10 @@ struct Thread {
   // active bits
   struct list_node queue_node_;
   enum thread_state state_;
-  zx_time_t last_started_running_;
-  zx_duration_t remaining_time_slice_;
   unsigned int flags_;
   unsigned int signals_;
 
-  // Total time in THREAD_RUNNING state.  If the thread is currently in
-  // THREAD_RUNNING state, this excludes the time it has accrued since it
-  // left the scheduler.
-  zx_duration_t runtime_ns_;
-
-  // priority: in the range of [MIN_PRIORITY, MAX_PRIORITY], from low to high.
-  // base_priority is set at creation time, and can be tuned with thread_set_priority().
-  // inherited_priority is temporarily set to >0 when inheriting a priority from another
-  // thread blocked on a locking primitive this thread holds. -1 means no inherit.
-  // effective_priority is MAX(base_priority, inherited_priority) and is the working
-  // priority for run queue decisions.
-  int effec_priority_;
-  int base_priority_;
-  int inherited_priority_;
-
   SchedulerState scheduler_state_;
-
-  // current cpu the thread is either running on or in the ready queue, undefined otherwise
-  cpu_num_t curr_cpu_;
-  cpu_num_t last_cpu_;        // last cpu the thread ran on, INVALID_CPU if it's never run
-  cpu_num_t next_cpu_;        // next cpu the thread should run on after |migrate_fn_| is called
-  cpu_mask_t hard_affinity_;  // mask of CPUs this thread _must_ run on
-  cpu_mask_t soft_affinity_;  // mask of CPUs this thread should run on if possible
 
   // if blocked, a pointer to the wait queue
   struct wait_queue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;

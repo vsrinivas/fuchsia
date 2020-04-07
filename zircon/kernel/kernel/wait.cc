@@ -86,17 +86,17 @@ void wait_queue_insert(wait_queue_t* wait, Thread* t) TA_REQ(thread_lock) {
     list_initialize(&t->queue_node_);
     list_add_head(&wait->heads, &t->wait_queue_heads_node_);
   } else {
-    int pri = t->effec_priority_;
+    const int pri = t->scheduler_state_.effective_priority();
 
     // walk through the sorted list of wait queue heads
     Thread* temp;
     list_for_every_entry (&wait->heads, temp, Thread, wait_queue_heads_node_) {
-      if (pri > temp->effec_priority_) {
+      if (pri > temp->scheduler_state_.effective_priority()) {
         // insert ourself here as a new queue head
         list_initialize(&t->queue_node_);
         list_add_before(&temp->wait_queue_heads_node_, &t->wait_queue_heads_node_);
         return;
-      } else if (temp->effec_priority_ == pri) {
+      } else if (temp->scheduler_state_.effective_priority() == pri) {
         // same priority, add ourself to the tail of this queue
         list_add_tail(&temp->queue_node_, &t->queue_node_);
         list_clear_node(&t->wait_queue_heads_node_);
@@ -192,16 +192,20 @@ void wait_queue_validate_queue(wait_queue_t* wait) TA_REQ(thread_lock) {
 
     // validate that the queue is sorted high to low priority
     if (last) {
-      DEBUG_ASSERT_MSG(last->effec_priority_ > temp->effec_priority_, "%p:%d  %p:%d", last,
-                       last->effec_priority_, temp, temp->effec_priority_);
+      DEBUG_ASSERT_MSG(
+          last->scheduler_state_.effective_priority() > temp->scheduler_state_.effective_priority(),
+          "%p:%d  %p:%d", last, last->scheduler_state_.effective_priority(), temp,
+          temp->scheduler_state_.effective_priority());
     }
 
     // walk any threads linked to this head, validating that they're the same priority
     Thread* temp2;
     list_for_every_entry (&temp->queue_node_, temp2, Thread, queue_node_) {
       DEBUG_ASSERT(temp2->magic_ == THREAD_MAGIC);
-      DEBUG_ASSERT_MSG(temp->effec_priority_ == temp2->effec_priority_, "%p:%d  %p:%d", temp,
-                       temp->effec_priority_, temp2, temp2->effec_priority_);
+      DEBUG_ASSERT_MSG(temp->scheduler_state_.effective_priority() ==
+                           temp2->scheduler_state_.effective_priority(),
+                       "%p:%d  %p:%d", temp, temp->scheduler_state_.effective_priority(), temp2,
+                       temp2->scheduler_state_.effective_priority());
     }
 
     last = temp;
@@ -215,7 +219,7 @@ int wait_queue_blocked_priority(const wait_queue_t* wait) {
     return -1;
   }
 
-  return t->effec_priority_;
+  return t->scheduler_state_.effective_priority();
 }
 
 // returns a reference to the highest priority thread queued
@@ -530,7 +534,7 @@ bool wait_queue_priority_changed(Thread* t, int old_prio, PropagatePI propagate)
   DEBUG_ASSERT(wq != NULL);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
 
-  LTRACEF("%p %d -> %d\n", t, old_prio, t->effec_priority_);
+  LTRACEF("%p %d -> %d\n", t, old_prio, t->scheduler_state_.effective_priority());
 
   // |t|'s effective priority has already been re-calculated.  If |t| is
   // currently at the head of the wait queue, then |t|'s old priority is the

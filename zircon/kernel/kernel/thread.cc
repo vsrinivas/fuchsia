@@ -23,6 +23,7 @@
 #include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <lib/version.h>
 #include <platform.h>
 #include <stdio.h>
@@ -35,6 +36,7 @@
 
 #include <arch/debugger.h>
 #include <arch/exception.h>
+#include <kernel/cpu.h>
 #include <kernel/dpc.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
@@ -46,7 +48,6 @@
 #include <kernel/timer.h>
 #include <ktl/algorithm.h>
 #include <ktl/atomic.h>
-#include <lib/lazy_init/lazy_init.h>
 #include <lockdep/lockdep.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -138,8 +139,6 @@ void init_thread_struct(Thread* t, const char* name) {
   strlcpy(t->name_, name, sizeof(t->name_));
   wait_queue_init(&t->retcode_wait_queue_);
   init_thread_lock_state(t);
-  t->hard_affinity_ = CPU_MASK_ALL;
-  t->soft_affinity_ = CPU_MASK_ALL;
 }
 
 static void initial_thread_func() TA_REQ(thread_lock) __NO_RETURN;
@@ -206,9 +205,6 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->signals_ = 0;
   t->blocked_status_ = ZX_OK;
   t->interruptable_ = false;
-  t->curr_cpu_ = INVALID_CPU;
-  t->last_cpu_ = INVALID_CPU;
-  t->next_cpu_ = INVALID_CPU;
 
   t->retcode_ = 0;
   wait_queue_init(&t->retcode_wait_queue_);
@@ -350,7 +346,7 @@ zx_status_t Thread::Suspend() {
       // The following call is not essential.  It just makes the
       // thread suspension happen sooner rather than at the next
       // timer interrupt or syscall.
-      mp_reschedule(cpu_num_to_mask(curr_cpu_), 0);
+      mp_reschedule(cpu_num_to_mask(scheduler_state_.curr_cpu_), 0);
       break;
     case THREAD_SUSPENDED:
       // thread is suspended already
@@ -602,7 +598,7 @@ void Thread::Kill() {
       // The following call is not essential.  It just makes the
       // thread termination happen sooner rather than at the next
       // timer interrupt or syscall.
-      mp_reschedule(cpu_num_to_mask(curr_cpu_), 0);
+      mp_reschedule(cpu_num_to_mask(scheduler_state_.curr_cpu_), 0);
       break;
     case THREAD_SUSPENDED:
       // thread is suspended, resume it so it can get the kill signal
@@ -637,7 +633,7 @@ void Thread::Kill() {
 cpu_mask_t Thread::GetCpuAffinity() const {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return hard_affinity_;
+  return scheduler_state_.hard_affinity();
 }
 
 void Thread::SetCpuAffinity(cpu_mask_t affinity) {
@@ -650,7 +646,7 @@ void Thread::SetCpuAffinity(cpu_mask_t affinity) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   // set the affinity mask
-  hard_affinity_ = affinity;
+  scheduler_state_.hard_affinity_ = affinity;
 
   // let the scheduler deal with it
   sched_migrate(this);
@@ -661,7 +657,7 @@ void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   // set the affinity mask
-  soft_affinity_ = affinity;
+  scheduler_state_.soft_affinity_ = affinity;
 
   // let the scheduler deal with it
   sched_migrate(this);
@@ -670,7 +666,7 @@ void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
 cpu_mask_t Thread::GetSoftCpuAffinity() const {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return soft_affinity_;
+  return scheduler_state_.soft_affinity_;
 }
 
 void Thread::Current::MigrateToCpu(const cpu_num_t target_cpu) {
@@ -1067,9 +1063,10 @@ zx_status_t Thread::Current::SleepInterruptable(zx_time_t deadline) {
 zx_duration_t Thread::Runtime() const {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  zx_duration_t runtime = runtime_ns_;
+  zx_duration_t runtime = scheduler_state_.runtime_ns();
   if (state_ == THREAD_RUNNING) {
-    zx_duration_t recent = zx_time_sub_time(current_time(), last_started_running_);
+    zx_duration_t recent =
+        zx_time_sub_time(current_time(), scheduler_state_.last_started_running());
     runtime = zx_duration_add_duration(runtime, recent);
   }
 
@@ -1082,7 +1079,7 @@ zx_duration_t Thread::Runtime() const {
  */
 cpu_num_t Thread::LastCpu() const {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return last_cpu_;
+  return scheduler_state_.last_cpu_;
 }
 
 /**
@@ -1101,11 +1098,13 @@ void thread_construct_first(Thread* t, const char* name) {
   t->state_ = THREAD_RUNNING;
   t->flags_ = THREAD_FLAG_DETACHED;
   t->signals_ = 0;
-  t->curr_cpu_ = cpu;
-  t->last_cpu_ = cpu;
-  t->next_cpu_ = INVALID_CPU;
-  t->hard_affinity_ = cpu_num_to_mask(cpu);
+
+  // Setup the scheduler state before directly manipulating its members.
   sched_init_thread(t, HIGHEST_PRIORITY);
+  t->scheduler_state_.curr_cpu_ = cpu;
+  t->scheduler_state_.last_cpu_ = cpu;
+  t->scheduler_state_.next_cpu_ = INVALID_CPU;
+  t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(cpu);
 
   arch_thread_construct_first(t);
   arch_set_current_thread(t);
@@ -1210,9 +1209,9 @@ void Thread::Current::BecomeIdle() {
   sched_init_thread(t, IDLE_PRIORITY);
 
   // Pin the thread on the current cpu and mark it as already running
-  t->last_cpu_ = curr_cpu;
-  t->curr_cpu_ = curr_cpu;
-  t->hard_affinity_ = cpu_num_to_mask(curr_cpu);
+  t->scheduler_state_.last_cpu_ = curr_cpu;
+  t->scheduler_state_.curr_cpu_ = curr_cpu;
+  t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(curr_cpu);
 
   // Cpu is active now
   mp_set_curr_cpu_active(true);
@@ -1290,7 +1289,7 @@ Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
     return t;
   }
   t->flags_ |= THREAD_FLAG_IDLE | THREAD_FLAG_DETACHED;
-  t->hard_affinity_ = cpu_num_to_mask(cpu_num);
+  t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(cpu_num);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   sched_unblock_idle(t);
@@ -1341,9 +1340,10 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
   }
 
-  zx_duration_t runtime = t->runtime_ns_;
+  zx_duration_t runtime = t->scheduler_state_.runtime_ns();
   if (t->state_ == THREAD_RUNNING) {
-    zx_duration_t recent = zx_time_sub_time(current_time(), t->last_started_running_);
+    zx_duration_t recent =
+        zx_time_sub_time(current_time(), t->scheduler_state_.last_started_running());
     runtime = zx_duration_add_duration(runtime, recent);
   }
 
@@ -1355,9 +1355,11 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
             "priority %d [%d,%d], remaining time slice %" PRIi64 "\n",
-            thread_state_to_str(t->state_), (int)t->curr_cpu_, (int)t->last_cpu_, t->hard_affinity_,
-            t->soft_affinity_, t->effec_priority_, t->base_priority_, t->inherited_priority_,
-            t->remaining_time_slice_);
+            thread_state_to_str(t->state_), (int)t->scheduler_state_.curr_cpu_,
+            (int)t->scheduler_state_.last_cpu_, t->scheduler_state_.hard_affinity_,
+            t->scheduler_state_.soft_affinity_, t->scheduler_state_.effective_priority_,
+            t->scheduler_state_.base_priority_, t->scheduler_state_.inherited_priority_,
+            t->scheduler_state_.remaining_time_slice());
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
     t->stack_.DumpInfo(INFO);
@@ -1376,8 +1378,9 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     arch_dump_thread(t);
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
-           thread_state_to_str(t->state_), !t->owned_wait_queues_.is_empty(), t->effec_priority_,
-           t->base_priority_, t->inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
+           thread_state_to_str(t->state_), !t->owned_wait_queues_.is_empty(),
+           t->scheduler_state_.effective_priority_, t->scheduler_state_.base_priority_,
+           t->scheduler_state_.inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name_);
   }
 }
 

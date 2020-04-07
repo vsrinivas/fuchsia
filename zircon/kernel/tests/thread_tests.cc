@@ -89,8 +89,8 @@ static int mutex_test() {
   Thread* threads[5];
 
   for (uint i = 0; i < fbl::count_of(threads); i++) {
-    threads[i] =
-        Thread::Create("mutex tester", &mutex_thread, &m, Thread::Current::Get()->base_priority_);
+    threads[i] = Thread::Create("mutex tester", &mutex_thread, &m,
+                                Thread::Current::Get()->scheduler_state_.base_priority());
     threads[i]->Resume();
   }
 
@@ -154,7 +154,7 @@ static int mutex_inherit_test() {
     Thread* test_thread[inherit_test_thread_count];
     for (auto& t : test_thread) {
       t = Thread::Create("mutex tester", inherit_worker, &args,
-                         Thread::Current::Get()->base_priority_);
+                         Thread::Current::Get()->scheduler_state_.base_priority());
       t->Resume();
     }
 
@@ -266,7 +266,7 @@ static void event_test() {
 static int quantum_tester(void* arg) {
   for (;;) {
     printf("%p: in this thread. rq %" PRIi64 "\n", Thread::Current::Get(),
-           Thread::Current::Get()->remaining_time_slice_);
+           Thread::Current::Get()->scheduler_state_.remaining_time_slice());
   }
   return 0;
 }
@@ -753,17 +753,16 @@ __NO_INLINE static void affinity_test() {
 }
 
 static int prio_test_thread(void* arg) {
-  Thread* t = Thread::Current::Get();
-  ASSERT(t->base_priority_ == LOW_PRIORITY);
+  Thread* volatile t = Thread::Current::Get();
+  ASSERT(t->scheduler_state_.base_priority() == LOW_PRIORITY);
 
   auto ev = (event_t*)arg;
   event_signal(ev, false);
 
   // Busy loop until our priority changes.
-  volatile int* v_pri = &t->base_priority_;
   int count = 0;
   for (;;) {
-    if (*v_pri == DEFAULT_PRIORITY) {
+    if (t->scheduler_state_.base_priority() == DEFAULT_PRIORITY) {
       break;
     }
     ++count;
@@ -773,7 +772,7 @@ static int prio_test_thread(void* arg) {
 
   // And then when it changes again.
   for (;;) {
-    if (*v_pri == HIGH_PRIORITY) {
+    if (t->scheduler_state_.base_priority() == HIGH_PRIORITY) {
       break;
     }
     ++count;
@@ -786,7 +785,7 @@ __NO_INLINE static void priority_test() {
   printf("starting priority tests\n");
 
   Thread* t = Thread::Current::Get();
-  int base_priority = t->base_priority_;
+  int base_priority = t->scheduler_state_.base_priority();
 
   if (base_priority != DEFAULT_PRIORITY) {
     printf("unexpected initial state, aborting test\n");
@@ -795,11 +794,11 @@ __NO_INLINE static void priority_test() {
 
   t->SetPriority(DEFAULT_PRIORITY + 2);
   Thread::Current::SleepRelative(ZX_MSEC(1));
-  ASSERT(t->base_priority_ == DEFAULT_PRIORITY + 2);
+  ASSERT(t->scheduler_state_.base_priority() == DEFAULT_PRIORITY + 2);
 
   t->SetPriority(DEFAULT_PRIORITY - 2);
   Thread::Current::SleepRelative(ZX_MSEC(1));
-  ASSERT(t->base_priority_ == DEFAULT_PRIORITY - 2);
+  ASSERT(t->scheduler_state_.base_priority() == DEFAULT_PRIORITY - 2);
 
   cpu_mask_t active = mp_get_active_mask();
   if (!active || ispow2(active)) {
