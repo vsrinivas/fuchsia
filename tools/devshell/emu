@@ -191,13 +191,6 @@ while [[ $# -ge 1 ]]; do
   shift
 done
 
-if [[ "$FUCHSIA_ARCH" == "arm64" ]]; then
-  if ! "$EXPERIMENT_ARM64"; then
-    fx-error "arm64 support is still experimental, requires --experiment-arm64"
-    exit 1
-  fi
-fi
-
 if [[ -z "$AEMU_DIR" && -d "$PREBUILT_AEMU_DIR" ]]; then
   AEMU_DIR="$PREBUILT_AEMU_DIR"
 fi
@@ -292,6 +285,14 @@ fi
 
 if (( HEADLESS )); then
     OPTIONS+=("-no-window")
+fi
+
+if [[ "$FUCHSIA_ARCH" == "arm64" ]]; then
+  if ! "$EXPERIMENT_ARM64"; then
+    fx-error "arm64 support is still experimental, requires --experiment-arm64"
+    exit 1
+  fi
+  OPTIONS+=("-avd-arch" "arm64")
 fi
 
 # use port 5556 by default
