@@ -2,6 +2,30 @@
 
 This document explains how to get started with syslogger APIs.
 
+## Component manifest
+
+The fuchsia.logger.LogSink capability must be exposed to the component that uses
+the syslog API.
+
+```
+{
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
+```
+
+## Default configuration
+
+The global logger is lazily instantiated on the first use of the API (more
+specifically, on the first call to `fx_log_get_logger`). The default
+configuration for the global logger is:
+- Use process name as the tag
+- Write logs to `fuchsia.logger.LogSink`
+- Min log level of `FX_LOG_INFO`
+
 ## In C
 
 ### BUILD.gn dependency
@@ -10,21 +34,15 @@ This document explains how to get started with syslogger APIs.
 //zircon/public/lib/syslog
 ```
 
-### Initialization
-
-Logger can only be initialized once.
-
-#### Basic initialization
+### Log messages
 
 ```C
-#include <lib/syslog/global.h>
-
-int main(int argc, char** argv) {
-    fx_log_init();
-}
+FX_LOGF(INFO, "tag", "my msg: %d", 10);
+FX_LOG(INFO, "tag", "my msg");
+FX_LOGF(INFO, NULL, "my msg: %d", 10);
 ```
 
-#### Initialization with tags
+### Using non-default configuration
 
 ```C
 #include <lib/syslog/global.h>
@@ -35,16 +53,8 @@ int main(int argc, char** argv) {
                                  .log_service_channel = ZX_HANDLE_INVALID,
                                  .tags = (const char * []) {"gtag", "gtag2"},
                                  .num_tags = 2};
-    fx_log_init_with_config(&config);
+    fx_log_reconfigure(&config);
 }
-```
-
-### Log messages
-
-```C
-FX_LOGF(INFO, "tag", "my msg: %d", 10);
-FX_LOG(INFO, "tag", "my msg");
-FX_LOGF(INFO, NULL, "my msg: %d", 10);
 ```
 
 ### Reference
@@ -59,43 +69,38 @@ FX_LOGF(INFO, NULL, "my msg: %d", 10);
 //src/lib/syslog/cpp
 ```
 
-### sandboxing dependency
+### Log messages
 
-```
-{
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
-    }
-}
+```C++
+FX_LOGS(INFO) << "my message";
+FX_LOGST(INFO, "tag") << "my message";
 ```
 
-### Initialization
+### Set tags
 
-Logger can only be initialized once.
-
-#### Basic initialization
+By default, the process name is used as the tag, but this can be changed by
+calling `syslog::SetTags`.
 
 ```C++
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
-    syslog::InitLogger();
+     syslog::SetTags({"tag1", "tag2"});
 }
 ```
 
-#### Initialization with tags
+### Set settings
 
 ```C++
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
-     syslog::InitLogger({"tag1", "tag2"});
+     syslog::LogSettings settings = {.fd = -1, .severity = FX_LOG_ERROR};
+     syslog::SetSettings(settings, {"tag1", "tag2"});
 }
 ```
 
-#### Initialization using command line
+### Set settings from command line
 
 ```C++
 #include "src/lib/fsl/syslogger/init.h"
@@ -105,19 +110,6 @@ int main(int argc, char** argv) {
     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
     fsl::InitLoggerFromCommandLine(command_line, {"my_program"});
 }
-```
-
-### Log messages
-
-```C++
-FX_LOGS(INFO) << "my message";
-FX_LOGST(INFO, "tag") << "my message";
-```
-
-### GTest main with Syslog automatically initialized
-
-```gn
-//src/lib/syslog/test:gtest_main
 ```
 
 ### Reference
