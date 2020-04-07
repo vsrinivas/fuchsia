@@ -34,6 +34,8 @@ pub struct fx_log_metadata_t {
 }
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
+#[cfg(test)]
+pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
 
 #[repr(C)]
 #[derive(Clone)]
@@ -80,7 +82,7 @@ impl Stream for LogMessageSocket {
         let &mut Self { ref mut socket, ref mut buffer } = &mut *self;
         let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
 
-        let parsed = if len > 0 { parse_log_message(&buffer[0..len]).map(Ok) } else { None };
+        let parsed = if len > 0 { parse_log_message(&buffer[..len]).map(Ok) } else { None };
         Poll::Ready(parsed)
     }
 }
@@ -92,7 +94,7 @@ fn parse_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
     }
 
     let mut l = LogMessage {
-        pid: LittleEndian::read_u64(&bytes[0..8]),
+        pid: LittleEndian::read_u64(&bytes[..8]),
         tid: LittleEndian::read_u64(&bytes[8..16]),
         time: LittleEndian::read_i64(&bytes[16..24]),
         severity: LittleEndian::read_i32(&bytes[24..28]),
@@ -190,6 +192,10 @@ mod tests {
         }
     }
 
+    const A: c_char = 'A' as _;
+    const B: c_char = 'B' as _;
+    const C: c_char = 'C' as _;
+
     fn memset<T: Copy>(x: &mut [T], offset: usize, value: T, size: usize) {
         x[offset..(offset + size)].iter_mut().for_each(|x| *x = value);
     }
@@ -214,8 +220,8 @@ mod tests {
         let mut p: fx_log_packet_t = Default::default();
         p.metadata.pid = 1;
         p.data[0] = 5;
-        memset(&mut p.data[..], 1, 65, 5);
-        memset(&mut p.data[..], 7, 66, 5);
+        memset(&mut p.data[..], 1, A, 5);
+        memset(&mut p.data[..], 7, B, 5);
 
         let ls = LogMessageSocket::new(sout).unwrap();
         sin.write(p.as_bytes()).unwrap();
@@ -279,8 +285,8 @@ mod tests {
     #[test]
     fn short_reads() {
         let p = test_packet();
-        let one_short = &p.as_bytes()[0..METADATA_SIZE];
-        let two_short = &p.as_bytes()[0..METADATA_SIZE - 1];
+        let one_short = &p.as_bytes()[..METADATA_SIZE];
+        let two_short = &p.as_bytes()[..METADATA_SIZE - 1];
 
         assert_eq!(parse_log_message(one_short), None);
         assert_eq!(parse_log_message(two_short), None);
@@ -289,9 +295,10 @@ mod tests {
     #[test]
     fn unterminated() {
         let mut p = test_packet();
-        p.data[9] = 1;
+        let end = 9;
+        p.data[end] = 1;
 
-        let buffer = &p.as_bytes()[0..METADATA_SIZE + 10];
+        let buffer = &p.as_bytes()[..MIN_PACKET_SIZE + end];
         let parsed = parse_log_message(buffer);
 
         assert_eq!(parsed, None);
@@ -300,11 +307,12 @@ mod tests {
     #[test]
     fn tags_no_message() {
         let mut p = test_packet();
-        p.data[0] = 11;
-        memset(&mut p.data[..], 1, 65, 11);
-        p.data[12] = 0;
+        let end = 12;
+        p.data[0] = end as c_char - 1;
+        memset(&mut p.data[..], 1, A, end - 1);
+        p.data[end] = 0;
 
-        let buffer = &p.as_bytes()[0..METADATA_SIZE + 13];
+        let buffer = &p.as_bytes()[..MIN_PACKET_SIZE + end];
         let parsed = parse_log_message(buffer);
 
         assert_eq!(parsed, None);
@@ -313,15 +321,23 @@ mod tests {
     #[test]
     fn tags_with_message() {
         let mut p = test_packet();
-        p.data[0] = 11;
-        memset(&mut p.data[..], 1, 65, 11);
-        p.data[12] = 0;
-        memset(&mut p.data[..], 13, 66, 5);
+        let a_start = 1;
+        let a_count = 11;
 
-        let buffer = &p.as_bytes()[0..METADATA_SIZE + 19];
+        p.data[0] = a_count as c_char;
+        memset(&mut p.data[..], a_start, A, a_count);
+        p.data[a_start + a_count] = 0; // terminate tags
+
+        let b_start = a_start + a_count + 1;
+        let b_count = 5;
+        memset(&mut p.data[..], b_start, B, b_count);
+
+        let data_size = b_start + b_count;
+
+        let buffer = &p.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminate message
         let (parsed, size) = parse_log_message(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + 18);
+        assert_eq!(size, METADATA_SIZE + data_size);
         assert_eq!(
             parsed,
             LogMessage {
@@ -339,12 +355,19 @@ mod tests {
     #[test]
     fn two_tags_no_message() {
         let mut p = test_packet();
-        p.data[0] = 11;
-        memset(&mut p.data[..], 1, 65, 11);
-        p.data[12] = 5;
-        memset(&mut p.data[..], 13, 66, 5);
+        let a_start = 1;
+        let a_count = 11;
 
-        let buffer = &p.as_bytes()[0..METADATA_SIZE + 19];
+        p.data[0] = a_count as c_char;
+        memset(&mut p.data[..], a_start, A, a_count);
+
+        let b_start = a_start + a_count + 1;
+        let b_count = 5;
+
+        p.data[b_start - 1] = b_count as c_char;
+        memset(&mut p.data[..], b_start, B, b_count);
+
+        let buffer = &p.as_bytes()[..MIN_PACKET_SIZE + b_start + b_count];
         let parsed = parse_log_message(buffer);
 
         assert_eq!(parsed, None);
@@ -353,16 +376,28 @@ mod tests {
     #[test]
     fn two_tags_with_message() {
         let mut p = test_packet();
-        p.data[0] = 11;
-        memset(&mut p.data[..], 1, 65, 11);
-        p.data[12] = 5;
-        memset(&mut p.data[..], 13, 66, 5);
-        memset(&mut p.data[..], 19, 67, 5);
+        let a_start = 1;
+        let a_count = 11;
 
-        let buffer = &p.as_bytes()[0..METADATA_SIZE + 25];
+        p.data[0] = a_count as c_char;
+        memset(&mut p.data[..], a_start, A, a_count);
+
+        let b_start = a_start + a_count + 1;
+        let b_count = 5;
+
+        p.data[b_start - 1] = b_count as c_char;
+        memset(&mut p.data[..], b_start, B, b_count);
+
+        let c_start = b_start + b_count + 1;
+        let c_count = 5;
+        memset(&mut p.data[..], c_start, C, c_count);
+
+        let data_size = c_start + c_count;
+
+        let buffer = &p.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
         let (parsed, size) = parse_log_message(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + 24);
+        assert_eq!(size, METADATA_SIZE + data_size);
         assert_eq!(
             parsed,
             LogMessage {
@@ -381,74 +416,76 @@ mod tests {
     fn max_tags_with_message() {
         let mut p = test_packet();
 
-        // fill the tags in the packet
+        let tags_start = 1;
+        let tag_len = 2;
+        let tag_size = tag_len + 1; // the length-prefix byte
         for i in 0..FX_LOG_MAX_TAGS {
-            p.data[3 * i] = 2;
-            memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
+            let start = tags_start + (tag_size * i);
+            let ascii = A + i as c_char;
+
+            p.data[start - 1] = tag_len as c_char;
+            memset(&mut p.data[..], start, ascii, tag_len);
         }
 
-        // fill the message in the packet
-        p.data[3 * FX_LOG_MAX_TAGS] = 0;
-        let ascii = (65 + FX_LOG_MAX_TAGS) as c_char;
-        memset(&mut p.data[..], 1 + 3 * FX_LOG_MAX_TAGS, ascii, 5);
-        p.data[1 + 3 * FX_LOG_MAX_TAGS + 5] = 0;
+        let msg_start = tags_start + (tag_size * FX_LOG_MAX_TAGS);
+        let msg_len = 5;
+        let ascii = A + FX_LOG_MAX_TAGS as c_char;
+        memset(&mut p.data[..], msg_start, ascii, msg_len);
 
-        let short_buffer = &p.as_bytes()[0..(METADATA_SIZE + 1 + 3 * FX_LOG_MAX_TAGS + 6)];
+        let data_size = msg_start + msg_len;
+
+        let min_buffer = &p.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
         let full_buffer = &p.as_bytes()[..];
-        let (short_parsed, short_size) = parse_log_message(short_buffer).unwrap();
+
+        let (min_parsed, min_size) = parse_log_message(min_buffer).unwrap();
         let (full_parsed, full_size) = parse_log_message(full_buffer).unwrap();
 
-        let expected_size = METADATA_SIZE + 1 + 3 * FX_LOG_MAX_TAGS + 5;
         let expected_message = LogMessage {
             pid: p.metadata.pid,
             tid: p.metadata.tid,
             time: p.metadata.time,
             severity: p.metadata.severity,
             dropped_logs: p.metadata.dropped_logs,
-            tags: (0..FX_LOG_MAX_TAGS as u8)
-                .map(|i| String::from_utf8(vec![65 + i as u8; 2]).unwrap())
+            msg: String::from_utf8(vec![ascii as u8; msg_len]).unwrap(),
+            tags: (0..FX_LOG_MAX_TAGS as _)
+                .map(|i| String::from_utf8(vec![(A + i) as u8; tag_len]).unwrap())
                 .collect(),
-            msg: String::from_utf8(vec![65 + FX_LOG_MAX_TAGS as u8; 5]).unwrap(),
         };
 
-        assert_eq!(short_size, expected_size);
-        assert_eq!(full_size, expected_size);
+        assert_eq!(min_size, METADATA_SIZE + data_size);
+        assert_eq!(full_size, min_size);
 
-        assert_eq!(short_parsed, expected_message);
+        assert_eq!(min_parsed, expected_message);
         assert_eq!(full_parsed, expected_message);
     }
 
     #[test]
-    fn max_tags_no_message() {
+    fn max_tags() {
         let mut p = test_packet();
+        let tags_start = 1;
+        let tag_len = 2;
+        let tag_size = tag_len + 1; // the length-prefix byte
         for i in 0..FX_LOG_MAX_TAGS {
-            p.data[3 * i] = 2;
-            memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
+            let start = tags_start + (tag_size * i);
+            let ascii = A + i as c_char;
+
+            p.data[start - 1] = tag_len as c_char;
+            memset(&mut p.data[..], start, ascii, tag_len);
         }
 
-        p.data[3 * FX_LOG_MAX_TAGS] = 0;
+        let msg_start = tags_start + (tag_size * FX_LOG_MAX_TAGS);
 
-        let buffer = &p.as_bytes()[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))];
-        let parsed = parse_log_message(buffer);
+        let buffer_missing_terminator = &p.as_bytes()[..METADATA_SIZE + msg_start];
+        assert_eq!(
+            parse_log_message(buffer_missing_terminator),
+            None,
+            "can't parse an empty message without a nul terminator"
+        );
 
-        assert_eq!(parsed, None);
-    }
-
-    #[test]
-    fn max_tags_empty_message() {
-        let mut p = test_packet();
-        for i in 0..FX_LOG_MAX_TAGS {
-            p.data[3 * i] = 2;
-            memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
-        }
-
-        p.data[3 * FX_LOG_MAX_TAGS] = 0;
-        p.data[1 + 3 * FX_LOG_MAX_TAGS] = 0;
-
-        let buffer = &p.as_bytes()[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)];
+        let buffer = &p.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
         let (parsed, size) = parse_log_message(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + 1 + 3 * FX_LOG_MAX_TAGS);
+        assert_eq!(size, METADATA_SIZE + msg_start);
         assert_eq!(
             parsed,
             LogMessage {
@@ -457,8 +494,8 @@ mod tests {
                 time: p.metadata.time,
                 severity: p.metadata.severity,
                 dropped_logs: p.metadata.dropped_logs,
-                tags: (0..FX_LOG_MAX_TAGS as u8)
-                    .map(|i| String::from_utf8(vec![65 + i as u8; 2]).unwrap())
+                tags: (0..FX_LOG_MAX_TAGS as _)
+                    .map(|i| String::from_utf8(vec![(A + i) as u8; 2]).unwrap())
                     .collect(),
                 msg: String::new(),
             }
@@ -469,11 +506,11 @@ mod tests {
     fn no_tags_with_message() {
         let mut p = test_packet();
         p.data[0] = 0;
-        p.data[1] = 'A' as c_char;
-        p.data[2] = 'A' as c_char;
+        p.data[1] = A;
+        p.data[2] = A; // measured size ends here
         p.data[3] = 0;
 
-        let buffer = &p.as_bytes()[0..(METADATA_SIZE + 4)];
+        let buffer = &p.as_bytes()[..METADATA_SIZE + 4]; // 0 tag size + 2 byte message + null
         let (parsed, size) = parse_log_message(buffer).unwrap();
 
         assert_eq!(size, METADATA_SIZE + 3);
