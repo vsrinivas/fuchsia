@@ -15,118 +15,132 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     SCRIPT_DIR))                 # unification
 
 
-class Finder(object):
+class BuildGraph:
 
-    def __init__(self, gn_binary, zircon_dir, build_dir):
-        self._zircon_dir = zircon_dir
-        self._command = [
-            gn_binary, '--root=' + zircon_dir, 'desc', build_dir, '//:default',
-            'deps', '--tree'
-        ]
-        self.load_build_graph()
+    def __init__(self, deps):
+        self._deps = deps
+        self._compute_refs()
 
-    def load_build_graph(self):
-        root_label = '//:default'
-        output = subprocess.check_output(self._command, encoding='utf8')
+    def _compute_refs(self):
+        self._nodes = set(self._deps.keys())
+        self._nodes.update(set(dep for v in self._deps.values() for dep in v))
+        refs = {}
 
-        # GN outputs the graph in an indented tree format:
-        # //foo
-        #   //bar
-        #     //baz
-        # //bar...
-        # The ... means this label has already been visited
+        for node in self._nodes:
+            if node not in refs:
+                refs[node] = []
+            if node not in self._deps:
+                self._deps[node] = []
 
-        deps = collections.defaultdict(list)
-        label_stack = [root_label]
-        for line in output.splitlines():
-            label = line.lstrip()
-            leading_spaces = len(line) - len(label)
-            assert leading_spaces >= 0
-            assert leading_spaces % 2 == 0
-            if label.endswith('...'):
-                label = label[:-3]
-            label_depth = leading_spaces // 2
-            del label_stack[label_depth + 1:]
-            label_stack.append(label)
-            deps[label_stack[label_depth]].append(label)
-
-        def strip_toolchain(label):
-            if label.endswith(')'):
-                label = label[:label.rindex('(')]
-            return label
-
-        self._deps = collapse_nodes(deps, strip_toolchain)
-
-        refs = collections.defaultdict(list)
         for label, label_deps in self._deps.items():
+            if label not in refs:
+                refs[label] = []
             for dep in label_deps:
+                if dep not in refs:
+                    refs[dep] = []
                 refs[dep].append(label)
-        self._refs = dict(refs)
 
-    def find_references(self, type, name):
-        category_label = '//system/' + type
-        base_label = '//system/' + type + '/' + name
+        self._refs = refs
 
-        all_refs = set()
-        for label, refs in self._refs.items():
-            if label.startswith(base_label + ':'):
-                all_refs.update(set(refs))
-
-        same_type_references = set()
-        other_type_references = set()
-        for line in all_refs:
-            line = line.strip()
-            if line.startswith(base_label + ':'):
+    def collapse_nodes(self, transform):
+        '''
+        Rename each node in the graph by passing it through the transform function,
+        and merge nodes with the same name. The new node will have the union of
+        edges on the old nodes. Nodes for which the transform function returns
+        None will be deleted.
+        '''
+        new_graph = collections.defaultdict(set)
+        for src, dsts in self._deps.items():
+            xsrc = transform(src)
+            if xsrc is None:
                 continue
-            # Remove target name and toolchain.
-            line = line[0:line.find(':')]
-            if line == category_label:
-                continue
-            same_type = line.startswith(category_label)
-            # Insert 'zircon' directory at the start.
-            line = '//zircon' + line[1:]
-            refs = same_type_references if same_type else other_type_references
-            refs.add(line)
+            src_set = new_graph[xsrc]
+            for dst in dsts:
+                xdst = transform(dst)
+                if xdst is None:
+                    continue
+                if xsrc == xdst:
+                    continue
+                src_set.add(xdst)
+        self._deps = dict(new_graph)
+        self._compute_refs()
 
-        return same_type_references, other_type_references
+    def references(self, label):
+        return self._refs.get(label)
 
-    def find_libraries(self, type):
-        base = os.path.join(self._zircon_dir, 'system', type)
-
-        def has_zn_build_file(dir):
-            build_path = os.path.join(base, dir, 'BUILD.gn')
-            if not os.path.isfile(build_path):
-                return False
-            with open(build_path, 'r') as build_file:
-                content = build_file.read()
-                return (
-                    '//build/unification/zx_library.gni' not in content and
-                    '//build/unification/fidl_alias.gni' not in content)
-
-        for _, dirs, _ in os.walk(base):
-            return list(filter(has_zn_build_file, dirs))
+    def dependencies(self, label):
+        return self._deps.get(label)
 
 
-def collapse_nodes(graph, transform):
-    '''
-    Rename each node in the graph by passing it through the transform function,
-    and merge nodes with the same name. The new node will have the union of
-    edges on the old nodes. Returns a new graph.
-    '''
-    new_graph = collections.defaultdict(set)
-    for src, dsts in graph.items():
-        xsrc = transform(src)
-        if xsrc is None:
-            continue
-        src_set = new_graph[xsrc]
-        for dst in dsts:
-            xdst = transform(dst)
-            if xdst is None:
-                continue
-            if xsrc == xdst:
-                continue
-            src_set.add(xdst)
-    return dict(new_graph)
+def load_build_graph(gn_binary, zircon_dir, build_dir):
+    root_label = '//:default'
+    output = subprocess.check_output(
+        [
+            gn_binary, '--root=' + zircon_dir, 'desc', build_dir, root_label,
+            'deps', '--tree'
+        ],
+        encoding='utf8')
+
+    # GN outputs the graph in an indented tree format:
+    # //foo
+    #   //bar
+    #     //baz
+    # //bar...
+    # The ... means this label has already been visited
+
+    deps = collections.defaultdict(list)
+    label_stack = [root_label]
+    for line in output.splitlines():
+        label = line.lstrip()
+        leading_spaces = len(line) - len(label)
+        assert leading_spaces >= 0
+        assert leading_spaces % 2 == 0
+        if label.endswith('...'):
+            label = label[:-3]
+        label_depth = leading_spaces // 2
+        del label_stack[label_depth + 1:]
+        label_stack.append(label)
+        deps[label_stack[label_depth]].append(label)
+
+    return BuildGraph(deps)
+
+
+def lib_label(type, name):
+    return '//system/{}/{}'.format(type, name)
+
+
+def format_label(label):
+    if label.startswith('//system/'):
+        label = label[len('//system/'):]
+    return label
+
+
+def find_libraries(zircon_dir, type):
+    base = os.path.join(zircon_dir, 'system', type)
+
+    def has_zn_build_file(dir):
+        build_path = os.path.join(base, dir, 'BUILD.gn')
+        if not os.path.isfile(build_path):
+            return False
+        with open(build_path, 'r') as build_file:
+            content = build_file.read()
+            return (
+                '//build/unification/zx_library.gni' not in content and
+                '//build/unification/fidl_alias.gni' not in content)
+
+    for _, dirs, _ in os.walk(base):
+        return [lib_label(type, dir) for dir in dirs if has_zn_build_file(dir)]
+
+
+def unblocked_by(graph, label):
+    deps = graph.dependencies(label)
+    unblocked = []
+    if deps is None:
+        return []
+    for dep in deps:
+        if graph.references(dep) == [label]:
+            unblocked.append(dep)
+    return unblocked
 
 
 def main():
@@ -169,7 +183,16 @@ def main():
     gn_binary = os.path.join(
         source_dir, 'prebuilt', 'third_party', 'gn', platform, 'gn')
 
-    finder = Finder(gn_binary, zircon_dir, build_dir)
+    graph = load_build_graph(gn_binary, zircon_dir, build_dir)
+
+    def strip_toolchain_and_label(label):
+        dirname, _, _ = label.partition(':')
+        for type in ['fidl', 'banjo', 'ulib', 'dev/lib']:
+            if dirname == '//system/' + type:
+                return
+        return dirname
+
+    graph.collapse_nodes(strip_toolchain_and_label)
 
     if args.fidl:
         type = 'fidl'
@@ -188,15 +211,27 @@ def main():
             # hyphen: be nice to users and support both forms.
             name = name.replace('.', '-')
 
-        same_type_refs, other_type_refs = finder.find_references(type, name)
+        refs = graph.references(lib_label(type, name))
 
-        if same_type_refs is None:
+        if refs is None:
             print('Could not find "%s", please check spelling!' % args.name)
             return 1
-        elif same_type_refs or other_type_refs:
+        elif len(refs):
             print('Nope, there are still references in the ZN build:')
-            for ref in sorted(same_type_refs | other_type_refs):
-                print('  ' + ref)
+            shown = set()
+            batch = set(refs)
+            while batch:
+                for ref in sorted(batch):
+                    print('  ' + format_label(ref))
+                shown.update(batch)
+                new_batch = set()
+                for ref in batch:
+                    for new_ref in graph.references(ref):
+                        if new_ref not in shown:
+                            new_batch.add(new_ref)
+                batch = new_batch
+                if batch:
+                    print('---')
             return 2
         else:
             print('Yes you can!')
@@ -204,27 +239,24 @@ def main():
         return 0
 
     # Case 2: no library name given.
-    names = finder.find_libraries(type)
-    candidates = {}
-    for name in names:
-        same_type_refs, other_type_refs = finder.find_references(type, name)
-        if other_type_refs:
-            continue
-        candidates[name] = same_type_refs
-    movable = {n for n, r in candidates.items() if not r}
-    type_blocked = {
-        n for n, r in candidates.items() if r and set(r).issubset(movable)
-    }
-    if type_blocked:
-        print(
-            'These libraries are only blocked by libraries waiting to be moved:'
-        )
-        for name in sorted(type_blocked):
-            print('  ' + name + ' (' + ','.join(candidates[name]) + ')')
+    libs = find_libraries(zircon_dir, type)
+    movable = set()
+    for lib in libs:
+        refs = graph.references(lib)
+        if not refs:
+            movable.add(lib)
     if movable:
         print('These libraries are free to go:')
-        for name in sorted(movable):
-            print('  ' + name)
+        for label in sorted(movable):
+            print('  ' + format_label(label))
+            unblocked = unblocked_by(graph, label)
+            if unblocked:
+                print(
+                    '    would unblock:',
+                    ', '.join(format_label(u) for u in unblocked))
+            if not graph.dependencies(label):
+                print('    no dependencies')
+
     else:
         print('No library may be moved')
 
