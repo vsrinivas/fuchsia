@@ -172,23 +172,21 @@ mod tests {
     #[repr(C, packed)]
     pub struct fx_log_packet_t_packed {
         pub metadata: fx_log_metadata_t_packed,
-        // Contains concatenated tags and message and a null terminating character at
-        // the end.
-        // char(tag_len) + "tag1" + char(tag_len) + "tag2\0msg\0"
+        /// Contains concatenated tags and message and a null terminating character at the end.
+        /// `char(tag_len) + "tag1" + char(tag_len) + "tag2\0msg\0"`
         pub data: [c_char; FX_LOG_MAX_DATAGRAM_LEN - METADATA_SIZE],
     }
 
-    /// Function to convert fx_log_packet_t to &[u8].
-    /// This function is safe as it works on `fx_log_packet_t` which
-    /// doesn't have any uninitialized padding bits.
-    fn to_u8_slice(p: &fx_log_packet_t) -> &[u8] {
-        // This code just converts to &[u8] so no need to explicity drop it as memory
-        // location would be freed as soon as p is dropped.
-        unsafe {
-            slice::from_raw_parts(
-                (p as *const fx_log_packet_t) as *const u8,
-                mem::size_of::<fx_log_packet_t>(),
-            )
+    impl fx_log_packet_t {
+        /// This struct has no padding bytes, but we can't use zerocopy because it needs const
+        /// generics to support arrays this large.
+        fn as_bytes(&self) -> &[u8] {
+            unsafe {
+                slice::from_raw_parts(
+                    (self as *const Self) as *const u8,
+                    mem::size_of::<fx_log_packet_t>(),
+                )
+            }
         }
     }
 
@@ -220,7 +218,7 @@ mod tests {
         memset(&mut p.data[..], 7, 66, 5);
 
         let ls = LogMessageSocket::new(sout).unwrap();
-        sin.write(to_u8_slice(&mut p)).unwrap();
+        sin.write(p.as_bytes()).unwrap();
         let mut expected_p = LogMessage {
             pid: p.metadata.pid,
             tid: p.metadata.tid,
@@ -256,7 +254,7 @@ mod tests {
         assert_eq!(1, calltimes.load(Ordering::Relaxed));
 
         // write one more time
-        sin.write(to_u8_slice(&p)).unwrap();
+        sin.write(p.as_bytes()).unwrap();
 
         for _ in 0..tries {
             if calltimes.load(Ordering::Relaxed) == 2 {
@@ -280,7 +278,7 @@ mod tests {
         p.metadata.dropped_logs = 10;
 
         {
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE]), None);
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE - 1]), None);
         }
@@ -288,7 +286,7 @@ mod tests {
         // Test that there should be null byte at end
         {
             p.data[9] = 1;
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 10]), None);
         }
         // test tags but no message
@@ -296,7 +294,7 @@ mod tests {
             p.data[0] = 11;
             memset(&mut p.data[..], 1, 65, 11);
             p.data[12] = 0;
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 13]), None);
         }
 
@@ -315,7 +313,7 @@ mod tests {
         let mut s = Some((expected_p, METADATA_SIZE + 18));
         {
             memset(&mut p.data[..], 13, 66, 5);
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), s);
         }
 
@@ -323,7 +321,7 @@ mod tests {
         {
             p.data[0] = 11;
             p.data[12] = 5;
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), None);
         }
 
@@ -334,7 +332,7 @@ mod tests {
             expected_p.tags.push(String::from("BBBBB"));
             expected_p.msg = String::from("CCCCC");
             s = Some((expected_p, METADATA_SIZE + 24));
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 25]), s);
         }
 
@@ -366,7 +364,7 @@ mod tests {
                 expected_p.msg = String::from_utf8(msg).unwrap();
             }
             s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5));
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(
                 parse_log_message(
                     &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 6)],
@@ -380,7 +378,7 @@ mod tests {
 
         // test max tags with no message
         {
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(
                 parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))],),
                 None
@@ -393,7 +391,7 @@ mod tests {
             expected_p = s.unwrap().0;
             expected_p.msg = String::from("");
             s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize)));
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(
                 parse_log_message(
                     &buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)],
@@ -410,7 +408,7 @@ mod tests {
             expected_p.msg = String::from("AA");
             expected_p.tags.clear();
             s = Some((expected_p, METADATA_SIZE + 3));
-            let buffer = to_u8_slice(&p);
+            let buffer = p.as_bytes();
             assert_eq!(parse_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
         }
     }
