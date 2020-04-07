@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -38,7 +37,20 @@ const (
 
 	defaultAcquireTimeout = 1000 * time.Millisecond
 	defaultBackoffTime    = 100 * time.Millisecond
-	defaultResendTime     = 400 * time.Millisecond
+	defaultRetransTime    = 400 * time.Millisecond
+)
+
+var (
+	defaultClientAddrs = []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
+	defaultServerCfg   = Config{
+		ServerAddress: serverAddr,
+		SubnetMask:    "\xff\xff\xff\x00",
+		Gateway:       "\xc0\xa8\x03\xF0",
+		DNS: []tcpip.Address{
+			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
+		},
+		LeaseLength: defaultLeaseLength,
+	}
 )
 
 func createTestStack() *stack.Stack {
@@ -161,7 +173,7 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 	}
 	s := createTestStack()
 	addEndpointToStack(t, nil, testNICID, s, &e)
-	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -231,7 +243,6 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	serverStack := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
 
-	// Link the server and the clients.
 	for i := range clientLinkEPs {
 		serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEPs[i])
 		clientLinkEPs[i].remote = append(clientLinkEPs[i].remote, &serverLinkEP)
@@ -247,14 +258,13 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		}
 	}()
 
-	// Start the clients.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	clientStack := createTestStack()
 	for i := range clientLinkEPs {
 		clientNICID := tcpip.NICID(i + 1)
 		addEndpointToStack(t, nil, clientNICID, clientStack, &clientLinkEPs[i])
-		c := newZeroJitterClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+		c := newZeroJitterClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c.Info()
 		go func() {
 			_, err := c.acquire(ctx, &info)
@@ -262,19 +272,8 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		}()
 	}
 
-	// Start the server.
-	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
-	serverCfg := Config{
-		ServerAddress: serverAddr,
-		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
-		DNS: []tcpip.Address{
-			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
-		},
-		LeaseLength: defaultLeaseLength,
-	}
-	if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-		t.Fatal(err)
+	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, defaultServerCfg); err != nil {
+		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 }
 
@@ -301,28 +300,35 @@ type randSourceStub struct {
 
 func (s *randSourceStub) Int63() int64 { return s.src }
 
+func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config) (clientStack *stack.Stack, client, server *endpoint, _ *Client) {
+	var serverLinkEP, clientLinkEP endpoint
+	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
+	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
+
+	serverStack := createTestStack()
+	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+	clientStack = createTestStack()
+	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
+
+	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, serverCfg); err != nil {
+		t.Fatalf("newEPConnServer failed: %s", err)
+	}
+	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+	return clientStack, &clientLinkEP, &serverLinkEP, c
+}
+
 func TestDHCP(t *testing.T) {
 	s := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
 
-	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
-
-	serverCfg := Config{
-		ServerAddress: serverAddr,
-		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
-		DNS: []tcpip.Address{
-			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
-		},
-		LeaseLength: defaultLeaseLength,
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
-		t.Fatal(err)
+	if _, err := newEPConnServer(ctx, s, defaultClientAddrs, defaultServerCfg); err != nil {
+		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 
-	c0 := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+	c0 := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	info := c0.Info()
 	{
 		{
@@ -330,10 +336,10 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := info.Addr.Address, clientAddrs[0]; got != want {
+			if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
-			if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
+			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 				t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 			}
 			c0.verifyClientStats(t, 1)
@@ -343,10 +349,10 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := info.Addr.Address, clientAddrs[0]; got != want {
+			if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
-			if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
+			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 				t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 			}
 			c0.verifyClientStats(t, 2)
@@ -354,16 +360,16 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		c1 := newZeroJitterClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+		c1 := newZeroJitterClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c1.Info()
 		cfg, err := c1.acquire(ctx, &info)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := info.Addr.Address, clientAddrs[1]; got != want {
+		if got, want := info.Addr.Address, defaultClientAddrs[1]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
-		if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
+		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 		}
 		c1.verifyClientStats(t, 1)
@@ -381,14 +387,14 @@ func TestDHCP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := info.Addr.Address, clientAddrs[0]; got != want {
+		if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
-		if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
+		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 		}
 
-		if diff := cmp.Diff(cfg, serverCfg); diff != "" {
+		if diff := cmp.Diff(cfg, defaultServerCfg); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
 		}
 		c0.verifyClientStats(t, 3)
@@ -443,11 +449,8 @@ func TestDelayRetransmission(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			var serverLinkEP, clientLinkEP endpoint
-			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
-			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
-
-			serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 				func() {
 					switch mustMsgType(t, b) {
 					case dhcpOFFER:
@@ -473,43 +476,16 @@ func TestDelayRetransmission(t *testing.T) {
 				return []stack.PacketBuffer{b}, 0
 			}
 
-			serverStack := createTestStack()
-			addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
-
-			clientStack := createTestStack()
-			addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
-
-			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
-
-			serverCfg := Config{
-				ServerAddress: serverAddr,
-				SubnetMask:    "\xff\xff\xff\x00",
-				Gateway:       "\xc0\xa8\x03\xF0",
-				DNS: []tcpip.Address{
-					"\x08\x08\x08\x08", "\x08\x08\x04\x04",
-				},
-				LeaseLength: defaultLeaseLength,
-			}
-
-			{
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-				if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			c := newZeroJitterClient(clientStack, testNICID, linkAddr1, 0, 0, math.MaxInt64, nil)
 			info := c.Info()
 			cfg, err := c.acquire(ctx, &info)
 			if tc.success {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got, want := info.Addr.Address, clientAddrs[0]; got != want {
+				if got, want := info.Addr.Address, defaultClientAddrs[0]; got != want {
 					t.Errorf("c.addr=%s, want=%s", got, want)
 				}
-				if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
+				if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 					t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 				}
 			} else {
@@ -522,7 +498,7 @@ func TestDelayRetransmission(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
-	for _, v := range []struct {
+	for _, tc := range []struct {
 		retran    time.Duration
 		iteration uint
 		jitter    time.Duration
@@ -540,20 +516,20 @@ func TestExponentialBackoff(t *testing.T) {
 		{retran: time.Second, iteration: 7, want: 64 * time.Second},
 		{retran: time.Second, iteration: 10, want: 64 * time.Second},
 	} {
-		t.Run(fmt.Sprintf("baseRetransmission=%s,jitter=%s,iteration=%d", v.retran, v.jitter, v.iteration), func(t *testing.T) {
-			c := NewClient(nil, 0, "", 0, 0, v.retran, nil)
+		t.Run(fmt.Sprintf("baseRetransmission=%s,jitter=%s,iteration=%d", tc.retran, tc.jitter, tc.iteration), func(t *testing.T) {
+			c := NewClient(nil, 0, "", 0, 0, tc.retran, nil)
 			// When used to add jitter to backoff, 1s is subtracted from random number
 			// to map [0s, +2s] -> [-1s, +1s], so add 1s here to compensate for that.
-			c.rand = rand.New(&randSourceStub{src: int64(time.Second + v.jitter)})
-			if got := c.exponentialBackoff(v.iteration); got != v.want {
-				t.Errorf("c.exponentialBackoff(%d) = %s, want: %s", v.iteration, got, v.want)
+			c.rand = rand.New(&randSourceStub{src: int64(time.Second + tc.jitter)})
+			if got := c.exponentialBackoff(tc.iteration); got != tc.want {
+				t.Errorf("c.exponentialBackoff(%d) = %s, want: %s", tc.iteration, got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRetransmissionExponentialBackoff(t *testing.T) {
-	for _, v := range []struct {
+	for _, tc := range []struct {
 		serverDelay, baseRetran time.Duration
 		wantTimeouts            uint64
 	}{
@@ -573,12 +549,17 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			wantTimeouts: 3,
 		},
 	} {
-		t.Run(fmt.Sprintf("serverDelay=%s,baseRetransmission=%s", v.serverDelay, v.baseRetran), func(t *testing.T) {
-			var serverLinkEP, clientLinkEP endpoint
-			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
-			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
+		t.Run(fmt.Sprintf("serverDelay=%s,baseRetransmission=%s", tc.serverDelay, tc.baseRetran), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			info := c.Info()
+			info.Retransmission = tc.baseRetran
+			c.info.Store(info)
+
 			var offerSent bool
-			serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+			serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 				switch typ := mustMsgType(t, b); typ {
 				case dhcpOFFER:
 					// Only respond to the first DHCPDISCOVER to avoid unwanted delays on responses to DHCPREQUEST.
@@ -586,52 +567,26 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 						return nil, 0
 					}
 					offerSent = true
-					return []stack.PacketBuffer{b}, v.serverDelay
+					return []stack.PacketBuffer{b}, tc.serverDelay
 				case dhcpACK:
-					return []stack.PacketBuffer{b}, v.serverDelay
+					return []stack.PacketBuffer{b}, tc.serverDelay
 				default:
 					t.Fatalf("test server is sending packet with unexpected type: %s", typ)
 					return nil, 0
 				}
 			}
 
-			serverStack := createTestStack()
-			addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
-
-			clientStack := createTestStack()
-			addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
-
-			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
-
-			serverCfg := Config{
-				ServerAddress: serverAddr,
-				SubnetMask:    "\xff\xff\xff\x00",
-				Gateway:       "\xc0\xa8\x03\xF0",
-				DNS: []tcpip.Address{
-					"\x08\x08\x08\x08", "\x08\x08\x04\x04",
-				},
-				LeaseLength: defaultLeaseLength,
-			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-				t.Fatal(err)
-			}
-
-			c := newZeroJitterClient(clientStack, testNICID, linkAddr1, 0, 0, v.baseRetran, nil)
-			info := c.Info()
 			if _, err := c.acquire(ctx, &info); err != nil {
 				t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
 			}
-			if got := c.stats.RecvOfferTimeout.Value(); got != v.wantTimeouts {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: %d", got, v.wantTimeouts)
+			if got := c.stats.RecvOfferTimeout.Value(); got != tc.wantTimeouts {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: %d", got, tc.wantTimeouts)
 			}
 			if got := c.stats.RecvOffers.Value(); got != 1 {
 				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
 			}
-			if got := c.stats.RecvAckTimeout.Value(); got != v.wantTimeouts {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: %d", got, v.wantTimeouts)
+			if got := c.stats.RecvAckTimeout.Value(); got != tc.wantTimeouts {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: %d", got, tc.wantTimeouts)
 			}
 			if got := c.stats.RecvAcks.Value(); got != 1 {
 				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAcks count: %d, want: 1", got)
@@ -674,10 +629,6 @@ func mustCloneWithNewMsgType(t *testing.T, b stack.PacketBuffer, msgType dhcpMsg
 }
 
 func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
-	var serverLinkEP, clientLinkEP endpoint
-	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
-	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
-
 	// Server is stubbed to only respond to the first DHCPDISCOVER to avoid unwanted
 	// delays on responses to DHCPREQUEST.
 	//
@@ -691,9 +642,17 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	// Similar flow of events happens for DHCPREQUEST.
 	const serverDelay = 30 * time.Millisecond
 	const retransmissionDelay = 50 * time.Millisecond
-	var offerSent bool
 
-	serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+	info := c.Info()
+	info.Retransmission = retransmissionDelay
+	c.info.Store(info)
+
+	var offerSent bool
+	serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 		switch typ := mustMsgType(t, b); typ {
 		case dhcpOFFER:
 			if offerSent {
@@ -715,32 +674,6 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 		}
 	}
 
-	serverStack := createTestStack()
-	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
-
-	clientStack := createTestStack()
-	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
-
-	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
-
-	serverCfg := Config{
-		ServerAddress: serverAddr,
-		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
-		DNS: []tcpip.Address{
-			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
-		},
-		LeaseLength: defaultLeaseLength,
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-		t.Fatal(err)
-	}
-
-	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, 0, 0, retransmissionDelay, nil)
-	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
 	}
@@ -834,53 +767,23 @@ func TestStateTransition(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var serverLinkEP, clientLinkEP endpoint
-			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
-			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
-
-			var blockData uint32 = 0
-			clientLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
-				if atomic.LoadUint32(&blockData) == 1 {
-					return nil, 0
-				}
-				if tc.typ == testRebind {
-					// Only pass client broadcast packets back into the stack. This simulates
-					// packet loss during the client's unicast RENEWING state, forcing
-					// it into broadcast REBINDING state.
-					if header.IPv4(b.Header.View()).DestinationAddress() != header.IPv4Broadcast {
-						return nil, 0
-					}
-				}
-				return []stack.PacketBuffer{b}, 0
-			}
-
-			serverStack := createTestStack()
-			addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
-
-			clientStack := createTestStack()
-			addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
-
-			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
-
-			serverCfg := Config{
-				ServerAddress: serverAddr,
-				SubnetMask:    "\xff\xff\xff\x00",
-				Gateway:       "\xc0\xa8\x03\xF0",
-				DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-				LeaseLength:   leaseLength,
-				RebindTime:    rebindTime,
-				RenewTime:     renewTime,
-			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-				t.Fatal(err)
-			}
+
+			serverCfg := defaultServerCfg
+			serverCfg.LeaseLength = leaseLength
+			serverCfg.RebindTime = rebindTime
+			serverCfg.RenewTime = renewTime
+
+			clientStack, clientEP, _, c := setupTestEnv(ctx, t, serverCfg)
+			info := c.Info()
+			info.Acquisition = tc.acquireTimeout
+			c.info.Store(info)
 
 			count := 0
 			var curAddr tcpip.AddressWithPrefix
 			addrCh := make(chan tcpip.AddressWithPrefix)
-			acquiredFunc := func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
+			c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
 				if oldAddr != curAddr {
 					t.Fatalf("aquisition %d: curAddr=%s, oldAddr=%s", count, curAddr, oldAddr)
 				}
@@ -921,7 +824,22 @@ func TestStateTransition(t *testing.T) {
 				}
 			}
 
-			c := newZeroJitterClient(clientStack, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
+			var blockData uint32 = 0
+			clientEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+				if atomic.LoadUint32(&blockData) == 1 {
+					return nil, 0
+				}
+				if tc.typ == testRebind {
+					// Only pass client broadcast packets back into the stack. This simulates
+					// packet loss during the client's unicast RENEWING state, forcing
+					// it into broadcast REBINDING state.
+					if header.IPv4(b.Header.View()).DestinationAddress() != header.IPv4Broadcast {
+						return nil, 0
+					}
+				}
+				return []stack.PacketBuffer{b}, 0
+			}
+
 			c.Run(ctx)
 
 			var addr tcpip.AddressWithPrefix
@@ -987,14 +905,20 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	)
 	testTimeout := stateTransitionTestTimeout(leaseLength)
 
-	var serverLinkEP, clientLinkEP endpoint
-	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
-	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverCfg := defaultServerCfg
+	serverCfg.LeaseLength = leaseLength
+	clientStack, _, serverEP, c := setupTestEnv(ctx, t, serverCfg)
+	info := c.Info()
+	info.Acquisition = acquireTimeout
+	c.info.Store(info)
 
 	// Only respond to the first DHCP request. This makes sure the client is stuck
 	// in init selecting state after lease expiration.
 	var ackSent bool
-	serverLinkEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+	serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
 		if ackSent {
 			return nil, 0
 		}
@@ -1004,30 +928,9 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		return []stack.PacketBuffer{b}, 0
 	}
 
-	serverStack := createTestStack()
-	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
-
-	clientStack := createTestStack()
-	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
-
-	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
-
-	serverCfg := Config{
-		ServerAddress: serverAddr,
-		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
-		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-		LeaseLength:   leaseLength,
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-		t.Fatal(err)
-	}
-
 	var curAddr tcpip.AddressWithPrefix
 	addrCh := make(chan tcpip.AddressWithPrefix)
-	acquiredFunc := func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
+	c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
 		// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
 		// will need to send from that address when it tries to renew its lease.
 		if newAddr == (tcpip.AddressWithPrefix{}) {
@@ -1051,7 +954,6 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		}
 	}
 
-	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, acquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
 	c.Run(ctx)
 
 	select {
@@ -1231,7 +1133,7 @@ func TestTwoServers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatal(err)
