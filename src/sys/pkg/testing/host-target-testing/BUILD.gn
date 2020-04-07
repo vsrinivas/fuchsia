@@ -13,5 +13,6 @@ go_library("host-target-testing") {
     "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/flynn/go-tuf",
     "//third_party/golibs:golang.org/x/crypto",
+    "//tools/net/sshutil",
   ]
 }

@@ -20,7 +20,7 @@ import (
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
-	"fuchsia.googlesource.com/host_target_testing/sshclient"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -35,7 +35,7 @@ type Client struct {
 
 	// This mutex protects the following fields.
 	mu        sync.Mutex
-	sshClient *sshclient.Client
+	sshClient *sshutil.Client
 }
 
 // NewClient creates a new Client.
@@ -46,7 +46,7 @@ func NewClient(ctx context.Context, deviceHostname string, privateKey ssh.Signer
 	}
 
 	addr := net.JoinHostPort(deviceHostname, "22")
-	sshClient, err := sshclient.NewClient(ctx, addr, sshConfig)
+	sshClient, err := sshutil.NewClient(ctx, addr, sshConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (c *Client) Reconnect(ctx context.Context) error {
 
 	c.sshClient.Close()
 
-	sshClient, err := sshclient.NewClient(ctx, c.addr, c.sshConfig)
+	sshClient, err := sshutil.NewClient(ctx, c.addr, c.sshConfig)
 	if err != nil {
 		return err
 	}

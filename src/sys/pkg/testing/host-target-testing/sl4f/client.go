@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fuchsia.googlesource.com/host_target_testing/sshclient"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
 // Client is a wrapper around sl4f that supports auto-installing and starting
@@ -29,14 +29,14 @@ import (
 // target to have the "run" and "sl4f" packages available at
 // "fuchsia-pkg://host_target_testing_sl4f".
 type Client struct {
-	sshClient *sshclient.Client
+	sshClient *sshutil.Client
 	url       string
 	repoName  string
 	seq       uint64
-	server    *sshclient.Session
+	server    *sshutil.Session
 }
 
-func NewClient(ctx context.Context, sshClient *sshclient.Client, addr string, repoName string) (*Client, error) {
+func NewClient(ctx context.Context, sshClient *sshutil.Client, addr string, repoName string) (*Client, error) {
 	c := &Client{
 		sshClient: sshClient,
 		repoName:  repoName,
