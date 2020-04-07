@@ -128,7 +128,10 @@ impl InspectDataFetcher {
         match raw_json {
             serde_json::Value::Array(values) => values
                 .into_iter()
-                .map(|tree_json| RawJsonNodeHierarchySerializer::deserialize(tree_json))
+                .map(|mut value| {
+                    let tree_json = value.get_mut("contents").context("contents are there")?.take();
+                    RawJsonNodeHierarchySerializer::deserialize(tree_json)
+                })
                 .collect::<Result<Vec<_>, _>>(),
             _ => unreachable!("No other json value type is expected here"),
         }
@@ -186,11 +189,9 @@ impl InspectDataFetcher {
                             let mut buf = vec![0; data.size as usize];
                             data.vmo.read(&mut buf, 0).context("reading vmo")?;
                             let hierarchy_json = std::str::from_utf8(&buf).unwrap();
-                            let mut output: serde_json::Value =
+                            let output: serde_json::Value =
                                 serde_json::from_str(&hierarchy_json).context("valid json")?;
-                            let tree_json =
-                                output.get_mut("contents").context("contents are there")?.take();
-                            result.push(tree_json);
+                            result.push(output);
                         }
                         _ => unreachable!(
                             "JSON was requested, no other data type should be received"
@@ -285,8 +286,9 @@ mod tests {
 
         let hierarchies = response.as_array_mut().expect("as array ok");
         assert_eq!(hierarchies.len(), 1);
-        let hierarchy = RawJsonNodeHierarchySerializer::deserialize(hierarchies[0].take())
-            .expect("deserialize ok");
+        let hierarchy =
+            RawJsonNodeHierarchySerializer::deserialize(hierarchies[0]["contents"].take())
+                .expect("deserialize ok");
 
         assert_inspect_tree!(hierarchy, root: {
             int: 3i64,
