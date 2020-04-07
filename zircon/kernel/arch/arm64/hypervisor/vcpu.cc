@@ -52,10 +52,13 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
     if (type == hypervisor::InterruptType::INACTIVE) {
       // There are no more pending interrupts.
       break;
-    } else if (gich_state->GetInterruptState(vector) != InterruptState::INACTIVE) {
-      // Skip an interrupt if it was already active or pending.
+    }
+    InterruptState state = gich_state->GetInterruptState(vector);
+    if (state == InterruptState::PENDING || state == InterruptState::PENDING_AND_ACTIVE) {
+      // Skip an interrupt if it was already pending, or active and pending.
       continue;
     }
+
     uint32_t lr_index = __builtin_ctzl(elrsr);
     bool hw = type == hypervisor::InterruptType::PHYSICAL;
     // From ARM GIC v3/v4, Section 4.8: If the GIC implements fewer than 256
@@ -67,7 +70,9 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
     // We may have as few as 16 priority levels, so step by 16 to the next
     // lowest priority in order to prioritise SGIs and PPIs over SPIs.
     uint8_t prio = vector < GIC_BASE_SPI ? 0 : 0x10;
-    uint64_t lr = gic_get_lr_from_vector(hw, prio, InterruptState::PENDING, vector);
+    state = state == InterruptState::INACTIVE ? InterruptState::PENDING
+                                              : InterruptState::PENDING_AND_ACTIVE;
+    uint64_t lr = gic_get_lr_from_vector(hw, prio, state, vector);
     ich_state->lr[lr_index] = lr;
     elrsr &= ~(1u << lr_index);
   }
