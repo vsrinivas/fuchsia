@@ -152,6 +152,7 @@ mod tests {
     use fuchsia_zircon::prelude::*;
     use futures::future::TryFutureExt;
     use futures::stream::TryStreamExt;
+    use std::ops::Range;
     use std::slice;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
@@ -184,14 +185,10 @@ mod tests {
                 )
             }
         }
-    }
 
-    const A: c_char = 'A' as _;
-    const B: c_char = 'B' as _;
-    const C: c_char = 'C' as _;
-
-    fn memset(x: &mut [c_char], offset: usize, value: c_char, size: usize) {
-        x[offset..(offset + size)].iter_mut().for_each(|x| *x = value);
+        fn fill_data(&mut self, region: Range<usize>, with: c_char) {
+            self.data[region].iter_mut().for_each(|c| *c = with);
+        }
     }
 
     #[test]
@@ -214,8 +211,8 @@ mod tests {
         let mut packet: fx_log_packet_t = Default::default();
         packet.metadata.pid = 1;
         packet.data[0] = 5;
-        memset(&mut packet.data[..], 1, A, 5);
-        memset(&mut packet.data[..], 7, B, 5);
+        packet.fill_data(1..6, 'A' as _);
+        packet.fill_data(7..12, 'B' as _);
 
         let ls = LogMessageSocket::new(sout).unwrap();
         sin.write(packet.as_bytes()).unwrap();
@@ -304,10 +301,10 @@ mod tests {
         let mut packet = test_packet();
         let end = 12;
         packet.data[0] = end as c_char - 1;
-        memset(&mut packet.data[..], 1, A, end - 1);
+        packet.fill_data(1..end, 'A' as _);
         packet.data[end] = 0;
 
-        let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end];
+        let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end]; // omit null-terminated
         let parsed = parse_log_message(buffer);
 
         assert_eq!(parsed, Err(StreamError::OutOfBounds));
@@ -318,14 +315,16 @@ mod tests {
         let mut packet = test_packet();
         let a_start = 1;
         let a_count = 11;
+        let a_end = a_start + a_count;
 
         packet.data[0] = a_count as c_char;
-        memset(&mut packet.data[..], a_start, A, a_count);
-        packet.data[a_start + a_count] = 0; // terminate tags
+        packet.fill_data(a_start..a_end, 'A' as _);
+        packet.data[a_end] = 0; // terminate tags
 
         let b_start = a_start + a_count + 1;
         let b_count = 5;
-        memset(&mut packet.data[..], b_start, B, b_count);
+        let b_end = b_start + b_count;
+        packet.fill_data(b_start..b_end, 'B' as _);
 
         let data_size = b_start + b_count;
 
@@ -352,17 +351,19 @@ mod tests {
         let mut packet = test_packet();
         let a_start = 1;
         let a_count = 11;
+        let a_end = a_start + a_count;
 
         packet.data[0] = a_count as c_char;
-        memset(&mut packet.data[..], a_start, A, a_count);
+        packet.fill_data(a_start..a_end, 'A' as _);
 
-        let b_start = a_start + a_count + 1;
+        let b_start = a_end + 1;
         let b_count = 5;
+        let b_end = b_start + b_count;
 
-        packet.data[b_start - 1] = b_count as c_char;
-        memset(&mut packet.data[..], b_start, B, b_count);
+        packet.data[a_end] = b_count as c_char;
+        packet.fill_data(b_start..b_end, 'B' as _);
 
-        let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + b_start + b_count];
+        let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + b_end];
         let parsed = parse_log_message(buffer);
 
         assert_eq!(parsed, Err(StreamError::OutOfBounds));
@@ -373,19 +374,22 @@ mod tests {
         let mut packet = test_packet();
         let a_start = 1;
         let a_count = 11;
+        let a_end = a_start + a_count;
 
         packet.data[0] = a_count as c_char;
-        memset(&mut packet.data[..], a_start, A, a_count);
+        packet.fill_data(a_start..a_end, 'A' as _);
 
-        let b_start = a_start + a_count + 1;
+        let b_start = a_end + 1;
         let b_count = 5;
+        let b_end = b_start + b_count;
 
-        packet.data[b_start - 1] = b_count as c_char;
-        memset(&mut packet.data[..], b_start, B, b_count);
+        packet.data[a_end] = b_count as c_char;
+        packet.fill_data(b_start..b_end, 'B' as _);
 
-        let c_start = b_start + b_count + 1;
+        let c_start = b_end + 1;
         let c_count = 5;
-        memset(&mut packet.data[..], c_start, C, c_count);
+        let c_end = c_start + c_count;
+        packet.fill_data(c_start..c_end, 'C' as _);
 
         let data_size = c_start + c_count;
 
@@ -416,20 +420,20 @@ mod tests {
         let tag_size = tag_len + 1; // the length-prefix byte
         for tag_num in 0..FX_LOG_MAX_TAGS {
             let start = tags_start + (tag_size * tag_num);
-            let ascii = A + tag_num as c_char;
+            let end = start + tag_len;
 
             packet.data[start - 1] = tag_len as c_char;
-            memset(&mut packet.data[..], start, ascii, tag_len);
+            let ascii = 'A' as c_char + tag_num as c_char;
+            packet.fill_data(start..end, ascii);
         }
 
         let msg_start = tags_start + (tag_size * FX_LOG_MAX_TAGS);
         let msg_len = 5;
-        let ascii = A + FX_LOG_MAX_TAGS as c_char;
-        memset(&mut packet.data[..], msg_start, ascii, msg_len);
+        let msg_end = msg_start + msg_len;
+        let msg_ascii = 'A' as c_char + FX_LOG_MAX_TAGS as c_char;
+        packet.fill_data(msg_start..msg_end, msg_ascii);
 
-        let data_size = msg_start + msg_len;
-
-        let min_buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
+        let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
         let full_buffer = &packet.as_bytes()[..];
 
         let (min_parsed, min_size) = parse_log_message(min_buffer).unwrap();
@@ -441,13 +445,15 @@ mod tests {
             time: packet.metadata.time,
             severity: packet.metadata.severity,
             dropped_logs: packet.metadata.dropped_logs,
-            msg: String::from_utf8(vec![ascii as u8; msg_len]).unwrap(),
+            msg: String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
             tags: (0..FX_LOG_MAX_TAGS as _)
-                .map(|tag_num| String::from_utf8(vec![(A + tag_num) as u8; tag_len]).unwrap())
+                .map(|tag_num| {
+                    String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap()
+                })
                 .collect(),
         };
 
-        assert_eq!(min_size, METADATA_SIZE + data_size);
+        assert_eq!(min_size, METADATA_SIZE + msg_end);
         assert_eq!(full_size, min_size);
 
         assert_eq!(min_parsed, expected_message);
@@ -462,10 +468,11 @@ mod tests {
         let tag_size = tag_len + 1; // the length-prefix byte
         for tag_num in 0..FX_LOG_MAX_TAGS {
             let start = tags_start + (tag_size * tag_num);
-            let ascii = A + tag_num as c_char;
+            let end = start + tag_len;
 
             packet.data[start - 1] = tag_len as c_char;
-            memset(&mut packet.data[..], start, ascii, tag_len);
+            let ascii = 'A' as c_char + tag_num as c_char;
+            packet.fill_data(start..end, ascii);
         }
 
         let msg_start = tags_start + (tag_size * FX_LOG_MAX_TAGS);
@@ -490,7 +497,8 @@ mod tests {
                 severity: packet.metadata.severity,
                 dropped_logs: packet.metadata.dropped_logs,
                 tags: (0..FX_LOG_MAX_TAGS as _)
-                    .map(|tag_num| String::from_utf8(vec![(A + tag_num) as u8; 2]).unwrap())
+                    .map(|tag_num| String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2])
+                        .unwrap())
                     .collect(),
                 msg: String::new(),
             }
@@ -501,8 +509,8 @@ mod tests {
     fn no_tags_with_message() {
         let mut packet = test_packet();
         packet.data[0] = 0;
-        packet.data[1] = A;
-        packet.data[2] = A; // measured size ends here
+        packet.data[1] = 'A' as _;
+        packet.data[2] = 'A' as _; // measured size ends here
         packet.data[3] = 0;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + 4]; // 0 tag size + 2 byte message + null
