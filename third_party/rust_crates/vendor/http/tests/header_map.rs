@@ -38,6 +38,22 @@ fn smoke() {
 }
 
 #[test]
+#[should_panic]
+fn reserve_over_capacity() {
+    // See https://github.com/hyperium/http/issues/352
+    let mut headers = HeaderMap::<u32>::with_capacity(32);
+    headers.reserve(50_000); // over MAX_SIZE
+}
+
+#[test]
+#[should_panic]
+fn reserve_overflow() {
+    // See https://github.com/hyperium/http/issues/352
+    let mut headers = HeaderMap::<u32>::with_capacity(0);
+    headers.reserve(std::usize::MAX); // next_power_of_two overflows
+}
+
+#[test]
 fn drain() {
     let mut headers = HeaderMap::new();
 
@@ -84,6 +100,40 @@ fn drain() {
 
         assert!(iter.next().is_none());
     }
+}
+
+#[test]
+fn drain_drop_immediately() {
+    // test mem::forgetting does not double-free
+
+    let mut headers = HeaderMap::new();
+    headers.insert("hello", "world".parse().unwrap());
+    headers.insert("zomg", "bar".parse().unwrap());
+    headers.append("hello", "world2".parse().unwrap());
+
+    let iter = headers.drain();
+    assert_eq!(iter.size_hint(), (2, Some(2)));
+    // not consuming `iter`
+}
+
+#[test]
+fn drain_forget() {
+    // test mem::forgetting does not double-free
+
+    let mut headers = HeaderMap::<HeaderValue>::new();
+    headers.insert("hello", "world".parse().unwrap());
+    headers.insert("zomg", "bar".parse().unwrap());
+
+    assert_eq!(headers.len(), 2);
+
+    {
+        let mut iter = headers.drain();
+        assert_eq!(iter.size_hint(), (2, Some(2)));
+        let _ = iter.next().unwrap();
+        std::mem::forget(iter);
+    }
+
+    assert_eq!(headers.len(), 0);
 }
 
 #[test]

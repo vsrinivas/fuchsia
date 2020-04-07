@@ -130,7 +130,7 @@ freetype = "0.4" # saved for future use
 getopts = "0.2"
 glob = "0.3.0"
 hex = "0.3.2"
-http = "0.1"
+http = "0.1.21"
 hyper = { version = "0.12.13", default-features = false }
 hyper-rustls = { version = "0.17.1", default-features = false }
 id_tree = "1.5"

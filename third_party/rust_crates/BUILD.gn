@@ -174,7 +174,7 @@ if (is_fuchsia) {
 }
 if (is_fuchsia) {
   group("http") {
-    deps = [ ":http-v0_1_19" ]
+    deps = [ ":http-v0_1_21" ]
   }
 }
 if (is_fuchsia) {
@@ -3031,7 +3031,7 @@ rust_library("h2-v0_1_16") {
   deps += [ ":bytes-v0_4_11" ]
   deps += [ ":fnv-v1_0_6" ]
   deps += [ ":futures-v0_1_29" ]
-  deps += [ ":http-v0_1_19" ]
+  deps += [ ":http-v0_1_21" ]
   deps += [ ":indexmap-v1_0_2" ]
   deps += [ ":log-v0_4_8" ]
   deps += [ ":slab-v0_4_2" ]
@@ -3175,10 +3175,10 @@ rust_library("hex-v0_3_2") {
   ]
 }
 
-rust_library("http-v0_1_19") {
+rust_library("http-v0_1_21") {
   crate_name = "http"
   crate_root = "//third_party/rust_crates/vendor/http/src/lib.rs"
-  output_name = "http-d8ffba5750289534"
+  output_name = "http-bd98e9b27f03cd25"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -3194,8 +3194,8 @@ rust_library("http-v0_1_19") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=d8ffba5750289534",
-    "-Cextra-filename=d8ffba5750289534",
+    "-Cmetadata=bd98e9b27f03cd25",
+    "-Cextra-filename=bd98e9b27f03cd25",
   ]
 }
 
@@ -3236,7 +3236,7 @@ rust_library("hyper-v0_12_24") {
   deps += [ ":bytes-v0_4_11" ]
   deps += [ ":futures-v0_1_29" ]
   deps += [ ":h2-v0_1_16" ]
-  deps += [ ":http-v0_1_19" ]
+  deps += [ ":http-v0_1_21" ]
   deps += [ ":httparse-v1_3_3" ]
   deps += [ ":iovec-v0_1_2" ]
   deps += [ ":itoa-v0_4_3" ]

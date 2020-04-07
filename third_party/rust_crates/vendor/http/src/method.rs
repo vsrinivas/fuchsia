@@ -219,13 +219,9 @@ impl Method {
     /// See [the spec](https://tools.ietf.org/html/rfc7231#section-4.2.2) for
     /// more words.
     pub fn is_idempotent(&self) -> bool {
-        if self.is_safe() {
-            true
-        } else {
-            match self.0 {
-                Put | Delete => true,
-                _ => false
-            }
+        match self.0 {
+            Put | Delete => true,
+            _ => self.is_safe(),
         }
     }
 
@@ -426,4 +422,18 @@ fn test_method_eq() {
 fn test_invalid_method() {
     assert!(Method::from_str("").is_err());
     assert!(Method::from_bytes(b"").is_err());
+}
+
+#[test]
+fn test_is_idempotent() {
+    assert!(Method::OPTIONS.is_idempotent());
+    assert!(Method::GET.is_idempotent());
+    assert!(Method::PUT.is_idempotent());
+    assert!(Method::DELETE.is_idempotent());
+    assert!(Method::HEAD.is_idempotent());
+    assert!(Method::TRACE.is_idempotent());
+
+    assert!(!Method::POST.is_idempotent());
+    assert!(!Method::CONNECT.is_idempotent());
+    assert!(!Method::PATCH.is_idempotent());
 }
