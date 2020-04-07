@@ -161,31 +161,32 @@ zx_status_t MediaApp::AcquireAudioRendererSync() {
 zx_status_t MediaApp::SetReferenceClock() {
   FX_DCHECK(audio_renderer_sync_);
 
+  zx::clock clone_of_mono;
   auto status =
       zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
-                        nullptr, &reference_clock_);
+                        nullptr, &clone_of_mono);
   if (status != ZX_OK) {
-    std::cerr << "Could not create clone of CLOCK_MONOTONIC: " << status << std::endl;
+    std::cerr << "Could not create clone of CLOCK_MONOTONIC (via create): " << status << std::endl;
     return status;
   }
 
   constexpr auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-  zx::clock dupe_clock_to_set;
-  status = reference_clock_.duplicate(rights, &dupe_clock_to_set);
+  zx::clock clock_to_set;
+  status = clone_of_mono.replace(rights, &clock_to_set);
   if (status != ZX_OK) {
-    std::cerr << "Could not duplicate clock to send: " << status << std::endl;
+    std::cerr << "Could not create clock to send (via replace): " << status << std::endl;
     return status;
   }
 
-  status = audio_renderer_sync_->SetReferenceClock(std::move(dupe_clock_to_set));
+  status = audio_renderer_sync_->SetReferenceClock(std::move(clock_to_set));
   if (status != ZX_OK) {
-    std::cerr << "Could not set reference clock for AudioRendererSync: " << status << std::endl;
+    std::cerr << "AudioRendererSync::SetReferenceClock failed: " << status << std::endl;
     return status;
   }
 
   status = audio_renderer_sync_->GetReferenceClock(&reference_clock_);
   if (status != ZX_OK) {
-    std::cerr << "Could not get reference clock for AudioRendererSync: " << status << std::endl;
+    std::cerr << "AudioRendererSync::GetReferenceClock failed: " << status << std::endl;
     return status;
   }
 
