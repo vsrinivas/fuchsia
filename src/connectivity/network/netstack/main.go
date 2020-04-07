@@ -184,20 +184,18 @@ func Main() {
 		},
 		HandleLocal: true,
 
-		// TODO(b/150455090): Re-enable the below configuations.
-		//NDPConfigs: tcpipstack.NDPConfigurations{
-		//	DupAddrDetectTransmits:  dadTransmits,
-		//	RetransmitTimer:         dadRetransmitTimer,
-		//	MaxRtrSolicitations:     maxRtrSolicitations,
-		//	RtrSolicitationInterval: rtrSolicitationInterval,
-		//	MaxRtrSolicitationDelay: maxRtrSolicitationDelay,
-		//	HandleRAs:               true,
-		//	DiscoverDefaultRouters:  true,
-		//	DiscoverOnLinkPrefixes:  true,
-		//	AutoGenGlobalAddresses:  true,
-		//},
+		NDPConfigs: tcpipstack.NDPConfigurations{
+			DupAddrDetectTransmits:  dadTransmits,
+			RetransmitTimer:         dadRetransmitTimer,
+			MaxRtrSolicitations:     maxRtrSolicitations,
+			RtrSolicitationInterval: rtrSolicitationInterval,
+			MaxRtrSolicitationDelay: maxRtrSolicitationDelay,
+			HandleRAs:               true,
+			DiscoverDefaultRouters:  true,
+			DiscoverOnLinkPrefixes:  true,
+			AutoGenGlobalAddresses:  true,
+		},
 		NDPDisp: ndpDisp,
-		//AutoGenIPv6LinkLocal: true,
 
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so

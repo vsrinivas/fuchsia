@@ -59,25 +59,6 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     // connect to netstack:
     let netstack = client::connect_to_service::<NetstackMarker>()?;
 
-    let skip_up_check = opt.skip_up_check;
-    let mut if_changed = netstack.take_event_stream().try_filter_map(
-        |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
-            match iface {
-                None => futures::future::ok(None),
-                Some(a) => {
-                    if skip_up_check
-                        || (a.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0)
-                    {
-                        futures::future::ok(Some((a.id, a.hwaddr.clone())))
-                    } else {
-                        fx_log_info!("Found interface, but it's down. waiting.");
-                        futures::future::ok(None)
-                    }
-                }
-            }
-        },
-    );
     let mut cfg = InterfaceConfig {
         name: if_name.to_string(),
         filepath: format!("/vdev/{}", opt.endpoint).to_string(),
@@ -98,9 +79,11 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let () = netstack.set_interface_status(nicid as u32, true)?;
     fx_log_info!("Added ethernet to stack.");
 
-    if let Some(ip) = opt.ip {
-        let mut subnet: fidl_fuchsia_net::Subnet =
-            ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("Can't parse provided ip").into();
+    let subnet: Option<fidl_fuchsia_net::Subnet> = opt.ip.as_ref().map(|ip| {
+        ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("Can't parse provided ip").into()
+    });
+
+    if let Some(mut subnet) = subnet {
         let _ = netstack
             .set_interface_address(nicid as u32, &mut subnet.addr, subnet.prefix_len)
             .await
@@ -125,7 +108,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 
     fx_log_info!("Configured nic address.");
 
-    if let Some(gateway) = opt.gateway {
+    if let Some(gateway) = &opt.gateway {
         let gw_addr: fidl_fuchsia_net::IpAddress = fidl_fuchsia_net_ext::IpAddress(
             gateway.parse::<std::net::IpAddr>().context("failed to parse gateway address")?,
         )
@@ -154,7 +137,34 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     }
 
     fx_log_info!("Waiting for interface up...");
-    let (if_id, hwaddr) = if_changed
+    let (if_id, hwaddr) = netstack
+        .take_event_stream()
+        .try_filter_map(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            if let Some(iface) = interfaces.iter().find(|iface| iface.name == if_name) {
+                if !opt.skip_up_check {
+                    if iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP == 0
+                    {
+                        fx_log_info!("Found interface, but it's down. waiting.");
+                        return futures::future::ok(None);
+                    }
+
+                    // If subnet is an IPv6 address, make sure the interface has
+                    // the address assigned so we know DAD has resolved.
+                    if let Some(subnet) = subnet {
+                        if let fidl_fuchsia_net::IpAddress::Ipv6(_) = subnet.addr {
+                            if !iface.ipv6addrs.iter().any(|x| x.addr == subnet.addr)  {
+                                fx_log_info!("Found interface, but IPv6 address is not resolved. waiting.");
+                                return futures::future::ok(None);
+                            }
+                        }
+                    }
+                }
+
+                return futures::future::ok(Some((iface.id, iface.hwaddr.clone())));
+            }
+
+            futures::future::ok(None)
+        })
         .try_next()
         .await
         .context("wait for interfaces")?
