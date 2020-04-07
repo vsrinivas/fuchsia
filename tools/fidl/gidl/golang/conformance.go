@@ -145,11 +145,6 @@ func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) e
 
 func marshalerContext(wireFormat gidlir.WireFormat) string {
 	switch wireFormat {
-	case gidlir.OldWireFormat:
-		return `fidl.MarshalerContext{
-			DecodeUnionsFromXUnionBytes: false,
-			EncodeUnionsAsXUnionBytes:   false,
-		}`
 	case gidlir.V1WireFormat:
 		return `fidl.MarshalerContext{
 			DecodeUnionsFromXUnionBytes: true,

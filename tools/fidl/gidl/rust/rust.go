@@ -170,7 +170,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		valueType := rustType(decodeSuccess.Value.(gidlir.Object).Name)
+		valueType := rustType(decodeSuccess.Value.(gidlir.Record).Name)
 		value := visit(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -274,7 +274,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case string:
 		// TODO(fxb/39686) Consider Go/Rust escape sequence differences
 		return wrapNullable(decl, fmt.Sprintf("String::from(%q)", value))
-	case gidlir.Object:
+	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
 			return onStruct(value, decl)
@@ -296,7 +296,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 		return "None"
 	}
-	panic(fmt.Sprintf("unexpected value visited %v of type %T (decl %v)", value, value, decl))
+	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
 func rustType(irType string) string {
@@ -328,7 +328,7 @@ func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 	case fidlir.Float64:
 		return "f64"
 	default:
-		panic(fmt.Sprintf("Unexpected subtype %s", string(subtype)))
+		panic(fmt.Sprintf("unexpected subtype %v", subtype))
 	}
 }
 
@@ -347,7 +347,7 @@ func wrapNullable(decl gidlmixer.Declaration, valueStr string) string {
 	panic(fmt.Sprintf("unexpected decl %v", decl))
 }
 
-func onStruct(value gidlir.Object, decl *gidlmixer.StructDecl) string {
+func onStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
 	var structFields []string
 	providedKeys := make(map[string]struct{}, len(value.Fields))
 	for _, field := range value.Fields {
@@ -356,7 +356,10 @@ func onStruct(value gidlir.Object, decl *gidlmixer.StructDecl) string {
 		}
 		providedKeys[field.Key.Name] = struct{}{}
 		fieldName := fidlcommon.ToSnakeCase(field.Key.Name)
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		fieldValueStr := visit(field.Value, fieldDecl)
 		structFields = append(structFields, fmt.Sprintf("%s: %s", fieldName, fieldValueStr))
 	}
@@ -375,7 +378,7 @@ func onStruct(value gidlir.Object, decl *gidlmixer.StructDecl) string {
 	return wrapNullable(decl, valueStr)
 }
 
-func onTable(value gidlir.Object, decl *gidlmixer.TableDecl) string {
+func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 	var tableFields []string
 	providedKeys := make(map[string]struct{}, len(value.Fields))
 	for _, field := range value.Fields {
@@ -384,7 +387,10 @@ func onTable(value gidlir.Object, decl *gidlmixer.TableDecl) string {
 		}
 		providedKeys[field.Key.Name] = struct{}{}
 		fieldName := fidlcommon.ToSnakeCase(field.Key.Name)
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		fieldValueStr := visit(field.Value, fieldDecl)
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
 	}
@@ -400,7 +406,7 @@ func onTable(value gidlir.Object, decl *gidlmixer.TableDecl) string {
 	return wrapNullable(decl, valueStr)
 }
 
-func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
+func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	if len(value.Fields) != 1 {
 		panic(fmt.Sprintf("union has %d fields, expected 1", len(value.Fields)))
 	}
@@ -410,7 +416,10 @@ func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
 	}
 	unionName := rustType(value.Name)
 	fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
-	fieldDecl, _ := decl.ForKey(field.Key)
+	fieldDecl, ok := decl.Field(field.Key.Name)
+	if !ok {
+		panic(fmt.Sprintf("field %s not found", field.Key.Name))
+	}
 	fieldValueStr := visit(field.Value, fieldDecl)
 	valueStr := fmt.Sprintf("%s::%s(%s)", unionName, fieldName, fieldValueStr)
 	return wrapNullable(decl, valueStr)
@@ -418,7 +427,7 @@ func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
 
 func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 	var elements []string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		elements = append(elements, visit(item, elemDecl))
 	}

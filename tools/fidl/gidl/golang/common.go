@@ -80,18 +80,21 @@ func (b *goValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	b.lastVar = newVar
 }
 
-func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
-	b.onObject(value, decl)
+func (b *goValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
+	b.onRecord(value, decl)
 }
 
-func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) {
+func (b *goValueBuilder) onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("%s := %s{}\n", containerVar, typeLiteral(decl)))
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
@@ -107,17 +110,17 @@ func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecla
 	b.lastVar = containerVar
 }
 
-func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
-	b.onObject(value, decl)
+func (b *goValueBuilder) OnTable(value gidlir.Record, decl *gidlmixer.TableDecl) {
+	b.onRecord(value, decl)
 }
 
-func (b *goValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
-	b.onObject(value, decl)
+func (b *goValueBuilder) OnUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) {
+	b.onRecord(value, decl)
 }
 
 func (b *goValueBuilder) onList(value []interface{}, decl gidlmixer.ListDeclaration) {
 	var argStr string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
 		argStr += b.lastVar + ", "
@@ -166,9 +169,9 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 	case *gidlmixer.UnionDecl:
 		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
-		return fmt.Sprintf("[%d]%s", decl.Size(), elemName(decl))
+		return fmt.Sprintf("[%d]%s", decl.Size(), typeName(decl.Elem()))
 	case *gidlmixer.VectorDecl:
-		return fmt.Sprintf("%s[]%s", pointerPrefix, elemName(decl))
+		return fmt.Sprintf("%s[]%s", pointerPrefix, typeName(decl.Elem()))
 	default:
 		panic("unhandled case")
 	}
@@ -188,13 +191,6 @@ func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
 		}
 	}
 	return strings.Join(parts, ".")
-}
-
-func elemName(parent gidlmixer.ListDeclaration) string {
-	if elemDecl, ok := parent.Elem(); ok {
-		return typeName(elemDecl)
-	}
-	panic("missing element")
 }
 
 // Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go

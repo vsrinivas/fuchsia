@@ -25,11 +25,11 @@ func TestParseValues(t *testing.T) {
 		{gidl: `"hello"`, expectedValue: "hello"},
 		{gidl: `true`, expectedValue: true},
 		{gidl: `null`, expectedValue: nil},
-		{gidl: `SomeObject {}`, expectedValue: ir.Object{
-			Name: "SomeObject",
+		{gidl: `SomeRecord {}`, expectedValue: ir.Record{
+			Name: "SomeRecord",
 		}},
-		{gidl: `SomeObject { the_field: 5, }`, expectedValue: ir.Object{
-			Name: "SomeObject",
+		{gidl: `SomeRecord { the_field: 5, }`, expectedValue: ir.Record{
+			Name: "SomeRecord",
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
@@ -39,8 +39,8 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `SomeObject { the_field: null, }`, expectedValue: ir.Object{
-			Name: "SomeObject",
+		{gidl: `SomeRecord { the_field: null, }`, expectedValue: ir.Record{
+			Name: "SomeRecord",
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
@@ -50,8 +50,8 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `SomeObject { 0x01020304: 5, }`, expectedValue: ir.Object{
-			Name: "SomeObject",
+		{gidl: `SomeRecord { 0x01020304: 5, }`, expectedValue: ir.Record{
+			Name: "SomeRecord",
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
@@ -61,8 +61,8 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `SomeObject { f1: 0x01, }`, expectedValue: ir.Object{
-			Name: "SomeObject",
+		{gidl: `SomeRecord { f1: 0x01, }`, expectedValue: ir.Record{
+			Name: "SomeRecord",
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
@@ -72,20 +72,20 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `SomeObject {
-			the_field: SomeNestedObject {
+		{gidl: `SomeRecord {
+			the_field: SomeNestedRecord {
 				foo: 5,
 				bar: 7,
 			},
-		}`, expectedValue: ir.Object{
-			Name: "SomeObject",
+		}`, expectedValue: ir.Record{
+			Name: "SomeRecord",
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
 						Name: "the_field",
 					},
-					Value: ir.Object{
-						Name: "SomeNestedObject",
+					Value: ir.Record{
+						Name: "SomeNestedRecord",
 						Fields: []ir.Field{
 							{
 								Key: ir.FieldKey{
@@ -328,7 +328,7 @@ func TestParseSuccessCase(t *testing.T) {
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
@@ -349,7 +349,7 @@ func TestParseSuccessCase(t *testing.T) {
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
@@ -389,7 +389,7 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
@@ -429,7 +429,7 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 	expectedAll := ir.All{
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
@@ -464,7 +464,7 @@ func TestParseEncodeFailureCase(t *testing.T) {
 		EncodeFailure: []ir.EncodeFailure{{
 			Name:        "OneStringOfMaxLengthFive-too-long",
 			WireFormats: []ir.WireFormat{ir.OldWireFormat, ir.V1WireFormat},
-			Value: ir.Object{
+			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
@@ -522,7 +522,7 @@ func TestParseEncodeBenchmarkCase(t *testing.T) {
 	expectedAll := ir.All{
 		EncodeBenchmark: []ir.EncodeBenchmark{{
 			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
@@ -589,7 +589,7 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 		EncodeSuccess: []ir.EncodeSuccess{
 			{
 				Name: "OneStringOfMaxLengthFive-empty",
-				Value: ir.Object{
+				Value: ir.Record{
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
 						{
@@ -614,7 +614,7 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 		DecodeSuccess: []ir.DecodeSuccess{
 			{
 				Name: "OneStringOfMaxLengthFive-empty",
-				Value: ir.Object{
+				Value: ir.Record{
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
 						{
@@ -695,7 +695,7 @@ func TestParseSucceedsMultipleWireFormats(t *testing.T) {
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "MultipleWireFormats",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name:   "MultipleWireFormats",
 				Fields: []ir.Field(nil),
 			},
@@ -712,7 +712,7 @@ func TestParseSucceedsMultipleWireFormats(t *testing.T) {
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "MultipleWireFormats",
-			Value: ir.Object{
+			Value: ir.Record{
 				Name:   "MultipleWireFormats",
 				Fields: []ir.Field(nil),
 			},

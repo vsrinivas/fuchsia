@@ -294,12 +294,12 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		return strconv.FormatFloat(value, 'g', -1, 64)
 	case string:
 		return fidlcommon.SingleQuote(value)
-	case gidlir.Object:
+	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
-			return onObject(value, decl)
+			return onRecord(value, decl)
 		case *gidlmixer.TableDecl:
-			return onObject(value, decl)
+			return onRecord(value, decl)
 		case *gidlmixer.UnionDecl:
 			return onUnion(value, decl)
 		}
@@ -317,28 +317,34 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		return "null"
 
 	}
-	panic(fmt.Sprintf("unexpected value visited %v (decl %v)", value, decl))
+	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
-func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
+func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	var args []string
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		val := visit(field.Value, fieldDecl)
 		args = append(args, fmt.Sprintf("%s: %s", fidlcommon.ToLowerCamelCase(field.Key.Name), val))
 	}
 	return fmt.Sprintf("%s(%s)", fidlcommon.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
 }
 
-func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
+func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		val := visit(field.Value, fieldDecl)
 		return fmt.Sprintf("%s.with%s(%s)", value.Name, fidlcommon.ToUpperCamelCase(field.Key.Name), val)
 	}
@@ -348,7 +354,7 @@ func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
 
 func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 	var elements []string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		elements = append(elements, visit(item, elemDecl))
 	}

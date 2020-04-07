@@ -260,28 +260,15 @@ func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 	switch subtype {
 	case fidlir.Bool:
 		return "bool"
-	case fidlir.Int8:
-		return "int8_t"
-	case fidlir.Uint8:
-		return "uint8_t"
-	case fidlir.Int16:
-		return "int16_t"
-	case fidlir.Uint16:
-		return "uint16_t"
-	case fidlir.Int32:
-		return "int32_t"
-	case fidlir.Uint32:
-		return "uint32_t"
-	case fidlir.Int64:
-		return "int64_t"
-	case fidlir.Uint64:
-		return "uint64_t"
+	case fidlir.Uint8, fidlir.Uint16, fidlir.Uint32, fidlir.Uint64,
+		fidlir.Int8, fidlir.Int16, fidlir.Int32, fidlir.Int64:
+		return fmt.Sprintf("%s_t", subtype)
 	case fidlir.Float32:
 		return "float"
 	case fidlir.Float64:
 		return "double"
 	default:
-		panic(fmt.Sprintf("Unexpected subtype %s", string(subtype)))
+		panic(fmt.Sprintf("unexpected subtype %s", subtype))
 	}
 }
 
@@ -320,12 +307,15 @@ func (b *llcppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	b.lastVar = newVar
 }
 
-func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
+func (b *llcppValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"llcpp::conformance::%s %s{};\n", value.Name, containerVar))
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		b.Builder.WriteString(fmt.Sprintf(
 			"%s.%s = std::move(%s);\n", containerVar, field.Key.Name, b.lastVar))
@@ -341,7 +331,7 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 	}
 }
 
-func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
+func (b *llcppValueBuilder) OnTable(value gidlir.Record, decl *gidlmixer.TableDecl) {
 	frameVar := b.newVar()
 
 	b.Builder.WriteString(fmt.Sprintf(
@@ -356,7 +346,10 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 		alignedVar := b.newVar()
@@ -372,7 +365,7 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 	b.lastVar = tableVar
 }
 
-func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
+func (b *llcppValueBuilder) OnUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) {
 	containerVar := b.newVar()
 
 	b.Builder.WriteString(fmt.Sprintf(
@@ -382,7 +375,10 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 		alignedVar := b.newVar()
@@ -395,7 +391,7 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 
 func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
 	var elements []string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
 		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
@@ -416,14 +412,14 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 
 	}
 	var elements []string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
 		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
 	}
 	arrayVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
-		arrayVar, elemName(decl), len(elements), strings.Join(elements, ", ")))
+		arrayVar, typeName(elemDecl), len(elements), strings.Join(elements, ", ")))
 	sliceVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(fidl::unowned_ptr(%s.data()), %d);\n",
 		sliceVar, typeName(decl), arrayVar, len(elements)))
@@ -452,9 +448,9 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 	case *gidlmixer.UnionDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
-		return fmt.Sprintf("fidl::Array<%s, %d>", elemName(decl), decl.Size())
+		return fmt.Sprintf("fidl::Array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
-		return fmt.Sprintf("fidl::VectorView<%s>", elemName(decl))
+		return fmt.Sprintf("fidl::VectorView<%s>", typeName(decl.Elem()))
 	default:
 		panic("unhandled case")
 	}
@@ -474,13 +470,6 @@ func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
 		parts = append([]string{"llcpp"}, parts...)
 	}
 	return strings.Join(parts, "::")
-}
-
-func elemName(parent gidlmixer.ListDeclaration) string {
-	if elemDecl, ok := parent.Elem(); ok {
-		return typeName(elemDecl)
-	}
-	panic("missing element")
 }
 
 func llcppType(gidlTypeString string) string {

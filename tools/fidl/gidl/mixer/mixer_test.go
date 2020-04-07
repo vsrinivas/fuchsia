@@ -90,7 +90,7 @@ func TestLookupDeclByTypeSuccess(t *testing.T) {
 }
 
 func TestExtractDeclarationSuccess(t *testing.T) {
-	value := gidlir.Object{
+	value := gidlir.Record{
 		Name: "ExampleStruct",
 		Fields: []gidlir.Field{
 			{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
@@ -104,7 +104,7 @@ func TestExtractDeclarationSuccess(t *testing.T) {
 }
 
 func TestExtractDeclarationNotDefined(t *testing.T) {
-	value := gidlir.Object{
+	value := gidlir.Record{
 		Name:   "ThisIsNotAStruct",
 		Fields: []gidlir.Field{},
 	}
@@ -118,7 +118,7 @@ func TestExtractDeclarationNotDefined(t *testing.T) {
 }
 
 func TestExtractDeclarationDoesNotConform(t *testing.T) {
-	value := gidlir.Object{
+	value := gidlir.Record{
 		Name: "ExampleStruct",
 		Fields: []gidlir.Field{
 			{Key: gidlir.FieldKey{Name: "ThisIsNotAField"}, Value: "foo"},
@@ -134,7 +134,7 @@ func TestExtractDeclarationDoesNotConform(t *testing.T) {
 }
 
 func TestExtractDeclarationUnsafeSuccess(t *testing.T) {
-	value := gidlir.Object{
+	value := gidlir.Record{
 		Name: "ExampleStruct",
 		Fields: []gidlir.Field{
 			{Key: gidlir.FieldKey{Name: "ThisIsNotAField"}, Value: "foo"},
@@ -292,19 +292,19 @@ func TestStructDeclConformsNonNullable(t *testing.T) {
 	checkConforms(t,
 		structDecl,
 		[]conformTest{
-			conformOk{gidlir.Object{
+			conformOk{gidlir.Record{
 				Name: "ExampleStruct",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
 			}},
-			conformFail{gidlir.Object{
+			conformFail{gidlir.Record{
 				Name: "ExampleStruct",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "DefinitelyNotS"}, Value: "foo"},
 				},
 			}},
-			conformFail{gidlir.Object{
+			conformFail{gidlir.Record{
 				Name: "DefinitelyNotExampleStruct",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
@@ -326,7 +326,7 @@ func TestStructDeclConformsNullable(t *testing.T) {
 	checkConforms(t,
 		structDecl,
 		[]conformTest{
-			conformOk{gidlir.Object{
+			conformOk{gidlir.Record{
 				Name: "ExampleStruct",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
@@ -346,19 +346,19 @@ func TestTableDeclConforms(t *testing.T) {
 	checkConforms(t,
 		tableDecl,
 		[]conformTest{
-			conformOk{gidlir.Object{
+			conformOk{gidlir.Record{
 				Name: "ExampleTable",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "t"}, Value: "foo"},
 				},
 			}},
-			conformFail{gidlir.Object{
+			conformFail{gidlir.Record{
 				Name: "ExampleTable",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "DefinitelyNotT"}, Value: "foo"},
 				},
 			}},
-			conformFail{gidlir.Object{
+			conformFail{gidlir.Record{
 				Name: "DefinitelyNotExampleTable",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "t"}, Value: "foo"},
@@ -380,19 +380,19 @@ func TestUnionDeclConformsNonNullable(t *testing.T) {
 	checkConforms(t,
 		unionDecl,
 		[]conformTest{
-			conformOk{gidlir.Object{
+			conformOk{gidlir.Record{
 				Name: "ExampleXUnion",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
 				},
 			}},
-			conformFail{gidlir.Object{
+			conformFail{gidlir.Record{
 				Name: "ExampleXUnion",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "DefinitelyNotX"}, Value: "foo"},
 				},
 			}},
-			conformFail{gidlir.Object{
+			conformFail{gidlir.Record{
 				Name: "DefinitelyNotExampleXUnion",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
@@ -414,7 +414,7 @@ func TestUnionDeclConformsNullable(t *testing.T) {
 	checkConforms(t,
 		unionDecl,
 		[]conformTest{
-			conformOk{gidlir.Object{
+			conformOk{gidlir.Record{
 				Name: "ExampleXUnion",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
@@ -484,9 +484,9 @@ func (v *visitor) OnInt64(int64, fidlir.PrimitiveSubtype)     { v.visited = "Int
 func (v *visitor) OnUint64(uint64, fidlir.PrimitiveSubtype)   { v.visited = "Uint64" }
 func (v *visitor) OnFloat64(float64, fidlir.PrimitiveSubtype) { v.visited = "Float64" }
 func (v *visitor) OnString(string, *StringDecl)               { v.visited = "String" }
-func (v *visitor) OnStruct(gidlir.Object, *StructDecl)        { v.visited = "Struct" }
-func (v *visitor) OnTable(gidlir.Object, *TableDecl)          { v.visited = "Table" }
-func (v *visitor) OnUnion(gidlir.Object, *UnionDecl)          { v.visited = "Union" }
+func (v *visitor) OnStruct(gidlir.Record, *StructDecl)        { v.visited = "Struct" }
+func (v *visitor) OnTable(gidlir.Record, *TableDecl)          { v.visited = "Table" }
+func (v *visitor) OnUnion(gidlir.Record, *UnionDecl)          { v.visited = "Union" }
 func (v *visitor) OnArray([]interface{}, *ArrayDecl)          { v.visited = "Array" }
 func (v *visitor) OnVector([]interface{}, *VectorDecl)        { v.visited = "Vector" }
 func (v *visitor) OnNull(Declaration)                         { v.visited = "Null" }
@@ -505,9 +505,9 @@ func TestVisit(t *testing.T) {
 		{nil, &StringDecl{nullable: true}, "Null"},
 		// These values and decls are not fully initialized, but for the
 		// purposes of Visit() it should not matter.
-		{gidlir.Object{}, &StructDecl{}, "Struct"},
-		{gidlir.Object{}, &TableDecl{}, "Table"},
-		{gidlir.Object{}, &UnionDecl{}, "Union"},
+		{gidlir.Record{}, &StructDecl{}, "Struct"},
+		{gidlir.Record{}, &TableDecl{}, "Table"},
+		{gidlir.Record{}, &UnionDecl{}, "Union"},
 	}
 	for _, test := range tests {
 		var v visitor

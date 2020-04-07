@@ -106,7 +106,7 @@ func successTests(gidlDecodeSuccesses []gidlir.DecodeSuccess) ([]testArray, []su
 	var arrays []testArray
 	var cases []successCase
 	for _, decodeSuccess := range gidlDecodeSuccesses {
-		typeName := decodeSuccess.Value.(gidlir.Object).Name
+		typeName := decodeSuccess.Value.(gidlir.Record).Name
 		for _, encoding := range decodeSuccess.Encodings {
 			srcWireFormat := encoding.WireFormat
 			srcBytesVar := testArrayName(

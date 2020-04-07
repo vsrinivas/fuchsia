@@ -19,9 +19,9 @@ type ValueVisitor interface {
 	OnUint64(value uint64, typ fidlir.PrimitiveSubtype)
 	OnFloat64(value float64, typ fidlir.PrimitiveSubtype)
 	OnString(value string, decl *StringDecl)
-	OnStruct(value gidlir.Object, decl *StructDecl)
-	OnTable(value gidlir.Object, decl *TableDecl)
-	OnUnion(value gidlir.Object, decl *UnionDecl)
+	OnStruct(value gidlir.Record, decl *StructDecl)
+	OnTable(value gidlir.Record, decl *TableDecl)
+	OnUnion(value gidlir.Record, decl *UnionDecl)
 	OnArray(value []interface{}, decl *ArrayDecl)
 	OnVector(value []interface{}, decl *VectorDecl)
 	OnNull(decl Declaration)
@@ -46,7 +46,7 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 		default:
 			panic(fmt.Sprintf("string value has non-string decl: %T", decl))
 		}
-	case gidlir.Object:
+	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *StructDecl:
 			visitor.OnStruct(value, decl)
@@ -114,14 +114,15 @@ var _ = []PrimitiveDeclaration{
 	&FloatDecl{},
 }
 
-type KeyedDeclaration interface {
+type RecordDeclaration interface {
 	Declaration
-	// ForKey looks up the declaration for a specific key.
-	ForKey(key gidlir.FieldKey) (Declaration, bool)
+	// Field returns the declaration for the field with the given name. It
+	// returns false if no field with that name exists.
+	Field(name string) (Declaration, bool)
 }
 
-// Assert that wrappers conform to the KeyedDeclaration interface.
-var _ = []KeyedDeclaration{
+// Assert that wrappers conform to the RecordDeclaration interface.
+var _ = []RecordDeclaration{
 	&StructDecl{},
 	&TableDecl{},
 	&UnionDecl{},
@@ -129,8 +130,8 @@ var _ = []KeyedDeclaration{
 
 type ListDeclaration interface {
 	Declaration
-	// Returns the declaration of the child element (e.g. []int decl -> int decl).
-	Elem() (Declaration, bool)
+	// Elem returns the declaration for the list's element type.
+	Elem() Declaration
 }
 
 // Assert that wrappers conform to the ListDeclaration interface.
@@ -264,26 +265,24 @@ func (decl *StructDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *StructDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if key.IsKnown() {
-		for _, member := range decl.Members {
-			if string(member.Name) == key.Name {
-				return decl.schema.lookupDeclByType(member.Type)
-			}
+func (decl *StructDecl) Field(name string) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if string(member.Name) == name {
+			return decl.schema.lookupDeclByType(member.Type)
 		}
 	}
 	return nil, false
 }
 
-// objectConforms is a helper function for implementing Declarations.conforms on
-// types that expect a gidlir.Object value. It takes the kind ("struct", etc.),
-// expected identifier, schema, and nullability, and returns the object or an
+// recordConforms is a helper function for implementing Declarations.conforms on
+// types that expect a gidlir.Record value. It takes the kind ("struct", etc.),
+// expected identifier, schema, and nullability, and returns the record or an
 // error. It can also return (nil, nil) when value is nil and nullable is true.
-func objectConforms(value interface{}, kind string, identifier fidlir.EncodedCompoundIdentifier, schema Schema, nullable bool) (*gidlir.Object, error) {
+func recordConforms(value interface{}, kind string, identifier fidlir.EncodedCompoundIdentifier, schema Schema, nullable bool) (*gidlir.Record, error) {
 	switch value := value.(type) {
 	default:
 		return nil, fmt.Errorf("expecting %s, found %T (%v)", kind, value, value)
-	case gidlir.Object:
+	case gidlir.Record:
 		if actualIdentifier := schema.nameToIdentifier(value.Name); actualIdentifier != identifier {
 			return nil, fmt.Errorf("expecting %s %s, found %s", kind, identifier, actualIdentifier)
 		}
@@ -297,15 +296,15 @@ func objectConforms(value interface{}, kind string, identifier fidlir.EncodedCom
 }
 
 func (decl *StructDecl) conforms(value interface{}) error {
-	object, err := objectConforms(value, "struct", decl.Name, decl.schema, decl.nullable)
+	record, err := recordConforms(value, "struct", decl.Name, decl.schema, decl.nullable)
 	if err != nil {
 		return err
 	}
-	if object == nil {
+	if record == nil {
 		return nil
 	}
-	for _, field := range object.Fields {
-		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+	for _, field := range record.Fields {
+		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
 		} else if err := fieldDecl.conforms(field.Value); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
@@ -321,39 +320,40 @@ type TableDecl struct {
 	schema Schema
 }
 
-func (decl *TableDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if key.IsKnown() {
-		for _, member := range decl.Members {
-			if string(member.Name) == key.Name {
-				return decl.schema.lookupDeclByType(member.Type)
-			}
+func (decl *TableDecl) Field(name string) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if string(member.Name) == name {
+			return decl.schema.lookupDeclByType(member.Type)
 		}
-	} else {
-		for _, member := range decl.Members {
-			if uint64(member.Ordinal) == key.UnknownOrdinal {
-				return decl.schema.lookupDeclByType(member.Type)
-			}
+	}
+	return nil, false
+}
+
+func (decl *TableDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if uint64(member.Ordinal) == ordinal {
+			return decl.schema.lookupDeclByType(member.Type)
 		}
 	}
 	return nil, false
 }
 
 func (decl *TableDecl) conforms(value interface{}) error {
-	object, err := objectConforms(value, "table", decl.Name, decl.schema, false)
+	record, err := recordConforms(value, "table", decl.Name, decl.schema, false)
 	if err != nil {
 		return err
 	}
-	if object == nil {
+	if record == nil {
 		panic("tables cannot be nullable")
 	}
-	for _, field := range object.Fields {
+	for _, field := range record.Fields {
 		if field.Key.IsUnknown() {
-			if _, ok := decl.ForKey(field.Key); ok {
-				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.UnknownOrdinal)
+			if _, ok := decl.fieldByOrdinal(field.Key.UnknownOrdinal); ok {
+				return fmt.Errorf("field name must be used rather than ordinal %d", field.Key.UnknownOrdinal)
 			}
 			continue
 		}
-		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
 		} else if err := fieldDecl.conforms(field.Value); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
@@ -373,42 +373,43 @@ func (decl *UnionDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if key.IsKnown() {
-		for _, member := range decl.Members {
-			if string(member.Name) == key.Name {
-				return decl.schema.lookupDeclByType(member.Type)
-			}
+func (decl *UnionDecl) Field(name string) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if string(member.Name) == name {
+			return decl.schema.lookupDeclByType(member.Type)
 		}
-	} else {
-		for _, member := range decl.Members {
-			if uint64(member.Ordinal) == key.UnknownOrdinal {
-				return decl.schema.lookupDeclByType(member.Type)
-			}
+	}
+	return nil, false
+}
+
+func (decl *UnionDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if uint64(member.Ordinal) == ordinal {
+			return decl.schema.lookupDeclByType(member.Type)
 		}
 	}
 	return nil, false
 }
 
 func (decl *UnionDecl) conforms(value interface{}) error {
-	object, err := objectConforms(value, "union", decl.Name, decl.schema, decl.nullable)
+	record, err := recordConforms(value, "union", decl.Name, decl.schema, decl.nullable)
 	if err != nil {
 		return err
 	}
-	if object == nil {
+	if record == nil {
 		return nil
 	}
-	if num := len(object.Fields); num != 1 {
+	if num := len(record.Fields); num != 1 {
 		return fmt.Errorf("must have one field, found %d", num)
 	}
-	for _, field := range object.Fields {
+	for _, field := range record.Fields {
 		if field.Key.IsUnknown() {
-			if _, ok := decl.ForKey(field.Key); ok {
-				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.UnknownOrdinal)
+			if _, ok := decl.fieldByOrdinal(field.Key.UnknownOrdinal); ok {
+				return fmt.Errorf("field name must be used rather than ordinal %d", field.Key.UnknownOrdinal)
 			}
 			continue
 		}
-		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
 		} else if err := fieldDecl.conforms(field.Value); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
@@ -424,8 +425,13 @@ type ArrayDecl struct {
 	schema Schema
 }
 
-func (decl *ArrayDecl) Elem() (Declaration, bool) {
-	return decl.schema.lookupDeclByType(*decl.typ.ElementType)
+func (decl *ArrayDecl) Elem() Declaration {
+	elemType := *decl.typ.ElementType
+	elemDecl, ok := decl.schema.lookupDeclByType(elemType)
+	if !ok {
+		panic(fmt.Sprintf("array element type %v not found in schema", elemType))
+	}
+	return elemDecl
 }
 
 func (decl *ArrayDecl) Size() int {
@@ -440,10 +446,7 @@ func (decl *ArrayDecl) conforms(untypedValue interface{}) error {
 		if len(value) != decl.Size() {
 			return fmt.Errorf("expecting %d elements, got %d", decl.Size(), len(value))
 		}
-		elemDecl, ok := decl.Elem()
-		if !ok {
-			return fmt.Errorf("error resolving elem declaration")
-		}
+		elemDecl := decl.Elem()
 		for i, elem := range value {
 			if err := elemDecl.conforms(elem); err != nil {
 				return fmt.Errorf("[%d]: %s", i, err)
@@ -463,8 +466,13 @@ func (decl *VectorDecl) IsNullable() bool {
 	return decl.typ.Nullable
 }
 
-func (decl *VectorDecl) Elem() (Declaration, bool) {
-	return decl.schema.lookupDeclByType(*decl.typ.ElementType)
+func (decl *VectorDecl) Elem() Declaration {
+	elemType := *decl.typ.ElementType
+	elemDecl, ok := decl.schema.lookupDeclByType(elemType)
+	if !ok {
+		panic(fmt.Sprintf("vector element type %v not found in schema", elemType))
+	}
+	return elemDecl
 }
 
 func (decl *VectorDecl) MaxSize() (int, bool) {
@@ -482,10 +490,7 @@ func (decl *VectorDecl) conforms(untypedValue interface{}) error {
 		if maxSize, ok := decl.MaxSize(); ok && len(value) > maxSize {
 			return fmt.Errorf("expecting at most %d elements, got %d", maxSize, len(value))
 		}
-		elemDecl, ok := decl.Elem()
-		if !ok {
-			return fmt.Errorf("error resolving elem declaration")
-		}
+		elemDecl := decl.Elem()
 		for i, elem := range value {
 			if err := elemDecl.conforms(elem); err != nil {
 				return fmt.Errorf("[%d]: %s", i, err)
@@ -550,7 +555,7 @@ func (s Schema) ExtractDeclaration(value interface{}) (*StructDecl, error) {
 // cases where conformance is too strict (e.g. failure cases).
 func (s Schema) ExtractDeclarationUnsafe(value interface{}) (*StructDecl, error) {
 	switch value := value.(type) {
-	case gidlir.Object:
+	case gidlir.Record:
 		return s.ExtractDeclarationByName(value.Name)
 	default:
 		return nil, fmt.Errorf("top-level message must be a struct; got %s (%T)", value, value)

@@ -11,17 +11,17 @@ package ir
 // - `uint64` for positive numbers (of any size)
 // - `float64` for floating point numbers (of any size)
 // - `bool` for booleans
-// - `Object` for structs, tables, and unions
+// - `Record` for structs, tables, and unions
 // - `[]interface{}` for slices of values
 // - `nil` for null values (only allowed for nullable types)
 type Value interface{}
 
-// Object represents a value for a struct, table, or union type.
-type Object struct {
+// Record represents a value for a struct, table, or union type.
+type Record struct {
 	// Unqualified type name.
 	Name string
-	// List of fields. Struct and table objects can have any number of fields.
-	// Union objects should have exactly one field.
+	// List of fields. Struct and table records can have any number of fields.
+	// Union records should have exactly one field.
 	Fields []Field
 }
 

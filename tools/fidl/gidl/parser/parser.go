@@ -415,7 +415,7 @@ func (p *Parser) parseValue() (interface{}, error) {
 		if tok.value == "false" {
 			return false, nil
 		}
-		return p.parseObject(tok.value)
+		return p.parseRecord(tok.value)
 	case tLsquare:
 		return p.parseSlice()
 	case tString:
@@ -456,8 +456,8 @@ func parseNum(tok token, neg bool) (interface{}, error) {
 	}
 }
 
-func (p *Parser) parseObject(name string) (interface{}, error) {
-	obj := ir.Object{Name: name}
+func (p *Parser) parseRecord(name string) (interface{}, error) {
+	obj := ir.Record{Name: name}
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
 		tokFieldName, ok := p.consumeToken(tText)
 		if !ok {

@@ -254,11 +254,6 @@ func transactionHeaderBytes(wireFormat gidlir.WireFormat) []byte {
 			0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}
-	case gidlir.OldWireFormat:
-		return []byte{
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}
 	default:
 		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
 	}
@@ -308,57 +303,46 @@ func (b *cppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	if value == -9223372036854775808 {
 		// There are no negative integer literals in C++, so need to use arithmatic to create the minimum value.
-		b.Builder.WriteString(fmt.Sprintf("%s %s = -9223372036854775807ll - 1;\n", numberName(typ), newVar))
+		b.Builder.WriteString(fmt.Sprintf("%s %s = -9223372036854775807ll - 1;\n", primitiveTypeName(typ), newVar))
 	} else {
-		b.Builder.WriteString(fmt.Sprintf("%s %s = %dll;\n", numberName(typ), newVar, value))
+		b.Builder.WriteString(fmt.Sprintf("%s %s = %dll;\n", primitiveTypeName(typ), newVar, value))
 	}
 	b.lastVar = newVar
 }
 
 func (b *cppValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %dull;\n", numberName(typ), newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("%s %s = %dull;\n", primitiveTypeName(typ), newVar, value))
 	b.lastVar = newVar
 }
 
 func (b *cppValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
-	var typename string
-	switch typ {
-	case fidlir.Float32:
-		typename = "float"
-	case fidlir.Float64:
-		typename = "double"
-	default:
-		panic("unknown floating point type")
-	}
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %g;\n", typename, newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("%s %s = %g;\n", primitiveTypeName(typ), newVar, value))
 	b.lastVar = newVar
 }
 
 func (b *cppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	newVar := b.newVar()
-
 	// TODO(fxb/39686) Consider Go/C++ escape sequence differences
 	b.Builder.WriteString(fmt.Sprintf(
 		"%s %s(%s);\n", typeName(decl), newVar, strconv.Quote(value)))
-
 	b.lastVar = newVar
 }
 
-func (b *cppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
-	b.onObject(value, decl)
+func (b *cppValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
+	b.onRecord(value, decl)
 }
 
-func (b *cppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
-	b.onObject(value, decl)
+func (b *cppValueBuilder) OnTable(value gidlir.Record, decl *gidlmixer.TableDecl) {
+	b.onRecord(value, decl)
 }
 
-func (b *cppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
-	b.onObject(value, decl)
+func (b *cppValueBuilder) OnUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) {
+	b.onRecord(value, decl)
 }
 
-func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) {
+func (b *cppValueBuilder) onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) {
 	containerVar := b.newVar()
 	nullable := decl.IsNullable()
 	if nullable {
@@ -374,7 +358,10 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecl
 		}
 		b.Builder.WriteString("\n")
 
-		fieldDecl, _ := decl.ForKey(field.Key)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
@@ -397,7 +384,7 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecl
 
 func (b *cppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
 	var elements []string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
 		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
@@ -411,7 +398,7 @@ func (b *cppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl
 
 func (b *cppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDecl) {
 	var elements []string
-	elemDecl, _ := decl.Elem()
+	elemDecl := decl.Elem()
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
 		elements = append(elements, b.lastVar)
@@ -435,7 +422,7 @@ func (b *cppValueBuilder) OnNull(decl gidlmixer.Declaration) {
 func typeName(decl gidlmixer.Declaration) string {
 	switch decl := decl.(type) {
 	case gidlmixer.PrimitiveDeclaration:
-		return numberName(decl.Subtype())
+		return primitiveTypeName(decl.Subtype())
 	case *gidlmixer.StringDecl:
 		if decl.IsNullable() {
 			return "::fidl::StringPtr"
@@ -454,12 +441,12 @@ func typeName(decl gidlmixer.Declaration) string {
 		}
 		return identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
-		return fmt.Sprintf("std::array<%s, %d>", elemName(decl), decl.Size())
+		return fmt.Sprintf("std::array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
 		if decl.IsNullable() {
-			return fmt.Sprintf("::fidl::VectorPtr<%s>", elemName(decl))
+			return fmt.Sprintf("::fidl::VectorPtr<%s>", typeName(decl.Elem()))
 		}
-		return fmt.Sprintf("std::vector<%s>", elemName(decl))
+		return fmt.Sprintf("std::vector<%s>", typeName(decl.Elem()))
 	default:
 		panic("unhandled case")
 	}
@@ -470,13 +457,18 @@ func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
 	return strings.Join(parts, "::")
 }
 
-func elemName(parent gidlmixer.ListDeclaration) string {
-	if elemDecl, ok := parent.Elem(); ok {
-		return typeName(elemDecl)
+func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
+	switch subtype {
+	case fidlir.Bool:
+		return "bool"
+	case fidlir.Uint8, fidlir.Uint16, fidlir.Uint32, fidlir.Uint64,
+		fidlir.Int8, fidlir.Int16, fidlir.Int32, fidlir.Int64:
+		return fmt.Sprintf("%s_t", subtype)
+	case fidlir.Float32:
+		return "float"
+	case fidlir.Float64:
+		return "double"
+	default:
+		panic(fmt.Sprintf("unexpected subtype %s", subtype))
 	}
-	panic("missing element")
-}
-
-func numberName(primitiveSubtype fidlir.PrimitiveSubtype) string {
-	return fmt.Sprintf("%s_t", primitiveSubtype)
 }

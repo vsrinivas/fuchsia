@@ -99,7 +99,7 @@ func ValidateAllType(input All, generatorType string) {
 // cases that contain them.
 func ContainsUnknownField(value Value) bool {
 	switch value := value.(type) {
-	case Object:
+	case Record:
 		for _, f := range value.Fields {
 			if f.Key.IsUnknown() {
 				return true
