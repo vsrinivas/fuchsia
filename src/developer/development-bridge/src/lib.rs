@@ -3,28 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{
-        AUTOSTART_MIN_RETRY_COUNT, LOCAL_SOCAT, MAX_RETRY_COUNT, RETRY_DELAY, SOCAT, SOCKET,
-        TARGET_SOCAT,
-    },
+    crate::constants::{LOCAL_SOCAT, MAX_RETRY_COUNT, RETRY_DELAY, SOCAT, SOCKET, TARGET_SOCAT},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::mdns::MdnsTargetFinder,
-    crate::target::{Target, TargetCollection},
-    anyhow::{Context, Error},
+    crate::target::{RCSConnection, Target, TargetCollection},
+    anyhow::{anyhow, Context, Error},
     ascendd_lib::run_ascendd,
+    async_std::task,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
-    fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    fidl_fuchsia_developer_remotecontrol::{ComponentControlError, RemoteControlMarker},
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
-    fidl_fuchsia_overnet_protocol::NodeId,
     fidl_fuchsia_test_manager as ftest_manager,
     futures::channel::mpsc,
     futures::lock::Mutex,
     futures::prelude::*,
-    futures::select,
     hoist::spawn,
     std::process::Command,
     std::rc::Rc,
@@ -37,6 +33,7 @@ mod discovery;
 mod mdns;
 mod net;
 mod target;
+mod util;
 
 async fn start_ascendd() {
     log::info!("Starting ascendd");
@@ -54,13 +51,32 @@ pub type GuardedTargetCollection = Arc<Mutex<TargetCollection>>;
 
 #[async_trait]
 pub trait DiscoveryHook {
-    async fn on_new_target(&self, nodename: &String, tc: &GuardedTargetCollection);
+    async fn on_new_target(&self, target: &Arc<Target>, tc: &GuardedTargetCollection);
+}
+
+#[derive(Default)]
+struct RCSActivatorHook {}
+
+#[async_trait]
+impl DiscoveryHook for RCSActivatorHook {
+    async fn on_new_target(&self, target: &Arc<Target>, _tc: &GuardedTargetCollection) {
+        let mut state = target.state.lock().await;
+        if state.overnet_started {
+            return;
+        }
+        match Daemon::start_remote_control(&target.nodename).await {
+            Ok(()) => state.overnet_started = true,
+            Err(e) => {
+                log::warn!("unable to start remote control for '{}': {}", target.nodename, e);
+                return;
+            }
+        }
+    }
 }
 
 // Daemon
 #[derive(Clone)]
 pub struct Daemon {
-    remote_control_proxy: RemoteControlProxy,
     target_collection: Arc<Mutex<TargetCollection>>,
 
     discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
@@ -76,16 +92,12 @@ impl Daemon {
             Arc::clone(&target_collection),
             Arc::clone(&discovered_target_hooks),
         );
-        let mut peer_id =
-            Daemon::find_remote_control().await?.expect("could not find or start remote control");
-        let remote_control_proxy = Daemon::create_remote_control_proxy(&mut peer_id).await?;
-        log::info!("Successfully connected to RCS");
-        // TODO(awdavies): Add in RCS-callback, making this mut.
-        let d = Daemon {
-            remote_control_proxy,
+        Daemon::spawn_onet_discovery(Arc::clone(&target_collection));
+        let mut d = Daemon {
             target_collection: Arc::clone(&target_collection),
             discovered_target_hooks: Arc::clone(&discovered_target_hooks),
         };
+        d.register_hook(RCSActivatorHook::default()).await;
 
         // MDNS must be started as late as possible to avoid races with registered
         // hooks.
@@ -113,11 +125,12 @@ impl Daemon {
                 let nodename = target.nodename.clone();
                 let mut tc_mut = tc.lock().await;
                 tc_mut.merge_insert(target).await;
+                let target_clone = Arc::clone(tc_mut.target_by_nodename(&nodename).unwrap());
                 let tc_clone = Arc::clone(&tc);
                 let hooks_clone = (*hooks.lock().await).clone();
                 spawn(async move {
                     futures::future::join_all(
-                        hooks_clone.iter().map(|hook| hook.on_new_target(&nodename, &tc_clone)),
+                        hooks_clone.iter().map(|hook| hook.on_new_target(&target_clone, &tc_clone)),
                     )
                     .await;
                 });
@@ -125,10 +138,7 @@ impl Daemon {
         });
     }
 
-    pub fn new_with_proxy_and_rx(
-        remote_control_proxy: RemoteControlProxy,
-        rx: mpsc::UnboundedReceiver<Target>,
-    ) -> Daemon {
+    pub fn new_with_rx(rx: mpsc::UnboundedReceiver<Target>) -> Daemon {
         let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
         Daemon::spawn_receiver_loop(
@@ -136,15 +146,7 @@ impl Daemon {
             Arc::clone(&target_collection),
             Arc::clone(&discovered_target_hooks),
         );
-        Daemon { remote_control_proxy, target_collection, discovered_target_hooks }
-    }
-
-    pub fn new_with_proxy(remote_control_proxy: RemoteControlProxy) -> Daemon {
-        Daemon {
-            remote_control_proxy,
-            target_collection: Arc::new(Mutex::new(TargetCollection::new())),
-            discovered_target_hooks: Arc::new(Mutex::new(Vec::new())),
-        }
+        Daemon { target_collection, discovered_target_hooks }
     }
 
     pub async fn handle_requests_from_stream(
@@ -158,22 +160,12 @@ impl Daemon {
         Ok(())
     }
 
-    async fn create_remote_control_proxy(id: &mut NodeId) -> Result<RemoteControlProxy, Error> {
-        let svc = hoist::connect_as_service_consumer()?;
-        let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        svc.connect_to_service(id, RemoteControlMarker::NAME, s)?;
-        let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
-        Ok(RemoteControlProxy::new(proxy))
-    }
-
-    async fn find_remote_control() -> Result<Option<NodeId>, Error> {
-        let (mut tx, mut rx) = futures::channel::mpsc::unbounded();
-
+    pub fn spawn_onet_discovery(tc: Arc<Mutex<TargetCollection>>) {
         spawn(async move {
             let svc = hoist::connect_as_service_consumer().unwrap();
             loop {
                 let peers = svc.list_peers().await.unwrap();
-                for peer in peers {
+                for mut peer in peers {
                     if peer.description.services.is_none() {
                         continue;
                     }
@@ -187,54 +179,55 @@ impl Daemon {
                     {
                         continue;
                     }
-                    tx.send(peer.id).await.unwrap();
-                    // In the future we'll want to keep going here and keep
-                    // looking for new RCS instances. For now, just exit,
-                    // because we wouldn't know what to do with another one
-                    // even if we did find it.
-                    return;
+                    if tc.lock().await.target_by_overnet_id(&peer.id).await.is_some() {
+                        continue;
+                    }
+                    let remote_control_proxy = ok_or_continue!(RCSConnection::new(&mut peer.id)
+                        .await
+                        .context("unable to convert proxy to target"));
+                    let target = ok_or_continue!(
+                        Target::from_rcs_connection(remote_control_proxy).await,
+                        "unable to convert proxy to target",
+                    );
+                    tc.lock().await.merge_insert(target).await;
                 }
             }
         });
-
-        let mut peer_id: Option<NodeId> = None;
-        for i in 0..MAX_RETRY_COUNT {
-            if i == AUTOSTART_MIN_RETRY_COUNT {
-                println!(
-                    "Could not find the RCS after {} attempts. Attempting to start it...",
-                    AUTOSTART_MIN_RETRY_COUNT
-                );
-                Daemon::start_remote_control().await?;
-                println!("RCS started successfully");
-            }
-
-            // TODO(jwing) use async-std here instead once we have it in-tree.
-            let fut = futures::compat::Compat01As03::new(tokio::timer::Delay::new(
-                std::time::Instant::now() + RETRY_DELAY,
-            ));
-
-            select! {
-                id = rx.next() => { peer_id = id; break },
-                _ = fut.fuse() => {}
-            };
-        }
-
-        return Ok(peer_id);
     }
 
-    async fn start_remote_control() -> Result<(), Error> {
-        let output = Command::new("fx")
+    async fn start_remote_control(nodename: &String) -> Result<(), Error> {
+        for _ in 0..MAX_RETRY_COUNT {
+            let output = Command::new("fx")
+            .arg("-d")
+            .arg(nodename)
             .arg("run")
             .arg("fuchsia-pkg://fuchsia.com/remote-control-runner#meta/remote-control-runner.cmx")
             .stdin(std::process::Stdio::null())
             .output()
-            .expect("failed to execute `fx run`");
-
-        if !output.stdout.starts_with("Successfully".as_bytes()) {
-            panic!("Starting RCS failed. Check target system logs for details.");
+            .context("Failed to run fx")?;
+            if output.stdout.starts_with(b"Successfully") {
+                return Ok(());
+            }
+            task::sleep(RETRY_DELAY).await;
         }
 
-        Ok(())
+        Err(anyhow!("Starting RCS failed. Check target system logs for details."))
+    }
+
+    /// Attempts to get at most one target. If there is more than one target,
+    /// returns an error.
+    /// TODO(fxb/47843): Implement target lookup for commands to deprecate this
+    /// function.
+    async fn target_from_cache(&self) -> Result<Arc<Target>, Error> {
+        let targets = self.target_collection.lock().await;
+        if targets.len() > 1 {
+            return Err(anyhow!("more than one target"));
+        }
+
+        match targets.iter().next() {
+            Some(t) => Ok(t.clone()),
+            None => Err(anyhow!("no targets found")),
+        }
     }
 
     pub async fn handle_request(&self, req: DaemonRequest, quiet: bool) -> Result<(), Error> {
@@ -264,16 +257,31 @@ impl Daemon {
                     );
                 }
 
-                let mut response = self
-                    .remote_control_proxy
-                    .start_component(
-                        &component_url,
-                        &mut args.iter().map(|s| s.as_str()),
-                        stdout,
-                        stderr,
-                        controller,
-                    )
-                    .await?;
+                let target = match self.target_from_cache().await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        log::warn!("{}", e);
+                        responder
+                            .send(&mut Err(ComponentControlError::ComponentControlFailure))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+                let target_state = target.state.lock().await;
+                let mut response = match &target_state.rcs {
+                    None => Err(ComponentControlError::ComponentControlFailure),
+                    Some(rcs) => {
+                        rcs.proxy
+                            .start_component(
+                                &component_url,
+                                &mut args.iter().map(|s| s.as_str()),
+                                stdout,
+                                stderr,
+                                controller,
+                            )
+                            .await?
+                    }
+                };
                 responder.send(&mut response).context("error sending response")?;
             }
             DaemonRequest::ListTargets { value, responder } => {
@@ -284,7 +292,7 @@ impl Daemon {
                 // parsing.
                 let targets = self.target_collection.lock().await;
                 let response = match value.as_ref() {
-                    "" => format!("{:?}", targets),
+                    "" => format!("{:?}", *targets),
                     _ => format!("{:?}", targets.target_by_nodename(&value)),
                 };
                 responder.send(response.as_ref()).context("error sending response")?;
@@ -293,11 +301,32 @@ impl Daemon {
                 if !quiet {
                     log::info!("Received launch suite request for '{:?}'", test_url);
                 }
-                match self.remote_control_proxy.launch_suite(&test_url, suite, controller).await {
-                    Ok(mut r) => responder.send(&mut r).context("sending LaunchSuite response")?,
-                    Err(_) => responder
-                        .send(&mut Err(ftest_manager::LaunchError::InternalError))
-                        .context("sending LaunchSuite error")?,
+                let target = match self.target_from_cache().await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        log::warn!("{}", e);
+                        responder
+                            .send(&mut Err(ftest_manager::LaunchError::InternalError))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+                let target_state = target.state.lock().await;
+                match &target_state.rcs {
+                    Some(rcs) => match rcs.proxy.launch_suite(&test_url, suite, controller).await {
+                        Ok(mut r) => {
+                            responder.send(&mut r).context("sending LaunchSuite response")?
+                        }
+                        Err(_) => responder
+                            .send(&mut Err(ftest_manager::LaunchError::InternalError))
+                            .context("sending LaunchSuite error")?,
+                    },
+                    None => {
+                        log::warn!("no RCS state available from target '{}'", target.nodename);
+                        responder
+                            .send(&mut Err(ftest_manager::LaunchError::InternalError))
+                            .context("sending LaunchSuite error")?;
+                    }
                 }
             }
             _ => {
@@ -381,18 +410,78 @@ mod test {
     use fidl_fuchsia_developer_remotecontrol::{
         ComponentControllerMarker, RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
     };
+    use fidl_fuchsia_overnet_protocol::NodeId;
     use std::collections::HashSet;
 
-    fn spawn_daemon_server_with_fake_remote_control(stream: DaemonRequestStream) {
+    struct TestHookFakeRCS {
+        ready_channel: mpsc::UnboundedSender<bool>,
+    }
+
+    impl TestHookFakeRCS {
+        pub fn new(ready_channel: mpsc::UnboundedSender<bool>) -> Self {
+            Self { ready_channel }
+        }
+    }
+
+    #[async_trait]
+    impl DiscoveryHook for TestHookFakeRCS {
+        async fn on_new_target(&self, target: &Arc<Target>, _tc: &GuardedTargetCollection) {
+            let mut target_state = target.state.lock().await;
+            target_state.rcs = match &target_state.rcs {
+                Some(_) => panic!("fake RCS should be set at most once"),
+                None => Some(RCSConnection::new_with_proxy(
+                    setup_fake_target_service(),
+                    &NodeId { id: 0u64 },
+                )),
+            };
+            self.ready_channel.unbounded_send(true).unwrap();
+        }
+    }
+
+    struct TargetControlChannels {
+        target_ready_channel: mpsc::UnboundedReceiver<bool>,
+        target_detected_channel: mpsc::UnboundedSender<Target>,
+    }
+
+    impl TargetControlChannels {
+        pub async fn send_target(&mut self, t: Target) {
+            self.target_detected_channel.unbounded_send(t).unwrap();
+            assert!(self.next_target_ready().await);
+        }
+
+        pub async fn next_target_ready(&mut self) -> bool {
+            self.target_ready_channel.next().await.unwrap()
+        }
+    }
+
+    async fn spawn_daemon_server_with_target_ctrl(
+        stream: DaemonRequestStream,
+    ) -> TargetControlChannels {
+        let (target_in, target_out) = mpsc::unbounded::<Target>();
+        let (target_ready_channel_in, target_ready_channel_out) = mpsc::unbounded::<bool>();
         spawn(async move {
-            Daemon::new_with_proxy(setup_fake_remote_control_service())
-                .handle_requests_from_stream(stream, false)
+            let mut d = Daemon::new_with_rx(target_out);
+            d.register_hook(TestHookFakeRCS::new(target_ready_channel_in)).await;
+            d.handle_requests_from_stream(stream, false)
                 .await
                 .unwrap_or_else(|err| panic!("Fatal error handling request: {:?}", err));
         });
+
+        TargetControlChannels {
+            target_ready_channel: target_ready_channel_out,
+            target_detected_channel: target_in,
+        }
     }
 
-    fn setup_fake_remote_control_service() -> RemoteControlProxy {
+    async fn spawn_daemon_server_with_fake_target(
+        stream: DaemonRequestStream,
+    ) -> TargetControlChannels {
+        let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
+        res.send_target(Target::new("foobar", Utc::now())).await;
+        res
+    }
+
+    fn setup_fake_target_service() -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
@@ -416,7 +505,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         hoist::run(async move {
-            spawn_daemon_server_with_fake_remote_control(stream);
+            let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
             let echoed = daemon_proxy.echo_string(echo).await.unwrap();
             assert_eq!(echoed, echo);
         });
@@ -434,7 +523,7 @@ mod test {
         let (serr, _) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
         hoist::run(async move {
-            spawn_daemon_server_with_fake_remote_control(stream);
+            let _ctrl = spawn_daemon_server_with_fake_target(stream).await;
             // There isn't a lot we can test here right now since this method has an empty response.
             // We just check for an Ok(()) and leave it to a real integration test to test behavior.
             daemon_proxy
@@ -447,18 +536,69 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn test_start_component_multiple_targets() -> Result<(), Error> {
+        let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
+        let args = vec!["test1".to_string(), "test2".to_string()];
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, server_end) = create_proxy::<ComponentControllerMarker>()?;
+        let (sout, _) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, _) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        hoist::run(async move {
+            let mut ctrl = spawn_daemon_server_with_fake_target(stream).await;
+            ctrl.send_target(Target::new("bazmumble", Utc::now())).await;
+            match daemon_proxy
+                .start_component(url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
+                .await
+                .unwrap()
+            {
+                Ok(_) => panic!("failure expected for multiple targets"),
+                _ => (),
+            }
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_targets() -> Result<(), Error> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        hoist::run(async move {
+            let mut ctrl = spawn_daemon_server_with_fake_target(stream).await;
+            ctrl.send_target(Target::new("baz", Utc::now())).await;
+            ctrl.send_target(Target::new("quux", Utc::now())).await;
+            let res = daemon_proxy.list_targets("").await.unwrap();
+
+            // TODO(awdavies): This check is in lieu of having an
+            // established format for the list_targets output.
+            assert!(res.contains("foobar"));
+            assert!(res.contains("baz"));
+            assert!(res.contains("quux"));
+
+            let res = daemon_proxy.list_targets("mlorp").await.unwrap();
+            assert!(!res.contains("foobar"));
+            assert!(!res.contains("baz"));
+            assert!(!res.contains("quux"));
+        });
+        Ok(())
+    }
+
     struct TestHookFirst {
         callbacks_done: mpsc::UnboundedSender<bool>,
     }
 
     #[async_trait]
     impl DiscoveryHook for TestHookFirst {
-        async fn on_new_target(&self, nodename: &String, tc: &GuardedTargetCollection) {
-            let t = Arc::clone(&tc.lock().await.target_by_nodename(nodename).unwrap());
-            let t = t.lock().await;
+        async fn on_new_target(&self, target: &Arc<Target>, tc: &GuardedTargetCollection) {
+            // This will crash if the target isn't already inserted.
+            let t = Arc::clone(&tc.lock().await.target_by_nodename(&target.nodename).unwrap());
             assert_eq!(t.nodename, "nothin");
-            assert_eq!(t.state, TargetState::Unknown);
-            assert_eq!(t.addrs, HashSet::new());
+            assert_eq!(*t.state.lock().await, TargetState::new());
+            assert_eq!(*t.addrs.lock().await, HashSet::new());
             self.callbacks_done.unbounded_send(true).unwrap();
         }
     }
@@ -469,30 +609,22 @@ mod test {
 
     #[async_trait]
     impl DiscoveryHook for TestHookSecond {
-        async fn on_new_target(&self, _nodename: &String, _tc: &GuardedTargetCollection) {
+        async fn on_new_target(&self, _target: &Arc<Target>, _tc: &GuardedTargetCollection) {
             self.callbacks_done.unbounded_send(true).unwrap();
         }
     }
 
     #[test]
-    fn test_receive_target() -> Result<(), Error> {
+    fn test_receive_target() {
         hoist::run(async move {
             let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
             let (tx, rx) = mpsc::unbounded::<Target>();
-            let mut daemon = Daemon::new_with_proxy_and_rx(setup_fake_remote_control_service(), rx);
+            let mut daemon = Daemon::new_with_rx(rx);
             daemon.register_hook(TestHookFirst { callbacks_done: tx_from_callback.clone() }).await;
             daemon.register_hook(TestHookSecond { callbacks_done: tx_from_callback }).await;
-            tx.unbounded_send(Target {
-                nodename: String::from("nothin"),
-                last_response: Utc::now(),
-                state: TargetState::Unknown,
-                addrs: HashSet::new(),
-            })
-            .unwrap();
+            tx.unbounded_send(Target::new("nothin", Utc::now())).unwrap();
             assert!(rx_from_callback.next().await.unwrap());
             assert!(rx_from_callback.next().await.unwrap());
         });
-
-        Ok(())
     }
 }

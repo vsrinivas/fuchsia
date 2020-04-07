@@ -54,11 +54,13 @@ mod linux {
     use std::collections::HashSet;
     use std::fmt::Write;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV6, UdpSocket};
+    use std::sync::Arc;
     use std::thread;
 
     use crate::net;
     use ::mdns::protocol as dns;
     use chrono::Utc;
+    use futures::lock::Mutex;
     use net2;
     use net2::unix::UnixUdpBuilderExt;
     use net2::UdpSocketExt;
@@ -141,7 +143,10 @@ mod linux {
                 return Err(MdnsConvertError::NodenameMissing);
             }
             let time = Utc::now();
-            Ok(Target { nodename, addrs, last_response: time, state: TargetState::Unknown })
+            let addrs = Arc::new(Mutex::new(addrs));
+            let last_response = Arc::new(Mutex::new(time));
+            let state = Arc::new(Mutex::new(TargetState::new()));
+            Ok(Target { nodename, addrs, last_response, state })
         }
     }
 
