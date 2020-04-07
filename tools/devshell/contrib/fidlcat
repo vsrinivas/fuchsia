@@ -29,51 +29,53 @@
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
 ##                   [--remote-pid=<pid> | --remote-name=<name> | run <component specification>]
 ##
-##    --port               Port the debug agent will be listening on. Will use 2345
-##                         by default.
-##    --with-symbol-server Connect to the symbol server. The first time you use this option,
-##                         fidlcat will give you a link to an authentication page.
-##                         You then have to use the generated key to authenticate.
-##    --debug-mode         Whether the debug agent's debug logs should be shown.
-##    --with-process-info  Display the process name, process id and thread id on
-##                         each line (useful for grep).
-##    --stack=<value>      Define the amount of stack frame to display
-##                         0: none (default value)
-##                         1: call site (1 to 4 levels)
-##                         2: full stack frame (adds some overhead)
-##    --syscalls           A regular expression which selects the syscalls to decode and display.
-##                         Can be passed multiple times.
-##                         By default, only zx_channel_.* syscalls are displayed.
-##                         To display all the syscalls, use: --syscalls ".*"
-##    --exclude-syscalls   A regular expression which selects the syscalls to not decode and
-##                         display.
-##                         Can be passed multiple times.
-##                         To be displayed, a syscall must verify --syscalls and not verify
-##                         --exclude-syscalls.
-##                         To display all the syscalls but the zx_handle syscalls, use:
-##                         --syscalls ".*" --exclude-syscalls "zx_handle_.*"
-##    --dump-messages      Always does a hexadecimal dump of the messages even if we can
-##                         decode them.
-##    --verbose=<value>    The log verbosity.  Legal values are "info", "warning",
-##                         "error", "fatal", or a number, starting from 0. Extra
-##                         verbosity comes with higher levels.
-##    --quiet=<value>      The log verbosity.  Legal values are "info", "warning",
-##                         "error", "fatal", or a number, starting from 0. Extra
-##                         verbosity comes with lower levels.
-##    --log-file=<path>    The log file destination.
-##    --remote-pid         The koid of the remote process to trace
-##    --remote-name        A set of comma-separated regexes. Fidlcat will monitor all existing
-##                         and future processes whose names match one of the regexes.
-##                         Can be provided multiple times for multiple regexes.
-##    --gdb                Launch fidlcat using gdb. This is only useful to be able to debug
-##                         fidlcat. When this option is used, the string you have to type within
-##                         gdb to launch fidlcat is printed and then, gdb is launched.
-##                         This option only works if you have the unstripped version of fidlcat.
-##    run                  A token indicating that you want to invoke and trace
-##                         the following component. The component is specified
-##                         with either a bash regex that matches a component URL
-##                         known to the build, or a full component URL not known
-##                         to your build, but available to your target.
+##    --port                Port the debug agent will be listening on. Will use 2345
+##                          by default.
+##    --with-symbol-server  Connect to the symbol server. The first time you use this option,
+##                          fidlcat will give you a link to an authentication page.
+##                          You then have to use the generated key to authenticate.
+##    --debug-mode          Whether the debug agent's debug logs should be shown.
+##    --with-process-info   Display the process name, process id and thread id on
+##                          each line (useful for grep).
+##    --stack=<value>       Define the amount of stack frame to display
+##                          0: none (default value)
+##                          1: call site (1 to 4 levels)
+##                          2: full stack frame (adds some overhead)
+##    --syscalls            A regular expression which selects the syscalls to decode and display.
+##                          Can be passed multiple times.
+##                          By default, only zx_channel_.* syscalls are displayed.
+##                          To display all the syscalls, use: --syscalls ".*"
+##    --exclude-syscalls    A regular expression which selects the syscalls to not decode and
+##                          display.
+##                          Can be passed multiple times.
+##                          To be displayed, a syscall must verify --syscalls and not verify
+##                          --exclude-syscalls.
+##                          To display all the syscalls but the zx_handle syscalls, use:
+##                          --syscalls ".*" --exclude-syscalls "zx_handle_.*"
+##    --dump-messages       Always does a hexadecimal dump of the messages even if we can
+##                          decode them.
+##    --verbose=<value>     The log verbosity.  Legal values are "info", "warning",
+##                          "error", "fatal", or a number, starting from 0. Extra
+##                          verbosity comes with higher levels.
+##    --quiet=<value>       The log verbosity.  Legal values are "info", "warning",
+##                          "error", "fatal", or a number, starting from 0. Extra
+##                          verbosity comes with lower levels.
+##    --log-file=<path>     The log file destination.
+##    --remote-pid          The koid of the remote process to trace
+##    --remote-name         A set of comma-separated regexes. Fidlcat will monitor all existing
+##                          and future processes whose names match one of the regexes.
+##                          Can be provided multiple times for multiple regexes.
+##    --symbol-path=<path>  An extra location where fildcat can find debug symbols.      
+##    --fidl-ir-path=<path> An extra location where fidlcat can find FIDL compiled files.
+##    --gdb                 Launch fidlcat using gdb. This is only useful to be able to debug
+##                          fidlcat. When this option is used, the string you have to type within
+##                          gdb to launch fidlcat is printed and then, gdb is launched.
+##                          This option only works if you have the unstripped version of fidlcat.
+##    run                   A token indicating that you want to invoke and trace
+##                          the following component. The component is specified
+##                          with either a bash regex that matches a component URL
+##                          known to the build, or a full component URL not known
+##                          to your build, but available to your target.
 ##
 ## Flags after -- are parsed by fidlcat.  Example usage:
 ##
@@ -171,6 +173,12 @@ while [[ $# -gt 0 ]]; do
       arguments+=("$1")
       ;;
     --remote-name=*)
+      arguments+=("$1")
+      ;;
+    --symbol-path=*)
+      arguments+=("$1")
+      ;;
+    --fidl-ir-path=*)
       arguments+=("$1")
       ;;
     --gdb)
