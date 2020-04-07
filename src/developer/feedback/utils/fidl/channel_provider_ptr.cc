@@ -55,7 +55,7 @@ ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
     pending_call_.CompleteOk(std::move(channel));
   });
 
-  return pending_call_.WaitForDone(timeout, std::move(if_timeout));
+  return pending_call_.WaitForDone(fit::Timeout(timeout, /*action=*/std::move(if_timeout)));
 }
 
 }  // namespace fidl

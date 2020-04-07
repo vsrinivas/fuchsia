@@ -14,6 +14,7 @@
 
 #include <type_traits>
 
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -52,11 +53,11 @@ class Bridge {
   ::fit::promise<V, E> WaitForDone() { return bridge_.consumer.promise_or(::fit::error()); }
 
   // Start the timeout and get the promise that will be ungated when |bridge_| is completed.
-  ::fit::promise<V, E> WaitForDone(
-      zx::duration timeout, ::fit::closure if_timeout = [] {}) {
-    if_timeout_ = std::move(if_timeout);
+  ::fit::promise<V, E> WaitForDone(Timeout timeout) {
+    timeout_ = std::move(timeout);
 
-    if (zx_status_t status = timeout_task_.PostDelayed(dispatcher_, timeout); status != ZX_OK) {
+    if (zx_status_t status = timeout_task_.PostDelayed(dispatcher_, timeout_.value);
+        status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to post timeout task, skipping '" << task_name_ << "'";
       return ::fit::make_result_promise<V, E>(::fit::error());
     }
@@ -65,14 +66,14 @@ class Bridge {
   }
 
  private:
-  void Timeout() {
+  void AtTimeout() {
     if (IsAlreadyDone()) {
       return;
     }
 
     FX_LOGS(WARNING) << task_name_ << " timed out";
-    if (if_timeout_) {
-      (*if_timeout_)();
+    if (timeout_.action) {
+      (*timeout_.action)();
     }
 
     bridge_.completer.complete_error();
@@ -82,10 +83,9 @@ class Bridge {
   const std::string task_name_;
   ::fit::bridge<V, E> bridge_;
 
-  async::TaskClosureMethod<Bridge, &Bridge::Timeout> timeout_task_{this};
+  async::TaskClosureMethod<Bridge, &Bridge::AtTimeout> timeout_task_{this};
 
-  // Additional work to do if |timeout_task_| triggers.
-  std::optional<::fit::closure> if_timeout_;
+  Timeout timeout_;
 };
 
 }  // namespace fit

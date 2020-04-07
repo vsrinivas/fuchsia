@@ -64,9 +64,8 @@ Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
     }
   });
 
-  return bridge_.WaitForDone(
-      timeout,
-      /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kScreenshot); });
+  return bridge_.WaitForDone(fit::Timeout(
+      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kScreenshot); }));
 }
 
 }  // namespace feedback

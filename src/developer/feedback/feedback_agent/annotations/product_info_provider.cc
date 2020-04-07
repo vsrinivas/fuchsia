@@ -193,8 +193,8 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
     bridge_.CompleteOk(std::move(product_info));
   });
 
-  return bridge_.WaitForDone(
-      timeout, /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kProductInfo); });
+  return bridge_.WaitForDone(fit::Timeout(
+      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kProductInfo); }));
 }
 
 }  // namespace internal

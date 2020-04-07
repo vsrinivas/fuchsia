@@ -61,10 +61,10 @@ TEST_F(BridgeTest, ExecutesIfTimeout) {
 
   auto bridge = CreateBridge<>();
 
-  EXPECT_TRUE(
-      ExecutePromise(bridge.WaitForDone(kTimeout, /*if_timeout=*/[&] { timeout_did_run = true; }),
-                     kTimeout)
-          .is_error());
+  EXPECT_TRUE(ExecutePromise(
+                  bridge.WaitForDone(Timeout(kTimeout, /*action=*/[&] { timeout_did_run = true; })),
+                  kTimeout)
+                  .is_error());
 
   EXPECT_TRUE(timeout_did_run);
 }
@@ -77,9 +77,10 @@ TEST_F(BridgeTest, CompleteError) {
   bridge.CompleteError();
 
   EXPECT_TRUE(bridge.IsAlreadyDone());
-  EXPECT_TRUE(ExecutePromise(bridge.WaitForDone(kTimeout, /*if_timeout=*/[&] {
-                timeout_did_run = true;
-              })).is_error());
+  EXPECT_TRUE(ExecutePromise(
+                  bridge.WaitForDone(Timeout(kTimeout, /*action=*/[&] { timeout_did_run = true; })),
+                  kTimeout)
+                  .is_error());
 
   EXPECT_FALSE(timeout_did_run);
 }

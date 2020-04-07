@@ -10,6 +10,7 @@ source_set("fit") {
     "bridge.h",
     "bridge_map.h",
     "promise.h",
+    "timeout.h",
   ]
 
   public_deps = [

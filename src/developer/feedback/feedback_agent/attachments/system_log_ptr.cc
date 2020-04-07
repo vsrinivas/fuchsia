@@ -83,8 +83,8 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
   logger_->DumpLogsSafe(std::move(log_listener_h), /*options=*/nullptr);
 
   return bridge_
-      .WaitForDone(timeout,
-                   /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kSystemLog); })
+      .WaitForDone(fit::Timeout(
+          timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kSystemLog); }))
       .then([this](::fit::result<void>& result) {
         binding_.Close(ZX_OK);
         return std::move(result);

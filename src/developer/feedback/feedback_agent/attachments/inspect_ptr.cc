@@ -51,8 +51,8 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
 
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return bridge_
-      .WaitForDone(timeout,
-                   /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kInspect); })
+      .WaitForDone(fit::Timeout(
+          timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kInspect); }))
       .then([this](::fit::result<>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING)

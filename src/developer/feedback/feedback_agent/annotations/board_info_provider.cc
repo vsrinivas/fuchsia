@@ -115,8 +115,8 @@ BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
     bridge_.CompleteOk(std::move(board_info));
   });
 
-  return bridge_.WaitForDone(
-      timeout, /*if_timeout=*/[this] { cobalt_->LogOccurrence(TimedOutData::kBoardInfo); });
+  return bridge_.WaitForDone(fit::Timeout(
+      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kBoardInfo); }));
 }
 
 }  // namespace internal

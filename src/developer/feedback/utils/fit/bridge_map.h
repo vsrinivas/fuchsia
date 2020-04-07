@@ -12,6 +12,7 @@
 #include <map>
 
 #include "src/developer/feedback/utils/fit/bridge.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 
 namespace feedback {
 namespace fit {
@@ -93,10 +94,9 @@ class BridgeMap {
 
   // Start the timeout and get the promise that will be ungated when the bridge at |id| is
   // completed. An error if returned if the bridge doesn't exist.
-  ::fit::promise<V, E> WaitForDone(
-      uint64_t id, zx::duration timeout, ::fit::closure if_timeout = [] {}) {
+  ::fit::promise<V, E> WaitForDone(uint64_t id, Timeout timeout) {
     if (Contains(id)) {
-      return bridges_.at(id).WaitForDone(timeout, std::move(if_timeout));
+      return bridges_.at(id).WaitForDone(std::move(timeout));
     }
     return ::fit::make_result_promise<V, E>(::fit::error());
   }
