@@ -58,7 +58,6 @@ const char kDartExceptionStackTraceKey[] = "DartError";
 constexpr char kReportTimeMillis[] = "reportTimeMillis";
 
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                      std::optional<zx::time_utc> current_time,
                                       std::map<std::string, std::string>* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                       std::optional<fuchsia::mem::Buffer>* minidump,
@@ -77,11 +76,6 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 
   if (report.has_event_id()) {
     (*annotations)[kEventIdKey] = report.event_id();
-  }
-
-  if (current_time.has_value()) {
-    (*annotations)[kReportTimeMillis] =
-        std::to_string(current_time.value().get() / zx::msec(1).get());
   }
 
   // Generic-specific annotations.
@@ -147,6 +141,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 }
 
 void AddCrashServerAnnotations(const std::string& program_name,
+                               const std::optional<zx::time_utc>& current_time,
                                const std::optional<std::string>& device_id,
                                const std::string& build_version, const bool should_process,
                                std::map<std::string, std::string>* annotations) {
@@ -156,6 +151,14 @@ void AddCrashServerAnnotations(const std::string& program_name,
   (*annotations)["ptype"] = program_name;
   (*annotations)["osName"] = "Fuchsia";
   (*annotations)["osVersion"] = build_version;
+
+  // We set the report time only if we were able to get an accurate one.
+  if (current_time.has_value()) {
+    (*annotations)[kReportTimeMillis] =
+        std::to_string(current_time.value().get() / zx::msec(1).get());
+  } else {
+    (*annotations)["debug.report-time.set"] = "false";
+  }
 
   // We set the device's global unique identifier only if the device has one.
   if (device_id.has_value()) {
@@ -204,11 +207,12 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   bool should_process = false;
 
   // Optional annotations and attachments filled by the client.
-  ExtractAnnotationsAndAttachments(std::move(report), current_time, annotations, attachments,
-                                   minidump, &should_process);
+  ExtractAnnotationsAndAttachments(std::move(report), annotations, attachments, minidump,
+                                   &should_process);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, device_id, build_version, should_process, annotations);
+  AddCrashServerAnnotations(program_name, current_time, device_id, build_version, should_process,
+                            annotations);
 
   // Feedback annotations common to all crash reports.
   AddFeedbackAnnotations(feedback_data, annotations);

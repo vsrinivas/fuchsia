@@ -486,6 +486,10 @@ TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
 
   EXPECT_EQ(crash_server_->latest_annotations().find("reportTimeMillis"),
             crash_server_->latest_annotations().end());
+
+  ASSERT_NE(crash_server_->latest_annotations().find("debug.report-time.set"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("debug.report-time.set"), "false");
 }
 
 TEST_F(CrashReporterTest, Check_guidNotSet) {
