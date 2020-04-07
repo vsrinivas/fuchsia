@@ -14,7 +14,7 @@ source_set("channel_provider_ptr") {
   public_deps = [
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils/fit",
+    "//src/developer/feedback/utils/fidl:oneshot_ptr",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
@@ -55,6 +55,23 @@ source_set("device_id_provider_ptr") {
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils/fit",
     "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+source_set("oneshot_ptr") {
+  sources = [ "oneshot_ptr.h" ]
+
+  public_deps = [
+    "//src/developer/feedback/utils/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",

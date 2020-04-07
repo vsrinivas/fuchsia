@@ -17,7 +17,7 @@ namespace fit {
 // Couples a timeout and an action to optionally take when the timeout occurs.
 struct Timeout {
   Timeout() = default;
-  Timeout(zx::duration value) : value(value) {}
+  explicit Timeout(zx::duration value) : value(value) {}
   Timeout(zx::duration value, ::fit::closure action) : value(value), action(std::move(action)) {}
 
   zx::duration value;

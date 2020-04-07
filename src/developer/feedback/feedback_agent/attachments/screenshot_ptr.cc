@@ -23,49 +23,34 @@ using fuchsia::ui::scenic::ScreenshotData;
 ::fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
                                               std::shared_ptr<sys::ServiceDirectory> services,
                                               zx::duration timeout, Cobalt* cobalt) {
-  std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services, cobalt);
+  std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto screenshot = scenic->TakeScreenshot(timeout);
+  auto screenshot = scenic->TakeScreenshot(
+      fit::Timeout(timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kScreenshot); }));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(screenshot),
                                               /*args=*/std::move(scenic));
 }
 
-Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               Cobalt* cobalt)
-    : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Screenshot collection") {}
+Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+    : scenic_(dispatcher, services) {}
 
-::fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) {
-  FXL_CHECK(!has_called_take_screenshot_) << "TakeScreenshot() is not intended to be called twice";
-  has_called_take_screenshot_ = true;
-
-  scenic_ = services_->Connect<fuchsia::ui::scenic::Scenic>();
-
-  scenic_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.ui.scenic.Scenic";
-    bridge_.CompleteError();
-  });
-
+::fit::promise<ScreenshotData> Scenic::TakeScreenshot(fit::Timeout timeout) {
   scenic_->TakeScreenshot([this](ScreenshotData raw_screenshot, bool success) {
-    if (bridge_.IsAlreadyDone()) {
+    if (scenic_.IsAlreadyDone()) {
       return;
     }
 
     if (!success) {
       FX_LOGS(ERROR) << "Scenic failed to take screenshot";
-      bridge_.CompleteError();
+      scenic_.CompleteError();
     } else {
-      bridge_.CompleteOk(std::move(raw_screenshot));
+      scenic_.CompleteOk(std::move(raw_screenshot));
     }
   });
 
-  return bridge_.WaitForDone(fit::Timeout(
-      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kScreenshot); }));
+  return scenic_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace feedback

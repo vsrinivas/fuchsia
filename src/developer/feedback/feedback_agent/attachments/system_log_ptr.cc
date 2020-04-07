@@ -26,12 +26,13 @@ namespace feedback {
 ::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                  zx::duration timeout, Cobalt* cobalt) {
-  std::unique_ptr<LogListener> log_listener =
-      std::make_unique<LogListener>(dispatcher, services, cobalt);
+  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(dispatcher, services);
 
-  return log_listener->CollectLogs(timeout).then(
-      [log_listener = std::move(log_listener)](
-          const ::fit::result<void>& result) -> ::fit::result<AttachmentValue> {
+  return log_listener
+      ->CollectLogs(fit::Timeout(
+          timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kSystemLog); }))
+      .then([log_listener = std::move(log_listener)](
+                const ::fit::result<void>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING) << "System log collection was interrupted - "
                               "logs may be partial or missing";
@@ -48,47 +49,29 @@ namespace feedback {
 }
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
-    : services_(services),
-      binding_(this),
-      cobalt_(cobalt),
-      bridge_(dispatcher, "System log collection") {}
+                         std::shared_ptr<sys::ServiceDirectory> services)
+    : binding_(this), logger_(dispatcher, services) {}
 
-::fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
-  FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";
-  has_called_collect_logs_ = true;
-
+::fit::promise<void> LogListener::CollectLogs(fit::Timeout timeout) {
   ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
+    if (logger_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "LogListenerSafe error";
-    bridge_.CompleteError();
+    logger_.CompleteError();
   });
 
-  logger_ = services_->Connect<fuchsia::logger::Log>();
-  logger_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to Log service";
-    bridge_.CompleteError();
-  });
   // Resets |log_many_called_| for the new call to DumpLogs().
   log_many_called_ = false;
   logger_->DumpLogsSafe(std::move(log_listener_h), /*options=*/nullptr);
 
-  return bridge_
-      .WaitForDone(fit::Timeout(
-          timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kSystemLog); }))
-      .then([this](::fit::result<void>& result) {
-        binding_.Close(ZX_OK);
-        return std::move(result);
-      });
+  return logger_.WaitForDone(std::move(timeout)).then([this](::fit::result<void>& result) {
+    binding_.Close(ZX_OK);
+    return std::move(result);
+  });
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages,
@@ -112,7 +95,7 @@ void LogListener::Log(fuchsia::logger::LogMessage message, LogCallback done) {
 }
 
 void LogListener::Done() {
-  if (bridge_.IsAlreadyDone()) {
+  if (logger_.IsAlreadyDone()) {
     return;
   }
 
@@ -124,7 +107,7 @@ void LogListener::Done() {
     FX_LOGS(WARNING) << "Done() was called, but no logs have been collected yet";
   }
 
-  bridge_.CompleteOk();
+  logger_.CompleteOk();
 }
 
 }  // namespace feedback

@@ -17,36 +17,22 @@ namespace feedback {
 ::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                  zx::duration timeout, Cobalt* cobalt) {
-  std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services, cobalt);
+  std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto logs = boot_log->GetLog(timeout);
+  auto logs = boot_log->GetLog(
+      fit::Timeout(timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kKernelLog); }));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(logs),
                                               /*args=*/std::move(boot_log));
 }
 
-BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                 Cobalt* cobalt)
-    : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Kernel log collection") {}
+BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+    : log_ptr_(dispatcher, services) {}
 
-::fit::promise<AttachmentValue> BootLog::GetLog(const zx::duration timeout) {
-  FXL_CHECK(!has_called_get_log_) << "GetLog() is not intended to be called twice";
-  has_called_get_log_ = true;
-
-  log_ptr_ = services_->Connect<fuchsia::boot::ReadOnlyLog>();
-
-  log_ptr_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.boot.ReadOnlyLog";
-    bridge_.CompleteError();
-  });
-
+::fit::promise<AttachmentValue> BootLog::GetLog(fit::Timeout timeout) {
   log_ptr_->Get([this](zx::debuglog log) {
-    if (bridge_.IsAlreadyDone()) {
+    if (log_ptr_.IsAlreadyDone()) {
       return;
     }
 
@@ -69,15 +55,14 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
 
     if (kernel_log.empty()) {
       FX_LOGS(ERROR) << "Empty kernel log";
-      bridge_.CompleteError();
+      log_ptr_.CompleteError();
       return;
     }
 
-    bridge_.CompleteOk(kernel_log);
+    log_ptr_.CompleteOk(kernel_log);
   });
 
-  return bridge_.WaitForDone(fit::Timeout(
-      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kKernelLog); }));
+  return log_ptr_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace feedback

@@ -97,15 +97,6 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
   EXPECT_THAT(second_logs, testing::HasSubstr(output));
 }
 
-TEST_F(CollectKernelLogTest, Fail_CallGetLogTwice) {
-  Cobalt cobalt(dispatcher(), environment_services_);
-  const zx::duration unused_timeout = zx::sec(1);
-  BootLog bootlog(dispatcher(), environment_services_, &cobalt);
-  executor_.schedule_task(bootlog.GetLog(unused_timeout));
-  ASSERT_DEATH(bootlog.GetLog(unused_timeout),
-               testing::HasSubstr("GetLog() is not intended to be called twice"));
-}
-
 TEST_F(CollectKernelLogTest, Check_CobaltLogsTimeout) {
   auto services = CreateServices();
   stubs::CobaltLoggerFactory logger_factory;
@@ -118,8 +109,8 @@ TEST_F(CollectKernelLogTest, Check_CobaltLogsTimeout) {
 
   // Set the timeout to 0 so kernel log collection always times out.
   const zx::duration timeout = zx::sec(0);
-  BootLog bootlog(dispatcher(), enclosing_environment->service_directory(), &cobalt);
-  executor_.schedule_task(bootlog.GetLog(timeout));
+  executor_.schedule_task(
+      CollectKernelLog(dispatcher(), enclosing_environment->service_directory(), timeout, &cobalt));
 
   // We don't control the loop so we need to make sure the Cobalt event is logged before checking
   // its value.

@@ -58,7 +58,7 @@ class Bridge {
 
     if (zx_status_t status = timeout_task_.PostDelayed(dispatcher_, timeout_.value);
         status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to post timeout task, skipping '" << task_name_ << "'";
+      FX_PLOGS(ERROR, status) << "Failed to post timeout task, aborting " << task_name_;
       return ::fit::make_result_promise<V, E>(::fit::error());
     }
 

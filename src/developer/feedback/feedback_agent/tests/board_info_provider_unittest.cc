@@ -173,17 +173,5 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
                                       }));
 }
 
-TEST_F(BoardInfoProviderTest, Fail_CallGetBoardInfoTwice) {
-  SetUpBoardProvider(std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({})));
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
-  Cobalt cobalt(dispatcher(), services());
-
-  const zx::duration unused_timeout = zx::sec(1);
-  internal::BoardInfoPtr board_info_ptr(dispatcher(), services(), &cobalt);
-  executor_.schedule_task(board_info_ptr.GetBoardInfo(unused_timeout));
-  ASSERT_DEATH(board_info_ptr.GetBoardInfo(unused_timeout),
-               testing::HasSubstr("GetBoardInfo() is not intended to be called twice"));
-}
-
 }  // namespace
 }  // namespace feedback

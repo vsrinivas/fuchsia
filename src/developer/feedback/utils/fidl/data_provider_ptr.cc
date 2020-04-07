@@ -44,20 +44,21 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
     }
   });
 
-  return pending_calls_.WaitForDone(id, timeout).then([id, this](::fit::result<Data>& result) {
-    // We need to move the result before erasing the bridge because |result| is passed as a
-    // reference.
-    ::fit::result<Data> data = std::move(result);
+  return pending_calls_.WaitForDone(id, fit::Timeout(timeout))
+      .then([id, this](::fit::result<Data>& result) {
+        // We need to move the result before erasing the bridge because |result| is passed as a
+        // reference.
+        ::fit::result<Data> data = std::move(result);
 
-    pending_calls_.Delete(id);
+        pending_calls_.Delete(id);
 
-    // Close the connection if we were the last pending call to GetData().
-    if (pending_calls_.IsEmpty()) {
-      connection_.Unbind();
-    }
+        // Close the connection if we were the last pending call to GetData().
+        if (pending_calls_.IsEmpty()) {
+          connection_.Unbind();
+        }
 
-    return data;
-  });
+        return data;
+      });
 }
 
 void DataProviderPtr::Connect() {

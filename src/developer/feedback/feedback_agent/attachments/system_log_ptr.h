@@ -17,7 +17,8 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/fit/bridge.h"
+#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 
 namespace feedback {
 
@@ -35,10 +36,10 @@ namespace feedback {
 class LogListener : public fuchsia::logger::LogListenerSafe {
  public:
   explicit LogListener(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt);
+                       std::shared_ptr<sys::ServiceDirectory> services);
 
   // Collects the logs and returns a promise to when the collection is done or the timeout over.
-  ::fit::promise<void> CollectLogs(zx::duration timeout);
+  ::fit::promise<void> CollectLogs(fit::Timeout timeout);
 
   // Returns the logs that have been collected so far.
   std::string CurrentLogs() { return logs_; }
@@ -49,22 +50,15 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
   void Log(fuchsia::logger::LogMessage log, LogCallback done) override;
   void Done() override;
 
-  const std::shared_ptr<sys::ServiceDirectory> services_;
   ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
-  Cobalt* cobalt_;
 
-  // Enforces the one-shot nature of CollectLogs().
-  bool has_called_collect_logs_ = false;
-
-  fuchsia::logger::LogPtr logger_;
+  fidl::OneShotPtr<fuchsia::logger::Log> logger_;
 
   // Wether LogMany() was called since the last call to CollectLogs().
   // This is to help debug FLK-179.
   bool log_many_called_ = false;
 
   std::string logs_;
-
-  fit::Bridge<> bridge_;
 };
 
 }  // namespace feedback

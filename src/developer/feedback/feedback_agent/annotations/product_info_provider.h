@@ -13,7 +13,8 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/fit/bridge.h"
+#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -46,20 +47,12 @@ namespace internal {
 // Will ever only make one call to fuchsia::hwinfo::Product::GetInfo.
 class ProductInfoPtr {
  public:
-  ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                 Cobalt* cobalt);
+  ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<Annotations> GetProductInfo(zx::duration timeout);
+  ::fit::promise<Annotations> GetProductInfo(fit::Timeout timeout);
 
  private:
-  const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
-
-  // Enforces the one-shot nature of GetProductInfo().
-  bool has_called_get_product_info_ = false;
-
-  fuchsia::hwinfo::ProductPtr product_ptr_;
-  fit::Bridge<Annotations> bridge_;
+  fidl::OneShotPtr<fuchsia::hwinfo::Product, Annotations> product_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProductInfoPtr);
 };

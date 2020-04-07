@@ -18,7 +18,8 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/fit/bridge.h"
+#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -37,30 +38,21 @@ namespace feedback {
 // Collect() is expected to be called exactly once.
 class Inspect {
  public:
-  Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-          Cobalt* cobalt);
+  Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<AttachmentValue> Collect(zx::duration timeout);
+  ::fit::promise<AttachmentValue> Collect(fit::Timeout timeout);
 
  private:
   void SetUp();
   void StreamInspectSnapshot();
   void AppendNextInspectBatch();
 
-  const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
-
-  // Enforces the one-shot nature of Collect().
-  bool has_called_collect_ = false;
-
-  fuchsia::diagnostics::ArchivePtr archive_;
+  fidl::OneShotPtr<fuchsia::diagnostics::Archive> archive_;
   fuchsia::diagnostics::BatchIteratorPtr snapshot_iterator_;
 
   // Accumulated Inspect data. Each element corresponds to one valid Inspect "block" in JSON format.
   // A block would typically be the Inspect data for one component.
   std::vector<std::string> inspect_data_;
-
-  fit::Bridge<> bridge_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Inspect);
 };

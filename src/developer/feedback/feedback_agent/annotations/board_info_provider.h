@@ -14,7 +14,8 @@
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/fit/bridge.h"
+#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -46,20 +47,12 @@ namespace internal {
 // Will ever only make one call to fuchsia::hwinfo::Board::GetInfo.
 class BoardInfoPtr {
  public:
-  BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               Cobalt* cobalt);
+  BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<Annotations> GetBoardInfo(zx::duration timeout);
+  ::fit::promise<Annotations> GetBoardInfo(fit::Timeout timeout);
 
  private:
-  const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
-
-  // Enforces the one-shot nature of GetBoardInfo().
-  bool has_called_get_board_info_ = false;
-
-  fuchsia::hwinfo::BoardPtr board_ptr_;
-  fit::Bridge<Annotations> bridge_;
+  fidl::OneShotPtr<fuchsia::hwinfo::Board, Annotations> board_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoardInfoPtr);
 };

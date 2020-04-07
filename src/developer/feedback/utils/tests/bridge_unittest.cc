@@ -50,7 +50,7 @@ TEST_F(BridgeTest, CompletesAtTimeout) {
 
   ASSERT_FALSE(bridge.IsAlreadyDone());
 
-  bridge.WaitForDone(kTimeout);
+  bridge.WaitForDone(fit::Timeout(kTimeout));
   RunLoopFor(kTimeout);
 
   EXPECT_TRUE(bridge.IsAlreadyDone());

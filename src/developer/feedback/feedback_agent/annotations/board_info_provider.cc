@@ -55,9 +55,10 @@ AnnotationKeys BoardInfoProvider::GetSupportedAnnotations() {
 }
 
 ::fit::promise<Annotations> BoardInfoProvider::GetAnnotations() {
-  auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_, cobalt_);
+  auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_);
 
-  auto board_info = board_info_ptr->GetBoardInfo(timeout_);
+  auto board_info = board_info_ptr->GetBoardInfo(
+      fit::Timeout(timeout_, /*action=*/[=] { cobalt_->LogOccurrence(TimedOutData::kBoardInfo); }));
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(board_info),
                                               /*args=*/std::move(board_info_ptr))
@@ -78,27 +79,12 @@ AnnotationKeys BoardInfoProvider::GetSupportedAnnotations() {
 
 namespace internal {
 BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
-    : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Hardware board info collection") {}
+                           std::shared_ptr<sys::ServiceDirectory> services)
+    : board_ptr_(dispatcher, services) {}
 
-::fit::promise<Annotations> BoardInfoPtr::GetBoardInfo(zx::duration timeout) {
-  FXL_CHECK(!has_called_get_board_info_) << "GetBoardInfo() is not intended to be called twice";
-  has_called_get_board_info_ = true;
-
-  board_ptr_ = services_->Connect<fuchsia::hwinfo::Board>();
-
-  board_ptr_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.hwinfo.Board";
-
-    bridge_.CompleteError();
-  });
-
+::fit::promise<Annotations> BoardInfoPtr::GetBoardInfo(fit::Timeout timeout) {
   board_ptr_->GetInfo([this](BoardInfo info) {
-    if (bridge_.IsAlreadyDone()) {
+    if (board_ptr_.IsAlreadyDone()) {
       return;
     }
 
@@ -112,11 +98,10 @@ BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
       board_info[kAnnotationHardwareBoardRevision] = info.revision();
     }
 
-    bridge_.CompleteOk(std::move(board_info));
+    board_ptr_.CompleteOk(std::move(board_info));
   });
 
-  return bridge_.WaitForDone(fit::Timeout(
-      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kBoardInfo); }));
+  return board_ptr_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace internal

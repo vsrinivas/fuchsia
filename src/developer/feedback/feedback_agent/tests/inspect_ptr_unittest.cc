@@ -145,25 +145,5 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
   CheckNoTimeout();
 }
 
-TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
-  SetUpInspect(std::make_unique<stubs::InspectArchiveClosesArchiveConnection>());
-
-  ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  CheckNoTimeout();
-}
-
-TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
-  Cobalt cobalt(dispatcher(), services());
-
-  const zx::duration unused_timeout = zx::sec(1);
-  Inspect inspect(dispatcher(), services(), &cobalt);
-  executor_.schedule_task(inspect.Collect(unused_timeout));
-  ASSERT_DEATH(inspect.Collect(unused_timeout),
-               testing::HasSubstr("Collect() is not intended to be called twice"));
-}
-
 }  // namespace
 }  // namespace feedback

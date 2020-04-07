@@ -46,6 +46,9 @@ test_package("feedback_utils_tests") {
       name = "log_format_unittest"
     },
     {
+      name = "oneshot_ptr_unittest"
+    },
+    {
       name = "promise_unittest"
     },
     {
@@ -80,6 +83,7 @@ test_package("feedback_utils_tests") {
     ":inspect_node_manager_unittest",
     ":inspect_protocol_stats_unittest",
     ":log_format_unittest",
+    ":oneshot_ptr_unittest",
     ":promise_unittest",
     ":rotating_file_set_unittest",
     ":time_unittest",
@@ -231,6 +235,24 @@ executable("log_format_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("oneshot_ptr_unittest") {
+  testonly = true
+
+  sources = [ "oneshot_ptr_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/feedback/utils/fidl:oneshot_ptr",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 

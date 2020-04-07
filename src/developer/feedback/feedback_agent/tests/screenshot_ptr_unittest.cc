@@ -80,55 +80,12 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   EXPECT_EQ(screenshot.info.pixel_format, fuchsia::images::PixelFormat::BGRA_8);
 }
 
-TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
-  SetUpScreenshotProvider(nullptr);
-
-  ::fit::result<ScreenshotData> result = TakeScreenshot();
-
-  ASSERT_TRUE(result.is_error());
-}
-
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
   SetUpScreenshotProvider(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
 
   ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
-}
-
-TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
-  SetUpScreenshotProvider(std::make_unique<stubs::ScenicClosesConnection>());
-
-  ::fit::result<ScreenshotData> result = TakeScreenshot();
-
-  ASSERT_TRUE(result.is_error());
-}
-
-TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
-  SetUpScreenshotProvider(std::make_unique<stubs::ScenicNeverReturns>());
-
-  ::fit::result<ScreenshotData> result = TakeScreenshot();
-
-  ASSERT_TRUE(result.is_error());
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(TimedOutData::kScreenshot),
-                                      }));
-}
-
-TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
-  std::vector<stubs::TakeScreenshotResponse> screenshot_provider_responses;
-  screenshot_provider_responses.emplace_back(stubs::CreateEmptyScreenshot(), kSuccess);
-  auto screenshot_provider = std::make_unique<stubs::Scenic>();
-  screenshot_provider->set_take_screenshot_responses(std::move(screenshot_provider_responses));
-  SetUpScreenshotProvider(std::move(screenshot_provider));
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
-  Cobalt cobalt(dispatcher(), services());
-
-  const zx::duration unused_timeout = zx::sec(1);
-  Scenic scenic(dispatcher(), services(), &cobalt);
-  executor_.schedule_task(scenic.TakeScreenshot(unused_timeout));
-  ASSERT_DEATH(scenic.TakeScreenshot(unused_timeout),
-               testing::HasSubstr("TakeScreenshot() is not intended to be called twice"));
 }
 
 }  // namespace

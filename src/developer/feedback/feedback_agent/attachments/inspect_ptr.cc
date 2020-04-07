@@ -26,23 +26,21 @@ namespace feedback {
 ::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
                                                    std::shared_ptr<sys::ServiceDirectory> services,
                                                    zx::duration timeout, Cobalt* cobalt) {
-  std::unique_ptr<Inspect> inspect = std::make_unique<Inspect>(dispatcher, services, cobalt);
+  std::unique_ptr<Inspect> inspect = std::make_unique<Inspect>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto inspect_data = inspect->Collect(timeout);
+  auto inspect_data = inspect->Collect(
+      fit::Timeout(timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kInspect); }));
+
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),
                                               /*args=*/std::move(inspect));
 }
 
-Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                 Cobalt* cobalt)
-    : services_(services), cobalt_(cobalt), bridge_(dispatcher, "Inspect data collection") {}
+Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+    : archive_(dispatcher, services) {}
 
-::fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
-  FXL_CHECK(!has_called_collect_) << "Collect() is not intended to be called twice";
-  has_called_collect_ = true;
-
+::fit::promise<AttachmentValue> Inspect::Collect(fit::Timeout timeout) {
   // We set up the connection and all the error handlers.
   SetUp();
 
@@ -50,9 +48,7 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
   StreamInspectSnapshot();
 
   // We wait on one way to finish the flow, joining whichever data has been collected.
-  return bridge_
-      .WaitForDone(fit::Timeout(
-          timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kInspect); }))
+  return archive_.WaitForDone(std::move(timeout))
       .then([this](::fit::result<>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING)
@@ -73,23 +69,13 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
 }
 
 void Inspect::SetUp() {
-  archive_ = services_->Connect<fuchsia::diagnostics::Archive>();
-  archive_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.Archive";
-    bridge_.CompleteError();
-  });
-
   snapshot_iterator_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
+    if (archive_.IsAlreadyDone()) {
       return;
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.BatchIterator";
-    bridge_.CompleteError();
+    archive_.CompleteError();
   });
 }
 
@@ -104,19 +90,19 @@ void Inspect::StreamInspectSnapshot() {
 
 void Inspect::AppendNextInspectBatch() {
   snapshot_iterator_->GetNext([this](auto result) {
-    if (bridge_.IsAlreadyDone()) {
+    if (archive_.IsAlreadyDone()) {
       return;
     }
 
     if (result.is_err()) {
       FX_LOGS(ERROR) << "Failed to retrieve next Inspect batch: " << result.err();
-      bridge_.CompleteError();
+      archive_.CompleteError();
       return;
     }
 
     std::vector<fuchsia::diagnostics::FormattedContent> batch = std::move(result.response().batch);
     if (batch.empty()) {  // We have gotten all the Inspect data.
-      bridge_.CompleteOk();
+      archive_.CompleteOk();
       return;
     }
 

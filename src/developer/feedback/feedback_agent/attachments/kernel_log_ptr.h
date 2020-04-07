@@ -15,7 +15,8 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/fit/bridge.h"
+#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -33,21 +34,12 @@ namespace feedback {
 // GetLog() is expected to be called only once.
 class BootLog {
  public:
-  BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-          Cobalt* cobalt);
+  BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<AttachmentValue> GetLog(zx::duration timeout);
+  ::fit::promise<AttachmentValue> GetLog(fit::Timeout timeout);
 
  private:
-  const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
-
-  // Enforces the one-shot nature of GetLog().
-  bool has_called_get_log_ = false;
-
-  fuchsia::boot::ReadOnlyLogPtr log_ptr_;
-
-  fit::Bridge<AttachmentValue> bridge_;
+  fidl::OneShotPtr<fuchsia::boot::ReadOnlyLog, AttachmentValue> log_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BootLog);
 };

@@ -73,10 +73,10 @@ AnnotationKeys ProductInfoProvider::GetSupportedAnnotations() {
 }
 
 ::fit::promise<Annotations> ProductInfoProvider::GetAnnotations() {
-  auto product_info_ptr =
-      std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_, cobalt_);
+  auto product_info_ptr = std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_);
 
-  auto product_info = product_info_ptr->GetProductInfo(timeout_);
+  auto product_info = product_info_ptr->GetProductInfo(fit::Timeout(
+      timeout_, /*action=*/[=] { cobalt_->LogOccurrence(TimedOutData::kProductInfo); }));
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(product_info),
                                               /*args=*/std::move(product_info_ptr))
@@ -128,29 +128,12 @@ std::optional<std::string> Join(const std::vector<LocaleId>& locale_list) {
 namespace internal {
 
 ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
-                               std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
-    : services_(services),
-      cobalt_(cobalt),
-      bridge_(dispatcher, "Hardware product info retrieval") {}
+                               std::shared_ptr<sys::ServiceDirectory> services)
+    : product_ptr_(dispatcher, services) {}
 
-::fit::promise<Annotations> ProductInfoPtr::GetProductInfo(zx::duration timeout) {
-  FXL_CHECK(!has_called_get_product_info_) << "GetProductInfo() is not intended to be called twice";
-  has_called_get_product_info_ = true;
-
-  product_ptr_ = services_->Connect<fuchsia::hwinfo::Product>();
-
-  product_ptr_.set_error_handler([this](zx_status_t status) {
-    if (bridge_.IsAlreadyDone()) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.hwinfo.Product";
-
-    bridge_.CompleteError();
-  });
-
+::fit::promise<Annotations> ProductInfoPtr::GetProductInfo(fit::Timeout timeout) {
   product_ptr_->GetInfo([this](ProductInfo info) {
-    if (bridge_.IsAlreadyDone()) {
+    if (product_ptr_.IsAlreadyDone()) {
       return;
     }
 
@@ -190,11 +173,10 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
       product_info[kAnnotationHardwareProductManufacturer] = info.manufacturer();
     }
 
-    bridge_.CompleteOk(std::move(product_info));
+    product_ptr_.CompleteOk(std::move(product_info));
   });
 
-  return bridge_.WaitForDone(fit::Timeout(
-      timeout, /*action=*/[this] { cobalt_->LogOccurrence(TimedOutData::kProductInfo); }));
+  return product_ptr_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace internal

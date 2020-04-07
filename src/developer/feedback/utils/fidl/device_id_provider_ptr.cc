@@ -60,10 +60,11 @@ void DeviceIdProviderPtr::CacheId() {
 
   const uint64_t id = pending_calls_.NewBridgeForTask("Getting Feedback device id");
 
-  return pending_calls_.WaitForDone(id, timeout).then([id, this](const ::fit::result<>& result) {
-    pending_calls_.Delete(id);
-    return DeviceIdToResult();
-  });
+  return pending_calls_.WaitForDone(id, fit::Timeout(timeout))
+      .then([id, this](const ::fit::result<>& result) {
+        pending_calls_.Delete(id);
+        return DeviceIdToResult();
+      });
 }
 
 ::fit::result<std::string> DeviceIdProviderPtr::DeviceIdToResult() {

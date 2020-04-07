@@ -205,18 +205,6 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
                                       }));
 }
 
-TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
-  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({})));
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
-  Cobalt cobalt(dispatcher(), services());
-
-  const zx::duration unused_timeout = zx::sec(1);
-  internal::ProductInfoPtr product_info_ptr(dispatcher(), services(), &cobalt);
-  executor_.schedule_task(product_info_ptr.GetProductInfo(unused_timeout));
-  ASSERT_DEATH(product_info_ptr.GetProductInfo(unused_timeout),
-               testing::HasSubstr("GetProductInfo() is not intended to be called twice"));
-}
-
 const Annotations ProductInfoValues = {
     {kAnnotationHardwareProductSKU, "some-sku"},
     {kAnnotationHardwareProductLanguage, "some-language"},

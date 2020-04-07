@@ -214,9 +214,10 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
   ::fit::result<void> result;
-  LogListener log_listener(dispatcher(), services(), &cobalt);
-  executor_.schedule_task(log_listener.CollectLogs(timeout).then(
-      [&result](const ::fit::result<void>& res) { result = std::move(res); }));
+  LogListener log_listener(dispatcher(), services());
+  executor_.schedule_task(
+      log_listener.CollectLogs(fit::Timeout(timeout))
+          .then([&result](const ::fit::result<void>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
 
   // First, we check we have had a successful flow.
@@ -225,23 +226,6 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // Then, we check that if the logger closes the connection (and triggers the error handler on the
   // LogListener side), we don't crash (cf. DX-1602).
   logger->CloseConnection();
-}
-
-TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
-  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
-  logger->set_messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "msg"),
-  });
-  InjectServiceProvider(logger.get());
-
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
-  Cobalt cobalt(dispatcher(), services());
-
-  const zx::duration unused_timeout = zx::sec(1);
-  LogListener log_listener(dispatcher(), services(), &cobalt);
-  executor_.schedule_task(log_listener.CollectLogs(unused_timeout));
-  ASSERT_DEATH(log_listener.CollectLogs(unused_timeout),
-               testing::HasSubstr("CollectLogs() is not intended to be called twice"));
 }
 
 }  // namespace

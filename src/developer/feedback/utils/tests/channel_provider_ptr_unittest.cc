@@ -83,40 +83,6 @@ TEST_F(ChannelProviderPtrTest, Succeed_EmptyChannel) {
   EXPECT_EQ(result.value(), "");
 }
 
-TEST_F(ChannelProviderPtrTest, Fail_ChannelProviderPtrNotAvailable) {
-  SetUpChannelProviderServer(nullptr);
-
-  const auto result = GetCurrentChannel();
-
-  ASSERT_FALSE(result);
-}
-
-TEST_F(ChannelProviderPtrTest, Fail_ChannelProviderPtrClosesConnection) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderClosesConnection>());
-
-  const auto result = GetCurrentChannel();
-
-  ASSERT_FALSE(result);
-}
-
-TEST_F(ChannelProviderPtrTest, Fail_ChannelProviderPtrNeverReturns) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderNeverReturns>());
-
-  bool timeout = false;
-  const auto result = GetCurrentChannel([&timeout]() { timeout = true; });
-
-  ASSERT_FALSE(result);
-  EXPECT_TRUE(timeout);
-}
-
-TEST_F(ChannelProviderPtrTest, Fail_CallGetCurrentTwice) {
-  const zx::duration unused_timeout = zx::sec(1);
-  ChannelProviderPtr ptr(dispatcher(), services());
-  executor_.schedule_task(ptr.GetCurrentChannel(unused_timeout));
-  ASSERT_DEATH(ptr.GetCurrentChannel(unused_timeout),
-               testing::HasSubstr("GetCurrentChannel() is not intended to be called twice"));
-}
-
 }  // namespace
 }  // namespace fidl
 }  // namespace feedback
