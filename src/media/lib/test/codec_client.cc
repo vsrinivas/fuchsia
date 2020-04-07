@@ -8,6 +8,7 @@
 #include <lib/media/test/one_shot_event.h>
 
 #include <algorithm>
+#include <iostream>
 #include <random>
 
 #include "src/lib/syslog/cpp/logger.h"
@@ -297,9 +298,10 @@ bool CodecClient::WaitForSysmemBuffersAllocated(
     return false;
   }
 
-  // This is a little noisy, but it can be useful to see how many buffers are being used.
-  FX_LOGS(INFO) << "WaitForSysmemBuffersAllocated() done - is_output: " << is_output
-                << " buffer_count: " << result_buffer_collection_info.buffer_count;
+  // This is a little noisy, but it can be useful to see how many buffers are being used.  Make sure
+  // it doesn't show up on stderr though.
+  std::cout << "WaitForSysmemBuffersAllocated() done - is_output: " << is_output
+            << " buffer_count: " << result_buffer_collection_info.buffer_count;
 
   *out_buffer_collection_info = std::move(result_buffer_collection_info);
   return true;
