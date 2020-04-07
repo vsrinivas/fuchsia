@@ -20,6 +20,7 @@
 #include <vm/fault.h>
 #include <vm/physmap.h>
 #include <vm/pmm_checker.h>
+#include <vm/scanner.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -1772,6 +1773,95 @@ static bool vmo_zero_scan_test() {
   END_TEST;
 }
 
+// Stubbed page source that is intended to be allowed to create a vmo that believes it is backed by a
+// user pager, but is incapable of actually providing pages.
+class StubPageSource : public PageSource {
+ public:
+  StubPageSource() {}
+  ~StubPageSource() {}
+  bool GetPage(uint64_t offset, vm_page_t** const page_out, paddr_t* const pa_out) { return false; }
+  void GetPageAsync(page_request_t* request) { panic("Not implemented\n"); }
+  void ClearAsyncRequest(page_request_t* request) { panic("Not implemented\n"); }
+  void SwapRequest(page_request_t* old, page_request_t* new_req) { panic("Not implemented\n"); }
+  void OnDetach() {}
+  void OnClose() {}
+  zx_status_t WaitOnEvent(event_t* event) { panic("Not implemented\n"); }
+};
+
+static bool vmo_move_pages_on_access_test() {
+  BEGIN_TEST;
+
+  // Disable the page scanner as this test would be flaky if the page queues were allowed to auto
+  // rotate, or if eviction were to happen.
+  scanner_push_disable_count();
+  auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
+
+  // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
+  // actually take any page faults.
+  fbl::AllocChecker ac;
+  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  VmPageList pl;
+  pl.InitializeSkew(0, 0);
+  vm_page_t* page;
+  status = pmm_alloc_page(0, &page);
+  ASSERT_EQ(ZX_OK, status);
+  page->set_state(VM_PAGE_STATE_OBJECT);
+  VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
+  ASSERT_NONNULL(page_or_marker);
+  *page_or_marker = VmPageOrMarker::Page(page);
+  VmPageSpliceList splice_list = pl.TakePages(0, PAGE_SIZE);
+  status = vmo->SupplyPages(0, PAGE_SIZE, &splice_list);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Our page should now be in a pager backed page queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+
+  PageRequest request;
+  // If we lookup the page then it should be moved to specifically the first page queue.
+  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Rotate the queues and check the page moves.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(1u, queue);
+
+  // Touching the page should move it back to the first queue.
+  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Touching pages in a child should also move the page to the front of the queues.
+  fbl::RefPtr<VmObject> child;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0, PAGE_SIZE,
+                            true, &child);
+  ASSERT_EQ(ZX_OK, status);
+
+  status = child->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+  pmm_page_queues()->RotatePagerBackedQueues();
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(1u, queue);
+  status = child->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  END_TEST;
+}
+
 // TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
@@ -2991,6 +3081,7 @@ VM_UNITTEST(vmo_lookup_test)
 VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
+VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)

@@ -339,6 +339,11 @@ class VmObjectPaged final : public VmObject {
   // Places a newly added page into the appropriate non wired page queue.
   void SetNotWired(vm_page_t* page, uint64_t offset);
 
+  // Updates any meta data for accessing a page. Currently this moves pager backed pages around in
+  // the page queue to track which ones were recently accessed for the purposes of eviction. In
+  // terms of functional correctness this never has to be called.
+  void UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+
   // Outside of initialization/destruction, hidden vmos always have two children. For
   // clarity, whichever child is first in the list is the 'left' child, and whichever
   // child is second is the 'right' child. Children of a paged vmo will always be paged

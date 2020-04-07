@@ -1727,6 +1727,35 @@ vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_
   return page;
 }
 
+void VmObjectPaged::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
+  // The only kinds of pages where there is anything to update on an access is pager backed pages.
+  // To that end we first want to determine, with certainty, that the provided page is in fact in
+  // the pager backed queue.
+
+  if (page == vm_get_zero_page()) {
+    return;
+  }
+  // Check if we have a page_source_. If we don't have one then none of our pages can be pager
+  // backed, so we can abort.
+  if (!page_source_) {
+    return;
+  }
+  // We know there is a page source and so most of the pages will be in the pager backed queue, with
+  // the exception of any pages that are pinned, those will be in the wired queue and so we need to
+  // skip them.
+  if (page->object.pin_count != 0) {
+    return;
+  }
+
+  // These asserts are for sanity, the above checks should have caused us to abort if these aren't
+  // true.
+  DEBUG_ASSERT(page->object.get_object() == reinterpret_cast<void*>(this));
+  DEBUG_ASSERT(page->object.get_page_offset() == offset);
+  // Although the page is already in the pager backed queue, this move causes it be moved to the
+  // front of the first queue, representing it was recently accessed.
+  pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+}
+
 // Looks up the page at the requested offset, faulting it in if requested and necessary.  If
 // this VMO has a parent and the requested page isn't found, the parent will be searched.
 //
@@ -1763,11 +1792,13 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       if (p->IsMarker()) {
         is_marker = true;
       } else if (p->IsPage()) {
+        vm_page_t* page = p->Page();
+        UpdateOnAccessLocked(page, offset);
         if (page_out) {
-          *page_out = p->Page();
+          *page_out = page;
         }
         if (pa_out) {
-          *pa_out = p->Page()->paddr();
+          *pa_out = page->paddr();
         }
         return ZX_OK;
       }
@@ -1817,6 +1848,10 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     }
   }
   DEBUG_ASSERT(p);
+  // It's possible that we are going to fork the page, and the user isn't actually going to directly
+  // use `p`, but creating the fork still uses `p` so we want to consider it accessed.
+  AssertHeld(page_owner->lock_);
+  page_owner->UpdateOnAccessLocked(p, owner_offset);
 
   if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
     // If we're read-only faulting, return the page so they can map or read from it directly.
