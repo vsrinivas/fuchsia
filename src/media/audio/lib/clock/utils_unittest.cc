@@ -8,7 +8,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 
-namespace media::audio {
+namespace media::audio::clock {
 namespace {
 
 TEST(ClockUtilsTest, DuplicateBadClock) {
@@ -261,4 +261,4 @@ TEST(ClockUtilsTest, AffineToTimeline) {
 
 }  // namespace
 
-}  // namespace media::audio
+}  // namespace media::audio::clock

@@ -324,7 +324,7 @@ void WavRecorder::ReceiveClockAndContinue(zx::clock received_clock) {
   reference_clock_ = std::move(received_clock);
 
   if (verbose_) {
-    audio::GetAndDisplayClockDetails(reference_clock_);
+    audio::clock::GetAndDisplayClockDetails(reference_clock_);
   }
 
   // Fetch the initial media type and figure out what we need to do from there.

@@ -62,7 +62,7 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
 
   if (!ref_clock.is_valid()) {
-    auto status = DuplicateClock(optimal_clock(), &ref_clock);
+    auto status = audio::clock::DuplicateClock(optimal_clock(), &ref_clock);
     FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
   }
   set_reference_clock(std::move(ref_clock));

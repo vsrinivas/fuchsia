@@ -10,7 +10,7 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/clock.h>
 
-namespace media::audio {
+namespace media::audio::clock {
 
 constexpr uint32_t kInvalidClockGeneration = 0xFFFFFFFF;
 struct ClockSnapshot {
@@ -33,6 +33,6 @@ fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::cloc
 affine::Transform ToAffineTransform(TimelineFunction& tl_function);
 TimelineFunction ToTimelineFunction(affine::Transform affine_trans);
 
-}  // namespace media::audio
+}  // namespace media::audio::clock
 
 #endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_UTILS_H_

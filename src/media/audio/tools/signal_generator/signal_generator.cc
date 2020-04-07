@@ -467,7 +467,7 @@ void MediaApp::GetClockAndStart() {
     reference_clock_ = std::move(received_clock);
 
     if (verbose_) {
-      audio::GetAndDisplayClockDetails(reference_clock_);
+      audio::clock::GetAndDisplayClockDetails(reference_clock_);
     }
 
     zx_time_t mono_now = zx::clock::get_monotonic().get();

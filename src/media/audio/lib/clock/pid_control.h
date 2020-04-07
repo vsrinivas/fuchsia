@@ -7,7 +7,7 @@
 
 #include <zircon/time.h>
 
-namespace media::audio {
+namespace media::audio::clock {
 
 class PidControl {
   friend class PidControlTest;
@@ -42,6 +42,6 @@ class PidControl {
   double delta_error_;
 };
 
-}  // namespace media::audio
+}  // namespace media::audio::clock
 
 #endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_PID_CONTROL_H_

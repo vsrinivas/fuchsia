@@ -1021,7 +1021,7 @@ void BaseCapturer::CreateOptimalReferenceClock() {
 void BaseCapturer::EstablishDefaultReferenceClock() {
   TRACE_DURATION("audio", "BaseCapturer::EstablishDefaultReferenceClock");
 
-  auto status = DuplicateClock(optimal_clock_, &reference_clock_);
+  auto status = audio::clock::DuplicateClock(optimal_clock_, &reference_clock_);
   FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
 }
 
@@ -1033,7 +1033,7 @@ void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
   zx::clock dupe_clock_for_client;
-  auto status = DuplicateClock(reference_clock_, &dupe_clock_for_client);
+  auto status = audio::clock::DuplicateClock(reference_clock_, &dupe_clock_for_client);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Could not duplicate the current reference clock handle";
     return;

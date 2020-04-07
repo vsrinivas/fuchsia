@@ -6,7 +6,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 
-namespace media::audio {
+namespace media::audio::clock {
 
 // Reset the PID controller; set the initial result & time
 void PidControl::Start(zx_time_t start_time) {
@@ -43,4 +43,4 @@ void PidControl::DisplayCoefficients() {
                 << total_pid_contribution_ << "\n";
 }
 
-}  // namespace media::audio
+}  // namespace media::audio::clock

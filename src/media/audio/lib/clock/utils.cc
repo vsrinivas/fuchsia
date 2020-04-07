@@ -8,7 +8,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 
-namespace media::audio {
+namespace media::audio::clock {
 
 zx_status_t DuplicateClock(const zx::clock& original_clock, zx::clock* dupe_clock) {
   FX_DCHECK(dupe_clock) << "Null ptr passed to DuplicateClock";
@@ -130,4 +130,4 @@ TimelineFunction ToTimelineFunction(affine::Transform affine_trans) {
                           affine_trans.numerator(), affine_trans.denominator());
 }
 
-}  // namespace media::audio
+}  // namespace media::audio::clock

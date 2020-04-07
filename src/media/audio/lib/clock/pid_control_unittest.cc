@@ -8,7 +8,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 
-namespace media::audio {
+namespace media::audio::clock {
 namespace {
 
 class PidControlTest : public testing::Test {
@@ -278,4 +278,4 @@ TEST_F(PidControlTest, RealWorld) {
 }
 
 }  // namespace
-}  // namespace media::audio
+}  // namespace media::audio::clock
