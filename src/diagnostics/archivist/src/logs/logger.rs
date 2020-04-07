@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    super::error::StreamError,
     byteorder::{ByteOrder, LittleEndian},
     fidl_fuchsia_logger::LogMessage,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -34,7 +35,6 @@ pub struct fx_log_metadata_t {
 }
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
-#[cfg(test)]
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
 
 #[repr(C)]
@@ -76,21 +76,25 @@ impl Stream for LogMessageSocket {
     /// It returns log message and the size of the packet received.
     /// The size does not include the metadata size taken by
     /// LogMessage data structure.
-    type Item = io::Result<(LogMessage, usize)>;
+    type Item = Result<(LogMessage, usize), StreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let &mut Self { ref mut socket, ref mut buffer } = &mut *self;
         let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
 
-        let parsed = if len > 0 { parse_log_message(&buffer[..len]).map(Ok) } else { None };
+        let parsed = if len > 0 { Some(parse_log_message(&buffer[..len])) } else { None };
         Poll::Ready(parsed)
     }
 }
 
-fn parse_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
-    // Check that data has metadata and first 1 byte is integer and last byte is NULL.
-    if bytes.len() < METADATA_SIZE + mem::size_of::<u8>() || bytes[bytes.len() - 1] != 0 {
-        return None;
+fn parse_log_message(bytes: &[u8]) -> Result<(LogMessage, usize), StreamError> {
+    if bytes.len() < MIN_PACKET_SIZE {
+        return Err(StreamError::ShortRead { len: bytes.len() });
+    }
+
+    let terminator = bytes[bytes.len() - 1];
+    if terminator != 0 {
+        return Err(StreamError::NotNullTerminated { terminator });
     }
 
     let mut l = LogMessage {
@@ -103,28 +107,29 @@ fn parse_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
         msg: String::new(),
     };
 
+    // start reading tags after the header
     let mut pos = METADATA_SIZE;
     let mut tag_len = bytes[pos] as usize;
     while tag_len != 0 {
         if l.tags.len() == FX_LOG_MAX_TAGS {
-            return None;
+            return Err(StreamError::TooManyTags);
         }
+
         if tag_len > FX_LOG_MAX_TAG_LEN - 1 {
-            return None;
+            return Err(StreamError::TagTooLong { index: l.tags.len(), len: tag_len });
         }
+
         if (pos + tag_len + 1) > bytes.len() {
-            return None;
+            return Err(StreamError::OutOfBounds);
         }
-        let str_slice = match str::from_utf8(&bytes[(pos + 1)..(pos + tag_len + 1)]) {
-            Err(_e) => return None,
-            Ok(s) => s,
-        };
+
+        let str_slice = str::from_utf8(&bytes[(pos + 1)..(pos + tag_len + 1)])?;
         let str_buf: String = str_slice.to_owned();
         l.tags.push(str_buf);
 
         pos = pos + tag_len + 1;
         if pos >= bytes.len() {
-            return None;
+            return Err(StreamError::OutOfBounds);
         }
         tag_len = bytes[pos] as usize;
     }
@@ -132,10 +137,7 @@ fn parse_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
     let mut found_msg = false;
     while i < bytes.len() {
         if bytes[i] == 0 {
-            let str_slice = match str::from_utf8(&bytes[pos + 1..i]) {
-                Err(_e) => return None,
-                Ok(s) => s,
-            };
+            let str_slice = str::from_utf8(&bytes[pos + 1..i])?;
             let str_buf: String = str_slice.to_owned();
             found_msg = true;
             l.msg = str_buf;
@@ -145,9 +147,9 @@ fn parse_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
         i = i + 1;
     }
     if !found_msg {
-        return None;
+        return Err(StreamError::OutOfBounds);
     }
-    Some((l, pos))
+    Ok((l, pos))
 }
 
 #[cfg(test)]
@@ -288,8 +290,9 @@ mod tests {
         let one_short = &p.as_bytes()[..METADATA_SIZE];
         let two_short = &p.as_bytes()[..METADATA_SIZE - 1];
 
-        assert_eq!(parse_log_message(one_short), None);
-        assert_eq!(parse_log_message(two_short), None);
+        assert_eq!(parse_log_message(one_short), Err(StreamError::ShortRead { len: 32 }));
+
+        assert_eq!(parse_log_message(two_short), Err(StreamError::ShortRead { len: 31 }));
     }
 
     #[test]
@@ -301,7 +304,7 @@ mod tests {
         let buffer = &p.as_bytes()[..MIN_PACKET_SIZE + end];
         let parsed = parse_log_message(buffer);
 
-        assert_eq!(parsed, None);
+        assert_eq!(parsed, Err(StreamError::NotNullTerminated { terminator: 1 }));
     }
 
     #[test]
@@ -315,7 +318,7 @@ mod tests {
         let buffer = &p.as_bytes()[..MIN_PACKET_SIZE + end];
         let parsed = parse_log_message(buffer);
 
-        assert_eq!(parsed, None);
+        assert_eq!(parsed, Err(StreamError::OutOfBounds));
     }
 
     #[test]
@@ -370,7 +373,7 @@ mod tests {
         let buffer = &p.as_bytes()[..MIN_PACKET_SIZE + b_start + b_count];
         let parsed = parse_log_message(buffer);
 
-        assert_eq!(parsed, None);
+        assert_eq!(parsed, Err(StreamError::OutOfBounds));
     }
 
     #[test]
@@ -478,7 +481,7 @@ mod tests {
         let buffer_missing_terminator = &p.as_bytes()[..METADATA_SIZE + msg_start];
         assert_eq!(
             parse_log_message(buffer_missing_terminator),
-            None,
+            Err(StreamError::OutOfBounds),
             "can't parse an empty message without a nul terminator"
         );
 

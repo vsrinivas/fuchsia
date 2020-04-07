@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 mod buffer;
 mod debuglog;
+mod error;
 mod listener;
 mod logger;
 mod stats;
