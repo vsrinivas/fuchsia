@@ -41,8 +41,8 @@ typedef struct fx_logger_config {
   // logger takes ownership of this fd.
   int console_fd;
 
-  // The FIDL log service channel to which the logger should connect, or
-  // |ZX_HANDLE_INVALID| if the logger should not connect to the log service.
+  // One end of the socket that goes to the log service. |ZX_HANDLE_INVALID| if
+  // logs should not go to the log service.
   // logger takes ownership of this handle.
   zx_handle_t log_service_channel;
 

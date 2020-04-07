@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/fxl/logging.h"
+
 #include <algorithm>
 #include <iostream>
 
 #include "src/lib/fxl/build_config.h"
 #include "src/lib/fxl/debug/debugger.h"
 #include "src/lib/fxl/log_settings.h"
-#include "src/lib/fxl/logging.h"
 
 #if defined(__Fuchsia__)
+#include <lib/syslog/global.h>
 #include <zircon/status.h>
 #elif defined(OS_ANDROID)
 #include <android/log.h>
@@ -76,10 +78,19 @@ LogMessage::~LogMessage() {
   if (status_ != std::numeric_limits<zx_status_t>::max()) {
     stream_ << ": " << status_ << " (" << zx_status_get_string(status_) << ")";
   }
-#endif
+#else
   stream_ << std::endl;
+#endif
 
-#if defined(OS_ANDROID)
+#if defined(__Fuchsia__)
+  // Write fatal logs to stderr as well because death tests sometimes verify a certain
+  // log message was printed prior to the crash.
+  // TODO(samans): Convert tests to not depend on stderr. https://fxbug.dev/49593
+  if (severity_ == LOG_FATAL)
+    std::cerr << stream_.str() << std::endl;
+  fx_logger_t* logger = fx_log_get_logger();
+  fx_logger_log(logger, severity_, nullptr, stream_.str().c_str());
+#elif defined(OS_ANDROID)
   android_LogPriority priority = (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
   switch (severity_) {
     case LOG_INFO:

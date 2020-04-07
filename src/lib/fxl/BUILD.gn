@@ -40,6 +40,10 @@ target(fxl_logging_type, "fxl_logging") {
 
   if (is_fuchsia) {
     libs = [ "zircon" ]
+    public_deps += [
+      "//src/lib/syslog/cpp",
+      "//zircon/public/lib/zx",
+    ]
   }
 }
 

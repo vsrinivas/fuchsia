@@ -52,6 +52,7 @@ void fx_logger::ActivateFallback(int fallback_fd) {
   // Do not change fd_to_close_ as we don't want to close fallback_fd.
   // We will still close original console_fd_
   logger_fd_.store(fallback_fd, std::memory_order_relaxed);
+  socket_.reset();
 }
 
 zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
