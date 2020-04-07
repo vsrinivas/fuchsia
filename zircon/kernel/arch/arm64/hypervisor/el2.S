@@ -366,6 +366,7 @@ FUNCTION_LABEL(el2_hvc_on)
     // Invalidate all EL2 TLB entries.
     tlbi alle2
     dsb sy
+    isb
 
     // Enable the MMU, I-cache, D-cache, and stack alignment checking.
     movlit reg_xs, SCTLR_ELX_M | SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
@@ -375,6 +376,7 @@ FUNCTION_LABEL(el2_hvc_on)
     // Setup the exec vector table for EL2.
     adr_global reg_xs, arm64_el2_exec_table
     msr vbar_el2, reg_xs
+    isb
 
     exception_return ZX_OK
 
@@ -399,6 +401,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
     // Invalidate all EL2 TLB entries.
     tlbi alle2
+    dsb sy
     isb
 
     // Setup the init vector table for EL2.
