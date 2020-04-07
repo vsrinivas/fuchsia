@@ -279,17 +279,22 @@ mod tests {
     #[test]
     fn short_reads() {
         let p = test_packet();
-        let buffer = p.as_bytes();
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE]), None);
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE - 1]), None);
+        let one_short = &p.as_bytes()[0..METADATA_SIZE];
+        let two_short = &p.as_bytes()[0..METADATA_SIZE - 1];
+
+        assert_eq!(parse_log_message(one_short), None);
+        assert_eq!(parse_log_message(two_short), None);
     }
 
     #[test]
     fn unterminated() {
         let mut p = test_packet();
         p.data[9] = 1;
-        let buffer = p.as_bytes();
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 10]), None);
+
+        let buffer = &p.as_bytes()[0..METADATA_SIZE + 10];
+        let parsed = parse_log_message(buffer);
+
+        assert_eq!(parsed, None);
     }
 
     #[test]
@@ -298,8 +303,11 @@ mod tests {
         p.data[0] = 11;
         memset(&mut p.data[..], 1, 65, 11);
         p.data[12] = 0;
-        let buffer = p.as_bytes();
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 13]), None);
+
+        let buffer = &p.as_bytes()[0..METADATA_SIZE + 13];
+        let parsed = parse_log_message(buffer);
+
+        assert_eq!(parsed, None);
     }
 
     #[test]
@@ -310,19 +318,22 @@ mod tests {
         p.data[12] = 0;
         memset(&mut p.data[..], 13, 66, 5);
 
-        let expected_p = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            severity: p.metadata.severity,
-            dropped_logs: p.metadata.dropped_logs,
-            tags: vec![String::from("AAAAAAAAAAA")],
-            msg: String::from("BBBBB"),
-        };
+        let buffer = &p.as_bytes()[0..METADATA_SIZE + 19];
+        let (parsed, size) = parse_log_message(buffer).unwrap();
 
-        let buffer = p.as_bytes();
-        let s = Some((expected_p, METADATA_SIZE + 18));
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), s);
+        assert_eq!(size, METADATA_SIZE + 18);
+        assert_eq!(
+            parsed,
+            LogMessage {
+                pid: p.metadata.pid,
+                tid: p.metadata.tid,
+                time: p.metadata.time,
+                severity: p.metadata.severity,
+                dropped_logs: p.metadata.dropped_logs,
+                tags: vec![String::from("AAAAAAAAAAA")],
+                msg: String::from("BBBBB"),
+            }
+        );
     }
 
     #[test]
@@ -333,8 +344,10 @@ mod tests {
         p.data[12] = 5;
         memset(&mut p.data[..], 13, 66, 5);
 
-        let buffer = p.as_bytes();
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 19]), None);
+        let buffer = &p.as_bytes()[0..METADATA_SIZE + 19];
+        let parsed = parse_log_message(buffer);
+
+        assert_eq!(parsed, None);
     }
 
     #[test]
@@ -346,18 +359,22 @@ mod tests {
         memset(&mut p.data[..], 13, 66, 5);
         memset(&mut p.data[..], 19, 67, 5);
 
-        let expected_p = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            severity: p.metadata.severity,
-            dropped_logs: p.metadata.dropped_logs,
-            tags: vec![String::from("AAAAAAAAAAA"), String::from("BBBBB")],
-            msg: String::from("CCCCC"),
-        };
-        let s = Some((expected_p, METADATA_SIZE + 24));
-        let buffer = p.as_bytes();
-        assert_eq!(parse_log_message(&buffer[0..METADATA_SIZE + 25]), s);
+        let buffer = &p.as_bytes()[0..METADATA_SIZE + 25];
+        let (parsed, size) = parse_log_message(buffer).unwrap();
+
+        assert_eq!(size, METADATA_SIZE + 24);
+        assert_eq!(
+            parsed,
+            LogMessage {
+                pid: p.metadata.pid,
+                tid: p.metadata.tid,
+                time: p.metadata.time,
+                severity: p.metadata.severity,
+                dropped_logs: p.metadata.dropped_logs,
+                tags: vec![String::from("AAAAAAAAAAA"), String::from("BBBBB")],
+                msg: String::from("CCCCC"),
+            }
+        );
     }
 
     #[test]
@@ -376,7 +393,13 @@ mod tests {
         memset(&mut p.data[..], 1 + 3 * FX_LOG_MAX_TAGS, ascii, 5);
         p.data[1 + 3 * FX_LOG_MAX_TAGS + 5] = 0;
 
-        let expected_p = LogMessage {
+        let short_buffer = &p.as_bytes()[0..(METADATA_SIZE + 1 + 3 * FX_LOG_MAX_TAGS + 6)];
+        let full_buffer = &p.as_bytes()[..];
+        let (short_parsed, short_size) = parse_log_message(short_buffer).unwrap();
+        let (full_parsed, full_size) = parse_log_message(full_buffer).unwrap();
+
+        let expected_size = METADATA_SIZE + 1 + 3 * FX_LOG_MAX_TAGS + 5;
+        let expected_message = LogMessage {
             pid: p.metadata.pid,
             tid: p.metadata.tid,
             time: p.metadata.time,
@@ -388,21 +411,16 @@ mod tests {
             msg: String::from_utf8(vec![65 + FX_LOG_MAX_TAGS as u8; 5]).unwrap(),
         };
 
-        let s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5));
-        let buffer = p.as_bytes();
+        assert_eq!(short_size, expected_size);
+        assert_eq!(full_size, expected_size);
 
-        assert_eq!(
-            parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 6)],),
-            s
-        );
-
-        assert_eq!(parse_log_message(&buffer[..]), s);
+        assert_eq!(short_parsed, expected_message);
+        assert_eq!(full_parsed, expected_message);
     }
 
     #[test]
     fn max_tags_no_message() {
         let mut p = test_packet();
-        // fill the tags in the packet
         for i in 0..FX_LOG_MAX_TAGS {
             p.data[3 * i] = 2;
             memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
@@ -410,17 +428,15 @@ mod tests {
 
         p.data[3 * FX_LOG_MAX_TAGS] = 0;
 
-        let buffer = p.as_bytes();
-        assert_eq!(
-            parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))],),
-            None
-        );
+        let buffer = &p.as_bytes()[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize))];
+        let parsed = parse_log_message(buffer);
+
+        assert_eq!(parsed, None);
     }
 
     #[test]
     fn max_tags_empty_message() {
         let mut p = test_packet();
-        // fill the tags in the packet
         for i in 0..FX_LOG_MAX_TAGS {
             p.data[3 * i] = 2;
             memset(&mut p.data[..], 1 + 3 * i, (65 + i) as c_char, 2);
@@ -429,23 +445,23 @@ mod tests {
         p.data[3 * FX_LOG_MAX_TAGS] = 0;
         p.data[1 + 3 * FX_LOG_MAX_TAGS] = 0;
 
-        let expected_p = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            severity: p.metadata.severity,
-            dropped_logs: p.metadata.dropped_logs,
-            tags: (0..FX_LOG_MAX_TAGS as u8)
-                .map(|i| String::from_utf8(vec![65 + i as u8; 2]).unwrap())
-                .collect(),
-            msg: String::new(),
-        };
+        let buffer = &p.as_bytes()[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)];
+        let (parsed, size) = parse_log_message(buffer).unwrap();
 
-        let s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize)));
-        let buffer = p.as_bytes();
+        assert_eq!(size, METADATA_SIZE + 1 + 3 * FX_LOG_MAX_TAGS);
         assert_eq!(
-            parse_log_message(&buffer[0..(METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 1)],),
-            s
+            parsed,
+            LogMessage {
+                pid: p.metadata.pid,
+                tid: p.metadata.tid,
+                time: p.metadata.time,
+                severity: p.metadata.severity,
+                dropped_logs: p.metadata.dropped_logs,
+                tags: (0..FX_LOG_MAX_TAGS as u8)
+                    .map(|i| String::from_utf8(vec![65 + i as u8; 2]).unwrap())
+                    .collect(),
+                msg: String::new(),
+            }
         );
     }
 
@@ -457,18 +473,21 @@ mod tests {
         p.data[2] = 'A' as c_char;
         p.data[3] = 0;
 
-        let expected_p = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            severity: p.metadata.severity,
-            dropped_logs: p.metadata.dropped_logs,
-            tags: vec![],
-            msg: String::from("AA"),
-        };
+        let buffer = &p.as_bytes()[0..(METADATA_SIZE + 4)];
+        let (parsed, size) = parse_log_message(buffer).unwrap();
 
-        let s = Some((expected_p.clone(), METADATA_SIZE + 3));
-        let buffer = p.as_bytes();
-        assert_eq!(parse_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
+        assert_eq!(size, METADATA_SIZE + 3);
+        assert_eq!(
+            parsed,
+            LogMessage {
+                pid: p.metadata.pid,
+                tid: p.metadata.tid,
+                time: p.metadata.time,
+                severity: p.metadata.severity,
+                dropped_logs: p.metadata.dropped_logs,
+                tags: vec![],
+                msg: String::from("AA"),
+            }
+        );
     }
 }
