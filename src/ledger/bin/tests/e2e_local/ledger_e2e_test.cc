@@ -184,7 +184,7 @@ TEST_F(LedgerEndToEndTest, Terminate) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(LedgerEndToEndTest, ClearPage) {
+TEST_F(LedgerEndToEndTest, DISABLED_ClearPage) {
   Init({});
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
