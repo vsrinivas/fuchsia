@@ -47,7 +47,6 @@ executable("main") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":constants",
     ":feedback_agent_src",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",

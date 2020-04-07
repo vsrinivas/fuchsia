@@ -10,11 +10,8 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/logger.h>
 
-#include <cstdio>
-#include <filesystem>
 #include <memory>
 
-#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
 
 int main(int argc, const char** argv) {
@@ -22,11 +19,6 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
-
-  // TODO(fxb/42590): stop renaming the old file.
-  if (std::filesystem::exists(feedback::kLegacyDeviceIdPath)) {
-    rename(feedback::kLegacyDeviceIdPath, feedback::kDeviceIdPath);
-  }
 
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
