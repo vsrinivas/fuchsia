@@ -74,6 +74,21 @@ TEST(ObjectWaitOneTest, WaitForEventThenSignal) {
   thread.join();
 }
 
+TEST(ObjectWaitOneTest, TransientSignalsNotReturned) {
+  auto ev = MakeEvent();
+  auto main_thread = zx::thread::self();
+  std::thread thread([&] {
+    ASSERT_OK(WaitForState(main_thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+    ev.signal(/*clear_mask=*/0u, /*set_mask=*/ZX_USER_SIGNAL_0);
+    ev.signal(/*clear_mask=*/ZX_USER_SIGNAL_0, /*set_mask=*/0);
+    ev.signal(/*clear_mask=*/0u, /*set_mask=*/ZX_USER_SIGNAL_1);
+  });
+  zx_signals_t observed;
+  ASSERT_OK(ev.wait_one(ZX_USER_SIGNAL_1, zx::time::infinite(), &observed));
+  ASSERT_EQ(observed, ZX_USER_SIGNAL_1);
+  thread.join();
+}
+
 TEST(ObjectWaitManyTest, TooManyObjects) {
   zx_wait_item_t items[ZX_WAIT_MANY_MAX_ITEMS + 1];
 
@@ -158,6 +173,47 @@ TEST(ObjectWaitManyTest, WaitForEventsThenSignal) {
   // depending on timing, the client might not see all the signaled events, but since
   // the wait completed, at least one of them is signaled.
   EXPECT_GT(signal_count, 0);
+}
+
+TEST(ObjectWaitManyTest, TransientSignalsNotReturned) {
+  // Wait on a USER_SIGNAL_0 on three objects.
+  zx_wait_item_t items[3];
+  for (auto& item : items) {
+    item = zx_wait_item_t{
+        .handle = MakeEvent().release(),
+        .waitfor = ZX_USER_SIGNAL_0,
+        .pending = 0u,
+    };
+  }
+
+  auto main_thread = zx::thread::self();
+  std::thread thread([&] {
+    // Wait for the main thread to get ready.
+    ASSERT_OK(WaitForState(main_thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY));
+
+    // Assert and clear USER_SIGNAL_1 on handle 0 and 2.
+    ASSERT_OK(zx_object_signal(items[0].handle, /*clear_mask=*/0u, /*set_mask=*/ZX_USER_SIGNAL_1));
+    ASSERT_OK(zx_object_signal(items[0].handle, /*clear_mask=*/ZX_USER_SIGNAL_1, /*set_mask=*/0u));
+    ASSERT_OK(zx_object_signal(items[2].handle, /*clear_mask=*/0u, /*set_mask=*/ZX_USER_SIGNAL_1));
+    ASSERT_OK(zx_object_signal(items[2].handle, /*clear_mask=*/ZX_USER_SIGNAL_1, /*set_mask=*/0u));
+
+    // Assert USER_SIGNAL_1 on handle 1.
+    ASSERT_OK(zx_object_signal(items[1].handle, /*clear_mask=*/0u, /*set_mask=*/ZX_USER_SIGNAL_1));
+
+    // Assert USER_SIGNAL_0 on handle 0.
+    ASSERT_OK(zx_object_signal(items[0].handle, /*clear_mask=*/0u, /*set_mask=*/ZX_USER_SIGNAL_0));
+  });
+
+  // Wait for the signals.
+  ASSERT_OK(zx::thread::wait_many(items, fbl::count_of(items), zx::time::infinite()));
+  thread.join();
+
+  // The transient USER_SIGNAL_1 signal on objects 0 and 2 should not be set.
+  // However, the asserted (but non-watched) USER_SIGNAL_1 on object 1 should be set,
+  // and the asserted (and watched) USER_SIGNAL_0 should be set on object 0.
+  EXPECT_EQ(items[0].pending, ZX_USER_SIGNAL_0);
+  EXPECT_EQ(items[1].pending, ZX_USER_SIGNAL_1);
+  EXPECT_EQ(items[2].pending, 0);
 }
 
 }  // namespace

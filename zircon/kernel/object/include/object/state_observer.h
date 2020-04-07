@@ -15,6 +15,8 @@
 class Handle;
 
 // Observer base class for state maintained by Dispatcher.
+//
+// Implementations must be thread compatible, but need not be thread safe.
 class StateObserver {
  public:
   // Optional initial counts. Each object might have a different idea of them

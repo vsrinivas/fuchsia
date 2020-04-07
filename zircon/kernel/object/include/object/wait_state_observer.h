@@ -47,7 +47,7 @@ class WaitStateObserver final : public StateObserver {
   const void* handle_ = nullptr;
   Event* event_ = nullptr;
   zx_signals_t watched_signals_ = 0u;
-  ktl::atomic<zx_signals_t> wakeup_reasons_;
+  ktl::atomic<zx_signals_t> target_signal_state_;
   fbl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };
 
