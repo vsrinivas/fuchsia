@@ -29,11 +29,15 @@ class VkReadbackTest {
   virtual ~VkReadbackTest();
 
   bool Initialize();
-  bool Exec();
+  bool Exec(VkFence fence = VK_NULL_HANDLE);
+  bool Submit(VkFence fence);
+  void Wait();
   bool Readback();
 
   uint32_t get_device_memory_handle() const { return device_memory_handle_; }
   void set_device_memory_handle(uint32_t handle) { device_memory_handle_ = handle; }
+
+  const VkDevice& vulkan_device() { return vk_device_; }
 
  private:
   bool InitVulkan();

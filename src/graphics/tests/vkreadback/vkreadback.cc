@@ -452,7 +452,15 @@ bool VkReadbackTest::InitImage() {
   return true;
 }
 
-bool VkReadbackTest::Exec() {
+bool VkReadbackTest::Exec(VkFence fence) {
+  if (!Submit(fence)) {
+    return false;
+  }
+  Wait();
+  return true;
+}
+
+bool VkReadbackTest::Submit(VkFence fence) {
   VkSubmitInfo submit_info = {
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
       .pNext = nullptr,
@@ -466,14 +474,13 @@ bool VkReadbackTest::Exec() {
   };
 
   VkResult result;
-  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS) {
+  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, fence)) != VK_SUCCESS) {
     RTN_MSG(false, "vkQueueSubmit failed\n");
   }
-
-  vkQueueWaitIdle(vk_queue_);
-
   return true;
 }
+
+void VkReadbackTest::Wait() { vkQueueWaitIdle(vk_queue_); }
 
 bool VkReadbackTest::Readback() {
   VkResult result;
