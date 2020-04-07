@@ -50,17 +50,15 @@ pub fn make_package_fetch_queue(
             let rewriter = Arc::clone(&rewriter);
             let blob_fetcher = blob_fetcher.clone();
             async move {
-                let fut = package_from_repo_or_cache(
+                Ok(package_from_repo_or_cache(
                     &repo_manager,
                     &rewriter,
                     &system_cache_list,
                     &url,
                     cache,
                     blob_fetcher,
-                );
-                let merkle = fut.await?;
-                fx_log_info!("resolved {} to {}", url, merkle);
-                Ok(merkle)
+                )
+                .await?)
             }
         });
     (package_fetch_queue.into_future(), package_fetcher)
@@ -166,11 +164,11 @@ async fn package_from_repo_or_cache(
     blob_fetcher: BlobFetcher,
 ) -> Result<BlobId, Status> {
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
-    // The following two lines must be separate lines to prevent deadlock
-    // in a single-threaded executor.
+    // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
+    // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
+    // statement, so the following two lines should not be combined.
     let fut = repo_manager.read().get_package(&rewritten_url, &cache, &blob_fetcher);
-    let res = fut.await;
-    let res = match res {
+    match fut.await {
         Ok(b) => Ok(b),
         Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
             // If we can get metadata but the repo doesn't know about the package,
@@ -184,9 +182,12 @@ async fn package_from_repo_or_cache(
             // Return the existing error if not found in the cache.
             lookup_from_system_cache(&pkg_url, system_cache_list).ok_or(e)
         }
-    };
-
-    res.map_err(|e| e.to_resolve_status())
+    }
+    .map_err(|e| e.to_resolve_status())
+    .map(|b| {
+        fx_log_info!("resolved {} as {} to {}", pkg_url, rewritten_url, b);
+        b
+    })
 }
 
 fn lookup_from_system_cache<'a>(
