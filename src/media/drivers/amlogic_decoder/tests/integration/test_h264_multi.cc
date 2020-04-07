@@ -14,13 +14,15 @@
 #include "pts_manager.h"
 #include "src/lib/fxl/log_settings.h"
 #include "test_frame_allocator.h"
+#include "tests/integration/test_25fps_h264_hashes.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
 #include "video_frame_helpers.h"
 
 class TestH264Multi {
  public:
-  static void DecodeSetStream(const char* filename) {
+  static void DecodeSetStream(const char* input_filename,
+                              uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename) {
     fxl::LogSettings settings;
     settings.min_log_level = -10;
     fxl::SetLogSettings(settings);
@@ -46,12 +48,18 @@ class TestH264Multi {
     std::promise<void> wait_valid;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid,
-                                             filename](std::shared_ptr<VideoFrame> frame) {
+      frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid, input_filename,
+                                             filename,
+                                             input_hashes](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         DLOG("Got frame %d\n", frame_count);
         EXPECT_EQ(320u, frame->coded_width);
-        EXPECT_EQ(192u, frame->coded_height);
+        bool is_bear = input_filename == std::string("video_test_data/bear.h264");
+        if (is_bear) {
+          EXPECT_EQ(192u, frame->coded_height);
+        } else {
+          EXPECT_EQ(240u, frame->coded_height);
+        }
         (void)filename;
 #if DUMP_VIDEO_TO_FILE
         DumpVideoFrameToFile(frame.get(), filename);
@@ -61,25 +69,27 @@ class TestH264Multi {
                                          frame->stride * frame->coded_height / 2);
 
         uint8_t* buf_start = static_cast<uint8_t*>(io_buffer_virt(&frame->buffer));
-        if (frame_count == 1) {
-          // Only test a small amount for now.
+        if (frame_count == 1 && is_bear) {
+          // Only test a small amount to try to make the output of huge failures obvious - the rest
+          // can be verified through hashes.
           constexpr uint8_t kExpectedData[] = {124, 186, 230, 247, 252, 252, 252, 252, 252, 252};
           for (uint32_t i = 0; i < std::size(kExpectedData); ++i) {
             EXPECT_EQ(kExpectedData[i], buf_start[i]) << " index " << i;
           }
         }
-        if (frame_count < 4) {
-          // Later frames seems to gradually be getting corrupted, so don't check them for now.
+        if (!is_bear || (frame_count < 4)) {
+          // Later frames of bear.h264 seem to gradually be getting corrupted, so don't check them for now.
           // TODO(fxb/13483): Test later frames once they're fixed.
           uint8_t md[SHA256_DIGEST_LENGTH];
           HashFrame(frame.get(), md);
-          EXPECT_EQ(0, memcmp(md, bear_h264_hashes[frame_count - 1], sizeof(md)))
+          EXPECT_EQ(0, memcmp(md, input_hashes[frame_count - 1], sizeof(md)))
               << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
         }
 
         video->AssertVideoDecoderLockHeld();
         video->video_decoder()->ReturnFrame(frame);
-        if (frame_count == 26) {
+        uint32_t expected_frame_count = is_bear ? 26 : 240;
+        if (frame_count == expected_frame_count) {
           wait_valid.set_value();
         }
       });
@@ -88,10 +98,10 @@ class TestH264Multi {
       EXPECT_EQ(ZX_OK, video->video_decoder()->Initialize());
     }
 
-    auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
-    ASSERT_NE(nullptr, bear_h264);
+    auto input_h264 = TestSupport::LoadFirmwareFile(input_filename);
+    ASSERT_NE(nullptr, input_h264);
     video->core()->InitializeDirectInput();
-    auto nal_units = SplitNalUnits(bear_h264->ptr, bear_h264->size);
+    auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
     for (auto& nal_unit : nal_units) {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
@@ -113,4 +123,12 @@ class TestH264Multi {
   }
 };
 
-TEST(H264Multi, DecodeSetStream) { TestH264Multi::DecodeSetStream("/tmp/bearmultih264.yuv"); }
+TEST(H264Multi, DecodeBear) {
+  TestH264Multi::DecodeSetStream("video_test_data/bear.h264", bear_h264_hashes,
+                                 "/tmp/bearmultih264.yuv");
+}
+
+TEST(H264Multi, Decode25fps) {
+  TestH264Multi::DecodeSetStream("video_test_data/test-25fps.h264", test_25fps_h264_hashes,
+                                 "/tmp/test25fpsmultih264.yuv");
+}

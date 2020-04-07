@@ -266,7 +266,7 @@ zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_
     memcpy(addr + 0x2000, data + 0x6000, kSecondaryFirmwareSize);           // mmc
     memcpy(addr + 0x3000, data + 0x3000, kSecondaryFirmwareSize);           // list
     memcpy(addr + 0x4000, data + 0x5000, kSecondaryFirmwareSize);           // slice
-    memcpy(addr + 0x5000, data + 0x4000, kSecondaryFirmwareSize);           // main
+    memcpy(addr + 0x5000, data, 0x2000);                                    // main
     memcpy(addr + 0x5000 + 0x2000, data + 0x2000, kSecondaryFirmwareSize);  // data copy 2
     memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
     ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
@@ -459,6 +459,9 @@ void H264MultiDecoder::StartFrameDecode() {
 
   // For now, just use the decode size from InitializeHardware.
   if (state_ == DecoderState::kInitialWaitingForInput) {
+  // TODO(fxb/13483): Use real value.
+    constexpr uint32_t kBytesToDecode = 100000;
+    ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
     owner_->core()->StartDecoding();
   }
   DpbStatusReg::Get().FromValue(kH264ActionSearchHead).WriteTo(owner_->dosbus());
@@ -709,28 +712,6 @@ void H264MultiDecoder::HandlePicDataDone() {
   }
   state_ = DecoderState::kInitialWaitingForInput;
   owner_->core()->StopDecoding();
-  // Swapping out and in the decoder shouldn't be necessary, but it seems to make decoding more
-  // reliable.
-  // TODO(fxb/13483): Remove swap out here when decoder is more stable.
-  InputContext context;
-  zx_status_t status = owner_->core()->InitializeInputContext(&context, false);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Error creating input context: %d", status);
-    OnFatalError();
-    return;
-  }
-
-  owner_->core()->SaveInputContext(&context);
-  owner_->core()->PowerOff();
-  owner_->core()->PowerOn();
-  owner_->core()->RestoreInputContext(&context);
-  state_ = DecoderState::kSwappedOut;
-  status = InitializeHardware();
-  if (status != ZX_OK) {
-    DECODE_ERROR("Error reinitializing hardware: %d", status);
-    OnFatalError();
-    return;
-  }
 
   currently_decoding_ = false;
   PumpDecoder();
@@ -764,6 +745,8 @@ void H264MultiDecoder::HandleInterrupt() {
 void H264MultiDecoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   DLOG("H264MultiDecoder::ReturnFrame %d", frame->index);
   video_frames_[frame->index]->in_use = false;
+  waiting_for_surfaces_ = false;
+  PumpDecoder();
 }
 
 void H264MultiDecoder::CallErrorHandler() { DLOG("Not implemented: %s\n", __func__); }
