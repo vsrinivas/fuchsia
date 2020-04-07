@@ -5,9 +5,9 @@
 #ifndef SRC_LIB_FIDL_CODEC_STATUS_H_
 #define SRC_LIB_FIDL_CODEC_STATUS_H_
 
-#include <string>
+#include <zircon/types.h>
 
-#include "zircon/types.h"
+#include <string>
 
 namespace fidl_codec {
 

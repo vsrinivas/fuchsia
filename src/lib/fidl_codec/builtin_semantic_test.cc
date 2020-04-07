@@ -4,8 +4,9 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
-#include "library_loader.h"
+#include <gtest/gtest.h>
+
+#include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/semantic.h"
 #include "src/lib/fidl_codec/semantic_parser_test.h"
 #include "src/lib/fidl_codec/wire_object.h"

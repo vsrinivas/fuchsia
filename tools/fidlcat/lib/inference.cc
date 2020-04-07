@@ -4,13 +4,14 @@
 
 #include "tools/fidlcat/lib/inference.h"
 
+#include <zircon/system/public/zircon/processargs.h>
+#include <zircon/system/public/zircon/types.h>
+
 #include <ios>
 #include <ostream>
 
 #include "src/lib/fidl_codec/printer.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
-#include "zircon/system/public/zircon/processargs.h"
-#include "zircon/system/public/zircon/types.h"
 
 namespace fidlcat {
 

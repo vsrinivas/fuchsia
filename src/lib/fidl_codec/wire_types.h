@@ -6,18 +6,14 @@
 #define SRC_LIB_FIDL_CODEC_WIRE_TYPES_H_
 
 #include <lib/fit/function.h>
-
-#ifdef __Fuchsia__
 #include <zircon/types.h>
-#else
-typedef uint32_t zx_handle_t;
-#endif
 
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "rapidjson/document.h"
+#include <rapidjson/document.h>
+
 #include "src/lib/fidl_codec/memory_helpers.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "src/lib/fidl_codec/wire_object.h"

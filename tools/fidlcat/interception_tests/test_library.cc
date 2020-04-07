@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_library.h"
+#include "tools/fidlcat/interception_tests/test_library.h"
 
 #include <iostream>
 #include <memory>

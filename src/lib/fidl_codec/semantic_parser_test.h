@@ -5,8 +5,9 @@
 #ifndef SRC_LIB_FIDL_CODEC_SEMANTIC_PARSER_TEST_H_
 #define SRC_LIB_FIDL_CODEC_SEMANTIC_PARSER_TEST_H_
 
-#include "gtest/gtest.h"
-#include "library_loader.h"
+#include <gtest/gtest.h>
+
+#include "src/lib/fidl_codec/library_loader.h"
 
 namespace fidl_codec {
 namespace semantic {

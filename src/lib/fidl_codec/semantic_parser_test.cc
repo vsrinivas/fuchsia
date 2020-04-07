@@ -9,8 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
-#include "library_loader.h"
+#include <gtest/gtest.h>
+
+#include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/list_test_data.h"
 #include "src/lib/fidl_codec/semantic_parser_test.h"
 

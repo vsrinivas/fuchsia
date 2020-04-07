@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "command_line_options.h"
+#include "tools/fidlcat/command_line_options.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,7 +10,8 @@
 #include <filesystem>
 #include <fstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace fidlcat {

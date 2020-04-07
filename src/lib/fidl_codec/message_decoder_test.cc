@@ -7,6 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/test/frobinator_impl.h>
 
 #include <iostream>
 #include <memory>
@@ -14,15 +15,15 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
-#include "lib/fidl/cpp/test/frobinator_impl.h"
+#include <gtest/gtest.h>
+#include <test/fidlcodec/examples/cpp/fidl.h>
+
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/library_loader_test_data.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "src/lib/fidl_codec/wire_object.h"
-#include "test/fidlcodec/examples/cpp/fidl.h"
-#include "wire_parser.h"
+#include "src/lib/fidl_codec/wire_parser.h"
 
 using test::fidlcodec::examples::Echo;
 using test::fidlcodec::examples::FidlCodecTestInterface;

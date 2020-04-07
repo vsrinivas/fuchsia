@@ -6,6 +6,7 @@
 #define TOOLS_FIDLCAT_LIB_TYPE_DECODER_H_
 
 #include <zircon/system/public/zircon/rights.h>
+#include <zircon/system/public/zircon/syscalls/debug.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/hypervisor.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
@@ -18,7 +19,6 @@
 
 #include "src/lib/fidl_codec/printer.h"
 #include "src/lib/fidl_codec/status.h"
-#include "zircon/system/public/zircon/syscalls/debug.h"
 
 namespace fidlcat {
 

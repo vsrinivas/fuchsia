@@ -8,7 +8,8 @@
 #include <fstream>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "tools/fidlcat/lib/message_graph.h"
 
 namespace fidlcat {

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "library_loader.h"
+#include "src/lib/fidl_codec/library_loader.h"
 
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fidl_codec/library_loader_test_data.h"
 #include "src/lib/fidl_codec/list_test_data.h"
 

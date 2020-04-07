@@ -5,10 +5,11 @@
 #ifndef SRC_LIB_FIDL_CODEC_ENCODER_H_
 #define SRC_LIB_FIDL_CODEC_ENCODER_H_
 
+#include <lib/fit/function.h>
+
 #include <optional>
 #include <vector>
 
-#include "lib/fit/function.h"
 #include "src/lib/fidl_codec/visitor.h"
 
 namespace fidl_codec {

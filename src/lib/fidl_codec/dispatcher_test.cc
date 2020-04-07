@@ -5,17 +5,19 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/test/frobinator_impl.h>
 
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include "lib/fidl/cpp/test/frobinator_impl.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <test/fidlcodec/examples/cpp/fidl.h>
+
 #include "src/lib/fidl_codec/encoder.h"
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/library_loader.h"
@@ -23,7 +25,6 @@
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_parser.h"
-#include "test/fidlcodec/examples/cpp/fidl.h"
 
 namespace fidl_codec {
 

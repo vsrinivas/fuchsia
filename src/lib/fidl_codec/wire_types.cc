@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "wire_types.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 #include <zircon/fidl.h>
 
-#include "rapidjson/error/en.h"
+#include <rapidjson/error/en.h>
+
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_object.h"

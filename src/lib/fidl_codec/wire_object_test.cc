@@ -13,14 +13,15 @@
 #include <string>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <test/fidlcodec/examples/cpp/fidl.h>
+
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/json_visitor.h"
 #include "src/lib/fidl_codec/wire_parser.h"
-#include "test/fidlcodec/examples/cpp/fidl.h"
 
 namespace fidl_codec {
 

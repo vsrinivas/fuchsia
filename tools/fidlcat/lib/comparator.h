@@ -14,7 +14,7 @@
 #include <string_view>
 #include <utility>
 
-#include "message_graph.h"
+#include "tools/fidlcat/lib/message_graph.h"
 
 namespace fidlcat {
 

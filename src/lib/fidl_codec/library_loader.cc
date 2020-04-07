@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "library_loader.h"
+#include "src/lib/fidl_codec/library_loader.h"
 
-#include "rapidjson/error/en.h"
+#include <rapidjson/error/en.h>
+
 #include "src/lib/fidl_codec/builtin_semantic.h"
 #include "src/lib/fidl_codec/semantic_parser.h"
 #include "src/lib/fidl_codec/wire_object.h"

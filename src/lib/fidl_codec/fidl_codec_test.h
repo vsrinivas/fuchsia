@@ -7,7 +7,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "sdk/lib/fidl/cpp/binding.h"
+#include <sdk/lib/fidl/cpp/binding.h>
+
 #include "src/lib/fidl_codec/library_loader.h"
 
 namespace fidl_codec {

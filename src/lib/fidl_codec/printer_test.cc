@@ -1,8 +1,12 @@
-#include "printer.h"
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/lib/fidl_codec/printer.h"
 
 #include <sstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace fidl_codec {
 

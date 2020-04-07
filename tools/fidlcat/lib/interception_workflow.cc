@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "interception_workflow.h"
+#include "tools/fidlcat/lib/interception_workflow.h"
 
 #include <cstring>
 #include <regex>
@@ -17,12 +17,6 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
-
-// TODO(fidlcat): Look into this.  Removing the hack that led to this (in
-// debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
-// on CQ in a way I can't repro locally.
-#undef __TA_REQUIRES
-
 #include "tools/fidlcat/lib/decode_options.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 

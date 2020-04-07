@@ -4,12 +4,13 @@
 
 #include "src/lib/fidl_codec/semantic.h"
 
+#include <zircon/system/public/zircon/processargs.h>
+#include <zircon/system/public/zircon/types.h>
+
 #include <string>
 
 #include "src/lib/fidl_codec/printer.h"
 #include "src/lib/fidl_codec/wire_object.h"
-#include "zircon/system/public/zircon/processargs.h"
-#include "zircon/system/public/zircon/types.h"
 
 namespace fidl_codec {
 namespace semantic {

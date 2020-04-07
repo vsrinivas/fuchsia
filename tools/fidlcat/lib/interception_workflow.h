@@ -19,12 +19,6 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
-
-// TODO: Look into this.  Removing the hack that led to this (in
-// debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
-// on CQ in a way I can't repro locally.
-#undef __TA_REQUIRES
-
 #include "tools/fidlcat/command_line_options.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 

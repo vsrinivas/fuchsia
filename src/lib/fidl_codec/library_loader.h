@@ -10,7 +10,8 @@
 #include <optional>
 #include <vector>
 
-#include "rapidjson/document.h"
+#include <rapidjson/document.h>
+
 #include "src/lib/fidl_codec/semantic.h"
 
 // This file contains a programmatic representation of a FIDL schema.  A

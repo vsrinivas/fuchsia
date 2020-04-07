@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "message_decoder.h"
+#include "src/lib/fidl_codec/message_decoder.h"
 
 #include <ostream>
 #include <sstream>
 
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/status.h"
 #include "src/lib/fidl_codec/wire_object.h"

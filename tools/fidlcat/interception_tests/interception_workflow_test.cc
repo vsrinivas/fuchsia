@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "interception_workflow_test.h"
+#include "tools/fidlcat/interception_tests/interception_workflow_test.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 
 namespace fidlcat {

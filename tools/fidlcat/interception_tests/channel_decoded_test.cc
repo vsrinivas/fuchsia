@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "interception_workflow_test.h"
-#include "test_library.h"
+#include <gtest/gtest.h>
+
+#include "tools/fidlcat/interception_tests/interception_workflow_test.h"
+#include "tools/fidlcat/interception_tests/test_library.h"
 
 namespace fidlcat {
 

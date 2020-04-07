@@ -4,9 +4,10 @@
 
 #include "src/lib/fidl_codec/encoder.h"
 
+#include <lib/fidl/txn_header.h>
+
 #include <algorithm>
 
-#include "lib/fidl/txn_header.h"
 #include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
 #include "src/lib/fxl/logging.h"

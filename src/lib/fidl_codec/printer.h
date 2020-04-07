@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_CODEC_PRINTER_H_
 
 #include <zircon/system/public/zircon/rights.h>
+#include <zircon/system/public/zircon/syscalls/debug.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
 #include <zircon/system/public/zircon/syscalls/resource.h>
@@ -16,7 +17,6 @@
 #include <ostream>
 
 #include "src/lib/fxl/logging.h"
-#include "zircon/system/public/zircon/syscalls/debug.h"
 
 namespace fidl_codec {
 

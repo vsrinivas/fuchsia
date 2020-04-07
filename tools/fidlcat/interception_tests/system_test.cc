@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zircon/system/public/zircon/syscalls/system.h"
+#include <zircon/system/public/zircon/features.h>
+#include <zircon/system/public/zircon/syscalls/system.h>
 
-// TODO(fidlcat): Look into this.  Removing the hack that led to this (in
-// debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
-// on CQ in a way I can't repro locally.
-#undef __TA_REQUIRES
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
-#include "interception_workflow_test.h"
-#include "zircon/system/public/zircon/features.h"
+#include "tools/fidlcat/interception_tests/interception_workflow_test.h"
 
 namespace fidlcat {
 

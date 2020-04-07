@@ -5,6 +5,9 @@
 #ifndef SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_
 #define SRC_LIB_FIDL_CODEC_MESSAGE_DECODER_H_
 
+#include <lib/fidl/cpp/message.h>
+#include <lib/fidl/txn_header.h>
+
 #include <cstdint>
 #include <memory>
 #include <ostream>
@@ -12,8 +15,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "lib/fidl/cpp/message.h"
-#include "lib/fidl/txn_header.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/memory_helpers.h"

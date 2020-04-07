@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDLCAT_INTERCEPTION_TESTS_INTERCEPTION_WORKFLOW_TEST_H_
 #define TOOLS_FIDLCAT_INTERCEPTION_TESTS_INTERCEPTION_WORKFLOW_TEST_H_
 
+#include <zircon/fidl.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -13,10 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "tools/fidlcat/lib/interception_workflow.h"
-#undef __TA_REQUIRES
-#include <zircon/fidl.h>
-
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
@@ -24,6 +22,7 @@
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "tools/fidlcat/lib/interception_workflow.h"
 
 namespace fidlcat {
 

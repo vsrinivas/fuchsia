@@ -20,12 +20,6 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/fxl/logging.h"
-
-// TODO(fidlcat): Look into this.  Removing the hack that led to this (in
-// debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
-// on CQ in a way I can't repro locally.
-#undef __TA_REQUIRES
-
 #include "tools/fidlcat/lib/interception_workflow.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
@@ -420,8 +414,8 @@ void SyscallDecoder::DecodeOutputs() {
       }
       thread = dispatcher_->CreateThread(thread_id_, process);
     }
-    output_event_ = std::make_unique<OutputEvent>(
-        timestamp << 32, thread, syscall_, syscall_return_value_);
+    output_event_ =
+        std::make_unique<OutputEvent>(timestamp << 32, thread, syscall_, syscall_return_value_);
     auto inline_member = syscall_->output_inline_members().begin();
     auto outline_member = syscall_->output_outline_members().begin();
     for (const auto& output : syscall_->outputs()) {
