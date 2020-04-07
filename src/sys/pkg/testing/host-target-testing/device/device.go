@@ -143,13 +143,17 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 	log.Printf("rebooting")
 
 	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
-		err := c.Run(ctx, "dm reboot", os.Stdout, os.Stderr)
+		// Run the reboot in the background, which gives us a chance to
+		// observe us successfully executing the reboot command.
+		err := c.Run(ctx, "dm reboot & exit 0", os.Stdout, os.Stderr)
 		if err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
-			if _, ok := err.(*ssh.ExitMissingError); !ok {
+			if _, ok := err.(*ssh.ExitMissingError); ok {
+				log.Printf("ssh disconnected before returning a status")
+			} else {
 				return fmt.Errorf("failed to reboot: %s", err)
 			}
 		}
@@ -164,13 +168,17 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 	log.Printf("rebooting to recovery")
 
 	return c.ExpectDisconnect(ctx, func() error {
-		err := c.Run(ctx, "dm reboot-recovery", os.Stdout, os.Stderr)
+		// Run the reboot in the background, which gives us a chance to
+		// observe us successfully executing the reboot command.
+		err := c.Run(ctx, "dm reboot-recovery & exit 0", os.Stdout, os.Stderr)
 		if err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
-			if _, ok := err.(*ssh.ExitMissingError); !ok {
+			if _, ok := err.(*ssh.ExitMissingError); ok {
+				log.Printf("ssh disconnected before returning a status")
+			} else {
 				return fmt.Errorf("failed to reboot into recovery: %s", err)
 			}
 		}
