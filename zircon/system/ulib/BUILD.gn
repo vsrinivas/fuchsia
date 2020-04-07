@@ -551,6 +551,8 @@ group("ulib-host") {
   testonly = true
   deps = [
 #------------------
+    "$zx/kernel/lib/heap/cmpctmalloc",
+#------------------
     "$zx/third_party/ulib/cksum",
 #------------------
 #------------------

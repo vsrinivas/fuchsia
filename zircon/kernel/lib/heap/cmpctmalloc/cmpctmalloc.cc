@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#ifdef _KERNEL
+
 #include "cmpctmalloc.h"
 
 #include <debug.h>
@@ -1113,3 +1115,4 @@ void cmpct_trim(void) {
     }
   }
 }
+#endif  // #ifdef _KERNEL
