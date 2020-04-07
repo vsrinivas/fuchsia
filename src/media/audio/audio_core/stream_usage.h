@@ -114,6 +114,9 @@ FidlCaptureUsageFromCaptureUsage(CaptureUsage u) {
   return {};
 }
 
+const char* RenderUsageToString(const RenderUsage& usage);
+const char* CaptureUsageToString(const CaptureUsage& usage);
+
 class StreamUsage {
  public:
   static constexpr StreamUsage WithRenderUsage(RenderUsage u) { return StreamUsage(u); }
@@ -155,6 +158,8 @@ class StreamUsage {
   // A |StreamUsage| is empty if it contains neither a render usage or a capture usage. This state
   // exists to be similar to the semantics of a FIDL union in C++.
   bool is_empty() const { return std::holds_alternative<std::monostate>(usage_); }
+
+  const char* ToString() const;
 
  private:
   using Usage = std::variant<std::monostate, RenderUsage, CaptureUsage>;
@@ -222,12 +227,5 @@ static StreamUsageSet StreamUsageSetFromCaptureUsages(const Container& container
 }
 
 }  // namespace media::audio
-
-#undef EXPAND_EACH_CAPTURE_USAGE
-#undef EXPAND_EACH_RENDER_USAGE
-#undef EXPAND_EACH_FIDL_CAPTURE_USAGE
-#undef EXPAND_EACH_FIDL_RENDER_USAGE
-#undef EXPAND_EACH_INTERNAL_CAPTURE_USAGE
-#undef EXPAND_EACH_INTERNAL_RENDER_USAGE
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_STREAM_USAGE_H_
