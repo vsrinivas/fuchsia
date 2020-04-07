@@ -23,8 +23,6 @@ static void usage() {
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  syslog::InitLogger();
-
   if (!command_line.HasOption("interface")) {
     usage();
     return ZX_ERR_INVALID_ARGS;

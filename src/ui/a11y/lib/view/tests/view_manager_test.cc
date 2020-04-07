@@ -53,9 +53,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
   ViewManagerTest()
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
-        view_manager_(std::move(factory_), debug_dir()) {
-    syslog::InitLogger();
-  }
+        view_manager_(std::move(factory_), debug_dir()) {}
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 

@@ -43,6 +43,4 @@ zx_status_t InitLogger(const syslog::LogSettings& settings,
 
 zx_status_t InitLogger(const std::initializer_list<std::string>& tags) { return SetTags(tags); }
 
-zx_status_t InitLogger() { return fx_log_init(); }
-
 }  // namespace syslog

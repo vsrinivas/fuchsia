@@ -71,10 +71,8 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity, const c
   output_compare_helper_ptr(&local, severity, msg, tags, num_tags);
 }
 
-TEST(LogInit, Init) {
+TEST(LogInit, InitWithTags) {
   Cleanup cleanup;
-  ASSERT_EQ(ZX_OK, syslog::InitLogger());
-  fx_log_reset_global_for_testing();
   ASSERT_EQ(ZX_OK, syslog::SetTags({"tag1", "tag2"}));
 }
 
@@ -157,12 +155,6 @@ TEST(Logger, CheckFunction) {
 }
 
 TEST(LoggerDeathTest, CheckFunction) {
-  Cleanup cleanup;
-  ASSERT_EQ(ZX_OK, syslog::InitLogger());
-  ASSERT_DEATH(FX_CHECK(false) << "test output", "");
-}
-
-TEST(LoggerDeathTest, CheckFunctionWithoutLogger) {
   Cleanup cleanup;
   ASSERT_DEATH(FX_CHECK(false) << "test output", "");
 }

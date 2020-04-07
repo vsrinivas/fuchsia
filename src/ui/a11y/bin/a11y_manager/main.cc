@@ -12,7 +12,6 @@
 #include "src/ui/a11y/bin/a11y_manager/app.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 

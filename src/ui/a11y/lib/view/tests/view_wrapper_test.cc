@@ -121,7 +121,7 @@ class MockAnnotationViewFactory : public a11y::AnnotationViewFactoryInterface {
 
 class ViewWrapperTest : public gtest::TestLoopFixture {
  public:
-  ViewWrapperTest() { syslog::InitLogger(); }
+  ViewWrapperTest() {}
 
   void SetUp() override {
     TestLoopFixture::SetUp();

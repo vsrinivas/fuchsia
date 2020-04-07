@@ -42,9 +42,6 @@ fx_logger_t* fx_log_get_logger() {
 }
 
 SYSLOG_EXPORT
-zx_status_t fx_log_init(void) { return ZX_OK; }
-
-SYSLOG_EXPORT
 zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
   return fx_log_get_logger()->Reconfigure(config);
 }

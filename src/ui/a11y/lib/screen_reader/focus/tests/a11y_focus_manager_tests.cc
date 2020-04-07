@@ -21,7 +21,6 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   void SetUp() override {
     a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(&mock_focus_chain_requester_,
                                                                    &mock_focus_chain_registry_);
-    syslog::InitLogger();
   }
 
   // Helper function to check if the given ViewRef has a11y focus.

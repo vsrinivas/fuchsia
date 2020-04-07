@@ -72,10 +72,6 @@ zx_status_t InitLogger(const std::initializer_list<std::string>& tags);
 zx_status_t InitLogger(const syslog::LogSettings& settings,
                        const std::initializer_list<std::string>& tags);
 
-// Creates default logger.
-// Returns zx_status_t if it is not able to create logger.
-zx_status_t InitLogger();
-
 }  // namespace syslog
 
 #define _FX_LOG_STREAM(severity, tag, status) \

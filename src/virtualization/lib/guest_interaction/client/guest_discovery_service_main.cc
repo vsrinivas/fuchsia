@@ -10,8 +10,6 @@
 #include "src/virtualization/lib/guest_interaction/client/guest_discovery_service.h"
 
 int main(int argc, char** argv) {
-  syslog::InitLogger();
-
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
 

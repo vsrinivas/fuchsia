@@ -42,7 +42,6 @@ const std::string kSemanticTreeWithMissingChildrenPath =
 class SemanticTreeTest : public gtest::TestLoopFixture {
  public:
   SemanticTreeTest() {
-    syslog::InitLogger();
     tree_.set_action_handler([this](uint32_t node_id,
                                     fuchsia::accessibility::semantics::Action action,
                                     fuchsia::accessibility::semantics::SemanticListener::

@@ -3018,10 +3018,6 @@ static void demo_run_magma(struct demo* demo) {
 #endif  // VK_USE_PLATFORM_FUCHSIA
 
 int cube_main(int argc, char** argv) {
-#if defined(VK_USE_PLATFORM_FUCHSIA)
-  fx_log_init();
-#endif
-
   struct demo demo;
 
   demo_init(&demo, argc, argv);

@@ -39,7 +39,6 @@ class Service : public ::test::sysmgr::Interface {
 }  // namespace sysmgr
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   sysmgr::test::Service service;

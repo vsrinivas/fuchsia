@@ -39,13 +39,6 @@ static int smallest_unused_fd() {
   return fd;
 }
 
-bool test_log_init(void) {
-  BEGIN_TEST;
-  fx_log_reset_global_for_testing();
-  EXPECT_EQ(ZX_OK, fx_log_init(), "");
-  END_TEST;
-}
-
 bool test_log_init_with_socket(void) {
   BEGIN_TEST;
   zx::socket socket0, socket1;
@@ -342,7 +335,6 @@ bool test_log_dont_dup(void) {
 }
 
 BEGIN_TEST_CASE(syslog_tests)
-RUN_TEST(test_log_init)
 RUN_TEST(test_log_init_with_socket)
 RUN_TEST(test_log_simple_write)
 RUN_TEST(test_log_write)

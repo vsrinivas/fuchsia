@@ -88,7 +88,7 @@ auto NodeIdEq(uint32_t node_id) { return testing::Property(&Node::node_id, node_
 
 class SemanticTreeServiceTest : public gtest::TestLoopFixture {
  public:
-  SemanticTreeServiceTest() { syslog::InitLogger(); }
+  SemanticTreeServiceTest() {}
 
  protected:
   void SetUp() override {

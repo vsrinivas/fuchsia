@@ -238,12 +238,9 @@ impl log::Log for Logger {
 
 /// Initializes syslogger using default options.
 pub fn init() -> Result<(), zx::Status> {
-    let status = unsafe { syslog::fx_log_init() };
-    if status == zx::Status::OK.into_raw() {
-        log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-        log::set_max_level(log::LevelFilter::Info);
-    }
-    zx::ok(status)
+    log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
+    log::set_max_level(log::LevelFilter::Info);
+    Ok(())
 }
 
 /// Initializes syslogger with tags. Max number of tags can be 4
