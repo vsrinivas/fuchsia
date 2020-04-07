@@ -125,7 +125,7 @@ MixStage& OutputPipeline::LookupStageForUsage(const StreamUsage& usage) {
       }
     }
   }
-  FX_CHECK(false);
+  FX_CHECK(false) << "No stage for usage " << usage.ToString();
   __UNREACHABLE;
 }
 

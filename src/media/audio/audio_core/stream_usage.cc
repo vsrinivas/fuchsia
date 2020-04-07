@@ -6,6 +6,32 @@
 
 namespace media::audio {
 
+std::optional<fuchsia::media::AudioRenderUsage> FidlRenderUsageFromRenderUsage(RenderUsage u) {
+  auto underlying = static_cast<std::underlying_type_t<RenderUsage>>(u);
+  if (underlying < fuchsia::media::RENDER_USAGE_COUNT) {
+    return {static_cast<fuchsia::media::AudioRenderUsage>(underlying)};
+  }
+  return {};
+}
+
+std::optional<fuchsia::media::AudioCaptureUsage> FidlCaptureUsageFromCaptureUsage(CaptureUsage u) {
+  auto underlying = static_cast<std::underlying_type_t<CaptureUsage>>(u);
+  if (underlying < fuchsia::media::CAPTURE_USAGE_COUNT) {
+    return {static_cast<fuchsia::media::AudioCaptureUsage>(underlying)};
+  }
+  return {};
+}
+
+StreamUsage StreamUsageFromFidlUsage(const fuchsia::media::Usage& usage) {
+  if (usage.is_render_usage()) {
+    return StreamUsage::WithRenderUsage(usage.render_usage());
+  } else if (usage.is_capture_usage()) {
+    return StreamUsage::WithCaptureUsage(usage.capture_usage());
+  } else {
+    return StreamUsage();
+  }
+}
+
 const char* RenderUsageToString(const RenderUsage& usage) {
   switch (usage) {
 #define EXPAND_RENDER_USAGE(U) \

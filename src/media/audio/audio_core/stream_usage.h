@@ -97,22 +97,9 @@ static CaptureUsage CaptureUsageFromFidlCaptureUsage(fuchsia::media::AudioCaptur
   return static_cast<CaptureUsage>(fidl::ToUnderlying(u));
 }
 
-[[maybe_unused]] static std::optional<fuchsia::media::AudioRenderUsage>
-FidlRenderUsageFromRenderUsage(RenderUsage u) {
-  auto underlying = static_cast<std::underlying_type_t<RenderUsage>>(u);
-  if (underlying < fuchsia::media::RENDER_USAGE_COUNT) {
-    return {static_cast<fuchsia::media::AudioRenderUsage>(underlying)};
-  }
-  return {};
-}
-[[maybe_unused]] static std::optional<fuchsia::media::AudioCaptureUsage>
-FidlCaptureUsageFromCaptureUsage(CaptureUsage u) {
-  auto underlying = static_cast<std::underlying_type_t<CaptureUsage>>(u);
-  if (underlying < fuchsia::media::CAPTURE_USAGE_COUNT) {
-    return {static_cast<fuchsia::media::AudioCaptureUsage>(underlying)};
-  }
-  return {};
-}
+std::optional<fuchsia::media::AudioRenderUsage> FidlRenderUsageFromRenderUsage(RenderUsage u);
+
+std::optional<fuchsia::media::AudioCaptureUsage> FidlCaptureUsageFromCaptureUsage(CaptureUsage u);
 
 const char* RenderUsageToString(const RenderUsage& usage);
 const char* CaptureUsageToString(const CaptureUsage& usage);
@@ -207,6 +194,8 @@ struct StreamUsageHash {
 using RenderUsageSet = std::unordered_set<RenderUsage, internal::EnumHash>;
 using CaptureUsageSet = std::unordered_set<CaptureUsage, internal::EnumHash>;
 using StreamUsageSet = std::unordered_set<StreamUsage, internal::StreamUsageHash>;
+
+StreamUsage StreamUsageFromFidlUsage(const fuchsia::media::Usage& usage);
 
 template <typename Container>
 static StreamUsageSet StreamUsageSetFromRenderUsages(const Container& container) {

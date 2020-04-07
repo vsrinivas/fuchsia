@@ -92,7 +92,8 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
 
   auto output = TargetForUsage(it->second.profile.usage);
   if (!output.is_linkable()) {
-    FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no output for the given usage exist.";
+    FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no device available for usage "
+                     << it->second.profile.usage.ToString();
     link_matrix_.Unlink(*it->second.ref);
     return;
   }
@@ -149,7 +150,8 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
 
   auto target = TargetForUsage(it->second.profile.usage);
   if (!target.is_linkable()) {
-    FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no input for the give usage exists.";
+    FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no device available for usage "
+                     << it->second.profile.usage.ToString();
     link_matrix_.Unlink(*it->second.ref);
     return;
   }
