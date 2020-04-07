@@ -16,6 +16,9 @@
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
+// Directory provided by the "isolated-cache-storage" feature of the component sandbox.
+static const char* kCacheDirectoryPath = "/cache";
+
 namespace {
 
 class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
@@ -87,9 +90,8 @@ std::unique_ptr<DemoHarness> DemoHarness::New(DemoHarness::WindowParams window_p
 
 DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params)
     : DemoHarness(window_params),
-      loop_(loop),
-      owned_loop_(loop_ ? nullptr : new async::Loop(&kAsyncLoopConfigAttachToCurrentThread)),
-      trace_provider_((loop_ ? loop_ : owned_loop_.get())->dispatcher()),
+      owned_loop_(loop ? nullptr : new async::Loop(&kAsyncLoopConfigAttachToCurrentThread)),
+      loop_(loop ? loop : owned_loop_.get()),
       component_context_(sys::ComponentContext::Create()),
       input_reader_(this) {
   // Provide a PseudoDir where the demo can register debugging services.
@@ -97,10 +99,15 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop, WindowParams window_pa
   component_context()->outgoing()->debug_dir()->AddSharedEntry("demo", debug_dir);
   filesystem_ = escher::HackFilesystem::New(debug_dir);
 
-  if (!loop_) {
-    loop_ = owned_loop_.get();
-  }
+  // Synchronously create trace provider so that all subsequent traces are recorded.  This is
+  // necessary e.g. if the system is already tracing when this app is launched, in order to not miss
+  // trace events that occur during startup.
+  bool already_started = false;
+  trace::TraceProviderWithFdio::CreateSynchronously(loop_->dispatcher(), "Escher DemoHarness",
+                                                    &trace_provider_, &already_started);
 }
+
+std::string DemoHarnessFuchsia::GetCacheDirectoryPath() { return kCacheDirectoryPath; }
 
 void DemoHarnessFuchsia::InitWindowSystem() { input_reader_.Start(); }
 
@@ -130,7 +137,10 @@ void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(std::set<std
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}
 
 void DemoHarnessFuchsia::RunForPlatform(Demo* demo) {
-  async::PostTask(loop_->dispatcher(), [this, demo] { this->RenderFrameOrQuit(demo); });
+  // We put in a delay so that tracing is ready to capture the first frame (otherwise we miss the
+  // first frame and catch the second).
+  async::PostDelayedTask(
+      loop_->dispatcher(), [this, demo] { this->RenderFrameOrQuit(demo); }, zx::msec(1));
   loop_->Run();
 }
 

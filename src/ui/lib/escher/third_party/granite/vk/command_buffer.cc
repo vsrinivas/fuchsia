@@ -36,6 +36,7 @@
 #include "src/ui/lib/escher/vk/impl/descriptor_set_allocator.h"
 #include "src/ui/lib/escher/vk/impl/framebuffer.h"
 #include "src/ui/lib/escher/vk/impl/framebuffer_allocator.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
@@ -90,7 +91,8 @@ CommandBuffer::CommandBuffer(EscherWeakPtr escher, Type type, impl::CommandBuffe
       type_(type),
       impl_(impl),
       vk_(impl_->vk()),
-      vk_device_(escher_->vk_device()) {
+      vk_device_(escher_->vk_device()),
+      pipeline_state_(escher_->pipeline_builder()->GetWeakPtr()) {
   BeginCompute();
 }
 
@@ -522,14 +524,16 @@ void CommandBuffer::FlushRenderState() {
 
 void CommandBuffer::FlushComputePipeline() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushComputePipeline");
-  current_vk_pipeline_ =
-      pipeline_state_.FlushComputePipeline(current_pipeline_layout_, current_program_);
+  const bool log_pipeline_creation = !allow_renderpass_and_pipeline_creation_;
+  current_vk_pipeline_ = pipeline_state_.FlushComputePipeline(
+      current_pipeline_layout_, current_program_, log_pipeline_creation);
 }
 
 void CommandBuffer::FlushGraphicsPipeline() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushGraphicsPipeline");
+  const bool log_pipeline_creation = !allow_renderpass_and_pipeline_creation_;
   current_vk_pipeline_ = pipeline_state_.FlushGraphicsPipeline(
-      current_pipeline_layout_, current_program_, allow_renderpass_and_pipeline_creation_);
+      current_pipeline_layout_, current_program_, log_pipeline_creation);
 }
 
 void CommandBuffer::FlushDescriptorSets() {

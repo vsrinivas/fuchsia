@@ -27,6 +27,7 @@
 #include "src/ui/lib/escher/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/render_pass_info.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
@@ -778,12 +779,12 @@ static void WarmProgramHelper(const ShaderProgramPtr& program, CommandBufferPipe
                               const std::vector<SamplerPtr>& immutable_samplers) {
   // Generate pipeline which doesn't require an immutable sampler.
   PipelineLayout* layout = program->ObtainPipelineLayout(nullptr);
-  cbps->FlushGraphicsPipeline(layout, program.get(), true);
+  cbps->FlushGraphicsPipeline(layout, program.get());
 
   // Generate pipelines which require immutable samplers.
   for (auto& sampler : immutable_samplers) {
     PipelineLayout* layout = program->ObtainPipelineLayout(sampler);
-    cbps->FlushGraphicsPipeline(layout, program.get(), true);
+    cbps->FlushGraphicsPipeline(layout, program.get());
   }
 }
 
@@ -791,7 +792,7 @@ static void WarmProgramHelper(const ShaderProgramPtr& program, CommandBufferPipe
 void PaperRenderer::WarmPipelineAndRenderPassCaches(
     Escher* escher, const PaperRendererConfig& config, vk::Format output_format,
     vk::ImageLayout output_swapchain_layout, const std::vector<SamplerPtr>& immutable_samplers) {
-  CommandBufferPipelineState cbps;
+  CommandBufferPipelineState cbps(escher->pipeline_builder()->GetWeakPtr());
 
   // Obtain and set the render pass; this is the only render pass that is used, so we just need to
   // set it once.

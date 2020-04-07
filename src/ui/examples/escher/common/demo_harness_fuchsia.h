@@ -25,6 +25,9 @@ class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRe
 
  private:
   // |DemoHarness|
+  std::string GetCacheDirectoryPath() override;
+
+  // |DemoHarness|
   // Called by Init().
   void InitWindowSystem() override;
   vk::SurfaceKHR CreateWindowAndSurface(const WindowParams& window_params) override;
@@ -51,9 +54,9 @@ class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRe
 
   // DemoHarnessFuchsia can work with a pre-existing message loop, and also
   // create its own if necessary.
-  async::Loop* loop_;
   std::unique_ptr<async::Loop> owned_loop_;
-  trace::TraceProviderWithFdio trace_provider_;
+  async::Loop* const loop_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
 
   std::unique_ptr<sys::ComponentContext> component_context_;
   ui_input::InputReader input_reader_;

@@ -7,6 +7,8 @@
 #include <iostream>
 #include <set>
 
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/examples/escher/common/demo.h"
@@ -16,6 +18,7 @@
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
@@ -66,6 +69,8 @@ void DemoHarness::Shutdown() {
 }
 
 void DemoHarness::CreateInstance(InstanceParams params) {
+  TRACE_DURATION("gfx", "DemoHarness::CreateInstance");
+
   // Add our own required layers and extensions in addition to those provided
   // by the caller.  Verify that they are all available, and obtain info about
   // them that is used:
@@ -83,10 +88,13 @@ void DemoHarness::CreateInstance(InstanceParams params) {
 }
 
 void DemoHarness::CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params) {
+  TRACE_DURATION("gfx", "DemoHarness::CreateDeviceAndQueue");
   device_queues_ = escher::VulkanDeviceQueues::New(instance_, std::move(params));
 }
 
 void DemoHarness::CreateSwapchain() {
+  TRACE_DURATION("gfx", "DemoHarness::CreateSwapchain");
+
   FXL_CHECK(!swapchain_.swapchain);
   FXL_CHECK(swapchain_.images.empty());
 
@@ -252,8 +260,49 @@ void DemoHarness::CreateSwapchain() {
 }
 
 void DemoHarness::CreateEscher() {
+  TRACE_DURATION("gfx", "DemoHarness::CreateEscher");
+
   FXL_CHECK(!escher_);
   escher_ = std::make_unique<escher::Escher>(device_queues_, filesystem_);
+
+  // Replace Escher's default pipeline builder.
+  {
+    std::string vk_pipeline_cache_path = GetCacheDirectoryPath() + "/vk_pipeline_cache";
+    std::vector<uint8_t> initial_bytes;
+    files::ReadFileToVector(vk_pipeline_cache_path, &initial_bytes);
+
+    auto pipeline_builder = std::make_unique<escher::PipelineBuilder>(
+        device(), initial_bytes.empty() ? nullptr : initial_bytes.data(), initial_bytes.size(),
+        [path = std::move(vk_pipeline_cache_path)](std::vector<uint8_t> bytes) {
+          if (!files::WriteFile(path, reinterpret_cast<char*>(bytes.data()), bytes.size())) {
+            FXL_LOG(WARNING) << "Failed to write " << bytes.size()
+                             << " bytes to VkPipelineCache data file: " << path;
+          }
+        });
+
+    // DemoHarness expects pipeline creation to always be done at well-defined times (typically at
+    // startup).  The program will crash if there is an attempt to unexpectedly lazily generate a
+    // pipeline.  A less draconian approach will be desirable for some other applications, such as
+    // Scenic.
+    pipeline_builder->set_log_pipeline_creation_callback(
+        [](const vk::GraphicsPipelineCreateInfo* graphics_info,
+           const vk::ComputePipelineCreateInfo* compute_info) {
+          if (graphics_info) {
+            FXL_CHECK(false) << "attempted to lazily generate a Vulkan graphics pipeline.";
+          } else {
+            FXL_CHECK(false) << "attempted to lazily generate a Vulkan compute pipeline.";
+          }
+        });
+
+    escher_->set_pipeline_builder(std::move(pipeline_builder));
+
+    // Ensure that the cache directory exists.
+    if (!files::IsDirectory(GetCacheDirectoryPath())) {
+      if (!files::CreateDirectory(GetCacheDirectoryPath())) {
+        FXL_LOG(WARNING) << "Failed to create cache directory: " << GetCacheDirectoryPath();
+      }
+    }
+  }
 }
 
 void DemoHarness::DestroyEscher() { escher_.reset(); }
@@ -357,7 +406,8 @@ bool DemoHarness::MaybeDrawFrame() {
   }
 
   {
-    TRACE_DURATION("gfx", "escher::DemoHarness::MaybeDrawFrame (drawing)");
+    TRACE_DURATION("gfx", "escher::DemoHarness::MaybeDrawFrame (drawing)", "frame", frame_count_);
+
     auto frame = escher()->NewFrame(demo_->name(), frame_count_, enable_gpu_logging_);
     OnFrameCreated();
 

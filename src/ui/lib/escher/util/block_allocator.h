@@ -36,6 +36,16 @@ class BlockAllocator {
     return static_cast<T*>(Allocate(count * sizeof(T), alignof(T)));
   }
 
+  template <typename T>
+  T* AllocateInitialized(size_t count = 1) {
+    static_assert(std::is_trivially_destructible<T>::value, "Type must be trivially destructible.");
+    T* ptr = static_cast<T*>(Allocate(count * sizeof(T), alignof(T)));
+    for (size_t i = 0; i < count; ++i) {
+      new (&ptr[i]) T();  // placement new
+    }
+    return ptr;
+  }
+
   // Invalidates all previously-allocated pointers.  Large blocks are freed, and
   // fixed-size blocks are made available for reuse.
   void Reset();

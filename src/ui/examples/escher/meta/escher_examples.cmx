@@ -8,6 +8,7 @@
             "class/input"
         ],
         "features": [
+            "isolated-cache-storage",
             "vulkan"
         ],
         "services": [

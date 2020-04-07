@@ -113,7 +113,7 @@ VK_TEST_F(CommandBufferTest, StaticStateSetting) {
 VK_TEST_F(CommandBufferTest, StaticStateSettingMatches) {
   auto escher = test::GetEscher();
   auto cb = CommandBuffer::NewForGraphics(escher, false);
-  CommandBufferPipelineState cbps;
+  CommandBufferPipelineState cbps(nullptr);
 
   auto cb_static_state = VulkanTester::GetStaticState(cb);
   auto cbps_static_state = cbps.static_state();

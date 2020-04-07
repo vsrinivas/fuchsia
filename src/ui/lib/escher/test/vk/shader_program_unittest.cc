@@ -21,6 +21,7 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
 #include "src/ui/lib/escher/vk/texture.h"
@@ -285,6 +286,48 @@ VK_TEST_F(ShaderProgramTest, NonExistentShaderDeathTest) {
       "");
 }
 
+// Helper function for tests below.  Typically clients only populate a RenderPassInfo; RenderPasses
+// are lazily generated/cached internally by CommandBufferPipelineState::FlushGraphicsPipeline().
+// This creates/returns an actual Vulkan render pass.
+impl::RenderPassPtr CreateRenderPassForTest() {
+  auto escher = test::GetEscher();
+
+  // Use the same output format as Scenic screenshots.
+  constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Unorm;
+  const vk::Format kDepthStencilFormat =
+      ESCHER_CHECKED_VK_RESULT(escher->device()->caps().GetMatchingDepthStencilFormat(
+          {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}));
+
+  RenderPassInfo::AttachmentInfo color_info;
+  color_info.format = kScenicScreenshotFormat;
+  color_info.swapchain_layout = vk::ImageLayout::eColorAttachmentOptimal;
+  color_info.sample_count = 1;
+
+  RenderPassInfo info;
+  RenderPassInfo::InitRenderPassInfo(&info, color_info,
+                                     /*depth_format=*/kDepthStencilFormat,
+                                     /*msaa_format=*/vk::Format::eUndefined, /*sample_count=*/1,
+                                     /*use_transient_depth_and_msaa*/ false);
+
+  return fxl::MakeRefCounted<impl::RenderPass>(escher->resource_recycler(), info);
+}
+
+// Helper function which sets up vertex attribute bindings that will be used for pipeline creation
+// in tests.  It doesn't really matter what vertex format is used, so we just use the standard one
+// used by PaperShapeCache.
+void SetupVertexAttributeBindingsForTest(CommandBufferPipelineState* cbps) {
+  MeshSpec mesh_spec = PaperShapeCache::kStandardMeshSpec();
+  const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
+  BlockAllocator allocator(512);
+  RenderFuncs::VertexAttributeBinding* attribute_bindings =
+      RenderFuncs::NewVertexAttributeBindings(PaperRenderFuncs::kMeshAttributeBindingLocations,
+                                              &allocator, mesh_spec, total_attribute_count);
+
+  for (uint32_t i = 0; i < total_attribute_count; ++i) {
+    attribute_bindings[i].Bind(cbps);
+  }
+}
+
 // This tests the most direct form of pipeline generation, without all of the laziness and caching
 // done by CommandBuffer.  Fundamentally this requires 4 things:
 //   1) a set of vk::ShaderModules
@@ -306,7 +349,7 @@ VK_TEST_F(ShaderProgramTest, NonExistentShaderDeathTest) {
 VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
   auto escher = test::GetEscher();
 
-  // 1), 2): obtain the ShaderProgram and the correcsponding PipelineLayout.
+  // 1), 2): obtain the ShaderProgram and the corresponding PipelineLayout.
   // TODO(ES-183): remove PaperRenderer shader dependency.
   auto program = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
   EXPECT_TRUE(program);
@@ -315,49 +358,17 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
   // 3): create a RenderPass.
   // NOTE: typically, RenderPasses are lazily generated/cached by
   // CommandBufferPipelineState::FlushGraphicsPipeline().
-  impl::RenderPassPtr render_pass;
-  {
-    // Use the same output format as Scenic screenshots.
-    constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Unorm;
-    const vk::Format kDepthStencilFormat =
-        ESCHER_CHECKED_VK_RESULT(escher->device()->caps().GetMatchingDepthStencilFormat(
-            {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}));
-
-    RenderPassInfo::AttachmentInfo color_info;
-    color_info.format = kScenicScreenshotFormat;
-    color_info.swapchain_layout = vk::ImageLayout::eColorAttachmentOptimal;
-    color_info.sample_count = 1;
-
-    RenderPassInfo info;
-    RenderPassInfo::InitRenderPassInfo(&info, color_info,
-                                       /*depth_format=*/kDepthStencilFormat,
-                                       /*msaa_format=*/vk::Format::eUndefined, /*sample_count=*/1,
-                                       /*use_transient_depth_and_msaa*/ false);
-
-    render_pass = fxl::MakeRefCounted<impl::RenderPass>(escher->resource_recycler(), info);
-  }
-  EXPECT_TRUE(render_pass);
+  impl::RenderPassPtr render_pass = CreateRenderPassForTest();
 
   // 4) Specify the static Vulkan state.
-  CommandBufferPipelineState cbps;
-  {
-    MeshSpec mesh_spec = PaperShapeCache::kStandardMeshSpec();
-    const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
-    BlockAllocator allocator;
-    RenderFuncs::VertexAttributeBinding* attribute_bindings =
-        RenderFuncs::NewVertexAttributeBindings(PaperRenderFuncs::kMeshAttributeBindingLocations,
-                                                &allocator, mesh_spec, total_attribute_count);
-
-    for (uint32_t i = 0; i < total_attribute_count; ++i) {
-      attribute_bindings[i].Bind(&cbps);
-    }
-  }
+  CommandBufferPipelineState cbps(escher->pipeline_builder()->GetWeakPtr());
+  SetupVertexAttributeBindingsForTest(&cbps);
   cbps.set_render_pass(render_pass.get());
   cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
 
   // 5) Build a pipeline (smoke-test).
   EXPECT_EQ(0U, program->stashed_graphics_pipeline_count());
-  vk::Pipeline pipeline_orig = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline_orig = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_EQ(1U, program->stashed_graphics_pipeline_count());
 
   // 6) Verify that, when blending is disabled, we get the same cached pipeline with different
@@ -383,18 +394,18 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
 
   cbps.SetBlendFactors(src_color_blend, src_alpha_blend, dst_color_blend, dst_alpha_blend);
   cbps.SetBlendOp(color_op, alpha_op);
-  vk::Pipeline pipeline2 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline2 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_EQ(pipeline_orig, pipeline2);
 
   // 7) Verify that, when blending is enabled, different blend-ops and blend-factors result in
   // different pipelines.
   cbps.SetBlendEnable(true);
-  vk::Pipeline pipeline3 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline3 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   cbps.SetBlendFactors(src_color_blend_orig, src_alpha_blend_orig, dst_color_blend_orig,
                        dst_alpha_blend_orig);
-  vk::Pipeline pipeline4 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline4 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   cbps.SetBlendOp(color_op_orig, alpha_op_orig);
-  vk::Pipeline pipeline5 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline5 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_NE(pipeline_orig, pipeline3);
   EXPECT_NE(pipeline_orig, pipeline4);
   EXPECT_NE(pipeline_orig, pipeline5);
@@ -406,28 +417,187 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
   // the blend-factor is eConstantColor.
   cbps.potential_static_state()->blend_constants[0] = 0.77f;
   cbps.potential_static_state()->blend_constants[3] = 0.66f;
-  vk::Pipeline pipeline6 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline6 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_EQ(pipeline5, pipeline6);
   cbps.potential_static_state()->blend_constants[0] = 0.55f;
   cbps.potential_static_state()->blend_constants[3] = 0.44f;
-  vk::Pipeline pipeline7 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline7 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_EQ(pipeline5, pipeline7);
   cbps.SetBlendFactors(vk::BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor,
                        vk::BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor);
-  vk::Pipeline pipeline8 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline8 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_NE(pipeline7, pipeline8);
   cbps.potential_static_state()->blend_constants[0] = 0.77f;
   cbps.potential_static_state()->blend_constants[3] = 0.66f;
-  vk::Pipeline pipeline9 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  vk::Pipeline pipeline9 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
   EXPECT_NE(pipeline6, pipeline9);
   // This is similar to comparing 5 vs. 6, except this time the blend-factor is eConstantCOlor.
   EXPECT_NE(pipeline8, pipeline9);
+}
+
+VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
+  auto escher = test::GetEscher();
+
+  // 1), 2): obtain the ShaderPrograms and the corresponding PipelineLayouts.
+  // TODO(ES-183): remove PaperRenderer shader dependency.
+  auto program1 = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
+  auto program2 = ClearPipelineStash(escher->GetProgram(escher::kPointLightProgramData));
+  EXPECT_TRUE(program1);
+  EXPECT_TRUE(program2);
+  PipelineLayout* pipeline_layout1 = program1->ObtainPipelineLayout(nullptr);
+  PipelineLayout* pipeline_layout2 = program2->ObtainPipelineLayout(nullptr);
+
+  // 3): create a RenderPass.
+  // NOTE: typically, RenderPasses are lazily generated/cached by
+  // CommandBufferPipelineState::FlushGraphicsPipeline().
+  impl::RenderPassPtr render_pass = CreateRenderPassForTest();
+
+  // 4) Specify the static Vulkan state.
+  CommandBufferPipelineState cbps(escher->pipeline_builder()->GetWeakPtr());
+  SetupVertexAttributeBindingsForTest(&cbps);
+  cbps.set_render_pass(render_pass.get());
+  cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+
+  // 5) Set up two similar vk::GraphicsPipelineCreateInfo structs, one with stencil buffer enabled
+  // and the other without.  These will be passed to PipelineBuilder instances.
+  BlockAllocator allocator(128);
+  auto create_info1 =
+      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout1, program1.get());
+  cbps.SetStencilTest(true);
+  auto create_info2 =
+      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout2, program2.get());
+
+  // 6) This callback will be invoked after set_log_pipeline_creation_callback() has injected
+  // it into a PipelineBuilder.
+  size_t log_graphics_callback_count = 0;
+  size_t log_compute_callback_count = 0;
+  auto log_callback = [&log_graphics_callback_count, &log_compute_callback_count](
+                          const vk::GraphicsPipelineCreateInfo* graphics_info,
+                          const vk::ComputePipelineCreateInfo* compute_info) {
+    EXPECT_TRUE(graphics_info || compute_info);
+    EXPECT_TRUE(!graphics_info || !compute_info);
+    if (graphics_info) {
+      ++log_graphics_callback_count;
+    } else {
+      ++log_compute_callback_count;
+    }
+  };
+
+  // Now we start testing the pipeline builder!
+
+  // Test that we can create pipelines using a pipeline builder which doesn't us a VkPipeline cache.
+  {
+    PipelineBuilder builder(escher->vk_device());
+
+    auto pipeline1 = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/false);
+
+    auto pipeline2 = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
+
+    // Neither of the above pipelines resulted in logging, because no callback had been set.
+    // After this, newly-built pipelines will trigger invocation of this callback, but only if the
+    // |do_logging| arg is true.
+    builder.set_log_pipeline_creation_callback(log_callback);
+
+    auto pipeline3 = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/false);
+    EXPECT_EQ(0U, log_graphics_callback_count);
+    auto pipeline4 = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
+    EXPECT_EQ(1U, log_graphics_callback_count);
+    auto pipeline5 = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/true);
+    EXPECT_EQ(2U, log_graphics_callback_count);
+    auto pipeline6 = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
+    EXPECT_EQ(3U, log_graphics_callback_count);
+
+    ASSERT_TRUE(pipeline1);
+    ASSERT_TRUE(pipeline2);
+    ASSERT_TRUE(pipeline3);
+    ASSERT_TRUE(pipeline4);
+    ASSERT_TRUE(pipeline5);
+    ASSERT_TRUE(pipeline6);
+    escher->vk_device().destroyPipeline(pipeline1);
+    escher->vk_device().destroyPipeline(pipeline2);
+    escher->vk_device().destroyPipeline(pipeline3);
+    escher->vk_device().destroyPipeline(pipeline4);
+    escher->vk_device().destroyPipeline(pipeline5);
+    escher->vk_device().destroyPipeline(pipeline6);
+  }
+
+  // Test that we can create pipelines using a VkPipelineCache, and that creating the "same"
+  // pipeline twice does not result in a second invocation of the StorePipelineCacheDataCallback.
+  {
+    // Keeps track of the number of times that a newly-built pipeline results in updated
+    // cache data, which the application should persist to disk.
+    size_t updated_vk_cache_data_count = 0;
+
+    // Store the latest cache data obtained via the
+    std::vector<uint8_t> latest_vk_cache_data;
+
+    auto updated_vk_cache_data_callback = [&updated_vk_cache_data_count,
+                                           &latest_vk_cache_data](std::vector<uint8_t> data) {
+      ++updated_vk_cache_data_count;
+      latest_vk_cache_data = std::move(data);
+    };
+
+    PipelineBuilder builder(escher->vk_device(), nullptr, 0, updated_vk_cache_data_callback);
+    // This time we enable the logging callback from the beginning.
+    builder.set_log_pipeline_creation_callback(log_callback);
+    log_graphics_callback_count = log_compute_callback_count = 0;
+
+    // The callback is not invoked eagerly when the pipeline is built, rather it is invoked when
+    // MaybeStorePipelineCacheData() is polled.
+    auto pipeline1a = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/true);
+    EXPECT_EQ(1U, log_graphics_callback_count);
+    EXPECT_EQ(0U, updated_vk_cache_data_count);
+    builder.MaybeStorePipelineCacheData();
+    EXPECT_EQ(1U, updated_vk_cache_data_count);
+
+    // Same thing, with different pipeline create info.
+    auto pipeline2a = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
+    EXPECT_EQ(2U, log_graphics_callback_count);
+    EXPECT_EQ(1U, updated_vk_cache_data_count);
+    builder.MaybeStorePipelineCacheData();
+    EXPECT_EQ(2U, updated_vk_cache_data_count);
+
+    // Creating additional pipelines with previously-seen create_info does not result in a change to
+    // the persisted Vk cache data.
+    auto pipeline1b = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/true);
+    auto pipeline2b = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
+    builder.MaybeStorePipelineCacheData();
+    EXPECT_EQ(4U, log_graphics_callback_count);
+    EXPECT_EQ(2U, updated_vk_cache_data_count);
+
+    // Create a new builder, primed with the data needed to build pipeline1 and pipeline2.  Building
+    // these will not result in any new data to persist.
+    PipelineBuilder builder2(escher->vk_device(), latest_vk_cache_data.data(),
+                             latest_vk_cache_data.size(), updated_vk_cache_data_callback);
+    // Build pipeline1/pipeline2 in the opposite order, just in case it makes a difference to the
+    // particular Vulkan implementation.
+    auto pipeline2c = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
+    auto pipeline1c = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/true);
+    builder.MaybeStorePipelineCacheData();
+    EXPECT_EQ(6U, log_graphics_callback_count);
+    EXPECT_EQ(2U, updated_vk_cache_data_count);
+
+    ASSERT_TRUE(pipeline1a);
+    ASSERT_TRUE(pipeline1b);
+    ASSERT_TRUE(pipeline1c);
+    ASSERT_TRUE(pipeline2a);
+    ASSERT_TRUE(pipeline2b);
+    ASSERT_TRUE(pipeline2c);
+    escher->vk_device().destroyPipeline(pipeline1a);
+    escher->vk_device().destroyPipeline(pipeline1b);
+    escher->vk_device().destroyPipeline(pipeline1c);
+    escher->vk_device().destroyPipeline(pipeline2a);
+    escher->vk_device().destroyPipeline(pipeline2b);
+    escher->vk_device().destroyPipeline(pipeline2c);
+  }
 }
 
 // TODO(ES-83): we need to set up so many meshes, materials, framebuffers, etc.
 // before we can obtain pipelines, we might as well just make this an end-to-end
 // test and actually render.  Or, go the other direction and manually set up
 // state in a standalone CommandBufferPipelineState object.
+// NOTE: see some of the other tests above, such as GeneratePipelineWithoutCommandBuffer...
+// it is now possible to generate pipelines more directly.
 VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 

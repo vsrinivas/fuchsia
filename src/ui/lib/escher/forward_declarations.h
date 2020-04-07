@@ -37,6 +37,7 @@ class Material;
 class Mesh;
 class Model;
 class Object;
+class PipelineBuilder;
 // TODO(ES-83): move to vk/impl.  Cannot do this yet because there is already
 // a PipelineLayout in impl/vk.
 class PipelineLayout;

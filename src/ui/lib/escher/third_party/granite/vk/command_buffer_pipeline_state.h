@@ -49,7 +49,7 @@ using ShaderProgramPtr = fxl::RefPtr<ShaderProgram>;
 // change to the VkPipeline that is used.
 class CommandBufferPipelineState {
  public:
-  CommandBufferPipelineState();
+  explicit CommandBufferPipelineState(fxl::WeakPtr<PipelineBuilder> pipeline_builder);
   ~CommandBufferPipelineState();
 
   void BeginGraphicsOrComputeContext();
@@ -58,11 +58,19 @@ class CommandBufferPipelineState {
   // vk::Pipeline.  If no pipeline is found, then if |allow_build_pipeline| == true, a new pipeline
   // is lazily generated and cached for next time; otherwise a CHECK fails.
   vk::Pipeline FlushGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program,
-                                     bool allow_build_pipeline);
-  vk::Pipeline FlushComputePipeline(const PipelineLayout* layout, ShaderProgram* program);
+                                     bool log_pipeline_creation = false);
+  vk::Pipeline FlushComputePipeline(const PipelineLayout* layout, ShaderProgram* program,
+                                    bool log_pipeline_creation = false);
 
   // Helper function used by |FlushGraphicsPipeline()|, and by tests.  Generates a new vk::Pipeline.
-  vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
+  vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program,
+                                     bool log_pipeline_creation);
+
+  // Helper function used by |BuildGraphicsPipeline()|, and by tests.  Uses |allocator| to allocate
+  // a new vk::GraphicsPipelineCreateInfo, as well as other Vulkan structs pointed by it.
+  vk::GraphicsPipelineCreateInfo* InitGraphicsPipelineCreateInfo(BlockAllocator* allocator,
+                                                                 const PipelineLayout* layout,
+                                                                 ShaderProgram* program);
 
   struct StaticState;
   StaticState* static_state() { return &static_state_; }
@@ -298,7 +306,8 @@ class CommandBufferPipelineState {
     vk::VertexInputRate input_rates[VulkanLimits::kNumVertexBuffers];
   };
 
-  vk::Pipeline BuildComputePipeline(const PipelineLayout* layout, ShaderProgram* program);
+  vk::Pipeline BuildComputePipeline(const PipelineLayout* layout, ShaderProgram* program,
+                                    bool log_pipeline_creation);
 
   // Helper functions for BuildGraphicsPipeline().
   static void InitPipelineColorBlendStateCreateInfo(
@@ -320,6 +329,8 @@ class CommandBufferPipelineState {
                                                      vk::SampleCountFlagBits subpass_samples);
   static void InitPipelineRasterizationStateCreateInfo(
       vk::PipelineRasterizationStateCreateInfo* info, const StaticState& static_state);
+
+  fxl::WeakPtr<PipelineBuilder> pipeline_builder_;
 
   impl::RenderPass* render_pass_ = nullptr;
 

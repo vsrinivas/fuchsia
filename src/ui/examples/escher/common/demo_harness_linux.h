@@ -16,6 +16,9 @@ class DemoHarnessLinux : public DemoHarness {
 
  private:
   // |DemoHarness|
+  std::string GetCacheDirectoryPath() override;
+
+  // |DemoHarness|
   // Called by Init().
   void InitWindowSystem() override;
   vk::SurfaceKHR CreateWindowAndSurface(const WindowParams& window_params) override;

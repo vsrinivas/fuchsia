@@ -388,6 +388,8 @@ template("escher_library") {
       "vk/impl/render_pass_cache.h",
       "vk/naive_gpu_allocator.cc",
       "vk/naive_gpu_allocator.h",
+      "vk/pipeline_builder.cc",
+      "vk/pipeline_builder.h",
       "vk/render_pass.cc",
       "vk/render_pass.h",
       "vk/render_pass_info.h",

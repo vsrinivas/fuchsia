@@ -132,4 +132,44 @@ TEST(BlockAllocator, LargeAllocations) {
   EXPECT_EQ(1u, allocator.large_blocks().size());
 }
 
+TEST(BlockAllocator, InitializedElements) {
+  // Two structs which differ only in that one default-initializes its elements, the other doesn't.
+  constexpr uint32_t kDefaultA = 1234567;
+  constexpr uint8_t kDefaultB = 234;
+  struct Initialized {
+    uint32_t a = kDefaultA;
+    uint8_t b = kDefaultB;
+  };
+  struct Uninitialized {
+    uint32_t a;
+    uint8_t b;
+  };
+
+  BlockAllocator allocator(1024);
+
+  constexpr size_t kCount = 10;
+  Uninitialized* uninited = allocator.AllocateMany<Uninitialized>(kCount);
+  for (size_t i = 0; i < kCount; ++i) {
+    uninited[i].a = i;
+    uninited[i].b = i + 1;
+  }
+  // Verify that the memory isn't wiped when the allocator was reset.  This ensures that later when
+  // we test initialization, it doesn't just pass because the correct values some happened to
+  // already be there.
+  allocator.Reset();
+  Initialized* inited = allocator.AllocateMany<Initialized>(kCount);
+  for (size_t i = 0; i < kCount; ++i) {
+    EXPECT_EQ(i, inited[i].a);
+    EXPECT_EQ(i + 1, inited[i].b);
+  }
+
+  // Now we reset the allocator again, and this time use AllocateInitialized().
+  allocator.Reset();
+  inited = allocator.AllocateInitialized<Initialized>(kCount);
+  for (size_t i = 0; i < kCount; ++i) {
+    EXPECT_EQ(kDefaultA, inited[i].a);
+    EXPECT_EQ(kDefaultB, inited[i].b);
+  }
+}
+
 }  // namespace

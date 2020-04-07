@@ -108,6 +108,7 @@ class DemoHarness {
   void CreateInstance(InstanceParams params);
   virtual vk::SurfaceKHR CreateWindowAndSurface(const WindowParams& window_params) = 0;
   void CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params);
+
   void CreateEscher();
   void CreateSwapchain();
 
@@ -121,6 +122,8 @@ class DemoHarness {
   void DestroyDevice();
   void DestroyInstance();
   virtual void ShutdownWindowSystem() = 0;
+
+  virtual std::string GetCacheDirectoryPath() = 0;
 
   double ComputeFps();
 

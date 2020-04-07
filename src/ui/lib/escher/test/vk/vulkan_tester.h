@@ -49,7 +49,7 @@ class VulkanTester {
     FXL_DCHECK(cb->current_pipeline_layout_);
     FXL_DCHECK(cb->current_program_);
     return cb->pipeline_state_.FlushGraphicsPipeline(
-        cb->current_pipeline_layout_, cb->current_program_, /*allow_build_pipeline=*/true);
+        cb->current_pipeline_layout_, cb->current_program_, /*log_pipeline_creation=*/false);
   }
 
   const ShaderProgramPtr& ClearPipelineStash(const ShaderProgramPtr& program) {

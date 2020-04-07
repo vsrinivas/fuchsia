@@ -29,10 +29,12 @@
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
+#include "src/ui/lib/escher/util/block_allocator.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/buffer.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 
 namespace escher {
@@ -57,7 +59,10 @@ ASSERT_NUM_STATE_BITS(kNumCullModeBits, VK_CULL_MODE_FRONT_AND_BACK - VK_CULL_MO
 // Compilation should pass, but fail if you increase the padding by 1.
 static_assert(sizeof(CommandBufferPipelineState::StaticState) == 16, "incorrect padding.");
 
-CommandBufferPipelineState::CommandBufferPipelineState() = default;
+CommandBufferPipelineState::CommandBufferPipelineState(
+    fxl::WeakPtr<PipelineBuilder> pipeline_builder)
+    : pipeline_builder_(std::move(pipeline_builder)) {}
+
 CommandBufferPipelineState::~CommandBufferPipelineState() = default;
 
 void CommandBufferPipelineState::BeginGraphicsOrComputeContext() {
@@ -70,7 +75,8 @@ void CommandBufferPipelineState::BeginGraphicsOrComputeContext() {
 // just based off of the pipeline layout spec and the current static state. There isn't all that
 // much more that goes into compute pipelines, so this seems sufficient.
 vk::Pipeline CommandBufferPipelineState::FlushComputePipeline(const PipelineLayout* pipeline_layout,
-                                                              ShaderProgram* program) {
+                                                              ShaderProgram* program,
+                                                              bool log_pipeline_creation) {
   Hasher h;
   h.u64(pipeline_layout->spec().hash().val);
 
@@ -80,14 +86,14 @@ vk::Pipeline CommandBufferPipelineState::FlushComputePipeline(const PipelineLayo
   if (auto pipeline = program->FindPipeline(hash)) {
     return pipeline;
   } else {
-    pipeline = BuildComputePipeline(pipeline_layout, program);
+    pipeline = BuildComputePipeline(pipeline_layout, program, log_pipeline_creation);
     program->StashPipeline(hash, pipeline);
     return pipeline;
   }
 }
 
 vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
-    const PipelineLayout* pipeline_layout, ShaderProgram* program, bool allow_build_pipeline) {
+    const PipelineLayout* pipeline_layout, ShaderProgram* program, bool log_pipeline_creation) {
   Hasher h;
   h.u64(pipeline_layout->spec().hash().val);
 
@@ -174,8 +180,7 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
   Hash hash = h.value();
   vk::Pipeline pipeline = program->FindPipeline(hash);
   if (!pipeline) {
-    FXL_CHECK(allow_build_pipeline) << static_state_;
-    pipeline = BuildGraphicsPipeline(pipeline_layout, program);
+    pipeline = BuildGraphicsPipeline(pipeline_layout, program, log_pipeline_creation);
     program->StashPipeline(hash, pipeline);
     FXL_CHECK(pipeline);
   }
@@ -303,107 +308,145 @@ void CommandBufferPipelineState::InitPipelineRasterizationStateCreateInfo(
   info->depthBiasEnable = static_state.depth_bias_enable != 0;
 }
 
-vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
-    const PipelineLayout* pipeline_layout, ShaderProgram* program) {
+vk::GraphicsPipelineCreateInfo* CommandBufferPipelineState::InitGraphicsPipelineCreateInfo(
+    BlockAllocator* allocator, const PipelineLayout* pipeline_layout, ShaderProgram* program) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::BuildGraphicsPipeline");
+
   auto& pipeline_layout_spec = pipeline_layout->spec();
 
   // Viewport state
-  vk::PipelineViewportStateCreateInfo viewport_info;
-  viewport_info.viewportCount = 1;
-  viewport_info.scissorCount = 1;
+  vk::PipelineViewportStateCreateInfo* viewport_info =
+      allocator->AllocateInitialized<vk::PipelineViewportStateCreateInfo>();
+  viewport_info->viewportCount = 1;
+  viewport_info->scissorCount = 1;
 
   // Dynamic state
-  vk::PipelineDynamicStateCreateInfo dynamic_info;
-  std::vector<vk::DynamicState> dynamic_states;
-  dynamic_states.reserve(7);
-  dynamic_states.push_back(vk::DynamicState::eScissor);
-  dynamic_states.push_back(vk::DynamicState::eViewport);
-  if (static_state_.depth_bias_enable) {
-    dynamic_states.push_back(vk::DynamicState::eDepthBias);
+  vk::PipelineDynamicStateCreateInfo* dynamic_info =
+      allocator->AllocateInitialized<vk::PipelineDynamicStateCreateInfo>();
+  {
+    constexpr size_t kMaxNumDynamicStates = 7;
+    vk::DynamicState* dynamic_states =
+        allocator->AllocateMany<vk::DynamicState>(kMaxNumDynamicStates);
+
+    dynamic_info->pDynamicStates = dynamic_states;
+    dynamic_info->dynamicStateCount = 0;
+    auto& state_count = dynamic_info->dynamicStateCount;
+    dynamic_states[state_count++] = vk::DynamicState::eScissor;
+    dynamic_states[state_count++] = vk::DynamicState::eViewport;
+    if (static_state_.depth_bias_enable) {
+      dynamic_states[state_count++] = vk::DynamicState::eDepthBias;
+    }
+    if (static_state_.stencil_test) {
+      dynamic_states[state_count++] = vk::DynamicState::eStencilCompareMask;
+      dynamic_states[state_count++] = vk::DynamicState::eStencilReference;
+      dynamic_states[state_count++] = vk::DynamicState::eStencilWriteMask;
+    }
+    FXL_DCHECK(dynamic_info->dynamicStateCount > 0);
+    FXL_DCHECK(dynamic_info->dynamicStateCount <= kMaxNumDynamicStates);
   }
-  if (static_state_.stencil_test) {
-    dynamic_states.push_back(vk::DynamicState::eStencilCompareMask);
-    dynamic_states.push_back(vk::DynamicState::eStencilReference);
-    dynamic_states.push_back(vk::DynamicState::eStencilWriteMask);
-  }
-  dynamic_info.pDynamicStates = dynamic_states.data();
-  dynamic_info.dynamicStateCount = dynamic_states.size();
 
   // Blend state
-  vk::PipelineColorBlendStateCreateInfo blend_info;
-  vk::PipelineColorBlendAttachmentState blend_attachments[VulkanLimits::kNumColorAttachments];
-  InitPipelineColorBlendStateCreateInfo(&blend_info, blend_attachments, pipeline_layout_spec,
-                                        static_state_, potential_static_state_, render_pass_,
-                                        current_subpass_);
+  vk::PipelineColorBlendStateCreateInfo* blend_info =
+      allocator->AllocateInitialized<vk::PipelineColorBlendStateCreateInfo>();
+  {
+    vk::PipelineColorBlendAttachmentState* blend_attachments =
+        allocator->AllocateMany<vk::PipelineColorBlendAttachmentState>(
+            VulkanLimits::kNumColorAttachments);
+    InitPipelineColorBlendStateCreateInfo(blend_info, blend_attachments, pipeline_layout_spec,
+                                          static_state_, potential_static_state_, render_pass_,
+                                          current_subpass_);
+  }
 
   // Depth state
-  vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-  InitPipelineDepthStencilStateCreateInfo(&depth_stencil_info, static_state_,
+  vk::PipelineDepthStencilStateCreateInfo* depth_stencil_info =
+      allocator->AllocateInitialized<vk::PipelineDepthStencilStateCreateInfo>();
+  InitPipelineDepthStencilStateCreateInfo(depth_stencil_info, static_state_,
                                           render_pass_->SubpassHasDepth(current_subpass_),
                                           render_pass_->SubpassHasStencil(current_subpass_));
 
   // Vertex input
-  vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-  vk::VertexInputAttributeDescription vertex_input_attribs[VulkanLimits::kNumVertexAttributes];
-  vk::VertexInputBindingDescription vertex_input_bindings[VulkanLimits::kNumVertexBuffers];
-  InitPipelineVertexInputStateCreateInfo(
-      &vertex_input_info, vertex_input_attribs, vertex_input_bindings,
-      pipeline_layout_spec.attribute_mask(), vertex_attributes_, vertex_bindings_);
+  vk::PipelineVertexInputStateCreateInfo* vertex_input_info =
+      allocator->AllocateInitialized<vk::PipelineVertexInputStateCreateInfo>();
+  {
+    vk::VertexInputAttributeDescription* vertex_input_attribs =
+        allocator->AllocateMany<vk::VertexInputAttributeDescription>(
+            VulkanLimits::kNumVertexAttributes);
+
+    vk::VertexInputBindingDescription* vertex_input_bindings =
+        allocator->AllocateMany<vk::VertexInputBindingDescription>(VulkanLimits::kNumVertexBuffers);
+
+    InitPipelineVertexInputStateCreateInfo(
+        vertex_input_info, vertex_input_attribs, vertex_input_bindings,
+        pipeline_layout_spec.attribute_mask(), vertex_attributes_, vertex_bindings_);
+  }
 
   // Input assembly
-  vk::PipelineInputAssemblyStateCreateInfo assembly_info;
-  assembly_info.primitiveRestartEnable = static_state_.primitive_restart;
-  assembly_info.topology = static_state_.get_primitive_topology();
+  vk::PipelineInputAssemblyStateCreateInfo* assembly_info =
+      allocator->AllocateInitialized<vk::PipelineInputAssemblyStateCreateInfo>();
+  assembly_info->primitiveRestartEnable = static_state_.primitive_restart;
+  assembly_info->topology = static_state_.get_primitive_topology();
 
   // Multisample
-  vk::PipelineMultisampleStateCreateInfo multisample_info;
-  InitPipelineMultisampleStateCreateInfo(&multisample_info, static_state_,
+  vk::PipelineMultisampleStateCreateInfo* multisample_info =
+      allocator->AllocateInitialized<vk::PipelineMultisampleStateCreateInfo>();
+  InitPipelineMultisampleStateCreateInfo(multisample_info, static_state_,
                                          render_pass_->SubpassSamples(current_subpass_));
 
   // Rasterization
-  vk::PipelineRasterizationStateCreateInfo rasterization_info;
-  InitPipelineRasterizationStateCreateInfo(&rasterization_info, static_state_);
+  vk::PipelineRasterizationStateCreateInfo* rasterization_info =
+      allocator->AllocateInitialized<vk::PipelineRasterizationStateCreateInfo>();
+  InitPipelineRasterizationStateCreateInfo(rasterization_info, static_state_);
 
   // Pipeline Stages
-  vk::PipelineShaderStageCreateInfo stages[EnumCount<ShaderStage>()];
+  vk::PipelineShaderStageCreateInfo* shader_stages =
+      allocator->AllocateInitialized<vk::PipelineShaderStageCreateInfo>(EnumCount<ShaderStage>());
   unsigned num_stages = 0;
-
   for (size_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
     auto& module = program->GetModuleForStage(static_cast<ShaderStage>(i));
     if (module) {
-      auto& s = stages[num_stages++];
+      auto& s = shader_stages[num_stages++];
+      s = vk::PipelineShaderStageCreateInfo();
       s.module = module->vk();
       s.pName = "main";
       s.stage = ShaderStageToFlags(module->shader_stage());
     }
   }
 
-  vk::GraphicsPipelineCreateInfo pipeline_info;
-  pipeline_info.layout = pipeline_layout->vk();
-  pipeline_info.renderPass = render_pass_->vk();
-  pipeline_info.subpass = current_subpass_;
+  vk::GraphicsPipelineCreateInfo* pipeline_info =
+      allocator->AllocateInitialized<vk::GraphicsPipelineCreateInfo>(1);
+  pipeline_info->layout = pipeline_layout->vk();
+  pipeline_info->renderPass = render_pass_->vk();
+  pipeline_info->subpass = current_subpass_;
 
-  pipeline_info.pViewportState = &viewport_info;
-  pipeline_info.pDynamicState = &dynamic_info;
-  pipeline_info.pColorBlendState = &blend_info;
-  pipeline_info.pDepthStencilState = &depth_stencil_info;
-  pipeline_info.pVertexInputState = &vertex_input_info;
-  pipeline_info.pInputAssemblyState = &assembly_info;
-  pipeline_info.pMultisampleState = &multisample_info;
-  pipeline_info.pRasterizationState = &rasterization_info;
-  pipeline_info.pStages = stages;
-  pipeline_info.stageCount = num_stages;
+  pipeline_info->pViewportState = viewport_info;
+  pipeline_info->pDynamicState = dynamic_info;
+  pipeline_info->pColorBlendState = blend_info;
+  pipeline_info->pDepthStencilState = depth_stencil_info;
+  pipeline_info->pVertexInputState = vertex_input_info;
+  pipeline_info->pInputAssemblyState = assembly_info;
+  pipeline_info->pMultisampleState = multisample_info;
+  pipeline_info->pRasterizationState = rasterization_info;
+  pipeline_info->pStages = shader_stages;
+  pipeline_info->stageCount = num_stages;
 
-  TRACE_DURATION("gfx", "escher::CommandBuffer::BuildGraphicsPipeline[vulkan]");
-  return ESCHER_CHECKED_VK_RESULT(
-      program->vk_device().createGraphicsPipeline(nullptr, pipeline_info));
+  return pipeline_info;
+}
+
+vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
+    const PipelineLayout* pipeline_layout, ShaderProgram* program, bool log_pipeline_creation) {
+  BlockAllocator allocator(1024);
+
+  vk::GraphicsPipelineCreateInfo* pipeline_create_info =
+      InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout, program);
+
+  return pipeline_builder_->BuildGraphicsPipeline(*pipeline_create_info, log_pipeline_creation);
 }
 
 // Building a compute pipeline is much simpler than building a graphics one. All you need
 // is a single shader module and a single pipeline layout.
 vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayout* pipeline_layout,
-                                                              ShaderProgram* program) {
+                                                              ShaderProgram* program,
+                                                              bool log_pipeline_creation) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::BuildComputePipeline");
   auto& module = program->GetModuleForStage(ShaderStage::kCompute);
   FXL_DCHECK(module && module->is_valid());
@@ -417,8 +460,8 @@ vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayo
   pipeline_info.stage = shader_stage_info;
   pipeline_info.layout = pipeline_layout->vk();
 
-  return ESCHER_CHECKED_VK_RESULT(
-      program->vk_device().createComputePipeline(nullptr, pipeline_info));
+  FXL_DCHECK(pipeline_builder_);
+  return pipeline_builder_->BuildComputePipeline(pipeline_info, log_pipeline_creation);
 }
 
 void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t attrib,

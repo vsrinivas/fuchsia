@@ -27,6 +27,7 @@
 #include "src/ui/lib/escher/vk/impl/framebuffer_allocator.h"
 #include "src/ui/lib/escher/vk/impl/pipeline_layout_cache.h"
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/texture.h"
 #include "src/ui/lib/escher/vk/vma_gpu_allocator.h"
 
@@ -67,6 +68,12 @@ std::unique_ptr<impl::MeshManager> NewMeshManager(impl::CommandBufferPool* main_
 
 }  // anonymous namespace
 
+// This version exists because if we were to define default args in the constructor (e.g.
+// "std::unique_ptr<PipelineBuilder> pipeline_builder = nullptr"), then we would run into
+// compile problems that can be solved by either:
+//   - this approach
+//   - including additional headers in escher.h, instead of forward-declaring
+// Since many files include escher.h, it is worthwhile to forward-declare as much as possible.
 Escher::Escher(VulkanDeviceQueuesPtr device) : Escher(std::move(device), HackFilesystem::New()) {}
 
 Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
@@ -81,6 +88,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
 #if ESCHER_USE_RUNTIME_GLSL
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
 #endif
+      pipeline_builder_(std::make_unique<PipelineBuilder>(device_->vk_device())),
       weak_factory_(this) {
   FXL_DCHECK(vulkan_context_.instance);
   FXL_DCHECK(vulkan_context_.physical_device);
@@ -139,6 +147,7 @@ Escher::~Escher() {
 }
 
 bool Escher::Cleanup() {
+  TRACE_DURATION("gfx", "Escher::Cleanup");
   bool finished = true;
   finished = command_buffer_pool()->Cleanup() && finished;
   if (auto pool = transfer_command_buffer_pool()) {
@@ -147,7 +156,12 @@ bool Escher::Cleanup() {
   if (auto pool = protected_command_buffer_pool()) {
     finished = pool->Cleanup() && finished;
   }
+  pipeline_builder_->MaybeStorePipelineCacheData();
   return finished;
+}
+
+void Escher::set_pipeline_builder(std::unique_ptr<PipelineBuilder> pipeline_builder) {
+  pipeline_builder_ = std::move(pipeline_builder);
 }
 
 impl::CommandBufferPool* Escher::protected_command_buffer_pool() {

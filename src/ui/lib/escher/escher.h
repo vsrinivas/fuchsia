@@ -111,6 +111,10 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   // again).
   bool Cleanup();
 
+  // Allow clients to set the pipeline builder; if this isn't called then Escher will use a
+  // default builder.
+  void set_pipeline_builder(std::unique_ptr<PipelineBuilder> pipeline_builder);
+
   VulkanDeviceQueues* device() const { return device_.get(); }
   vk::Device vk_device() const { return device_->vk_device(); }
   vk::PhysicalDevice vk_physical_device() const { return device_->vk_physical_device(); }
@@ -147,6 +151,8 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
 
   DefaultShaderProgramFactory* shader_program_factory() { return shader_program_factory_.get(); }
 
+  PipelineBuilder* pipeline_builder() const { return pipeline_builder_.get(); }
+
   // Check if GPU performance profiling is supported.
   bool supports_timer_queries() const { return supports_timer_queries_; }
   float timestamp_period() const { return timestamp_period_; }
@@ -181,6 +187,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<SamplerCache> sampler_cache_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;
   std::unique_ptr<DefaultShaderProgramFactory> shader_program_factory_;
+  std::unique_ptr<PipelineBuilder> pipeline_builder_;
 
   std::unique_ptr<impl::PipelineLayoutCache> pipeline_layout_cache_;
 

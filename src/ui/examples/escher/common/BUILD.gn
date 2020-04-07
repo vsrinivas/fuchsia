@@ -8,6 +8,7 @@ static_library("common") {
   sources = [ "demo_harness.cc" ]
   deps = [
     ":demo_base",
+    "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/glslang:glslang_default_resource_limits_sources",
     "//third_party/glslang:glslang_sources",

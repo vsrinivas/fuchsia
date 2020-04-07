@@ -13,6 +13,8 @@
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
+static const char* kCacheDirectoryPath = "/tmp/escher_demoharness";
+
 static DemoHarnessLinux* g_harness = nullptr;
 static GLFWwindow* g_window;
 // Current mouse position.
@@ -133,6 +135,8 @@ std::unique_ptr<DemoHarness> DemoHarness::New(DemoHarness::WindowParams window_p
 DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params) : DemoHarness(window_params) {
   filesystem_ = escher::HackFilesystem::New();
 }
+
+std::string DemoHarnessLinux::GetCacheDirectoryPath() { return kCacheDirectoryPath; }
 
 void DemoHarnessLinux::InitWindowSystem() {
   FXL_CHECK(!g_harness);
