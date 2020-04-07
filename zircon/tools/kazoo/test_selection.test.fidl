@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
-
-using zx;
+library zx;
 
 // This file is copies of some syscalls that cover more unusual features (see
 // annotations at the method).
@@ -14,9 +12,6 @@ using Futex = int32;
 using mutable_uint32 = uint32;
 using mutable_vector_void = vector<byte>;
 using optional_signals = signals;
-using signals = uint32;
-using time = int64;
-using usize = uint64;
 using vector_void_u32size = vector<byte>;
 enum Clock : uint32 {
     MONOTONIC = 0;
@@ -34,16 +29,16 @@ protocol Selection {
                  const_futexptr requeue_ptr,
                  uint32 requeue_count,
                  handle new_requeue_owner) ->
-        (zx.status status);
+        (status status);
 
     // Optional output (signals).
     ObjectWaitOne(handle handle, signals signals, time deadline) ->
-        (zx.status status, optional_signals observed);
+        (status status, optional_signals observed);
 
     // Argument reordering.
     [ArgReorder="handle,data,offset,data_size,actual"]
     KtraceRead(handle<resource> handle, mutable_vector_void data, uint32 offset) ->
-        (zx.status status, usize actual);
+        (status status, usize actual);
 
     // Mutable uint32 in the middle of input parameters (rather than as an
     // output).
@@ -55,12 +50,12 @@ protocol Selection {
                 mutable_uint32 val,
                 usize width,
                 bool write) ->
-        (zx.status status);
+        (status status);
 
     // uint32_t for size of a "vector".
     JobSetPolicy(handle<job> handle, uint32 options, uint32 topic, vector_void_u32size policy) ->
-        (zx.status status);
+        (status status);
 
     // Handling of enums.
-    ClockGet(Clock clock_id) -> (zx.status status, time out);
+    ClockGet(Clock clock_id) -> (status status, time out);
 };

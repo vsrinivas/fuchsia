@@ -158,7 +158,8 @@ zx_library("c") {
             "../../vdso/vcpu.fidl",
             "../../vdso/vmar.fidl",
             "../../vdso/vmo.fidl",
-            "../../vdso/zx.fidl",
+            "../../vdso/zx_common.fidl",
+            "../../vdso/zx_syscall.fidl",
           ]
           if (!exclude_testonly_syscalls) {
             headers += [ "zircon/testonly-syscalls.h" ]

@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
-
-using zx;
+library zx;
 
 using voidptr = uint64;
 
 [Transport = "Syscall"]
 protocol Ovp {
-    ovp_void_pointer_out(handle handle) -> (zx.status status, voidptr details);
+    ovp_void_pointer_out(handle handle) -> (status status, voidptr details);
 };
