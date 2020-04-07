@@ -1,2 +1,7 @@
 [
+  {
+    "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
+    "name": "zbi-bootfs",
+    "sdk": false
+  }
 ]

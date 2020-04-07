@@ -45,8 +45,8 @@ test("zbi-bootfs-test") {
   sources = [ "zbi-bootfs-test.cc" ]
   deps = [
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/zbi-bootfs",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zbi-bootfs",
   ]
   data_deps = [
     ":generated-lz4f-zbi",
@@ -58,6 +58,7 @@ resource("generated-lz4f-zbi") {
   sources = [ "$target_out_dir/generated-lz4f.zbi" ]
   outputs = [ "testdata/zbi-bootfs/generated-lz4f.zbi" ]
   deps = [ ":generated-lz4f" ]
+
   # TODO(44278): Restore to true when converting this file to GN build idioms.
   testonly = false
 }
@@ -66,6 +67,7 @@ resource("generated-zstd-zbi") {
   sources = [ "$target_out_dir/generated-zstd.zbi" ]
   outputs = [ "testdata/zbi-bootfs/generated-zstd.zbi" ]
   deps = [ ":generated-zstd" ]
+
   # TODO(44278): Restore to true when converting this file to GN build idioms.
   testonly = false
 }
@@ -73,6 +75,7 @@ resource("generated-zstd-zbi") {
 # Generate zbi images for tests.
 migrated_zbi("generated-zstd") {
   compress = "zstd"
+
   # TODO(44278): Restore to true when converting this file to GN build idioms.
   testonly = false
   cpu = ""
@@ -81,6 +84,7 @@ migrated_zbi("generated-zstd") {
 
 migrated_zbi("generated-lz4f") {
   compress = "lz4f"
+
   # TODO(44278): Restore to true when converting this file to GN build idioms.
   testonly = false
   cpu = ""
@@ -95,7 +99,7 @@ zbi_input("create-zbi-image") {
 
 fuzzer("zbi-bootfs-fuzzer") {
   sources = [ "zbi-bootfs-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/zbi-bootfs" ]
+  deps = [ "//zircon/system/ulib/zbi-bootfs" ]
 }
 
 migrated_manifest("zbi-bootfs-test-manifest") {
