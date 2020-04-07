@@ -56,13 +56,13 @@ test("usb-virtual-bus-hid") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-input:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }
@@ -74,11 +74,11 @@ test("usb-virtual-bus-ftdi") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }
@@ -90,11 +90,11 @@ test("usb-virtual-bus-cdc-acm") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }
@@ -108,12 +108,12 @@ test("usb-virtual-bus-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }
@@ -127,13 +127,13 @@ test("usb-virtual-bus-cdc-ecm") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }

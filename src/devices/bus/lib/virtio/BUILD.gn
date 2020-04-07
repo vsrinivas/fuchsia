@@ -22,7 +22,6 @@ source_set("virtio") {
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/pretty",
@@ -30,6 +29,7 @@ source_set("virtio") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/virtio",
   ]
 }

@@ -41,13 +41,13 @@ driver_module("usb-one-endpoint-hid-fake-usb") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/ulib/hid",
   ]
 }
 
@@ -65,13 +65,13 @@ driver_module("usb-two-endpoint-hid-fake-usb") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/ulib/hid",
   ]
 }
 

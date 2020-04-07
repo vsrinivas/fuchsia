@@ -132,7 +132,6 @@ driver_module("platform-bus-x86") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/lazy_init",
     "//zircon/public/lib/pci",
     "//zircon/public/lib/region-alloc",
@@ -147,6 +146,7 @@ driver_module("platform-bus-x86") {
     "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/driver-unit-test",
+    "//zircon/system/ulib/hid",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
   public_configs = [ "$zx_build/public/gn/config:default_warnings" ]
@@ -185,7 +185,6 @@ test("x86-battery-test") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/pci",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
@@ -194,6 +193,7 @@ test("x86-battery-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/ulib/hid",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }
@@ -228,12 +228,12 @@ test("x86-lid-test") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/mock-hidbus-ifc",
+    "//zircon/system/ulib/hid",
   ]
 }
 
@@ -266,13 +266,13 @@ test("x86-pwrsrc-test") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/ulib/hid",
   ]
 }
 
@@ -379,12 +379,12 @@ test("x86-cros-ec-test") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/mock-hidbus-ifc",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]

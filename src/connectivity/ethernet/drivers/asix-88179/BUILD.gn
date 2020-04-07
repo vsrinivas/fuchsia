@@ -80,13 +80,13 @@ test("usb-virtual-bus-asix-88179") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
 }

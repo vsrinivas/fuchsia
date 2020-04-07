@@ -17,9 +17,9 @@ driver_module("pc-ps2") {
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/hid",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/fidl/fuchsia-hardware-input:c",
+    "//zircon/system/ulib/hid",
   ]
 }
 

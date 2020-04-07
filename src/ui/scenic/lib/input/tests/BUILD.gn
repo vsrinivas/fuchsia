@@ -51,7 +51,7 @@ source_set("util") {
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/input",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
   ]
   public_deps = [ "//src/ui/scenic/lib/gfx/tests:testing_deps" ]
 }

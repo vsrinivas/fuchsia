@@ -92,7 +92,7 @@ executable("mediaplayer_test_util_bin") {
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
   ]
 }
 
@@ -158,8 +158,8 @@ executable("mediaplayer_tests_bin") {
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/hid",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

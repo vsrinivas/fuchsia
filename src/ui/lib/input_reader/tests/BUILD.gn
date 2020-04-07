@@ -52,7 +52,7 @@ source_set("end_to_end_tests") {
     "//sdk/fidl/fuchsia.ui.input",
     "//src/ui/lib/input_reader",
     "//src/ui/testing:mock_input_device",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
 }
@@ -67,7 +67,7 @@ source_set("interface_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.input",
     "//src/ui/testing:mock_input_device",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
 }
@@ -121,7 +121,7 @@ executable("input_reader_unittests") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/input_reader",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
 

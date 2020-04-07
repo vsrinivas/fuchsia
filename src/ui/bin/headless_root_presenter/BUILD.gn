@@ -80,7 +80,7 @@ source_set("lib") {
     "//src/ui/bin/root_presenter:factory_reset_manager",
     "//src/ui/bin/root_presenter:media_buttons_handler",
     "//src/ui/lib/input_reader",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/trace",
+    "//zircon/system/ulib/hid",
   ]
 }

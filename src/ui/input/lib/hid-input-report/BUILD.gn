@@ -21,7 +21,7 @@ source_set("hid-input-report") {
     "//sdk/fidl/fuchsia.ui.input2",
     "//src/ui/lib/key_util",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
 }
@@ -50,10 +50,10 @@ test("lib-hid-input-report-test") {
     "//src/ui/lib/key_util",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/zxtest",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/hid-parser",
   ]

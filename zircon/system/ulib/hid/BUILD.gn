@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("hid") {
   sdk = "static"
   sdk_headers = [
@@ -44,9 +56,8 @@ zx_library("hid") {
     "visalia-touch.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-input:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/system/fidl/fuchsia-hardware-input:c",
   ]
 }

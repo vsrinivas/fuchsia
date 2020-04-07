@@ -19,7 +19,7 @@ source_set("input") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
   ]
 
   deps = [

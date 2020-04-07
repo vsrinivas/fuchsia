@@ -18,10 +18,10 @@ driver_module("nxp") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/rtc",
   ]
 }

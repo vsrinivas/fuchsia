@@ -39,7 +39,7 @@ executable("integration_tests") {
     "//src/ui/testing:mock_input_device",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/hid",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
 }
