@@ -43,6 +43,7 @@ executable("volume-descriptor-test") {
 unittest_package("storage-volume-image-tests") {
   deps = [
     ":volume-descriptor-test",
+    "fvm:fvm-test",
     "serialization:serialization-test",
     "utils:utils-test",
   ]
@@ -58,6 +59,10 @@ unittest_package("storage-volume-image-tests") {
     },
     {
       name = "serialization-test"
+      environments = basic_envs
+    },
+    {
+      name = "fvm-test"
       environments = basic_envs
     },
   ]

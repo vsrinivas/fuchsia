@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("address-descriptor") {
+  sources = [ "address_descriptor.cc" ]
+  public = [ "address_descriptor.h" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [ "//third_party/rapidjson" ]
+}
+
+executable("fvm-test") {
+  testonly = true
+  sources = [ "address_descriptor_test.cc" ]
+  deps = [
+    ":address-descriptor",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
+    "//src/storage/volume_image/serialization:schema",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+  ]
+}

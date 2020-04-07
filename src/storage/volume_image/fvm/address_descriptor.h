@@ -25,7 +25,7 @@ struct AddressMap {
   // Target address space, where data is written to, in the fvm image.
   uint64_t target;
 
-  // Number of addressable blocks in this address space.
+  // Number of addressable blocks in this address space to be written.
   uint64_t count;
 
   // Options that apply to this mapping.
@@ -34,11 +34,19 @@ struct AddressMap {
 
 // Represents how the input partition image, should be transformed to fit in the fvm.
 struct AddressDescriptor {
+  static constexpr uint64_t kMagic = 0xADD835DE5C817085;
+
   // Returns an |AddressDescriptor| containing the deserialized contents from |serialized|.
   //
   // On error, returns a string describing the error condition.
   static fit::result<AddressDescriptor, std::string> Deserialize(
       fbl::Span<const uint8_t> serialized);
+
+  // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
+  static fit::result<AddressDescriptor, std::string> Deserialize(fbl::Span<const char> serialized) {
+    return Deserialize(fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(serialized.data()),
+                                                serialized.size() * sizeof(char)));
+  }
 
   // Returns a vector containing a serialized version of |this|.
   //
