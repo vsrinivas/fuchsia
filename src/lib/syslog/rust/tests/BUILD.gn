@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-syslog-integration-tests" ]
+}
+
+test_package("fuchsia-syslog-integration-tests") {
+  deps = [
+    ":panic_is_logged",
+    ":panicker",
+  ]
+
+  binaries = [
+    {
+      name = "panicker"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/panicker.cmx")
+      dest = "panicker.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "panic_is_logged"
+      environment = basic_envs
+    },
+  ]
+}
+
+rustc_test("panic_is_logged") {
+  name = "panic_is_logged"
+  edition = "2018"
+  source_root = "panic_is_logged.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/diagnostics/lib/validating-log-listener",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+  ]
+}
+
+rustc_binary("panicker") {
+  edition = "2018"
+  source_root = "panicker.rs"
+  deps = [ "//src/lib/syslog/rust:syslog" ]
+}

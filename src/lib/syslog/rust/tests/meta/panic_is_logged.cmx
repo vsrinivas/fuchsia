@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/panic_is_logged"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

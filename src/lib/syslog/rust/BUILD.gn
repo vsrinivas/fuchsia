@@ -41,7 +41,10 @@ rustc_library("syslog-listener") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-syslog-tests" ]
+  deps = [
+    ":fuchsia-syslog-tests",
+    "tests",
+  ]
 }
 
 test_package("fuchsia-syslog-tests") {

@@ -11,6 +11,7 @@ use log::{Level, LevelFilter, Metadata, Record};
 use std::ffi::{CStr, CString};
 use std::fmt::Arguments;
 use std::os::raw::c_char;
+use std::panic;
 
 #[allow(non_camel_case_types)]
 mod syslog;
@@ -197,7 +198,11 @@ impl Logger {
 
 lazy_static! {
     /// Global reference to default logger object.
-    pub static ref LOGGER: Logger = get_default();
+    pub static ref LOGGER: Logger = {
+        let l = get_default();
+        install_panic_hook();
+        l
+    };
 }
 
 /// macro helper function to convert strings and call log
@@ -265,6 +270,26 @@ pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
         log::set_max_level(log::LevelFilter::Info);
     }
     zx::ok(status)
+}
+
+/// Installs a new panic hook to send the panic message to the log service, since v2 components
+/// won't have stdout.
+fn install_panic_hook() {
+    let default_hook = panic::take_hook();
+    panic::set_hook(Box::new(move |panic_info| {
+        // Handle common cases of &'static str or String payload.
+        let msg = match panic_info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match panic_info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "<Unknown panic payload type>",
+            },
+        };
+
+        fx_log!(tag: "", levels::ERROR, "{}", format_args!("PANIC: {}", msg));
+
+        default_hook(panic_info);
+    }));
 }
 
 /// Set default logger severity.
