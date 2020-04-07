@@ -83,6 +83,8 @@ _migrated_fuzzers = [
   "//zircon/system/ulib/zircon-crypto/test:hmac-fuzzer",
   "//zircon/system/utest/kernel-cmdline:kernel-cmdline-fuzzer",
   "//zircon/system/utest/noop-fuzzer",
+  "//zircon/third_party/ulib/lz4/test:lz4-decompress-fuzzer",
+  "//zircon/third_party/ulib/lz4/test:lz4-roundtrip-fuzzer",
 ]
 
 # Emits a JSON manifest similar to the one used to incorporate Zircon fuzzers into the Fuchsia GN

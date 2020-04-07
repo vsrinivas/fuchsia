@@ -114,22 +114,16 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.lz4-decompress-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.lz4-decompress-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.lz4-decompress-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.lz4-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.lz4-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.lz4-fuzzer.ubsan",
 #------------------
 #------------------
 #------------------
@@ -649,22 +643,16 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":bin.lz4-decompress-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.lz4-decompress-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.lz4-decompress-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.lz4-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.lz4-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.lz4-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.null-namespace-child",
@@ -1567,22 +1555,16 @@ aggregate_manifest("migrated-aux") {
 #------------------
 #------------------
 #------------------
-    #":bin.lz4-decompress-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.lz4-decompress-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.lz4-decompress-fuzzer.ubsan",
 #------------------
 #------------------
-    #":bin.lz4-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.lz4-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.lz4-fuzzer.ubsan",
 #------------------
     "//zircon/system/uapp/minfs:minfs-manifest",
 #------------------
@@ -2875,22 +2857,16 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
 #------------------
-    #":bin.lz4-decompress-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.lz4-decompress-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.lz4-decompress-fuzzer.ubsan",
 #------------------
 #------------------
-    #":bin.lz4-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.lz4-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.lz4-fuzzer.ubsan",
 #------------------
     "//zircon/system/uapp/minfs:minfs-manifest",
     "//zircon/system/utest/msd:msd-manifest",

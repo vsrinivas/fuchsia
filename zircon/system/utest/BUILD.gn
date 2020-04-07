@@ -112,7 +112,6 @@ if (current_cpu != "") {
       "$zx/third_party/ulib/linenoise:test",
 #------------------
 #------------------
-      "$zx/third_party/ulib/lz4/test",
 #------------------
 #------------------
       "abi-type-validator",

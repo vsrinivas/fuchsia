@@ -11,8 +11,6 @@ zircon_fuzzers =
 # _migrated_fuzzers in //garnet/tests/zircon/BUILD.gn.
 fuzzer_names = [
   "hermetic-decompressor",
-  "lz4",
-  "lz4-decompress",
 ]
 known_fuzzers = []
 foreach(fuzzer, fuzzer_names) {

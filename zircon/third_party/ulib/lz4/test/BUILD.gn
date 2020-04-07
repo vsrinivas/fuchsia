@@ -2,22 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fuzzing/fuzzer.gni")
 
 group("test") {
   testonly = true
   deps = [
     ":lz4-decompress-fuzzer",
-    ":lz4-fuzzer",
+    ":lz4-roundtrip-fuzzer",
   ]
 }
 
-zx_fuzzer("lz4-decompress-fuzzer") {
+fuzzer("lz4-decompress-fuzzer") {
   sources = [ "lz4-decompress-fuzzer.cc" ]
-  deps = [ "$zx/third_party/ulib/lz4" ]
+  deps = [ "//zircon/public/lib/lz4" ]
 }
 
-zx_fuzzer("lz4-fuzzer") {
+fuzzer("lz4-roundtrip-fuzzer") {
   sources = [ "lz4-fuzzer.cc" ]
-  deps = [ "$zx/third_party/ulib/lz4" ]
+  deps = [ "//zircon/public/lib/lz4" ]
 }
