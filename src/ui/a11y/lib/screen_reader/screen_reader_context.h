@@ -20,6 +20,18 @@ namespace a11y {
 // ScreenReaderContext class.
 class ScreenReaderContext {
  public:
+  // Describes Screen Reader possible modes of navigation.
+  enum class ScreenReaderMode {
+    kNormal,  // Default case.
+    // Whether a continuous exploration is in progress. A continuous exploration is a state
+    // where an user is exploring the screen (by touch, for example), and is informed of the
+    // elements in a11y focus (hearing the tts, for example). When in continuous exploration, if the
+    // user stops at a particular semantic node, this node is informed only once, and another update
+    // will only come after the user moves to a different node. In contrast, when the user is not in
+    // continuous exploration, if the node is explored multiple times, they will always be informed.
+    kContinuousExploration,
+  };
+
   explicit ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager);
 
   virtual ~ScreenReaderContext() = default;
@@ -30,12 +42,19 @@ class ScreenReaderContext {
   // Returns the Executor used by the Screen Reader to schedule promises.
   async::Executor* executor() { return &executor_; }
 
+  // Sets the Screen Reader current mode.
+  void set_mode(ScreenReaderMode mode) { mode_ = mode; }
+  ScreenReaderMode mode() const { return mode_; }
+
  private:
   async::Executor executor_;
 
   // Stores A11yFocusManager pointer.
   // A11yFocusManager pointer should never be nullptr.
   std::unique_ptr<A11yFocusManager> a11y_focus_manager_;
+
+  // Current Screen Reader mode.
+  ScreenReaderMode mode_ = ScreenReaderMode::kNormal;
 };
 
 }  // namespace a11y

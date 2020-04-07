@@ -43,11 +43,21 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add OneFingerDrag gesture.
   gesture_bind_status = gesture_handler->BindOneFingerDragAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        context_->set_mode(ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
+      }, /*on_start*/
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        FX_DCHECK(context_->mode() ==
+                  ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
         ScreenReaderAction::ActionData action_data;
         action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
         ExecuteAction("explore_action", action_data);
-      });
+      }, /*on_update*/
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        FX_DCHECK(context_->mode() ==
+                  ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
+        context_->set_mode(ScreenReaderContext::ScreenReaderMode::kNormal);
+      } /*on_complete*/);
   FX_DCHECK(gesture_bind_status);
 }
 

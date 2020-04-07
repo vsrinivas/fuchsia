@@ -37,11 +37,32 @@ fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const ActionData& proc
   return bridge.consumer.promise_or(fit::error());
 }
 
+fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::ScreenReaderMode mode,
+                                                        zx_koid_t view_koid, uint32_t node_id) {
+  return fit::make_promise([this, mode, view_koid, node_id]() mutable -> fit::promise<> {
+    if (mode == ScreenReaderContext::ScreenReaderMode::kContinuousExploration) {
+      // If the new a11y focus to be set is the same as the existing one during a
+      // continuous exploration, this means that the same node would be spoken
+      // multiple times. Check if the focus is new before continuing.
+      auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
+      auto focus = a11y_focus_manager->GetA11yFocus();
+      if (!focus) {
+        return fit::make_error_promise();
+      }
+      if (focus->view_ref_koid == view_koid && focus->node_id == node_id) {
+        return fit::make_error_promise();
+      }
+    }
+    return SetA11yFocusPromise(node_id, view_koid);
+  });
+}
+
 void ExploreAction::Run(ActionData process_data) {
   auto promise =
       ExecuteHitTestingPromise(process_data)
-          .and_then([this, view_koid = process_data.current_view_koid](Hit& hit) mutable {
-            return SetA11yFocusPromise(hit.node_id(), view_koid);
+          .and_then([this, view_koid = process_data.current_view_koid,
+                     mode = screen_reader_context_->mode()](Hit& hit) mutable -> fit::promise<> {
+            return SetA11yFocusOrStopPromise(mode, view_koid, hit.node_id());
           })
           .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
             auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
@@ -58,8 +79,8 @@ void ExploreAction::Run(ActionData process_data) {
             return EnqueueUtterancePromise(std::move(utterance));
           })
           .and_then([this]() {
-            // Speaks the enqueued utterance. No need to chain another promise, as this is the last
-            // step.
+            // Speaks the enqueued utterance. No need to chain another promise, as this
+            // is the last step.
             action_context_->tts_engine_ptr->Speak(
                 [](fuchsia::accessibility::tts::Engine_Speak_Result result) {
                   if (result.is_err()) {

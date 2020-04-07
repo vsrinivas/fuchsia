@@ -275,5 +275,52 @@ TEST_F(ExploreActionTest, SpeakFails) {
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
 
+TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
+  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
+  a11y::ExploreAction::ActionData action_data;
+  action_data.current_view_koid = semantic_provider_.koid();
+  // Note that x and y are set just for completeness of the data type. the semantic provider is
+  // responsible for returning what was the hit based on these numbers.
+  action_data.local_point.x = kLocalCoordForTesting;
+  action_data.local_point.y = kLocalCoordForTesting;
+
+  semantic_provider_.SetHitTestResult(0);
+
+  screen_reader_context_->set_mode(
+      a11y::ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
+  explore_action.Run(action_data);
+  RunLoopUntilIdle();
+
+  // Checks that a new a11y focus was set.
+  EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  auto focus = a11y_focus_manager_ptr_->GetA11yFocus();
+  ASSERT_TRUE(focus);
+  EXPECT_EQ(focus->node_id, 0u);
+  EXPECT_EQ(focus->view_ref_koid, semantic_provider_.koid());
+
+  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
+}
+
+TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
+  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
+  a11y::ExploreAction::ActionData action_data;
+  action_data.current_view_koid = semantic_provider_.koid();
+  // Note that x and y are set just for completeness of the data type. the semantic provider is
+  // responsible for returning what was the hit based on these numbers.
+  action_data.local_point.x = kLocalCoordForTesting;
+  action_data.local_point.y = kLocalCoordForTesting;
+
+  semantic_provider_.SetHitTestResult(0);
+
+  screen_reader_context_->set_mode(
+      a11y::ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
+  a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), 0, [](auto...) {});
+  explore_action.Run(action_data);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
+}
+
 }  // namespace
 }  // namespace accesibility_test
