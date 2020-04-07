@@ -45,11 +45,6 @@ bitfield! {
 }
 
 impl Header {
-    /// Dynamically sized portion of the record, in bytes.
-    fn variable_length(&self) -> usize {
-        (self.size_words() - 2) as usize * 8
-    }
-
     /// Sets the length of the item the header refers to. Panics if not 8-byte aligned.
     fn set_len(&mut self, new_len: usize) {
         assert_eq!(new_len % 8, 0, "encoded message must be 8-byte aligned");
@@ -166,13 +161,15 @@ mod tests {
     use {
         super::*,
         crate::{
-            encode::Encoder,
+            encode::{BufMutShared, Encoder},
             parse::{parse_argument, parse_record, ParseResult},
         },
         fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
         fuchsia_zircon as zx,
         std::{fmt::Debug, io::Cursor},
     };
+
+    const BUF_LEN: usize = 1024;
 
     pub(crate) fn assert_roundtrips<T>(
         val: T,
@@ -182,7 +179,6 @@ mod tests {
     ) where
         T: Debug + PartialEq,
     {
-        const BUF_LEN: usize = 1024;
         let mut encoder = Encoder::new(Cursor::new(vec![0; BUF_LEN]));
         encoder_method(&mut encoder, &val).unwrap();
 
@@ -315,5 +311,24 @@ mod tests {
             parse_record,
             None,
         );
+    }
+
+    #[test]
+    fn invalid_records() {
+        // invalid word size
+        let mut encoder = Encoder::new(Cursor::new(vec![0; BUF_LEN]));
+        let mut header = Header(0);
+        header.set_type(TRACING_FORMAT_LOG_RECORD_TYPE);
+        header.set_size_words(0); // invalid, should be at least 2 as header and time are included
+        encoder.buf.put_u64_le(header.0).unwrap();
+        encoder.buf.put_i64_le(zx::Time::get(zx::ClockId::Monotonic).into_nanos()).unwrap();
+        encoder
+            .write_argument(&Argument {
+                name: String::from("msg"),
+                value: Value::Text(String::from("test message one")),
+            })
+            .unwrap();
+
+        assert!(parse_record(encoder.buf.get_ref()).is_err());
     }
 }

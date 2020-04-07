@@ -25,7 +25,12 @@ pub fn parse_record(buf: &[u8]) -> ParseResult<'_, Record> {
 
     let (var_len, timestamp) = le_i64(after_header)?;
 
-    let remaining_record_len = header.variable_length();
+    // Remove two word lengths for header and timestamp.
+    let remaining_record_len = if header.size_words() >= 2 {
+        (header.size_words() - 2) as usize * 8
+    } else {
+        return Err(nom::Err::Failure(StreamError::ValueOutOfValidRange));
+    };
 
     let (after_record, args_buf) = take(remaining_record_len)(var_len)?;
     let (_, arguments) = many0(parse_argument)(args_buf)?;
