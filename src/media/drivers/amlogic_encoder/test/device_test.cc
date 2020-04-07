@@ -168,15 +168,13 @@ class AmlogicEncoderTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    auto device = device_.release();
-    if (device) {
-      ddk::UnbindTxn txn(device->zxdev());
-      device->DdkUnbindNew(std::move(txn));
+    if (device_) {
+      ddk::UnbindTxn txn(device_->zxdev());
+      device_->DdkUnbindNew(std::move(txn));
+      device_ = nullptr;
     }
     ASSERT_TRUE(ddk_.Ok());
   }
-
-  DeviceCtx* dev() { return device_.get(); }
 
  private:
   async::Loop loop_;
