@@ -193,7 +193,7 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
         ((Level == PiTracingLevel::Extended) && (old_inherited_prio != t->inherited_priority_))) {
       if (thread_ == nullptr) {
         // Generate the start event and a flow id.
-        flow_id_ = PiKTracerFlowIdGenerator::gen_.fetch_add(1, std::memory_order_relaxed);
+        flow_id_ = PiKTracerFlowIdGenerator::gen_.fetch_add(1, ktl::memory_order_relaxed);
         ktrace(TAG_INHERIT_PRIORITY_START, flow_id_, 0, 0, arch_curr_cpu_num());
       } else {
         // Flush the previous event, but do not declare it to be the last in
