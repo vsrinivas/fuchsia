@@ -52,7 +52,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
     "output_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "background",
@@ -62,7 +62,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
       },
       {
         "device_id": "*",
-        "supported_output_stream_types": ["media", "system_agent"],
+        "supported_stream_types": ["media", "system_agent"],
         "eligible_for_loopback": false,
         "independent_volume_control": true
       }
@@ -113,14 +113,14 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingMultipleDeviceIds) {
     "output_devices": [
       {
         "device_id" : ["34384e7da9d52c8062a9765baeb6053a", "34384e7da9d52c8062a9765baeb6053b" ],
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media"
         ],
         "eligible_for_loopback": false
       },
       {
         "device_id" : "*",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "background",
@@ -174,7 +174,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
     "output_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "background",
@@ -224,7 +224,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
     "output_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "system_agent"
@@ -255,7 +255,7 @@ TEST(ProcessConfigLoaderTest, AllowConfigWithoutUltrasound) {
     "output_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "background",
@@ -288,6 +288,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
     "input_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_stream_types": [
+          "capture:background"
+        ],
         "rate": 96000
       },
       {
@@ -313,7 +316,27 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
   auto& config = process_config->device_config();
 
   EXPECT_EQ(config.input_device_profile(expected_id).rate(), 96000u);
+  EXPECT_TRUE(config.input_device_profile(expected_id)
+                  .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::BACKGROUND)));
+  EXPECT_FALSE(config.input_device_profile(expected_id)
+                   .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::FOREGROUND)));
+  EXPECT_FALSE(config.input_device_profile(expected_id)
+                   .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)));
+  EXPECT_FALSE(config.input_device_profile(expected_id)
+                   .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::COMMUNICATION)));
+  EXPECT_FALSE(config.input_device_profile(expected_id)
+                   .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)));
   EXPECT_EQ(config.input_device_profile(unknown_id).rate(), 24000u);
+  EXPECT_TRUE(config.input_device_profile(unknown_id)
+                  .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::BACKGROUND)));
+  EXPECT_TRUE(config.input_device_profile(unknown_id)
+                  .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::FOREGROUND)));
+  EXPECT_TRUE(config.input_device_profile(unknown_id)
+                  .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)));
+  EXPECT_TRUE(config.input_device_profile(unknown_id)
+                  .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::COMMUNICATION)));
+  EXPECT_FALSE(config.input_device_profile(unknown_id)
+                   .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)));
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
@@ -326,7 +349,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     "output_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "background",
@@ -541,7 +564,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
     "output_devices": [
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-        "supported_output_stream_types": [
+        "supported_stream_types": [
           "media",
           "interruption",
           "background",

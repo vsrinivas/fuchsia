@@ -36,6 +36,7 @@ static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeyOutputRate[] = "output_rate";
 static constexpr char kJsonKeyInputDevices[] = "input_devices";
 static constexpr char kJsonKeyOutputDevices[] = "output_devices";
+static constexpr char kJsonKeySupportedStreamTypes[] = "supported_stream_types";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
@@ -253,6 +254,22 @@ std::optional<std::vector<audio_stream_unique_id_t>> ParseDeviceIdFromJsonValue(
   return {result};
 }
 
+StreamUsageSet ParseStreamUsageSetFromJsonArray(const rapidjson::Value& value,
+                                                StreamUsageSet* all_supported_usages = nullptr) {
+  FX_DCHECK(value.IsArray());
+  StreamUsageSet supported_stream_types;
+  for (const auto& stream_type : value.GetArray()) {
+    FX_DCHECK(stream_type.IsString());
+    const auto supported_usage = StreamUsageFromString(stream_type.GetString());
+    FX_DCHECK(supported_usage);
+    if (all_supported_usages) {
+      all_supported_usages->insert(*supported_usage);
+    }
+    supported_stream_types.insert(*supported_usage);
+  }
+  return supported_stream_types;
+}
+
 std::pair<std::optional<std::vector<audio_stream_unique_id_t>>, DeviceConfig::OutputDeviceProfile>
 ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                                        StreamUsageSet* all_supported_usages) {
@@ -277,19 +294,22 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     independent_volume_control = independent_volume_control_it->value.GetBool();
   }
 
+  StreamUsageSet supported_stream_types;
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
-  FX_CHECK(supported_stream_types_it != value.MemberEnd());
+  if (supported_stream_types_it != value.MemberEnd()) {
+    supported_stream_types =
+        ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value, all_supported_usages);
+  } else {
+    supported_stream_types_it = value.FindMember(kJsonKeySupportedStreamTypes);
+    if (supported_stream_types_it != value.MemberEnd()) {
+      supported_stream_types =
+          ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value, all_supported_usages);
+    } else {
+      FX_DCHECK(false) << "Missing required stream usage set";
+    }
+  }
   auto& supported_stream_types_value = supported_stream_types_it->value;
   FX_CHECK(supported_stream_types_value.IsArray());
-
-  StreamUsageSet supported_stream_types;
-  for (const auto& stream_type : supported_stream_types_value.GetArray()) {
-    FX_CHECK(stream_type.IsString());
-    const auto supported_usage = StreamUsageFromString(stream_type.GetString());
-    FX_DCHECK(supported_usage);
-    all_supported_usages->insert(*supported_usage);
-    supported_stream_types.insert(*supported_usage);
-  }
 
   auto pipeline_it = value.FindMember(kJsonKeyPipeline);
   PipelineConfig pipeline_config;
@@ -386,6 +406,13 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   FX_DCHECK(rate_it != value.MemberEnd());
   FX_DCHECK(rate_it->value.IsUint());
   auto rate = rate_it->value.GetUint();
+
+  StreamUsageSet supported_stream_types;
+  auto supported_stream_types_it = value.FindMember(kJsonKeySupportedStreamTypes);
+  if (supported_stream_types_it != value.MemberEnd()) {
+    supported_stream_types = ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value);
+    return {device_id, DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types))};
+  }
 
   return {device_id, DeviceConfig::InputDeviceProfile(rate)};
 }

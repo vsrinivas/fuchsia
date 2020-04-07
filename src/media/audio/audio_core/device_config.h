@@ -90,7 +90,10 @@ class DeviceConfig {
     InputDeviceProfile() : InputDeviceProfile(kDefaultRate) {}
 
     InputDeviceProfile(uint32_t rate)
-        : DeviceProfile(StreamUsageSetFromCaptureUsages(kFidlCaptureUsages)), rate_(rate) {}
+        : InputDeviceProfile(rate, StreamUsageSetFromCaptureUsages(kFidlCaptureUsages)) {}
+
+    InputDeviceProfile(uint32_t rate, StreamUsageSet supported_usages)
+        : DeviceProfile(std::move(supported_usages)), rate_(rate) {}
 
     uint32_t rate() const { return rate_; }
 

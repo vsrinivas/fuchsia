@@ -23,7 +23,7 @@
       "required": ["level", "db"],
       "additionalProperties": false
     },
-    "output_stream_type": {
+    "stream_type": {
       "enum": [
         "background", "communications", "interruption", "media", "system_agent"
       ]
@@ -47,7 +47,7 @@
         "_comment": "string",
         "streams": {
           "type": "array",
-          "items": { "$ref": "#/definitions/output_stream_type" }
+          "items": { "$ref": "#/definitions/stream_type" }
         },
         "effects": {
           "type": "array",
@@ -82,7 +82,11 @@
         },
         "supported_output_stream_types": {
           "type": "array",
-          "items" : { "$ref" : "#definitions/output_stream_type" }
+          "items" : { "$ref" : "#definitions/stream_type" }
+        },
+        "supported_stream_types": {
+          "type": "array",
+          "items" : { "$ref" : "#definitions/stream_type" }
         },
 
         // Whether this device is eligible to be looped back to loopback capturers.
@@ -95,7 +99,15 @@
         // The mix pipeline to construct for this device.
         "pipeline": { "$ref" : "#definitions/mix_group" }
       },
-      "required": [ "device_id", "supported_output_stream_types" ],
+      "required": [ "device_id" ],
+      "oneOf": [
+        {
+          "required": [ "supported_output_stream_types" ]
+        },
+        {
+          "required": [ "supported_stream_types" ]
+        }
+      ],
       "additionalProperties": false
     },
     "thermal_policy_entry" : {
@@ -130,6 +142,11 @@
             {"$ref": "#/definitions/device_id"},
             {"$ref": "#/definitions/device_id_list"}
           ]
+        },
+
+        "supported_stream_types": {
+          "type": "array",
+          "items" : { "$ref" : "#definitions/stream_type" }
         },
 
         // The target rate for this device. A different rate may be chosen if the driver does
