@@ -604,7 +604,6 @@ pub type zx_rrec_t = [u8; 64];
 pub enum zx_packet_type_t {
     ZX_PKT_TYPE_USER = 0,
     ZX_PKT_TYPE_SIGNAL_ONE = 1,
-    ZX_PKT_TYPE_SIGNAL_REP = 2,
     ZX_PKT_TYPE_GUEST_BELL = 3,
     ZX_PKT_TYPE_GUEST_MEM = 4,
     ZX_PKT_TYPE_GUEST_IO = 5,
