@@ -2,7 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
+                "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
+                "fuchsia.media.AudioDeviceEnumerator": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
             },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider"
@@ -16,6 +17,7 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
+            "fuchsia.media.AudioDeviceEnumerator",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

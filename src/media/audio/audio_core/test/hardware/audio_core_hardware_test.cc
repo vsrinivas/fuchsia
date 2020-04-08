@@ -4,6 +4,7 @@
 #include "src/media/audio/audio_core/test/hardware/audio_core_hardware_test.h"
 
 #include <lib/sys/cpp/service_directory.h>
+#include <zircon/status.h>
 
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -13,24 +14,58 @@ void AudioCoreHardwareTest::SetUp() {
   TestFixture::SetUp();
 
   ConnectToAudioCore();
+  ASSERT_TRUE(WaitForCaptureDevice());
   ConnectToAudioCapturer();
+
+  ConnectToGainAndVolumeControls();
+  SetGainsToUnity();
 
   GetDefaultCaptureFormat();
   SetCapturerFormat();
 
   MapMemoryForCapturer();
-
   RunLoopUntilIdle();
-  ASSERT_FALSE(error_occurred());
 }
 
 void AudioCoreHardwareTest::TearDown() { ASSERT_FALSE(error_occurred()); }
+
+bool AudioCoreHardwareTest::WaitForCaptureDevice() {
+  audio_device_enumerator_ = sys::ServiceDirectory::CreateFromNamespace()
+                                 ->Connect<fuchsia::media::AudioDeviceEnumerator>();
+
+  audio_device_enumerator_.set_error_handler(ErrorHandler([](zx_status_t status) {
+    FAIL() << "Client connection to fuchsia.media.AudioDeviceEnumerator: "
+           << zx_status_get_string(status) << " (" << status << ")";
+  }));
+
+  audio_device_enumerator_.events().OnDeviceAdded =
+      ([this](fuchsia::media::AudioDeviceInfo device) {
+        if (device.is_input) {
+          capture_device_tokens_.insert(device.token_id);
+        }
+      });
+  audio_device_enumerator_.events().OnDeviceRemoved =
+      ([this](uint64_t token_id) { capture_device_tokens_.erase(token_id); });
+  audio_device_enumerator_->GetDevices(
+      [this](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+        for (auto& device : devices) {
+          if (device.is_input) {
+            capture_device_tokens_.insert(device.token_id);
+          }
+        }
+      });
+
+  RunLoopWithTimeoutOrUntil([this]() { return error_occurred_ || !capture_device_tokens_.empty(); },
+                            kDurationResponseExpected);
+  return !capture_device_tokens_.empty();
+}
 
 void AudioCoreHardwareTest::ConnectToAudioCore() {
   audio_core_ = sys::ServiceDirectory::CreateFromNamespace()->Connect<fuchsia::media::AudioCore>();
 
   audio_core_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.AudioCore failed";
+    FAIL() << "Client connection to fuchsia.media.AudioCore: " << zx_status_get_string(status)
+           << " (" << status << ")";
   }));
 }
 
@@ -41,8 +76,48 @@ void AudioCoreHardwareTest::ConnectToAudioCapturer() {
   audio_core_->CreateAudioCapturer(kNotLoopback, audio_capturer_.NewRequest());
 
   audio_capturer_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.AudioCapturer failed";
+    FAIL() << "Client connection to fuchsia.media.AudioCapturer: " << zx_status_get_string(status)
+           << " (" << status << ")";
   }));
+
+  audio_capturer_->SetUsage(kUsage);
+}
+
+void AudioCoreHardwareTest::ConnectToGainAndVolumeControls() {
+  ASSERT_TRUE(audio_capturer_.is_bound());
+
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(kUsage);
+  audio_core_->BindUsageVolumeControl(std::move(usage), usage_volume_control_.NewRequest());
+
+  usage_volume_control_.set_error_handler(ErrorHandler([](zx_status_t status) {
+    FAIL() << "Client connection to (capture usage) fuchsia.media.audio.VolumeControl: "
+           << zx_status_get_string(status) << " (" << status << ")";
+  }));
+
+  audio_capturer_->BindGainControl(stream_gain_control_.NewRequest());
+
+  stream_gain_control_.set_error_handler(ErrorHandler([](zx_status_t status) {
+    FAIL() << "Client connection to (capture stream) fuchsia.media.audio.GainControl: "
+           << zx_status_get_string(status) << " (" << status << ")";
+  }));
+}
+
+// Set unity gain on this capturer gain control, capture usage and all capture devices.
+// Also set 1.0 volume on this capture usage
+void AudioCoreHardwareTest::SetGainsToUnity() {
+  ASSERT_TRUE(stream_gain_control_.is_bound());
+  ASSERT_TRUE(usage_volume_control_.is_bound());
+  ASSERT_TRUE(audio_device_enumerator_.is_bound());
+  ASSERT_FALSE(capture_device_tokens_.empty());
+
+  stream_gain_control_->SetGain(0.0f);
+  usage_volume_control_->SetVolume(fuchsia::media::audio::MAX_VOLUME);
+  audio_core_->SetCaptureUsageGain(kUsage, 0.0f);
+
+  for (auto token_id : capture_device_tokens_) {
+    audio_device_enumerator_->SetDeviceGain(token_id, kUnityGain, kSetGainFlags);
+  }
 }
 
 // Fetch the initial media type and adjust channel_count_ and frames_per_second_ if needed.
@@ -82,7 +157,8 @@ void AudioCoreHardwareTest::MapMemoryForCapturer() {
   zx_status_t status = payload_buffer_map_.CreateAndMap(vmo_buffer_byte_count_, kMapOptions,
                                                         /* vmar_manager= */ nullptr,
                                                         &audio_capturer_vmo, kVmoRights);
-  EXPECT_EQ(status, ZX_OK) << "VmoMapper::CreateAndMap failed: " << status;
+  EXPECT_EQ(status, ZX_OK) << "VmoMapper::CreateAndMap failed: " << zx_status_get_string(status)
+                           << " (" << status << ")";
 
   audio_capturer_->AddPayloadBuffer(kPayloadBufferId, std::move(audio_capturer_vmo));
 
@@ -124,7 +200,6 @@ void AudioCoreHardwareTest::DisplayReceivedAudio() {
 // Note that we do this at the audio input device's native (default) frame_rate and channel_count,
 // to minimize any loss in transparency from frame-rate-conversion or rechannelization.
 TEST_F(AudioCoreHardwareTest, ZeroesInLiveCapture) {
-  ASSERT_TRUE(audio_capturer_.is_bound());
   const uint32_t payload_offset = 0u;
 
   audio_capturer_->CaptureAt(kPayloadBufferId, payload_offset, vmo_buffer_frame_count_,

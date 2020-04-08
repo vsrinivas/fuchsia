@@ -7,6 +7,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 
+#include <unordered_set>
+
 #include "src/media/audio/lib/test/test_fixture.h"
 
 namespace media::audio::test {
@@ -17,6 +19,13 @@ class AudioCoreHardwareTest : public TestFixture {
   // If gain is full, and if we are capturing from a real microphone in a normal acoustic
   // environment (not an anechoic enclosure), then 2 frames is a very reasonable limit.
   static constexpr uint32_t kLimitConsecFramesZero = 5;
+
+  static constexpr fuchsia::media::AudioCaptureUsage kUsage =
+      fuchsia::media::AudioCaptureUsage::FOREGROUND;
+
+  static constexpr uint32_t kSetGainFlags =
+      fuchsia::media::SetAudioGainFlag_GainValid & fuchsia::media::SetAudioGainFlag_MuteValid;
+  static constexpr fuchsia::media::AudioGainInfo kUnityGain{.gain_db = 0.0f, .flags = 0};
 
   // We'll use just one payload buffer here.
   static constexpr uint32_t kPayloadBufferId = 0;
@@ -32,8 +41,13 @@ class AudioCoreHardwareTest : public TestFixture {
   void SetUp() override;
   void TearDown() override;
 
+  bool WaitForCaptureDevice();
+
   void ConnectToAudioCore();
   void ConnectToAudioCapturer();
+
+  void ConnectToGainAndVolumeControls();
+  void SetGainsToUnity();
 
   void GetDefaultCaptureFormat();
   void SetCapturerFormat();
@@ -43,8 +57,14 @@ class AudioCoreHardwareTest : public TestFixture {
   void OnPacketProduced(fuchsia::media::StreamPacket packet);
   void DisplayReceivedAudio();
 
+  fuchsia::media::AudioDeviceEnumeratorPtr audio_device_enumerator_;
   fuchsia::media::AudioCorePtr audio_core_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
+
+  fuchsia::media::audio::VolumeControlPtr usage_volume_control_;
+  fuchsia::media::audio::GainControlPtr stream_gain_control_;
+
+  std::unordered_set<uint64_t> capture_device_tokens_;
 
   uint32_t channel_count_ = kDefaultChannelCount;
   uint32_t frames_per_second_ = kDefaultFramesPerSecond;
