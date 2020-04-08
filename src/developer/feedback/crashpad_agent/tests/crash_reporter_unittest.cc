@@ -171,7 +171,8 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  void SetUpDeviceIdProvider(std::unique_ptr<stubs::DeviceIdProvider> feedback_device_id_provider) {
+  void SetUpDeviceIdProvider(
+      std::unique_ptr<stubs::DeviceIdProviderBase> feedback_device_id_provider) {
     feedback_device_id_provider_ = std::move(feedback_device_id_provider);
     if (feedback_device_id_provider_) {
       InjectServiceProvider(feedback_device_id_provider_.get());
@@ -191,7 +192,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   void SetUpUtcProvider(const std::vector<UtcProvider::Response>& responses) {
-    utc_provider_ = std::make_unique<UtcProvider>(dispatcher(), responses);
+    utc_provider_ = std::make_unique<stubs::UtcProvider>(dispatcher(), responses);
     InjectServiceProvider(utc_provider_.get());
   }
 
@@ -438,12 +439,12 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
  protected:
   std::unique_ptr<stubs::DataProvider> feedback_data_provider_;
-  std::unique_ptr<stubs::DeviceIdProvider> feedback_device_id_provider_;
+  std::unique_ptr<stubs::DeviceIdProviderBase> feedback_device_id_provider_;
 
  private:
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
   std::unique_ptr<fakes::PrivacySettings> privacy_settings_;
-  std::unique_ptr<stubs::UtcProvider> utc_provider_;
+  std::unique_ptr<stubs::UtcProviderBase> utc_provider_;
 
  protected:
   StubCrashServer* crash_server_;

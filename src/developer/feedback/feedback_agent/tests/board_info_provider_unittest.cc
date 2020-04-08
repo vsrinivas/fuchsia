@@ -42,7 +42,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProvider> board_provider) {
+  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProviderBase> board_provider) {
     board_provider_ = std::move(board_provider);
     if (board_provider_) {
       InjectServiceProvider(board_provider_.get());
@@ -81,7 +81,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::BoardInfoProvider> board_provider_;
+  std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_;
 };
 
 BoardInfo CreateBoardInfo(const Annotations& annotations) {

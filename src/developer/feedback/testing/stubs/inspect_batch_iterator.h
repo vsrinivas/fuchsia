@@ -11,21 +11,12 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
 
-//  Inspect batch iterator service to return controlled response to BatchIterator::GetNext().
-class InspectBatchIteratorBase : public fuchsia::diagnostics::testing::BatchIterator_TestBase {
- public:
-  InspectBatchIteratorBase() = default;
-
-  // |fuchsia::diagnostics::testing::BatchIterator_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
-};
+using InspectBatchIteratorBase = STUB_FIDL_SERVER(fuchsia::diagnostics, BatchIterator);
 
 class InspectBatchIterator : public InspectBatchIteratorBase {
  public:
@@ -65,7 +56,7 @@ class InspectBatchIteratorNeverResponds : public InspectBatchIteratorBase {
   InspectBatchIteratorNeverResponds() {}
 
   // |fuchsia::diagnostics::BatchIterator|
-  void GetNext(GetNextCallback callback) override;
+  STUB_METHOD_DOES_NOT_RETURN(GetNext, GetNextCallback);
 };
 
 class InspectBatchIteratorReturnsError : public InspectBatchIteratorBase {

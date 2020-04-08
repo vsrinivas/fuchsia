@@ -47,7 +47,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProvider> product_provider) {
+  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProviderBase> product_provider) {
     product_provider_ = std::move(product_provider);
     if (product_provider_) {
       InjectServiceProvider(product_provider_.get());
@@ -86,7 +86,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::ProductInfoProvider> product_provider_;
+  std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_;
 };
 
 ProductInfo CreateProductInfo(const Annotations& annotations) {

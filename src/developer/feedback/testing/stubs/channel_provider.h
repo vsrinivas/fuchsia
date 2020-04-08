@@ -7,53 +7,43 @@
 
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <fuchsia/update/channel/cpp/fidl_test_base.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
 
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
 
-class ChannelProvider : public fuchsia::update::channel::testing::Provider_TestBase {
- public:
-  ::fidl::InterfaceRequestHandler<fuchsia::update::channel::Provider> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::update::channel::Provider> request) {
-      binding_ = std::make_unique<::fidl::Binding<fuchsia::update::channel::Provider>>(
-          this, std::move(request));
-    };
-  }
+using ChannelProviderBase = STUB_FIDL_SERVER(fuchsia::update::channel, Provider);
 
-  void CloseConnection();
+class ChannelProvider : public ChannelProviderBase {
+ public:
+  ChannelProvider(const std::string channel) : channel_(channel) {}
 
   // |fuchsia::update::channel::Provider|.
   void GetCurrent(GetCurrentCallback callback) override;
 
-  // |fuchsia::update::channel::testing::Provider_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
-
-  void set_channel(const std::string& channel) { channel_ = channel; }
-
  private:
-  std::unique_ptr<::fidl::Binding<fuchsia::update::channel::Provider>> binding_;
   std::string channel_;
 };
 
-class ChannelProviderClosesConnection : public ChannelProvider {
- public:
+class ChannelProviderReturnsEmptyChannel : public ChannelProviderBase {
   // |fuchsia::update::channel::Provider|.
   void GetCurrent(GetCurrentCallback callback) override;
 };
 
-class ChannelProviderNeverReturns : public ChannelProvider {
+class ChannelProviderClosesConnection : public ChannelProviderBase {
  public:
   // |fuchsia::update::channel::Provider|.
-  void GetCurrent(GetCurrentCallback callback) override;
+  STUB_METHOD_CLOSES_CONNECTION(GetCurrent, GetCurrentCallback);
+};
+
+class ChannelProviderNeverReturns : public ChannelProviderBase {
+ public:
+  // |fuchsia::update::channel::Provider|.
+  STUB_METHOD_DOES_NOT_RETURN(GetCurrent, GetCurrentCallback);
 };
 
 }  // namespace stubs

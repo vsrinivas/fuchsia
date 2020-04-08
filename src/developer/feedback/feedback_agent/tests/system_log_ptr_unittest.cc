@@ -36,7 +36,7 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpLogger(std::unique_ptr<stubs::Logger> logger) {
+  void SetUpLogger(std::unique_ptr<stubs::LoggerBase> logger) {
     logger_ = std::move(logger);
     if (logger_) {
       InjectServiceProvider(logger_.get());
@@ -58,7 +58,7 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
  private:
   async::Executor executor_;
 
-  std::unique_ptr<stubs::Logger> logger_;
+  std::unique_ptr<stubs::LoggerBase> logger_;
 };
 
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
@@ -95,8 +95,7 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
-  std::unique_ptr<stubs::Logger> logger =
-      std::make_unique<stubs::LoggerUnbindsFromLogListenerAfterOneMessage>();
+  auto logger = std::make_unique<stubs::LoggerUnbindsFromLogListenerAfterOneMessage>();
   logger->set_messages({
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
@@ -119,8 +118,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   const zx::duration logger_delay = zx::sec(10);
   const zx::duration log_collection_timeout = zx::sec(1);
 
-  std::unique_ptr<stubs::Logger> logger =
-      std::make_unique<stubs::LoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
+  auto logger = std::make_unique<stubs::LoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
   logger->set_messages({
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),

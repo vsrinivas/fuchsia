@@ -9,17 +9,9 @@
 namespace feedback {
 namespace stubs {
 
-void ChannelProvider::CloseConnection() {
-  if (binding_) {
-    binding_->Close(ZX_ERR_PEER_CLOSED);
-  }
-}
-
 void ChannelProvider::GetCurrent(GetCurrentCallback callback) { callback(channel_); }
 
-void ChannelProviderClosesConnection::GetCurrent(GetCurrentCallback callback) { CloseConnection(); }
-
-void ChannelProviderNeverReturns::GetCurrent(GetCurrentCallback callback) {}
+void ChannelProviderReturnsEmptyChannel::GetCurrent(GetCurrentCallback callback) { callback(""); }
 
 }  // namespace stubs
 }  // namespace feedback

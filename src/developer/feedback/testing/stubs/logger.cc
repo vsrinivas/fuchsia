@@ -36,12 +36,6 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
   return msg;
 }
 
-void Logger::CloseConnection() {
-  if (binding_) {
-    binding_->Close(ZX_ERR_PEER_CLOSED);
-  }
-}
-
 void Logger::ListenSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
                         std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerSafePtr log_listener_ptr = log_listener.Bind();
@@ -58,16 +52,6 @@ void Logger::DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSa
   log_listener_ptr->LogMany(messages_, []() {});
   log_listener_ptr->Done();
 }
-
-void LoggerClosesConnection::DumpLogsSafe(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
-    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  CloseConnection();
-}
-
-void LoggerNeverBindsToLogListener::DumpLogsSafe(
-    ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
-    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {}
 
 void LoggerUnbindsFromLogListenerAfterOneMessage::DumpLogsSafe(
     ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,

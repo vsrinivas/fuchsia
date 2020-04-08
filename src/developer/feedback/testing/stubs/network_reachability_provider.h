@@ -7,35 +7,16 @@
 
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl_test_base.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
 
-class NetworkReachabilityProvider : public fuchsia::net::testing::Connectivity_TestBase {
+class NetworkReachabilityProvider : public STUB_FIDL_SERVER(fuchsia::net, Connectivity) {
  public:
-  ::fidl::InterfaceRequestHandler<fuchsia::net::Connectivity> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::net::Connectivity> request) {
-      binding_ =
-          std::make_unique<::fidl::Binding<fuchsia::net::Connectivity>>(this, std::move(request));
-    };
-  }
-
-  void CloseConnection();
-
   // |fuchsia::net::Connectivity|
   void TriggerOnNetworkReachable(bool reachable);
-
-  // |fuchsia::net::testing::Connectivity_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
-
- private:
-  std::unique_ptr<::fidl::Binding<fuchsia::net::Connectivity>> binding_;
 };
 
 }  // namespace stubs

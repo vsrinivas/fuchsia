@@ -32,7 +32,8 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
   ChannelProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProvider> channel_provider_server) {
+  void SetUpChannelProviderServer(
+      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
     channel_provider_server_ = std::move(channel_provider_server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -72,13 +73,12 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::ChannelProvider> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
 };
 
 TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
-  channel_provider->set_channel("my-channel");
-  SetUpChannelProviderServer(std::move(channel_provider));
+  auto channel_provider_server = std::make_unique<stubs::ChannelProvider>("my-channel");
+  SetUpChannelProviderServer(std::move(channel_provider_server));
 
   const auto result = GetCurrentChannel();
 
@@ -87,7 +87,7 @@ TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
 }
 
 TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderReturnsEmptyChannel>());
 
   const auto result = GetCurrentChannel();
 

@@ -34,7 +34,7 @@ class CobaltTestFixture {
   bool WasLogEventCalled() { return logger_factory_->WasLogEventCalled(); }
   bool WasLogEventCountCalled() { return logger_factory_->WasLogEventCountCalled(); }
 
-  void CloseFactoryConnection() { logger_factory_->CloseFactoryConnection(); }
+  void CloseFactoryConnection() { logger_factory_->CloseConnection(); }
   void CloseLoggerConnection() { logger_factory_->CloseLoggerConnection(); }
 
  private:

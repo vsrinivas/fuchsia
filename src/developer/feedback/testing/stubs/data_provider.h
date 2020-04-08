@@ -15,11 +15,14 @@
 #include <map>
 #include <memory>
 
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {
 
+// TODO(49481): Clean up DataProvider stubs to use STUB_FIDL_SERVER(fuchsia::feedback,
+// DataProvider).
 class DataProviderBase : public fuchsia::feedback::testing::DataProvider_TestBase {
  public:
   ::fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
@@ -116,7 +119,7 @@ class DataProviderNeverReturning : public DataProvider {
   void GetData(GetDataCallback callback) override;
 };
 
-class DataProviderBundleAttachment : public DataProviderBase {
+class DataProviderBundleAttachment : public STUB_FIDL_SERVER(fuchsia::feedback, DataProvider) {
  public:
   DataProviderBundleAttachment(fuchsia::feedback::Attachment attachment_bundle)
       : attachment_bundle_(std::move(attachment_bundle)) {}

@@ -50,7 +50,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   RebootLogHandlerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpCrashReporter(std::unique_ptr<stubs::CrashReporter> crash_reporter) {
+  void SetUpCrashReporter(std::unique_ptr<stubs::CrashReporterBase> crash_reporter) {
     crash_reporter_ = std::move(crash_reporter);
     if (crash_reporter_) {
       InjectServiceProvider(crash_reporter_.get());
@@ -76,7 +76,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   async::Executor executor_;
 
  protected:
-  std::unique_ptr<stubs::CrashReporter> crash_reporter_;
+  std::unique_ptr<stubs::CrashReporterBase> crash_reporter_;
   std::string reboot_log_path_;
 
  private:
@@ -160,11 +160,14 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   SetUpCrashReporter(std::make_unique<stubs::CrashReporter>());
   SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  ::fit::result<void> result = HandleRebootLog();
+  // TODO(49481): Stop casting once we set expectations for the crash reporter in the constructor.
+  stubs::CrashReporter* crash_reporter = static_cast<stubs::CrashReporter*>(crash_reporter_.get());
+
+  fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(crash_reporter_->crash_signature().c_str(), param.output_crash_signature.c_str());
-  EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), param.input_reboot_log.c_str());
-  EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
+  EXPECT_STREQ(crash_reporter->crash_signature().c_str(), param.output_crash_signature.c_str());
+  EXPECT_STREQ(crash_reporter->reboot_log().c_str(), param.input_reboot_log.c_str());
+  EXPECT_EQ(crash_reporter->uptime(), param.output_uptime);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(param.output_cobalt_event_code)));
 }

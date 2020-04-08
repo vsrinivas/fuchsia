@@ -22,12 +22,6 @@ using CreateLoggerFromProjectIdCallback =
     fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback;
 using fuchsia::cobalt::Logger;
 
-void CobaltLoggerFactoryBase::CloseFactoryConnection() {
-  if (factory_binding_) {
-    factory_binding_->Close(ZX_ERR_PEER_CLOSED);
-  }
-}
-
 void CobaltLoggerFactoryBase::CloseLoggerConnection() {
   if (logger_binding_) {
     logger_binding_->Close(ZX_ERR_PEER_CLOSED);
@@ -35,7 +29,7 @@ void CobaltLoggerFactoryBase::CloseLoggerConnection() {
 }
 
 void CobaltLoggerFactoryBase::CloseAllConnections() {
-  CloseFactoryConnection();
+  CloseConnection();
   CloseLoggerConnection();
 }
 
@@ -45,12 +39,6 @@ void CobaltLoggerFactory::CreateLoggerFromProjectId(uint32_t project_id,
   logger_binding_ =
       std::make_unique<::fidl::Binding<fuchsia::cobalt::Logger>>(logger_.get(), std::move(logger));
   callback(Status::OK);
-}
-
-void CobaltLoggerFactoryClosesConnection::CreateLoggerFromProjectId(
-    uint32_t project_id, ::fidl::InterfaceRequest<Logger> logger,
-    CreateLoggerFromProjectIdCallback callback) {
-  CloseFactoryConnection();
 }
 
 void CobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectId(

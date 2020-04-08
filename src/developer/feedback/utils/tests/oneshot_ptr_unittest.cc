@@ -36,7 +36,8 @@ class OneShotPtrTest : public UnitTestFixture {
     return out_result;
   }
 
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProvider> channel_provider_server) {
+  void SetUpChannelProviderServer(
+      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
     channel_provider_server_ = std::move(channel_provider_server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -45,12 +46,11 @@ class OneShotPtrTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
-  std::unique_ptr<stubs::ChannelProvider> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
 };
 
 TEST_F(OneShotPtrTest, Check_Success) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
-  channel_provider->set_channel(kChannel);
+  auto channel_provider = std::make_unique<stubs::ChannelProvider>(kChannel);
 
   SetUpChannelProviderServer(std::move(channel_provider));
 
@@ -104,8 +104,7 @@ TEST_F(OneShotPtrTest, Fail_Timeout) {
 }
 
 TEST_F(OneShotPtrTest, Crash_MultipleUses) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
-  channel_provider->set_channel(kChannel);
+  auto channel_provider = std::make_unique<stubs::ChannelProvider>(kChannel);
 
   SetUpChannelProviderServer(std::move(channel_provider));
 

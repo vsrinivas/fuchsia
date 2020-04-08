@@ -32,7 +32,7 @@ class DeviceIdProviderPtrTest : public UnitTestFixture {
 
  protected:
   void SetUpDeviceIdProviderServer(
-      std::unique_ptr<stubs::DeviceIdProvider> device_id_provider_server) {
+      std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server) {
     device_id_provider_server_ = std::move(device_id_provider_server);
     if (device_id_provider_server_) {
       InjectServiceProvider(device_id_provider_server_.get());
@@ -59,7 +59,7 @@ class DeviceIdProviderPtrTest : public UnitTestFixture {
   async::Executor executor_;
 
   DeviceIdProviderPtr device_id_provider_ptr_;
-  std::unique_ptr<stubs::DeviceIdProvider> device_id_provider_server_;
+  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
 };
 
 TEST_F(DeviceIdProviderPtrTest, Check_DeviceIsCachedInConstructor) {
@@ -90,8 +90,7 @@ TEST_F(DeviceIdProviderPtrTest, Check_CachedErrorReturned) {
 }
 
 TEST_F(DeviceIdProviderPtrTest, Check_ErrorOnTimeout) {
-  SetUpDeviceIdProviderServer(
-      std::make_unique<stubs::DeviceIdProviderNeverReturns>(kDefaultDeviceId));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderNeverReturns>());
 
   bool is_called = false;
   std::optional<std::string> device_id = std::nullopt;

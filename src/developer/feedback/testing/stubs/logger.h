@@ -8,14 +8,12 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl_test_base.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
 
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
@@ -28,16 +26,10 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
                                             const zx::duration timestamp_offset = zx::duration(0),
                                             const std::vector<std::string>& tags = {});
 
-class Logger : public fuchsia::logger::testing::Log_TestBase {
+using LoggerBase = STUB_FIDL_SERVER(fuchsia::logger, Log);
+
+class Logger : public LoggerBase {
  public:
-  ::fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::logger::Log> request) {
-      binding_ = std::make_unique<::fidl::Binding<fuchsia::logger::Log>>(this, std::move(request));
-    };
-  }
-
-  void CloseConnection();
-
   // |fuchsia:logger::Log|
   void Listen(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
               std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
@@ -55,50 +47,61 @@ class Logger : public fuchsia::logger::testing::Log_TestBase {
   void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
                     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
-  // |fuchsia::logger::testing::Log_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  //  Injection methods.
+  void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
+    messages_ = messages;
   }
+
+ private:
+  std::vector<fuchsia::logger::LogMessage> messages_;
+};
+
+class LoggerClosesConnection : public LoggerBase {
+ public:
+  // |fuchsia:logger::Log|
+  STUB_METHOD_CLOSES_CONNECTION(ListenSafe,
+                                ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe>,
+                                std::unique_ptr<fuchsia::logger::LogFilterOptions>);
+
+  STUB_METHOD_CLOSES_CONNECTION(DumpLogsSafe,
+                                ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe>,
+                                std::unique_ptr<fuchsia::logger::LogFilterOptions>);
+};
+
+class LoggerNeverBindsToLogListener : public LoggerBase {
+ public:
+  // |fuchsia:logger::Log|
+  STUB_METHOD_DOES_NOT_RETURN(ListenSafe, ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe>,
+                              std::unique_ptr<fuchsia::logger::LogFilterOptions>);
+
+  STUB_METHOD_DOES_NOT_RETURN(DumpLogsSafe,
+                              ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe>,
+                              std::unique_ptr<fuchsia::logger::LogFilterOptions>);
+};
+
+class LoggerUnbindsFromLogListenerAfterOneMessage : public LoggerBase {
+ public:
+  // |fuchsia:logger::Log|
+  void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
+                    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
   //  Injection methods.
   void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
     messages_ = messages;
   }
 
- protected:
-  std::unique_ptr<::fidl::Binding<fuchsia::logger::Log>> binding_;
+ private:
   std::vector<fuchsia::logger::LogMessage> messages_;
 };
 
-class LoggerClosesConnection : public Logger {
+class LoggerNeverCallsLogManyBeforeDone : public LoggerBase {
  public:
   // |fuchsia:logger::Log|
   void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
                     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class LoggerNeverBindsToLogListener : public Logger {
- public:
-  // |fuchsia:logger::Log|
-  void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
-                    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
-};
-
-class LoggerUnbindsFromLogListenerAfterOneMessage : public Logger {
- public:
-  // |fuchsia:logger::Log|
-  void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
-                    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
-};
-
-class LoggerNeverCallsLogManyBeforeDone : public Logger {
- public:
-  // |fuchsia:logger::Log|
-  void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
-                    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
-};
-
-class LoggerBindsToLogListenerButNeverCalls : public Logger {
+class LoggerBindsToLogListenerButNeverCalls : public LoggerBase {
  public:
   // |fuchsia:logger::Log|
   void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
@@ -110,7 +113,7 @@ class LoggerBindsToLogListenerButNeverCalls : public Logger {
   fuchsia::logger::LogListenerSafePtr log_listener_ptr_;
 };
 
-class LoggerDelaysAfterOneMessage : public Logger {
+class LoggerDelaysAfterOneMessage : public LoggerBase {
  public:
   LoggerDelaysAfterOneMessage(async_dispatcher_t* dispatcher, zx::duration delay)
       : dispatcher_(dispatcher), delay_(delay) {}
@@ -119,12 +122,18 @@ class LoggerDelaysAfterOneMessage : public Logger {
   void DumpLogsSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,
                     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
+  //  Injection methods.
+  void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
+    messages_ = messages;
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
   zx::duration delay_;
+  std::vector<fuchsia::logger::LogMessage> messages_;
 };
 
-class LoggerDelayedResponses : public Logger {
+class LoggerDelayedResponses : public LoggerBase {
  public:
   LoggerDelayedResponses(async_dispatcher_t* dispatcher,
                          std::vector<std::vector<fuchsia::logger::LogMessage>> dumps,

@@ -18,12 +18,6 @@ using Error = fuchsia::feedback::DeviceIdError;
 
 }  // namespace
 
-void DeviceIdProvider::CloseConnection() {
-  if (binding_) {
-    binding_->Close(ZX_ERR_PEER_CLOSED);
-  }
-}
-
 void DeviceIdProvider::GetId(GetIdCallback callback) {
   callback(Result::WithResponse(Response(std::string(device_id_))));
 }
@@ -31,8 +25,6 @@ void DeviceIdProvider::GetId(GetIdCallback callback) {
 void DeviceIdProviderReturnsError::GetId(GetIdCallback callback) {
   callback(Result::WithErr(Error::NOT_FOUND));
 }
-
-void DeviceIdProviderNeverReturns::GetId(GetIdCallback callback) {}
 
 DeviceIdProviderExpectsOneCall::~DeviceIdProviderExpectsOneCall() {
   FX_CHECK(!is_first_) << "Too few calls made to GetId, expecting 1 call";

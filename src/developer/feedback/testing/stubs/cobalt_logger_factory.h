@@ -7,32 +7,22 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl_test_base.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
 
 #include <limits>
 #include <memory>
 
 #include "src/developer/feedback/testing/stubs/cobalt_logger.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
-class CobaltLoggerFactoryBase : public fuchsia::cobalt::testing::LoggerFactory_TestBase {
+class CobaltLoggerFactoryBase : public STUB_FIDL_SERVER(fuchsia::cobalt, LoggerFactory) {
  public:
   CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
   virtual ~CobaltLoggerFactoryBase() {}
-
-  // Returns a request handler for binding to this stub service.
-  ::fidl::InterfaceRequestHandler<fuchsia::cobalt::LoggerFactory> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
-      factory_binding_ = std::make_unique<::fidl::Binding<fuchsia::cobalt::LoggerFactory>>(
-          this, std::move(request));
-    };
-  }
 
   const CobaltEvent& LastEvent() const { return logger_->LastEvent(); }
   const std::vector<CobaltEvent>& Events() const { return logger_->Events(); }
@@ -49,19 +39,12 @@ class CobaltLoggerFactoryBase : public fuchsia::cobalt::testing::LoggerFactory_T
   bool WasLogCobaltEventCalled() const { return logger_->WasLogCobaltEventCalled(); }
   bool WasLogCobaltEventsCalled() const { return logger_->WasLogCobaltEventsCalled(); }
 
-  void CloseFactoryConnection();
   void CloseLoggerConnection();
   void CloseAllConnections();
-
-  // |fuchsia::cobalt::testing::LoggerFactory_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
 
  protected:
   std::unique_ptr<CobaltLoggerBase> logger_;
   std::unique_ptr<::fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
-  std::unique_ptr<::fidl::Binding<fuchsia::cobalt::LoggerFactory>> factory_binding_;
 };
 
 // Always succeed in setting up the logger.
@@ -85,9 +68,9 @@ class CobaltLoggerFactoryClosesConnection : public CobaltLoggerFactoryBase {
 
  private:
   // |fuchsia::cobalt::LoggerFactory|
-  void CreateLoggerFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+  STUB_METHOD_CLOSES_CONNECTION(CreateLoggerFromProjectId, uint32_t,
+                                ::fidl::InterfaceRequest<fuchsia::cobalt::Logger>,
+                                LoggerFactory::CreateLoggerFromProjectIdCallback);
 };
 
 // Fail to create the logger.

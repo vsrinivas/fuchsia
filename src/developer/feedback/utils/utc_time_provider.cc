@@ -35,7 +35,7 @@ void UTCTimeProvider::WatchForAccurateUtcTime() {
         utc_.Unbind();
         break;
       case fuchsia::time::UtcSource::BACKSTOP:
-        // fuchisa.time.Utc does not currently distinguish between devices that have an internal
+        // fuchsia.time.Utc does not currently distinguish between devices that have an internal
         // clock and those that do not. So, if a device has an internal clock, it's possbile that
         // the device's UTC time is be accurate despite |BACKSTOP| being returned,
         WatchForAccurateUtcTime();

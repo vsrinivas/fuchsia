@@ -54,8 +54,6 @@ void InspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback cal
   has_returned_batch_ = true;
 }
 
-void InspectBatchIteratorNeverResponds::GetNext(GetNextCallback callback) {}
-
 void InspectBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
   callback(::fit::error(fuchsia::diagnostics::ReaderError::IO));
 }

@@ -10,14 +10,14 @@
 
 #include <utility>
 
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub loggers must implement and provides common functionality.
-class CobaltLoggerBase : public fuchsia::cobalt::testing::Logger_TestBase {
+class CobaltLoggerBase : public STUB_FIDL_SERVER(fuchsia::cobalt, Logger) {
  public:
   virtual ~CobaltLoggerBase() = default;
 
@@ -50,11 +50,6 @@ class CobaltLoggerBase : public fuchsia::cobalt::testing::Logger_TestBase {
   void MarkLogCustomEventAsCalled() { return MarkFunctionAsCalled(Function::LogCustomEvent); }
   void MarkLogCobaltEventAsCalled() { return MarkFunctionAsCalled(Function::LogCobaltEvent); }
   void MarkLogCobaltEventsAsCalled() { return MarkFunctionAsCalled(Function::LogCobaltEvents); }
-
-  // |fuchsia::cobalt::testing::Logger_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
 
  private:
   // Each of the functions fuchsia.cobalt.Logger exposes.

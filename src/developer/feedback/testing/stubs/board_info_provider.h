@@ -7,48 +7,30 @@
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl_test_base.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
 
-class BoardInfoProvider : public fuchsia::hwinfo::testing::Board_TestBase {
+using BoardInfoProviderBase = STUB_FIDL_SERVER(fuchsia::hwinfo, Board);
+
+class BoardInfoProvider : public BoardInfoProviderBase {
  public:
   BoardInfoProvider(fuchsia::hwinfo::BoardInfo&& info) : info_(std::move(info)) {}
-
-  ::fidl::InterfaceRequestHandler<fuchsia::hwinfo::Board> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::hwinfo::Board> request) {
-      binding_ =
-          std::make_unique<::fidl::Binding<fuchsia::hwinfo::Board>>(this, std::move(request));
-    };
-  }
-
-  void CloseConnection();
 
   // |fuchsia::hwinfo::Board|
   void GetInfo(GetInfoCallback callback) override;
 
-  // |fuchsia::hwinfo::testing::Board_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
-
  private:
-  std::unique_ptr<::fidl::Binding<fuchsia::hwinfo::Board>> binding_;
   fuchsia::hwinfo::BoardInfo info_;
   bool has_been_called_ = false;
 };
 
-class BoardInfoProviderNeverReturns : public BoardInfoProvider {
+class BoardInfoProviderNeverReturns : public BoardInfoProviderBase {
  public:
-  BoardInfoProviderNeverReturns() : BoardInfoProvider(fuchsia::hwinfo::BoardInfo()) {}
-
   // |fuchsia::hwinfo::Board|
-  void GetInfo(GetInfoCallback callback) override;
+  STUB_METHOD_DOES_NOT_RETURN(GetInfo, GetInfoCallback);
 };
 
 }  // namespace stubs

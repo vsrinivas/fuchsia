@@ -36,7 +36,7 @@ class UTCTimeProviderTest : public UnitTestFixture {
 
  private:
   timekeeper::TestClock clock_;
-  std::unique_ptr<stubs::UtcProvider> stub_utc_provider_;
+  std::unique_ptr<stubs::UtcProviderBase> stub_utc_provider_;
 
  protected:
   std::unique_ptr<UTCTimeProvider> utc_provider_;

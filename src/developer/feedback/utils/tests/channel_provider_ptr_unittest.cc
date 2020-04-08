@@ -28,7 +28,8 @@ class ChannelProviderPtrTest : public UnitTestFixture {
   ChannelProviderPtrTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProvider> channel_provider_server) {
+  void SetUpChannelProviderServer(
+      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
     channel_provider_server_ = std::move(channel_provider_server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
@@ -60,12 +61,11 @@ class ChannelProviderPtrTest : public UnitTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::ChannelProvider> channel_provider_server_;
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
 };
 
 TEST_F(ChannelProviderPtrTest, Succeed_SomeChannel) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
-  channel_provider->set_channel("my-channel");
+  auto channel_provider = std::make_unique<stubs::ChannelProvider>("my-channel");
   SetUpChannelProviderServer(std::move(channel_provider));
 
   const auto result = GetCurrentChannel();
@@ -75,7 +75,7 @@ TEST_F(ChannelProviderPtrTest, Succeed_SomeChannel) {
 }
 
 TEST_F(ChannelProviderPtrTest, Succeed_EmptyChannel) {
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>());
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderReturnsEmptyChannel>());
 
   const auto result = GetCurrentChannel();
 

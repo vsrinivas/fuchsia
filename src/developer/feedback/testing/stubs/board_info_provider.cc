@@ -17,13 +17,5 @@ void BoardInfoProvider::GetInfo(GetInfoCallback callback) {
   callback(std::move(info_));
 }
 
-void BoardInfoProvider::CloseConnection() {
-  if (binding_) {
-    binding_->Close(ZX_ERR_PEER_CLOSED);
-  }
-}
-
-void BoardInfoProviderNeverReturns::GetInfo(GetInfoCallback callback) {}
-
 }  // namespace stubs
 }  // namespace feedback

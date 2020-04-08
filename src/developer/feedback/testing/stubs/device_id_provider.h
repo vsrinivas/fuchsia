@@ -7,60 +7,40 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl_test_base.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
 
-class DeviceIdProvider : public fuchsia::feedback::testing::DeviceIdProvider_TestBase {
+using DeviceIdProviderBase = STUB_FIDL_SERVER(fuchsia::feedback, DeviceIdProvider);
+
+class DeviceIdProvider : public DeviceIdProviderBase {
  public:
   DeviceIdProvider(const std::string& device_id) : device_id_(device_id) {}
 
-  ::fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
-      binding_ = std::make_unique<::fidl::Binding<fuchsia::feedback::DeviceIdProvider>>(
-          this, std::move(request));
-    };
-  }
-
-  void CloseConnection();
-
   // |fuchsia::feedback::DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
-
-  // |fuchsia::feedback::testing::DeviceIdProvider_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
 
  protected:
   const std::string& device_id() { return device_id_; }
 
  private:
-  std::string device_id_;
-  std::unique_ptr<::fidl::Binding<fuchsia::feedback::DeviceIdProvider>> binding_;
+  const std::string device_id_;
 };
 
-class DeviceIdProviderReturnsError : public DeviceIdProvider {
+class DeviceIdProviderReturnsError : public DeviceIdProviderBase {
  public:
-  DeviceIdProviderReturnsError() : DeviceIdProvider("") {}
-
   // |fuchsia::feedback::DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 };
 
-class DeviceIdProviderNeverReturns : public DeviceIdProvider {
+class DeviceIdProviderNeverReturns : public DeviceIdProviderBase {
  public:
-  DeviceIdProviderNeverReturns(const std::string& device_id) : DeviceIdProvider(device_id) {}
-
   // |fuchsia::feedback::DeviceIdProvider|
-  void GetId(GetIdCallback callback) override;
+  STUB_METHOD_DOES_NOT_RETURN(GetId, GetIdCallback);
 };
 
 class DeviceIdProviderExpectsOneCall : public DeviceIdProvider {
@@ -68,6 +48,7 @@ class DeviceIdProviderExpectsOneCall : public DeviceIdProvider {
   DeviceIdProviderExpectsOneCall(const std::string& device_id) : DeviceIdProvider(device_id) {}
 
   ~DeviceIdProviderExpectsOneCall();
+
   // |fuchsia::feedback::DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 

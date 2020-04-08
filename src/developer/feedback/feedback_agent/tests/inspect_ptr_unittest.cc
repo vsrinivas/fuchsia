@@ -36,7 +36,7 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpInspect(std::unique_ptr<stubs::InspectArchive> inspect_archive) {
+  void SetUpInspect(std::unique_ptr<stubs::InspectArchiveBase> inspect_archive) {
     inspect_archive_ = std::move(inspect_archive);
     if (inspect_archive_) {
       InjectServiceProvider(inspect_archive_.get());
@@ -66,7 +66,7 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::InspectArchive> inspect_archive_;
+  std::unique_ptr<stubs::InspectArchiveBase> inspect_archive_;
 };
 
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {

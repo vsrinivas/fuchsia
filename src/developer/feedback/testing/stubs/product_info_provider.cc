@@ -9,21 +9,11 @@
 namespace feedback {
 namespace stubs {
 
-using fuchsia::hwinfo::ProductInfo;
-
 void ProductInfoProvider::GetInfo(GetInfoCallback callback) {
   FX_CHECK(!has_been_called_) << "GetInfo() can only be called once";
   has_been_called_ = true;
   callback(std::move(info_));
 }
-
-void ProductInfoProvider::CloseConnection() {
-  if (binding_) {
-    binding_->Close(ZX_ERR_PEER_CLOSED);
-  }
-}
-
-void ProductInfoProviderNeverReturns::GetInfo(GetInfoCallback callback) {}
 
 }  // namespace stubs
 }  // namespace feedback

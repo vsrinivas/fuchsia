@@ -82,14 +82,14 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
                                     attachment_allowlist, &device_id_provider_);
   }
 
-  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProvider> board_provider) {
+  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProviderBase> board_provider) {
     board_provider_ = std::move(board_provider);
     if (board_provider_) {
       InjectServiceProvider(board_provider_.get());
     }
   }
 
-  void SetUpChannelProvider(std::unique_ptr<stubs::ChannelProvider> channel_provider) {
+  void SetUpChannelProvider(std::unique_ptr<stubs::ChannelProviderBase> channel_provider) {
     channel_provider_ = std::move(channel_provider);
     if (channel_provider_) {
       InjectServiceProvider(channel_provider_.get());
@@ -111,7 +111,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     InjectServiceProvider(logger_.get());
   }
 
-  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProvider> product_provider) {
+  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProviderBase> product_provider) {
     product_provider_ = std::move(product_provider);
     if (product_provider_) {
       InjectServiceProvider(product_provider_.get());
@@ -169,11 +169,11 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<Datastore> datastore_;
 
   // Stubs.
-  std::unique_ptr<stubs::BoardInfoProvider> board_provider_;
-  std::unique_ptr<stubs::ChannelProvider> channel_provider_;
-  std::unique_ptr<stubs::InspectArchive> inspect_archive_;
+  std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_;
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_;
+  std::unique_ptr<stubs::InspectArchiveBase> inspect_archive_;
   std::unique_ptr<stubs::Logger> logger_;
-  std::unique_ptr<stubs::ProductInfoProvider> product_provider_;
+  std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_;
 };
 
 TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
@@ -224,8 +224,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Channel) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>();
-  channel_provider->set_channel("my-channel");
+  auto channel_provider = std::make_unique<stubs::ChannelProvider>("my-channel");
   SetUpChannelProvider(std::move(channel_provider));
   SetUpDatastore({kAnnotationChannel}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
