@@ -56,6 +56,7 @@ class VirtualAudioUtil {
     GET_GAIN,
     GET_FORMAT,
     RETRIEVE_BUFFER,
+    WRITE_BUFFER,
     GET_POSITION,
     SET_NOTIFICATION_FREQUENCY,
 
@@ -95,6 +96,7 @@ class VirtualAudioUtil {
       {"get-gain", Command::GET_GAIN},
       {"get-format", Command::GET_FORMAT},
       {"get-rb", Command::RETRIEVE_BUFFER},
+      {"write-rb", Command::WRITE_BUFFER},
       {"get-pos", Command::GET_POSITION},
       {"notifs", Command::SET_NOTIFICATION_FREQUENCY},
 
@@ -114,6 +116,9 @@ class VirtualAudioUtil {
   static constexpr uint32_t kDefaultFifoDepth = 0x100;
   static constexpr uint64_t kDefaultExternalDelayNsec = zx::msec(1).get();
   static constexpr uint8_t kDefaultRingBufferOption = 0;
+
+  // This repeated value can be interpreted various ways, at various sample_sizes and num_chans.
+  static constexpr uint64_t kDefaultValueToWrite = 0x0000765400009ABC;
 
   static constexpr uint8_t kDefaultGainPropsOption = 0;
   static constexpr uint8_t kDefaultPlugPropsOption = 0;
@@ -166,6 +171,7 @@ class VirtualAudioUtil {
   bool GetGain();
   bool GetFormat();
   bool GetBuffer();
+  bool WriteBuffer(const std::string& write_val_str);
   bool GetPosition();
   bool SetNotificationFrequency(const std::string& override_notifs_str);
 
@@ -178,6 +184,8 @@ class VirtualAudioUtil {
   fuchsia::virtualaudio::OutputPtr output_ = nullptr;
 
   bool configuring_output_ = true;
+  static zx::vmo ring_buffer_vmo_;
+  static uint64_t ring_buffer_size_;
 
   static void CallbackReceived();
   static void EnableCallback();
@@ -211,6 +219,8 @@ class VirtualAudioUtil {
 
 ::async::Loop* VirtualAudioUtil::loop_;
 bool VirtualAudioUtil::received_callback_;
+zx::vmo VirtualAudioUtil::ring_buffer_vmo_;
+uint64_t VirtualAudioUtil::ring_buffer_size_ = 0;
 
 // VirtualAudioUtil implementation
 //
@@ -505,6 +515,9 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
     case Command::RETRIEVE_BUFFER:
       success = GetBuffer();
       break;
+    case Command::WRITE_BUFFER:
+      success = WriteBuffer(value);
+      break;
     case Command::GET_POSITION:
       success = GetPosition();
       break;
@@ -650,9 +663,10 @@ struct Format {
 // 3: 16k 2-chan 16b
 // 4: 96k and 48k, 2-chan 16b
 // 5: 3-chan device at 48k 16b
+// 6: 1-chan device at 8k 16b
 //
 // Going forward, it would be best to have chans, rate and bitdepth specifiable individually.
-constexpr Format kFormatSpecs[6] = {
+constexpr Format kFormatSpecs[7] = {
     {.flags = AUDIO_SAMPLE_FORMAT_16BIT | AUDIO_SAMPLE_FORMAT_24BIT_IN32,
      .min_rate = 8000,
      .max_rate = 44100,
@@ -670,7 +684,7 @@ constexpr Format kFormatSpecs[6] = {
      .max_rate = 48000,
      .min_chans = 2,
      .max_chans = 2,
-     .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY},
+     .rate_family_flags = ASF_RANGE_FLAG_FPS_CONTINUOUS},
     {.flags = AUDIO_SAMPLE_FORMAT_16BIT,
      .min_rate = 16000,
      .max_rate = 16000,
@@ -688,7 +702,13 @@ constexpr Format kFormatSpecs[6] = {
      .max_rate = 48000,
      .min_chans = 3,
      .max_chans = 3,
-     .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY}};
+     .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY},
+    {.flags = AUDIO_SAMPLE_FORMAT_16BIT,
+     .min_rate = 8000,
+     .max_rate = 8000,
+     .min_chans = 1,
+     .max_chans = 1,
+     .rate_family_flags = ASF_RANGE_FLAG_FPS_CONTINUOUS}};
 
 bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {
   if (!ConnectToDevice()) {
@@ -1017,7 +1037,31 @@ bool VirtualAudioUtil::GetBuffer() {
     input_->GetBuffer(BufferCallback<false>);
   }
 
-  return WaitForCallback();
+  return WaitForCallback() && ring_buffer_vmo_.is_valid();
+}
+
+bool VirtualAudioUtil::WriteBuffer(const std::string& write_value_str) {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  size_t value_to_write =
+      (write_value_str == "" ? kDefaultValueToWrite : fxl::StringToNumber<size_t>(write_value_str));
+
+  if (!ring_buffer_vmo_.is_valid()) {
+    if (!GetBuffer()) {
+      return false;
+    }
+  }
+
+  for (size_t offset = 0; offset < ring_buffer_size_; offset += sizeof(value_to_write)) {
+    auto status = ring_buffer_vmo_.write(&value_to_write, offset, sizeof(value_to_write));
+    if (status != ZX_OK) {
+      printf("Writing 0x%016zX to rb_vmo[%zu] failed (%d)\n", value_to_write, offset, status);
+      return false;
+    }
+  }
+  return WaitForNoCallback();
 }
 
 bool VirtualAudioUtil::GetPosition() {
@@ -1100,10 +1144,10 @@ void VirtualAudioUtil::GainCallback(bool mute, bool agc, float gain_db) {
 template <bool is_out>
 void VirtualAudioUtil::BufferNotification(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
                                           uint32_t notifications_per_ring) {
-  uint64_t vmo_size;
-  ring_buffer_vmo.get_size(&vmo_size);
+  ring_buffer_vmo_ = std::move(ring_buffer_vmo);
+  ring_buffer_vmo_.get_size(&ring_buffer_size_);
 
-  printf("--Received SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n", vmo_size,
+  printf("--Received SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n", ring_buffer_size_,
          num_ring_buffer_frames, notifications_per_ring, (is_out ? "output" : "input"));
 }
 template <bool is_out>
