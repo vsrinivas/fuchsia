@@ -803,18 +803,21 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 #endif
 
 void Blob::Sync(SyncCallback closure) {
+  TRACE_DURATION("blobfs", "Blob::Sync");
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kSync);
   if (atomic_load(&syncing_)) {
+    auto trace_id = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("blobfs", "Blob.sync", trace_id);
     blobfs_->Sync(
-        [this, evt = std::move(event), cb = std::move(closure)](zx_status_t status) mutable {
-          if (status != ZX_OK) {
-            cb(status);
-            return;
+        [this, trace_id, evt = std::move(event), cb = std::move(closure)](zx_status_t status)
+        mutable {
+          TRACE_DURATION("blobfs", "Blob::Sync::callback");
+          if (status == ZX_OK) {
+            fs::WriteTxn sync_txn(blobfs_);
+            sync_txn.EnqueueFlush();
+            status = sync_txn.Transact();
           }
-
-          fs::WriteTxn sync_txn(blobfs_);
-          sync_txn.EnqueueFlush();
-          status = sync_txn.Transact();
+          TRACE_FLOW_END("blobfs", "Blob.sync", trace_id);
           cb(status);
         });
   } else {

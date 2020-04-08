@@ -669,17 +669,22 @@ BlockIterator Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
 }
 
 void Blobfs::Sync(SyncCallback closure) {
+  TRACE_DURATION("blobfs", "Blobfs::Sync");
   if (journal_ == nullptr) {
     return closure(ZX_OK);
   }
+  auto trace_id = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("blobfs", "Blobfs.sync", trace_id);
   journal_->schedule_task(journal_->Sync().then(
-      [closure = std::move(closure)](
+      [trace_id, closure = std::move(closure)](
           fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
+        TRACE_DURATION("blobfs", "Blobfs::Sync::callback");
         if (result.is_ok()) {
           closure(ZX_OK);
         } else {
           closure(result.error());
         }
+        TRACE_FLOW_END("blobfs", "Blobfs.sync", trace_id);
         return fit::ok();
       }));
 }
