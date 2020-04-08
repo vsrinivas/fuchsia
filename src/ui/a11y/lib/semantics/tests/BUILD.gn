@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 group("unit") {
   testonly = true
@@ -63,23 +64,11 @@ test_package("semantics-integration-tests") {
   tests = [
     {
       name = "flutter_semantics_tests"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "web_semantics_tests"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
   ]
 

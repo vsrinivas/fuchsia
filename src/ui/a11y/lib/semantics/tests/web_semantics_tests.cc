@@ -30,7 +30,7 @@ class WebSemanticsTest : public SemanticsIntegrationTest {
 };
 
 // Loads a static page via the component framework and verifies its semantic tree.
-TEST_F(WebSemanticsTest, DISABLED_StaticSemantics) {
+TEST_F(WebSemanticsTest, StaticSemantics) {
   web_runner_tests::TestServer server;
   FX_CHECK(server.FindAndBindPort());
 
@@ -69,7 +69,7 @@ TEST_F(WebSemanticsTest, DISABLED_StaticSemantics) {
       [&] {
         auto tree = view_manager()->GetTreeByKoid(view_ref_koid);
         auto node = tree->GetNode(0);
-        return node != nullptr;
+        return node != nullptr && node->has_attributes() && node->attributes().has_label();
       },
       kTimeout))
       << "No root node found.";

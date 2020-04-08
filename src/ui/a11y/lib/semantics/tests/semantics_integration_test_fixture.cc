@@ -90,7 +90,15 @@ SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environmen
       component_context_(sys::ComponentContext::Create()),
       view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                     component_context_->outgoing()->debug_dir()),
-      scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()) {}
+      scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()) {
+  scenic_.set_error_handler([](zx_status_t status) {
+    FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+  });
+
+  // Wait for scenic to get initialized by calling GetDisplayInfo.
+  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo info) { QuitLoop(); });
+  RunLoopWithTimeout(kTimeout);
+}
 
 void SemanticsIntegrationTest::SetUp() {
   TestWithEnvironment::SetUp();

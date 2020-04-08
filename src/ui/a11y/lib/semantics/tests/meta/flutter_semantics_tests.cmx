@@ -23,7 +23,7 @@
         }
     },
     "program": {
-        "binary": "test/web_semantics_tests"
+        "binary": "test/flutter_semantics_tests"
     },
     "sandbox": {
         "features": [
