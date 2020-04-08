@@ -16,7 +16,6 @@ driver_module("as370-usb-phy") {
   sources = [ "as370-usb-phy.cc" ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -24,6 +23,7 @@ driver_module("as370-usb-phy") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }

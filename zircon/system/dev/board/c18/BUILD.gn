@@ -34,12 +34,13 @@ driver_module("c18") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mt8167",
-    "//zircon/public/lib/mt8183",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/dev/lib/mt8167",
+    "//zircon/system/dev/lib/mt8183",
   ]
+
   # TODO(47406): restore some form of data dependency on c18
   # boot shim.
 }

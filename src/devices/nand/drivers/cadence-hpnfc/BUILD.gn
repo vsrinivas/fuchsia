@@ -49,7 +49,6 @@ test("cadence-hpnfc-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.rawnand",
-    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -62,6 +61,7 @@ test("cadence-hpnfc-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }

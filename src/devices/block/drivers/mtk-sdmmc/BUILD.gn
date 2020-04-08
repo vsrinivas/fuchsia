@@ -24,7 +24,6 @@ driver_module("mtk-sdmmc") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mt8167",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -33,6 +32,7 @@ driver_module("mtk-sdmmc") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/mt8167",
   ]
 }
 
@@ -55,7 +55,6 @@ test("mtk-sdmmc-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-mmio-reg",
-    "//zircon/public/lib/mt8167",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -65,6 +64,7 @@ test("mtk-sdmmc-test") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/mt8167",
   ]
 }
 

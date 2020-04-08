@@ -18,7 +18,6 @@ driver_module("aml-light") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -27,6 +26,7 @@ driver_module("aml-light") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.pwm",
+    "//zircon/system/dev/lib/amlogic",
   ]
 }
 
@@ -40,7 +40,6 @@ test("aml-light-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -56,6 +55,7 @@ test("aml-light-test") {
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.pwm",
     "//zircon/system/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
+    "//zircon/system/dev/lib/amlogic",
   ]
 }
 

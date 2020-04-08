@@ -18,7 +18,6 @@ driver_module("vs680-thermal") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -29,6 +28,7 @@ driver_module("vs680-thermal") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
@@ -48,7 +48,6 @@ test("vs680-thermal-test") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -62,6 +61,7 @@ test("vs680-thermal-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }

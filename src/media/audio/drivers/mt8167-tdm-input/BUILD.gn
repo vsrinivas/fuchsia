@@ -26,8 +26,6 @@ driver_module("mt8167-tdm-input") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mt8167",
-    "//zircon/public/lib/mt8167",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -37,6 +35,8 @@ driver_module("mt8167-tdm-input") {
     "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/mt8167",
+    "//zircon/system/dev/lib/mt8167",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
   ]

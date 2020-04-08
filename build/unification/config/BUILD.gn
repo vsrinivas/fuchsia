@@ -75,4 +75,6 @@ config("zircon-library") {
   ldflags = compiler_flags
 
   asmflags = compiler_flags
+
+  defines = [ "_ALL_SOURCE" ]
 }

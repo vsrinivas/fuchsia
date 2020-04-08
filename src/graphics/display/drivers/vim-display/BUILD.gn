@@ -11,7 +11,6 @@ source_set("common") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.i2cimpl",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -28,6 +27,7 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/audio-driver-proto",

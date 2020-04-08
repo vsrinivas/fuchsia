@@ -24,7 +24,6 @@ driver_module("mtk-thermal") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mt8167",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -35,6 +34,7 @@ driver_module("mtk-thermal") {
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/mt8167",
   ]
 }
 
@@ -58,7 +58,6 @@ test("mtk-thermal-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/mock-mmio-reg",
-    "//zircon/public/lib/mt8167",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -70,6 +69,7 @@ test("mtk-thermal-test") {
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/mt8167",
   ]
 }
 

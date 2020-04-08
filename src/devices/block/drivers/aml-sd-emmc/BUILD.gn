@@ -18,7 +18,6 @@ driver_module("aml-sd-emmc") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/hwreg",
@@ -28,6 +27,7 @@ driver_module("aml-sd-emmc") {
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
@@ -43,7 +43,6 @@ test("aml-sd-emmc-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sdmmc",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -55,6 +54,7 @@ test("aml-sd-emmc-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]

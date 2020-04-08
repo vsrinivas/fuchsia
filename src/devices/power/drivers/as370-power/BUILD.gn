@@ -16,7 +16,6 @@ driver_module("as370-power") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -28,6 +27,7 @@ driver_module("as370-power") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
@@ -44,7 +44,6 @@ test("as370-power-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
-    "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -59,6 +58,7 @@ test("as370-power-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mock-i2c",
   ]

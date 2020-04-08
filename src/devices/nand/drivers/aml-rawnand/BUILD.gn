@@ -25,7 +25,6 @@ source_set("common") {
   sources = [ "onfi.cc" ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.rawnand",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -34,6 +33,7 @@ source_set("common") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",

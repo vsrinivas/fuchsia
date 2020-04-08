@@ -18,7 +18,6 @@ test("sherlock-audio-out-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -34,6 +33,7 @@ test("sherlock-audio-out-test") {
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mock-i2c",

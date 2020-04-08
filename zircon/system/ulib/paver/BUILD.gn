@@ -29,7 +29,6 @@ zx_library("paver") {
     "validation.cc",
   ]
   deps = [
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ddk",
@@ -48,6 +47,7 @@ zx_library("paver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxcrypt-fdio",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",

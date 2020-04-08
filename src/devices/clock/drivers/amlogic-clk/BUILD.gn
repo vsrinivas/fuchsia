@@ -16,7 +16,6 @@ driver_module("amlogic-clk") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -29,6 +28,7 @@ driver_module("amlogic-clk") {
     "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
@@ -46,7 +46,6 @@ test("amlogic-clk-test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -62,6 +61,7 @@ test("amlogic-clk-test") {
     "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]

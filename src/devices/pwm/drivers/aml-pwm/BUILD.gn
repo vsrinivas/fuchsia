@@ -38,7 +38,6 @@ test("aml-pwm-test") {
 
 group("common") {
   public_deps = [
-    "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -47,6 +46,7 @@ group("common") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.pwm",
+    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
