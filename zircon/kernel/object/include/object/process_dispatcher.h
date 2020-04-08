@@ -17,7 +17,6 @@
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 #include <kernel/brwlock.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
@@ -36,7 +35,7 @@ class JobDispatcher;
 class ProcessDispatcher final
     : public SoloDispatcher<ProcessDispatcher, ZX_DEFAULT_PROCESS_RIGHTS> {
  public:
-  static zx_status_t Create(fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
+  static zx_status_t Create(fbl::RefPtr<JobDispatcher> job, ktl::string_view name, uint32_t flags,
                             KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
                             KernelHandle<VmAddressRegionDispatcher>* root_vmar_handle,
                             zx_rights_t* root_vmar_rights);
@@ -399,7 +398,7 @@ class ProcessDispatcher final
   friend void KillProcess(zx_koid_t id);
   friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
-  ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags);
+  ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, ktl::string_view name, uint32_t flags);
 
   ProcessDispatcher(const ProcessDispatcher&) = delete;
   ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;

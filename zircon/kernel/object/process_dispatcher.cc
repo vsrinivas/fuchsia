@@ -64,7 +64,7 @@ static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
   return Handle::FromU32(handle_id);
 }
 
-zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name,
+zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, ktl::string_view name,
                                       uint32_t flags, KernelHandle<ProcessDispatcher>* handle,
                                       zx_rights_t* rights,
                                       KernelHandle<VmAddressRegionDispatcher>* root_vmar_handle,
@@ -99,7 +99,7 @@ zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, fbl::Strin
   return ZX_OK;
 }
 
-ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name,
+ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, ktl::string_view name,
                                      uint32_t flags)
     : job_(ktl::move(job)),
       policy_(job_->GetPolicy()),

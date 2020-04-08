@@ -19,11 +19,11 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/thread.h>
+#include <ktl/string_view.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
 #include <object/exception_dispatcher.h>
@@ -78,7 +78,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   };
 
   static zx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
-                            fbl::StringPiece name, KernelHandle<ThreadDispatcher>* out_handle,
+                            ktl::string_view name, KernelHandle<ThreadDispatcher>* out_handle,
                             zx_rights_t* out_rights);
   ~ThreadDispatcher();
 

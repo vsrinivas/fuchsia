@@ -22,7 +22,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/inline_array.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 #include <ktl/algorithm.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
@@ -45,7 +44,7 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 // and may copy extra data past the NUL.
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
 zx_status_t copy_user_string(const user_in_ptr<const char>& src, size_t src_len, char* buf,
-                             size_t buf_len, fbl::StringPiece* sp) {
+                             size_t buf_len, ktl::string_view* sp) {
   // Disallow 0 buf_len (since we are copying into it), but allow 0 src_len (to allow
   // "", src_len doesn't include '\0'). With the check for buf_len, we won't underflow
   // src_len below. Also, 0 src_len is valid input (for "" src strings).
@@ -60,7 +59,7 @@ zx_status_t copy_user_string(const user_in_ptr<const char>& src, size_t src_len,
   // ensure zero termination
   size_t str_len = (src_len == buf_len ? src_len - 1 : src_len);
   buf[str_len] = 0;
-  *sp = fbl::StringPiece(buf);
+  *sp = ktl::string_view(buf);
 
   return ZX_OK;
 }
@@ -78,7 +77,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle, user_in_ptr<const char
 
   // copy out the name
   char buf[ZX_MAX_NAME_LEN];
-  fbl::StringPiece sp;
+  ktl::string_view sp;
   // Silently truncate the given name.
   if (name_len > sizeof(buf))
     name_len = sizeof(buf);
@@ -223,7 +222,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
 
   // copy out the name
   char buf[ZX_MAX_NAME_LEN];
-  fbl::StringPiece sp;
+  ktl::string_view sp;
   // Silently truncate the given name.
   if (name_len > sizeof(buf))
     name_len = sizeof(buf);

@@ -40,7 +40,7 @@ KCOUNTER(dispatcher_thread_destroy_count, "dispatcher.thread.destroy")
 
 // static
 zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
-                                     fbl::StringPiece name,
+                                     ktl::string_view name,
                                      KernelHandle<ThreadDispatcher>* out_handle,
                                      zx_rights_t* out_rights) {
   // Create the lower level thread and attach it to the scheduler.
