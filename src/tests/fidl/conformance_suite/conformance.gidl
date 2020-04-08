@@ -805,3 +805,172 @@ decode_failure("NonEmptyStringWithNullPtrBody") {
     ],
     err = NON_EMPTY_STRING_WITH_NULL_BODY,
 }
+
+success("StrictBitsKnownValue") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    bindings_denylist = [dart],
+    value = StrictBitsStruct {
+        b: 1,
+    },
+    bytes = [
+        8:raw(
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        )
+    ],
+}
+
+success("StrictBitsCombinedValue") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    bindings_denylist = [dart],
+    value = StrictBitsStruct {
+        b: 3,
+    },
+    bytes = [
+        8:raw(
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        )
+    ],
+}
+
+encode_failure("StrictBitsUnknownBit") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    // TODO(fxb/7874): Implement strict bits in Go.
+    // Rust: cannot construct invalid bits.
+    bindings_denylist = [dart,go,rust],
+    value = StrictBitsStruct {
+        b: 4,
+    },
+    err = STRICT_BITS_UNKNOWN_BIT,
+}
+
+decode_failure("StrictBitsUnknownBit") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    // TODO(fxb/7874): Implement strict bits in Go.
+    bindings_denylist = [dart,go],
+    type = StrictBitsStruct,
+    bytes = [
+        8:raw(
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ),
+    ],
+    err = STRICT_BITS_UNKNOWN_BIT,
+}
+
+success("FlexibleBitsKnownValue") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    bindings_denylist = [dart],
+    value = FlexibleBitsStruct {
+        b: 1,
+    },
+    bytes = [
+        8:raw(
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        )
+    ],
+}
+
+success("FlexibleBitsUnknownValue") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    // TODO(fxb/7874): Implement flexible bits in Rust, HLCPP, and LLCPP.
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleBitsStruct {
+        b: 0xffffffff,
+    },
+    bytes = [
+        8:raw(
+            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+        )
+    ],
+}
+
+success("FlexibleBitsUint64UnknownValue") {
+    // TODO(fxb/43254): Support bits in the Dart backend.
+    // TODO(fxb/7874): Implement flexible bits in Rust, HLCPP, and LLCPP.
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleBitsUint64Struct {
+        b: 0x0102030405060708,
+    },
+    bytes = [
+        8:raw(
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        )
+    ],
+}
+
+success("StrictEnumKnownValue") {
+    // TODO(fxb/43254): Support enums in the Dart backend.
+    bindings_denylist = [dart],
+    value = StrictEnumStruct {
+        e: 1,
+    },
+    bytes = [
+        8:raw(
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ),
+    ],
+}
+
+encode_failure("StrictEnumUnknownValue") {
+    // TODO(fxb/43254): Support enums in the Dart backend.
+    // TODO(fxb/7874): Implement strict enums in Go.
+    // Rust: cannot construct invalid enum.
+    bindings_denylist = [dart,go,rust],
+    value = StrictEnumStruct {
+        e: 3,
+    },
+    err = STRICT_ENUM_UNKOWN_VALUE,
+}
+
+decode_failure("StrictEnumUnknownValue") {
+    // TODO(fxb/43254): Support enums in the Dart backend.
+    // TODO(fxb/7874): Implement strict enums in Go.
+    bindings_denylist = [dart,go],
+    type = StrictEnumStruct,
+    bytes = [
+        8:raw(
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ),
+    ],
+    err = STRICT_ENUM_UNKOWN_VALUE,
+}
+
+success("FlexibleEnumKnownValue") {
+    // TODO(fxb/43254): Support enums in the Dart backend.
+    bindings_denylist = [dart],
+    value = FlexibleEnumStruct {
+        e: 1,
+    },
+    bytes = [
+        8:raw(
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        )
+    ],
+}
+
+success("FlexibleEnumUnknownValue") {
+    // TODO(fxb/43254): Support enums in the Dart backend.
+    // TODO(fxb/7874): Implement flexible enums in Rust, HLCPP, and LLCPP.
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleEnumStruct {
+        e: 0xffffffff,
+    },
+    bytes = [
+        8:raw(
+            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+        )
+    ],
+}
+
+success("FlexibleEnumUint64UnknownValue") {
+    // TODO(fxb/43254): Support enums in the Dart backend.
+    // TODO(fxb/7874): Implement flexible enums in Rust, HLCPP, and LLCPP.
+    bindings_denylist = [dart,rust,cpp,llcpp],
+    value = FlexibleEnumUint64Struct {
+        e: 0x0102030405060708,
+    },
+    bytes = [
+        8:raw(
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        )
+    ],
+}

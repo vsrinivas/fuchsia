@@ -330,6 +330,20 @@ func (b *cppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	b.lastVar = newVar
 }
 
+func (b *cppValueBuilder) OnBits(value interface{}, decl *gidlmixer.BitsDecl) {
+	gidlmixer.Visit(b, value, &decl.Underlying)
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%s);\n", newVar, typeName(decl), b.lastVar))
+	b.lastVar = newVar
+}
+
+func (b *cppValueBuilder) OnEnum(value interface{}, decl *gidlmixer.EnumDecl) {
+	gidlmixer.Visit(b, value, &decl.Underlying)
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%s);\n", newVar, typeName(decl), b.lastVar))
+	b.lastVar = newVar
+}
+
 func (b *cppValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
 	b.onRecord(value, decl)
 }
@@ -428,6 +442,10 @@ func typeName(decl gidlmixer.Declaration) string {
 			return "::fidl::StringPtr"
 		}
 		return "std::string"
+	case *gidlmixer.BitsDecl:
+		return identifierName(decl.Name)
+	case *gidlmixer.EnumDecl:
+		return identifierName(decl.Name)
 	case *gidlmixer.StructDecl:
 		if decl.IsNullable() {
 			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))

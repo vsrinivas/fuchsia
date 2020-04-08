@@ -19,6 +19,8 @@ type ValueVisitor interface {
 	OnUint64(value uint64, typ fidlir.PrimitiveSubtype)
 	OnFloat64(value float64, typ fidlir.PrimitiveSubtype)
 	OnString(value string, decl *StringDecl)
+	OnBits(value interface{}, decl *BitsDecl)
+	OnEnum(value interface{}, decl *EnumDecl)
 	OnStruct(value gidlir.Record, decl *StructDecl)
 	OnTable(value gidlir.Record, decl *TableDecl)
 	OnUnion(value gidlir.Record, decl *UnionDecl)
@@ -34,9 +36,27 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 	case bool:
 		visitor.OnBool(value)
 	case int64:
-		visitor.OnInt64(value, decl.(*IntegerDecl).Subtype())
+		switch decl := decl.(type) {
+		case *BitsDecl:
+			visitor.OnBits(value, decl)
+		case *EnumDecl:
+			visitor.OnEnum(value, decl)
+		case *IntegerDecl:
+			visitor.OnInt64(value, decl.Subtype())
+		default:
+			panic(fmt.Sprintf("int64 value has non-integer decl: %T", decl))
+		}
 	case uint64:
-		visitor.OnUint64(value, decl.(*IntegerDecl).Subtype())
+		switch decl := decl.(type) {
+		case *BitsDecl:
+			visitor.OnBits(value, decl)
+		case *EnumDecl:
+			visitor.OnEnum(value, decl)
+		case *IntegerDecl:
+			visitor.OnUint64(value, decl.Subtype())
+		default:
+			panic(fmt.Sprintf("uint64 value has non-integer decl: %T", decl))
+		}
 	case float64:
 		visitor.OnFloat64(value, decl.(*FloatDecl).Subtype())
 	case string:
@@ -94,6 +114,8 @@ var _ = []Declaration{
 	&IntegerDecl{},
 	&FloatDecl{},
 	&StringDecl{},
+	&BitsDecl{},
+	&EnumDecl{},
 	&StructDecl{},
 	&TableDecl{},
 	&UnionDecl{},
@@ -252,6 +274,28 @@ func (decl *StringDecl) conforms(value interface{}) error {
 		}
 		return fmt.Errorf("expecting non-null string, found nil")
 	}
+}
+
+type BitsDecl struct {
+	NeverNullable
+	fidlir.Bits
+	Underlying IntegerDecl
+}
+
+func (decl *BitsDecl) conforms(value interface{}) error {
+	// TODO(fxb/7847): Require a valid bits member when strict
+	return decl.Underlying.conforms(value)
+}
+
+type EnumDecl struct {
+	NeverNullable
+	fidlir.Enum
+	Underlying IntegerDecl
+}
+
+func (decl *EnumDecl) conforms(value interface{}) error {
+	// TODO(fxb/7847): Require a valid enum member when strict
+	return decl.Underlying.conforms(value)
 }
 
 // StructDecl describes a struct declaration.
@@ -516,12 +560,19 @@ type Schema struct {
 // BuildSchema builds a Schema from a FIDL library.
 // Note: The returned schema contains pointers into fidl.
 func BuildSchema(fidl fidlir.Root) Schema {
-	// TODO(fxb/43254): bits and enums
-	total := len(fidl.Structs) + len(fidl.Tables) + len(fidl.Unions)
+	total := len(fidl.Bits) + len(fidl.Enums) + len(fidl.Structs) + len(fidl.Tables) + len(fidl.Unions)
 	types := make(map[fidlir.EncodedCompoundIdentifier]interface{}, total)
 	// These loops must use fidl.Structs[i], fidl.Tables[i], etc. rather than
 	// iterating `for i, decl := ...` and using &decl, because that would store
 	// the same local variable address in every entry.
+	for i := range fidl.Bits {
+		decl := &fidl.Bits[i]
+		types[decl.Name] = decl
+	}
+	for i := range fidl.Enums {
+		decl := &fidl.Enums[i]
+		types[decl.Name] = decl
+	}
 	for i := range fidl.Structs {
 		decl := &fidl.Structs[i]
 		types[decl.Name] = decl
@@ -578,19 +629,29 @@ func (s Schema) ExtractDeclarationByName(name string) (*StructDecl, error) {
 }
 
 func (s Schema) lookupDeclByName(name string, nullable bool) (Declaration, bool) {
-	return s.lookupDeclByECI(s.nameToIdentifier(name), nullable)
+	return s.lookupDeclByIdentifier(s.nameToIdentifier(name), nullable)
 }
 
 func (s Schema) nameToIdentifier(name string) fidlir.EncodedCompoundIdentifier {
 	return fidlir.EncodedCompoundIdentifier(fmt.Sprintf("%s/%s", s.library, name))
 }
 
-func (s Schema) lookupDeclByECI(eci fidlir.EncodedCompoundIdentifier, nullable bool) (Declaration, bool) {
+func (s Schema) lookupDeclByIdentifier(eci fidlir.EncodedCompoundIdentifier, nullable bool) (Declaration, bool) {
 	typ, ok := s.types[eci]
 	if !ok {
 		return nil, false
 	}
 	switch typ := typ.(type) {
+	case *fidlir.Bits:
+		return &BitsDecl{
+			Bits:       *typ,
+			Underlying: *lookupDeclByPrimitive(typ.Type.PrimitiveSubtype).(*IntegerDecl),
+		}, true
+	case *fidlir.Enum:
+		return &EnumDecl{
+			Enum:       *typ,
+			Underlying: *lookupDeclByPrimitive(typ.Type).(*IntegerDecl),
+		}, true
 	case *fidlir.Struct:
 		return &StructDecl{
 			Struct:   *typ,
@@ -612,8 +673,37 @@ func (s Schema) lookupDeclByECI(eci fidlir.EncodedCompoundIdentifier, nullable b
 			schema:   s,
 		}, true
 	}
-	// TODO(fxb/43254): bits and enums
 	return nil, false
+}
+
+// LookupDeclByPrimitive looks up a message declaration by primitive subtype.
+func lookupDeclByPrimitive(subtype fidlir.PrimitiveSubtype) PrimitiveDeclaration {
+	switch subtype {
+	case fidlir.Bool:
+		return &BoolDecl{}
+	case fidlir.Int8:
+		return &IntegerDecl{subtype: subtype, lower: math.MinInt8, upper: math.MaxInt8}
+	case fidlir.Int16:
+		return &IntegerDecl{subtype: subtype, lower: math.MinInt16, upper: math.MaxInt16}
+	case fidlir.Int32:
+		return &IntegerDecl{subtype: subtype, lower: math.MinInt32, upper: math.MaxInt32}
+	case fidlir.Int64:
+		return &IntegerDecl{subtype: subtype, lower: math.MinInt64, upper: math.MaxInt64}
+	case fidlir.Uint8:
+		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint8}
+	case fidlir.Uint16:
+		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint16}
+	case fidlir.Uint32:
+		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint32}
+	case fidlir.Uint64:
+		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint64}
+	case fidlir.Float32:
+		return &FloatDecl{subtype: subtype}
+	case fidlir.Float64:
+		return &FloatDecl{subtype: subtype}
+	default:
+		panic(fmt.Sprintf("unsupported primitive subtype: %s", subtype))
+	}
 }
 
 func (s Schema) lookupDeclByType(typ fidlir.Type) (Declaration, bool) {
@@ -624,34 +714,9 @@ func (s Schema) lookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 			nullable: typ.Nullable,
 		}, true
 	case fidlir.PrimitiveType:
-		switch typ.PrimitiveSubtype {
-		case fidlir.Bool:
-			return &BoolDecl{}, true
-		case fidlir.Int8:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt8, upper: math.MaxInt8}, true
-		case fidlir.Int16:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt16, upper: math.MaxInt16}, true
-		case fidlir.Int32:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt32, upper: math.MaxInt32}, true
-		case fidlir.Int64:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: math.MinInt64, upper: math.MaxInt64}, true
-		case fidlir.Uint8:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint8}, true
-		case fidlir.Uint16:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint16}, true
-		case fidlir.Uint32:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint32}, true
-		case fidlir.Uint64:
-			return &IntegerDecl{subtype: typ.PrimitiveSubtype, lower: 0, upper: math.MaxUint64}, true
-		case fidlir.Float32:
-			return &FloatDecl{subtype: typ.PrimitiveSubtype}, true
-		case fidlir.Float64:
-			return &FloatDecl{subtype: typ.PrimitiveSubtype}, true
-		default:
-			panic(fmt.Sprintf("unsupported primitive subtype: %s", typ.PrimitiveSubtype))
-		}
+		return lookupDeclByPrimitive(typ.PrimitiveSubtype), true
 	case fidlir.IdentifierType:
-		return s.lookupDeclByECI(typ.Identifier, typ.Nullable)
+		return s.lookupDeclByIdentifier(typ.Identifier, typ.Nullable)
 	case fidlir.ArrayType:
 		return &ArrayDecl{schema: s, typ: typ}, true
 	case fidlir.VectorType:

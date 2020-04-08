@@ -286,12 +286,17 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
 		return strconv.FormatBool(value)
-	case int64:
-		return fmt.Sprintf("%d", value)
-	case uint64:
-		return fmt.Sprintf("0x%x", value)
-	case float64:
-		return strconv.FormatFloat(value, 'g', -1, 64)
+	case int64, uint64, float64:
+		switch decl.(type) {
+		case *gidlmixer.IntegerDecl, *gidlmixer.FloatDecl:
+			return fmt.Sprintf("%#v", value)
+		case *gidlmixer.BitsDecl:
+			// TODO(fxb/43254)
+			panic("bits not implemented yet")
+		case *gidlmixer.EnumDecl:
+			// TODO(fxb/43254)
+			panic("enum not implemented yet")
+		}
 	case string:
 		return fidlcommon.SingleQuote(value)
 	case gidlir.Record:
@@ -358,8 +363,8 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 	for _, item := range value {
 		elements = append(elements, visit(item, elemDecl))
 	}
-	if numberDecl, ok := elemDecl.(*gidlmixer.IntegerDecl); ok {
-		typeName := fidlcommon.ToUpperCamelCase(string(numberDecl.Subtype()))
+	if integerDecl, ok := elemDecl.(*gidlmixer.IntegerDecl); ok {
+		typeName := fidlcommon.ToUpperCamelCase(string(integerDecl.Subtype()))
 		return fmt.Sprintf("%sList.fromList([%s])", typeName, strings.Join(elements, ", "))
 	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))

@@ -1,5 +1,13 @@
 library test.mixer;
 
+bits ExampleBits : uint8 {
+    B = 1;
+};
+
+enum ExampleEnum : uint8 {
+    E = 1;
+};
+
 struct ExampleStruct {
     string s;
 };

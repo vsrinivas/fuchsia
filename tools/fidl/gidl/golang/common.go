@@ -80,6 +80,20 @@ func (b *goValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	b.lastVar = newVar
 }
 
+func (b *goValueBuilder) OnBits(value interface{}, decl *gidlmixer.BitsDecl) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"%s := %s(%d)\n", newVar, typeLiteral(decl), value))
+	b.lastVar = newVar
+}
+
+func (b *goValueBuilder) OnEnum(value interface{}, decl *gidlmixer.EnumDecl) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"%s := %s(%d)\n", newVar, typeLiteral(decl), value))
+	b.lastVar = newVar
+}
+
 func (b *goValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
 	b.onRecord(value, decl)
 }
@@ -162,6 +176,10 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 		return string(decl.Subtype())
 	case *gidlmixer.StringDecl:
 		return pointerPrefix + "string"
+	case *gidlmixer.BitsDecl:
+		return identifierName(decl.Name)
+	case *gidlmixer.EnumDecl:
+		return identifierName(decl.Name)
 	case *gidlmixer.StructDecl:
 		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.TableDecl:

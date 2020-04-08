@@ -494,7 +494,7 @@ func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
 	}
 	code := ir.ErrorCode(tok.value)
 	if _, ok := ir.AllErrorCodes[code]; !ok {
-		return "", p.newParseError(tok, "unknown error code")
+		return "", p.newParseError(tok, "unknown error code: %s", tok.value)
 	}
 	return code, nil
 }

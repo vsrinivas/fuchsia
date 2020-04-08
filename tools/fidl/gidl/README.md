@@ -27,7 +27,7 @@ for each language / binding.
 
 * Go:
     * Build: `fx build src/tests/fidl_go_conformance:fidl_go_conformance_tests`
-    * Run: `fx run-test go_fidl_conformance -- -test.v`
+    * Run: `fx run-test fidl_go_conformance -- -test.v`
 
 * C++ (HLCPP):
     * Build: `fx build sdk/lib/fidl/cpp:conformance_test`

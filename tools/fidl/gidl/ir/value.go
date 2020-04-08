@@ -7,8 +7,8 @@ package ir
 // Value represents any acceptable value used to represent a FIDL value.
 // This type may wrap one of:
 // - `string` for strings
-// - `int64` for negative numbers (of any size)
-// - `uint64` for positive numbers (of any size)
+// - `int64` for negative numbers (of any size), bits, and enums
+// - `uint64` for positive numbers (of any size), bits, and enums
 // - `float64` for floating point numbers (of any size)
 // - `bool` for booleans
 // - `Record` for structs, tables, and unions

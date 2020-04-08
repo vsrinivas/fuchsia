@@ -269,8 +269,17 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case bool:
 		return strconv.FormatBool(value)
 	case int64, uint64, float64:
-		suffix := primitiveTypeName(decl.(gidlmixer.PrimitiveDeclaration).Subtype())
-		return fmt.Sprintf("%v%s", value, suffix)
+		switch decl := decl.(type) {
+		case gidlmixer.PrimitiveDeclaration:
+			suffix := primitiveTypeName(decl.Subtype())
+			return fmt.Sprintf("%v%s", value, suffix)
+		case *gidlmixer.BitsDecl:
+			primitive := visit(value, &decl.Underlying)
+			return fmt.Sprintf("%s::from_bits(%v).unwrap()", identifierName(decl.Name), primitive)
+		case *gidlmixer.EnumDecl:
+			primitive := visit(value, &decl.Underlying)
+			return fmt.Sprintf("%s::from_primitive(%v).unwrap()", identifierName(decl.Name), primitive)
+		}
 	case string:
 		// TODO(fxb/39686) Consider Go/Rust escape sequence differences
 		return wrapNullable(decl, fmt.Sprintf("String::from(%q)", value))
@@ -297,6 +306,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		return "None"
 	}
 	panic(fmt.Sprintf("not implemented: %T", value))
+}
+
+func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
+	parts := strings.Split(string(eci), "/")
+	return rustType(parts[len(parts)-1])
 }
 
 func rustType(irType string) string {
@@ -447,6 +461,8 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.NonEmptyStringWithNullBody: "UnexpectedNullRef",
 	gidlir.StrictUnionFieldNotSet:     "UnknownUnionTag",
 	gidlir.StrictUnionUnknownField:    "UnknownUnionTag",
+	gidlir.StrictBitsUnknownBit:       "Invalid",
+	gidlir.StrictEnumUnknownValue:     "Invalid",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

@@ -6,7 +6,7 @@ package ir
 
 type ErrorCode string
 
-// TODO(34770) Organize error codes by encoding / decoding.
+// TODO(fxb/34770) Organize error codes by encoding / decoding.
 // Potentially do a check in the parser that the code is the right type.
 const (
 	_                          ErrorCode = ""
@@ -14,11 +14,15 @@ const (
 	NonEmptyStringWithNullBody           = "NON_EMPTY_STRING_WITH_NULL_BODY"
 	StrictUnionFieldNotSet               = "STRICT_UNION_FIELD_NOT_SET"
 	StrictUnionUnknownField              = "STRICT_UNION_UNKNOWN_FIELD"
+	StrictBitsUnknownBit                 = "STRICT_BITS_UNKNOWN_BIT"
+	StrictEnumUnknownValue               = "STRICT_ENUM_UNKOWN_VALUE"
 )
 
-var AllErrorCodes = map[ErrorCode]bool{
-	StringTooLong:              true,
-	NonEmptyStringWithNullBody: true,
-	StrictUnionFieldNotSet:     true,
-	StrictUnionUnknownField:    true,
+var AllErrorCodes = map[ErrorCode]struct{}{
+	StringTooLong:              {},
+	NonEmptyStringWithNullBody: {},
+	StrictUnionFieldNotSet:     {},
+	StrictUnionUnknownField:    {},
+	StrictBitsUnknownBit:       {},
+	StrictEnumUnknownValue:     {},
 }

@@ -210,8 +210,9 @@ func TestIntegerDeclConforms(t *testing.T) {
 			conformOk{uint64(0)},
 			conformOk{uint64(128)},
 			conformOk{uint64(255)},
-			conformFail{int64(-1)},
+			conformFail{uint64(256)},
 			conformFail{int64(256)},
+			conformFail{int64(-1)},
 			conformFail{nil},
 			// Must be uint64 or int64, not any integer type.
 			conformFail{0},
@@ -227,8 +228,10 @@ func TestIntegerDeclConforms(t *testing.T) {
 		[]conformTest{
 			conformOk{int64(-5)},
 			conformOk{int64(10)},
+			conformOk{uint64(10)},
 			conformFail{int64(-6)},
 			conformFail{int64(11)},
+			conformFail{uint64(11)},
 		},
 	)
 }
@@ -279,6 +282,60 @@ func TestStringDeclConforms(t *testing.T) {
 			conformOk{"12"},
 			conformFail{"123"},
 			conformFail{"the quick brown fox"},
+		},
+	)
+}
+
+func TestBitsDeclConforms(t *testing.T) {
+	decl, ok := testSchema.lookupDeclByName("ExampleBits", false)
+	if !ok {
+		t.Fatalf("lookupDeclByName failed")
+	}
+	bitsDecl := decl.(*BitsDecl)
+	checkConforms(t,
+		bitsDecl,
+		[]conformTest{
+			// Underlying type for ExampleBits is uint8.
+			conformOk{uint64(0)},
+			conformOk{uint64(255)},
+			conformFail{uint64(256)},
+			conformFail{int64(256)},
+			conformFail{int64(-1)},
+			conformFail{nil},
+			// Must be uint64 or int64, not any integer type.
+			conformFail{0},
+			conformFail{uint(0)},
+			conformFail{int8(0)},
+			conformFail{uint8(0)},
+			conformFail{"foo"},
+			conformFail{1.5},
+		},
+	)
+}
+
+func TestEnumDeclConforms(t *testing.T) {
+	decl, ok := testSchema.lookupDeclByName("ExampleEnum", false)
+	if !ok {
+		t.Fatalf("lookupDeclByName failed")
+	}
+	enumDecl := decl.(*EnumDecl)
+	checkConforms(t,
+		enumDecl,
+		[]conformTest{
+			// Underlying type for ExampleEnum is uint8.
+			conformOk{uint64(0)},
+			conformOk{uint64(255)},
+			conformFail{uint64(256)},
+			conformFail{int64(256)},
+			conformFail{int64(-1)},
+			conformFail{nil},
+			// Must be uint64 or int64, not any integer type.
+			conformFail{0},
+			conformFail{uint(0)},
+			conformFail{int8(0)},
+			conformFail{uint8(0)},
+			conformFail{"foo"},
+			conformFail{1.5},
 		},
 	)
 }
@@ -484,6 +541,8 @@ func (v *visitor) OnInt64(int64, fidlir.PrimitiveSubtype)     { v.visited = "Int
 func (v *visitor) OnUint64(uint64, fidlir.PrimitiveSubtype)   { v.visited = "Uint64" }
 func (v *visitor) OnFloat64(float64, fidlir.PrimitiveSubtype) { v.visited = "Float64" }
 func (v *visitor) OnString(string, *StringDecl)               { v.visited = "String" }
+func (v *visitor) OnBits(interface{}, *BitsDecl)              { v.visited = "Bits" }
+func (v *visitor) OnEnum(interface{}, *EnumDecl)              { v.visited = "Enum" }
 func (v *visitor) OnStruct(gidlir.Record, *StructDecl)        { v.visited = "Struct" }
 func (v *visitor) OnTable(gidlir.Record, *TableDecl)          { v.visited = "Table" }
 func (v *visitor) OnUnion(gidlir.Record, *UnionDecl)          { v.visited = "Union" }
@@ -505,6 +564,10 @@ func TestVisit(t *testing.T) {
 		{nil, &StringDecl{nullable: true}, "Null"},
 		// These values and decls are not fully initialized, but for the
 		// purposes of Visit() it should not matter.
+		{uint64(1), &BitsDecl{}, "Bits"},
+		{int64(-1), &BitsDecl{}, "Bits"},
+		{uint64(1), &EnumDecl{}, "Enum"},
+		{int64(-1), &EnumDecl{}, "Enum"},
 		{gidlir.Record{}, &StructDecl{}, "Struct"},
 		{gidlir.Record{}, &TableDecl{}, "Table"},
 		{gidlir.Record{}, &UnionDecl{}, "Union"},
