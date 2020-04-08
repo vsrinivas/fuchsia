@@ -36,6 +36,10 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
 
   virtual ~AddressSpace() { owner_->AddressSpaceReleased(this); }
 
+  // Though this address space does not support allocations, this needs to be implemented
+  // to avoid errors from when a gpu mapping is released and attempts to call |FreeLocked|.
+  bool FreeLocked(uint64_t addr) override { return true; }
+
   bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
   bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
 
@@ -180,6 +184,7 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
   std::optional<uint64_t> ringbuffer_gpu_addr_;
 
   friend class TestAddressSpace;
+  friend class TestAddressSpace_GarbageCollect_Test;
 
   DISALLOW_COPY_AND_ASSIGN(AddressSpace);
 };
