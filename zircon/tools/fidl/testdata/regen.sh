@@ -25,6 +25,8 @@ while read -r src_path; do
     json_name=$( echo "${src_name}" | cut -f 1 -d '.').test.json.golden
     coding_tables_name=$( echo "${src_name}" | cut -f 1 -d '.').test.tables.c.golden
 
+    JSONIR_GOLDENS+=("${json_name}")
+
     echo -e "\033[1mexample: ${src_name}\033[0m"
     echo "  json ir: ${src_name} > ${json_name}"
     echo "  coding table: ${src_name} > ${coding_tables_name}"
@@ -41,6 +43,8 @@ while read -r lib_path; do
     json_name=${lib_name}.test.json.golden
     coding_tables_name=$( echo "${src_name}" | cut -f 1 -d '.').test.tables.c.golden
 
+    JSONIR_GOLDENS+=("${json_name}")
+
     echo -e "\033[1mexample: ${lib_name}\033[0m"
     echo "  json ir: ${lib_name} > ${json_name}"
     echo "  coding table: ${src_name} > ${coding_tables_name}"
@@ -51,4 +55,6 @@ while read -r lib_path; do
         --experimental enable_handle_rights \
         $( awk '{print "--files " $0}' < order.txt | tr '\n' ' ' )
 done < <(find "${EXAMPLE_DIR}" -maxdepth 1 ! -path "${EXAMPLE_DIR}" -type d)
-cd "${FUCHSIA_DIR}"
+
+> "../../goldens/jsonir_goldens.txt"
+printf "%s\n" "${JSONIR_GOLDENS[@]//,}" | sort > "../../goldens/jsonir_goldens.txt"
