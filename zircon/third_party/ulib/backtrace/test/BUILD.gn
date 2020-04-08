@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":backtrace-test" ]
+}
+
+zx_test("backtrace-test") {
+  sources = [ "backtrace_test.cc" ]
+
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/backtrace",
+  ]
+}

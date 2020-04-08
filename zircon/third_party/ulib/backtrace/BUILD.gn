@@ -33,19 +33,3 @@ zx_library("backtrace") {
 
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":backtrace-test" ]
-}
-
-zx_test("backtrace-test") {
-  sources = [ "test/backtrace_test.cc" ]
-
-  deps = [
-    ":backtrace",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}

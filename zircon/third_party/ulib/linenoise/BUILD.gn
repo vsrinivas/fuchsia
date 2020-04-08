@@ -12,19 +12,3 @@ zx_library("linenoise") {
     "$zx/system/ulib/fdio",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":linenoise-test" ]
-}
-
-zx_test("linenoise-test") {
-  sources = [ "linenoise_tests.cc" ]
-
-  deps = [
-    ":linenoise",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}
