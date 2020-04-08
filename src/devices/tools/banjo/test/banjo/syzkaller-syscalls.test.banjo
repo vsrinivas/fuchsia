@@ -752,7 +752,6 @@ enum zx_port_create_options : uint32 {
 enum zx_port_packet_type : uint32 {
     ZX_PKT_TYPE_USER = 0;           // 0x00u
     ZX_PKT_TYPE_SIGNAL_ONE = 1;     // 0x01u
-    ZX_PKT_TYPE_SIGNAL_REP = 2;     // 0x02u
     ZX_PKT_TYPE_GUEST_BELL = 3;     // 0x03u
     ZX_PKT_TYPE_GUEST_MEM = 4;      // 0x04u
     ZX_PKT_TYPE_GUEST_IO = 5;       // 0x05u
