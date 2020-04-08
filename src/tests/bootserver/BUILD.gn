@@ -5,13 +5,35 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
+test_dirs = []
+
+if (host_os == "linux") {
+  # Each of these tests runs against a QEMU instance, but on ASAN builds it
+  # takes a very long time to bring up QEMU (>1 minute), which means we can
+  # easily exceed the global test timeout if we try to run multiple tests in
+  # the same test target.
+  #
+  # Instead, shard each test into its own target so it has enough time to
+  # spin up QEMU, run the test, and bring it back down.
+  #
+  # If this becomes problematic it's possible to put multiple tests in a file,
+  # but this makes them more brittle and tricky to write since the QEMU
+  # instance is now shared state that carries over between tests.
+  test_dirs += [
+    "test_advert_frequency",
+    "test_init_partition_tables",
+    "test_pave_no_bind",
+    "test_pave_no_bind_failure",
+  ]
+}
+
+# TODO(scottmg): Colocate this test with bootserver/netsvc when it moves out of //zircon.
 group("tests") {
   testonly = true
 
   deps = []
-
-  if (host_os == "linux") {
-    deps += [ ":bootserver_tests($host_toolchain)" ]
+  foreach(test_dir, test_dirs) {
+    deps += [ ":bootserver_${test_dir}($host_toolchain)" ]
   }
 }
 
@@ -21,7 +43,16 @@ if (is_linux) {
 
     name = "fuchsia.googlesource.com/tests/bootserver"
 
-    deps = [ "//src/testing/qemu" ]
+    deps = [
+      "//src/testing/qemu",
+      "//tools/net/netutil",
+      "//tools/net/tftp",
+    ]
+
+    non_go_deps = [
+      ":bootserver_user_tools",
+      ":main_zbi",
+    ]
   }
 
   group("main_zbi") {
@@ -37,7 +68,8 @@ if (is_linux) {
       "$zircon_root_build_dir/tools/bootserver",
       "$zircon_root_build_dir/tools/netls",
     ]
-    outputs = [ "$root_out_dir/test_data/bootserver_tools/{{source_file_part}}" ]
+    outputs =
+        [ "$root_out_dir/test_data/bootserver_tools/{{source_file_part}}" ]
   }
 
   group("bootserver_user_tools") {
@@ -51,17 +83,10 @@ if (is_linux) {
     }
   }
 
-  # TODO(scottmg): Colocate this test with bootserver/netsvc when it moves out of //zircon.
-  go_test("bootserver_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/bootserver" ]
-    deps = [
-      ":lib",
-      "//tools/net/netutil",
-      "//tools/net/tftp",
-    ]
-    non_go_deps = [
-      ":main_zbi",
-      ":bootserver_user_tools",
-    ]
+  foreach(test_dir, test_dirs) {
+    go_test("bootserver_${test_dir}") {
+      gopackages = [ "fuchsia.googlesource.com/tests/bootserver/${test_dir}" ]
+      deps = [ ":lib" ]
+    }
   }
 }
