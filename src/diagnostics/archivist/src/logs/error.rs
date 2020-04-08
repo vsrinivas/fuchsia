@@ -3,7 +3,7 @@
 
 use thiserror::Error;
 
-use super::logger::{FX_LOG_MAX_TAGS, FX_LOG_MAX_TAG_LEN, MIN_PACKET_SIZE};
+use super::message::{MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
 
 #[derive(Debug, Error)]
 pub enum StreamError {
@@ -13,10 +13,10 @@ pub enum StreamError {
     #[error("message incorrectly terminated, found {terminator}, expected 0")]
     NotNullTerminated { terminator: u8 },
 
-    #[error("provided {} or more tags", FX_LOG_MAX_TAGS + 1)]
+    #[error("provided {} or more tags", MAX_TAGS + 1)]
     TooManyTags,
 
-    #[error("provided tag at position {index} with length {len} (max {})", FX_LOG_MAX_TAG_LEN)]
+    #[error("provided tag at position {index} with length {len} (max {})", MAX_TAG_LEN)]
     TagTooLong { index: usize, len: usize },
 
     #[error("incorrect or corrupt metadata indicates to read past end of buffer")]

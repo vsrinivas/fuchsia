@@ -1,97 +1,21 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use {
-    super::error::StreamError,
-    byteorder::{ByteOrder, LittleEndian},
-    fidl_fuchsia_logger::LogMessage,
-    fidl_fuchsia_sys_internal::SourceIdentity,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{
-        io::{self, AsyncRead},
-        ready,
-        task::{Context, Poll},
-        Stream,
-    },
-    libc::{c_char, c_int},
-    std::{mem, pin::Pin, str},
-};
-
-type FxLogSeverityT = c_int;
-type ZxKoid = u64;
-
-pub const FX_LOG_MAX_DATAGRAM_LEN: usize = 2032;
-pub const FX_LOG_MAX_TAGS: usize = 5;
-pub const FX_LOG_MAX_TAG_LEN: usize = 64;
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
-pub struct fx_log_metadata_t {
-    pub pid: ZxKoid,
-    pub tid: ZxKoid,
-    pub time: zx::sys::zx_time_t,
-    pub severity: FxLogSeverityT,
-    pub dropped_logs: u32,
-}
+use super::error::StreamError;
+use byteorder::{ByteOrder, LittleEndian};
+use fidl_fuchsia_logger::LogMessage;
+use fuchsia_zircon as zx;
+use libc::{c_char, c_int};
+use std::{mem, str};
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
 
-#[repr(C)]
-#[derive(Clone)]
-pub struct fx_log_packet_t {
-    pub metadata: fx_log_metadata_t,
-    // Contains concatenated tags and message and a null terminating character at
-    // the end.
-    // char(tag_len) + "tag1" + char(tag_len) + "tag2\0msg\0"
-    pub data: [c_char; FX_LOG_MAX_DATAGRAM_LEN - METADATA_SIZE],
-}
+pub const MAX_DATAGRAM_LEN: usize = 2032;
+pub const MAX_TAGS: usize = 5;
+pub const MAX_TAG_LEN: usize = 64;
 
-impl Default for fx_log_packet_t {
-    fn default() -> fx_log_packet_t {
-        fx_log_packet_t {
-            data: [0; FX_LOG_MAX_DATAGRAM_LEN - METADATA_SIZE],
-            metadata: Default::default(),
-        }
-    }
-}
-
-#[must_use = "futures/streams"]
-pub struct LogMessageSocket {
-    #[allow(unused)]
-    source: SourceIdentity,
-    socket: fasync::Socket,
-    buffer: [u8; FX_LOG_MAX_DATAGRAM_LEN],
-}
-
-impl LogMessageSocket {
-    /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket, source: SourceIdentity) -> Result<Self, io::Error> {
-        Ok(Self {
-            source,
-            socket: fasync::Socket::from_socket(socket)?,
-            buffer: [0; FX_LOG_MAX_DATAGRAM_LEN],
-        })
-    }
-}
-
-impl Stream for LogMessageSocket {
-    /// It returns log message and the size of the packet received.
-    /// The size does not include the metadata size taken by
-    /// LogMessage data structure.
-    type Item = Result<(LogMessage, usize), StreamError>;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let &mut Self { source: _, ref mut socket, ref mut buffer } = &mut *self;
-        let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
-
-        let parsed = if len > 0 { Some(parse_log_message(&buffer[..len])) } else { None };
-        Poll::Ready(parsed)
-    }
-}
-
-fn parse_log_message(bytes: &[u8]) -> Result<(LogMessage, usize), StreamError> {
+pub(super) fn parse_log_message(bytes: &[u8]) -> Result<(LogMessage, usize), StreamError> {
     if bytes.len() < MIN_PACKET_SIZE {
         return Err(StreamError::ShortRead { len: bytes.len() });
     }
@@ -112,11 +36,11 @@ fn parse_log_message(bytes: &[u8]) -> Result<(LogMessage, usize), StreamError> {
     let mut tag_len = bytes[cursor] as usize;
     let mut tags = Vec::new();
     while tag_len != 0 {
-        if tags.len() == FX_LOG_MAX_TAGS {
+        if tags.len() == MAX_TAGS {
             return Err(StreamError::TooManyTags);
         }
 
-        if tag_len > FX_LOG_MAX_TAG_LEN - 1 {
+        if tag_len > MAX_TAG_LEN - 1 {
             return Err(StreamError::TagTooLong { index: tags.len(), len: tag_len });
         }
 
@@ -148,25 +72,66 @@ fn parse_log_message(bytes: &[u8]) -> Result<(LogMessage, usize), StreamError> {
     Err(StreamError::OutOfBounds)
 }
 
+#[allow(non_camel_case_types)]
+type fx_log_severity_t = c_int;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
+pub struct fx_log_metadata_t {
+    pub pid: zx::sys::zx_koid_t,
+    pub tid: zx::sys::zx_koid_t,
+    pub time: zx::sys::zx_time_t,
+    pub severity: fx_log_severity_t,
+    pub dropped_logs: u32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct fx_log_packet_t {
+    pub metadata: fx_log_metadata_t,
+    // Contains concatenated tags and message and a null terminating character at
+    // the end.
+    // char(tag_len) + "tag1" + char(tag_len) + "tag2\0msg\0"
+    pub data: [c_char; MAX_DATAGRAM_LEN - METADATA_SIZE],
+}
+
+impl Default for fx_log_packet_t {
+    fn default() -> fx_log_packet_t {
+        fx_log_packet_t {
+            data: [0; MAX_DATAGRAM_LEN - METADATA_SIZE],
+            metadata: Default::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl fx_log_packet_t {
+    /// This struct has no padding bytes, but we can't use zerocopy because it needs const
+    /// generics to support arrays this large.
+    pub(super) fn as_bytes(&self) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(
+                (self as *const Self) as *const u8,
+                mem::size_of::<fx_log_packet_t>(),
+            )
+        }
+    }
+
+    pub(super) fn fill_data(&mut self, region: std::ops::Range<usize>, with: c_char) {
+        self.data[region].iter_mut().for_each(|c| *c = with);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use fuchsia_async::DurationExt;
-    use fuchsia_zircon::prelude::*;
-    use futures::future::TryFutureExt;
-    use futures::stream::TryStreamExt;
-    use std::ops::Range;
-    use std::slice;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
-
     #[repr(C, packed)]
     pub struct fx_log_metadata_t_packed {
-        pub pid: ZxKoid,
-        pub tid: ZxKoid,
+        pub pid: zx::sys::zx_koid_t,
+        pub tid: zx::sys::zx_koid_t,
         pub time: zx::sys::zx_time_t,
-        pub severity: FxLogSeverityT,
+        pub severity: fx_log_severity_t,
         pub dropped_logs: u32,
     }
 
@@ -175,99 +140,21 @@ mod tests {
         pub metadata: fx_log_metadata_t_packed,
         /// Contains concatenated tags and message and a null terminating character at the end.
         /// `char(tag_len) + "tag1" + char(tag_len) + "tag2\0msg\0"`
-        pub data: [c_char; FX_LOG_MAX_DATAGRAM_LEN - METADATA_SIZE],
-    }
-
-    impl fx_log_packet_t {
-        /// This struct has no padding bytes, but we can't use zerocopy because it needs const
-        /// generics to support arrays this large.
-        fn as_bytes(&self) -> &[u8] {
-            unsafe {
-                slice::from_raw_parts(
-                    (self as *const Self) as *const u8,
-                    mem::size_of::<fx_log_packet_t>(),
-                )
-            }
-        }
-
-        fn fill_data(&mut self, region: Range<usize>, with: c_char) {
-            self.data[region].iter_mut().for_each(|c| *c = with);
-        }
+        pub data: [c_char; MAX_DATAGRAM_LEN - METADATA_SIZE],
     }
 
     #[test]
     fn abi_test() {
         assert_eq!(METADATA_SIZE, 32);
-        assert_eq!(FX_LOG_MAX_TAGS, 5);
-        assert_eq!(FX_LOG_MAX_TAG_LEN, 64);
-        assert_eq!(mem::size_of::<fx_log_packet_t>(), FX_LOG_MAX_DATAGRAM_LEN);
+        assert_eq!(MAX_TAGS, 5);
+        assert_eq!(MAX_TAG_LEN, 64);
+        assert_eq!(mem::size_of::<fx_log_packet_t>(), MAX_DATAGRAM_LEN);
 
         // Test that there is no padding
         assert_eq!(mem::size_of::<fx_log_packet_t>(), mem::size_of::<fx_log_packet_t_packed>());
 
         assert_eq!(mem::size_of::<fx_log_metadata_t>(), mem::size_of::<fx_log_metadata_t_packed>());
     }
-
-    #[test]
-    fn logger_stream_test() {
-        let mut executor = fasync::Executor::new().unwrap();
-        let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-
-        let mut packet: fx_log_packet_t = Default::default();
-        packet.metadata.pid = 1;
-        packet.data[0] = 5;
-        packet.fill_data(1..6, 'A' as _);
-        packet.fill_data(7..12, 'B' as _);
-
-        let ls = LogMessageSocket::new(sout, SourceIdentity::empty()).unwrap();
-        sin.write(packet.as_bytes()).unwrap();
-        let mut expected_p = LogMessage {
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
-            time: packet.metadata.time,
-            severity: packet.metadata.severity,
-            dropped_logs: packet.metadata.dropped_logs,
-            tags: Vec::with_capacity(1),
-            msg: String::from("BBBBB"),
-        };
-        expected_p.tags.push(String::from("AAAAA"));
-        let calltimes = Arc::new(AtomicUsize::new(0));
-        let c = calltimes.clone();
-        let f = ls
-            .map_ok(move |(msg, s)| {
-                assert_eq!(msg, expected_p);
-                assert_eq!(s, METADATA_SIZE + 6 /* tag */+ 6 /* msg */);
-                c.fetch_add(1, Ordering::Relaxed);
-            })
-            .try_collect::<()>();
-
-        fasync::spawn(f.unwrap_or_else(|e| {
-            panic!("test fail {:?}", e);
-        }));
-
-        let tries = 10;
-        for _ in 0..tries {
-            if calltimes.load(Ordering::Relaxed) == 1 {
-                break;
-            }
-            let timeout = fasync::Timer::new(100.millis().after_now());
-            executor.run(timeout, 2);
-        }
-        assert_eq!(1, calltimes.load(Ordering::Relaxed));
-
-        // write one more time
-        sin.write(packet.as_bytes()).unwrap();
-
-        for _ in 0..tries {
-            if calltimes.load(Ordering::Relaxed) == 2 {
-                break;
-            }
-            let timeout = fasync::Timer::new(100.millis().after_now());
-            executor.run(timeout, 2);
-        }
-        assert_eq!(2, calltimes.load(Ordering::Relaxed));
-    }
-
     fn test_packet() -> fx_log_packet_t {
         let mut packet: fx_log_packet_t = Default::default();
         packet.metadata.pid = 1;
@@ -423,7 +310,7 @@ mod tests {
         let tags_start = 1;
         let tag_len = 2;
         let tag_size = tag_len + 1; // the length-prefix byte
-        for tag_num in 0..FX_LOG_MAX_TAGS {
+        for tag_num in 0..MAX_TAGS {
             let start = tags_start + (tag_size * tag_num);
             let end = start + tag_len;
 
@@ -432,10 +319,10 @@ mod tests {
             packet.fill_data(start..end, ascii);
         }
 
-        let msg_start = tags_start + (tag_size * FX_LOG_MAX_TAGS);
+        let msg_start = tags_start + (tag_size * MAX_TAGS);
         let msg_len = 5;
         let msg_end = msg_start + msg_len;
-        let msg_ascii = 'A' as c_char + FX_LOG_MAX_TAGS as c_char;
+        let msg_ascii = 'A' as c_char + MAX_TAGS as c_char;
         packet.fill_data(msg_start..msg_end, msg_ascii);
 
         let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
@@ -451,7 +338,7 @@ mod tests {
             severity: packet.metadata.severity,
             dropped_logs: packet.metadata.dropped_logs,
             msg: String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
-            tags: (0..FX_LOG_MAX_TAGS as _)
+            tags: (0..MAX_TAGS as _)
                 .map(|tag_num| {
                     String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap()
                 })
@@ -471,7 +358,7 @@ mod tests {
         let tags_start = 1;
         let tag_len = 2;
         let tag_size = tag_len + 1; // the length-prefix byte
-        for tag_num in 0..FX_LOG_MAX_TAGS {
+        for tag_num in 0..MAX_TAGS {
             let start = tags_start + (tag_size * tag_num);
             let end = start + tag_len;
 
@@ -480,7 +367,7 @@ mod tests {
             packet.fill_data(start..end, ascii);
         }
 
-        let msg_start = tags_start + (tag_size * FX_LOG_MAX_TAGS);
+        let msg_start = tags_start + (tag_size * MAX_TAGS);
 
         let buffer_missing_terminator = &packet.as_bytes()[..METADATA_SIZE + msg_start];
         assert_eq!(
@@ -501,7 +388,7 @@ mod tests {
                 time: packet.metadata.time,
                 severity: packet.metadata.severity,
                 dropped_logs: packet.metadata.dropped_logs,
-                tags: (0..FX_LOG_MAX_TAGS as _)
+                tags: (0..MAX_TAGS as _)
                     .map(|tag_num| String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2])
                         .unwrap())
                     .collect(),

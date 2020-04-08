@@ -4,7 +4,7 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use crate::logs::logger;
+use super::message::METADATA_SIZE;
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::{self, LogMessage};
@@ -128,7 +128,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<(LogMessage, usize)
     if let Some(b'\n') = l.msg.bytes().last() {
         l.msg.pop();
     }
-    let size = logger::METADATA_SIZE + 5/*tag*/ + l.msg.len() + 1;
+    let size = METADATA_SIZE + 5/*tag*/ + l.msg.len() + 1;
     Some((l, size))
 }
 
@@ -248,7 +248,7 @@ pub mod tests {
                 msg: String::from("test log"),
             }
         );
-        assert_eq!(size, logger::METADATA_SIZE + 6 + "test log".len());
+        assert_eq!(size, METADATA_SIZE + 6 + "test log".len());
 
         // maximum allowed klog size
         let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]);
@@ -265,7 +265,7 @@ pub mod tests {
                 msg: String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap(),
             }
         );
-        assert_eq!(size, logger::METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32);
+        assert_eq!(size, METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32);
 
         // empty message
         let klog = TestDebugEntry::new(&vec![]);
@@ -282,7 +282,7 @@ pub mod tests {
                 msg: String::from_utf8(vec![]).unwrap(),
             }
         );
-        assert_eq!(size, logger::METADATA_SIZE + 6);
+        assert_eq!(size, METADATA_SIZE + 6);
 
         // truncated header
         let klog = vec![3u8; 4];
@@ -317,7 +317,7 @@ pub mod tests {
                     tags: vec![String::from("klog")],
                     msg: String::from("test log"),
                 },
-                logger::METADATA_SIZE + 6 + "test log".len()
+                METADATA_SIZE + 6 + "test log".len()
             )]
         );
 
