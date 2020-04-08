@@ -12,9 +12,9 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/thread_lock.h>
 #include <ktl/move.h>

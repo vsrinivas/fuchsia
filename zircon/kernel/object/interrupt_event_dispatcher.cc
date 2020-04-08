@@ -13,8 +13,8 @@
 #include <dev/interrupt.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <kernel/auto_lock.h>
+#include <kernel/mutex.h>
 
 KCOUNTER(dispatcher_interrupt_event_create_count, "dispatcher.interrupt_event.create")
 KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.destroy")
@@ -36,7 +36,7 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
     return ZX_ERR_NO_MEMORY;
   }
 
-  Guard<fbl::Mutex> guard{disp->get_lock()};
+  Guard<Mutex> guard{disp->get_lock()};
 
   uint32_t interrupt_flags = 0;
 

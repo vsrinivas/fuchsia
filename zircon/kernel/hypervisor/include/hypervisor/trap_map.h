@@ -27,7 +27,7 @@ class BlockingPortAllocator final : public PortAllocator {
 
  private:
   Semaphore semaphore_;
-  fbl::TypedArena<PortPacket, fbl::Mutex> arena_;
+  fbl::TypedArena<PortPacket, Mutex> arena_;
 
   PortPacket* Alloc() override;
 };

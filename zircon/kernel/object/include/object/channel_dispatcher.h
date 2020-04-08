@@ -13,9 +13,9 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <kernel/event.h>
+#include <kernel/mutex.h>
 #include <ktl/unique_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>

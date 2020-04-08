@@ -24,8 +24,8 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <kernel/mp.h>
+#include <kernel/mutex.h>
 #include <kernel/timer.h>
 #include <lk/init.h>
 #include <vm/bootalloc.h>

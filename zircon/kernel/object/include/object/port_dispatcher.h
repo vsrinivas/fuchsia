@@ -14,7 +14,7 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <kernel/semaphore.h>
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
@@ -123,7 +123,7 @@ class PortObserver final : public StateObserver {
   using List = fbl::DoublyLinkedList<PortObserver*, PortObserver::ListTraits>;
 
   PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-               Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals);
+               Lock<Mutex>* port_lock, uint64_t key, zx_signals_t signals);
 
   ~PortObserver() = default;
 
@@ -153,7 +153,7 @@ class PortObserver final : public StateObserver {
   PortPacket packet_;
 
   fbl::RefPtr<PortDispatcher> const port_;
-  Lock<fbl::Mutex>* const port_lock_;
+  Lock<Mutex>* const port_lock_;
 
   // Guarded by port_lock_;
   ListNodeState observer_list_node_state_;

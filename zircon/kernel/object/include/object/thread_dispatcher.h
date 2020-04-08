@@ -16,11 +16,11 @@
 #include <arch/exception.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
+#include <kernel/mutex.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/thread.h>
 #include <ktl/string_view.h>

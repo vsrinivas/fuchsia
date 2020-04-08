@@ -104,7 +104,7 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
   const bool shutdown_read = how & ZX_SOCKET_SHUTDOWN_READ;
   const bool shutdown_write = how & ZX_SOCKET_SHUTDOWN_WRITE;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   zx_signals_t signals = GetSignalsStateLocked();
   // If we're already shut down in the requested way, return immediately.
@@ -163,7 +163,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const char> src, size_t len, siz
 
   LTRACE_ENTRY;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (!peer_)
     return ZX_ERR_PEER_CLOSED;
@@ -239,7 +239,7 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
 
   LTRACE_ENTRY;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (len != (size_t)((uint32_t)len))
     return ZX_ERR_INVALID_ARGS;
@@ -303,7 +303,7 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
 
 void SocketDispatcher::GetInfo(zx_info_socket_t* info) const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   *info = zx_info_socket_t{
       .options = flags_,
       .padding1 = {},
@@ -322,19 +322,19 @@ void SocketDispatcher::GetInfo(zx_info_socket_t* info) const {
 
 size_t SocketDispatcher::GetReadThreshold() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return read_threshold_;
 }
 
 size_t SocketDispatcher::GetWriteThreshold() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return write_threshold_;
 }
 
 zx_status_t SocketDispatcher::SetReadThreshold(size_t value) {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (value > data_.max_size())
     return ZX_ERR_INVALID_ARGS;
   read_threshold_ = value;
@@ -355,7 +355,7 @@ zx_status_t SocketDispatcher::SetReadThreshold(size_t value) {
 
 zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (peer_ == NULL)
     return ZX_ERR_PEER_CLOSED;
   AssertHeld(*peer_->get_lock());

@@ -73,7 +73,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
                                                    fbl::RefPtr<VmAddressRegionOrMapping>* out) {
   DEBUG_ASSERT(out);
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -331,7 +331,7 @@ zx_status_t VmAddressRegion::DestroyLocked() {
 }
 
 fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) {
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return nullptr;
   }
@@ -503,7 +503,7 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
 }
 
 bool VmAddressRegion::has_parent() const {
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   return parent_ != nullptr;
 }
 
@@ -540,7 +540,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -635,7 +635,7 @@ zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -652,7 +652,7 @@ zx_status_t VmAddressRegion::UnmapAllowPartial(vaddr_t base, size_t size) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -801,7 +801,7 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -1072,8 +1072,8 @@ void RegionList::FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t se
                                      vaddr_t parent_base, vaddr_t parent_size,
                                      RegionList::AllocSpotInfo* alloc_spot_info) const {
   const vaddr_t align = 1UL << align_pow2;
-  // candidate_spot_count is the number of available slot that we could allocate if we have not found
-  // the spot with index |selected_index| to allocate.
+  // candidate_spot_count is the number of available slot that we could allocate if we have not
+  // found the spot with index |selected_index| to allocate.
   size_t candidate_spot_count = 0;
   // Found indicates whether we have found the spot with index |selected_indexes|.
   bool found = false;
@@ -1140,8 +1140,7 @@ zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, ui
   }
 
   AllocSpotInfo alloc_spot_info;
-  FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
-                      &alloc_spot_info);
+  FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size, &alloc_spot_info);
   size_t candidate_spot_count = alloc_spot_info.candidate_spot_count;
   if (candidate_spot_count == 0) {
     DEBUG_ASSERT(!alloc_spot_info.found);
@@ -1155,8 +1154,8 @@ zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, ui
     // range for available spaces.
     DEBUG_ASSERT(prng);
     selected_index = prng->RandInt(candidate_spot_count);
-     FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
-                         &alloc_spot_info);
+    FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
+                        &alloc_spot_info);
   }
   DEBUG_ASSERT(alloc_spot_info.found);
   *alloc_spot = alloc_spot_info.alloc_spot;

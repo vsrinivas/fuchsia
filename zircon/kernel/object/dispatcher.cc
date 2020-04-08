@@ -11,7 +11,7 @@
 #include <lib/ktrace.h>
 
 #include <arch/ops.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <ktl/atomic.h>
 
 // kernel counters. The following counters never decrease.
@@ -118,7 +118,7 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
 }  // namespace
 
 // Since this conditionally takes the dispatcher's |lock_|, based on
-// the type of Mutex (either fbl::Mutex or fbl::NullLock), the thread
+// the type of Mutex (either Mutex or fbl::NullLock), the thread
 // safety analysis is unable to prove that the accesses to |signals_|
 // and to |observers_| are always protected.
 template <typename LockType>
@@ -167,7 +167,7 @@ bool Dispatcher::RemoveObserver(StateObserver* observer) {
   ZX_DEBUG_ASSERT(is_waitable());
   DEBUG_ASSERT(observer != nullptr);
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (StateObserver::ObserverListTraits::node_state(*observer).InContainer()) {
     observers_.erase(*observer);
@@ -203,7 +203,7 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
 }
 
 // Since this conditionally takes the dispatcher's |lock_|, based on
-// the type of Mutex (either fbl::Mutex or fbl::NullLock), the thread
+// the type of Mutex (either Mutex or fbl::NullLock), the thread
 // safety analysis is unable to prove that the accesses to |signals_|
 // are always protected.
 template <typename LockType>

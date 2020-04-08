@@ -14,7 +14,7 @@
 #include <dev/address_provider/ecam_region.h>
 #include <dev/pci_config.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 
 // PcieAddressProvider is an interface that implements translation from a BDF to
 // a PCI ECAM address.

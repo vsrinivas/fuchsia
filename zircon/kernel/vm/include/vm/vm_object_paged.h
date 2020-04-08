@@ -82,7 +82,7 @@ class VmObjectPaged final : public VmObject {
   bool is_contiguous() const override { return (options_ & kContiguous); }
   bool is_resizable() const override { return (options_ & kResizable); }
   bool is_pager_backed() const override {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     return GetRootPageSourceLocked() != nullptr;
   }
   bool is_hidden() const override { return (options_ & kHidden); }
@@ -90,17 +90,17 @@ class VmObjectPaged final : public VmObject {
     if (is_slice()) {
       return ChildType::kSlice;
     }
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     return (original_parent_user_id_ != 0) ? ChildType::kCowClone : ChildType::kNotChild;
   }
   bool is_slice() const { return options_ & kSlice; }
   uint64_t parent_user_id() const override {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     return original_parent_user_id_;
   }
   void set_user_id(uint64_t user_id) override {
     VmObject::set_user_id(user_id);
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     page_attribution_user_id_ = user_id;
   }
 
@@ -197,7 +197,7 @@ class VmObjectPaged final : public VmObject {
   zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len, list_node_t& free_list)
       TA_REQ(lock_);
   zx_status_t ZeroRangeLocked(uint64_t offset, uint64_t len, list_node_t* free_list,
-                              Guard<fbl::Mutex>* guard) TA_REQ(lock_);
+                              Guard<Mutex>* guard) TA_REQ(lock_);
 
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
@@ -221,7 +221,7 @@ class VmObjectPaged final : public VmObject {
   // internal read/write routine that takes a templated copy function to help share some code
   template <typename T>
   zx_status_t ReadWriteInternalLocked(uint64_t offset, size_t len, bool write, T copyfunc,
-                                      Guard<fbl::Mutex>* guard) TA_REQ(lock_);
+                                      Guard<Mutex>* guard) TA_REQ(lock_);
 
   // Searches for info for initialization of a page being commited into |this| at |offset|.
   //
@@ -326,7 +326,7 @@ class VmObjectPaged final : public VmObject {
   // [zero_start_offset, zero_end_offset) is relative to the page and so [0, PAGE_SIZE) would zero
   // the entire page.
   zx_status_t ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
-                              uint64_t zero_end_offset, Guard<fbl::Mutex>* guard) TA_REQ(lock_);
+                              uint64_t zero_end_offset, Guard<Mutex>* guard) TA_REQ(lock_);
 
   // Unpins a page and potentially moves it into a different page queue should its pin
   // count reach zero.

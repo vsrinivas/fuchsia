@@ -45,19 +45,19 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
     return ZX_ERR_NO_MEMORY;
   }
 
-  Guard<fbl::Mutex> guard{&list_mtx_};
+  Guard<Mutex> guard{&list_mtx_};
   srcs_.push_front(src);
   *src_out = ktl::move(src);
   return ZX_OK;
 }
 
 fbl::RefPtr<PagerSource> PagerDispatcher::ReleaseSource(PagerSource* src) {
-  Guard<fbl::Mutex> guard{&list_mtx_};
+  Guard<Mutex> guard{&list_mtx_};
   return src->InContainer() ? srcs_.erase(*src) : nullptr;
 }
 
 void PagerDispatcher::on_zero_handles() {
-  Guard<fbl::Mutex> guard{&list_mtx_};
+  Guard<Mutex> guard{&list_mtx_};
   while (!srcs_.is_empty()) {
     fbl::RefPtr<PagerSource> src = srcs_.pop_front();
 
@@ -84,7 +84,7 @@ PagerSource::~PagerSource() {
 }
 
 void PagerSource::GetPageAsync(page_request_t* request) {
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   QueueMessageLocked(request);
@@ -130,7 +130,7 @@ void PagerSource::QueueMessageLocked(page_request_t* request) {
 }
 
 void PagerSource::ClearAsyncRequest(page_request_t* request) {
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   if (request == active_request_) {
@@ -145,7 +145,7 @@ void PagerSource::ClearAsyncRequest(page_request_t* request) {
 }
 
 void PagerSource::SwapRequest(page_request_t* old, page_request_t* new_req) {
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   if (list_in_list(&old->provider_node)) {
@@ -155,7 +155,7 @@ void PagerSource::SwapRequest(page_request_t* old, page_request_t* new_req) {
   }
 }
 void PagerSource::OnDetach() {
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   complete_pending_ = true;
@@ -165,7 +165,7 @@ void PagerSource::OnDetach() {
 void PagerSource::OnClose() {
   fbl::RefPtr<PagerSource> self;
 
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   closed_ = true;
@@ -180,7 +180,7 @@ void PagerSource::OnDispatcherClosed() {
   // The pager dispatcher's reference to this object is the only one we completely control. Now
   // that it's gone, we need to make sure that port_ doesn't end up with an invalid pointer
   // to packet_ if all external RefPtrs to this object go away.
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
 
   if (complete_pending_) {
     if (port_->CancelQueued(&packet_)) {
@@ -204,7 +204,7 @@ void PagerSource::OnDispatcherClosed() {
 void PagerSource::Free(PortPacket* packet) {
   fbl::RefPtr<PagerSource> self;
 
-  Guard<fbl::Mutex> guard{&mtx_};
+  Guard<Mutex> guard{&mtx_};
   if (active_request_ != &complete_request_) {
     OnPacketFreedLocked();
   } else {

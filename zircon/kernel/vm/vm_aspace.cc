@@ -21,7 +21,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <vm/fault.h>
@@ -213,7 +213,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
 
   // add it to the global list
   {
-    Guard<fbl::Mutex> guard{&aspace_list_lock};
+    Guard<Mutex> guard{&aspace_list_lock};
     aspaces.push_back(aspace.get());
   }
 
@@ -235,7 +235,7 @@ VmAspace::~VmAspace() {
 
   // pop it out of the global aspace list
   {
-    Guard<fbl::Mutex> guard{&aspace_list_lock};
+    Guard<Mutex> guard{&aspace_list_lock};
     if (this->InContainer()) {
       aspaces.erase(*this);
     }
@@ -250,7 +250,7 @@ VmAspace::~VmAspace() {
 }
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return fbl::RefPtr<VmAddressRegion>(root_vmar_);
 }
 
@@ -258,7 +258,7 @@ zx_status_t VmAspace::Destroy() {
   canary_.Assert();
   LTRACEF("%p '%s'\n", this, name_);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // Don't let a vDSO mapping prevent destroying a VMAR
   // when the whole process is being destroyed.
@@ -280,7 +280,7 @@ zx_status_t VmAspace::Destroy() {
 }
 
 bool VmAspace::is_destroyed() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return aspace_destroyed_;
 }
 
@@ -565,7 +565,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       // for now, hold the aspace lock across the page fault operation,
       // which stops any other operations on the address space from moving
       // the region out from underneath it
-      Guard<fbl::Mutex> guard{&lock_};
+      Guard<Mutex> guard{&lock_};
 
       status = root_vmar_->PageFault(va, flags, &page_request);
     }
@@ -591,7 +591,7 @@ void VmAspace::Dump(bool verbose) const {
   printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this, base_,
          base_ + size_ - 1, size_, flags_, ref_count_debug(), name_);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (verbose) {
     root_vmar_->Dump(1, verbose);
@@ -601,7 +601,7 @@ void VmAspace::Dump(bool verbose) const {
 bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   if (root_vmar_ == nullptr || aspace_destroyed_) {
     // Aspace hasn't been initialized or has already been destroyed.
     return true;
@@ -614,7 +614,7 @@ bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
 }
 
 void DumpAllAspaces(bool verbose) {
-  Guard<fbl::Mutex> guard{&aspace_list_lock};
+  Guard<Mutex> guard{&aspace_list_lock};
 
   for (const auto& a : aspaces) {
     a.Dump(verbose);
@@ -635,7 +635,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
 size_t VmAspace::AllocatedPages() const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return root_vmar_->AllocatedPagesLocked();
 }
 
@@ -654,17 +654,17 @@ void VmAspace::InitializeAslr() {
 }
 
 uintptr_t VmAspace::vdso_base_address() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return VDso::base_address(vdso_code_mapping_);
 }
 
 uintptr_t VmAspace::vdso_code_address() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return vdso_code_mapping_ ? vdso_code_mapping_->base() : 0;
 }
 
 void VmAspace::DropAllUserPageTables() {
-  Guard<fbl::Mutex> guard{&aspace_list_lock};
+  Guard<Mutex> guard{&aspace_list_lock};
 
   for (auto& a : aspaces) {
     a.DropUserPageTables();
@@ -674,6 +674,6 @@ void VmAspace::DropAllUserPageTables() {
 void VmAspace::DropUserPageTables() {
   if (!is_user())
     return;
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   arch_aspace().Unmap(base(), size() / PAGE_SIZE, nullptr);
 }

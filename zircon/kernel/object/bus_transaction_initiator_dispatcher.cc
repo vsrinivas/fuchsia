@@ -65,7 +65,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
     return status;
   }
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (zero_handles_) {
     return ZX_ERR_BAD_STATE;
   }
@@ -80,13 +80,13 @@ void BusTransactionInitiatorDispatcher::ReleaseQuarantine() {
   // The PMT dtor will call RemovePmo, which will reacquire this BTI's lock.
   // To avoid deadlock, drop the lock before letting the quarantined PMTs go.
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     quarantine_.swap(tmp);
   }
 }
 
 void BusTransactionInitiatorDispatcher::on_zero_handles() {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   // Prevent new pinning from happening.  The Dispatcher will stick around
   // until all of the PMTs are closed.
   zero_handles_ = true;
@@ -108,13 +108,13 @@ void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher
 }
 
 void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* pmt) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
   pinned_memory_.erase(*pmt);
 }
 
 void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
   quarantine_.push_back(ktl::move(pmt));
@@ -128,13 +128,13 @@ void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryToken
 
 // The count of the pinned memory object tokens.
 uint64_t BusTransactionInitiatorDispatcher::pmo_count() const {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return pinned_memory_.size_slow();
 }
 
 // The count of the quarantined pinned memory object tokens.
 uint64_t BusTransactionInitiatorDispatcher::quarantine_count() const {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return quarantine_.size_slow();
 }
 

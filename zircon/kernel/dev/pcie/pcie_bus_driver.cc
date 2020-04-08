@@ -15,7 +15,7 @@
 #include <dev/pcie_root.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <ktl/limits.h>
 #include <ktl/move.h>
 #include <lk/init.h>

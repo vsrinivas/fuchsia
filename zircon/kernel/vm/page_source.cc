@@ -25,7 +25,7 @@ PageSource::~PageSource() {
 void PageSource::Detach() {
   canary_.Assert();
   LTRACEF("%p\n", this);
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
     return;
   }
@@ -51,7 +51,7 @@ void PageSource::Close() {
   // TODO: Close will have more meaning once writeback is implemented
   Detach();
 
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   if (!closed_) {
     closed_ = true;
     OnClose();
@@ -65,7 +65,7 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
   bool overflow = add_overflow(offset, len, &end);
   DEBUG_ASSERT(!overflow);  // vmobject should have already validated overflow
 
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
     return;
   }
@@ -125,7 +125,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, vm_page_t
   ASSERT(request);
   offset = fbl::round_down(offset, static_cast<uint64_t>(PAGE_SIZE));
 
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -201,7 +201,7 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
   LTRACEF_LEVEL(2, "%p\n", this);
   DEBUG_ASSERT(request->offset_ != UINT64_MAX);
 
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -250,7 +250,7 @@ void PageSource::CompleteRequestLocked(PageRequest* req) {
 
 void PageSource::CancelRequest(PageRequest* request) {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   LTRACEF("%p %lx\n", this, request->offset_);
 
   if (request->offset_ == UINT64_MAX) {
@@ -293,7 +293,7 @@ void PageSource::CancelRequest(PageRequest* request) {
 }
 
 void PageSource::Dump() const {
-  Guard<fbl::Mutex> guard{&page_source_mtx_};
+  Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
   for (auto& req : outstanding_requests_) {
     printf("  req [%lx, %lx) pending %lx overlap %lu\n", req.offset_, req.GetEnd(),

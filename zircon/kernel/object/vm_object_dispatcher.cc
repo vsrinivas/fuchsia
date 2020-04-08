@@ -161,7 +161,7 @@ zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(void) { return VmoToInfoEntry(vmo()
 zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   content_size_ = content_size;
   return ZX_OK;
 }
@@ -169,7 +169,7 @@ zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
 uint64_t VmObjectDispatcher::GetContentSize() const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return content_size_;
 }
 
@@ -177,7 +177,7 @@ uint64_t VmObjectDispatcher::ExpandContentIfNeeded(uint64_t requested_content_si
                                                    uint64_t zero_until_offset) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (requested_content_size <= content_size_) {
     return content_size_;
   }

@@ -22,8 +22,8 @@
 #include <dev/pcie_upstream_node.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
 

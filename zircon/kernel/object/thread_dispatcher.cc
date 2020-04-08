@@ -123,7 +123,7 @@ zx_status_t ThreadDispatcher::Initialize() {
     return result;
   }
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   // we've entered the initialized state
   SetStateLocked(ThreadState::Lifecycle::INITIALIZED);
   return ZX_OK;
@@ -166,7 +166,7 @@ zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool initial_thread
 }
 
 zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspended) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (state_.lifecycle() != ThreadState::Lifecycle::INITIALIZED)
     return ZX_ERR_BAD_STATE;
@@ -210,7 +210,7 @@ void ThreadDispatcher::Exit() {
   DEBUG_ASSERT(Thread::Current::Get() == core_thread_);
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     SetStateLocked(ThreadState::Lifecycle::DYING);
   }
@@ -227,7 +227,7 @@ void ThreadDispatcher::Kill() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   switch (state_.lifecycle()) {
     case ThreadState::Lifecycle::INITIAL:
@@ -254,7 +254,7 @@ zx_status_t ThreadDispatcher::Suspend() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
@@ -292,7 +292,7 @@ void ThreadDispatcher::Resume() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
@@ -320,7 +320,7 @@ void ThreadDispatcher::Resume() {
 }
 
 bool ThreadDispatcher::IsDyingOrDead() const {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return IsDyingOrDeadLocked();
 }
 
@@ -330,7 +330,7 @@ bool ThreadDispatcher::IsDyingOrDeadLocked() const {
 }
 
 bool ThreadDispatcher::HasStarted() const {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return HasStartedLocked();
 }
 
@@ -370,7 +370,7 @@ void ThreadDispatcher::Exiting() {
   // marked dead, and we don't want to have a state where the process is
   // dead but one thread is not.
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // put ourselves into the dead state
     SetStateLocked(ThreadState::Lifecycle::DEAD);
@@ -409,7 +409,7 @@ void ThreadDispatcher::Suspending() {
   // Update the state before sending any notifications out. We want the
   // receiver to see the new state.
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // Don't suspend if we are racing with our own death.
     if (state_.lifecycle() != ThreadState::Lifecycle::DYING) {
@@ -426,7 +426,7 @@ void ThreadDispatcher::Resuming() {
   // Update the state before sending any notifications out. We want the
   // receiver to see the new state.
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // Don't resume if we are racing with our own death.
     if (state_.lifecycle() != ThreadState::Lifecycle::DYING) {
@@ -573,7 +573,7 @@ static zx_thread_state_t ThreadLifecycleToState(ThreadState::Lifecycle lifecycle
 
 zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   info->state = ThreadLifecycleToState(state_.lifecycle(), blocked_reason_);
   info->wait_exception_channel_type = exceptionate_type_;
@@ -604,7 +604,7 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (InExceptionLocked()) {
     // We always leave exception handling before the report gets wiped
@@ -637,7 +637,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // We send the exception while locked so that if it succeeds we can
     // atomically update our state.
@@ -659,7 +659,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
 
   LTRACEF("received exception response %d\n", status);
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   // If both the thread was killed and the exception was resumed before we
   // started waiting, the exception resume status (ZX_OK) might be returned,
@@ -730,7 +730,7 @@ zx_status_t ThreadDispatcher::ReadStateGeneric(F get_state_func, Thread* thread,
   T state{};
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     // We can't be reading regs while the thread transitions from SUSPENDED to RUNNING.
     if (!SuspendedOrInExceptionLocked()) {
       return ZX_ERR_BAD_STATE;
@@ -788,7 +788,7 @@ zx_status_t ThreadDispatcher::WriteStateGeneric(F set_state_func, Thread* thread
     return status;
   }
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   // We can't be reading regs while the thread transitions from SUSPENDED to RUNNING.
   if (!SuspendedOrInExceptionLocked()) {
@@ -826,7 +826,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 }
 
 zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
@@ -838,7 +838,7 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
 }
 
 zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& params) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
@@ -850,7 +850,7 @@ zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& para
 }
 
 zx_status_t ThreadDispatcher::SetSoftAffinity(cpu_mask_t mask) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {

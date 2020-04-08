@@ -15,8 +15,8 @@
 #include <zircon/types.h>
 
 #include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/mutex.h>
 #include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <vm/physmap.h>
@@ -78,14 +78,14 @@ zx_status_t VmObject::set_name(const char* name, size_t len) {
 
 void VmObject::set_user_id(uint64_t user_id) {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   DEBUG_ASSERT(user_id_ == 0);
   user_id_ = user_id;
 }
 
 uint64_t VmObject::user_id() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return user_id_;
 }
 
@@ -106,13 +106,13 @@ void VmObject::RemoveMappingLocked(VmMapping* r) {
 
 uint32_t VmObject::num_mappings() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return mapping_list_len_;
 }
 
 bool VmObject::IsMappedByUser() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   for (const auto& m : mapping_list_) {
     if (m.aspace()->is_user()) {
       return true;
@@ -124,7 +124,7 @@ bool VmObject::IsMappedByUser() const {
 uint32_t VmObject::share_count() const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   if (mapping_list_len_ < 2) {
     return 1;
   }
@@ -212,7 +212,7 @@ zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t 
 }
 
 void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
-  Guard<fbl::Mutex> guard{&child_observer_lock_};
+  Guard<Mutex> guard{&child_observer_lock_};
   child_observer_ = child_observer;
 }
 
@@ -236,7 +236,7 @@ void VmObject::NotifyOneChild() {
   // back into this object.
   DEBUG_ASSERT(!lock_.lock().IsHeld());
 
-  Guard<fbl::Mutex> observer_guard{&child_observer_lock_};
+  Guard<Mutex> observer_guard{&child_observer_lock_};
 
   // Signal the dispatcher that there are child VMOS
   if (child_observer_ != nullptr) {
@@ -259,14 +259,14 @@ void VmObject::DropChildLocked(VmObject* c) {
 void VmObject::RemoveChild(VmObject* o, Guard<Mutex>&& adopt) {
   canary_.Assert();
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
-  Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+  Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
 
   DropChildLocked(o);
 
   OnUserChildRemoved(guard.take());
 }
 
-void VmObject::OnUserChildRemoved(Guard<fbl::Mutex>&& adopt) {
+void VmObject::OnUserChildRemoved(Guard<Mutex>&& adopt) {
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
 
   // The observer may call back into this object so we must release the shared lock to prevent any
@@ -274,7 +274,7 @@ void VmObject::OnUserChildRemoved(Guard<fbl::Mutex>&& adopt) {
   // otherwise we have lock ordering issue, since we already allow the shared lock to be acquired
   // whilst holding the child_observer_lock.
   {
-    Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+    Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
 
     DEBUG_ASSERT(user_child_count_ > 0);
     --user_child_count_;
@@ -283,7 +283,7 @@ void VmObject::OnUserChildRemoved(Guard<fbl::Mutex>&& adopt) {
     }
   }
   {
-    Guard<fbl::Mutex> observer_guard{&child_observer_lock_};
+    Guard<Mutex> observer_guard{&child_observer_lock_};
 
     // Signal the dispatcher that there are no more child VMOS
     if (child_observer_ != nullptr) {
@@ -294,13 +294,13 @@ void VmObject::OnUserChildRemoved(Guard<fbl::Mutex>&& adopt) {
 
 uint32_t VmObject::num_children() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return children_list_len_;
 }
 
 uint32_t VmObject::num_user_children() const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return user_child_count_;
 }
 
@@ -374,7 +374,7 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (unlikely(!InRange(start_offset, len, size()))) {
     return ZX_ERR_OUT_OF_RANGE;

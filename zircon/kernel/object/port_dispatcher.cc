@@ -48,10 +48,17 @@ KCOUNTER(port_signal_pending_11p, "port.signal.pending.count.11p")
 
 void kcounter_record_pending_signal(uint64_t count) {
   switch (count) {
-    case 1: break;
-    case 2 ... 4: kcounter_add(port_signal_pending_2_4, 1u); break;
-    case 5 ... 10: kcounter_add(port_signal_pending_5_10, 1u); break;
-    default: kcounter_add(port_signal_pending_11p, 1u); break;
+    case 1:
+      break;
+    case 2 ... 4:
+      kcounter_add(port_signal_pending_2_4, 1u);
+      break;
+    case 5 ... 10:
+      kcounter_add(port_signal_pending_5_10, 1u);
+      break;
+    default:
+      kcounter_add(port_signal_pending_11p, 1u);
+      break;
   }
 }
 
@@ -64,7 +71,7 @@ class ArenaPortAllocator final : public PortAllocator {
   virtual void Free(PortPacket* port_packet);
 
  private:
-  fbl::TypedArena<PortPacket, fbl::Mutex> arena_;
+  fbl::TypedArena<PortPacket, Mutex> arena_;
 };
 
 namespace {
@@ -102,7 +109,7 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
 }
 
 PortObserver::PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                           Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals)
+                           Lock<Mutex>* port_lock, uint64_t key, zx_signals_t signals)
     : options_(options),
       trigger_(signals),
       packet_(handle, nullptr),
@@ -216,7 +223,7 @@ PortDispatcher::~PortDispatcher() {
 void PortDispatcher::on_zero_handles() {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   DEBUG_ASSERT(!zero_handles_);
   zero_handles_ = true;
 
@@ -306,7 +313,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
   canary_.Assert();
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     if (zero_handles_) {
       return ZX_ERR_BAD_HANDLE;
     }
@@ -366,7 +373,7 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
 
     // No interrupt packets queued. Check the regular packets.
     {
-      Guard<fbl::Mutex> guard{get_lock()};
+      Guard<Mutex> guard{get_lock()};
       PortPacket* port_packet = packets_.pop_front();
       if (port_packet != nullptr) {
         if (IsDefaultAllocatedEphemeral(*port_packet)) {
@@ -409,7 +416,7 @@ void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) 
   fbl::RefPtr<Dispatcher> dispatcher;
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // We may be racing with on_zero_handles. Whichever one of us unlinks the dispatcher will be
     // responsible for ensuring the observer is cleaned up.
@@ -449,7 +456,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
   }
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     DEBUG_ASSERT(!zero_handles_);
     observers_.push_front(observer);
   }
@@ -460,7 +467,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   // This loop can take a while if there are many items.
   // In practice, the number of pending signal packets is
@@ -504,7 +511,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
 bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (port_packet->InContainer()) {
     if (IsDefaultAllocatedEphemeral(*port_packet)) {

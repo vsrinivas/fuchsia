@@ -25,7 +25,7 @@ zx_status_t Exceptionate::SetChannel(KernelHandle<ChannelDispatcher> channel_han
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (is_shutdown_) {
     return ZX_ERR_BAD_STATE;
@@ -46,13 +46,13 @@ zx_status_t Exceptionate::SetChannel(KernelHandle<ChannelDispatcher> channel_han
 }
 
 void Exceptionate::Shutdown() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   channel_handle_.reset();
   is_shutdown_ = true;
 }
 
 bool Exceptionate::HasValidChannel() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return HasValidChannelLocked();
 }
 
@@ -63,7 +63,7 @@ bool Exceptionate::HasValidChannelLocked() const {
 zx_status_t Exceptionate::SendException(const fbl::RefPtr<ExceptionDispatcher>& exception) {
   DEBUG_ASSERT(exception);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (!channel_handle_.dispatcher()) {
     return ZX_ERR_NEXT;

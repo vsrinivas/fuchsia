@@ -14,8 +14,8 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
+#include <kernel/mutex.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/mbuf.h>

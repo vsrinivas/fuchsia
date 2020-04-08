@@ -119,14 +119,14 @@ ChannelDispatcher::~ChannelDispatcher() {
 zx_status_t ChannelDispatcher::AddObserver(StateObserver* observer) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   StateObserver::CountInfo cinfo = {{{messages_.size(), ZX_CHANNEL_READABLE}, {0u, 0u}}};
   AddObserverLocked(observer, &cinfo);
   return ZX_OK;
 }
 
 void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (!waiter->InContainer()) {
     return;
   }
@@ -154,7 +154,7 @@ void ChannelDispatcher::set_owner(zx_koid_t new_owner) {
   if (new_owner == ZX_KOID_INVALID)
     return;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   owner_ = new_owner;
 }
 
@@ -183,7 +183,7 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
   auto max_size = *msg_size;
   auto max_handle_count = *msg_handle_count;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (owner != owner_)
     return ZX_ERR_BAD_HANDLE;
@@ -220,7 +220,7 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
 
   AutoReschedDisable resched_disable;  // Must come before the lock guard.
   resched_disable.Disable();
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   // Failing this test is only possible if this process has two threads racing:
   // one thread is issuing channel_write() and one thread is moving the handle
@@ -252,7 +252,7 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
   {
     AutoReschedDisable resched_disable;  // Must come before the lock guard.
     resched_disable.Disable();
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // See Write() for an explanation of this test.
     if (owner != owner_)
@@ -325,7 +325,7 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
   // from the list *but* another thread could still
   // cause (3A), (3B), or (3C) before the lock below.
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     // (4) If any of (3A), (3B), or (3C) have occurred,
     // we were removed from the waiters list already

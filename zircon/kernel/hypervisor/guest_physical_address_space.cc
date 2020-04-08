@@ -126,7 +126,7 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_EXECUTE) {
     pf_flags |= VMM_PF_FLAG_INSTRUCTION;
   }
-  Guard<fbl::Mutex> guard{guest_aspace_->lock()};
+  Guard<Mutex> guard{guest_aspace_->lock()};
   return mapping->PageFault(guest_paddr, pf_flags, nullptr);
 }
 

@@ -211,7 +211,7 @@ void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process) {
       auto chan = DownCastDispatcher<const ChannelDispatcher>(disp);
       uint64_t koid, peer_koid, count, max_count;
       {
-        Guard<fbl::Mutex> guard{chan->get_lock()};
+        Guard<Mutex> guard{chan->get_lock()};
         koid = chan->get_koid();
         peer_koid = chan->get_related_koid();
         count = chan->get_message_count();

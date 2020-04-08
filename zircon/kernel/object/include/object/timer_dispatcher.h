@@ -12,8 +12,8 @@
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
-#include <fbl/mutex.h>
 #include <kernel/dpc.h>
+#include <kernel/mutex.h>
 #include <kernel/timer.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>

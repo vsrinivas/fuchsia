@@ -8,9 +8,9 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <vm/pmm.h>
 #include <vm/pmm_checker.h>
 

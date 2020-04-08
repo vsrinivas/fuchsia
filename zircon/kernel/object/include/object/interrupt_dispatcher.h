@@ -11,8 +11,8 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-#include <fbl/mutex.h>
 #include <kernel/event.h>
+#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <object/dispatcher.h>
 #include <object/port_dispatcher.h>

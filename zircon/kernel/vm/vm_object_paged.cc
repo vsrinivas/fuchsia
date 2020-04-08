@@ -203,7 +203,7 @@ VmObjectPaged::~VmObjectPaged() {
     //
     // To prevent races with a hidden parent merging itself into this vmo, it is necessary
     // to hold the lock over the parent_ check and into the subsequent removal call.
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     if (parent_) {
       LTRACEF("removing ourself from our parent %p\n", parent_.get());
       parent_->RemoveChild(this, guard.take());
@@ -545,7 +545,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     // allowing this operation on resizable vmo's, we should still be holding the lock to
     // correctly read size_. Unfortunately we must also drop then drop the lock in order to
     // perform the allocation.
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     our_size = size_;
   }
   if (!InRange(offset, size, our_size)) {
@@ -576,7 +576,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
 
   bool notify_one_child;
   {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
 
     // If this VMO is contiguous then we allow creating an uncached slice as we will never
@@ -661,7 +661,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
 
   bool notify_one_child;
   {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
     switch (type) {
       case CloneType::Snapshot: {
@@ -769,9 +769,9 @@ bool VmObjectPaged::OnChildAddedLocked() {
   panic("no child with matching user_id: %" PRIx64 "\n", user_id_);
 }
 
-void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
+void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
-  Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+  Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
 
   if (!is_hidden()) {
     VmObject::RemoveChild(removed, guard.take());
@@ -1071,7 +1071,7 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
   // This can grab our lock.
   uint64_t parent_id = parent_user_id();
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   size_t count = 0;
   page_list_.ForEveryPage([&count](const auto& p, uint64_t) {
@@ -1108,7 +1108,7 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
 
 size_t VmObjectPaged::AttributedPagesInRange(uint64_t offset, uint64_t len) const {
   canary_.Assert();
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return AttributedPagesInRangeLocked(offset, len);
 }
 
@@ -1326,7 +1326,7 @@ uint64_t VmObjectPaged::CountAttributedAncestorPagesLocked(uint64_t offset, uint
 }
 
 zx_status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   VmPageOrMarker page = VmPageOrMarker::Page(p);
   zx_status_t result = AddPageLocked(&page, offset);
@@ -1913,7 +1913,7 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // trim the size
   uint64_t new_len;
@@ -2054,7 +2054,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
   list_initialize(&list);
   zx_status_t status;
   {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     status = DecommitRangeLocked(offset, len, list);
   }
   if (status == ZX_OK) {
@@ -2122,7 +2122,7 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   list_initialize(&list);
   zx_status_t status;
   {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     status = ZeroRangeLocked(offset, len, &list, &guard);
   }
   if (status == ZX_OK) {
@@ -2134,7 +2134,7 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
 }
 
 zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
-                                           uint64_t zero_end_offset, Guard<fbl::Mutex>* guard) {
+                                           uint64_t zero_end_offset, Guard<Mutex>* guard) {
   DEBUG_ASSERT(zero_start_offset < zero_end_offset);
   DEBUG_ASSERT(zero_end_offset <= PAGE_SIZE);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_base_offset));
@@ -2159,7 +2159,7 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
   // Need to actually zero out bytes in the page.
   return ReadWriteInternalLocked(
       page_base_offset + zero_start_offset, zero_end_offset - zero_start_offset, true,
-      [](void* dst, size_t offset, size_t len, Guard<fbl::Mutex>* guard) -> zx_status_t {
+      [](void* dst, size_t offset, size_t len, Guard<Mutex>* guard) -> zx_status_t {
         // We're memsetting the *kernel* address of an allocated page, so we know that this
         // cannot fault. memset may not be the most efficient, but we don't expect to be doing
         // this very often.
@@ -2170,7 +2170,7 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
 }
 
 zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_node_t* free_list,
-                                           Guard<fbl::Mutex>* guard) {
+                                           Guard<Mutex>* guard) {
   // Zeroing a range behaves as if it were an efficient zx_vmo_write. As we cannot write to uncached
   // vmo, we also cannot zero an uncahced vmo.
   if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
@@ -2391,7 +2391,7 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
 zx_status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return PinLocked(offset, len);
 }
 
@@ -2484,7 +2484,7 @@ void VmObjectPaged::UnpinPage(vm_page_t* page, uint64_t offset) {
 }
 
 void VmObjectPaged::Unpin(uint64_t offset, uint64_t len) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   UnpinLocked(offset, len);
 }
 
@@ -2769,7 +2769,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     return status;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // make sure everything is aligned before we get started
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
@@ -2864,7 +2864,7 @@ void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
 // again at the exact same offsets.
 template <typename T>
 zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, bool write,
-                                                   T copyfunc, Guard<fbl::Mutex>* guard) {
+                                                   T copyfunc, Guard<Mutex>* guard) {
   canary_.Assert();
 
   uint64_t end_offset;
@@ -2958,12 +2958,12 @@ zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len) {
   // read routine that just uses a memcpy
   char* ptr = reinterpret_cast<char*>(_ptr);
   auto read_routine = [ptr](const void* src, size_t offset, size_t len,
-                            Guard<fbl::Mutex>* guard) -> zx_status_t {
+                            Guard<Mutex>* guard) -> zx_status_t {
     memcpy(ptr + offset, src, len);
     return ZX_OK;
   };
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   return ReadWriteInternalLocked(offset, len, false, read_routine, &guard);
 }
@@ -2979,12 +2979,12 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
   // write routine that just uses a memcpy
   const char* ptr = reinterpret_cast<const char*>(_ptr);
   auto write_routine = [ptr](void* dst, size_t offset, size_t len,
-                             Guard<fbl::Mutex>* guard) -> zx_status_t {
+                             Guard<Mutex>* guard) -> zx_status_t {
     memcpy(dst, ptr + offset, len);
     return ZX_OK;
   };
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
@@ -2996,7 +2996,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // verify that the range is within the object
   if (unlikely(!InRange(offset, len, size_))) {
@@ -3057,7 +3057,7 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
 
   // read routine that uses copy_to_user
   auto read_routine = [ptr, current_aspace](const char* src, size_t offset, size_t len,
-                                            Guard<fbl::Mutex>* guard) -> zx_status_t {
+                                            Guard<Mutex>* guard) -> zx_status_t {
     auto copy_result = ptr.byte_offset(offset).copy_array_to_user_capture_faults(src, len);
 
     // If a fault has actually occurred, then we will have captured fault info that we can use to
@@ -3078,7 +3078,7 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     return copy_result.status == ZX_OK ? ZX_OK : ZX_ERR_NOT_FOUND;
   };
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   return ReadWriteInternalLocked(offset, len, false, read_routine, &guard);
 }
@@ -3089,7 +3089,7 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
 
   // write routine that uses copy_from_user
   auto write_routine = [ptr, &current_aspace](char* dst, size_t offset, size_t len,
-                                              Guard<fbl::Mutex>* guard) -> zx_status_t {
+                                              Guard<Mutex>* guard) -> zx_status_t {
     auto copy_result = ptr.byte_offset(offset).copy_array_from_user_capture_faults(dst, len);
 
     // If a fault has actually occurred, then we will have captured fault info that we can use to
@@ -3110,13 +3110,13 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     return copy_result.status == ZX_OK ? ZX_OK : ZX_ERR_NOT_FOUND;
   };
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
 
 zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
-  Guard<fbl::Mutex> src_guard{&lock_};
+  Guard<Mutex> src_guard{&lock_};
   uint64_t end;
   if (add_overflow(offset, len, &end) || size() < end) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -3150,7 +3150,7 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
 }
 
 zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   ASSERT(page_source_);
 
   uint64_t end;
@@ -3207,7 +3207,7 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
 }
 
 uint32_t VmObjectPaged::GetMappingCachePolicy() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   return cache_policy_;
 }
@@ -3218,7 +3218,7 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // conditions for allowing the cache policy to be set:
   // 1) vmo either has no pages committed currently or is transitioning from being cached

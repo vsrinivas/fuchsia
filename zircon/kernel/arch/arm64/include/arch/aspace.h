@@ -13,7 +13,7 @@
 
 #include <arch/arm64/mmu.h>
 #include <fbl/canary.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <vm/arch_vm_aspace.h>
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {

@@ -38,7 +38,7 @@ VmMapping::~VmMapping() {
 }
 
 fbl::RefPtr<VmObject> VmMapping::vmo() const {
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   return vmo_locked();
 }
 
@@ -85,7 +85,7 @@ zx_status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flag
 
   size = ROUNDUP(size, PAGE_SIZE);
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -126,7 +126,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
 
   DEBUG_ASSERT(object_);
   // grab the lock for the vmo
-  Guard<fbl::Mutex> guard{object_->lock()};
+  Guard<Mutex> guard{object_->lock()};
 
   // Persist our current caching mode
   new_arch_mmu_flags |= (arch_mmu_flags_ & ARCH_MMU_FLAG_CACHE_MASK);
@@ -228,7 +228,7 @@ zx_status_t VmMapping::Unmap(vaddr_t base, size_t size) {
     return ZX_ERR_BAD_STATE;
   }
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -264,7 +264,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
   // grab the lock for the vmo
   DEBUG_ASSERT(object_);
-  Guard<fbl::Mutex> guard{object_->lock()};
+  Guard<Mutex> guard{object_->lock()};
 
   // Check if unmapping from one of the ends
   if (base_ == base || base + size == base_ + size_) {
@@ -507,7 +507,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> aspace_guard{aspace_->lock()};
+  Guard<Mutex> aspace_guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -527,7 +527,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
   }
 
   // grab the lock for the vmo
-  Guard<fbl::Mutex> object_guard{object_->lock()};
+  Guard<Mutex> object_guard{object_->lock()};
 
   // set the currently faulting flag for any recursive calls the vmo may make back into us.
   DEBUG_ASSERT(!currently_faulting_);
@@ -570,7 +570,7 @@ zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
   canary_.Assert();
   LTRACEF("%p [%#zx+%#zx], offset %#zx, len %#zx\n", this, base_, size_, offset, len);
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -612,7 +612,7 @@ zx_status_t VmMapping::DestroyLocked() {
 
   // grab the object lock and remove ourself from its list
   {
-    Guard<fbl::Mutex> guard{object_->lock()};
+    Guard<Mutex> guard{object_->lock()};
     object_->RemoveMappingLocked(this);
   }
 
@@ -668,7 +668,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
   }
 
   // grab the lock for the vmo
-  Guard<fbl::Mutex> guard{object_->lock()};
+  Guard<Mutex> guard{object_->lock()};
 
   // set the currently faulting flag for any recursive calls the vmo may make back into us
   // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
@@ -791,6 +791,6 @@ void VmMapping::ActivateLocked() {
 }
 
 void VmMapping::Activate() {
-  Guard<fbl::Mutex> guard{object_->lock()};
+  Guard<Mutex> guard{object_->lock()};
   ActivateLocked();
 }

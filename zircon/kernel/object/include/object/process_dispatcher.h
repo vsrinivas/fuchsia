@@ -13,12 +13,12 @@
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/brwlock.h>
 #include <kernel/event.h>
+#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>
 #include <ktl/forward.h>

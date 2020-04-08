@@ -104,7 +104,7 @@ zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const ui
                                           size_t* actual) TA_NO_THREAD_SAFETY_ANALYSIS {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (!peer_)
     return ZX_ERR_PEER_CLOSED;
   return peer_->WriteSelfLocked(elem_size, ptr, count, actual);
@@ -178,7 +178,7 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
   if (count == 0)
     return ZX_ERR_OUT_OF_RANGE;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   uint32_t old_tail = tail_;
 

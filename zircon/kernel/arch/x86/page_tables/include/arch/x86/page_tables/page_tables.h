@@ -8,8 +8,8 @@
 #define ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_PAGE_TABLES_H_
 
 #include <fbl/canary.h>
-#include <fbl/mutex.h>
 #include <hwreg/bitfields.h>
+#include <kernel/mutex.h>
 // Needed for ARCH_MMU_FLAG_*
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>

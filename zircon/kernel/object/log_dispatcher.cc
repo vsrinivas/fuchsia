@@ -70,7 +70,7 @@ zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* a
   if (!(flags_ & ZX_LOG_FLAG_READABLE))
     return ZX_ERR_BAD_STATE;
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   zx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
   if (status == ZX_ERR_SHOULD_WAIT) {

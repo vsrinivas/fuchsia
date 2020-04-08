@@ -33,7 +33,7 @@ VmAddressRegionOrMapping::VmAddressRegionOrMapping(vaddr_t base, size_t size, ui
 zx_status_t VmAddressRegionOrMapping::Destroy() {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -87,7 +87,7 @@ bool VmAddressRegionOrMapping::is_valid_mapping_flags(uint arch_mmu_flags) {
 }
 
 size_t VmAddressRegionOrMapping::AllocatedPages() const {
-  Guard<fbl::Mutex> guard{aspace_->lock()};
+  Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return 0;
   }

@@ -59,7 +59,7 @@ ExceptionDispatcher::~ExceptionDispatcher() { kcounter_add(dispatcher_exception_
 bool ExceptionDispatcher::FillReport(zx_exception_report_t* report) const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   if (report_) {
     *report = *report_;
     return true;
@@ -70,7 +70,7 @@ bool ExceptionDispatcher::FillReport(zx_exception_report_t* report) const {
 void ExceptionDispatcher::SetTaskRights(zx_rights_t thread_rights, zx_rights_t process_rights) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   thread_rights_ = thread_rights;
   process_rights_ = process_rights;
 }
@@ -78,7 +78,7 @@ void ExceptionDispatcher::SetTaskRights(zx_rights_t thread_rights, zx_rights_t p
 zx_status_t ExceptionDispatcher::MakeThreadHandle(HandleOwner* handle) const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (thread_rights_ == 0) {
     return ZX_ERR_ACCESS_DENIED;
@@ -94,7 +94,7 @@ zx_status_t ExceptionDispatcher::MakeThreadHandle(HandleOwner* handle) const {
 zx_status_t ExceptionDispatcher::MakeProcessHandle(HandleOwner* handle) const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (process_rights_ == 0) {
     return ZX_ERR_ACCESS_DENIED;
@@ -118,14 +118,14 @@ void ExceptionDispatcher::on_zero_handles() {
 void ExceptionDispatcher::GetResumeThreadOnClose(bool* resume_on_close) const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   *resume_on_close = resume_on_close_;
 }
 
 void ExceptionDispatcher::SetResumeThreadOnClose(bool resume_on_close) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   resume_on_close_ = resume_on_close;
 }
 
@@ -152,7 +152,7 @@ zx_status_t ExceptionDispatcher::WaitForHandleClose() {
   }
 
   // Return the close action and reset it for next time.
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   status = resume_on_close_ ? ZX_OK : ZX_ERR_NEXT;
   resume_on_close_ = false;
   return status;
@@ -163,14 +163,14 @@ void ExceptionDispatcher::DiscardHandleClose() {
 
   response_event_.Unsignal();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   resume_on_close_ = false;
 }
 
 void ExceptionDispatcher::Clear() {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   report_ = nullptr;
   arch_context_ = nullptr;
 }

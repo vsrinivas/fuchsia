@@ -175,7 +175,7 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
 }
 
 void PinnedMemoryTokenDispatcher::Unpin() {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   explicitly_unpinned_ = true;
 
   // Unmap the memory prior to unpinning to prevent continued access.
@@ -195,7 +195,7 @@ void PinnedMemoryTokenDispatcher::InvalidateMappedAddrsLocked() {
 }
 
 void PinnedMemoryTokenDispatcher::on_zero_handles() {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   if (!explicitly_unpinned_ && initialized_) {
     // The user failed to call zx_pmt_unpin. Unmap the memory to prevent continued access, but leave
@@ -229,7 +229,7 @@ PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
 zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results, bool contiguous,
                                                      dev_vaddr_t* mapped_addrs,
                                                      size_t mapped_addrs_count) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   const fbl::Array<dev_vaddr_t>& pmo_addrs = mapped_addrs_;
   const size_t found_addrs = pmo_addrs.size();

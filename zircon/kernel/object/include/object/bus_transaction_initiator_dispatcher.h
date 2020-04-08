@@ -11,8 +11,8 @@
 
 #include <dev/iommu.h>
 #include <fbl/canary.h>
-#include <fbl/mutex.h>
 #include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/pinned_memory_token_dispatcher.h>

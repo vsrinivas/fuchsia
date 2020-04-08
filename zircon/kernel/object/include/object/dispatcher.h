@@ -18,12 +18,12 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/mutex.h>
 #include <fbl/recycler.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <ktl/move.h>
 #include <ktl/type_traits.h>
@@ -201,7 +201,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   zx_signals_t GetSignalsStateLocked() const TA_REQ(get_lock()) { return signals_; }
 
   // Dispatcher subtypes should use this lock to protect their internal state.
-  virtual Lock<fbl::Mutex>* get_lock() const = 0;
+  virtual Lock<Mutex>* get_lock() const = 0;
 
  private:
   friend class fbl::Recyclable<Dispatcher>;
@@ -329,7 +329,7 @@ class PeeredDispatcher : public Dispatcher {
     if ((set_mask & ~allowed_signals) || (clear_mask & ~allowed_signals))
       return ZX_ERR_INVALID_ARGS;
 
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
 
     UpdateStateLocked(clear_mask, set_mask);
     return ZX_OK;
@@ -341,7 +341,7 @@ class PeeredDispatcher : public Dispatcher {
     if ((set_mask & ~allowed_signals) || (clear_mask & ~allowed_signals))
       return ZX_ERR_INVALID_ARGS;
 
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     // object_signal() may race with handle_close() on another thread.
     if (!peer_)
       return ZX_ERR_PEER_CLOSED;
@@ -353,7 +353,7 @@ class PeeredDispatcher : public Dispatcher {
   // |void on_zero_handles_locked()|. The peer lifetime management
   // (i.e. the peer zeroing) is centralized here.
   void on_zero_handles() final TA_NO_THREAD_SAFETY_ANALYSIS {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     auto peer = ktl::move(peer_);
     static_cast<Self*>(this)->on_zero_handles_locked();
 
@@ -370,11 +370,11 @@ class PeeredDispatcher : public Dispatcher {
   // Returns true if the peer has closed. Once the peer has closed it
   // will never re-open.
   bool PeerHasClosed() const {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     return peer_ == nullptr;
   }
 
-  Lock<fbl::Mutex>* get_lock() const final { return holder_->get_lock(); }
+  Lock<Mutex>* get_lock() const final { return holder_->get_lock(); }
 
  protected:
   const fbl::Canary<CanaryTag<Self>::magic> canary_;

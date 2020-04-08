@@ -12,7 +12,7 @@
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 

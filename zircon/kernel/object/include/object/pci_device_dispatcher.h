@@ -17,10 +17,10 @@
 #include <dev/pcie_device.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>

@@ -11,7 +11,6 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/event.h>

@@ -95,13 +95,13 @@ done_add:
 }
 
 size_t PmmNode::NumArenas() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return arena_list_.size();
 }
 
 zx_status_t PmmNode::GetArenaInfo(size_t count, uint64_t i, pmm_arena_info_t* buffer,
                                   size_t buffer_size) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if ((count == 0) || (count + i > arena_list_.size()) || (i >= arena_list_.size())) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -143,7 +143,7 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void PmmNode::FillFreePages() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (!free_fill_enabled_) {
     return;
@@ -157,7 +157,7 @@ void PmmNode::FillFreePages() {
 }
 
 void PmmNode::CheckAllFreePages() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (!checker_.IsArmed()) {
     return;
@@ -168,12 +168,12 @@ void PmmNode::CheckAllFreePages() {
 }
 
 void PmmNode::EnableChecker() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   free_fill_enabled_ = true;
 }
 
 void PmmNode::DisableChecker() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   checker_.Disarm();
   free_fill_enabled_ = false;
 }
@@ -192,7 +192,7 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
 }
 
 zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* pa_out) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (unlikely(InOomStateLocked())) {
     if (alloc_flags & PMM_ALLOC_DELAY_OK) {
@@ -238,7 +238,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     return status;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   if (unlikely(count > free_count_)) {
     return ZX_ERR_NO_MEMORY;
@@ -285,7 +285,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
   address = ROUNDDOWN(address, PAGE_SIZE);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // walk through the arenas, looking to see if the physical page belongs to it
   for (auto& a : arena_list_) {
@@ -339,7 +339,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
   DEBUG_ASSERT(pa);
   DEBUG_ASSERT(list);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   for (auto& a : arena_list_) {
     vm_page_t* p = a.FindFreeContiguous(count, alignment_log2);
@@ -386,7 +386,7 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
 }
 
 void PmmNode::FreePage(vm_page* page) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   // pages freed individually shouldn't be in a queue
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
@@ -417,7 +417,7 @@ void PmmNode::FreeListLocked(list_node* list) {
 }
 
 void PmmNode::FreeList(list_node* list) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   FreeListLocked(list);
 }
@@ -425,7 +425,7 @@ void PmmNode::FreeList(list_node* list) {
 void PmmNode::AllocPages(uint alloc_flags, page_request_t* req) {
   kcounter_add(pmm_alloc_async, 1);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   list_add_tail(&request_list_, &req->provider_node);
 
   request_evt_.SignalNoResched();
@@ -445,7 +445,7 @@ bool PmmNode::InOomStateLocked() {
 }
 
 bool PmmNode::ClearRequest(page_request_t* req) {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   bool res;
   if (list_in_list(&req->provider_node)) {
     // Get rid of our reference to the request and let the client know that we
@@ -473,7 +473,7 @@ void PmmNode::SwapRequest(page_request_t* old, page_request_t* new_req) {
   DEBUG_ASSERT(old->drop_ref_cb == new_req->drop_ref_cb);
   DEBUG_ASSERT(old->pages_available_cb == new_req->pages_available_cb);
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   new_req->length = old->length;
   new_req->offset = old->offset;
@@ -486,7 +486,7 @@ void PmmNode::SwapRequest(page_request_t* old, page_request_t* new_req) {
 }
 
 void PmmNode::ProcessPendingRequests() {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   page_request* node = nullptr;
   while ((node = list_peek_head_type(&request_list_, page_request, provider_node)) &&
          mem_avail_state_cur_index_) {
@@ -551,7 +551,7 @@ void PmmNode::Dump(bool is_panic) const {
   if (is_panic) {
     dump();
   } else {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     dump();
   }
 }
@@ -575,7 +575,7 @@ zx_status_t PmmNode::InitReclamation(const uint64_t* watermarks, uint8_t waterma
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   uint64_t tmp[MAX_WATERMARK_COUNT];
   uint64_t tmp_debounce = fbl::round_up(debounce, static_cast<uint64_t>(PAGE_SIZE)) / PAGE_SIZE;
@@ -649,7 +649,7 @@ void PmmNode::SetMemAvailStateLocked(uint8_t mem_avail_state) {
 }
 
 void PmmNode::DumpMemAvailState() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
 
   char str[32];
   printf("watermarks: [");
@@ -669,7 +669,7 @@ void PmmNode::DumpMemAvailState() const {
 }
 
 uint64_t PmmNode::DebugNumPagesTillMemState(uint8_t mem_state_idx) const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   if (mem_avail_state_cur_index_ <= mem_state_idx) {
     // Already in mem_state_idx, or in a state with less available memory than mem_state_idx.
     return 0;
@@ -682,7 +682,7 @@ uint64_t PmmNode::DebugNumPagesTillMemState(uint8_t mem_state_idx) const {
 }
 
 uint8_t PmmNode::DebugMaxMemAvailState() const {
-  Guard<fbl::Mutex> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return mem_avail_state_watermark_count_;
 }
 
