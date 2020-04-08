@@ -694,8 +694,7 @@ where
             }
         }
 
-        if let Err(e) = writeln!(self.writer, "{}", self.decorator.decorate(line)) {
-            println!("log_listener: not able to write logs: {:?}", e);
+        if let Err(_) = writeln!(self.writer, "{}", self.decorator.decorate(line)) {
             process::exit(1);
         }
 
