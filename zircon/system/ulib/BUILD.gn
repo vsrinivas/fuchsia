@@ -422,7 +422,6 @@ group("ulib") {
     "tee-client-api:tee-client-api-static",
 #------------------
 #------------------
-    "test-exceptions",
 #------------------
 #------------------
     "test-utils",

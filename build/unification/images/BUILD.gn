@@ -211,7 +211,6 @@ aggregate_manifest("legacy-aux") {
     "tee-client-api",
 #------------------
 #------------------
-    "test-exceptions",
 #------------------
 #------------------
     "trace-engine",
