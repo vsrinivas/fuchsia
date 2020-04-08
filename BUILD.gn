@@ -434,6 +434,7 @@ group("tool_paths.metadata") {
     "//prebuilt/third_party/dart/$host_platform/bin/dartfmt",
     "//prebuilt/third_party/yapf/yapf",
     "//prebuilt/third_party/dart/$host_platform/bin/dart",
+    "//third_party/catapult/tracing/bin/trace2html",
   ]
   metadata = {
     tool_paths = []
