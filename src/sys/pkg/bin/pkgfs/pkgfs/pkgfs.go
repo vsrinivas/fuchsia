@@ -39,7 +39,6 @@ type Filesystem struct {
 	mountInfo                               mountInfo
 	mountTime                               time.Time
 	allowedNonStaticPackages                *allowlist.Allowlist
-	logNonBaseExecutableOpens               bool
 	enforceNonBaseExecutabilityRestrictions bool
 }
 
@@ -58,7 +57,6 @@ func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool, e
 		mountInfo: mountInfo{
 			parentFd: -1,
 		},
-		logNonBaseExecutableOpens:               true,
 		enforceNonBaseExecutabilityRestrictions: enforceNonBaseExecutabilityRestrictions,
 	}
 
@@ -226,10 +224,9 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	f.retrievePackagesAllowlist(pd)
 
 	// If the marker blob is known (even if it doesn't exist in blobfs),
-	// silently disable logging and enforcement of executability
-	// restrictions.
+	// silently disable enforcement of executability restrictions.
 	if _, ok := pd.getBlobFor(disableExecutabilityEnforcementPath); ok {
-		f.logNonBaseExecutableOpens = false
+		f.enforceNonBaseExecutabilityRestrictions = false
 	}
 
 	return nil

@@ -23,7 +23,7 @@ func Main() {
 		enforcePkgfsPackagesNonStaticAllowlist = flag.Bool("enforcePkgfsPackagesNonStaticAllowlist",
 			true,
 			"Whether to enforce the allowlist of non-static packages allowed to appear in /pkgfs/packages")
-		enforceNonBaseExecutabilityRestrictions = flag.Bool("enforceNonBaseExecutabilityRestrictions", false,
+		enforceNonBaseExecutabilityRestrictions = flag.Bool("enforceNonBaseExecutabilityRestrictions", true,
 			"Whether to enforce the restrictions to executability of files in packages to just packages in base or the allowlist")
 	)
 

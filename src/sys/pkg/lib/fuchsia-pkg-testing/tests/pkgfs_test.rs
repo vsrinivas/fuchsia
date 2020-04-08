@@ -1571,6 +1571,26 @@ async fn executability_enforcement_blocks_cache_package() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn executability_enforcement_defaults_to_on() {
+    let pkg = executable_package().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .enforce_packages_non_static_allowlist(false)
+        .start()
+        .unwrap();
+
+    verify_executable_package_rights(&pkgfs, &pkg, Executability::BlockExecute).await;
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn executability_enforcement_allows_allowlisted_package() {
     let pkg = executable_package().await;
     let system_image_package = SystemImageBuilder::new()

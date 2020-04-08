@@ -194,12 +194,9 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 			}
 
 			// TODO(48930) Remove this temporary feature when possible.
-			if !d.executable && d.fs.logNonBaseExecutableOpens {
-				log.Printf("pkgfs: attempted executable open of %s, but this will soon not be allowed due to executability restrictions in pkgfs. See fxb/48902", name)
-
-				if d.fs.enforceNonBaseExecutabilityRestrictions {
-					return nil, nil, nil, fs.ErrPermission
-				}
+			if !d.executable && d.fs.enforceNonBaseExecutabilityRestrictions {
+				log.Printf("pkgfs: attempted executable open of %s. This is not allowed due to executability restrictions in pkgfs. See fxbug.dev/48902", name)
+				return nil, nil, nil, fs.ErrPermission
 			}
 		}
 		return nil, nil, &fs.Remote{Channel: d.fs.blobfs.Channel(), Path: root.blobId, Flags: flags}, nil
