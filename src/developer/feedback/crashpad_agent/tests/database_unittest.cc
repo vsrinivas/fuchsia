@@ -103,7 +103,7 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
 
     ASSERT_TRUE(SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb));
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
   }
 

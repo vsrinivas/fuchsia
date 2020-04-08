@@ -29,21 +29,21 @@ class UTCTimeProviderTest : public UnitTestFixture {
   }
 
  protected:
-  void SetUpUtcProvider(const std::vector<UtcProvider::Response>& responses) {
-    stub_utc_provider_ = std::make_unique<stubs::UtcProvider>(dispatcher(), responses);
-    InjectServiceProvider(stub_utc_provider_.get());
+  void SetUpUtcProviderServer(const std::vector<UtcProvider::Response>& responses) {
+    utc_provider_server_ = std::make_unique<stubs::UtcProvider>(dispatcher(), responses);
+    InjectServiceProvider(utc_provider_server_.get());
   }
 
  private:
   timekeeper::TestClock clock_;
-  std::unique_ptr<stubs::UtcProviderBase> stub_utc_provider_;
+  std::unique_ptr<stubs::UtcProviderBase> utc_provider_server_;
 
  protected:
   std::unique_ptr<UTCTimeProvider> utc_provider_;
 };
 
 TEST_F(UTCTimeProviderTest, Check_ReturnsExternal) {
-  SetUpUtcProvider({
+  SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kExternal),
   });
   RunLoopUntilIdle();
@@ -56,7 +56,7 @@ TEST_F(UTCTimeProviderTest, Check_ReturnsBackstop) {
   // Upon receiving "backstop", |utc_provider_| will make another call to the stub so we need an
   // extra response. We use "no_response" so that |utc_provider_| just waits and doesn't make any
   // more calls.
-  SetUpUtcProvider({
+  SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kBackstop),
       UtcProvider::Response(UtcProvider::Response::Value::kNoResponse),
   });
@@ -66,7 +66,7 @@ TEST_F(UTCTimeProviderTest, Check_ReturnsBackstop) {
 }
 
 TEST_F(UTCTimeProviderTest, Check_ServerNeverResponds) {
-  SetUpUtcProvider({
+  SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kNoResponse),
   });
   RunLoopUntilIdle();
@@ -79,7 +79,7 @@ TEST_F(UTCTimeProviderTest, Check_ServerNeverResponds) {
 
 TEST_F(UTCTimeProviderTest, Check_MultipleCalls) {
   constexpr zx::duration kDelay = zx::msec(5);
-  SetUpUtcProvider({
+  SetUpUtcProviderServer({
       UtcProvider::Response(UtcProvider::Response::Value::kBackstop, kDelay),
       UtcProvider::Response(UtcProvider::Response::Value::kExternal, kDelay),
   });

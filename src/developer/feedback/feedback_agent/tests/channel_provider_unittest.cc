@@ -32,16 +32,15 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
   ChannelProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpChannelProviderServer(
-      std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server) {
-    channel_provider_server_ = std::move(channel_provider_server);
+  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+    channel_provider_server_ = std::move(server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
     }
   }
 
   std::optional<std::string> GetCurrentChannel(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     ChannelProvider provider(dispatcher(), services(), timeout, &cobalt);

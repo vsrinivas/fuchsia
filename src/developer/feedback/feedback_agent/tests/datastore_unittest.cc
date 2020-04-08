@@ -70,7 +70,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
         device_id_provider_(kDeviceIdPath) {}
 
   void SetUp() override {
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt_ = std::make_unique<Cobalt>(dispatcher(), services());
   }
 
@@ -82,39 +82,39 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
                                     attachment_allowlist, &device_id_provider_);
   }
 
-  void SetUpBoardProvider(std::unique_ptr<stubs::BoardInfoProviderBase> board_provider) {
-    board_provider_ = std::move(board_provider);
-    if (board_provider_) {
-      InjectServiceProvider(board_provider_.get());
+  void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
+    board_provider_server_ = std::move(server);
+    if (board_provider_server_) {
+      InjectServiceProvider(board_provider_server_.get());
     }
   }
 
-  void SetUpChannelProvider(std::unique_ptr<stubs::ChannelProviderBase> channel_provider) {
-    channel_provider_ = std::move(channel_provider);
-    if (channel_provider_) {
-      InjectServiceProvider(channel_provider_.get());
+  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+    channel_provider_server_ = std::move(server);
+    if (channel_provider_server_) {
+      InjectServiceProvider(channel_provider_server_.get());
     }
   }
 
-  void SetUpInspect(const std::string& inspect_chunk) {
-    inspect_archive_ = std::make_unique<stubs::InspectArchive>(
+  void SetUpInspectServer(const std::string& inspect_chunk) {
+    inspect_server_ = std::make_unique<stubs::InspectArchive>(
         std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({
             {inspect_chunk},
             {},
         })));
-    InjectServiceProvider(inspect_archive_.get());
+    InjectServiceProvider(inspect_server_.get());
   }
 
-  void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    logger_.reset(new stubs::Logger());
-    logger_->set_messages(messages);
-    InjectServiceProvider(logger_.get());
+  void SetUpLoggerServer(const std::vector<fuchsia::logger::LogMessage>& messages) {
+    logger_server_.reset(new stubs::Logger());
+    logger_server_->set_messages(messages);
+    InjectServiceProvider(logger_server_.get());
   }
 
-  void SetUpProductProvider(std::unique_ptr<stubs::ProductInfoProviderBase> product_provider) {
-    product_provider_ = std::move(product_provider);
-    if (product_provider_) {
-      InjectServiceProvider(product_provider_.get());
+  void SetUpProductProviderServer(std::unique_ptr<stubs::ProductInfoProviderBase> server) {
+    product_provider_server_ = std::move(server);
+    if (product_provider_server_) {
+      InjectServiceProvider(product_provider_server_.get());
     }
   }
 
@@ -168,12 +168,12 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<Cobalt> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 
-  // Stubs.
-  std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_;
-  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_;
-  std::unique_ptr<stubs::InspectArchiveBase> inspect_archive_;
-  std::unique_ptr<stubs::Logger> logger_;
-  std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_;
+  // Stubs servers.
+  std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
+  std::unique_ptr<stubs::Logger> logger_server_;
+  std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
 
 TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
@@ -205,7 +205,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
   fuchsia::hwinfo::BoardInfo info;
   info.set_name("my-board-name");
   info.set_revision("my-revision");
-  SetUpBoardProvider(std::make_unique<stubs::BoardInfoProvider>(std::move(info)));
+  SetUpBoardProviderServer(std::make_unique<stubs::BoardInfoProvider>(std::move(info)));
   SetUpDatastore(
       {
           kAnnotationHardwareBoardName,
@@ -224,8 +224,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Channel) {
-  auto channel_provider = std::make_unique<stubs::ChannelProvider>("my-channel");
-  SetUpChannelProvider(std::move(channel_provider));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("my-channel"));
   SetUpDatastore({kAnnotationChannel}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
   ::fit::result<Annotations> annotations = GetAnnotations();
@@ -271,7 +270,7 @@ TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
     locales.back().id = locale;
   }
   info.set_locale_list(locales);
-  SetUpProductProvider(std::make_unique<stubs::ProductInfoProvider>(std::move(info)));
+  SetUpProductProviderServer(std::make_unique<stubs::ProductInfoProvider>(std::move(info)));
   SetUpDatastore(
       {
           kAnnotationHardwareProductLanguage,
@@ -380,7 +379,7 @@ TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
 TEST_F(DatastoreTest, GetAttachments_Inspect) {
   // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
   // here to check that we are attaching the Inspect data.
-  SetUpInspect("foo");
+  SetUpInspectServer("foo");
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentInspect});
 
   ::fit::result<Attachments> attachments = GetAttachments();
@@ -429,7 +428,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
 TEST_F(DatastoreTest, GetAttachments_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
-  SetUpLogger({
+  SetUpLoggerServer({
       stubs::BuildLogMessage(FX_LOG_INFO, "log message",
                              /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });

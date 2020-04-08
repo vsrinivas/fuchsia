@@ -39,7 +39,7 @@ class FeedbackAgentTest : public UnitTestFixture, public CobaltTestFixture {
   FeedbackAgentTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
   void SetUp() {
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
     inspector_ = std::make_unique<inspect::Inspector>();
     feedback_agent_ = FeedbackAgent::TryCreate(dispatcher(), services(), &inspector_->GetRoot());

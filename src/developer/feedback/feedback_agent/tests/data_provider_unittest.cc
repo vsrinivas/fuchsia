@@ -147,7 +147,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     clock_ = new timekeeper::TestClock();
     cobalt_ = std::make_unique<Cobalt>(dispatcher(), services(),
                                        std::unique_ptr<timekeeper::TestClock>(clock_));
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   }
 
  protected:
@@ -160,10 +160,10 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
         std::make_unique<DataProvider>(dispatcher(), services(), cobalt_.get(), datastore_.get());
   }
 
-  void SetUpScenic(std::unique_ptr<stubs::Scenic> scenic) {
-    scenic_ = std::move(scenic);
-    if (scenic_) {
-      InjectServiceProvider(scenic_.get());
+  void SetUpScenicServer(std::unique_ptr<stubs::Scenic> server) {
+    scenic_server_ = std::move(server);
+    if (scenic_server_) {
+      InjectServiceProvider(scenic_server_.get());
     }
   }
 
@@ -204,10 +204,10 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
   }
 
-  uint64_t total_num_scenic_bindings() { return scenic_->total_num_bindings(); }
-  size_t current_num_scenic_bindings() { return scenic_->current_num_bindings(); }
+  uint64_t total_num_scenic_bindings() { return scenic_server_->total_num_bindings(); }
+  size_t current_num_scenic_bindings() { return scenic_server_->current_num_bindings(); }
   const std::vector<stubs::TakeScreenshotResponse>& get_scenic_responses() const {
-    return scenic_->take_screenshot_responses();
+    return scenic_server_->take_screenshot_responses();
   }
 
  private:
@@ -221,7 +221,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<DataProvider> data_provider_;
 
  private:
-  std::unique_ptr<stubs::Scenic> scenic_;
+  std::unique_ptr<stubs::Scenic> scenic_server_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -230,7 +230,7 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   scenic_responses.emplace_back(stubs::CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
   auto scenic = std::make_unique<stubs::Scenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(scenic));
+  SetUpScenicServer(std::move(scenic));
   SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
@@ -264,7 +264,7 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
   scenic_responses.emplace_back(stubs::CreateEmptyScreenshot(), kFailure);
   auto scenic = std::make_unique<stubs::Scenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(scenic));
+  SetUpScenicServer(std::move(scenic));
   SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
@@ -277,7 +277,7 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) 
   scenic_responses.emplace_back(stubs::CreateNonBGRA8Screenshot(), kSuccess);
   auto scenic = std::make_unique<stubs::Scenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(scenic));
+  SetUpScenicServer(std::move(scenic));
   SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
@@ -298,7 +298,7 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   ASSERT_EQ(scenic_responses.size(), num_calls);
   auto scenic = std::make_unique<stubs::Scenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(scenic));
+  SetUpScenicServer(std::move(scenic));
   SetUpDataProvider();
 
   std::vector<GetScreenshotResponse> feedback_responses;
@@ -339,7 +339,7 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
 
 TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
   // We use a stub that always returns false as we are not interested in the responses.
-  SetUpScenic(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
+  SetUpScenicServer(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
   SetUpDataProvider();
 
   const size_t num_calls = 5u;

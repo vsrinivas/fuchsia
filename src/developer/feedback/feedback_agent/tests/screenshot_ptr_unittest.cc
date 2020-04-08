@@ -35,15 +35,15 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   TakeScreenshotTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpScreenshotProvider(std::unique_ptr<stubs::Scenic> screenshot_provider) {
-    screenshot_provider_ = std::move(screenshot_provider);
-    if (screenshot_provider_) {
-      InjectServiceProvider(screenshot_provider_.get());
+  void SetUpScenicServer(std::unique_ptr<stubs::Scenic> server) {
+    scenic_server_ = std::move(server);
+    if (scenic_server_) {
+      InjectServiceProvider(scenic_server_.get());
     }
   }
 
   ::fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     ::fit::result<ScreenshotData> result;
@@ -57,17 +57,17 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::Scenic> screenshot_provider_;
+  std::unique_ptr<stubs::Scenic> scenic_server_;
 };
 
 TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   const size_t image_dim_in_px = 100;
-  std::vector<stubs::TakeScreenshotResponse> screenshot_provider_responses;
-  screenshot_provider_responses.emplace_back(stubs::CreateCheckerboardScreenshot(image_dim_in_px),
-                                             kSuccess);
+  std::vector<stubs::TakeScreenshotResponse> scenic_server_responses;
+  scenic_server_responses.emplace_back(stubs::CreateCheckerboardScreenshot(image_dim_in_px),
+                                       kSuccess);
   std::unique_ptr<stubs::Scenic> scenic = std::make_unique<stubs::Scenic>();
-  scenic->set_take_screenshot_responses(std::move(screenshot_provider_responses));
-  SetUpScreenshotProvider(std::move(scenic));
+  scenic->set_take_screenshot_responses(std::move(scenic_server_responses));
+  SetUpScenicServer(std::move(scenic));
 
   ::fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -81,7 +81,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
-  SetUpScreenshotProvider(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
+  SetUpScenicServer(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
 
   ::fit::result<ScreenshotData> result = TakeScreenshot();
 

@@ -50,10 +50,10 @@ class RebootLogHandlerTest : public UnitTestFixture,
   RebootLogHandlerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpCrashReporter(std::unique_ptr<stubs::CrashReporterBase> crash_reporter) {
-    crash_reporter_ = std::move(crash_reporter);
-    if (crash_reporter_) {
-      InjectServiceProvider(crash_reporter_.get());
+  void SetUpCrashReporterServer(std::unique_ptr<stubs::CrashReporterBase> server) {
+    crash_reporter_server_ = std::move(server);
+    if (crash_reporter_server_) {
+      InjectServiceProvider(crash_reporter_server_.get());
     }
   }
 
@@ -76,7 +76,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   async::Executor executor_;
 
  protected:
-  std::unique_ptr<stubs::CrashReporterBase> crash_reporter_;
+  std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
   std::string reboot_log_path_;
 
  private:
@@ -157,11 +157,12 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   const auto param = GetParam();
 
   WriteRebootLogContents(param.input_reboot_log);
-  SetUpCrashReporter(std::make_unique<stubs::CrashReporter>());
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporter>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   // TODO(49481): Stop casting once we set expectations for the crash reporter in the constructor.
-  stubs::CrashReporter* crash_reporter = static_cast<stubs::CrashReporter*>(crash_reporter_.get());
+  stubs::CrashReporter* crash_reporter =
+      static_cast<stubs::CrashReporter*>(crash_reporter_server_.get());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
@@ -174,7 +175,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
 
 TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
   WriteRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002");
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
@@ -183,7 +184,7 @@ TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
 }
 
 TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
@@ -192,7 +193,7 @@ TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
 }
 
 TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   WriteRebootLogContents("");
   EXPECT_EQ(HandleRebootLog().state(), kError);
 
@@ -201,8 +202,8 @@ TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   WriteRebootLogContents();
-  SetUpCrashReporter(nullptr);
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCrashReporterServer(nullptr);
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
@@ -212,8 +213,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
   WriteRebootLogContents();
-  SetUpCrashReporter(std::make_unique<stubs::CrashReporterClosesConnection>());
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterClosesConnection>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
@@ -223,8 +224,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
   WriteRebootLogContents();
-  SetUpCrashReporter(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);

@@ -22,23 +22,25 @@ class CobaltTestFixture {
   CobaltTestFixture(UnitTestFixture* unit_test_fixture) : unit_test_fixture_(unit_test_fixture) {}
 
  protected:
-  void SetUpCobaltLoggerFactory(std::unique_ptr<stubs::CobaltLoggerFactoryBase> logger_factory) {
-    logger_factory_ = std::move(logger_factory);
-    if (logger_factory_ && unit_test_fixture_) {
-      unit_test_fixture_->InjectServiceProvider(logger_factory_.get());
+  void SetUpCobaltServer(std::unique_ptr<stubs::CobaltLoggerFactoryBase> server) {
+    logger_factory_server_ = std::move(server);
+    if (logger_factory_server_ && unit_test_fixture_) {
+      unit_test_fixture_->InjectServiceProvider(logger_factory_server_.get());
     }
   }
 
-  const std::vector<CobaltEvent>& ReceivedCobaltEvents() const { return logger_factory_->Events(); }
+  const std::vector<CobaltEvent>& ReceivedCobaltEvents() const {
+    return logger_factory_server_->Events();
+  }
 
-  bool WasLogEventCalled() { return logger_factory_->WasLogEventCalled(); }
-  bool WasLogEventCountCalled() { return logger_factory_->WasLogEventCountCalled(); }
+  bool WasLogEventCalled() { return logger_factory_server_->WasLogEventCalled(); }
+  bool WasLogEventCountCalled() { return logger_factory_server_->WasLogEventCountCalled(); }
 
-  void CloseFactoryConnection() { logger_factory_->CloseConnection(); }
-  void CloseLoggerConnection() { logger_factory_->CloseLoggerConnection(); }
+  void CloseFactoryConnection() { logger_factory_server_->CloseConnection(); }
+  void CloseLoggerConnection() { logger_factory_server_->CloseLoggerConnection(); }
 
  private:
-  std::unique_ptr<stubs::CobaltLoggerFactoryBase> logger_factory_;
+  std::unique_ptr<stubs::CobaltLoggerFactoryBase> logger_factory_server_;
   UnitTestFixture* unit_test_fixture_;
 };
 

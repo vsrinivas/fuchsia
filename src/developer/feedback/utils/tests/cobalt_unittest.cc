@@ -65,7 +65,7 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
 };
 
 TEST_F(CobaltTest, Check_Log) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   for (size_t i = 0; i < 5; ++i) {
     LogCount();
@@ -80,7 +80,7 @@ TEST_F(CobaltTest, Check_Timer) {
   constexpr zx::time kStartTime(0);
   constexpr zx::time kEndTime(kStartTime + zx::usec(5));
 
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   clock_->Set(kStartTime);
   const uint64_t timer_id = cobalt_->StartTimer();
@@ -98,7 +98,7 @@ TEST_F(CobaltTest, Check_Timer) {
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   CloseLoggerConnection();
 
@@ -112,7 +112,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   for (size_t i = 0; i < 5; ++i) {
     LogOccurrence();
@@ -136,7 +136,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
 
 TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
   auto stub_logger = std::make_unique<stubs::CobaltLoggerIgnoresFirstEvents>(5u);
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>(std::move(stub_logger)));
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>(std::move(stub_logger)));
 
   for (size_t i = 0; i < 5; ++i) {
     LogOccurrence();
@@ -155,7 +155,7 @@ TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
 }
 
 TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   CloseLoggerConnection();
 
@@ -175,8 +175,7 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
 
 TEST_F(CobaltTest, Check_ExponentialBackoff) {
   constexpr uint64_t num_attempts = 10u;
-  SetUpCobaltLoggerFactory(
-      std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
   CloseLoggerConnection();
 
   // We need to conservatively approximate the exponential backoff used by |logger_| so we don't
@@ -202,8 +201,7 @@ TEST_F(CobaltTest, Check_LoopOutlivesCobalt) {
   // fuchsia.cobalt/Logger and then is freed. This test should trigger ASAN if the task is not
   // cancelled.
   constexpr uint64_t num_attempts = 10u;
-  SetUpCobaltLoggerFactory(
-      std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
   CloseLoggerConnection();
 
   zx::duration delay = kLoggerBackoffInitialDelay;

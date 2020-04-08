@@ -88,7 +88,7 @@ class QueueTest : public UnitTestFixture, CobaltTestFixture {
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
 
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProvider();
     RunLoopUntilIdle();
   }

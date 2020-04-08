@@ -36,15 +36,15 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpLogger(std::unique_ptr<stubs::LoggerBase> logger) {
-    logger_ = std::move(logger);
-    if (logger_) {
-      InjectServiceProvider(logger_.get());
+  void SetUpLoggerServer(std::unique_ptr<stubs::LoggerBase> server) {
+    logger_server_ = std::move(server);
+    if (logger_server_) {
+      InjectServiceProvider(logger_server_.get());
     }
   }
 
   ::fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     ::fit::result<AttachmentValue> result;
@@ -58,7 +58,7 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
  private:
   async::Executor executor_;
 
-  std::unique_ptr<stubs::LoggerBase> logger_;
+  std::unique_ptr<stubs::LoggerBase> logger_server_;
 };
 
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
@@ -75,7 +75,7 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
       stubs::BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(8),
                              /*tags=*/{"foo", "bar"}),
   });
-  SetUpLogger(std::move(logger));
+  SetUpLoggerServer(std::move(logger));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -100,7 +100,7 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
-  SetUpLogger(std::move(logger));
+  SetUpLoggerServer(std::move(logger));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -123,7 +123,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
-  SetUpLogger(std::move(logger));
+  SetUpLoggerServer(std::move(logger));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog(log_collection_timeout);
 
@@ -142,7 +142,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
-  SetUpLogger(std::make_unique<stubs::Logger>());
+  SetUpLoggerServer(std::make_unique<stubs::Logger>());
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -150,7 +150,7 @@ TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
-  SetUpLogger(nullptr);
+  SetUpLoggerServer(nullptr);
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -158,7 +158,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
-  SetUpLogger(std::make_unique<stubs::LoggerClosesConnection>());
+  SetUpLoggerServer(std::make_unique<stubs::LoggerClosesConnection>());
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -166,7 +166,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
-  SetUpLogger(std::make_unique<stubs::LoggerNeverBindsToLogListener>());
+  SetUpLoggerServer(std::make_unique<stubs::LoggerNeverBindsToLogListener>());
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -174,7 +174,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
-  SetUpLogger(std::make_unique<stubs::LoggerNeverCallsLogManyBeforeDone>());
+  SetUpLoggerServer(std::make_unique<stubs::LoggerNeverCallsLogManyBeforeDone>());
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -182,7 +182,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
 }
 
 TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
-  SetUpLogger(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
+  SetUpLoggerServer(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
@@ -205,7 +205,7 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   });
   InjectServiceProvider(logger.get());
 
-  SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can

@@ -36,15 +36,15 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  void SetUpInspect(std::unique_ptr<stubs::InspectArchiveBase> inspect_archive) {
-    inspect_archive_ = std::move(inspect_archive);
-    if (inspect_archive_) {
-      InjectServiceProvider(inspect_archive_.get());
+  void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
+    inspect_server_ = std::move(server);
+    if (inspect_server_) {
+      InjectServiceProvider(inspect_server_.get());
     }
   }
 
   ::fit::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltLoggerFactory(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     ::fit::result<AttachmentValue> result;
@@ -66,11 +66,11 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::InspectArchiveBase> inspect_archive_;
+  std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
 };
 
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
-  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({
           {"foo1", "foo2"},
           {"bar1"},
@@ -91,7 +91,7 @@ bar1
 }
 
 TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
-  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"}))));
 
@@ -108,7 +108,7 @@ foo2
 }
 
 TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
-  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
@@ -118,7 +118,7 @@ TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
-  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIteratorReturnsError>()));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
@@ -127,7 +127,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
-  SetUpInspect(std::make_unique<stubs::InspectArchive>(
+  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIteratorNeverResponds>()));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
@@ -137,7 +137,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
-  SetUpInspect(std::make_unique<stubs::InspectArchiveClosesIteratorConnection>());
+  SetUpInspectServer(std::make_unique<stubs::InspectArchiveClosesIteratorConnection>());
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());

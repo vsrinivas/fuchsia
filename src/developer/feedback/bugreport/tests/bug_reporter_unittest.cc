@@ -16,7 +16,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -39,10 +39,10 @@ class BugReporterTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  void SetUpDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
-    data_provider_ =
+  void SetUpDataProviderServer(fuchsia::feedback::Attachment attachment_bundle) {
+    data_provider_server_ =
         std::make_unique<stubs::DataProviderBundleAttachment>(std::move(attachment_bundle));
-    ASSERT_EQ(service_directory_provider_.AddService(data_provider_->GetHandler()), ZX_OK);
+    FX_CHECK(service_directory_provider_.AddService(data_provider_server_->GetHandler()) == ZX_OK);
   }
 
  private:
@@ -54,7 +54,7 @@ class BugReporterTest : public gtest::TestLoopFixture {
 
  private:
   // TODO(49481): Change this to DataProviderBase once DataProviderStubs have been refactored.
-  std::unique_ptr<stubs::DataProviderBundleAttachment> data_provider_;
+  std::unique_ptr<stubs::DataProviderBundleAttachment> data_provider_server_;
   files::ScopedTempDir tmp_dir_;
 };
 
@@ -64,7 +64,7 @@ TEST_F(BugReporterTest, Basic) {
   fuchsia::feedback::Attachment attachment_bundle;
   attachment_bundle.key = "unused";
   ASSERT_TRUE(fsl::VmoFromString(payload, &attachment_bundle.value));
-  SetUpDataProvider(std::move(attachment_bundle));
+  SetUpDataProviderServer(std::move(attachment_bundle));
 
   ASSERT_TRUE(
       MakeBugReport(service_directory_provider_.service_directory(), bugreport_path_.data()));
