@@ -44,15 +44,21 @@ class Inspect {
   Future<List<Map<String, dynamic>>> snapshot(List<String> selectors) async {
     final hierarchyList =
         await sl4f.request('diagnostics_facade.SnapshotInspect', {
-      'selectors': selectors,
-    });
+              'selectors': selectors,
+            }) ??
+            [];
     return hierarchyList.cast<Map<String, dynamic>>();
+  }
+
+  /// Gets the inspect data for all components currently running in the system.
+  Future<List<Map<String, dynamic>>> snapshotAll() async {
+    return await snapshot([]);
   }
 
   /// Gets the data of the first found hierarchy matching the given selectors
   /// under root. Returns null of no hierarchy was found.
-  Future<Map<String, dynamic>> snapshotRoot(String componentName) async {
-    final hierarchies = await snapshot(['$componentName:root']);
+  Future<Map<String, dynamic>> snapshotRoot(String componentSelector) async {
+    final hierarchies = await snapshot(['$componentSelector:root']);
     if (hierarchies.isEmpty) {
       return null;
     }

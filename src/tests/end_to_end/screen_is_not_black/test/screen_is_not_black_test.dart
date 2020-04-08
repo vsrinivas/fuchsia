@@ -115,34 +115,28 @@ void main() {
   //
   // While this makes relative time measurements meaningless, we can still
   // compare successive runs and measure absolute time changes.
-  Future<Uptime> findRebootTimestamp(
-      sl4f.Inspect inspect, dynamic diagnostics) async {
-    for (final item in diagnostics) {
-      if (!item.toString().contains('timekeeper.cmx')) {
-        continue;
-      }
-      final lowRebootWallClock = DateTime.now();
-      final inspectResult = await inspect.inspectRecursively([item]);
-      final highRebootWallClock = DateTime.now();
+  Future<Uptime> findRebootTimestamp(sl4f.Inspect inspect) async {
+    final lowRebootWallClock = DateTime.now();
+    final healthRoot = await inspect.snapshotRoot('timekeeper.cmx');
+    final highRebootWallClock = DateTime.now();
 
-      final healthRoot = inspectResult?.single['contents']['root'];
-      final uptimeNanos =
-          healthRoot['current']['system_uptime_monotonic_nanos'];
-      final uptime = Duration(microseconds: uptimeNanos ~/ 1e3);
-      var sinceReboot = uptime;
-      if (sinceReboot > _maxElapsedSincePowerOn) {
-        // If the system monotonic clock measures duration since power-on,
-        // instead of duration since reboot, compute the adjusted uptime.
-        final start = Duration(
-            microseconds: healthRoot['start_time_monotonic_nanos'] ~/ 1e3);
-        sinceReboot = sinceReboot - start + _rebootToTimekeeper;
-      }
+    if (healthRoot == null) {
+      log.info('System uptime was not found, using zero values instead.');
       return Uptime(
-          lowRebootWallClock, sinceReboot, highRebootWallClock, uptime);
+          DateTime.now(), Duration.zero, DateTime.now(), Duration.zero);
     }
 
-    log.info('System uptime was not found, using zero values instead.');
-    return Uptime(DateTime.now(), Duration.zero, DateTime.now(), Duration.zero);
+    final uptimeNanos = healthRoot['current']['system_uptime_monotonic_nanos'];
+    final uptime = Duration(microseconds: uptimeNanos ~/ 1e3);
+    var sinceReboot = uptime;
+    if (sinceReboot > _maxElapsedSincePowerOn) {
+      // If the system monotonic clock measures duration since power-on,
+      // instead of duration since reboot, compute the adjusted uptime.
+      final start = Duration(
+          microseconds: healthRoot['start_time_monotonic_nanos'] ~/ 1e3);
+      sinceReboot = sinceReboot - start + _rebootToTimekeeper;
+    }
+    return Uptime(lowRebootWallClock, sinceReboot, highRebootWallClock, uptime);
   }
 
   List<sl4f.TestCaseResults> record(String programName, String nodeName,
@@ -190,41 +184,38 @@ void main() {
           [rebootDuration.inMilliseconds.toDouble()]),
     ];
 
-    var inspect = sl4f.Inspect(sl4fDriver.ssh);
+    final inspect = sl4f.Inspect(sl4fDriver);
+    final Uptime uptime = await findRebootTimestamp(inspect);
 
-    final diagnostics =
-        (await inspect.retrieveHubEntries(filter: 'diagnostics')) ?? [];
-
-    final Uptime uptime = await findRebootTimestamp(inspect, diagnostics);
-
-    // Shorten program names like:
-    // /hub/c/program.cmx/1245/out/diagnostics -> program.cmx
-    // /hub/c/program.cmx/1245/out/diagnostics/root.inspect -> program.cmx
-    final componentRe =
-        RegExp(r'/c/([^/]*)/[0-9]+/out/diagnostics(/root.inspect)*');
     // Collect all health nodes and other metrics relevant for the boot process
     // from the running programs.  Some programs, like 'timekeeper' and `kcounter_inspect`
     // are more interesting since they have metrics useful for analyzing the timing of the
     // boot process.
-    for (final item in diagnostics) {
-      final label = componentRe.firstMatch(item)?.group(1) ?? item;
-      final inspectResult = await inspect.inspectRecursively([item]);
-      final rootNode = inspectResult?.single['contents']['root'];
+    final diagnostics = await inspect.snapshotAll();
+    for (final inspectResult in diagnostics) {
+      final label = inspectResult['path'];
+      final rootNode = inspectResult['contents']['root'];
       if (rootNode == null) {
         continue;
       }
 
       // For all nodes that have it, add health node information.
       rebootResults.addAll(record(
-              label,
-              'fuchsia.inspect.Health',
-              rootNode,
-              'start_timestamp_nanos',
-              'TimeToStart',
-              uptime.rebootSincePowerOn) +
+            label,
+            'fuchsia.inspect.Health',
+            rootNode,
+            'start_timestamp_nanos',
+            'TimeToStart',
+            uptime.rebootSincePowerOn,
+          ) +
           // Record all durations under the node named 'fuchsia.inspect.Timestamps'.
-          recordAll(label, 'fuchsia.inspect.Timestamps', rootNode, 'Durations',
-              uptime.sinceEpoch()));
+          recordAll(
+            label,
+            'fuchsia.inspect.Timestamps',
+            rootNode,
+            'Durations',
+            uptime.sinceEpoch(),
+          ));
     }
 
     List<Map<String, dynamic>> results = [];

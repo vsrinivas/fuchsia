@@ -62,6 +62,43 @@ void main(List<String> args) {
     expect(result, equals(expectedHierarchies));
   });
 
+  test('snapshot inspect all', () async {
+    final expectedHierarchies = [
+      {
+        'contents': {
+          'root': {'a': 1}
+        },
+        'path': 'test.cmx'
+      },
+      {
+        'contents': {
+          'root': {
+            'node': {'prop': 2}
+          }
+        },
+        'path': 'other.cmx'
+      }
+    ];
+
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
+      expect(body['params']['selectors'], []);
+      req.response.write(jsonEncode({
+        'id': body['id'],
+        'result': expectedHierarchies,
+        'error': null,
+      }));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    final result = await Inspect(sl4f).snapshotAll();
+    expect(result, equals(expectedHierarchies));
+  });
+
   test('snapshot inspect root', () async {
     final resultHierarchies = [
       {
@@ -266,6 +303,12 @@ class FakeInspect implements Inspect {
 
   @override
   Future<List<Map<String, dynamic>>> snapshot(List<String> selectors) async {
+    await Future.delayed(delay);
+    return null;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> snapshotAll() async {
     await Future.delayed(delay);
     return null;
   }

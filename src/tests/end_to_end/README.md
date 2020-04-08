@@ -20,11 +20,11 @@ Because end to end tests are tied to a specific product or even architecture,
 you should review the test's README.md to see which product or special
 instructions are needed to run the test.
 
-To run an end to end test use the `run-e2e-test` command:
+To run an end to end test use the `run-e2e-tests` command:
 
 ```
 $ fx set <product>.<arch> && fx build
-$ fx run-e2e-test name_of_the_test
+$ fx run-e2e-tests name_of_the_test
 ```
 
 Where `name_of_the_test` is the name of the dart_test rule (like `sl4f_test`).
