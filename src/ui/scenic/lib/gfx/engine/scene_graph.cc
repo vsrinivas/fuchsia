@@ -159,46 +159,48 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
     const std::vector<zx_koid_t>& old_focus_chain) {
   const std::vector<zx_koid_t>& new_focus_chain = view_tree_.focus_chain();
 
-  bool focus_changed = (old_focus_chain != new_focus_chain);
+  if (old_focus_chain == new_focus_chain) {
+    FXL_VLOG(1) << "Scenic, view focus changed: false" << std::endl
+                << "\t Old focus chain: " << FocusChainToString(old_focus_chain);
+    return;
+  }
 
-  FXL_VLOG(1) << "Scenic, view focus changed: " << std::boolalpha << focus_changed << std::endl
+  FXL_VLOG(1) << "Scenic, view focus changed: true" << std::endl
               << "\t Old focus chain: " << FocusChainToString(old_focus_chain) << std::endl
               << "\t New focus chain: " << FocusChainToString(new_focus_chain);
 
-  if (focus_changed) {
-    if (focus_chain_listener_) {
-      TRACE_DURATION("gfx", "SceneGraphFocusChainDispatch", "chain_depth", new_focus_chain.size());
-      FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
-      focus_chain_listener_->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
+  if (focus_chain_listener_) {
+    TRACE_DURATION("gfx", "SceneGraphFocusChainDispatch", "chain_depth", new_focus_chain.size());
+    FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
+    focus_chain_listener_->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
+  }
+
+  const zx_time_t focus_time = dispatcher_clock_now();
+  if (!old_focus_chain.empty()) {
+    fuchsia::ui::input::FocusEvent focus;
+    focus.event_time = focus_time;
+    focus.focused = false;
+
+    if (view_tree_.EventReporterOf(old_focus_chain.back())) {
+      fuchsia::ui::input::InputEvent input;
+      input.set_focus(std::move(focus));
+      view_tree_.EventReporterOf(old_focus_chain.back())->EnqueueEvent(std::move(input));
+    } else {
+      FXL_VLOG(1) << "Old focus event; could not enqueue. No reporter. Event was: " << focus;
     }
+  }
 
-    const zx_time_t focus_time = dispatcher_clock_now();
-    if (!old_focus_chain.empty()) {
-      fuchsia::ui::input::FocusEvent focus;
-      focus.event_time = focus_time;
-      focus.focused = false;
+  if (!new_focus_chain.empty()) {
+    fuchsia::ui::input::FocusEvent focus;
+    focus.event_time = focus_time;
+    focus.focused = true;
 
-      if (view_tree_.EventReporterOf(old_focus_chain.back())) {
-        fuchsia::ui::input::InputEvent input;
-        input.set_focus(std::move(focus));
-        view_tree_.EventReporterOf(old_focus_chain.back())->EnqueueEvent(std::move(input));
-      } else {
-        FXL_VLOG(1) << "Old focus event; could not enqueue. No reporter. Event was: " << focus;
-      }
-    }
-
-    if (!new_focus_chain.empty()) {
-      fuchsia::ui::input::FocusEvent focus;
-      focus.event_time = focus_time;
-      focus.focused = true;
-
-      if (view_tree_.EventReporterOf(new_focus_chain.back())) {
-        fuchsia::ui::input::InputEvent input;
-        input.set_focus(std::move(focus));
-        view_tree_.EventReporterOf(new_focus_chain.back())->EnqueueEvent(std::move(input));
-      } else {
-        FXL_VLOG(1) << "New focus event; could not enqueue. No reporter. Event was: " << focus;
-      }
+    if (view_tree_.EventReporterOf(new_focus_chain.back())) {
+      fuchsia::ui::input::InputEvent input;
+      input.set_focus(std::move(focus));
+      view_tree_.EventReporterOf(new_focus_chain.back())->EnqueueEvent(std::move(input));
+    } else {
+      FXL_VLOG(1) << "New focus event; could not enqueue. No reporter. Event was: " << focus;
     }
   }
 }
