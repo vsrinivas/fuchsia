@@ -6,10 +6,11 @@
 #define FBL_STRING_PIECE_H_
 
 #include <string.h>
+#include <zircon/compiler.h>
+
 #include <type_traits>
 
 #include <fbl/string_traits.h>
-#include <zircon/compiler.h>
 
 namespace fbl {
 
@@ -64,11 +65,6 @@ class __POINTER(char) StringPiece {
   constexpr const char& operator[](size_t pos) const { return data_[pos]; }
 
   int compare(const StringPiece& other) const;
-
-  void clear() {
-    data_ = nullptr;
-    length_ = 0U;
-  }
 
   constexpr StringPiece& operator=(const StringPiece& other) = default;
   constexpr StringPiece& operator=(StringPiece&& other) = default;

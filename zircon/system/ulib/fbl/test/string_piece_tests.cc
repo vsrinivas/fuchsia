@@ -104,7 +104,7 @@ TEST(StringPieceTest, CopyMoveAndAssignment) {
   }
 }
 
-TEST(StringPieceTest, SetClear) {
+TEST(StringPieceTest, Set) {
   const char data[] = "abc";
 
   fbl::StringPiece str;
@@ -122,10 +122,6 @@ TEST(StringPieceTest, SetClear) {
   str.set(data, 2);
   EXPECT_EQ(data, str.data());
   EXPECT_EQ(2u, str.length());
-
-  str.clear();
-  EXPECT_NULL(str.data());
-  EXPECT_EQ(0u, str.length());
 }
 
 TEST(StringPieceTest, CompareTest) {
