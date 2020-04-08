@@ -18,11 +18,11 @@ driver_module("usb-harriet") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

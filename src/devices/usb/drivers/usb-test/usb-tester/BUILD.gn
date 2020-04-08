@@ -20,10 +20,10 @@ driver_module("usb-tester") {  # TODO: test_driver?
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

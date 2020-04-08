@@ -23,8 +23,8 @@ driver_module("intel-serialio") {
     "//sdk/banjo/ddk.protocol.serial",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/device-protocol-pci",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }
 

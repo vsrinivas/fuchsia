@@ -33,13 +33,13 @@ driver_module("dwc3") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/usb",
   ]
   public_configs = [ ":internal" ]
 }

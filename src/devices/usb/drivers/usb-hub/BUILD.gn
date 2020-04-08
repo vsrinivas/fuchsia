@@ -18,10 +18,10 @@ driver_module("usb-hub") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

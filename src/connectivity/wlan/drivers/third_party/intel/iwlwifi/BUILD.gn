@@ -99,9 +99,9 @@ source_set("pcie") {
 
   public_deps = [
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 
   # TODO(39324): This driver emits a bunch of -Wthread-safety warnings that

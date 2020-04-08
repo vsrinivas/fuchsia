@@ -23,10 +23,10 @@ driver_module("usb-peripheral") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
   ]
 

@@ -27,12 +27,12 @@ driver_module("ftdi") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 
@@ -51,10 +51,10 @@ driver_module("ftdi-fake-usb") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

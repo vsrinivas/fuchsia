@@ -15,7 +15,6 @@ driver_module("address_space_driver") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
@@ -26,6 +25,7 @@ driver_module("address_space_driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

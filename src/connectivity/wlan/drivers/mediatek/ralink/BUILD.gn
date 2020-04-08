@@ -32,9 +32,9 @@ driver_module("ralink_driver") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/dev/lib/usb",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

@@ -25,12 +25,12 @@ driver_module("dwc2") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

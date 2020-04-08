@@ -19,10 +19,10 @@ test("ftdi-i2c-test") {
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 
@@ -44,11 +44,11 @@ source_set("common") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

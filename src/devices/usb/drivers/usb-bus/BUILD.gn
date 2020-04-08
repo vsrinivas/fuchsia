@@ -37,9 +37,9 @@ source_set("common") {
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_llcpp",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 

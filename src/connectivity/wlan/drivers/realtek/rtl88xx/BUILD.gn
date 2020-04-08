@@ -33,9 +33,9 @@ driver_module("rtl88xx_driver") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/dev/lib/usb",
     "//zircon/system/public",
   ]
 

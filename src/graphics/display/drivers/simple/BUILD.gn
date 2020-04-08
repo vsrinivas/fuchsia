@@ -12,10 +12,10 @@ source_set("shared") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/mmio",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }
 
@@ -37,9 +37,9 @@ foreach(driver, simple_drivers) {
     deps = [
       ":shared",
       "//zircon/public/lib/ddk",
-      "//zircon/public/lib/device-protocol-pci",
       "//zircon/system/banjo/ddk.protocol.display.controller",
       "//zircon/system/banjo/ddk.protocol.pci",
+      "//zircon/system/dev/lib/device-protocol-pci",
     ]
   }
   migrated_manifest("simple-$driver-manifest") {

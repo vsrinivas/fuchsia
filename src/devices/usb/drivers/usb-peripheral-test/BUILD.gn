@@ -23,9 +23,9 @@ if (is_fuchsia) {
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/usb",
       "//zircon/system/banjo/ddk.protocol.usb",
       "//zircon/system/banjo/ddk.protocol.usb.request",
+      "//zircon/system/dev/lib/usb",
     ]
   }
 

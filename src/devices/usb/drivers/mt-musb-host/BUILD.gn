@@ -39,11 +39,11 @@ source_set("common") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mt8167",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 
@@ -104,12 +104,12 @@ test("mt-hci-request-queue-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/mt8167",
+    "//zircon/system/dev/lib/usb",
   ]
 }
 
