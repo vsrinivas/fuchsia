@@ -1,30 +1,37 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 package sshutil
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"net"
-	"strings"
 	"sync"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 
 	"golang.org/x/crypto/ssh"
 )
 
 const (
-	reconnectInterval = 5 * time.Second
+	connectInterval = 5 * time.Second
+
+	// Interval between keep-alive pings.
 	keepaliveInterval = 1 * time.Second
+
+	// Cancel the connection if a we don't receive a response to a keep-alive
+	// ping within this amount of time.
 	keepaliveDeadline = keepaliveInterval + 15*time.Second
 )
 
 // Client is a wrapper around ssh that supports keepalive and auto-reconnection.
+// TODO(fxb/48042): change all usage of sshutil to use this Client type instead
+// of ssh.Client.
 type Client struct {
 	addr         string
 	config       *ssh.ClientConfig
@@ -61,27 +68,20 @@ func NewClient(ctx context.Context, addr string, config *ssh.ClientConfig) (*Cli
 // ssh client and connection if successful, or errs out if the context is
 // canceled.
 func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
-	t := time.NewTicker(reconnectInterval)
-
-	for {
+	var client *ssh.Client
+	var conn net.Conn
+	err := retry.Retry(ctx, retry.NewConstantBackoff(connectInterval), func() error {
 		log.Printf("trying to connect to %s...", addr)
-
-		client, conn, err := connectToSSH(ctx, addr, config)
-		if err == nil {
-			log.Printf("connected to %s", addr)
-
-			return client, conn, nil
+		var err error
+		client, conn, err = connectToSSH(ctx, addr, config)
+		if err != nil {
+			log.Printf("failed to connect, will try again in %s: %s", connectInterval, err)
+			return err
 		}
-
-		log.Printf("failed to connect, will try again in %s: %s", reconnectInterval, err)
-
-		select {
-		case <-t.C:
-			continue
-		case <-ctx.Done():
-			return nil, nil, ctx.Err()
-		}
-	}
+		log.Printf("connected to %s", addr)
+		return nil
+	}, nil)
+	return client, conn, err
 }
 
 func connectToSSH(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
@@ -119,7 +119,10 @@ func (c *Client) makeSession(ctx context.Context, stdout io.Writer, stderr io.Wr
 		err     error
 	}
 
-	ch := make(chan result)
+	// Use a buffered channel to ensure that sending the first element doesn't
+	// block and cause the goroutine to leak in the case where the context gets
+	// cancelled before we receive on the channel.
+	ch := make(chan result, 1)
 	go func() {
 		session, err := client.NewSession()
 		if err != nil {
@@ -181,18 +184,6 @@ func (c *Client) Close() {
 	c.disconnect()
 }
 
-// GetSshConnection returns the first field in the remote SSH_CONNECTION
-// environment variable.
-func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	err := c.Run(ctx, "PATH= echo $SSH_CONNECTION", &stdout, &stderr)
-	if err != nil {
-		return "", fmt.Errorf("failed to read SSH_CONNECTION: %s: %s", err, string(stderr.Bytes()))
-	}
-	return strings.Split(string(stdout.Bytes()), " ")[0], nil
-}
-
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
 // client is disconnected.
 func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
@@ -243,7 +234,7 @@ func (c *Client) keepalive() {
 		// fxb/47698). To protect against this, we'll emit events in a
 		// separate goroutine so if we don't get one in the expected
 		// time we'll disconnect.
-		ch := make(chan error)
+		ch := make(chan error, 1)
 		go func() {
 			// ssh keepalive is not completely reliable. So in
 			// addition to emitting it, we'll also set a tcp
@@ -297,7 +288,7 @@ func (s *Session) Close() {
 }
 
 func (s *Session) Start(ctx context.Context, command string) error {
-	ch := make(chan error)
+	ch := make(chan error, 1)
 	go func() {
 		ch <- s.session.Start(command)
 	}()
@@ -311,7 +302,7 @@ func (s *Session) Start(ctx context.Context, command string) error {
 }
 
 func (s *Session) Wait(ctx context.Context) error {
-	ch := make(chan error)
+	ch := make(chan error, 1)
 	go func() {
 		ch <- s.session.Wait()
 	}()
@@ -326,7 +317,7 @@ func (s *Session) Wait(ctx context.Context) error {
 }
 
 func (s *Session) Run(ctx context.Context, command string) error {
-	ch := make(chan error)
+	ch := make(chan error, 1)
 	go func() {
 		ch <- s.session.Run(command)
 	}()
