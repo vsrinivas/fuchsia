@@ -891,8 +891,8 @@ void H264MultiDecoder::PumpDecoder() {
       }
       // TODO(fxb/13483): keep display_width and coded_width separate; keep display_height and
       // coded_height separate
-      display_width_ = media_decoder_->GetPicSize().width();
-      display_height_ = media_decoder_->GetPicSize().height();
+      display_width_ = media_decoder_->GetVisibleRect().width();
+      display_height_ = media_decoder_->GetVisibleRect().height();
       mb_width_ = media_decoder_->GetPicSize().width() / 16;
       mb_height_ = media_decoder_->GetPicSize().height() / 16;
       uint32_t min_frame_count = media_decoder_->GetRequiredNumOfPictures();

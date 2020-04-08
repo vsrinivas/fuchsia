@@ -54,11 +54,14 @@ class TestH264Multi {
         ++frame_count;
         DLOG("Got frame %d\n", frame_count);
         EXPECT_EQ(320u, frame->coded_width);
+        EXPECT_EQ(320u, frame->display_width);
         bool is_bear = input_filename == std::string("video_test_data/bear.h264");
         if (is_bear) {
           EXPECT_EQ(192u, frame->coded_height);
+          EXPECT_EQ(180u, frame->display_height);
         } else {
           EXPECT_EQ(240u, frame->coded_height);
+          EXPECT_EQ(240u, frame->display_height);
         }
         (void)filename;
 #if DUMP_VIDEO_TO_FILE
