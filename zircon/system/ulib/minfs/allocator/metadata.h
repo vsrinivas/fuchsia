@@ -13,39 +13,67 @@
 
 namespace minfs {
 
+// This structure contains pointers to relevant allocator fields in the superblock.
+struct SuperblockAllocatorAccess {
+  uint32_t Superblock::* used;
+  uint32_t Superblock::* total;
+  uint32_t Superblock::* data_slices;
+  uint32_t Superblock::* metadata_slices;
+
+  // Returns pointers suitable for the block allocator.
+  static SuperblockAllocatorAccess Blocks() {
+    return SuperblockAllocatorAccess{
+          &Superblock::alloc_block_count,
+          &Superblock::block_count,
+          &Superblock::dat_slices,
+          &Superblock::abm_slices
+        };
+  }
+
+  // Returns pointers suitable for the inode allocator.
+  static SuperblockAllocatorAccess Inodes() {
+    return SuperblockAllocatorAccess{
+          &Superblock::alloc_inode_count,
+          &Superblock::inode_count,
+          &Superblock::ino_slices,
+          &Superblock::ibm_slices
+        };
+  }
+};
+
 // Represents the FVM-related information for the allocator, including
 // slice usage and a mechanism to grow the allocation pool.
 class AllocatorFvmMetadata {
  public:
-  AllocatorFvmMetadata();
-  AllocatorFvmMetadata(uint32_t* data_slices, uint32_t* metadata_slices, uint32_t slice_size);
-  AllocatorFvmMetadata(AllocatorFvmMetadata&&);
-  AllocatorFvmMetadata& operator=(AllocatorFvmMetadata&&);
-  ~AllocatorFvmMetadata();
+  AllocatorFvmMetadata() = default;
+  AllocatorFvmMetadata(SuperblockManager* superblock, SuperblockAllocatorAccess access)
+      : superblock_(superblock), superblock_access_(access) {}
 
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatorFvmMetadata);
+  // Movable, not copyable.
+  AllocatorFvmMetadata(AllocatorFvmMetadata&&) = default;
+  AllocatorFvmMetadata& operator=(AllocatorFvmMetadata&&) = default;
 
   uint32_t UnitsPerSlices(uint32_t slice, uint32_t unit_size) const;
   uint32_t SlicesToBlocks(uint32_t slices) const;
   uint32_t BlocksToSlices(uint32_t blocks) const;
 
-  uint32_t DataSlices() const { return *data_slices_; }
+  uint32_t DataSlices() const { return superblock_->Info().*superblock_access_.data_slices; }
 
-  void SetDataSlices(uint32_t slices) { *data_slices_ = slices; }
+  void SetDataSlices(uint32_t slices) {
+    superblock_->MutableInfo()->*superblock_access_.data_slices = slices;
+  }
 
-  uint32_t MetadataSlices() const { return *metadata_slices_; }
+  uint32_t MetadataSlices() const { return superblock_->Info().*superblock_access_.metadata_slices; }
 
-  void SetMetadataSlices(uint32_t slices) { *metadata_slices_ = slices; }
+  void SetMetadataSlices(uint32_t slices) {
+    superblock_->MutableInfo()->*superblock_access_.metadata_slices = slices;
+  }
 
-  uint64_t SliceSize() const { return slice_size_; }
+  uint64_t SliceSize() const { return superblock_->Info().slice_size; }
 
  private:
-  // Slices used by the allocator's data.
-  uint32_t* data_slices_;
-  // Slices used by the allocator's metadata.
-  uint32_t* metadata_slices_;
-  // Constant slice size used by FVM.
-  uint64_t slice_size_;
+  SuperblockManager* superblock_ = nullptr;
+  SuperblockAllocatorAccess superblock_access_ = {};
 };
 
 // Metadata information used to initialize a generic allocator.
@@ -57,13 +85,14 @@ class AllocatorFvmMetadata {
 // filesystem is mounted.
 class AllocatorMetadata {
  public:
-  AllocatorMetadata();
+  AllocatorMetadata() = default;
   AllocatorMetadata(blk_t data_start_block, blk_t metadata_start_block, bool using_fvm,
-                    AllocatorFvmMetadata fvm, uint32_t* pool_used, uint32_t* pool_total);
-  AllocatorMetadata(AllocatorMetadata&&);
-  AllocatorMetadata& operator=(AllocatorMetadata&&);
-  ~AllocatorMetadata();
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatorMetadata);
+                    AllocatorFvmMetadata fvm, SuperblockManager* superblock_manager,
+                    SuperblockAllocatorAccess interface);
+
+  // Movable, not copyable.
+  AllocatorMetadata(AllocatorMetadata&&) = default;
+  AllocatorMetadata& operator=(AllocatorMetadata&&) = default;
 
   blk_t DataStartBlock() const { return data_start_block_; }
 
@@ -76,24 +105,26 @@ class AllocatorMetadata {
     return fvm_;
   }
 
-  uint32_t PoolUsed() const { return *pool_used_; }
+  uint32_t PoolUsed() const { return superblock_->Info().*superblock_access_.used; }
 
   // Return the number of elements which are still available for allocation/reservation.
-  uint32_t PoolAvailable() const { return *pool_total_ - *pool_used_; }
+  uint32_t PoolAvailable() const { return PoolTotal() - PoolUsed(); }
 
   void PoolAllocate(uint32_t units) {
-    ZX_DEBUG_ASSERT(*pool_used_ + units <= *pool_total_);
-    *pool_used_ += units;
+    ZX_DEBUG_ASSERT(PoolTotal() - PoolUsed() >= units);
+    superblock_->MutableInfo()->*superblock_access_.used += units;
   }
 
   void PoolRelease(uint32_t units) {
-    ZX_DEBUG_ASSERT(*pool_used_ >= units);
-    *pool_used_ -= units;
+    ZX_DEBUG_ASSERT(PoolUsed() >= units);
+    superblock_->MutableInfo()->*superblock_access_.used -= units;
   }
 
-  uint32_t PoolTotal() const { return *pool_total_; }
+  uint32_t PoolTotal() const { return superblock_->Info().*superblock_access_.total; }
 
-  void SetPoolTotal(uint32_t total) { *pool_total_ = total; }
+  void SetPoolTotal(uint32_t total) {
+    superblock_->MutableInfo()->*superblock_access_.total = total;
+  }
 
  private:
   // Block at which data for the allocator starts.
@@ -106,11 +137,8 @@ class AllocatorMetadata {
   bool using_fvm_;
   AllocatorFvmMetadata fvm_;
 
-  // This information should be re-derivable from the allocator,
-  // but is typically stored in the superblock to make mounting
-  // faster.
-  uint32_t* pool_used_;
-  uint32_t* pool_total_;
+  SuperblockManager* superblock_ = nullptr;
+  SuperblockAllocatorAccess superblock_access_ = {};
 };
 
 }  // namespace minfs

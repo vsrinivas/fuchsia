@@ -361,7 +361,7 @@ class FakeTransaction : public PendingWork {
 TEST(AllocatorTest, PersistRange) {
   // Create PersistentStorage with bogus attributes - valid storage is unnecessary for this test.
   AllocatorFvmMetadata fvm_metadata;
-  AllocatorMetadata metadata(0, 0, false, std::move(fvm_metadata), 0, 0);
+  AllocatorMetadata metadata(0, 0, false, std::move(fvm_metadata), nullptr, {});
   PersistentStorage storage(nullptr, nullptr, kMinfsBlockSize, nullptr, std::move(metadata));
   FakeTransaction transaction;
   ASSERT_EQ(transaction.BlockCount(), 0);

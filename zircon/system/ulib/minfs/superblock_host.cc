@@ -89,6 +89,8 @@ void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock w
     };
     transaction->EnqueueMetadata(operation, &data);
   }
+
+  dirty_ = false;
 }
 
 }  // namespace minfs

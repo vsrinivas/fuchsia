@@ -70,6 +70,8 @@ void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock w
     operation.dev_offset = superblock_dev_offset,
     transaction->EnqueueMetadata(operation, &buffer);
   }
+
+  dirty_ = false;
 }
 
 }  // namespace minfs

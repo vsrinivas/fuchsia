@@ -513,6 +513,10 @@ void Minfs::EnqueueCallback(SyncCallback callback) {
 #endif
 
 void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
+  if (sb_->is_dirty()) {
+    sb_->Write(transaction.get(), UpdateBackupSuperblock::kNoUpdate);
+  }
+
 #ifdef __Fuchsia__
   ZX_DEBUG_ASSERT(journal_ != nullptr);
 
@@ -720,7 +724,6 @@ void Minfs::AddUnlinked(PendingWork* transaction, VnodeMinfs* vn) {
     last_vn->InodeSync(transaction, kMxFsSyncDefault);
     vn->InodeSync(transaction, kMxFsSyncDefault);
   }
-  sb_->Write(transaction, UpdateBackupSuperblock::kNoUpdate);
 }
 
 void Minfs::RemoveUnlinked(PendingWork* transaction, VnodeMinfs* vn) {
@@ -786,7 +789,6 @@ zx_status_t Minfs::PurgeUnlinked() {
       ZX_DEBUG_ASSERT(Info().unlinked_tail == last_ino);
       sb_->MutableInfo()->unlinked_tail = 0;
     }
-    sb_->Write(transaction.get(), UpdateBackupSuperblock::kNoUpdate);
     CommitTransaction(std::move(transaction));
     unlinked_count++;
   }
@@ -1047,11 +1049,11 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
   // Block Bitmap allocator initialization.
   AllocatorFvmMetadata block_allocator_fvm = AllocatorFvmMetadata(
-      &sb->MutableInfo()->dat_slices, &sb->MutableInfo()->abm_slices, info.slice_size);
+      sb.get(), SuperblockAllocatorAccess::Blocks());
   AllocatorMetadata block_allocator_meta =
       AllocatorMetadata(info.dat_block, abm_start_block, (info.flags & kMinfsFlagFVM) != 0,
-                        std::move(block_allocator_fvm), &sb->MutableInfo()->alloc_block_count,
-                        &sb->MutableInfo()->block_count);
+                        std::move(block_allocator_fvm),
+                        sb.get(), SuperblockAllocatorAccess::Blocks());
 
   std::unique_ptr<PersistentStorage> storage(
 #ifdef __Fuchsia__
@@ -1070,11 +1072,11 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
   // Inode Bitmap allocator initialization.
   AllocatorFvmMetadata inode_allocator_fvm = AllocatorFvmMetadata(
-      &sb->MutableInfo()->ino_slices, &sb->MutableInfo()->ibm_slices, info.slice_size);
+      sb.get(), SuperblockAllocatorAccess::Inodes());
   AllocatorMetadata inode_allocator_meta =
       AllocatorMetadata(ino_start_block, ibm_start_block, (info.flags & kMinfsFlagFVM) != 0,
-                        std::move(inode_allocator_fvm), &sb->MutableInfo()->alloc_inode_count,
-                        &sb->MutableInfo()->inode_count);
+                        std::move(inode_allocator_fvm), sb.get(),
+                        SuperblockAllocatorAccess::Inodes());
 
   std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
@@ -1170,6 +1172,9 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
 
   std::unique_ptr<Minfs> fs;
   status = Minfs::ReadInitialBlocks(info, std::move(bc), std::move(sb), &fs);
+  if (status != ZX_OK) {
+    return status;
+  }
 
 #ifdef __Fuchsia__
   if (options.use_journal) {

@@ -157,8 +157,8 @@ class TransactionTest : public zxtest::Test {
     // Create inode manager.
     AllocatorFvmMetadata fvm_metadata;
     AllocatorMetadata metadata(kDefaultStartBlock, kDefaultStartBlock, false,
-                               std::move(fvm_metadata), &info_.alloc_inode_count,
-                               &info_.inode_count);
+                               std::move(fvm_metadata), superblock_manager_.get(),
+                               SuperblockAllocatorAccess::Inodes());
     ASSERT_OK(InodeManager::Create(&block_device_, superblock_manager_.get(), &builder,
                                    std::move(metadata), kDefaultStartBlock, kTotalElements,
                                    &inode_manager_));

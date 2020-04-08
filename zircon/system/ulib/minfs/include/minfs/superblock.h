@@ -44,12 +44,17 @@ class SuperblockManager {
                             uint32_t max_blocks, IntegrityCheck checks,
                             std::unique_ptr<SuperblockManager>* out);
 
+  bool is_dirty() const { return dirty_; }
+
   const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(mapping_.start()); }
 
   // Acquire a pointer to the superblock, such that any
   // modifications will be carried out to persistent storage
   // the next time "Write" is invoked.
-  Superblock* MutableInfo() { return reinterpret_cast<Superblock*>(mapping_.start()); }
+  Superblock* MutableInfo() {
+    dirty_ = true;
+    return reinterpret_cast<Superblock*>(mapping_.start());
+  }
 
   // Write the superblock/backup superblock back to persistent storage at respective locations.
   // If write_backup is kUpdate, also update the backup superblock.
@@ -59,6 +64,7 @@ class SuperblockManager {
   SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper);
 
   fzl::OwnedVmoMapper mapping_;
+  bool dirty_ = false;
 };
 
 #else  // __Fuchsia__
@@ -72,12 +78,17 @@ class SuperblockManager {
   static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
                             std::unique_ptr<SuperblockManager>* out);
 
+  bool is_dirty() const { return dirty_; }
+
   const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(&info_blk_[0]); }
 
   // Acquire a pointer to the superblock, such that any
   // modifications will be carried out to persistent storage
   // the next time "Write" is invoked.
-  Superblock* MutableInfo() { return reinterpret_cast<Superblock*>(&info_blk_[0]); }
+  Superblock* MutableInfo() {
+    dirty_ = true;
+    return reinterpret_cast<Superblock*>(&info_blk_[0]);
+  }
 
   // Write the superblock/backup superblock back to persistent storage at respective locations.
   // If write_backup is kUpdate, also update the backup superblock.
@@ -87,6 +98,7 @@ class SuperblockManager {
   SuperblockManager(const Superblock* info);
 
   uint8_t info_blk_[kMinfsBlockSize];
+  bool dirty_ = false;
 };
 
 #endif
