@@ -65,6 +65,13 @@ zx_status_t SetSettings(const syslog::LogSettings& settings,
 // Sets the tags for the global logger.
 zx_status_t SetTags(const std::initializer_list<std::string>& tags);
 
+// DEPRECATED. Do not use.
+zx_status_t InitLogger(const std::initializer_list<std::string>& tags);
+
+// DEPRECATED. Do not use.
+zx_status_t InitLogger(const syslog::LogSettings& settings,
+                       const std::initializer_list<std::string>& tags);
+
 }  // namespace syslog
 
 #define _FX_LOG_STREAM(severity, tag, status) \
