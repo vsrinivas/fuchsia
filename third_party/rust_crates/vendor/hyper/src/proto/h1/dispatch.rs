@@ -1,3 +1,5 @@
+use std::error::Error as StdError;
+
 use bytes::{Buf, Bytes};
 use futures::{Async, Future, Poll, Stream};
 use http::{Request, Response, StatusCode};
@@ -5,7 +7,7 @@ use tokio_io::{AsyncRead, AsyncWrite};
 
 use body::{Body, Payload};
 use body::internal::FullDataArg;
-use common::Never;
+use common::{Never, YieldNow};
 use proto::{BodyLength, DecodedLength, Conn, Dispatched, MessageHead, RequestHead, RequestLine, ResponseHead};
 use super::Http1Transaction;
 use service::Service;
@@ -16,6 +18,10 @@ pub(crate) struct Dispatcher<D, Bs: Payload, I, T> {
     body_tx: Option<::body::Sender>,
     body_rx: Option<Bs>,
     is_closing: bool,
+    /// If the poll loop reaches its max spin count, it will yield by notifying
+    /// the task immediately. This will cache that `Task`, since it usually is
+    /// the same one.
+    yield_now: YieldNow,
 }
 
 pub(crate) trait Dispatch {
@@ -44,7 +50,7 @@ type ClientRx<B> = ::client::dispatch::Receiver<Request<B>, Response<Body>>;
 impl<D, Bs, I, T> Dispatcher<D, Bs, I, T>
 where
     D: Dispatch<PollItem=MessageHead<T::Outgoing>, PollBody=Bs, RecvItem=MessageHead<T::Incoming>>,
-    D::PollError: Into<Box<::std::error::Error + Send + Sync>>,
+    D::PollError: Into<Box<dyn StdError + Send + Sync>>,
     I: AsyncRead + AsyncWrite,
     T: Http1Transaction,
     Bs: Payload,
@@ -56,6 +62,7 @@ where
             body_tx: None,
             body_rx: None,
             is_closing: false,
+            yield_now: YieldNow::new(),
         }
     }
 
@@ -96,7 +103,29 @@ where
     fn poll_inner(&mut self, should_shutdown: bool) -> Poll<Dispatched, ::Error> {
         T::update_date();
 
-        loop {
+        try_ready!(self.poll_loop());
+
+        if self.is_done() {
+            if let Some(pending) = self.conn.pending_upgrade() {
+                self.conn.take_error()?;
+                return Ok(Async::Ready(Dispatched::Upgrade(pending)));
+            } else if should_shutdown {
+                try_ready!(self.conn.shutdown().map_err(::Error::new_shutdown));
+            }
+            self.conn.take_error()?;
+            Ok(Async::Ready(Dispatched::Shutdown))
+        } else {
+            Ok(Async::NotReady)
+        }
+    }
+
+    fn poll_loop(&mut self) -> Poll<(), ::Error> {
+        // Limit the looping on this connection, in case it is ready far too
+        // often, so that other futures don't starve.
+        //
+        // 16 was chosen arbitrarily, as that is number of pipelined requests
+        // benchmarks often use. Perhaps it should be a config option instead.
+        for _ in 0..16 {
             self.poll_read()?;
             self.poll_write()?;
             self.poll_flush()?;
@@ -110,21 +139,19 @@ where
             // Using this instead of task::current() and notify() inside
             // the Conn is noticeably faster in pipelined benchmarks.
             if !self.conn.wants_read_again() {
-                break;
+                //break;
+                return Ok(Async::Ready(()));
             }
         }
 
-        if self.is_done() {
-            if let Some(pending) = self.conn.pending_upgrade() {
-                self.conn.take_error()?;
-                return Ok(Async::Ready(Dispatched::Upgrade(pending)));
-            } else if should_shutdown {
-                try_ready!(self.conn.shutdown().map_err(::Error::new_shutdown));
-            }
-            self.conn.take_error()?;
-            Ok(Async::Ready(Dispatched::Shutdown))
-        } else {
-            Ok(Async::NotReady)
+        trace!("poll_loop yielding (self = {:p})", self);
+
+        match self.yield_now.poll_yield() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            // maybe with `!` this can be cleaner...
+            // but for now, just doing this to eliminate branches
+            Ok(Async::Ready(never)) |
+            Err(never) => match never {}
         }
     }
 
@@ -162,7 +189,6 @@ where
                                         self.conn.close_read();
                                     }
                                 }
-
                             }
                         },
                         Ok(Async::Ready(None)) => {
@@ -180,7 +206,7 @@ where
                     // just drop, the body will close automatically
                 }
             } else {
-                return self.conn.read_keep_alive().map(Async::Ready);
+                return self.conn.read_keep_alive();
             }
         }
     }
@@ -189,7 +215,7 @@ where
         // can dispatch receive, or does it still care about, an incoming message?
         match self.dispatch.poll_ready() {
             Ok(Async::Ready(())) => (),
-            Ok(Async::NotReady) => unreachable!("dispatch not ready when conn is"),
+            Ok(Async::NotReady) => return Ok(Async::NotReady), // service might not be ready
             Err(()) => {
                 trace!("dispatch no longer receiving messages");
                 self.close();
@@ -335,7 +361,7 @@ where
 impl<D, Bs, I, T> Future for Dispatcher<D, Bs, I, T>
 where
     D: Dispatch<PollItem=MessageHead<T::Outgoing>, PollBody=Bs, RecvItem=MessageHead<T::Incoming>>,
-    D::PollError: Into<Box<::std::error::Error + Send + Sync>>,
+    D::PollError: Into<Box<dyn StdError + Send + Sync>>,
     I: AsyncRead + AsyncWrite,
     T: Http1Transaction,
     Bs: Payload,
@@ -366,7 +392,7 @@ impl<S> Server<S> where S: Service {
 impl<S, Bs> Dispatch for Server<S>
 where
     S: Service<ReqBody=Body, ResBody=Bs>,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     Bs: Payload,
 {
     type PollItem = MessageHead<StatusCode>;
@@ -410,7 +436,11 @@ where
         if self.in_flight.is_some() {
             Ok(Async::NotReady)
         } else {
-            Ok(Async::Ready(()))
+            self.service.poll_ready()
+                .map_err(|_e| {
+                    // FIXME: return error value.
+                    trace!("service closed");
+                })
         }
     }
 
@@ -482,7 +512,10 @@ where
                     let _ = cb.send(Ok(res));
                     Ok(())
                 } else {
-                    Err(::Error::new_mismatched_response())
+                    // Getting here is likely a bug! An error should have happened
+                    // in Conn::require_empty_read() before ever parsing a
+                    // full message!
+                    Err(::Error::new_unexpected_message())
                 }
             },
             Err(err) => {
@@ -493,7 +526,7 @@ where
                     trace!("canceling queued request with connection error: {}", err);
                     // in this case, the message was never even started, so it's safe to tell
                     // the user that the request was completely canceled
-                    let _ = cb.send(Err((::Error::new_canceled(Some(err)), Some(req))));
+                    let _ = cb.send(Err((::Error::new_canceled().with(err), Some(req))));
                     Ok(())
                 } else {
                     Err(err)

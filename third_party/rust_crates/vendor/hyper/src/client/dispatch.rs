@@ -1,4 +1,4 @@
-use futures::{Async, Poll, Stream};
+use futures::{future, Async, Future, Poll, Stream};
 use futures::sync::{mpsc, oneshot};
 use want;
 
@@ -167,7 +167,7 @@ struct Envelope<T, U>(Option<(T, Callback<T, U>)>);
 impl<T, U> Drop for Envelope<T, U> {
     fn drop(&mut self) {
         if let Some((val, cb)) = self.0.take() {
-            let _ = cb.send(Err((::Error::new_canceled(None::<::Error>), Some(val))));
+            let _ = cb.send(Err((::Error::new_canceled().with("connection closed"), Some(val))));
         }
     }
 }
@@ -178,14 +178,21 @@ pub enum Callback<T, U> {
 }
 
 impl<T, U> Callback<T, U> {
-    pub fn poll_cancel(&mut self) -> Poll<(), ()> {
+    pub(crate) fn is_canceled(&self) -> bool {
+        match *self {
+            Callback::Retry(ref tx) => tx.is_canceled(),
+            Callback::NoRetry(ref tx) => tx.is_canceled(),
+        }
+    }
+
+    pub(crate) fn poll_cancel(&mut self) -> Poll<(), ()> {
         match *self {
             Callback::Retry(ref mut tx) => tx.poll_cancel(),
             Callback::NoRetry(ref mut tx) => tx.poll_cancel(),
         }
     }
 
-    pub fn send(self, val: Result<U, (::Error, Option<T>)>) {
+    pub(crate) fn send(self, val: Result<U, (::Error, Option<T>)>) {
         match self {
             Callback::Retry(tx) => {
                 let _ = tx.send(val);
@@ -194,6 +201,37 @@ impl<T, U> Callback<T, U> {
                 let _ = tx.send(val.map_err(|e| e.0));
             }
         }
+    }
+
+    pub(crate) fn send_when(
+        self,
+        mut when: impl Future<Item=U, Error=(::Error, Option<T>)>,
+    ) -> impl Future<Item=(), Error=()> {
+        let mut cb = Some(self);
+
+        // "select" on this callback being canceled, and the future completing
+        future::poll_fn(move || {
+            match when.poll() {
+                Ok(Async::Ready(res)) => {
+                    cb.take()
+                        .expect("polled after complete")
+                        .send(Ok(res));
+                    Ok(().into())
+                },
+                Ok(Async::NotReady) => {
+                    // check if the callback is canceled
+                    try_ready!(cb.as_mut().unwrap().poll_cancel());
+                    trace!("send_when canceled");
+                    Ok(().into())
+                },
+                Err(err) => {
+                    cb.take()
+                        .expect("polled after complete")
+                        .send(Err(err));
+                    Ok(().into())
+                }
+            }
+        })
     }
 }
 
@@ -274,20 +312,21 @@ mod tests {
     #[cfg(feature = "nightly")]
     #[bench]
     fn giver_queue_throughput(b: &mut test::Bencher) {
-        let (mut tx, mut rx) = super::channel::<i32, ()>();
+        use {Body, Request, Response};
+        let (mut tx, mut rx) = super::channel::<Request<Body>, Response<Body>>();
 
         b.iter(move || {
             ::futures::future::lazy(|| {
-                let _ = tx.send(1).unwrap();
+                let _ = tx.send(Request::default()).unwrap();
                 loop {
-                    let async = rx.poll().unwrap();
-                    if async.is_not_ready() {
+                    let ok = rx.poll().unwrap();
+                    if ok.is_not_ready() {
                         break;
                     }
                 }
 
 
-                Ok::<(), ()>(())
+                Ok::<_, ()>(())
             }).wait().unwrap();
         })
     }

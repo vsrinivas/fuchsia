@@ -1,3 +1,5 @@
+use std::error::Error as StdError;
+
 use futures::{Async, Future, Poll, Stream};
 use h2::Reason;
 use h2::server::{Builder, Connection, Handshake, SendResponse};
@@ -38,6 +40,7 @@ where
     B: Payload,
 {
     conn: Connection<T, SendBuf<B::Data>>,
+    closing: Option<::Error>,
 }
 
 
@@ -45,14 +48,12 @@ impl<T, S, B, E> Server<T, S, B, E>
 where
     T: AsyncRead + AsyncWrite,
     S: Service<ReqBody=Body, ResBody=B>,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
-    //S::Future: Send + 'static,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     B: Payload,
     E: H2Exec<S::Future, B>,
 {
-    pub(crate) fn new(io: T, service: S, exec: E) -> Server<T, S, B, E> {
-        let handshake = Builder::new()
-            .handshake(io);
+    pub(crate) fn new(io: T, service: S, builder: &Builder, exec: E) -> Server<T, S, B, E> {
+        let handshake = builder.handshake(io);
         Server {
             exec,
             state: State::Handshaking(handshake),
@@ -67,7 +68,9 @@ where
                 // fall-through, to replace state with Closed
             },
             State::Serving(ref mut srv) => {
-                srv.conn.graceful_shutdown();
+                if srv.closing.is_none() {
+                    srv.conn.graceful_shutdown();
+                }
                 return;
             },
             State::Closed => {
@@ -82,8 +85,7 @@ impl<T, S, B, E> Future for Server<T, S, B, E>
 where
     T: AsyncRead + AsyncWrite,
     S: Service<ReqBody=Body, ResBody=B>,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
-    //S::Future: Send + 'static,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     B: Payload,
     E: H2Exec<S::Future, B>,
 {
@@ -96,7 +98,8 @@ where
                 State::Handshaking(ref mut h) => {
                     let conn = try_ready!(h.poll().map_err(::Error::new_h2));
                     State::Serving(Serving {
-                        conn: conn,
+                        conn,
+                        closing: None,
                     })
                 },
                 State::Serving(ref mut srv) => {
@@ -125,22 +128,60 @@ where
             ReqBody=Body,
             ResBody=B,
         >,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         E: H2Exec<S::Future, B>,
     {
-        while let Some((req, respond)) = try_ready!(self.conn.poll().map_err(::Error::new_h2)) {
-            trace!("incoming request");
-            let content_length = content_length_parse_all(req.headers());
-            let req = req.map(|stream| {
-                ::Body::h2(stream, content_length)
-            });
-            let fut = H2Stream::new(service.call(req), respond);
-            exec.execute_h2stream(fut)?;
+        if self.closing.is_none() {
+            loop {
+                // At first, polls the readiness of supplied service.
+                match service.poll_ready() {
+                    Ok(Async::Ready(())) => (),
+                    Ok(Async::NotReady) => {
+                        // use `poll_close` instead of `poll`, in order to avoid accepting a request.
+                        try_ready!(self.conn.poll_close().map_err(::Error::new_h2));
+                        trace!("incoming connection complete");
+                        return Ok(Async::Ready(()));
+                    }
+                    Err(err) => {
+                        let err = ::Error::new_user_service(err);
+                        debug!("service closed: {}", err);
+
+                        let reason = err.h2_reason();
+                        if reason == Reason::NO_ERROR {
+                            // NO_ERROR is only used for graceful shutdowns...
+                            trace!("interpretting NO_ERROR user error as graceful_shutdown");
+                            self.conn.graceful_shutdown();
+                        } else {
+                            trace!("abruptly shutting down with {:?}", reason);
+                            self.conn.abrupt_shutdown(reason);
+                        }
+                        self.closing = Some(err);
+                        break;
+                    }
+                }
+
+                // When the service is ready, accepts an incoming request.
+                if let Some((req, respond)) = try_ready!(self.conn.poll().map_err(::Error::new_h2)) {
+                    trace!("incoming request");
+                    let content_length = content_length_parse_all(req.headers());
+                    let req = req.map(|stream| {
+                        ::Body::h2(stream, content_length)
+                    });
+                    let fut = H2Stream::new(service.call(req), respond);
+                    exec.execute_h2stream(fut)?;
+                } else {
+                    // no more incoming streams...
+                    trace!("incoming connection complete");
+                    return Ok(Async::Ready(()))
+                }
+            }
         }
 
-        // no more incoming streams...
-        trace!("incoming connection complete");
-        Ok(Async::Ready(()))
+        debug_assert!(self.closing.is_some(), "poll_server broke loop without closing");
+
+        try_ready!(self.conn.poll_close().map_err(::Error::new_h2));
+
+        Err(self.closing.take().expect("polled after error"))
     }
 }
 
@@ -164,7 +205,7 @@ where
 impl<F, B> H2Stream<F, B>
 where
     F: Future<Item=Response<B>>,
-    F::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    F::Error: Into<Box<dyn StdError + Send + Sync>>,
     B: Payload,
 {
     fn new(fut: F, respond: SendResponse<SendBuf<B::Data>>) -> H2Stream<F, B> {
@@ -191,7 +232,12 @@ where
                             }
                             return Ok(Async::NotReady);
                         }
-                        Err(e) => return Err(::Error::new_user_service(e)),
+                        Err(e) => {
+                            let err = ::Error::new_user_service(e);
+                            warn!("http2 service errored: {}", err);
+                            self.reply.send_reset(err.h2_reason());
+                            return Err(err);
+                        },
                     };
 
                     let (head, mut body) = res.into_parts();
@@ -210,7 +256,7 @@ where
                             match self.reply.send_response(res, $eos) {
                                 Ok(tx) => tx,
                                 Err(e) => {
-                                    trace!("send response error: {}", e);
+                                    debug!("send response error: {}", e);
                                     self.reply.send_reset(Reason::INTERNAL_ERROR);
                                     return Err(::Error::new_h2(e));
                                 }
@@ -252,7 +298,7 @@ where
 impl<F, B> Future for H2Stream<F, B>
 where
     F: Future<Item=Response<B>>,
-    F::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    F::Error: Into<Box<dyn StdError + Send + Sync>>,
     B: Payload,
 {
     type Item = ();

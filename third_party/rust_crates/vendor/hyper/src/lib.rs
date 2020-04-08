@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/hyper/0.12.24")]
+#![doc(html_root_url = "https://docs.rs/hyper/0.12.35")]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![cfg_attr(test, deny(warnings))]
@@ -22,6 +22,7 @@ extern crate bytes;
 #[cfg(feature = "runtime")] extern crate futures_cpupool;
 extern crate h2;
 #[doc(hidden)] pub extern crate http;
+extern crate http_body;
 extern crate httparse;
 extern crate iovec;
 extern crate itoa;
@@ -29,6 +30,7 @@ extern crate itoa;
 #[cfg(feature = "runtime")] extern crate net2;
 extern crate time;
 #[cfg(feature = "runtime")] extern crate tokio;
+extern crate tokio_buf;
 #[cfg(feature = "runtime")] extern crate tokio_executor;
 #[macro_use] extern crate tokio_io;
 #[cfg(feature = "runtime")] extern crate tokio_reactor;

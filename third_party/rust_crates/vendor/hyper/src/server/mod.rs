@@ -54,6 +54,7 @@ pub mod conn;
 mod shutdown;
 #[cfg(feature = "runtime")] mod tcp;
 
+use std::error::Error as StdError;
 use std::fmt;
 #[cfg(feature = "runtime")] use std::net::{SocketAddr, TcpListener as StdTcpListener};
 
@@ -142,10 +143,10 @@ impl<S> Server<AddrIncoming, S> {
 impl<I, S, E, B> Server<I, S, E>
 where
     I: Stream,
-    I::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    I::Error: Into<Box<dyn StdError + Send + Sync>>,
     I::Item: AsyncRead + AsyncWrite + Send + 'static,
     S: MakeServiceRef<I::Item, ReqBody=Body, ResBody=B>,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     S::Service: 'static,
     B: Payload,
     E: H2Exec<<S::Service as Service>::Future, B>,
@@ -201,10 +202,10 @@ where
 impl<I, S, B, E> Future for Server<I, S, E>
 where
     I: Stream,
-    I::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    I::Error: Into<Box<dyn StdError + Send + Sync>>,
     I::Item: AsyncRead + AsyncWrite + Send + 'static,
     S: MakeServiceRef<I::Item, ReqBody=Body, ResBody=B>,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     S::Service: 'static,
     B: Payload,
     E: H2Exec<<S::Service as Service>::Future, B>,
@@ -302,6 +303,52 @@ impl<I, E> Builder<I, E> {
         self
     }
 
+    // soft-deprecated? deprecation warning just seems annoying...
+    // reimplemented to take `self` instead of `&mut self`
+    #[doc(hidden)]
+    pub fn http2_initial_stream_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        self.protocol.http2_initial_stream_window_size(sz.into());
+        self
+    }
+
+    // soft-deprecated? deprecation warning just seems annoying...
+    // reimplemented to take `self` instead of `&mut self`
+    #[doc(hidden)]
+    pub fn http2_initial_connection_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        self.protocol.http2_initial_connection_window_size(sz.into());
+        self
+    }
+
+    /// Sets the [`SETTINGS_INITIAL_WINDOW_SIZE`][spec] option for HTTP2
+    /// stream-level flow control.
+    ///
+    /// Default is 65,535
+    ///
+    /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_INITIAL_WINDOW_SIZE
+    pub fn http2_initial_stream_window_size_(mut self, sz: impl Into<Option<u32>>) -> Self {
+        self.protocol.http2_initial_stream_window_size(sz.into());
+        self
+    }
+
+    /// Sets the max connection-level flow control for HTTP2
+    ///
+    /// Default is 65,535
+    pub fn http2_initial_connection_window_size_(mut self, sz: impl Into<Option<u32>>) -> Self {
+        self.protocol.http2_initial_connection_window_size(sz.into());
+        self
+    }
+
+    /// Sets the [`SETTINGS_MAX_CONCURRENT_STREAMS`][spec] option for HTTP2
+    /// connections.
+    ///
+    /// Default is no limit (`None`).
+    ///
+    /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_MAX_CONCURRENT_STREAMS
+    pub fn http2_max_concurrent_streams(mut self, max: impl Into<Option<u32>>) -> Self {
+        self.protocol.http2_max_concurrent_streams(max.into());
+        self
+    }
+
     /// Set the maximum buffer size.
     ///
     /// Default is ~ 400kb.
@@ -352,10 +399,10 @@ impl<I, E> Builder<I, E> {
     pub fn serve<S, B>(self, new_service: S) -> Server<I, S, E>
     where
         I: Stream,
-        I::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        I::Error: Into<Box<dyn StdError + Send + Sync>>,
         I::Item: AsyncRead + AsyncWrite + Send + 'static,
         S: MakeServiceRef<I::Item, ReqBody=Body, ResBody=B>,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         S::Service: 'static,
         B: Payload,
         E: NewSvcExec<I::Item, S::Future, S::Service, E, NoopWatcher>,

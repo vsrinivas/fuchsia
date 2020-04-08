@@ -24,7 +24,7 @@
 //! ## Example
 //!
 //! For a small example program simply fetching a URL, take a look at the
-//! [full client example](https://github.com/hyperium/hyper/blob/master/examples/client.rs).
+//! [full client example](https://github.com/hyperium/hyper/blob/0.12.x/examples/client.rs).
 //!
 //! ```
 //! extern crate hyper;
@@ -236,13 +236,14 @@ where C: Connect + Sync + 'static,
         match req.version() {
             Version::HTTP_11 => (),
             Version::HTTP_10 => if is_http_connect {
-                debug!("CONNECT is not allowed for HTTP/1.0");
+                warn!("CONNECT is not allowed for HTTP/1.0");
                 return ResponseFuture::new(Box::new(future::err(::Error::new_user_unsupported_request_method())));
             },
-            other => if self.config.ver != Ver::Http2 {
-                error!("Request has unsupported version \"{:?}\"", other);
-                return ResponseFuture::new(Box::new(future::err(::Error::new_user_unsupported_version())));
-            }
+            other_h2 @ Version::HTTP_2 => if self.config.ver != Ver::Http2 {
+                return ResponseFuture::error_version(other_h2);
+            },
+            // completely unsupported HTTP version (like HTTP/0.9)!
+            other => return ResponseFuture::error_version(other),
         };
 
         let domain = match extract_domain(req.uri_mut(), is_http_connect) {
@@ -497,7 +498,7 @@ where C: Connect + Sync + 'static,
             let connecting = match pool.connecting(&pool_key, ver) {
                 Some(lock) => lock,
                 None => {
-                    let canceled = ::Error::new_canceled(Some("HTTP/2 connection in progress"));
+                    let canceled = ::Error::new_canceled().with("HTTP/2 connection in progress");
                     return Either::B(future::err(canceled));
                 }
             };
@@ -516,7 +517,7 @@ where C: Connect + Sync + 'static,
                             None => {
                                 // Another connection has already upgraded,
                                 // the pool checkout should finish up for us.
-                                let canceled = ::Error::new_canceled(Some("ALPN upgraded to HTTP/2"));
+                                let canceled = ::Error::new_canceled().with("ALPN upgraded to HTTP/2");
                                 return Either::B(future::err(canceled));
                             }
                         }
@@ -528,6 +529,7 @@ where C: Connect + Sync + 'static,
                         .http2_only(is_h2)
                         .handshake(io)
                         .and_then(move |(tx, conn)| {
+                            trace!("handshake complete, spawning background dispatcher task");
                             let bg = executor.execute(conn.map_err(|e| {
                                 debug!("client connection error: {}", e)
                             }));
@@ -581,14 +583,19 @@ impl<C, B> fmt::Debug for Client<C, B> {
 /// This is returned by `Client::request` (and `Client::get`).
 #[must_use = "futures do nothing unless polled"]
 pub struct ResponseFuture {
-    inner: Box<Future<Item=Response<Body>, Error=::Error> + Send>,
+    inner: Box<dyn Future<Item=Response<Body>, Error=::Error> + Send>,
 }
 
 impl ResponseFuture {
-    fn new(fut: Box<Future<Item=Response<Body>, Error=::Error> + Send>) -> Self {
+    fn new(fut: Box<dyn Future<Item=Response<Body>, Error=::Error> + Send>) -> Self {
         Self {
             inner: fut,
         }
+    }
+
+    fn error_version(ver: Version) -> Self {
+        warn!("Request has unsupported version \"{:?}\"", ver);
+        ResponseFuture::new(Box::new(future::err(::Error::new_user_unsupported_version())))
     }
 }
 
@@ -964,6 +971,25 @@ impl Builder {
         self
     }
 
+    /// Sets the [`SETTINGS_INITIAL_WINDOW_SIZE`][spec] option for HTTP2
+    /// stream-level flow control.
+    ///
+    /// Default is 65,535
+    ///
+    /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_INITIAL_WINDOW_SIZE
+    pub fn http2_initial_stream_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        self.conn_builder.http2_initial_stream_window_size(sz.into());
+        self
+    }
+
+    /// Sets the max connection-level flow control for HTTP2
+    ///
+    /// Default is 65,535
+    pub fn http2_initial_connection_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        self.conn_builder.http2_initial_connection_window_size(sz.into());
+        self
+    }
+
     /// Sets the maximum idle connection per host allowed in the pool.
     ///
     /// Default is `usize::MAX` (no limit).
@@ -1004,7 +1030,7 @@ impl Builder {
     /// Provide an executor to execute background `Connection` tasks.
     pub fn executor<E>(&mut self, exec: E) -> &mut Self
     where
-        E: Executor<Box<Future<Item=(), Error=()> + Send>> + Send + Sync + 'static,
+        E: Executor<Box<dyn Future<Item=(), Error=()> + Send>> + Send + Sync + 'static,
     {
         self.conn_builder.executor(exec);
         self

@@ -15,6 +15,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use futures::{Async, Future, Poll};
 use futures::future::{self, Either, Executor};
+use h2;
 use tokio_io::{AsyncRead, AsyncWrite};
 
 use body::Payload;
@@ -77,6 +78,7 @@ pub struct Builder {
     h1_read_buf_exact_size: Option<usize>,
     h1_max_buf_size: Option<usize>,
     http2: bool,
+    h2_builder: h2::client::Builder,
 }
 
 /// A future setting up HTTP over an IO object.
@@ -96,7 +98,7 @@ pub struct Handshake<T, B> {
 pub struct ResponseFuture {
     // for now, a Box is used to hide away the internal `B`
     // that can be returned if canceled
-    inner: Box<Future<Item=Response<Body>, Error=::Error> + Send>,
+    inner: Box<dyn Future<Item=Response<Body>, Error=::Error> + Send>,
 }
 
 /// Deconstructed parts of a `Connection`.
@@ -233,7 +235,7 @@ where
             },
             Err(_req) => {
                 debug!("connection was not ready");
-                let err = ::Error::new_canceled(Some("connection was not ready"));
+                let err = ::Error::new_canceled().with("connection was not ready");
                 Either::B(future::err(err))
             }
         };
@@ -260,7 +262,7 @@ where
             },
             Err(req) => {
                 debug!("connection was not ready");
-                let err = ::Error::new_canceled(Some("connection was not ready"));
+                let err = ::Error::new_canceled().with("connection was not ready");
                 Either::B(future::err((err, Some(req))))
             }
         }
@@ -320,7 +322,7 @@ where
             },
             Err(req) => {
                 debug!("connection was not ready");
-                let err = ::Error::new_canceled(Some("connection was not ready"));
+                let err = ::Error::new_canceled().with("connection was not ready");
                 Either::B(future::err((err, Some(req))))
             }
         }
@@ -374,6 +376,10 @@ where
     /// upgrade. Once the upgrade is completed, the connection would be "done",
     /// but it is not desired to actally shutdown the IO object. Instead you
     /// would take it back using `into_parts`.
+    ///
+    /// Use [`poll_fn`](https://docs.rs/futures/0.1.25/futures/future/fn.poll_fn.html)
+    /// and [`try_ready!`](https://docs.rs/futures/0.1.25/futures/macro.try_ready.html)
+    /// to work with this function; or use the `without_shutdown` wrapper.
     pub fn poll_without_shutdown(&mut self) -> Poll<(), ::Error> {
         match self.inner.as_mut().expect("already upgraded") {
             &mut Either::A(ref mut h1) => {
@@ -383,6 +389,16 @@ where
                 h2.poll().map(|x| x.map(|_| ()))
             }
         }
+    }
+
+    /// Prevent shutdown of the underlying IO object at the end of service the request,
+    /// instead run `into_parts`. This is a convenience wrapper over `poll_without_shutdown`.
+    pub fn without_shutdown(self) -> impl Future<Item=Parts<T>, Error=::Error> {
+        let mut conn = Some(self);
+        ::futures::future::poll_fn(move || -> ::Result<_> {
+            try_ready!(conn.as_mut().unwrap().poll_without_shutdown());
+            Ok(conn.take().unwrap().into_parts().into())
+        })
     }
 }
 
@@ -431,6 +447,9 @@ impl Builder {
     /// Creates a new connection builder.
     #[inline]
     pub fn new() -> Builder {
+        let mut h2_builder = h2::client::Builder::default();
+        h2_builder.enable_push(false);
+
         Builder {
             exec: Exec::Default,
             h1_writev: true,
@@ -438,13 +457,14 @@ impl Builder {
             h1_title_case_headers: false,
             h1_max_buf_size: None,
             http2: false,
+            h2_builder,
         }
     }
 
     /// Provide an executor to execute background HTTP2 tasks.
     pub fn executor<E>(&mut self, exec: E) -> &mut Builder
     where
-        E: Executor<Box<Future<Item=(), Error=()> + Send>> + Send + Sync + 'static,
+        E: Executor<Box<dyn Future<Item=(), Error=()> + Send>> + Send + Sync + 'static,
     {
         self.exec = Exec::Executor(Arc::new(exec));
         self
@@ -482,6 +502,29 @@ impl Builder {
     /// Default is false.
     pub fn http2_only(&mut self, enabled: bool) -> &mut Builder {
         self.http2 = enabled;
+        self
+    }
+
+    /// Sets the [`SETTINGS_INITIAL_WINDOW_SIZE`][spec] option for HTTP2
+    /// stream-level flow control.
+    ///
+    /// Default is 65,535
+    ///
+    /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_INITIAL_WINDOW_SIZE
+    pub fn http2_initial_stream_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        if let Some(sz) = sz.into() {
+            self.h2_builder.initial_window_size(sz);
+        }
+        self
+    }
+
+    /// Sets the max connection-level flow control for HTTP2
+    ///
+    /// Default is 65,535
+    pub fn http2_initial_connection_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        if let Some(sz) = sz.into() {
+            self.h2_builder.initial_connection_window_size(sz);
+        }
         self
     }
 
@@ -532,7 +575,7 @@ where
             let dispatch = proto::h1::Dispatcher::new(cd, conn);
             Either::A(dispatch)
         } else {
-            let h2 = proto::h2::Client::new(io, rx, self.builder.exec.clone());
+            let h2 = proto::h2::Client::new(io, rx, &self.builder.h2_builder, self.builder.exec.clone());
             Either::B(h2)
         };
 

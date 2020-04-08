@@ -7,6 +7,7 @@
 //! - The [`Connect`](Connect) trait and related types to build custom connectors.
 use std::error::Error as StdError;
 use std::{fmt, mem};
+#[cfg(try_from)] use std::convert::TryFrom;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use futures::Future;
@@ -26,7 +27,7 @@ pub trait Connect: Send + Sync {
     /// The connected IO Stream.
     type Transport: AsyncRead + AsyncWrite + Send + 'static;
     /// An error occured when trying to connect.
-    type Error: Into<Box<StdError + Send + Sync>>;
+    type Error: Into<Box<dyn StdError + Send + Sync>>;
     /// A Future that will resolve to the connected Transport.
     type Future: Future<Item=(Self::Transport, Connected), Error=Self::Error> + Send;
     /// Connect to a destination.
@@ -52,7 +53,7 @@ pub struct Connected {
     pub(super) extra: Option<Extra>,
 }
 
-pub(super) struct Extra(Box<ExtraInner>);
+pub(super) struct Extra(Box<dyn ExtraInner>);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum Alpn {
@@ -251,6 +252,15 @@ impl Destination {
     */
 }
 
+#[cfg(try_from)]
+impl TryFrom<Uri> for Destination {
+    type Error = ::error::Error;
+
+    fn try_from(uri: Uri) -> Result<Self, Self::Error> {
+        Destination::try_from_uri(uri)
+    }
+}
+
 impl Connected {
     /// Create new `Connected` type with empty metadata.
     pub fn new() -> Connected {
@@ -334,7 +344,7 @@ impl fmt::Debug for Extra {
 }
 
 trait ExtraInner: Send + Sync {
-    fn clone_box(&self) -> Box<ExtraInner>;
+    fn clone_box(&self) -> Box<dyn ExtraInner>;
     fn set(&self, res: &mut Response<::Body>);
 }
 
@@ -348,7 +358,7 @@ impl<T> ExtraInner for ExtraEnvelope<T>
 where
     T: Clone + Send + Sync + 'static
 {
-    fn clone_box(&self) -> Box<ExtraInner> {
+    fn clone_box(&self) -> Box<dyn ExtraInner> {
         Box::new(self.clone())
     }
 
@@ -357,7 +367,7 @@ where
     }
 }
 
-struct ExtraChain<T>(Box<ExtraInner>, T);
+struct ExtraChain<T>(Box<dyn ExtraInner>, T);
 
 impl<T: Clone> Clone for ExtraChain<T> {
     fn clone(&self) -> Self {
@@ -369,7 +379,7 @@ impl<T> ExtraInner for ExtraChain<T>
 where
     T: Clone + Send + Sync + 'static
 {
-    fn clone_box(&self) -> Box<ExtraInner> {
+    fn clone_box(&self) -> Box<dyn ExtraInner> {
         Box::new(self.clone())
     }
 
@@ -381,7 +391,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{Connected, Destination};
+    use super::{Connected, Destination, TryFrom};
 
     #[test]
     fn test_destination_set_scheme() {
@@ -525,6 +535,22 @@ mod tests {
         assert_eq!(dst.scheme(), "http");
         assert_eq!(dst.host(), "hyper.rs");
         assert_eq!(dst.port(), None);
+    }
+
+    #[cfg(try_from)]
+    #[test]
+    fn test_try_from_destination() {
+        let uri: http::Uri = "http://hyper.rs".parse().expect("initial parse");
+        let result = Destination::try_from(uri);
+        assert_eq!(result.is_ok(), true);
+    }
+    
+    #[cfg(try_from)]    
+    #[test]
+    fn test_try_from_no_scheme() {
+        let uri: http::Uri = "hyper.rs".parse().expect("initial parse error");
+        let result = Destination::try_from(uri);
+        assert_eq!(result.is_err(), true);
     }
 
     #[derive(Clone, Debug, PartialEq)]

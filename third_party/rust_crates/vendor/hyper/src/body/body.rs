@@ -1,9 +1,11 @@
 use std::borrow::Cow;
+use std::error::Error as StdError;
 use std::fmt;
 
 use bytes::Bytes;
 use futures::sync::{mpsc, oneshot};
-use futures::{Async, Future, Poll, Stream};
+use futures::{Async, Future, Poll, Stream, Sink, AsyncSink, StartSend};
+use tokio_buf::SizeHint;
 use h2;
 use http::HeaderMap;
 
@@ -38,7 +40,7 @@ enum Kind {
         content_length: Option<u64>,
         recv: h2::RecvStream,
     },
-    Wrapped(Box<Stream<Item = Chunk, Error = Box<::std::error::Error + Send + Sync>> + Send>),
+    Wrapped(Box<dyn Stream<Item = Chunk, Error = Box<dyn StdError + Send + Sync>> + Send>),
 }
 
 struct Extra {
@@ -140,7 +142,7 @@ impl Body {
     pub fn wrap_stream<S>(stream: S) -> Body
     where
         S: Stream + Send + 'static,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         Chunk: From<S::Item>,
     {
         let mapped = stream.map(Chunk::from).map_err(Into::into);
@@ -245,7 +247,7 @@ impl Body {
                 ref mut abort_rx,
             } => {
                 if let Ok(Async::Ready(())) = abort_rx.poll() {
-                    return Err(::Error::new_body_write("body write aborted"));
+                    return Err(::Error::new_body_write_aborted());
                 }
 
                 match rx.poll().expect("mpsc cannot error") {
@@ -332,6 +334,36 @@ impl Payload for Body {
     }
 }
 
+impl ::http_body::Body for Body {
+    type Data = Chunk;
+    type Error = ::Error;
+
+    fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error> {
+        <Self as Payload>::poll_data(self)
+    }
+
+    fn poll_trailers(&mut self) -> Poll<Option<HeaderMap>, Self::Error> {
+        <Self as Payload>::poll_trailers(self)
+    }
+
+    fn is_end_stream(&self) -> bool {
+        <Self as Payload>::is_end_stream(self)
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        let mut hint = SizeHint::default();
+
+        let content_length = <Self as Payload>::content_length(self);
+
+        if let Some(size) = content_length {
+            hint.set_upper(size);
+            hint.set_lower(size)
+        }
+
+        hint
+    }
+}
+
 impl Stream for Body {
     type Item = Chunk;
     type Error = ::Error;
@@ -343,7 +375,21 @@ impl Stream for Body {
 
 impl fmt::Debug for Body {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Body").finish()
+        #[derive(Debug)]
+        struct Streaming;
+        #[derive(Debug)]
+        struct Empty;
+        #[derive(Debug)]
+        struct Once<'a>(&'a Chunk);
+
+        let mut builder = f.debug_tuple("Body");
+        match self.kind {
+            Kind::Once(None) => builder.field(&Empty),
+            Kind::Once(Some(ref chunk)) => builder.field(&Once(chunk)),
+            _ => builder.field(&Streaming),
+        };
+
+        builder.finish()
     }
 }
 
@@ -381,6 +427,25 @@ impl Sender {
     }
 }
 
+impl Sink for Sender {
+    type SinkItem = Chunk;
+    type SinkError = ::Error;
+
+    fn poll_complete(&mut self) -> Poll<(), Self::SinkError> {
+        Ok(Async::Ready(()))
+    }
+
+    fn start_send(&mut self, msg: Chunk) -> StartSend<Self::SinkItem, Self::SinkError> {
+        match self.poll_ready()? {
+            Async::Ready(_) => {
+                self.send_data(msg).map_err(|_| ::Error::new_closed())?;
+                Ok(AsyncSink::Ready)
+            }
+            Async::NotReady => Ok(AsyncSink::NotReady(msg)),
+        }
+    }
+}
+
 impl From<Chunk> for Body {
     #[inline]
     fn from(chunk: Chunk) -> Body {
@@ -393,13 +458,13 @@ impl From<Chunk> for Body {
 }
 
 impl
-    From<Box<Stream<Item = Chunk, Error = Box<::std::error::Error + Send + Sync>> + Send + 'static>>
+    From<Box<dyn Stream<Item = Chunk, Error = Box<dyn StdError + Send + Sync>> + Send + 'static>>
     for Body
 {
     #[inline]
     fn from(
         stream: Box<
-            Stream<Item = Chunk, Error = Box<::std::error::Error + Send + Sync>> + Send + 'static,
+            dyn Stream<Item = Chunk, Error = Box<dyn StdError + Send + Sync>> + Send + 'static,
         >,
     ) -> Body {
         Body::new(Kind::Wrapped(stream))

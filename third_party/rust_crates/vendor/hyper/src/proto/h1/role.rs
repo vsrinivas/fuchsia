@@ -1,3 +1,7 @@
+// `mem::uninitialized` replaced with `mem::MaybeUninit`,
+// can't upgrade yet
+#![allow(deprecated)]
+
 use std::fmt::{self, Write};
 use std::mem;
 
@@ -65,7 +69,7 @@ impl Http1Transaction for Server {
     const LOG: &'static str = "{role=server}";
 
     fn parse(buf: &mut BytesMut, ctx: ParseContext) -> ParseResult<RequestLine> {
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(None);
         }
 
@@ -86,8 +90,8 @@ impl Http1Transaction for Server {
             trace!("Request.parse([Header; {}], [u8; {}])", headers.len(), buf.len());
             let mut req = httparse::Request::new(&mut headers);
             let bytes = buf.as_ref();
-            match req.parse(bytes)? {
-                httparse::Status::Complete(parsed_len) => {
+            match req.parse(bytes) {
+                Ok(httparse::Status::Complete(parsed_len)) => {
                     trace!("Request.parse Complete({})", parsed_len);
                     len = parsed_len;
                     subject = RequestLine(
@@ -106,9 +110,20 @@ impl Http1Transaction for Server {
 
                     record_header_indices(bytes, &req.headers, &mut headers_indices)?;
                     headers_len = req.headers.len();
-                    //(len, subject, version, headers_len)
                 }
-                httparse::Status::Partial => return Ok(None),
+                Ok(httparse::Status::Partial) => return Ok(None),
+                Err(err) => return Err(match err {
+                    // if invalid Token, try to determine if for method or path
+                    httparse::Error::Token => {
+                        if req.method.is_none() {
+                            Parse::Method
+                        } else {
+                            debug_assert!(req.path.is_none());
+                            Parse::Uri
+                        }
+                    },
+                    other => other.into(),
+                }),
             }
         };
 
@@ -233,13 +248,18 @@ impl Http1Transaction for Server {
         );
         debug_assert!(!msg.title_case_headers, "no server config for title case headers");
 
+        let mut wrote_len = false;
+
         // hyper currently doesn't support returning 1xx status codes as a Response
         // This is because Service only allows returning a single Response, and
         // so if you try to reply with a e.g. 100 Continue, you have no way of
         // replying with the latter status code response.
-        let is_upgrade = msg.head.subject == StatusCode::SWITCHING_PROTOCOLS
-            || (msg.req_method == &Some(Method::CONNECT) && msg.head.subject.is_success());
-        let (ret, mut is_last) = if is_upgrade {
+        let (ret, mut is_last) = if msg.head.subject == StatusCode::SWITCHING_PROTOCOLS {
+            (Ok(()), true)
+        } else if msg.req_method == &Some(Method::CONNECT) && msg.head.subject.is_success() {
+            // Sending content-length or transfer-encoding header on 2xx response
+            // to CONNECT is forbidden in RFC 7231.
+            wrote_len = true;
             (Ok(()), true)
         } else if msg.head.subject.is_informational() {
             warn!("response with 1xx status code not supported");
@@ -271,7 +291,7 @@ impl Http1Transaction for Server {
                     warn!("response with HTTP2 version coerced to HTTP/1.1");
                     extend(dst, b"HTTP/1.1 ");
                 },
-                _ => unreachable!(),
+                other => panic!("unexpected response version: {:?}", other),
             }
 
             extend(dst, msg.head.subject.as_str().as_bytes());
@@ -282,15 +302,14 @@ impl Http1Transaction for Server {
         }
 
         let mut encoder = Encoder::length(0);
-        let mut wrote_len = false;
         let mut wrote_date = false;
         'headers: for (name, mut values) in msg.head.headers.drain() {
             match name {
                 header::CONTENT_LENGTH => {
                     if wrote_len {
-                        warn!("transfer-encoding and content-length both found, canceling");
+                        warn!("unexpected content-length found, canceling");
                         rewind(dst);
-                        return Err(::Error::new_header());
+                        return Err(::Error::new_user_header());
                     }
                     match msg.body {
                         Some(BodyLength::Known(known_len)) => {
@@ -350,7 +369,7 @@ impl Http1Transaction for Server {
                                         if fold.0 != len {
                                             warn!("multiple Content-Length values found: [{}, {}]", fold.0, len);
                                             rewind(dst);
-                                            return Err(::Error::new_header());
+                                            return Err(::Error::new_user_header());
                                         }
                                         folded = Some(fold);
                                     } else {
@@ -359,7 +378,7 @@ impl Http1Transaction for Server {
                                 } else {
                                     warn!("illegal Content-Length value: {:?}", value);
                                     rewind(dst);
-                                    return Err(::Error::new_header());
+                                    return Err(::Error::new_user_header());
                                 }
                             }
                             if let Some((len, value)) = folded {
@@ -397,9 +416,9 @@ impl Http1Transaction for Server {
                 },
                 header::TRANSFER_ENCODING => {
                     if wrote_len {
-                        warn!("transfer-encoding and content-length both found, canceling");
+                        warn!("unexpected transfer-encoding found, canceling");
                         rewind(dst);
-                        return Err(::Error::new_header());
+                        return Err(::Error::new_user_header());
                     }
                     // check that we actually can send a chunked body...
                     if msg.head.version == Version::HTTP_10 || !Server::can_chunked(msg.req_method, msg.head.subject) {
@@ -472,14 +491,20 @@ impl Http1Transaction for Server {
                 },
                 None |
                 Some(BodyLength::Known(0)) => {
-                    extend(dst, b"content-length: 0\r\n");
+                    if msg.head.subject != StatusCode::NOT_MODIFIED {
+                        extend(dst, b"content-length: 0\r\n");
+                    }
                     Encoder::length(0)
                 },
                 Some(BodyLength::Known(len)) => {
-                    extend(dst, b"content-length: ");
-                    let _ = ::itoa::write(&mut dst, len);
-                    extend(dst, b"\r\n");
-                    Encoder::length(len)
+                    if msg.head.subject == StatusCode::NOT_MODIFIED {
+                        Encoder::length(0)
+                    } else {
+                        extend(dst, b"content-length: ");
+                        let _ = ::itoa::write(&mut dst, len);
+                        extend(dst, b"\r\n");
+                        Encoder::length(len)
+                    }
                 },
             };
         }
@@ -507,7 +532,7 @@ impl Http1Transaction for Server {
     }
 
     fn on_error(err: &::Error) -> Option<MessageHead<Self::Outgoing>> {
-        use ::error::{Kind, Parse};
+        use ::error::Kind;
         let status = match *err.kind() {
             Kind::Parse(Parse::Method) |
             Kind::Parse(Parse::Header) |
@@ -527,11 +552,7 @@ impl Http1Transaction for Server {
         Some(msg)
     }
 
-    fn should_error_on_parse_eof() -> bool {
-        false
-    }
-
-    fn should_read_first() -> bool {
+    fn is_server() -> bool {
         true
     }
 
@@ -571,7 +592,7 @@ impl Http1Transaction for Client {
     fn parse(buf: &mut BytesMut, ctx: ParseContext) -> ParseResult<StatusCode> {
         // Loop to skip information status code headers (100 Continue, etc).
         loop {
-            if buf.len() == 0 {
+            if buf.is_empty() {
                 return Ok(None);
             }
             // Unsafe: see comment in Server Http1Transaction, above.
@@ -611,9 +632,8 @@ impl Http1Transaction for Client {
                 let name = header_name!(&slice[header.name.0..header.name.1]);
                 let value = header_value!(slice.slice(header.value.0, header.value.1));
 
-                match name {
-                    header::CONNECTION => {
-                        // keep_alive was previously set to default for Version
+                if let header::CONNECTION = name {
+                    // keep_alive was previously set to default for Version
                         if keep_alive {
                             // HTTP/1.1
                             keep_alive = !headers::connection_close(&value);
@@ -622,9 +642,7 @@ impl Http1Transaction for Client {
                             // HTTP/1.0
                             keep_alive = headers::connection_keep_alive(&value);
                         }
-                    },
-                    _ => (),
-                }
+                    }
                 headers.append(name, value);
             }
 
@@ -667,7 +685,11 @@ impl Http1Transaction for Client {
         match msg.head.version {
             Version::HTTP_10 => extend(dst, b"HTTP/1.0"),
             Version::HTTP_11 => extend(dst, b"HTTP/1.1"),
-            _ => unreachable!(),
+            Version::HTTP_2 => {
+                warn!("request with HTTP2 version coerced to HTTP/1.1");
+                extend(dst, b"HTTP/1.1");
+            },
+            other => panic!("unexpected request version: {:?}", other),
         }
         extend(dst, b"\r\n");
 
@@ -687,12 +709,8 @@ impl Http1Transaction for Client {
         None
     }
 
-    fn should_error_on_parse_eof() -> bool {
+    fn is_client() -> bool {
         true
-    }
-
-    fn should_read_first() -> bool {
-        false
     }
 }
 
@@ -714,7 +732,7 @@ impl Client {
             101 => {
                 return Ok(Some((DecodedLength::ZERO, true)));
             },
-            100...199 => {
+            100..=199 => {
                 trace!("ignoring informational response: {}", inc.subject.as_u16());
                 return Ok(None);
             },
@@ -726,12 +744,9 @@ impl Client {
             Some(Method::HEAD) => {
                 return Ok(Some((DecodedLength::ZERO, false)));
             }
-            Some(Method::CONNECT) => match inc.subject.as_u16() {
-                200...299 => {
-                    return Ok(Some((DecodedLength::ZERO, true)));
-                },
-                _ => {},
-            },
+            Some(Method::CONNECT) => if let 200..=299 = inc.subject.as_u16() {
+                return Ok(Some((DecodedLength::ZERO, true)));
+            }
             Some(_) => {},
             None => {
                 trace!("Client::decoder is missing the Method");
@@ -766,31 +781,44 @@ impl Client {
 
 impl Client {
     fn set_length(head: &mut RequestHead, body: Option<BodyLength>) -> Encoder {
-        if let Some(body) = body {
-            let can_chunked = head.version == Version::HTTP_11
-                && (head.subject.0 != Method::HEAD)
-                && (head.subject.0 != Method::GET)
-                && (head.subject.0 != Method::CONNECT);
-            set_length(&mut head.headers, body, can_chunked)
+        let body = if let Some(body) = body {
+            body
         } else {
             head.headers.remove(header::TRANSFER_ENCODING);
-            Encoder::length(0)
+            return Encoder::length(0)
+        };
+
+        // HTTP/1.0 doesn't know about chunked
+        let can_chunked = head.version == Version::HTTP_11;
+        let headers = &mut head.headers;
+
+        // If the user already set specific headers, we should respect them, regardless
+        // of what the Payload knows about itself. They set them for a reason.
+
+        // Because of the borrow checker, we can't check the for an existing
+        // Content-Length header while holding an `Entry` for the Transfer-Encoding
+        // header, so unfortunately, we must do the check here, first.
+
+        let existing_con_len = headers::content_length_parse_all(headers);
+        let mut should_remove_con_len = false;
+
+        if !can_chunked {
+            // Chunked isn't legal, so if it is set, we need to remove it.
+            if headers.remove(header::TRANSFER_ENCODING).is_some() {
+                trace!("removing illegal transfer-encoding header");
+            }
+
+            return if let Some(len) = existing_con_len {
+                Encoder::length(len)
+            } else if let BodyLength::Known(len) = body {
+                set_content_length(headers, len)
+            } else {
+                // HTTP/1.0 client requests without a content-length
+                // cannot have any body at all.
+                Encoder::length(0)
+            };
         }
-    }
-}
 
-fn set_length(headers: &mut HeaderMap, body: BodyLength, can_chunked: bool) -> Encoder {
-    // If the user already set specific headers, we should respect them, regardless
-    // of what the Payload knows about itself. They set them for a reason.
-
-    // Because of the borrow checker, we can't check the for an existing
-    // Content-Length header while holding an `Entry` for the Transfer-Encoding
-    // header, so unfortunately, we must do the check here, first.
-
-    let existing_con_len = headers::content_length_parse_all(headers);
-    let mut should_remove_con_len = false;
-
-    if can_chunked {
         // If the user set a transfer-encoding, respect that. Let's just
         // make sure `chunked` is the final encoding.
         let encoder = match headers.entry(header::TRANSFER_ENCODING)
@@ -826,9 +854,22 @@ fn set_length(headers: &mut HeaderMap, body: BodyLength, can_chunked: bool) -> E
                 if let Some(len) = existing_con_len {
                     Some(Encoder::length(len))
                 } else if let BodyLength::Unknown = body {
-                    should_remove_con_len = true;
-                    te.insert(HeaderValue::from_static("chunked"));
-                    Some(Encoder::chunked())
+                    // GET, HEAD, and CONNECT almost never have bodies.
+                    //
+                    // So instead of sending a "chunked" body with a 0-chunk,
+                    // assume no body here. If you *must* send a body,
+                    // set the headers explicitly.
+                    match head.subject.0 {
+                        Method::GET |
+                        Method::HEAD |
+                        Method::CONNECT => {
+                            Some(Encoder::length(0))
+                        },
+                        _ => {
+                            te.insert(HeaderValue::from_static("chunked"));
+                            Some(Encoder::chunked())
+                        },
+                    }
                 } else {
                     None
                 }
@@ -854,27 +895,6 @@ fn set_length(headers: &mut HeaderMap, body: BodyLength, can_chunked: bool) -> E
         };
 
         set_content_length(headers, len)
-    } else {
-        // Chunked isn't legal, so if it is set, we need to remove it.
-        // Also, if it *is* set, then we shouldn't replace with a length,
-        // since the user tried to imply there isn't a length.
-        let encoder = if headers.remove(header::TRANSFER_ENCODING).is_some() {
-            trace!("removing illegal transfer-encoding header");
-            should_remove_con_len = true;
-            Encoder::close_delimited()
-        } else if let Some(len) = existing_con_len {
-            Encoder::length(len)
-        } else if let BodyLength::Known(len) = body {
-            set_content_length(headers, len)
-        } else {
-            Encoder::close_delimited()
-        };
-
-        if should_remove_con_len && existing_con_len.is_some() {
-            headers.remove(header::CONTENT_LENGTH);
-        }
-
-        encoder
     }
 }
 
@@ -1589,4 +1609,3 @@ mod tests {
         })
     }
 }
-

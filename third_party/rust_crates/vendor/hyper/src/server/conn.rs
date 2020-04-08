@@ -8,6 +8,7 @@
 //! If you don't have need to manage connections yourself, consider using the
 //! higher-level [Server](super) API.
 
+use std::error::Error as StdError;
 use std::fmt;
 use std::mem;
 #[cfg(feature = "runtime")] use std::net::SocketAddr;
@@ -17,6 +18,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use futures::{Async, Future, Poll, Stream};
 use futures::future::{Either, Executor};
+use h2;
 use tokio_io::{AsyncRead, AsyncWrite};
 #[cfg(feature = "runtime")] use tokio_reactor::Handle;
 
@@ -46,6 +48,7 @@ pub struct Http<E = Exec> {
     exec: E,
     h1_half_close: bool,
     h1_writev: bool,
+    h2_builder: h2::server::Builder,
     mode: ConnectionMode,
     keep_alive: bool,
     max_buf_size: Option<usize>,
@@ -120,14 +123,14 @@ where
 
 #[derive(Clone, Debug)]
 enum Fallback<E> {
-    ToHttp2(E),
+    ToHttp2(h2::server::Builder, E),
     Http1Only,
 }
 
 impl<E> Fallback<E> {
     fn to_h2(&self) -> bool {
         match *self {
-            Fallback::ToHttp2(_) => true,
+            Fallback::ToHttp2(..) => true,
             Fallback::Http1Only => false,
         }
     }
@@ -165,6 +168,7 @@ impl Http {
             exec: Exec::Default,
             h1_half_close: true,
             h1_writev: true,
+            h2_builder: h2::server::Builder::default(),
             mode: ConnectionMode::Fallback,
             keep_alive: true,
             max_buf_size: None,
@@ -176,7 +180,7 @@ impl Http {
     #[deprecated(note = "use Http::with_executor instead")]
     pub fn executor<E>(&mut self, exec: E) -> &mut Self
     where
-        E: Executor<Box<Future<Item=(), Error=()> + Send>> + Send + Sync + 'static
+        E: Executor<Box<dyn Future<Item=(), Error=()> + Send>> + Send + Sync + 'static
     {
         self.exec = Exec::Executor(Arc::new(exec));
         self
@@ -236,6 +240,42 @@ impl<E> Http<E> {
         self
     }
 
+    /// Sets the [`SETTINGS_INITIAL_WINDOW_SIZE`][spec] option for HTTP2
+    /// stream-level flow control.
+    ///
+    /// Default is 65,535
+    ///
+    /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_INITIAL_WINDOW_SIZE
+    pub fn http2_initial_stream_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        if let Some(sz) = sz.into() {
+            self.h2_builder.initial_window_size(sz);
+        }
+        self
+    }
+
+    /// Sets the max connection-level flow control for HTTP2
+    ///
+    /// Default is 65,535
+    pub fn http2_initial_connection_window_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        if let Some(sz) = sz.into() {
+            self.h2_builder.initial_connection_window_size(sz);
+        }
+        self
+    }
+
+    /// Sets the [`SETTINGS_MAX_CONCURRENT_STREAMS`][spec] option for HTTP2
+    /// connections.
+    ///
+    /// Default is no limit (`None`).
+    ///
+    /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_MAX_CONCURRENT_STREAMS
+    pub fn http2_max_concurrent_streams(&mut self, max: impl Into<Option<u32>>) -> &mut Self {
+        if let Some(max) = max.into() {
+            self.h2_builder.max_concurrent_streams(max);
+        }
+        self
+    }
+
     /// Enables or disables HTTP keep-alive.
     ///
     /// Default is true.
@@ -278,6 +318,7 @@ impl<E> Http<E> {
             exec,
             h1_half_close: self.h1_half_close,
             h1_writev: self.h1_writev,
+            h2_builder: self.h2_builder,
             mode: self.mode,
             keep_alive: self.keep_alive,
             max_buf_size: self.max_buf_size,
@@ -324,7 +365,7 @@ impl<E> Http<E> {
     pub fn serve_connection<S, I, Bd>(&self, io: I, service: S) -> Connection<I, S, E>
     where
         S: Service<ReqBody=Body, ResBody=Bd>,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         Bd: Payload,
         I: AsyncRead + AsyncWrite,
         E: H2Exec<S::Future, Bd>,
@@ -350,7 +391,7 @@ impl<E> Http<E> {
             }
             ConnectionMode::H2Only => {
                 let rewind_io = Rewind::new(io);
-                let h2 = proto::h2::Server::new(rewind_io, service, self.exec.clone());
+                let h2 = proto::h2::Server::new(rewind_io, service, &self.h2_builder, self.exec.clone());
                 Either::B(h2)
             }
         };
@@ -358,7 +399,7 @@ impl<E> Http<E> {
         Connection {
             conn: Some(either),
             fallback: if self.mode == ConnectionMode::Fallback {
-                Fallback::ToHttp2(self.exec.clone())
+                Fallback::ToHttp2(self.h2_builder.clone(), self.exec.clone())
             } else {
                 Fallback::Http1Only
             },
@@ -379,7 +420,7 @@ impl<E> Http<E> {
             ReqBody=Body,
             ResBody=Bd,
         >,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         Bd: Payload,
         E: H2Exec<<S::Service as Service>::Future, Bd>,
     {
@@ -404,7 +445,7 @@ impl<E> Http<E> {
             ReqBody=Body,
             ResBody=Bd,
         >,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         Bd: Payload,
         E: H2Exec<<S::Service as Service>::Future, Bd>,
     {
@@ -419,14 +460,14 @@ impl<E> Http<E> {
     pub fn serve_incoming<I, S, Bd>(&self, incoming: I, make_service: S) -> Serve<I, S, E>
     where
         I: Stream,
-        I::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        I::Error: Into<Box<dyn StdError + Send + Sync>>,
         I::Item: AsyncRead + AsyncWrite,
         S: MakeServiceRef<
             I::Item,
             ReqBody=Body,
             ResBody=Bd,
         >,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         Bd: Payload,
         E: H2Exec<<S::Service as Service>::Future, Bd>,
     {
@@ -444,7 +485,7 @@ impl<E> Http<E> {
 impl<I, B, S, E> Connection<I, S, E>
 where
     S: Service<ReqBody=Body, ResBody=B>,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     I: AsyncRead + AsyncWrite,
     B: Payload + 'static,
     E: H2Exec<S::Future, B>,
@@ -502,6 +543,10 @@ where
     /// upgrade. Once the upgrade is completed, the connection would be "done",
     /// but it is not desired to actally shutdown the IO object. Instead you
     /// would take it back using `into_parts`.
+    ///
+    /// Use [`poll_fn`](https://docs.rs/futures/0.1.25/futures/future/fn.poll_fn.html)
+    /// and [`try_ready!`](https://docs.rs/futures/0.1.25/futures/macro.try_ready.html)
+    /// to work with this function; or use the `without_shutdown` wrapper.
     pub fn poll_without_shutdown(&mut self) -> Poll<(), ::Error> {
         loop {
             let polled = match *self.conn.as_mut().unwrap() {
@@ -511,7 +556,6 @@ where
             match polled {
                 Ok(x) => return Ok(x),
                 Err(e) => {
-                    debug!("error polling connection protocol without shutdown: {}", e);
                     match *e.kind() {
                         Kind::Parse(Parse::VersionH2) if self.fallback.to_h2() => {
                             self.upgrade_h2();
@@ -522,6 +566,16 @@ where
                 }
             }
         }
+    }
+
+    /// Prevent shutdown of the underlying IO object at the end of service the request,
+    /// instead run `into_parts`. This is a convenience wrapper over `poll_without_shutdown`.
+    pub fn without_shutdown(self) -> impl Future<Item=Parts<I,S>, Error=::Error> {
+        let mut conn = Some(self);
+        ::futures::future::poll_fn(move || -> ::Result<_> {
+            try_ready!(conn.as_mut().unwrap().poll_without_shutdown());
+            Ok(conn.take().unwrap().into_parts().into())
+        })
     }
 
     fn upgrade_h2(&mut self) {
@@ -538,11 +592,16 @@ where
         };
         let mut rewind_io = Rewind::new(io);
         rewind_io.rewind(read_buf);
-        let exec = match self.fallback {
-            Fallback::ToHttp2(ref exec) => exec.clone(),
+        let (builder, exec) = match self.fallback {
+            Fallback::ToHttp2(ref builder, ref exec) => (builder, exec),
             Fallback::Http1Only => unreachable!("upgrade_h2 with Fallback::Http1Only"),
         };
-        let h2 = proto::h2::Server::new(rewind_io, dispatch.into_service(), exec);
+        let h2 = proto::h2::Server::new(
+            rewind_io,
+            dispatch.into_service(),
+            builder,
+            exec.clone(),
+        );
 
         debug_assert!(self.conn.is_none());
         self.conn = Some(Either::B(h2));
@@ -564,7 +623,7 @@ where
 impl<I, B, S, E> Future for Connection<I, S, E>
 where
     S: Service<ReqBody=Body, ResBody=B> + 'static,
-    S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    S::Error: Into<Box<dyn StdError + Send + Sync>>,
     I: AsyncRead + AsyncWrite + 'static,
     B: Payload + 'static,
     E: H2Exec<S::Future, B>,
@@ -585,7 +644,6 @@ where
                     }
                 })),
                 Err(e) => {
-                    debug!("error polling connection protocol: {}", e);
                     match *e.kind() {
                         Kind::Parse(Parse::VersionH2) if self.fallback.to_h2() => {
                             self.upgrade_h2();
@@ -635,10 +693,10 @@ impl<I, S, B, E> Stream for Serve<I, S, E>
 where
     I: Stream,
     I::Item: AsyncRead + AsyncWrite,
-    I::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    I::Error: Into<Box<dyn StdError + Send + Sync>>,
     S: MakeServiceRef<I::Item, ReqBody=Body, ResBody=B>,
-    //S::Error2: Into<Box<::std::error::Error + Send + Sync>>,
-    //SME: Into<Box<::std::error::Error + Send + Sync>>,
+    //S::Error2: Into<Box<StdError + Send + Sync>>,
+    //SME: Into<Box<StdError + Send + Sync>>,
     B: Payload,
     E: H2Exec<<S::Service as Service>::Future, B>,
 {
@@ -646,6 +704,15 @@ where
     type Error = ::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        match self.make_service.poll_ready_ref() {
+            Ok(Async::Ready(())) => (),
+            Ok(Async::NotReady) => return Ok(Async::NotReady),
+            Err(e) => {
+                trace!("make_service closed");
+                return Err(::Error::new_user_make_service(e));
+            }
+        }
+
         if let Some(io) = try_ready!(self.incoming.poll().map_err(::Error::new_accept)) {
             let new_fut = self.make_service.make_service_ref(&io);
             Ok(Async::Ready(Some(Connecting {
@@ -697,7 +764,7 @@ impl<I, S, E> SpawnAll<I, S, E> {
 impl<I, S, B, E> SpawnAll<I, S, E>
 where
     I: Stream,
-    I::Error: Into<Box<::std::error::Error + Send + Sync>>,
+    I::Error: Into<Box<dyn StdError + Send + Sync>>,
     I::Item: AsyncRead + AsyncWrite + Send + 'static,
     S: MakeServiceRef<
         I::Item,
@@ -724,6 +791,7 @@ where
 }
 
 pub(crate) mod spawn_all {
+    use std::error::Error as StdError;
     use futures::{Future, Poll};
     use tokio_io::{AsyncRead, AsyncWrite};
 
@@ -794,7 +862,7 @@ pub(crate) mod spawn_all {
     where
         I: AsyncRead + AsyncWrite + Send + 'static,
         N: Future<Item=S>,
-        N::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        N::Error: Into<Box<dyn StdError + Send + Sync>>,
         S: Service<ReqBody=Body, ResBody=B>,
         B: Payload,
         E: H2Exec<S::Future, B>,
@@ -810,8 +878,8 @@ pub(crate) mod spawn_all {
                         let conn = try_ready!(connecting
                             .poll()
                             .map_err(|err| {
-                                let err = ::Error::new_user_new_service(err);
-                                debug!("connection error: {}", err);
+                                let err = ::Error::new_user_make_service(err);
+                                debug!("connecting error: {}", err);
                             }));
                         let connected = watcher.watch(conn.with_upgrades());
                         State::Connected(connected)
@@ -850,7 +918,7 @@ mod upgrades {
     impl<I, B, S, E> UpgradeableConnection<I, S, E>
     where
         S: Service<ReqBody=Body, ResBody=B>,// + 'static,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         I: AsyncRead + AsyncWrite,
         B: Payload + 'static,
         E: H2Exec<S::Future, B>,
@@ -867,7 +935,7 @@ mod upgrades {
     impl<I, B, S, E> Future for UpgradeableConnection<I, S, E>
     where
         S: Service<ReqBody=Body, ResBody=B> + 'static,
-        S::Error: Into<Box<::std::error::Error + Send + Sync>>,
+        S::Error: Into<Box<dyn StdError + Send + Sync>>,
         I: AsyncRead + AsyncWrite + Send + 'static,
         B: Payload + 'static,
         E: super::H2Exec<S::Future, B>,
@@ -894,7 +962,6 @@ mod upgrades {
                         return Ok(Async::Ready(()));
                     },
                     Err(e) => {
-                        debug!("error polling connection protocol: {}", e);
                         match *e.kind() {
                             Kind::Parse(Parse::VersionH2) if self.inner.fallback.to_h2() => {
                                 self.inner.upgrade_h2();

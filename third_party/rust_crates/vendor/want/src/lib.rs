@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/want/0.0.6")]
+#![doc(html_root_url = "https://docs.rs/want/0.2.0")]
 #![deny(warnings)]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
@@ -18,6 +18,71 @@
 //! This is where something like `want` comes in. Added to a channel, you can
 //! make sure that the `tx` only creates the message and sends it when the `rx`
 //! has `poll()` for it, and the buffer was empty.
+//!
+//! # Example
+//!
+//! ```
+//! extern crate futures;
+//! extern crate want;
+//!
+//! use futures::{Async, Stream};
+//!
+//! // Some message that is expensive to produce.
+//! struct Expensive;
+//!
+//! let (mut tx, mut rx) = futures::sync::mpsc::channel(0);
+//! let (mut gv, mut tk) = want::new();
+//!
+//! # fn spawn<T>(_t: T) {}
+//! # fn can_we_print_msg() -> Result<(), ()> { Ok(()) }
+//!
+//! // Our receiving task...
+//! spawn(futures::future::poll_fn(move || loop {
+//!
+//!     match rx.poll() {
+//!         Ok(Async::Ready(Some(_msg))) => {
+//!             println!("got a message");
+//!         },
+//!         Ok(Async::Ready(None)) => {
+//!             println!("DONE");
+//!             return Ok::<_, ()>(Async::Ready(()));
+//!         },
+//!         Ok(Async::NotReady) => {
+//!             // Maybe something comes up that prevents us from ever
+//!             // using the expensive message.
+//!             //
+//!             // Without `want`, the "send" task may have started to
+//!             // produce the expensive message even though we wouldn't
+//!             // be able to use it.
+//!             can_we_print_msg()?;
+//!
+//!             // But we can use it! So tell the `want` channel.
+//!             tk.want();
+//!         },
+//!         Err(()) => unreachable!("mpsc doesn't error"),
+//!     }
+//! }));
+//!
+//! // Our sending task
+//! spawn(futures::future::poll_fn(move || {
+//!     // It's expensive to create a new message, so we wait until the
+//!     // receiving end truly *wants* the message.
+//!     match gv.poll_want() {
+//!         Ok(Async::Ready(())) => {
+//!             // They want it, let's go!
+//!             tx.try_send(Expensive).unwrap();
+//!             Ok(Async::Ready(()))
+//!         },
+//!         Ok(Async::NotReady) => Ok(Async::NotReady),
+//!         Err(_) => {
+//!             // Looks like they will never want it...
+//!             Err(())
+//!         }
+//!     }
+//! }));
+//!
+//! # fn main() {}
+//! ```
 
 extern crate futures;
 #[macro_use]

@@ -2,7 +2,7 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::marker::PhantomData;
 
-use futures::{future, Future, IntoFuture};
+use futures::{future, Async, Future, IntoFuture, Poll};
 
 use body::Payload;
 use common::Never;
@@ -21,10 +21,19 @@ pub trait Service {
     /// Note: Returning an `Error` to a hyper server will cause the connection
     /// to be abruptly aborted. In most cases, it is better to return a `Response`
     /// with a 4xx or 5xx status code.
-    type Error: Into<Box<StdError + Send + Sync>>;
+    type Error: Into<Box<dyn StdError + Send + Sync>>;
 
     /// The `Future` returned by this `Service`.
     type Future: Future<Item=Response<Self::ResBody>, Error=Self::Error>;
+
+    /// Returns `Ready` when the service is able to process requests.
+    ///
+    /// The implementation of this method is allowed to return a `Ready` even if
+    /// the service is not ready to process. In this case, the future returned
+    /// from `call` will resolve to an error.
+    fn poll_ready(&mut self) -> Poll<(), Self::Error> {
+        Ok(Async::Ready(()))
+    }
 
     /// Calls this `Service` with a request, returning a `Future` of the response.
     fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future;
@@ -51,7 +60,7 @@ pub trait Service {
 /// ```
 pub fn service_fn<F, R, S>(f: F) -> ServiceFn<F, R>
 where
-    F: Fn(Request<R>) -> S,
+    F: FnMut(Request<R>) -> S,
     S: IntoFuture,
 {
     ServiceFn {
@@ -75,7 +84,7 @@ where
 /// ```
 pub fn service_fn_ok<F, R, S>(f: F) -> ServiceFnOk<F, R>
 where
-    F: Fn(Request<R>) -> Response<S>,
+    F: FnMut(Request<R>) -> Response<S>,
     S: Payload,
 {
     ServiceFnOk {
@@ -92,10 +101,10 @@ pub struct ServiceFn<F, R> {
 
 impl<F, ReqBody, Ret, ResBody> Service for ServiceFn<F, ReqBody>
 where
-    F: Fn(Request<ReqBody>) -> Ret,
+    F: FnMut(Request<ReqBody>) -> Ret,
     ReqBody: Payload,
     Ret: IntoFuture<Item=Response<ResBody>>,
-    Ret::Error: Into<Box<StdError + Send + Sync>>,
+    Ret::Error: Into<Box<dyn StdError + Send + Sync>>,
     ResBody: Payload,
 {
     type ReqBody = ReqBody;
@@ -133,7 +142,7 @@ pub struct ServiceFnOk<F, R> {
 
 impl<F, ReqBody, ResBody> Service for ServiceFnOk<F, ReqBody>
 where
-    F: Fn(Request<ReqBody>) -> Response<ResBody>,
+    F: FnMut(Request<ReqBody>) -> Response<ResBody>,
     ReqBody: Payload,
     ResBody: Payload,
 {
@@ -162,4 +171,25 @@ impl<F, R> fmt::Debug for ServiceFnOk<F, R> {
         f.debug_struct("impl Service")
             .finish()
     }
+}
+
+//#[cfg(test)]
+fn _assert_fn_mut() {
+    fn assert_service<T: Service>(_t: &T) {}
+
+    let mut val = 0;
+
+    let svc = service_fn(move |_req: Request<::Body>| {
+        val += 1;
+        future::ok::<_, Never>(Response::new(::Body::empty()))
+    });
+
+    assert_service(&svc);
+
+    let svc = service_fn_ok(move |_req: Request<::Body>| {
+        val += 1;
+        Response::new(::Body::empty())
+    });
+
+    assert_service(&svc);
 }

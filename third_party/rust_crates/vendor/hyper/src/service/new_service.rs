@@ -1,6 +1,6 @@
 use std::error::Error as StdError;
 
-use futures::{Future, IntoFuture};
+use futures::{Async, Future, IntoFuture, Poll};
 
 use body::Payload;
 use super::{MakeService, Service};
@@ -14,7 +14,7 @@ pub trait NewService {
     type ResBody: Payload;
 
     /// The error type that can be returned by `Service`s.
-    type Error: Into<Box<StdError + Send + Sync>>;
+    type Error: Into<Box<dyn StdError + Send + Sync>>;
 
     /// The resolved `Service` from `new_service()`.
     type Service: Service<
@@ -27,7 +27,12 @@ pub trait NewService {
     type Future: Future<Item=Self::Service, Error=Self::InitError>;
 
     /// The error type that can be returned when creating a new `Service`.
-    type InitError: Into<Box<StdError + Send + Sync>>;
+    type InitError: Into<Box<dyn StdError + Send + Sync>>;
+
+    #[doc(hidden)]
+    fn poll_ready(&mut self) -> Poll<(), Self::InitError> {
+        Ok(Async::Ready(()))
+    }
 
     /// Create a new `Service`.
     fn new_service(&self) -> Self::Future;
@@ -37,7 +42,7 @@ impl<F, R, S> NewService for F
 where
     F: Fn() -> R,
     R: IntoFuture<Item=S>,
-    R::Error: Into<Box<StdError + Send + Sync>>,
+    R::Error: Into<Box<dyn StdError + Send + Sync>>,
     S: Service,
 {
     type ReqBody = S::ReqBody;
@@ -62,6 +67,10 @@ where
     type Service = N::Service;
     type Future = N::Future;
     type MakeError = N::InitError;
+
+    fn poll_ready(&mut self) -> Poll<(), Self::MakeError> {
+        NewService::poll_ready(self)
+    }
 
     fn make_service(&mut self, _: Ctx) -> Self::Future {
         self.new_service()
