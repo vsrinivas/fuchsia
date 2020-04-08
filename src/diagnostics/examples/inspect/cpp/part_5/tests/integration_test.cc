@@ -72,6 +72,12 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
       stream_parameters.set_data_type(fuchsia::diagnostics::DataType::INSPECT);
       stream_parameters.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
       stream_parameters.set_format(fuchsia::diagnostics::Format::JSON);
+      {
+        std::vector<fuchsia::diagnostics::SelectorArgument> args;
+        args.emplace_back();
+        args[0].set_raw_selector("sys/inspect_cpp_codelab_part_5.cmx:root");
+        stream_parameters.set_selectors(std::move(args));
+      }
       archive->StreamDiagnostics(iterator.NewRequest(), std::move(stream_parameters));
 
       bool done = false;
@@ -86,10 +92,13 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
 
       RunLoopUntil([&] { return done; });
 
-      for (const auto& content : current_entries) {
+      // Should be at most one component.
+      ZX_ASSERT(current_entries.size() <= 1);
+      if (!current_entries.empty()) {
         std::string json;
-        fsl::StringFromVmo(content.json(), &json);
-        if (json.find("sys/inspect_cpp_codelab_part_5.cmx") != std::string::npos) {
+        fsl::StringFromVmo(current_entries[0].json(), &json);
+        // Ensure the component is either OK or UNHEALTHY.
+        if (json.find("OK") != std::string::npos || json.find("UNHEALTHY") != std::string::npos) {
           return json;
         }
       }
