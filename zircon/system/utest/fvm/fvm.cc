@@ -470,7 +470,8 @@ void CheckNoAccessBlock(int fd, size_t block, size_t count) {
 
 void CheckDeadConnection(int fd) {
   lseek(fd, 0, SEEK_SET);
-  ASSERT_EQ(EBADF, errno);
+  bool is_dead = ((errno == EBADF) || (errno == EPIPE));
+  ASSERT_TRUE(is_dead);
 }
 
 void Upgrade(const fdio_cpp::FdioCaller& caller, const uint8_t* old_guid, const uint8_t* new_guid,
