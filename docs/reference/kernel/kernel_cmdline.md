@@ -424,6 +424,7 @@ This option (false by default) causes the kernels active memory scanner to be
 initially disabled on startup. You can re-enable it using the kernel console.
 If you disable the scanner, you can have additional system predictability since
 it removes time based and background memory eviction.
+
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
 If set, disable all speculative execution information leak mitigations.
@@ -475,8 +476,9 @@ This option controls whether microarchitectual structures are flushed on
 the kernel to user exit path, if possible. It may have a negative performance
 impact.
 
-* If set to true, structures are flushed if the processor is vulnerable.
-* If set to false (the default), no flush is executed on structures.
+*   If set to true (the default), structures are flushed if the processor is
+    vulnerable.
+*   If set to false, no flush is executed on structures.
 
 This option only affects x86 systems.
 
