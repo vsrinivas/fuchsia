@@ -349,9 +349,7 @@ async fn route_storage_capability<'a>(
                     ModelError::capability_discovery_error(format!(
                         "The directory backing storage capability `{}` at `{}` is sourced from \
                         child `{}`, but this child does not exist.",
-                        storage_decl.name,
-                        source_realm.abs_moniker,
-                        partial,
+                        storage_decl.name, source_realm.abs_moniker, partial,
                     )),
                 )?;
                 let capability = ComponentCapability::Storage(storage_decl);

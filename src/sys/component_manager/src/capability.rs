@@ -93,6 +93,14 @@ impl FrameworkCapability {
         }
     }
 
+    /// Returns the source path or name of the capability as a string, useful for debugging.
+    pub fn source_id(&self) -> String {
+        self.path()
+            .map(|p| format!("{}", p))
+            .or_else(|| self.name().map(|n| format!("{}", n)))
+            .unwrap_or_default()
+    }
+
     pub fn builtin_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
         match decl {
             UseDecl::Service(s) if s.source == UseSource::Realm => {

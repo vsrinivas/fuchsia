@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod binding;
+pub mod capability_routed_logger;
 pub mod error;
 pub mod hooks;
 pub mod hub;
