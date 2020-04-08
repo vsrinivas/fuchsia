@@ -157,7 +157,7 @@ TEST_F(LoggingFixture, UseSyslog) {
                                .log_service_channel = remote.release(),
                                .tags = NULL,
                                .num_tags = 0};
-  ASSERT_EQ(ZX_OK, fx_log_init_with_config(&config));
+  ASSERT_EQ(ZX_OK, fx_log_reconfigure(&config));
 
   // Write a message using FXL_LOG an verify that it's forwarded to syslog.
   const char* msg = "test message";

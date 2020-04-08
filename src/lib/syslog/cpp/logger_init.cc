@@ -36,11 +36,4 @@ zx_status_t SetTags(const std::initializer_list<std::string>& tags) {
   return SetSettings(settings, tags);
 }
 
-zx_status_t InitLogger(const syslog::LogSettings& settings,
-                       const std::initializer_list<std::string>& tags) {
-  return SetSettings(settings, tags);
-}
-
-zx_status_t InitLogger(const std::initializer_list<std::string>& tags) { return SetTags(tags); }
-
 }  // namespace syslog
