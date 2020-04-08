@@ -1,0 +1,70 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+# Defines a host-side test for a triage configuration
+#
+# Packages a set of triage configuration files into a single test which
+# runs all of the tests in the `test` section of the configuration file.
+# This test will pass if all of the tests pass and fail if any of them fail.
+#
+# Parameters
+#
+#   sources (required)
+#     The list of configuration files. These sources must be within source_dir.
+#
+#   source_dir (optional)
+#     Directory containing the test sources.
+#     Defaults to "config".
+#
+# Example of usage:
+#
+# triage_config_test("some_test") {
+#   sources = [
+#     "bar.triage",
+#     "foo.triage",
+#   ]
+# }
+#
+# Example of running:
+#
+#   fx test some_test
+#
+template("triage_config_test") {
+  assert(defined(invoker.sources),
+         "triage_config_test() requires 'sources' be defined")
+
+  if (defined(invoker.source_dir)) {
+    config_source_dir = invoker.source_dir
+  } else {
+    config_source_dir = "config"
+  }
+
+  generated_test_target = target_name + "__test_main"
+  generated_test_main = "$target_gen_dir/${target_name}__test_main.rs"
+
+  action(generated_test_target) {
+    script = "//src/diagnostics/triage/build/gen_triage_config_test.py"
+    outputs = [ generated_test_main ]
+    inputs = []
+    args = [ "--out=" + rebase_path(generated_test_main, root_build_dir) ]
+    foreach(source, invoker.sources) {
+      source_path = "$config_source_dir/$source"
+      args += [ "--config=" + rebase_path(source_path, root_build_dir) ]
+      inputs += [ source_path ]
+    }
+    testonly = true
+  }
+
+  rustc_test(target_name) {
+    source_root = generated_test_main
+    testonly = true
+    deps = [
+      ":$generated_test_target($host_toolchain)",
+      "//src/diagnostics/triage/build/triage_config_testing_helper",
+      "//third_party/rust_crates:anyhow",
+    ]
+  }
+}

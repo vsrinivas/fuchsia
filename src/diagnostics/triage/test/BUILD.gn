@@ -7,6 +7,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//src/diagnostics/triage/build/triage_config_test.gni")
 
 rustc_binary("triage_test") {
   name = "triage_test"
@@ -35,4 +36,17 @@ group("triage_test_host") {
     ":install",
     ":triage_test($host_toolchain)",
   ]
+}
+
+triage_config_test("triage_sample_config_test") {
+  sources = [
+    "other.triage",
+    "sample.triage",
+    "sample_tags.triage",
+  ]
+}
+
+group("congfig_tests") {
+  testonly = true
+  deps = [ ":triage_sample_config_test($host_toolchain)" ]
 }

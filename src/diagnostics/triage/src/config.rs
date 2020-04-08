@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{
+    crate::{
         act::{Actions, ActionsSchema},
         metrics::{Metric, Metrics},
-        validate::{validate, TestsSchema},
+        validate::{validate, TestsSchema, Trials},
         Options,
     },
     anyhow::{bail, format_err, Error},
@@ -145,9 +145,8 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
     if config_files.len() == 0 {
         bail!("Need at least one config file; use --config");
     }
-    let mut actions = HashMap::new();
-    let mut metrics = HashMap::new();
-    let mut tests = HashMap::new();
+
+    let mut config_file_map = HashMap::new();
     for file_name in config_files {
         let namespace = base_name(&file_name)?;
         let file_data = match fs::read_to_string(file_name.clone()) {
@@ -156,9 +155,41 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
                 bail!("Couldn't read config file '{}' to string", file_name);
             }
         };
+        config_file_map.insert(namespace, file_data);
+    }
+
+    let ParseResult { actions, metrics, tests } =
+        parse_config_files(config_file_map, action_tag_directive)?;
+
+    validate(&metrics, &actions, &tests)?;
+
+    Ok(StateHolder { metrics, actions, inspect_contexts, output_format })
+}
+
+pub fn initialize_for_validation(
+    config_files: HashMap<String, String>,
+) -> Result<ParseResult, Error> {
+    parse_config_files(config_files, ActionTagDirective::AllowAll)
+}
+
+pub struct ParseResult {
+    pub metrics: Metrics,
+    pub actions: Actions,
+    pub tests: Trials,
+}
+
+fn parse_config_files(
+    config_files: HashMap<String, String>,
+    action_tag_directive: ActionTagDirective,
+) -> Result<ParseResult, Error> {
+    let mut actions = HashMap::new();
+    let mut metrics = HashMap::new();
+    let mut tests = HashMap::new();
+
+    for (namespace, file_data) in config_files {
         let file_config = match ConfigFileSchema::parse(file_data) {
             Ok(c) => c,
-            Err(e) => bail!("Parsing file '{}': {}", file_name, e),
+            Err(e) => bail!("Parsing file '{}': {}", namespace, e),
         };
         let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } = file_config;
 
@@ -177,9 +208,8 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
         actions.insert(namespace.clone(), file_actions);
         tests.insert(namespace, file_tests);
     }
-    validate(&metrics, &actions, &tests)?;
 
-    Ok(StateHolder { metrics, actions, inspect_contexts, output_format })
+    Ok(ParseResult { actions, metrics, tests })
 }
 
 fn base_name(path: &String) -> Result<String, Error> {
