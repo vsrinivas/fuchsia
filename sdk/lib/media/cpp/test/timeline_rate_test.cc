@@ -42,12 +42,14 @@ void VerifyReduce(uint32_t subject_delta, uint32_t reference_delta, uint32_t com
   EXPECT_EQ(reference_delta, test_reference_delta);
 }
 
-// Verifies the TimelineRate::Scale methods by scaling value by subject_delta
-// /
-// reference_delta and verifying the result.
+// Verifies the TimelineRate::Scale methods by scaling value by
+// (subject_delta / reference_delta) and verifying the result.
 void VerifyScale(int64_t value, uint32_t subject_delta, uint32_t reference_delta, int64_t result) {
   // Test the instance method.
   EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta).Scale(value));
+  if (TimelineRate(subject_delta, reference_delta).invertible()) {
+    EXPECT_EQ(result, TimelineRate(reference_delta, subject_delta).ScaleInverse(value));
+  }
 
   // Test the static method.
   EXPECT_EQ(result, TimelineRate::Scale(value, subject_delta, reference_delta));
@@ -86,12 +88,21 @@ void VerifyProduct(uint32_t a_subject_delta, uint32_t a_reference_delta, uint32_
   }
 }
 
-// Verifies the TimelineRaten::Inverse method using the given rate.
+// Verifies the TimelineRate::Inverse method using the given rate.
 void VerifyInverse(uint32_t subject_delta, uint32_t reference_delta) {
   TimelineRate rate(subject_delta, reference_delta);
   TimelineRate inverse(rate.Inverse());
   EXPECT_EQ(rate.reference_delta(), inverse.subject_delta());
   EXPECT_EQ(rate.subject_delta(), inverse.reference_delta());
+}
+
+// Verifies the TimelineRate::ScaleInverse method with given rate (relies on Scale and Inverse)
+void VerifyScaleInverse(int64_t value, uint32_t subject_delta, uint32_t reference_delta) {
+  TimelineRate rate(subject_delta, reference_delta);
+  TimelineRate inverse(reference_delta, subject_delta);
+
+  EXPECT_EQ(rate.Scale(value), inverse.ScaleInverse(value));
+  EXPECT_EQ(rate.ScaleInverse(value), inverse.Scale(value));
 }
 
 // Tests TimelineRate::Reduce and that the TimelineRate constructor reduces.
@@ -161,6 +172,15 @@ TEST(TimelineRateTest, Inverse) {
   VerifyInverse(1, 2);
   VerifyInverse(1000000, 1234);
   VerifyInverse(1234, 1000000);
+}
+
+// Tests TimelineRate::ScaleInverse.
+TEST(TimelineRateTest, ScaleInverse) {
+  VerifyScaleInverse(1, 1, 1);
+  VerifyScaleInverse(4, 2, 1);
+  VerifyScaleInverse(42, 1, 2);
+  VerifyScaleInverse(1234000, 1000, 1234);
+  VerifyScaleInverse(24680000, 1234, 1000);
 }
 
 }  // namespace

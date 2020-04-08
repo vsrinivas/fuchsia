@@ -100,6 +100,11 @@ class TimelineRate final {
   // Scales the value by this rate. Returns kOverflow on overflow.
   int64_t Scale(int64_t value) const { return Scale(value, subject_delta_, reference_delta_); }
 
+  // Scales the value by the inverse of this rate.
+  int64_t ScaleInverse(int64_t value) const {
+    return Scale(value, reference_delta_, subject_delta_);
+  }
+
   uint32_t subject_delta() const { return subject_delta_; }
   uint32_t reference_delta() const { return reference_delta_; }
 
@@ -140,7 +145,7 @@ inline int64_t operator*(int64_t a, TimelineRate b) { return b.Scale(a); }
 
 // Returns the the int64_t divided by the rate. Returns kOverflow on
 // overflow.
-inline int64_t operator/(int64_t a, TimelineRate b) { return b.Inverse().Scale(a); }
+inline int64_t operator/(int64_t a, TimelineRate b) { return b.ScaleInverse(a); }
 
 }  // namespace media
 
