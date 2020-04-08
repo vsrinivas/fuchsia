@@ -84,7 +84,7 @@ zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time)
       kcounter_add(syscalls_zx_clock_get_type_utc, 1);
       break;
     case ZX_CLOCK_THREAD:
-      time = ThreadDispatcher::GetCurrent()->runtime_ns();
+      time = Thread::Current::Get()->Runtime();
       kcounter_add(syscalls_zx_clock_get_type_thread, 1);
       break;
     default:

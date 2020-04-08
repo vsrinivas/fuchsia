@@ -120,8 +120,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
   void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
-  uint64_t runtime_ns() const { return core_thread_->Runtime(); }
-  cpu_num_t last_cpu() const { return core_thread_->LastCpu(); }
 
   // Assuming the thread is stopped waiting for an exception response,
   // fill in |*report| with the exception report.
