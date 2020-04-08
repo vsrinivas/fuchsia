@@ -139,7 +139,7 @@ class MediaApp {
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
   bool received_min_lead_time_ = false;
-  int64_t min_lead_time_ = 0;
+  zx::duration min_lead_time_;
 
   std::vector<fzl::VmoMapper> payload_buffers_;
 

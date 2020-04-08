@@ -15,6 +15,7 @@
 
 namespace media::tools {
 
+constexpr auto kNoTimeStamp = zx::time(fuchsia::media::NO_TIMESTAMP);
 constexpr auto kPlayStartupDelay = zx::msec(0);
 
 std::string RefTimeStrFromZxTime(zx::time zx_time) {
@@ -470,9 +471,6 @@ void MediaApp::GetClockAndStart() {
       audio::clock::GetAndDisplayClockDetails(reference_clock_);
     }
 
-    zx_time_t mono_now = zx::clock::get_monotonic().get();
-    srand48(mono_now);
-
     Play();
   });
 }
@@ -489,28 +487,23 @@ void MediaApp::Play() {
       SendPacket();
     }
 
-    zx_time_t ref_now;
-    auto status = reference_clock_.read(&ref_now);
+    zx::time ref_now;
+    auto status = reference_clock_.read(ref_now.get_address());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "zx::clock::read failed during Play()";
       Shutdown();
       return;
     }
-    srand48(ref_now);
+    srand48(ref_now.get());
 
-    reference_start_time_ =
-        use_pts_ ? (zx::time{ref_now} + zx::duration{min_lead_time_} + kPlayStartupDelay)
-                 : zx::time{fuchsia::media::NO_TIMESTAMP};
-    media_start_time_ = zx::time{use_pts_ ? 0 : fuchsia::media::NO_TIMESTAMP};
+    reference_start_time_ = use_pts_ ? ref_now + kPlayStartupDelay + min_lead_time_ : kNoTimeStamp;
+    media_start_time_ = use_pts_ ? zx::time(0) : kNoTimeStamp;
 
     if (verbose_) {
       auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
       auto requested_media_str = RefTimeStrFromZxTime(media_start_time_);
-
       auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
-
-      auto mono_now = zx::clock::get_monotonic();
-      auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
+      auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
 
       printf("\nCalling Play (ref %s, media %s) at ref_now %s : mono_now %s\n",
              requested_ref_str.c_str(), requested_media_str.c_str(), ref_now_str.c_str(),
@@ -519,21 +512,18 @@ void MediaApp::Play() {
 
     auto play_completion_func = [this](int64_t actual_ref_start, int64_t actual_media_start) {
       if (verbose_) {
-        auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
-        auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
-
-        zx_time_t ref_now;
-        auto status = reference_clock_.read(&ref_now);
+        zx::time ref_now;
+        auto status = reference_clock_.read(ref_now.get_address());
         if (status != ZX_OK) {
           FX_PLOGS(ERROR, status) << "zx::clock::read failed during Play callback";
           Shutdown();
           return;
         }
 
-        auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
-
-        auto mono_now = zx::clock::get_monotonic();
-        auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
+        auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
+        auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
+        auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
+        auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
 
         printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
                actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
@@ -681,20 +671,17 @@ void MediaApp::SendPacket() {
   }
 
   if (verbose_) {
-    auto pts_str = RefTimeStrFromZxTime(zx::time{packet.stream_packet.pts});
-
-    auto mono_now = zx::clock::get_monotonic();
-    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
-
-    zx_time_t ref_now;
-    auto status = reference_clock_.read(&ref_now);
+    zx::time ref_now;
+    auto status = reference_clock_.read(ref_now.get_address());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "zx::clock::read failed during SendPacket()";
       Shutdown();
       return;
     }
 
-    auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+    auto pts_str = RefTimeStrFromZxTime(zx::time{packet.stream_packet.pts});
+    auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
+    auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
 
     printf("Sending packet %4lu (media pts %s) at ref_now %s : mono_now %s\n", num_packets_sent_,
            pts_str.c_str(), ref_now_str.c_str(), mono_now_str.c_str());
@@ -711,18 +698,16 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
   num_frames_completed_ += frames_completed;
 
   if (verbose_) {
-    auto mono_now = zx::clock::get_monotonic();
-    auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
-
-    zx_time_t ref_now;
-    auto status = reference_clock_.read(&ref_now);
+    zx::time ref_now;
+    auto status = reference_clock_.read(ref_now.get_address());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "zx::clock::read failed during OnSendPacketComplete()";
       Shutdown();
       return;
     }
 
-    auto ref_now_str = RefTimeMsStrFromZxTime(zx::time{ref_now});
+    auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
+    auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
 
     printf("Packet %4lu complete (%5lu, %8lu frames total) at ref_now %s : mono_now %s\n",
            num_packets_completed_, frames_completed, num_frames_completed_, ref_now_str.c_str(),
@@ -751,7 +736,7 @@ void MediaApp::SetAudioRendererEvents() {
       printf("- OnMinLeadTimeChanged: %lu\n", min_lead_time_nsec);
     }
     received_min_lead_time_ = true;
-    min_lead_time_ = min_lead_time_nsec;
+    min_lead_time_ = zx::duration(min_lead_time_nsec);
   };
 
   audio_renderer_->EnableMinLeadTimeEvents(true);
