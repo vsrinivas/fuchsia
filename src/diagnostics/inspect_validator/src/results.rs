@@ -91,7 +91,6 @@ impl Summary for LazyAction {
     fn summary(&self) -> String {
         match self {
             LazyAction::CreateLazyNode(_) => "CreateLazyNode".to_string(),
-            LazyAction::ModifyLazyNode(_) => "ModifyLazyNode".to_string(),
             LazyAction::DeleteLazyNode(_) => "DeleteLazyNode".to_string(),
             _ => "Unknown".to_string(),
         }

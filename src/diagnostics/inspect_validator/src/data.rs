@@ -542,9 +542,6 @@ impl Data {
                 disposition,
                 actions,
             }) => self.add_lazy_node(*parent, *id, name, disposition, actions),
-            validate::LazyAction::ModifyLazyNode(validate::ModifyLazyNode { id, actions }) => {
-                self.modify_lazy_node(*id, actions)
-            }
             validate::LazyAction::DeleteLazyNode(validate::DeleteLazyNode { id }) => {
                 self.delete_property(*id)
             }
@@ -841,29 +838,6 @@ impl Data {
                 parsed_data,
             },
         )?;
-        Ok(())
-    }
-
-    fn modify_lazy_node(&mut self, id: u32, actions: &Vec<validate::Action>) -> Result<(), Error> {
-        if let Some(property) = self.properties.get_mut(&id) {
-            match &property {
-                Property { payload: Payload::Link { disposition, .. }, .. } => {
-                    property.payload = Payload::Link {
-                        disposition: disposition.clone(),
-                        parsed_data: {
-                            let mut parsed_data = Data::new();
-                            parsed_data.apply_multiple(actions)?;
-                            parsed_data
-                        },
-                    }
-                }
-                unexpected => {
-                    return Err(format_err!("Bad type {:?} trying to update lazy node", unexpected))
-                }
-            }
-        } else {
-            return Err(format_err!("Tried to update non-existent lazy node {}.", id));
-        }
         Ok(())
     }
 
@@ -1571,10 +1545,6 @@ mod tests {
         info.apply_lazy(&delete_lazy_node!(id: 1))?;
         // Outputs only 'Inline' lazy node since 'Child' lazy node was deleted
         assert_eq!(info.to_string(), " root ->\n>  inline_bytes: Bytes([3, 4])\n\n\n\n");
-
-        info.apply_lazy(&modify_lazy_node!(id: 2, actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "inline_bytes_modified",value: vec!(4u8, 2u8))]))?;
-        // Outputs modfied lazy node.
-        assert_eq!(info.to_string(), " root ->\n>  inline_bytes_modified: Bytes([4, 2])\n\n\n\n");
 
         Ok(())
     }

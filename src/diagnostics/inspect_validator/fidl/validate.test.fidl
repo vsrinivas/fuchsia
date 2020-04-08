@@ -206,16 +206,6 @@ struct CreateLazyNode {
     vector<Action> actions;
 };
 
-// Action sent to instruct a Puppet to update a lazy node.
-struct ModifyLazyNode {
-    // Unique id used between Controller and Puppet to uniquely identify lazy node.
-    uint32 id;
-
-    // Send a sequence of actions to execute within the lambda to create Inspect
-    // tree.
-    vector<Action> actions;
-};
-
 // Action sent to instruct a Puppet to delete a lazy node.
 struct DeleteLazyNode {
     // Unique id used between Controller and Puppet to uniquely identify lazy node.
@@ -250,8 +240,7 @@ flexible union Action {
 /// Tells the puppet to do something to modify a lazy node.
 flexible union LazyAction {
     1: CreateLazyNode create_lazy_node;
-    2: ModifyLazyNode modify_lazy_node;
-    3: DeleteLazyNode delete_lazy_node;
+    2: DeleteLazyNode delete_lazy_node;
 };
 
 [Discoverable]

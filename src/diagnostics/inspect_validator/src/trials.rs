@@ -252,16 +252,6 @@ macro_rules! create_lazy_node {
 }
 
 #[macro_export]
-macro_rules! modify_lazy_node {
-    (id: $id:expr, actions: $actions:expr) => {
-        validate::LazyAction::ModifyLazyNode(validate::ModifyLazyNode {
-            id: $id,
-            actions: $actions,
-        })
-    };
-}
-
-#[macro_export]
 macro_rules! delete_lazy_node {
     (id: $id:expr) => {
         validate::LazyAction::DeleteLazyNode(validate::DeleteLazyNode { id: $id })
@@ -587,6 +577,15 @@ fn lazy_nodes_trial() -> Trial {
                 name: "child",
                 disposition: validate::LinkDisposition::Child,
                 actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "child_bytes_new",value: vec!(1u8, 2u8))]
+            ),
+            delete_lazy_node!(id: 1),
+            // Create child node with inline disposition
+            create_lazy_node!(
+                parent: ROOT_ID,
+                id: 1,
+                name: "inline_child",
+                disposition: validate::LinkDisposition::Inline,
+                actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "inline_child",value: vec!(1u8, 2u8))]
             ),
             delete_lazy_node!(id: 1),
         ])],

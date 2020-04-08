@@ -20,6 +20,7 @@ pub struct LazyNode {
 
 impl LazyNode {
     /// Creates a VMO tree using the channel given as root and the children trees as read from `channel.open_child`.
+    /// In order to support async recursion, we have to Pin and Box the Future type.
     pub fn new(channel: TreeProxy) -> Pin<Box<dyn Future<Output = Result<LazyNode, Error>>>> {
         Box::pin(async move {
             let fetcher = LazyNodeFetcher::new(channel);
@@ -256,8 +257,11 @@ mod tests {
         Ok(buffer)
     }
 
+    // Create a VMO with the contents of the string copied into it.
     fn create_vmo(value: &str) -> zx::Vmo {
-        zx::Vmo::create(value.len().try_into().unwrap()).unwrap()
+        let vmo = zx::Vmo::create(value.len().try_into().unwrap()).unwrap();
+        vmo.write(value.as_bytes(), 0).unwrap();
+        vmo
     }
 
     fn duplicate_vmo(vmo: &Vmo) -> Vmo {
