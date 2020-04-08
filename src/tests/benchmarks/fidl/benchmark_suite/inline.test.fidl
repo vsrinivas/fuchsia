@@ -6,3 +6,12 @@ library benchmarkfidl;
 
 struct EmptyStruct {
 };
+
+// Message header for a FIDL transaction.
+// See fidl_message_header_t.
+struct MessageHeader {
+    uint32 txid;
+    array<uint8>:3 flags;
+    uint8 magic_number;
+    uint64 ordinal;
+};

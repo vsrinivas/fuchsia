@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library benchmarkfidl;
+
+// Example Response.
+// Based on fuchsia.media.StreamPacket.
+struct ErrorSyntaxResponse {
+    int64 ptrs;
+    uint32 payload_buffer_id;
+    uint64 payload_offset;
+    uint64 payload_size;
+    uint32 flags;
+    uint64 buffer_config;
+    uint64 stream_segment_id;
+};
+
+// Result for a protocol using the error syntax.
+union ErrorSyntaxResult {
+    1: ErrorSyntaxResponse response;
+    2: uint32 err;
+};

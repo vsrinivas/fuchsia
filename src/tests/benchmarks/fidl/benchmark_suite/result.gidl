@@ -1,0 +1,49 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+encode_benchmark("ErrorSyntaxResult_Success") {
+    value = ResultProtocolErrorSyntax{
+        response: {
+            ptrs: 1,
+            payload_buffer_id: 2,
+            payload_offset: 3,
+            payload_size: 4,
+            flags: 5,
+            buffer_config: 6,
+            stream_segment_id: 7
+        }
+    }
+}
+
+decode_benchmark("ErrorSyntaxResult_Success") {
+    type = ResultProtocolErrorSyntax
+    bytes = [
+        8:num(0), // tag
+        8:num(56), // size
+        8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff), // ptr
+        8:num(1), // ptrs
+        4:num(2), // payload_buffer_id
+        8:num(3), // payload_offset
+        8:num(4), // payload_size
+        4:num(5), // flags
+        8:num(6), // buffer_config
+        8:num(7) // stream_segment_id
+    ]
+}
+
+encode_benchmark("ErrorSyntaxResult_Failure") {
+    value = ResultProtocolErrorSyntax{
+        err: 10,
+    }
+}
+
+decode_benchmark("ErrorSyntaxResult_Success") {
+    type = ResultProtocolErrorSyntax
+    bytes = [
+        8:num(1), // tag
+        8:num(4), // size
+        8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff), // ptr
+        4:num(10), // err
+    ]
+}

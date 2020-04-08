@@ -10,3 +10,22 @@ decode_benchmark("EmptyStruct") {
     type = EmptyStruct,
     bytes = [ 1:raw(0x00), ]
 }
+
+encode_benchmark("MessageHeader") {
+    value = MessageHeader{
+        txid: 1,
+        flags: [1, 2, 3],
+        magic_number: 0xff,
+        ordinal: 1,
+    },
+}
+
+decode_benchmark("MessageHeader") {
+    type = MessageHeader,
+    bytes = [
+        4:num(1), // txid
+        3:raw(0x01, 0x02, 0x03), // flags
+        1:raw(0xff), // magic_number
+        8:num(1) // ordinal
+    ]
+}
