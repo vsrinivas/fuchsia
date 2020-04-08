@@ -34,7 +34,7 @@ executable("test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fake-bti",
+    "//zircon/system/dev/lib/fake-bti",
   ]
 }
 
