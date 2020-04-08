@@ -44,7 +44,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   void SetSize(uint32_t new_size) final;
   void AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
                             blk_t* out_bno) final;
-  void DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) final;
+  void DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) final;
   bool IsDirectory() const final { return false; }
 #ifdef __Fuchsia__
   void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,

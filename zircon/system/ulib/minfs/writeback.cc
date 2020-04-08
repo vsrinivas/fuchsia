@@ -31,8 +31,8 @@ namespace minfs {
 
 zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
                                 size_t reserve_blocks, InodeManager* inode_manager,
-                                Allocator* block_allocator, std::unique_ptr<Transaction>* out) {
-  std::unique_ptr<Transaction> transaction(new Transaction(minfs));
+                                std::unique_ptr<Transaction>* out) {
+  auto transaction = std::make_unique<Transaction>(minfs);
 
   if (reserve_inodes) {
     // The inode allocator is currently not accessed asynchronously.
@@ -46,8 +46,8 @@ zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
   }
 
   if (reserve_blocks) {
-    zx_status_t status = transaction->block_reservation_.Initialize(
-        transaction.get(), reserve_blocks, block_allocator);
+    zx_status_t status = transaction->block_reservation_.Reserve(
+        transaction.get(), reserve_blocks);
     if (status != ZX_OK) {
       return status;
     }
@@ -60,11 +60,13 @@ zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
 Transaction::Transaction(TransactionalFs* minfs)
     :
 #ifdef __Fuchsia__
-      lock_(minfs->GetLock())
+      lock_(minfs->GetLock()),
 #else
       transaction_(minfs->GetMutableBcache()),
-      builder_(minfs->GetMutableBcache())
+      builder_(minfs->GetMutableBcache()),
 #endif
+      inode_reservation_(&minfs->GetInodeAllocator()),
+      block_reservation_(&minfs->GetBlockAllocator())
 {
 }
 

@@ -147,7 +147,7 @@ class VnodeMinfs : public fs::Vnode,
 
   // Deletes the block at |vmo_offset| within the file, corresponding to on-disk
   // block |dev_offset| (zero if unallocated).
-  virtual void DeleteBlock(PendingWork* transaction, blk_t vmo_offset, blk_t dev_offset) = 0;
+  virtual void DeleteBlock(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset) = 0;
 
 #ifdef __Fuchsia__
   // Instructs the Vnode to write out |count| blocks of the vnode, starting at local
@@ -419,7 +419,7 @@ class VnodeMinfs : public fs::Vnode,
   // Must only be called on Vnodes which
   // - Have no open fds
   // - Are fully unlinked (link count == 0)
-  void Purge(PendingWork* transaction);
+  void Purge(Transaction* transaction);
 
 #ifdef __Fuchsia__
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,

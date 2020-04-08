@@ -10,7 +10,6 @@ void PendingAllocationData::Reset(blk_t size) {
   new_blocks_ = 0;
   node_size_ = size;
   block_map_.ClearAll();
-  reservation_.Cancel();
 }
 
 zx_status_t PendingAllocationData::GetNextRange(blk_t* start, blk_t* count) const {

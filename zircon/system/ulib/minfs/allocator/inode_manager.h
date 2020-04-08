@@ -59,11 +59,13 @@ class InodeManager : public InspectableInodeManager {
 
   // Reserve |inodes| inodes in the allocator.
   zx_status_t Reserve(PendingWork* transaction, size_t inodes, AllocatorReservation* reservation) {
-    return reservation->Initialize(transaction, inodes, inode_allocator_.get());
+    return reservation->Reserve(transaction, inodes);
   }
 
   // Free an inode.
-  void Free(PendingWork* transaction, size_t index) { inode_allocator_->Free(transaction, index); }
+  void Free(Transaction* transaction, size_t index) {
+    inode_allocator_->Free(&transaction->inode_reservation(), index);
+  }
 
   // Persist the inode to storage.
   void Update(PendingWork* transaction, ino_t ino, const Inode* inode);
@@ -82,6 +84,8 @@ class InodeManager : public InspectableInodeManager {
   // It is the caller's responsibility to ensure that there is space
   // on persistent storage for these inodes to be stored.
   zx_status_t Grow(size_t inodes);
+
+  Allocator& inode_allocator() { return *inode_allocator_; }
 
  private:
 #ifdef __Fuchsia__

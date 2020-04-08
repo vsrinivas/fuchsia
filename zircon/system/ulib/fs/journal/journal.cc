@@ -45,11 +45,12 @@ fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion)
 Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
                  std::unique_ptr<storage::BlockingRingBuffer> journal_buffer,
                  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
-                 uint64_t journal_start_block)
+                 uint64_t journal_start_block, Options options)
     : journal_buffer_(std::move(journal_buffer)),
       writeback_buffer_(std::move(writeback_buffer)),
       writer_(transaction_handler, std::move(journal_superblock), journal_start_block,
-              journal_buffer_->capacity()) {}
+              journal_buffer_->capacity()),
+      options_(options) {}
 
 Journal::Journal(TransactionHandler* transaction_handler,
                  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer)
@@ -97,11 +98,12 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
       });
 
   // Track write ops to ensure that invocations of |sync| can flush all prior work.
-  //
-  // TODO(37958): This is more restrictive than it needs to be, to prevent
-  // reuse before on-disk free within the filesystem.
-  auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
-  return barrier_.wrap(std::move(ordered_promise));
+  if (options_.sequence_data_writes) {
+    auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
+    return barrier_.wrap(std::move(ordered_promise));
+  } else {
+    return barrier_.wrap(std::move(promise));
+  }
 }
 
 Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations) {

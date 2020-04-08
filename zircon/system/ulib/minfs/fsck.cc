@@ -370,7 +370,7 @@ std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo blo
   if (bno >= fs_->Info().block_count) {
     return std::string("out of range");
   }
-  if (!fs_->GetBlockAllocator()->CheckAllocated(bno)) {
+  if (!fs_->GetBlockAllocator().CheckAllocated(bno)) {
     return std::string("not allocated");
   }
   if (checked_blocks_.Get(bno, bno + 1)) {
@@ -512,7 +512,7 @@ void MinfsChecker::CheckReserved() {
   }
 
   // Check reserved data block '0'.
-  if (fs_->GetBlockAllocator()->CheckAllocated(0)) {
+  if (fs_->GetBlockAllocator().CheckAllocated(0)) {
     checked_blocks_.Set(0, 1);
     alloc_blocks_++;
   } else {
@@ -632,7 +632,7 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
   unsigned missing = 0;
 
   for (unsigned n = 0; n < fs_->Info().block_count; n++) {
-    if (fs_->GetBlockAllocator()->CheckAllocated(n)) {
+    if (fs_->GetBlockAllocator().CheckAllocated(n)) {
       if (!checked_blocks_.Get(n, n + 1)) {
         missing++;
       }

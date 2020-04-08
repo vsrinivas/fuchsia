@@ -806,7 +806,7 @@ zx_status_t VnodeMinfs::Open([[maybe_unused]] ValidatedOptions options,
   return ZX_OK;
 }
 
-void VnodeMinfs::Purge(PendingWork* transaction) {
+void VnodeMinfs::Purge(Transaction* transaction) {
   ZX_DEBUG_ASSERT(fd_count_ == 0);
   ZX_DEBUG_ASSERT(IsUnlinked());
   fs_->VnodeRelease(this);

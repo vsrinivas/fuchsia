@@ -41,6 +41,8 @@ struct BlockRegion {
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
 
+class Allocator;
+
 // An empty key class which represents the |AllocatorReservation|'s access to
 // restricted |Allocator| interfaces.
 class AllocatorReservationKey {
@@ -50,6 +52,72 @@ class AllocatorReservationKey {
  private:
   friend AllocatorReservation;
   AllocatorReservationKey() {}
+};
+
+// PendingChange tracks pending allocations and will prevent elements from being allocated twice.
+// After a change has been committed (passed to a transaction), deallocated elements can still be
+// reserved until the transaction actually writes the transaction to the journal. This is because we
+// want to prevent data writes going to those blocks until after that.
+//
+// There can be multiple PendingChange objects per transaction, but, at time of writing, there is
+// only one PendingChange for allocations and one PendingChange for deallocations for each allocator
+// we support (blocks and inodes), so that's 4 per transaction in total.
+//
+// This class is not thread-safe and should only be accessed by Allocator, under its lock.
+class PendingChange {
+ public:
+  enum class Kind {
+    kAllocation,
+    kDeallocation
+  };
+
+  ~PendingChange();
+
+  // Not copyable or movable.
+  PendingChange(const PendingChange&) = delete;
+  PendingChange& operator =(const PendingChange&) = delete;
+
+  Kind kind() const { return kind_; }
+
+  // The change is committed when the change has been made to the persistent bitmap.
+  bool is_committed() const { return committed_; }
+  void set_committed(bool v) { committed_ = v; }
+
+  // Returns the number of items that need to be reserved for this change. Reserved is where the
+  // bitmap indicates the items are free, but they can't be used for some reason.
+  size_t GetReservedCount() const;
+
+  // Returns the next unreserved item starting from |start|.
+  size_t GetNextUnreserved(size_t start) const;
+
+  // Returns the number of items this change covers.
+  size_t item_count() const { return bitmap_.num_bits(); }
+
+  // Access to the underlying bitmap.
+  bitmap::RleBitmap& bitmap() { return bitmap_; }
+
+ protected:
+  PendingChange(Allocator* allocator, Kind kind);
+
+ private:
+  Allocator& allocator_;
+  const Kind kind_;
+  // The bitmap keeps track of the changes, one bit per element. If kind_ == Kind::kAllocation, each
+  // bit is an element to be allocated. If kind_ == Kind::kDeallocation, each bit is an element to
+  // be deallocated.
+  bitmap::RleBitmap bitmap_;
+  // Whether this change is committed to the persistent bitmap.
+  bool committed_ = false;
+};
+
+class PendingAllocations : public PendingChange {
+ public:
+  PendingAllocations(Allocator* allocator) : PendingChange(allocator, Kind::kAllocation) {}
+};
+
+class PendingDeallocations : public PendingChange {
+ public:
+  PendingDeallocations(Allocator* allocator) : PendingChange(allocator, Kind::kDeallocation) {}
 };
 
 // The Allocator class is used to abstract away the mechanism by which minfs
@@ -77,7 +145,7 @@ class Allocator {
   size_t GetAvailable() const FS_TA_EXCLUDES(lock_);
 
   // Free an item from the allocator.
-  void Free(PendingWork* transaction, size_t index) FS_TA_EXCLUDES(lock_);
+  void Free(AllocatorReservation* reservation, size_t index) FS_TA_EXCLUDES(lock_);
 
 #ifdef __Fuchsia__
   // Extract a vector of all currently allocated regions in the filesystem.
@@ -93,12 +161,12 @@ class Allocator {
   // idiom. They are public, but require an empty |AllocatorReservationKey|.
 
   // Allocate a single element and return its newly allocated index.
-  size_t Allocate(AllocatorReservationKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
+  size_t Allocate(AllocatorReservationKey, AllocatorReservation* reservation) FS_TA_EXCLUDES(lock_);
 
   // Reserve |count| elements. This is required in order to later allocate them.
   // Outputs a |reservation| which contains reservation details.
-  zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count,
-                      AllocatorReservation* reservation) FS_TA_EXCLUDES(lock_);
+  zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction,
+                      size_t count) FS_TA_EXCLUDES(lock_);
 
   // Unreserve |count| elements. This may be called in the event of failure, or if we
   // over-reserved initially.
@@ -106,26 +174,18 @@ class Allocator {
   // PRECONDITION: AllocatorReservation must have |reserved| > 0.
   void Unreserve(AllocatorReservationKey, size_t count) FS_TA_EXCLUDES(lock_);
 
-#ifdef __Fuchsia__
-  // Mark |index| for de-allocation by adding it to the swap_out map,
-  // and return the index of a new element to be swapped in.
-  // This is currently only used for the block allocator.
+  // Allocate / de-allocate elements from the given reservation. This persists the results of any
+  // pending allocations/deallocations.
   //
-  // PRECONDITION: |index| must be allocated in the internal map.
-  // PRECONDITION: AllocatorReservation must have |reserved| > 0.
-  size_t Swap(AllocatorReservationKey, size_t index) FS_TA_EXCLUDES(lock_);
-
-  // Allocate / de-allocate elements from the swap_in / swap_out maps (respectively).
-  // This persists the results of |Swap|.
-  //
-  // Since elements are only ever swapped synchronously, all elements represented in the swap_in_
-  // and swap_out_ maps are guaranteed to belong to only one Vnode. This method should only be
-  // called in the same thread as the block swaps -- i.e. we should never be resolving blocks for
-  // more than one vnode at a time.
-  void SwapCommit(AllocatorReservationKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
-#endif
+  // Since elements are only ever swapped synchronously, all elements represented in the
+  // allocations_ and deallocations_ bitmaps are guaranteed to belong to only one Vnode. This method
+  // should only be called in the same thread as the block swaps -- i.e. we should never be
+  // resolving blocks for more than one vnode at a time.
+  void Commit(PendingWork* transaction, AllocatorReservation* reservation) FS_TA_EXCLUDES(lock_);
 
  private:
+  friend class PendingChange;  // For AddPendingChange & RemovePendingChange.
+
   Allocator(std::unique_ptr<AllocatorStorage> storage)
       : reserved_(0), first_free_(0), storage_(std::move(storage)) {}
 
@@ -140,9 +200,17 @@ class Allocator {
   // Acquire direct access to the underlying map storage.
   WriteData GetMapDataLocked() const FS_TA_REQUIRES(lock_);
 
-  // Find and return a free element. This should only be called when reserved_ > 0,
-  // ensuring that at least one free element must exist.
+  // Find and return a free element. This should only be called when reserved_ > 0, ensuring that at
+  // least one free element must exist. This currently assumes that first_free_ is accurately set.
   size_t FindLocked() const FS_TA_REQUIRES(lock_);
+
+  // Find the next unreserved element starting from |start|. Like FindLocked, this should only be
+  // called when reserved_ > 0.
+  size_t FindNextUnreserved(size_t start) const FS_TA_REQUIRES(lock_);
+
+  // Adds & removes |change| from the vector of pending changes.
+  void AddPendingChange(PendingChange* change);
+  void RemovePendingChange(PendingChange* change);
 
   // Protects the allocator's metadata.
   // Does NOT guard the allocator |storage_|.
@@ -165,12 +233,7 @@ class Allocator {
   // A bitmap interface into |storage_|.
   RawBitmap map_ FS_TA_GUARDED(lock_);
 
-#ifdef __Fuchsia__
-  // Bitmap of elements to be allocated on SwapCommit.
-  bitmap::RleBitmap swap_in_ FS_TA_GUARDED(lock_);
-  // Bitmap of elements to be de-allocated on SwapCommit.
-  bitmap::RleBitmap swap_out_ FS_TA_GUARDED(lock_);
-#endif
+  std::vector<PendingChange*> pending_changes_ FS_TA_GUARDED(lock_);
 };
 
 }  // namespace minfs

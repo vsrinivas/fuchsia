@@ -111,12 +111,13 @@ class AllocatorMetadata {
   uint32_t PoolAvailable() const { return PoolTotal() - PoolUsed(); }
 
   void PoolAllocate(uint32_t units) {
-    ZX_DEBUG_ASSERT(PoolTotal() - PoolUsed() >= units);
+    ZX_DEBUG_ASSERT_MSG(PoolTotal() - PoolUsed() >= units, "total=%u, used=%u, units=%u\n",
+                        PoolTotal(), PoolUsed(), units);
     superblock_->MutableInfo()->*superblock_access_.used += units;
   }
 
   void PoolRelease(uint32_t units) {
-    ZX_DEBUG_ASSERT(PoolUsed() >= units);
+    ZX_DEBUG_ASSERT_MSG(PoolUsed() >= units, "used=%u, units=%u\n", PoolUsed(), units);
     superblock_->MutableInfo()->*superblock_access_.used -= units;
   }
 

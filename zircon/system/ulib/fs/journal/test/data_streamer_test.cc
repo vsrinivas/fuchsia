@@ -92,7 +92,8 @@ class DataStreamerFixture : public zxtest::Test {
     info_block.Update(0, 0);
 
     journal_ = std::make_unique<Journal>(&handler_, std::move(info_block),
-                                         std::move(journal_buffer), std::move(data_buffer), 0);
+                                         std::move(journal_buffer), std::move(data_buffer), 0,
+                                         Journal::Options());
   }
 
   MockTransactionHandler& handler() { return handler_; }

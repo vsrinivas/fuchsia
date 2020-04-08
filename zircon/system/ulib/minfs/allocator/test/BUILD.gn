@@ -31,7 +31,7 @@ test("minfs-allocator-unit") {
   }
   test_group = "fs"
   sources = [
-    "allocator-test.cc",
+    "allocator_test.cc",
     "main.cc",
   ]
   deps = [

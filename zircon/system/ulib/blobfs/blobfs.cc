@@ -83,7 +83,7 @@ zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, Vmoid
 
   *out_journal = std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
                                            std::move(journal_buffer), std::move(writeback_buffer),
-                                           journal_start);
+                                           journal_start, Journal::Options());
   return ZX_OK;
 }
 

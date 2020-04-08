@@ -65,7 +65,7 @@ class MockMinfs : public InspectableMinfs {
 
   const InspectableInodeManager* GetInodeManager() const final { return nullptr; }
 
-  const Allocator* GetBlockAllocator() const final { return nullptr; }
+  const Allocator& GetBlockAllocator() const final { ZX_ASSERT(false); }
 
   zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const final { return ZX_OK; }
 };

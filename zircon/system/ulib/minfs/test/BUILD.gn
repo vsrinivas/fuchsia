@@ -56,6 +56,7 @@ test("minfs-unit") {
     "unit/parser_test.cc",
     "unit/superblock_test.cc",
     "unit/transaction_test.cc",
+    "unit/truncate_test.cc",
     "unit/vnode_test.cc",
   ]
   deps = [

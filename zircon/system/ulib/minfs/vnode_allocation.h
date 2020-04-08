@@ -32,11 +32,9 @@ class PendingAllocationData {
   // Returns the size of the longest range in block_map_;
   blk_t GetLongestRange() const;
 
-  AllocatorReservation* GetReservation() { return &reservation_; }
-
   // Returns true if no blocks are marked for allocation.
   bool IsEmpty() const {
-    return block_map_.num_bits() == 0 && new_blocks_ == 0 && reservation_.GetReserved() == 0;
+    return block_map_.num_bits() == 0 && new_blocks_ == 0;
   }
 
   // Returns true if |block_num| is marked in the block_map_.
@@ -76,9 +74,6 @@ class PendingAllocationData {
 
   // Map of relative data blocks to be allocated at a later time.
   bitmap::RleBitmap block_map_;
-
-  // Reservation containing reservations for all blocks to be allocated in the block_map_.
-  AllocatorReservation reservation_;
 };
 
 }  // namespace minfs

@@ -48,14 +48,16 @@ class VnodeMinfs;
 class Transaction final : public PendingWork {
  public:
   static zx_status_t Create(TransactionalFs* minfs, size_t reserve_inodes, size_t reserve_blocks,
-                            InodeManager* inode_manager, Allocator* block_allocator,
-                            std::unique_ptr<Transaction>* out);
+                            InodeManager* inode_manager, std::unique_ptr<Transaction>* out);
 
   Transaction() = delete;
 
   explicit Transaction(TransactionalFs* minfs);
 
   ~Transaction() final;
+
+  AllocatorReservation& inode_reservation() { return inode_reservation_; }
+  AllocatorReservation& block_reservation() { return block_reservation_; }
 
   ////////////////
   // PendingWork interface.
@@ -66,13 +68,11 @@ class Transaction final : public PendingWork {
   ////////////////
   // Other methods.
   size_t AllocateInode() {
-    ZX_DEBUG_ASSERT(inode_reservation_.IsInitialized());
-    return inode_reservation_.Allocate(this);
+    return inode_reservation_.Allocate();
   }
 
   size_t AllocateBlock() {
-    ZX_DEBUG_ASSERT(block_reservation_.IsInitialized());
-    return block_reservation_.Allocate(this);
+    return block_reservation_.Allocate();
   }
 
   void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);
@@ -89,25 +89,7 @@ class Transaction final : public PendingWork {
   }
 
   size_t SwapBlock(size_t old_bno) {
-    ZX_DEBUG_ASSERT(block_reservation_.IsInitialized());
     return block_reservation_.Swap(old_bno);
-  }
-
-  void Resolve() {
-    if (block_reservation_.IsInitialized()) {
-      block_reservation_.SwapCommit(this);
-    }
-  }
-
-  // Removes |requested| blocks from block_reservation_ and gives them to |other_reservation|.
-  void GiveBlocksToReservation(size_t requested, AllocatorReservation* other_reservation) {
-    ZX_DEBUG_ASSERT(block_reservation_.IsInitialized());
-    block_reservation_.GiveBlocks(requested, other_reservation);
-  }
-
-  // Removes all reserved blocks from |other_reservation| and gives them to block_reservation_.
-  void TakeReservedBlocksFromReservation(AllocatorReservation* other_reservation) {
-    other_reservation->GiveBlocks(other_reservation->GetReserved(), &block_reservation_);
   }
 
   std::vector<fbl::RefPtr<VnodeMinfs>> RemovePinnedVnodes();

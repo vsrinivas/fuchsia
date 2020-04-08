@@ -43,27 +43,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final { return ZX_OK; }
 };
 
-// Mock Minfs class to be used in Transaction tests.
-class MockMinfs : public TransactionalFs {
- public:
-  MockMinfs() = default;
-  fbl::Mutex* GetLock() const { return &txn_lock_; }
-
-  zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               std::unique_ptr<Transaction>* out) {
-    return ZX_OK;
-  }
-
-  void EnqueueCallback(SyncCallback callback) {}
-
-  void CommitTransaction(std::unique_ptr<Transaction> transaction) {}
-
-  Bcache* GetMutableBcache() { return nullptr; }
-
- private:
-  mutable fbl::Mutex txn_lock_;
-};
-
 // Fake Storage class to be used in Transaction tests.
 class FakeStorage : public AllocatorStorage {
  public:
@@ -136,117 +115,148 @@ class FakeBlockDevice : public block_client::BlockDevice {
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final { return ZX_OK; }
 };
 
-class TransactionTest : public zxtest::Test {
+// Mock Minfs class to be used in Transaction tests.
+class FakeMinfs : public TransactionalFs {
  public:
-  TransactionTest() = default;
-
-  void SetUp() override {
-    info_.alloc_inode_count = 0;
+  FakeMinfs() : builder_(&handler_) {
     info_.inode_count = kTotalElements;
-    MockTransactionHandler handler;
-    fs::BufferedOperationsBuilder builder(&handler);
+  }
 
-    // Create block allocator.
-    std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements));
-    ASSERT_OK(Allocator::Create(&builder, std::move(storage), &block_allocator_));
+  fbl::Mutex* GetLock() const { return &txn_lock_; }
 
-    // Create superblock manager.
-    ASSERT_OK(SuperblockManager::Create(&block_device_, &info_, kDefaultStartBlock,
-                                        IntegrityCheck::kNone, &superblock_manager_));
+  zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
+                               std::unique_ptr<Transaction>* out) {
+    return ZX_OK;
+  }
 
-    // Create inode manager.
-    AllocatorFvmMetadata fvm_metadata;
-    AllocatorMetadata metadata(kDefaultStartBlock, kDefaultStartBlock, false,
-                               std::move(fvm_metadata), superblock_manager_.get(),
-                               SuperblockAllocatorAccess::Inodes());
-    ASSERT_OK(InodeManager::Create(&block_device_, superblock_manager_.get(), &builder,
-                                   std::move(metadata), kDefaultStartBlock, kTotalElements,
-                                   &inode_manager_));
+  void EnqueueCallback(SyncCallback callback) {}
+
+  void CommitTransaction(std::unique_ptr<Transaction> transaction) {}
+
+  Bcache* GetMutableBcache() { return nullptr; }
+
+  Allocator& GetBlockAllocator() {
+    if (!block_allocator_) {
+      std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements));
+      ZX_ASSERT(Allocator::Create(&builder_, std::move(storage), &block_allocator_) == ZX_OK);
+    }
+    return *block_allocator_;
+  }
+
+  Allocator& GetInodeAllocator() {
+    return GetInodeManager().inode_allocator();
+  }
+
+  InodeManager& GetInodeManager() {
+    if (!inode_manager_) {
+      // Create superblock manager.
+      ZX_ASSERT(SuperblockManager::Create(&block_device_, &info_, kDefaultStartBlock,
+                                          IntegrityCheck::kNone, &superblock_manager_) == ZX_OK);
+
+      // Create inode manager.
+      AllocatorFvmMetadata fvm_metadata;
+      AllocatorMetadata metadata(kDefaultStartBlock, kDefaultStartBlock, false,
+                                 std::move(fvm_metadata), superblock_manager_.get(),
+                                 SuperblockAllocatorAccess::Inodes());
+      ZX_ASSERT(InodeManager::Create(&block_device_, superblock_manager_.get(), &builder_,
+                                     std::move(metadata), kDefaultStartBlock, kTotalElements,
+                                     &inode_manager_) == ZX_OK);
+    }
+    return *inode_manager_;
   }
 
   zx_status_t CreateTransaction(size_t inodes, size_t blocks, std::unique_ptr<Transaction>* out) {
-    return Transaction::Create(&minfs_, inodes, blocks, inode_manager_.get(),
-                               block_allocator_.get(), out);
+    return Transaction::Create(this, inodes, blocks, &GetInodeManager(), out);
   }
 
-  Allocator* BlockAllocator() { return block_allocator_.get(); }
-
-  MockMinfs minfs_;
-
  private:
-  Superblock info_;
+  mutable fbl::Mutex txn_lock_;
+  MockTransactionHandler handler_;
   FakeBlockDevice block_device_;
+  fs::BufferedOperationsBuilder builder_;
+  Superblock info_ = {};
   std::unique_ptr<SuperblockManager> superblock_manager_;
-  std::unique_ptr<Allocator> block_allocator_;
   std::unique_ptr<InodeManager> inode_manager_;
+  std::unique_ptr<Allocator> block_allocator_;
 };
 
 // Creates a Transaction using the public constructor, which by default contains no reservations.
-TEST_F(TransactionTest, CreateTransactionNoReservationsAlt) { Transaction transaction(&minfs_); }
+TEST(TransactionTest, CreateTransactionNoReservationsAlt) {
+  FakeMinfs minfs;
+  Transaction transaction(&minfs);
+}
 
 // Creates a Transaction with no reservations.
-TEST_F(TransactionTest, CreateTransactionNoReservations) {
+TEST(TransactionTest, CreateTransactionNoReservations) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(0, 0, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(0, 0, &transaction));
 }
 
 // Creates a Transaction with inode and block reservations.
-TEST_F(TransactionTest, CreateTransactionWithReservations) {
+TEST(TransactionTest, CreateTransactionWithReservations) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
 }
 
 // Creates a Transaction with the maximum possible number of inodes and blocks reserved.
-TEST_F(TransactionTest, CreateTransactionWithMaxBlockReservations) {
+TEST(TransactionTest, CreateTransactionWithMaxBlockReservations) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(kTotalElements, kTotalElements, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(kTotalElements, kTotalElements, &transaction));
 }
 
 // Attempts to create a transaction with more than the maximum available inodes reserved.
-TEST_F(TransactionTest, CreateTransactionTooManyInodesFails) {
+TEST(TransactionTest, CreateTransactionTooManyInodesFails) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_EQ(ZX_ERR_NO_SPACE, CreateTransaction(kTotalElements + 1, 0, &transaction));
+  ASSERT_EQ(ZX_ERR_NO_SPACE, minfs.CreateTransaction(kTotalElements + 1, 0, &transaction));
 }
 
 // Attempts to create a transaction with more than the maximum available blocks reserved.
-TEST_F(TransactionTest, CreateTransactionTooManyBlocksFails) {
+TEST(TransactionTest, CreateTransactionTooManyBlocksFails) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_EQ(ZX_ERR_NO_SPACE, CreateTransaction(0, kTotalElements + 1, &transaction));
+  ASSERT_EQ(ZX_ERR_NO_SPACE, minfs.CreateTransaction(0, kTotalElements + 1, &transaction));
 }
 
 // Tests allocation of a single inode.
-TEST_F(TransactionTest, InodeAllocationSucceeds) {
+TEST(TransactionTest, InodeAllocationSucceeds) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateInode(); });
 }
 
 // Tests allocation of a single block.
-TEST_F(TransactionTest, BlockAllocationSucceeds) {
+TEST(TransactionTest, BlockAllocationSucceeds) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateBlock(); });
 }
 
-using TransactionDeathTest = TransactionTest;
-
 // Attempts to allocate an inode when the transaction was not initialized properly.
-TEST_F(TransactionDeathTest, AllocateInodeWithoutInitializationFails) {
-  Transaction transaction(&minfs_);
+TEST(TransactionDeathTest, AllocateInodeWithoutInitializationFails) {
+  FakeMinfs minfs;
+  Transaction transaction(&minfs);
   ASSERT_DEATH([&transaction]() { transaction.AllocateInode(); });
 }
 
 // Attempts to allocate a block when the transaction was not initialized properly.
-TEST_F(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
-  Transaction transaction(&minfs_);
+TEST(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
+  FakeMinfs minfs;
+  Transaction transaction(&minfs);
   ASSERT_DEATH([&transaction]() { transaction.AllocateBlock(); });
 }
 
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
 // Attempts to allocate an inode when none have been reserved.
-TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
+TEST(TransactionDeathTest, AllocateTooManyInodesFails) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(1, 0, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(1, 0, &transaction));
 
   // First allocation should succeed.
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateInode(); });
@@ -258,9 +268,10 @@ TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
 
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
 // Attempts to allocate a block when none have been reserved.
-TEST_F(TransactionDeathTest, AllocateTooManyBlocksFails) {
+TEST(TransactionDeathTest, AllocateTooManyBlocksFails) {
+  FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(0, 1, &transaction));
+  ASSERT_OK(minfs.CreateTransaction(0, 1, &transaction));
 
   // First allocation should succeed.
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateBlock(); });
@@ -271,8 +282,9 @@ TEST_F(TransactionDeathTest, AllocateTooManyBlocksFails) {
 #endif
 
 // Checks that the Transaction's work is empty before any writes have been enqueued.
-TEST_F(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
-  Transaction transaction(&minfs_);
+TEST(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
+  FakeMinfs minfs;
+  Transaction transaction(&minfs);
 
   // Metadata operations should be empty.
   fbl::Vector<storage::UnbufferedOperation> meta_operations =
@@ -285,8 +297,9 @@ TEST_F(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
 }
 
 // Checks that the Transaction's metadata work is populated after enqueueing metadata writes.
-TEST_F(TransactionTest, EnqueueAndVerifyMetadataWork) {
-  Transaction transaction(&minfs_);
+TEST(TransactionTest, EnqueueAndVerifyMetadataWork) {
+  FakeMinfs minfs;
+  Transaction transaction(&minfs);
 
   storage::Operation op = {
       .type = storage::OperationType::kWrite,
@@ -308,8 +321,9 @@ TEST_F(TransactionTest, EnqueueAndVerifyMetadataWork) {
 }
 
 // Checks that the Transaction's data work is populated after enqueueing data writes.
-TEST_F(TransactionTest, EnqueueAndVerifyDataWork) {
-  Transaction transaction(&minfs_);
+TEST(TransactionTest, EnqueueAndVerifyDataWork) {
+  FakeMinfs minfs;
+  Transaction transaction(&minfs);
 
   storage::Operation op = {
       .type = storage::OperationType::kWrite,
@@ -348,7 +362,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
   void SetSize(uint32_t new_size) final {}
   void AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
                             blk_t* out_bno) final {}
-  void DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) final {}
+  void DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) final {}
   void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                       blk_t count) final {}
   bool HasPendingAllocation(blk_t vmo_offset) final { return false; }
@@ -369,13 +383,14 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
 };
 
 // Checks that a pinned vnode is not attached to the transaction's data work.
-TEST_F(TransactionTest, RemovePinnedVnodeContainsVnode) {
+TEST(TransactionTest, RemovePinnedVnodeContainsVnode) {
+  FakeMinfs minfs;
   bool vnode_alive = false;
 
   fbl::RefPtr<MockVnodeMinfs> vnode(fbl::AdoptRef(new MockVnodeMinfs(&vnode_alive)));
   ASSERT_TRUE(vnode_alive);
 
-  Transaction transaction(&minfs_);
+  Transaction transaction(&minfs);
   transaction.PinVnode(std::move(vnode));
   ASSERT_EQ(nullptr, vnode);
 
@@ -386,11 +401,12 @@ TEST_F(TransactionTest, RemovePinnedVnodeContainsVnode) {
   ASSERT_FALSE(vnode_alive);
 }
 
-TEST_F(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
+TEST(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
+  FakeMinfs minfs;
   size_t vnode_count = 4;
   bool vnode_alive[vnode_count];
   fbl::RefPtr<MockVnodeMinfs> vnodes[vnode_count];
-  Transaction transaction(&minfs_);
+  Transaction transaction(&minfs);
 
   for (size_t i = 0; i < vnode_count; i++) {
     vnode_alive[i] = false;
@@ -408,35 +424,6 @@ TEST_F(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
   for (size_t i = 0; i < vnode_count; i++) {
     ASSERT_FALSE(vnode_alive[i]);
   }
-}
-
-// Checks that GiveBlocksToReservation correctly transfers block allocation to an external
-// reservation.
-TEST_F(TransactionTest, GiveBlocksToReservationAddsAllocation) {
-  std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-  transaction->AllocateBlock();
-
-  AllocatorReservation reservation;
-  ASSERT_OK(reservation.Initialize(transaction.get(), 0, BlockAllocator()));
-  ASSERT_EQ(0, reservation.GetReserved());
-
-  transaction->GiveBlocksToReservation(1, &reservation);
-  ASSERT_EQ(1, reservation.GetReserved());
-}
-
-// Checks that TakeBlockReservation correctly transfers block allocation from an external
-// reservation.
-TEST_F(TransactionTest, TakeBlockReservationRemovesAllocation) {
-  std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-
-  AllocatorReservation reservation;
-  ASSERT_OK(reservation.Initialize(transaction.get(), 1, BlockAllocator()));
-  ASSERT_EQ(1, reservation.GetReserved());
-
-  transaction->TakeReservedBlocksFromReservation(&reservation);
-  ASSERT_EQ(0, reservation.GetReserved());
 }
 
 }  // namespace

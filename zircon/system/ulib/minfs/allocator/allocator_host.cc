@@ -55,17 +55,4 @@ size_t Allocator::GetAvailableLocked() const {
 
 WriteData Allocator::GetMapDataLocked() const { return map_.StorageUnsafe()->GetData(); }
 
-size_t Allocator::FindLocked() const {
-  ZX_DEBUG_ASSERT(reserved_ > 0);
-  size_t start = first_free_;
-
-  while (true) {
-    // Search for first free element in the map.
-    size_t index;
-    ZX_ASSERT(map_.Find(false, start, map_.size(), 1, &index) == ZX_OK);
-
-    return index;
-  }
-}
-
 }  // namespace minfs

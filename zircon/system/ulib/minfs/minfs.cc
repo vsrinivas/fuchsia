@@ -493,8 +493,7 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
   ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
   // Reserve blocks from allocators before returning WritebackWork to client.
-  return Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(),
-                             block_allocator_.get(), out);
+  return Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), out);
 }
 
 #ifdef __Fuchsia__
@@ -512,7 +511,25 @@ void Minfs::EnqueueCallback(SyncCallback callback) {
 }
 #endif
 
+// To be used with promises to hold on to an object and release it when executed. It is used below
+// to pin vnodes that might be referenced in a transaction and to keep deallocated blocks reserved
+// until the transaction hits the device. See below for more.
+template <typename T>
+class ReleaseObject {
+ public:
+  ReleaseObject(T object) : object_(std::move(object)) {}
+
+  void operator()([[maybe_unused]] const fit::result<void, zx_status_t>& dont_care) {
+    object_.reset();
+  }
+
+ private:
+  std::optional<T> object_;
+};
+
 void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
+  transaction->inode_reservation().Commit(transaction.get());
+  transaction->block_reservation().Commit(transaction.get());
   if (sb_->is_dirty()) {
     sb_->Write(transaction.get(), UpdateBackupSuperblock::kNoUpdate);
   }
@@ -522,23 +539,42 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
 
   auto data_operations = transaction->RemoveDataOperations();
   auto metadata_operations = transaction->RemoveMetadataOperations();
-  auto pinned_vnodes = transaction->RemovePinnedVnodes();
 
   ZX_DEBUG_ASSERT(BlockCount(metadata_operations) <= limits_.GetMaximumEntryDataBlocks());
 
+  // We take the pending block deallocations here and hold on to them until the transaction has
+  // committed. Otherwise, it would be possible for data writes in a later transaction to make it
+  // out to those blocks, but if the transaction that freed those blocks doesn't make it, we will
+  // have erroneously overwritten those blocks. We don't need to do the same for inode allocations
+  // because writes to those blocks are always done via the journal which are always sequenced.
+  //
+  // There are some potential optimisations that probably aren't worth doing:
+  //
+  //   * We could release the objects after we've written metadata to the journal, but before we
+  //     have finished writing the metadata changes to their final locations.
+  //
+  //   * We only need to keep the blocks reserved for data writes. We could allow the blocks to be
+  //     used for metadata (e.g. indirect blocks).
+  //
+  //   * The allocator will currently reserve inodes that are freed in the same transaction i.e. it
+  //     won't be possible to use free inodes until the next transaction. This probably can't happen
+  //     anyway.
   if (!data_operations.is_empty() && !metadata_operations.is_empty()) {
-    auto promise = journal_->WriteData(std::move(data_operations))
-                       .and_then(journal_->WriteMetadata(std::move(metadata_operations)));
-    auto wrapped_promise = fs::wrap_reference_vector(std::move(promise), std::move(pinned_vnodes));
-    journal_->schedule_task(std::move(wrapped_promise));
+    journal_->schedule_task(
+        journal_->WriteData(std::move(data_operations))
+        .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
+        .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
+        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!metadata_operations.is_empty()) {
-    auto promise = fs::wrap_reference_vector(
-        journal_->WriteMetadata(std::move(metadata_operations)), std::move(pinned_vnodes));
-    journal_->schedule_task(std::move(promise));
+    journal_->schedule_task(
+        journal_->WriteMetadata(std::move(metadata_operations))
+        .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
+        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!data_operations.is_empty()) {
-    auto promise = fs::wrap_reference_vector(journal_->WriteData(std::move(data_operations)),
-                                             std::move(pinned_vnodes));
-    journal_->schedule_task(std::move(promise));
+    journal_->schedule_task(
+        journal_->WriteData(std::move(data_operations))
+        .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
+        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   }
 #endif
 }
@@ -586,7 +622,7 @@ zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) cons
 }
 #endif
 
-zx_status_t Minfs::InoFree(PendingWork* transaction, VnodeMinfs* vn) {
+zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
   TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
 
 #ifdef __Fuchsia__
@@ -603,7 +639,7 @@ zx_status_t Minfs::InoFree(PendingWork* transaction, VnodeMinfs* vn) {
     }
     ValidateBno(vn->GetInode()->dnum[n]);
     block_count--;
-    block_allocator_->Free(transaction, vn->GetInode()->dnum[n]);
+    block_allocator_->Free(&transaction->block_reservation(), vn->GetInode()->dnum[n]);
   }
 
   // release all indirect blocks
@@ -631,11 +667,11 @@ zx_status_t Minfs::InoFree(PendingWork* transaction, VnodeMinfs* vn) {
         continue;
       }
       block_count--;
-      block_allocator_->Free(transaction, entry[m]);
+      block_allocator_->Free(&transaction->block_reservation(), entry[m]);
     }
     // release the direct block itself
     block_count--;
-    block_allocator_->Free(transaction, vn->GetInode()->inum[n]);
+    block_allocator_->Free(&transaction->block_reservation(), vn->GetInode()->inum[n]);
   }
 
   // release doubly indirect blocks
@@ -681,16 +717,16 @@ zx_status_t Minfs::InoFree(PendingWork* transaction, VnodeMinfs* vn) {
         }
 
         block_count--;
-        block_allocator_->Free(transaction, entry[k]);
+        block_allocator_->Free(&transaction->block_reservation(), entry[k]);
       }
 
       block_count--;
-      block_allocator_->Free(transaction, dentry[m]);
+      block_allocator_->Free(&transaction->block_reservation(), dentry[m]);
     }
 
     // release the doubly indirect block itself
     block_count--;
-    block_allocator_->Free(transaction, vn->GetInode()->dinum[n]);
+    block_allocator_->Free(&transaction->block_reservation(), vn->GetInode()->dinum[n]);
   }
   vn->MarkPurged();
   InodeUpdate(transaction, vn->GetIno(), vn->GetInode());
@@ -1005,9 +1041,9 @@ void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
 }
 #endif
 
-void Minfs::BlockFree(PendingWork* transaction, blk_t bno) {
+void Minfs::BlockFree(Transaction* transaction, blk_t bno) {
   ValidateBno(bno);
-  block_allocator_->Free(transaction, bno);
+  block_allocator_->Free(&transaction->block_reservation(), bno);
 }
 
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
@@ -1281,7 +1317,8 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
 
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(journal_superblock),
                                            std::move(journal_buffer), std::move(writeback_buffer),
-                                           JournalStartBlock(sb_->Info()));
+                                           JournalStartBlock(sb_->Info()),
+                                           fs::Journal::Options{ .sequence_data_writes = false });
   return ZX_OK;
 }
 

@@ -53,6 +53,17 @@ class Journal final : public fit::executor {
  public:
   using Promise = fit::promise<void, zx_status_t>;
 
+  struct Options {
+    // If true, make data writes always be issued to the device *after* the metadata is written from
+    // the previous transaction. This is necessary in cases where a file system wants to reuse a
+    // block that has been recently deallocated, and the file system is not aware of whether the
+    // transaction that deallocated the block is made it to the device yet. If the transaction has
+    // not made it to the device, then it would be possible for a data write to get there first and
+    // if there were to be a power-loss event, the file system would see new data with old
+    // metadata. See fxb/37958 for more details.
+    bool sequence_data_writes = true;
+  };
+
   // Constructs a Journal with journaling enabled. This is the traditional constructor
   // of Journals, where data and metadata are treated separately.
   //
@@ -62,7 +73,7 @@ class Journal final : public fit::executor {
   Journal(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
           std::unique_ptr<storage::BlockingRingBuffer> journal_buffer,
           std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
-          uint64_t journal_start_block);
+          uint64_t journal_start_block, Options options);
 
   // Constructs a journal where metadata and data are both treated as data, effectively
   // disabling the journal.
@@ -129,6 +140,8 @@ class Journal final : public fit::executor {
   // during destruction, the executor can complete pending tasks operation on the writeback
   // buffers before the writeback buffers are destroyed.
   BackgroundExecutor executor_;
+
+  const Options options_;
 };
 
 }  // namespace fs

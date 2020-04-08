@@ -153,6 +153,9 @@ class TransactionalFs {
   virtual void CommitTransaction(std::unique_ptr<Transaction> transaction) = 0;
 
   virtual Bcache* GetMutableBcache() = 0;
+
+  virtual Allocator& GetBlockAllocator() = 0;
+  virtual Allocator& GetInodeAllocator() = 0;
 };
 
 class InspectableMinfs : public fs::Inspectable {
@@ -166,7 +169,7 @@ class InspectableMinfs : public fs::Inspectable {
   virtual const InspectableInodeManager* GetInodeManager() const = 0;
 
   // Gets an immutable reference to the block_allocator.
-  virtual const Allocator* GetBlockAllocator() const = 0;
+  virtual const Allocator& GetBlockAllocator() const = 0;
 
 #ifndef __Fuchsia__
   // Gets an immutable copy of offsets_.
@@ -230,10 +233,10 @@ class Minfs :
   void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
 
   // Free a data block.
-  void BlockFree(PendingWork* transaction, blk_t bno);
+  void BlockFree(Transaction* transaction, blk_t bno);
 
   // Free ino in inode bitmap, release all blocks held by inode.
-  zx_status_t InoFree(PendingWork* transaction, VnodeMinfs* vn);
+  zx_status_t InoFree(Transaction* transaction, VnodeMinfs* vn);
 
   // Mark |vn| to be unlinked.
   void AddUnlinked(PendingWork* transaction, VnodeMinfs* vn);
@@ -354,7 +357,7 @@ class Minfs :
 
   const InspectableInodeManager* GetInodeManager() const final { return inodes_.get(); }
 
-  const Allocator* GetBlockAllocator() const final { return block_allocator_.get(); }
+  const Allocator& GetBlockAllocator() const final { return *block_allocator_; }
 
 #ifndef __Fuchsia__
   const BlockOffsets GetBlockOffsets() const final { return offsets_; }
@@ -377,6 +380,9 @@ class Minfs :
 
   // TODO(rvargas): Make private.
   std::unique_ptr<Bcache> bc_;
+
+  Allocator& GetBlockAllocator() final { return *block_allocator_; }
+  Allocator& GetInodeAllocator() final { return inodes_->inode_allocator(); }
 
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;

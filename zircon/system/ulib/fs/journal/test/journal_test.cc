@@ -595,7 +595,8 @@ void JournalRequestVerifier::VerifyInfoBlockWrite(uint64_t sequence_number,
 // journal.
 TEST_F(JournalTest, JournalConstructor) {
   MockTransactionHandler handler(registry());
-  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                  Journal::Options());
   CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
   uint64_t sequence_number = 0;
   registry()->VerifyReplay({}, sequence_number);
@@ -605,7 +606,8 @@ TEST_F(JournalTest, JournalConstructor) {
 // generating no additional work (without concurrent metadata writes).
 TEST_F(JournalTest, NoWorkSyncCompletesBeforeJournalDestruction) {
   MockTransactionHandler handler(registry());
-  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                  Journal::Options());
 
   sync_completion_t sync_completion;
   bool sync_completed = false;
@@ -627,7 +629,8 @@ TEST_F(JournalTest, NoWorkSyncCompletesOnDestruction) {
 
   {
     MockTransactionHandler handler(registry());
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise = journal.Sync().and_then([&] {
       sync_completed = true;
       return fit::ok();
@@ -663,7 +666,8 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise = journal.WriteData({operation}).and_then([&]() {
       CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
     });
@@ -718,7 +722,7 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operation}));
   }
 }
@@ -785,7 +789,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -818,7 +822,8 @@ TEST_F(JournalTest, TrimDataObserveTransaction) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise = journal.TrimData({operation}).and_then([&]() {
       CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
     });
@@ -893,7 +898,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -979,7 +984,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -1070,7 +1075,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -1157,7 +1162,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operations[0]}).and_then(journal.Sync()));
     // This write will block until the prevoius operation completes.
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
@@ -1245,7 +1250,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operations[0]}).and_then(journal.Sync()));
     // This write will block until the prevoius operation completes.
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
@@ -1624,7 +1629,7 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     auto promise =
         journal.WriteMetadata({operations[0]}).and_then(journal.WriteData({operations[1]}));
     journal.schedule_task(std::move(promise));
@@ -1688,7 +1693,7 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     auto promise =
         journal.WriteMetadata({operations[0]}).and_then(journal.WriteData({operations[1]}));
     journal.schedule_task(std::move(promise));
@@ -1776,7 +1781,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(
         journal.WriteMetadata({operations[0]}).and_then(journal.Sync()).and_then([&]() {
           // Wait to complete the prior operation before we invoke "WriteMetadata",
@@ -1846,7 +1851,7 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     auto first_promise = journal.WriteMetadata({operations[0]});
     auto second_promise = journal.WriteMetadata({operations[1]});
 
@@ -1858,10 +1863,6 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
 }
 
 // Tests that data writes are not ordered at the time "WriteData" is invoked.
-//
-// TODO(37958): Re-enable this test. Currently, data writes *are* ordered
-// alongside metadata as a workaround.
-#if 0
 TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
   storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
   const std::vector<storage::UnbufferedOperation> operations = {
@@ -1902,7 +1903,8 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options{ .sequence_data_writes = false });
 
     // Although we "WriteData" in a particular order, we can "and-then" data
     // to force an arbitrary order that we want. This is visible in the transaction
@@ -1913,7 +1915,6 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
     journal.schedule_task(second_promise.and_then(std::move(first_promise)));
   }
 }
-#endif
 
 // Tests a pretty common operation from a client point-of-view: order data operations around
 // completion of a metadata update.
@@ -1989,7 +1990,8 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise = journal.WriteData({operations[0]})
                        .and_then(journal.WriteMetadata({operations[1]}))
                        .and_then(journal.WriteData({operations[2]}));
@@ -2054,7 +2056,8 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
 
     auto promise0 = journal.WriteData({operations[0]});
     journal.schedule_task(std::move(promise0));
@@ -2107,7 +2110,8 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto data_promise = journal.WriteData({operation});
 
     auto sync_promise = journal.Sync().and_then([&]() {
@@ -2163,7 +2167,8 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
       }};
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto metadata_promise = journal.WriteMetadata({operation});
 
     auto sync_promise = journal.Sync().and_then([&]() {
@@ -2199,7 +2204,8 @@ TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
   zx_status_t data_status = ZX_OK;
   MockTransactionHandler handler(registry());
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise = journal.WriteData({operations[0]}).or_else([&](zx_status_t& status) {
       data_status = status;
     });
@@ -2228,7 +2234,8 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   zx_status_t metadata_status = ZX_OK;
   MockTransactionHandler handler(registry());
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise = journal.WriteMetadata({operations[0]}).or_else([&](zx_status_t& status) {
       metadata_status = status;
     });
@@ -2328,7 +2335,8 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
 
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
     auto promise =
         journal.WriteData({operations[0]})
             .then([&](fit::result<void, zx_status_t>& result) {
@@ -2377,7 +2385,8 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
   std::atomic<bool> sync_done = false;
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                    Journal::Options());
 
     auto data_promise = journal.WriteData({operations[0]});
     auto sync_promise = journal.Sync().then(
@@ -2436,7 +2445,7 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     auto promise0 =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by our MockTransactionHandler implementation.
@@ -2506,7 +2515,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     auto promise0 =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by our MockTransactionHandler implementation.
@@ -2586,7 +2595,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     auto metadata_promise =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // The metadata operation completed successfully.
@@ -2705,7 +2714,7 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                    kJournalStartBlock);
+                    kJournalStartBlock, Journal::Options());
     journal.schedule_task(journal.WriteMetadata({operation}));
   }
 }

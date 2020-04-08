@@ -91,7 +91,7 @@ void Directory::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, 
   }
 }
 
-void Directory::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) {
+void Directory::DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) {
   // If we found a block that was previously allocated, delete it.
   if (old_bno != 0) {
     fs_->BlockFree(transaction, old_bno);

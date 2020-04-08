@@ -31,7 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   }
   auto journal_start_block = fuzz_utils.data_provider()->ConsumeIntegral<uint64_t>();
   Journal journal(fuzz_utils.handler(), std::move(info), std::move(journal_buffer),
-                  std::move(writeback_buffer), journal_start_block);
+                  std::move(writeback_buffer), journal_start_block, Journal::Options());
   while (fuzz_utils.data_provider()->remaining_bytes() != 0) {
     auto writeback_promise =
         journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid))

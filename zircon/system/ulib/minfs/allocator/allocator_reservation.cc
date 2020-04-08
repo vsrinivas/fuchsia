@@ -14,69 +14,56 @@ namespace minfs {
 
 AllocatorReservation::~AllocatorReservation() { Cancel(); }
 
-zx_status_t AllocatorReservation::Initialize(PendingWork* transaction, size_t reserved,
-                                             Allocator* allocator) {
-  if (allocator_ != nullptr) {
+zx_status_t AllocatorReservation::Reserve(PendingWork* transaction, size_t reserved) {
+  if (reserved_ != 0) {
     return ZX_ERR_BAD_STATE;
   }
-
-  if (allocator == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  ZX_DEBUG_ASSERT(reserved_ == 0);
-
-  zx_status_t status = allocator->Reserve({}, transaction, reserved, this);
+  zx_status_t status = allocator_.Reserve({}, transaction, reserved);
   if (status == ZX_OK) {
-    allocator_ = allocator;
     reserved_ = reserved;
   }
   return status;
 }
 
-size_t AllocatorReservation::Allocate(PendingWork* transaction) {
-  ZX_DEBUG_ASSERT(allocator_ != nullptr);
-  ZX_DEBUG_ASSERT(reserved_ > 0);
+size_t AllocatorReservation::Allocate() {
+  ZX_ASSERT(reserved_ > 0);
   reserved_--;
-  return allocator_->Allocate({}, transaction);
+  return allocator_.Allocate({}, this);
 }
 
 #ifdef __Fuchsia__
 size_t AllocatorReservation::Swap(size_t old_index) {
-  ZX_DEBUG_ASSERT(allocator_ != nullptr);
-  ZX_DEBUG_ASSERT(reserved_ > 0);
-  reserved_--;
-  return allocator_->Swap({}, old_index);
-}
-
-void AllocatorReservation::SwapCommit(PendingWork* transaction) {
-  ZX_DEBUG_ASSERT(allocator_ != nullptr);
-  allocator_->SwapCommit({}, transaction);
-}
-
-void AllocatorReservation::GiveBlocks(size_t requested, AllocatorReservation* other_reservation) {
-  ZX_DEBUG_ASSERT(requested <= reserved_);
-  ZX_DEBUG_ASSERT(other_reservation != nullptr);
-
-  if (other_reservation->IsInitialized()) {
-    ZX_DEBUG_ASSERT(other_reservation->allocator_ == allocator_);
-  } else {
-    other_reservation->allocator_ = allocator_;
+  if (old_index > 0) {
+    allocator_.Free(this, old_index);
   }
-
-  reserved_ -= requested;
-  other_reservation->reserved_ += requested;
+  return Allocate();
 }
 
 #endif
 
 void AllocatorReservation::Cancel() {
-  if (IsInitialized() && reserved_ > 0) {
-    allocator_->Unreserve({}, reserved_);
+  if (reserved_ > 0) {
+    allocator_.Unreserve({}, reserved_);
     reserved_ = 0;
   }
+}
 
-  ZX_DEBUG_ASSERT(reserved_ == 0);
+PendingAllocations& AllocatorReservation::GetPendingAllocations(Allocator* allocator) {
+  if (!allocations_) {
+    allocations_ = std::make_unique<PendingAllocations>(allocator);
+  }
+  return *allocations_;
+}
+
+PendingDeallocations& AllocatorReservation::GetPendingDeallocations(Allocator* allocator) {
+  if (!deallocations_) {
+    deallocations_ = std::make_unique<PendingDeallocations>(allocator);
+  }
+  return *deallocations_;
+}
+
+void AllocatorReservation::Commit(PendingWork* transaction) {
+  allocator_.Commit(transaction, this);
 }
 
 }  // namespace minfs

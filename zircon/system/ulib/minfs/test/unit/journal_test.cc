@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <block-client/cpp/fake-device.h>
+#include <fbl/auto_call.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <zxtest/zxtest.h>
@@ -153,6 +154,88 @@ TEST_F(JournalGrowFvmTest, GrowingWithNoReplaySucceeds) {
   std::unique_ptr<Minfs> fs;
   ASSERT_OK(Minfs::Create(std::move(bcache), MountOptions(), &fs));
   EXPECT_EQ(1, fs->Info().dat_slices);  // We expect the old, smaller size.
+}
+
+// Like FakeBlockDevice but can simulate slow writes.
+class PausableFakeDevice : public block_client::FakeBlockDevice {
+ public:
+  using FakeBlockDevice::FakeBlockDevice;
+
+  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
+    {
+      std::unique_lock lock(mutex_);
+      while (paused_ && count > 0 && (requests[0].opcode & BLOCKIO_OP_MASK) == BLOCKIO_WRITE) {
+        condition_.wait(lock);
+      }
+    }
+    return FakeBlockDevice::FifoTransaction(requests, count);
+  }
+
+  void Pause() {
+    std::scoped_lock lock(mutex_);
+    paused_ = true;
+  }
+
+  void Resume() {
+    std::scoped_lock lock(mutex_);
+    paused_ = false;
+    condition_.notify_all();
+  }
+
+ private:
+  std::mutex mutex_;
+  std::condition_variable condition_;
+  bool paused_ = false;
+};
+
+// It is not safe for data writes to go to freed blocks until the metadata that frees them has been
+// committed because data writes do not wait. This test verifies this by pausing writes and then
+// freeing blocks and making sure that block doesn't get reused. This test currently relies on the
+// allocator behaving a certain way, i.e. it allocates the first free block that it can find.
+TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
+  static constexpr int kBlockCount = 1 << 15;
+  auto device = std::make_unique<PausableFakeDevice>(kBlockCount, 512);
+  PausableFakeDevice* device_ptr = device.get();
+  std::unique_ptr<Bcache> bcache;
+  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
+  ASSERT_OK(Mkfs(bcache.get()));
+  MountOptions options = {};
+  std::unique_ptr<Minfs> fs;
+  ASSERT_OK(Minfs::Create(std::move(bcache), options, &fs));
+
+  // Create a file and make it allocate 1 block.
+  fbl::RefPtr<VnodeMinfs> root;
+  ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+  fbl::RefPtr<fs::Vnode> foo;
+  ASSERT_OK(root->Create(&foo, "foo", 0));
+  auto close = fbl::MakeAutoCall([foo]() {
+                                   ASSERT_OK(foo->Close());
+                                 });
+  std::vector<uint8_t> buf(10, 0xaf);
+  size_t written;
+  ASSERT_OK(foo->Write(buf.data(), buf.size(), 0, &written));
+  ASSERT_EQ(written, buf.size());
+
+  // Make a note of which block was allocated.
+  auto foo_file = fbl::RefPtr<File>::Downcast(foo);
+  blk_t block = foo_file->GetInode()->dnum[0];
+  EXPECT_NE(0, block);
+
+  // Pause writes now.
+  device_ptr->Pause();
+
+  // Truncate the file which should cause the block to be released.
+  ASSERT_OK(foo->Truncate(0));
+
+  // Write to the file again and make sure it gets written to a different block.
+  ASSERT_OK(foo->Write(buf.data(), buf.size(), 0, &written));
+  ASSERT_EQ(written, buf.size());
+
+  // The block that was allocated should be different.
+  EXPECT_NE(block, foo_file->GetInode()->dnum[0]);
+
+  // Resume so that fs can be destroyed.
+  device_ptr->Resume();
 }
 
 }  // namespace

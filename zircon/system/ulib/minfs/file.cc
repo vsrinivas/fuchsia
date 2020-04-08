@@ -92,9 +92,6 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
     ZX_ASSERT(allocation_state_.GetNextRange(&bno_start, &bno_count) == ZX_OK);
     ZX_ASSERT(bno_count <= max_blocks);
 
-    // Transfer reserved blocks from the vnode's allocation state to the current Transaction.
-    transaction->TakeReservedBlocksFromReservation(allocation_state_.GetReservation());
-
     // Since we reserved enough space ahead of time, this should not fail.
     ZX_ASSERT(BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0]) == ZX_OK);
 
@@ -130,11 +127,6 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
     // In the future we could resolve on a per state (i.e. reservation) basis, but since swaps are
     // currently only made within a single thread, for now it is okay to resolve everything.
     transaction->PinVnode(fbl::RefPtr(this));
-    transaction->Resolve();
-
-    // Return remaining reserved blocks back to the allocation state.
-    blk_t bno_remaining = expected_blocks - bno_count;
-    transaction->GiveBlocksToReservation(bno_remaining, allocation_state_.GetReservation());
   }
 
   InodeSync(transaction.get(), kMxFsSyncMtime);
@@ -197,7 +189,7 @@ void File::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t
 #endif
 }
 
-void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) {
+void File::DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) {
   // If we found a block that was previously allocated, delete it.
   if (old_bno != 0) {
     fs_->BlockFree(transaction, old_bno);
@@ -213,10 +205,7 @@ void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno)
 #ifdef __Fuchsia__
 void File::IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                           blk_t block_count) {
-  ZX_ASSERT(transaction != nullptr);
-  AllocatorReservation block_reservation;
-  transaction->GiveBlocksToReservation(block_count, &block_reservation);
-  block_reservation.GiveBlocks(block_count, allocation_state_.GetReservation());
+  // This is a no-op. The blocks are swapped later.
 }
 
 bool File::HasPendingAllocation(blk_t vmo_offset) {
