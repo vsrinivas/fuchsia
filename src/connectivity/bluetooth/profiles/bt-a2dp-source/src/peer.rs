@@ -4,7 +4,7 @@
 
 use {
     anyhow::Context,
-    bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
+    bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpointId},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
@@ -13,47 +13,17 @@ use {
     fuchsia_zircon as zx,
     futures::{Future, StreamExt},
     parking_lot::Mutex,
-    std::{collections::HashMap, sync::Arc},
+    std::sync::Arc,
 };
 
-struct Streams(HashMap<StreamEndpointId, StreamEndpoint>);
-
-impl Streams {
-    /// A new empty set of endpoints.
-    fn new() -> Streams {
-        Streams(HashMap::new())
-    }
-
-    /// Adds a stream, indexing it by the endpoint id, associated with an encoding,
-    /// replacing any other stream with the same endpoint id.
-    fn insert(&mut self, stream: avdtp::StreamEndpoint) {
-        self.0.insert(stream.local_id().clone(), stream);
-    }
-
-    /// Retrieves a reference to the Stream referenced by `id`, if the stream exists,
-    /// otherwise returns Err(BadAcpSeid).
-    fn get(&mut self, id: &StreamEndpointId) -> Option<&StreamEndpoint> {
-        self.0.get(id)
-    }
-
-    /// Retrieves a mutable reference to the Stream referenced by `id`, if the stream exists,
-    /// otherwise returns Err(BadAcpSeid).
-    fn get_mut(&mut self, id: &StreamEndpointId) -> Option<&mut StreamEndpoint> {
-        self.0.get_mut(id)
-    }
-
-    /// Returns the information on all known streams.
-    fn information(&self) -> Vec<avdtp::StreamInformation> {
-        self.0.values().map(|x| x.information()).collect()
-    }
-}
+use crate::stream;
 
 pub struct Peer {
     /// The id of the peer we are connected to.
     id: PeerId,
-    /// The inner peer
+    /// Inner keeps track of the peer and the streams.
     inner: Arc<Mutex<PeerInner>>,
-    /// Profile Proxy, used to connect new transport sockets.
+    /// Profile Proxy to connect new transport sockets.
     profile: ProfileProxy,
     /// The profile descriptor for this peer, if it has been discovered.
     descriptor: Mutex<Option<ProfileDescriptor>>,
@@ -68,7 +38,7 @@ impl Peer {
     pub fn create(
         id: PeerId,
         peer: avdtp::Peer,
-        streams: Vec<avdtp::StreamEndpoint>,
+        streams: stream::Streams,
         profile: ProfileProxy,
     ) -> Self {
         let res = Self {
@@ -105,7 +75,7 @@ impl Peer {
     pub fn collect_capabilities(
         &self,
     ) -> impl Future<Output = avdtp::Result<Vec<avdtp::StreamEndpoint>>> {
-        let avdtp = self.inner.lock().peer.clone();
+        let avdtp = self.avdtp_peer();
         let get_all = self.descriptor.lock().map_or(false, a2dp_version_check);
         async move {
             fx_vlog!(1, "Discovering peer streams..");
@@ -145,15 +115,14 @@ impl Peer {
         codec_params: ServiceCapability,
     ) -> impl Future<Output = avdtp::Result<avdtp::MediaStream>> {
         let peer = Arc::downgrade(&self.inner);
-        let lock = self.inner.lock();
         let peer_id = self.id.clone();
-        let avdtp = lock.peer.clone();
+        let avdtp = self.avdtp_peer();
         let profile = self.profile.clone();
 
         async move {
             fx_vlog!(
                 1,
-                "Connecting stream {} to remote stream {} with {:?}",
+                "Connecting stream {} to remote {} with {:?}",
                 local_id,
                 remote_id,
                 codec_params
@@ -161,19 +130,18 @@ impl Peer {
 
             let capabilities = vec![ServiceCapability::MediaTransport, codec_params];
 
-            avdtp.set_configuration(&remote_id, &local_id, &capabilities).await?;
-            avdtp.open(&remote_id).await?;
-
             {
                 let strong = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
-                strong.lock().set_opening(&local_id, &remote_id, capabilities)?;
+                strong.lock().set_opening(&local_id, &remote_id, capabilities.clone())?;
             }
 
+            avdtp.set_configuration(&remote_id, &local_id, &capabilities).await?;
+            avdtp.open(&remote_id).await?;
             let channel = profile
                 .connect(&mut peer_id.into(), PSM_AVDTP, ChannelParameters::new_empty())
                 .await
                 .context("FIDL error: {}")?
-                .map_err(|_| avdtp::Error::PeerDisconnected)?;
+                .or(Err(avdtp::Error::PeerDisconnected))?;
             if channel.socket.is_none() {
                 fx_log_warn!("Couldn't connect media transport {}: no socket", peer_id);
                 return Err(avdtp::Error::PeerDisconnected);
@@ -187,7 +155,6 @@ impl Peer {
 
             let to_start = &[remote_id];
             avdtp.start(to_start).await?;
-
             {
                 let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
                 let mut strong_peer = strong_peer.lock();
@@ -243,23 +210,20 @@ struct PeerInner {
     /// AVDTP Sec 6.11 - only up to one stream can be in this state.
     opening: Option<StreamEndpointId>,
     /// The local stream endpoint collection
-    local: Streams,
+    local: stream::Streams,
 }
 
 impl PeerInner {
-    pub fn new(peer: avdtp::Peer, streams: Vec<avdtp::StreamEndpoint>) -> Self {
-        let mut local = Streams::new();
-        for stream in streams {
-            local.insert(stream);
-        }
+    pub fn new(peer: avdtp::Peer, local: stream::Streams) -> Self {
         Self { peer: Arc::new(peer), opening: None, local }
     }
 
     /// Returns an endpoint from the local set or a BadAcpSeid error if it doesn't exist.
-    fn get_mut(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<&mut StreamEndpoint> {
-        self.local
-            .get_mut(&local_id)
-            .ok_or(avdtp::Error::RequestInvalid(avdtp::ErrorCode::BadAcpSeid))
+    fn get_mut(
+        &mut self,
+        local_id: &StreamEndpointId,
+    ) -> Result<&mut stream::Stream, avdtp::ErrorCode> {
+        self.local.get_mut(&local_id).ok_or(avdtp::ErrorCode::BadAcpSeid)
     }
 
     fn set_opening(
@@ -268,15 +232,18 @@ impl PeerInner {
         remote_id: &StreamEndpointId,
         capabilities: Vec<ServiceCapability>,
     ) -> avdtp::Result<()> {
-        let stream = self.get_mut(&local_id)?;
+        if self.opening.is_some() {
+            return Err(avdtp::Error::InvalidState);
+        }
+        let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         stream.configure(&remote_id, capabilities)?;
-        stream.establish()?;
+        stream.endpoint_mut().establish()?;
         self.opening = Some(local_id.clone());
         Ok(())
     }
 
     fn set_started(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
-        let stream = self.get_mut(&local_id)?;
+        let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         fx_log_info!("Setting started: {:?}", stream);
         stream.start()
     }
@@ -286,22 +253,25 @@ impl PeerInner {
     /// L2CAP channel after the first.
     fn receive_channel(&mut self, channel: zx::Socket) -> avdtp::Result<()> {
         let stream_id = self.opening.as_ref().cloned().ok_or(avdtp::Error::InvalidState)?;
-        let stream = self.get_mut(&stream_id)?;
+        let stream = self.get_mut(&stream_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         let channel =
             fasync::Socket::from_socket(channel).or_else(|e| Err(avdtp::Error::ChannelSetup(e)))?;
-        if !stream.receive_channel(channel)? {
+        if !stream.endpoint_mut().receive_channel(channel)? {
             self.opening = None;
         }
         fx_log_info!("Transport channel connected to seid {}", stream_id);
         Ok(())
     }
 
-    /// Takes the media stream from an opened StreamEndpoint.
+    /// Takes the media stream from an opened Stream.
     fn take_media_stream(
         &mut self,
         local_id: &StreamEndpointId,
     ) -> avdtp::Result<avdtp::MediaStream> {
-        self.get_mut(local_id)?.take_transport()
+        self.get_mut(local_id)
+            .map_err(|e| avdtp::Error::RequestInvalid(e))?
+            .endpoint_mut()
+            .take_transport()
     }
 
     /// Handle a single request event from the avdtp peer.
@@ -313,7 +283,7 @@ impl PeerInner {
             | avdtp::Request::GetAllCapabilities { responder, stream_id } => {
                 match self.local.get(&stream_id) {
                     None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => responder.send(stream.capabilities()),
+                    Some(stream) => responder.send(stream.endpoint().capabilities()),
                 }
             }
             // TOOO(2783): React correctly to sink connections.
@@ -352,7 +322,7 @@ impl PeerInner {
                     None => return responder.reject(avdtp::ErrorCode::BadAcpSeid),
                     Some(stream) => stream,
                 };
-                match stream.get_configuration() {
+                match stream.endpoint().get_configuration() {
                     Ok(c) => responder.send(&c),
                     Err(e) => {
                         // Only happens when the stream is in the wrong state
@@ -407,7 +377,7 @@ impl PeerInner {
 mod tests {
     use super::*;
 
-    use crate::{build_local_endpoints, SBC_SEID};
+    use crate::{build_local_streams, SBC_SEID};
 
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::ErrorCode;
@@ -418,42 +388,6 @@ mod tests {
     use matches::assert_matches;
     use std::convert::TryInto;
     use std::task::Poll;
-
-    fn make_endpoint(seid: u8) -> StreamEndpoint {
-        StreamEndpoint::new(seid, avdtp::MediaType::Audio, avdtp::EndpointType::Source, vec![])
-            .expect("endpoint creation should succeed")
-    }
-
-    #[test]
-    fn test_streams() {
-        let mut streams = Streams::new();
-
-        streams.insert(make_endpoint(1));
-        streams.insert(make_endpoint(6));
-
-        let first_id = 1_u8.try_into().expect("good id");
-        let missing_id = 5_u8.try_into().expect("good id");
-
-        assert!(streams.get(&first_id).is_some());
-        assert!(streams.get(&missing_id).is_none());
-
-        assert!(streams.get_mut(&first_id).is_some());
-        assert!(streams.get_mut(&missing_id).is_none());
-
-        let expected_info = vec![make_endpoint(1).information(), make_endpoint(6).information()];
-
-        let infos = streams.information();
-
-        assert_eq!(expected_info.len(), infos.len());
-
-        if infos[0].id() == &first_id {
-            assert_eq!(expected_info[0], infos[0]);
-            assert_eq!(expected_info[1], infos[1]);
-        } else {
-            assert_eq!(expected_info[0], infos[1]);
-            assert_eq!(expected_info[1], infos[0]);
-        }
-    }
 
     fn setup_avdtp_peer() -> (avdtp::Peer, zx::Socket) {
         let (remote, signaling) =
@@ -534,7 +468,7 @@ mod tests {
         let peer = Peer::create(
             PeerId(1),
             avdtp,
-            build_local_endpoints().expect("endpoints"),
+            build_local_streams().expect("endpoints"),
             profile_proxy,
         );
         let p: ProfileDescriptor = ProfileDescriptor {
@@ -636,7 +570,7 @@ mod tests {
         let peer = Peer::create(
             PeerId(1),
             avdtp,
-            build_local_endpoints().expect("endpoints"),
+            build_local_streams().expect("build streams"),
             profile_proxy,
         );
         let p: ProfileDescriptor = ProfileDescriptor {
@@ -738,7 +672,7 @@ mod tests {
         let peer = Peer::create(
             PeerId(1),
             avdtp,
-            build_local_endpoints().expect("endpoints"),
+            build_local_streams().expect("build streams"),
             profile_proxy,
         );
 
@@ -786,7 +720,7 @@ mod tests {
         let peer = Peer::create(
             PeerId(1),
             avdtp,
-            build_local_endpoints().expect("endpoints"),
+            build_local_streams().expect("build streams"),
             profile_proxy,
         );
 
@@ -889,7 +823,7 @@ mod tests {
         let peer = Peer::create(
             PeerId(1),
             avdtp,
-            build_local_endpoints().expect("endpoints"),
+            build_local_streams().expect("build streams"),
             profile_proxy,
         );
 
@@ -970,7 +904,7 @@ mod tests {
         let peer = Peer::create(
             PeerId(1),
             avdtp,
-            build_local_endpoints().expect("endpoints"),
+            build_local_streams().expect("build streams"),
             profile_proxy,
         );
 

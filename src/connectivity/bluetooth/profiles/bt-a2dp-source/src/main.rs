@@ -35,6 +35,7 @@ mod encoding;
 mod pcm_audio;
 mod peer;
 mod sources;
+mod stream;
 
 use crate::encoding::{EncodedStream, RtpPacketBuilder};
 use crate::pcm_audio::PcmAudio;
@@ -78,11 +79,11 @@ const AAC_SEID: u8 = 7;
 // Highest AAC bitrate we want to transmit
 const MAX_BITRATE_AAC: u32 = 250000;
 
-/// Builds a set of endpoints from the available codecs.
-pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint>> {
+/// Builds the set of streams which we currently support.
+pub(crate) fn build_local_streams() -> avdtp::Result<stream::Streams> {
     // TODO(BT-533): detect codecs, add streams for each codec
 
-    let mut streams: Vec<avdtp::StreamEndpoint> = Vec::new();
+    let mut streams = stream::Streams::new();
 
     let sbc_codec_info = SbcCodecInfo::new(
         SbcSamplingFrequency::FREQ48000HZ,
@@ -95,7 +96,7 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
     )?;
     fx_vlog!(1, "Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
-    let sbc_stream = avdtp::StreamEndpoint::new(
+    let sbc_endpoint = avdtp::StreamEndpoint::new(
         SBC_SEID,
         avdtp::MediaType::Audio,
         avdtp::EndpointType::Source,
@@ -108,7 +109,9 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
             },
         ],
     )?;
-    streams.push(sbc_stream);
+
+    streams.insert(stream::Stream::build(sbc_endpoint));
+    fx_vlog!(1, "SBC Stream added at SEID {}", SBC_SEID);
 
     let aac_codec_info = AacCodecInfo::new(
         AacObjectType::MANDATORY_SRC,
@@ -120,7 +123,7 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
 
     fx_vlog!(1, "Supported AAC codec parameters: {:?}.", aac_codec_info);
 
-    let aac_stream = avdtp::StreamEndpoint::new(
+    let aac_endpoint = avdtp::StreamEndpoint::new(
         AAC_SEID,
         avdtp::MediaType::Audio,
         avdtp::EndpointType::Source,
@@ -133,7 +136,9 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
             },
         ],
     )?;
-    streams.push(aac_stream);
+
+    streams.insert(stream::Stream::build(aac_endpoint));
+    fx_vlog!(1, "AAC stream added at SEID {}", AAC_SEID);
 
     Ok(streams)
 }
@@ -142,11 +147,12 @@ struct Peers {
     peers: DetachableMap<PeerId, Peer>,
     source_type: AudioSourceType,
     profile: ProfileProxy,
+    streams: stream::Streams,
 }
 
 impl Peers {
-    fn new(source_type: AudioSourceType, profile: ProfileProxy) -> Self {
-        Peers { peers: DetachableMap::new(), source_type, profile }
+    fn new(source_type: AudioSourceType, profile: ProfileProxy, streams: stream::Streams) -> Self {
+        Peers { peers: DetachableMap::new(), source_type, profile, streams }
     }
 
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<peer::Peer>> {
@@ -193,8 +199,7 @@ impl Peers {
         } else {
             let avdtp_peer =
                 avdtp::Peer::new(channel).map_err(|e| avdtp::Error::ChannelSetup(e))?;
-            let endpoints = build_local_endpoints()?;
-            let peer = Peer::create(id, avdtp_peer, endpoints, self.profile.clone());
+            let peer = Peer::create(id, avdtp_peer, self.streams.as_new(), self.profile.clone());
             // Start the streaming task if the profile information is populated.
             // Otherwise, `self.discovered()` will do so.
             let start_streaming_flag = desc.map_or(false, |d| {
@@ -433,7 +438,9 @@ async fn main() -> Result<(), Error> {
 
     profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
-    let peers = Peers::new(opts.source, profile_svc);
+    let streams = build_local_streams()?;
+
+    let peers = Peers::new(opts.source, profile_svc, streams);
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
@@ -514,7 +521,8 @@ mod tests {
             create_proxy_and_stream::<ConnectionReceiverMarker>()
                 .expect("ConnectionReceiver proxy should be created");
 
-        let peers = Peers::new(AudioSourceType::BigBen, profile_proxy);
+        let streams = build_local_streams().expect("building streams");
+        let peers = Peers::new(AudioSourceType::BigBen, profile_proxy, streams);
         let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
         let handler_fut =
