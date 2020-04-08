@@ -1,0 +1,76 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":elf-runner-test" ]
+}
+
+rustc_test("elf_runner_test_bin") {
+  name = "elf_runner_test"
+  edition = "2018"
+  source_root = "elf_runner_test.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_binary("args_reporter") {
+  edition = "2018"
+  source_root = "args_reporter.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+  ]
+}
+
+test_package("elf-runner-test") {
+  deps = [
+    ":args_reporter",
+    ":elf_runner_test_bin",
+    "//src/sys/component_manager:bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/reporter_no_args.cml")
+      dest = "reporter_no_args.cm"
+    },
+    {
+      path = rebase_path("meta/reporter_args.cml")
+      dest = "reporter_args.cm"
+    },
+    {
+      path = rebase_path("meta/component_manager.cmx")
+      dest = "component_manager.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "args_reporter"
+    },
+    {
+      name = "component_manager"
+    },
+  ]
+
+  tests = [
+    {
+      name = "elf_runner_test"
+    },
+  ]
+}

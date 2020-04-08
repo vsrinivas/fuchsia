@@ -12,11 +12,11 @@ group("tests") {
 
   deps = [
     ":component_manager_panic_test",
-    ":elf_runner_test",
     ":shutdown_integration_test",
     "base_resolver_test",
     "collections:collections_integration_test",
     "destruction:destruction_integration_test",
+    "elf_runner:tests",
     "events:events_integration_test",
     "hub:hub_integration_test",
     "rights:tests",
@@ -156,58 +156,6 @@ test_package("component_manager_panic_test") {
   binaries = [
     {
       name = "component_manager"
-    },
-  ]
-}
-
-rustc_test("elf_runner_test_bin") {
-  name = "elf_runner_test"
-  edition = "2018"
-  source_root = "elf_runner_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-runtime",
-  ]
-}
-
-test_package("elf_runner_test") {
-  deps = [
-    ":elf_runner_test_bin",
-    "//examples/components/basic:echo_args_bin",
-    "//src/sys/component_manager:bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/echo_no_args.cml")
-      dest = "echo_no_args.cm"
-    },
-    {
-      path = rebase_path("//examples/components/basic/meta/echo_args.cml")
-      dest = "echo_args.cm"
-    },
-    {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "echo_args"
-    },
-    {
-      name = "component_manager"
-    },
-  ]
-
-  tests = [
-    {
-      name = "elf_runner_test"
     },
   ]
 }
