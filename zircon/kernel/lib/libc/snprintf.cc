@@ -30,18 +30,18 @@ class String {
   size_t capacity_;
   size_t pos_ = 0;
 
-  int Write(const char* buf, size_t len) {
+  int Write(ktl::string_view str) {
     // The capacity includes the NUL terminator not written here.
     if (pos_ + 1 < capacity_) {
-      size_t copy = ktl::min(len, capacity_ - 1 - pos_);
-      memcpy(&buffer_[pos_], buf, copy);
+      size_t copy = ktl::min(str.size(), capacity_ - 1 - pos_);
+      memcpy(&buffer_[pos_], str.data(), copy);
       pos_ += copy;
     }
-    return static_cast<int>(len);
+    return static_cast<int>(str.size());
   }
 
-  static int Callback(const char* buf, size_t len, void* ptr) {
-    return static_cast<String*>(ptr)->Write(buf, len);
+  static int Callback(void* ptr, ktl::string_view str) {
+    return static_cast<String*>(ptr)->Write(str);
   }
 };
 

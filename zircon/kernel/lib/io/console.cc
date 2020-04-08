@@ -117,8 +117,8 @@ void unregister_print_callback(print_callback_t* cb) {
 
 // This is what printf calls.  Really this could and should be const.
 // But all the stdio function signatures require non-const `FILE*`.
-FILE FILE::stdout_{[](const char* s, size_t len, void*) {
-                     kStdoutWrite(s, len);
-                     return static_cast<int>(len);
+FILE FILE::stdout_{[](void*, ktl::string_view str) {
+                     kStdoutWrite(str.data(), str.size());
+                     return static_cast<int>(str.size());
                    },
                    nullptr};

@@ -14,6 +14,7 @@
 // All anybody really wants from stdio is printf.
 
 #ifdef __cplusplus
+#include <ktl/string_view.h>
 
 class FILE {
  public:
@@ -23,12 +24,17 @@ class FILE {
   // (and the double indirection for a single-entry vtable--at the cost of
   // double indirection for the ptr data in a callback that uses it).
 
-  using Callback = int(const char* buf, size_t len, void* ptr);
+  using Callback = int(void*, ktl::string_view);
 
   FILE(Callback* write, void* ptr) : write_(write), ptr_(ptr) {}
 
+  template <typename T>
+  explicit FILE(T* writer)
+      : write_([](void* ptr, ktl::string_view s) { return static_cast<T*>(ptr)->Write(s); }),
+        ptr_(writer) {}
+
   // This is what fprintf calls to do output.
-  int Write(const char* buf, size_t len) { return write_(buf, len, ptr_); }
+  int Write(ktl::string_view s) { return write_(ptr_, s); }
 
   // This is not defined by libc itself.  The kernel defines it to point at
   // the default console output mechanism.

@@ -110,14 +110,14 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
   size_t chars_written = 0;
   char num_buffer[32];
 
-#define OUTPUT_STRING(str, len) \
-  do {                          \
-    err = out->Write(str, len); \
-    if (err < 0) {              \
-      goto exit;                \
-    } else {                    \
-      chars_written += err;     \
-    }                           \
+#define OUTPUT_STRING(str, len)   \
+  do {                            \
+    err = out->Write({str, len}); \
+    if (err < 0) {                \
+      goto exit;                  \
+    } else {                      \
+      chars_written += err;       \
+    }                             \
   } while (0)
 #define OUTPUT_CHAR(c)                       \
   do {                                       \

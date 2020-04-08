@@ -47,7 +47,7 @@ void _panic(void* caller, void* frame, const char* fmt, ...) {
 
 void _panic_no_format(const char* msg, size_t len) {
   platform_panic_start();
-  stdout->Write(msg, len);
+  stdout->Write({msg, len});
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
