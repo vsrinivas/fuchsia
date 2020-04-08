@@ -1,0 +1,43 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys.internal;
+
+using fuchsia.logger;
+
+/// An incoming connection for logging from a component, attributed by appmgr.
+struct LogConnection {
+    /// The incoming request for the LogSink.
+    request<fuchsia.logger.LogSink> log_request;
+
+    /// What we know about the identity of the requester.
+    SourceIdentity source_identity;
+};
+
+/// `LogConnector` is implemented once per-realm by appmgr. Clients of this protocol call `TakeLogConnectionListener` to
+/// receive logs within the client's realm.
+///
+/// When a component starts with this protocol in its sandbox, appmgr creates a matching
+/// `LogConnectionListener` for that component's realm, and will forward any `LogConnection`s in the realm to the
+/// LogConnectionListener.
+///
+/// As a result, if a `LogConnectionListener` wishes to consume logs for another component in its realm, the
+/// consumer must be started before other components in the realm. The consumer does not need to
+/// begin executing, just have its namespace constructed.
+[Discoverable]
+protocol LogConnector {
+    /// Removes the `LogConnectionListener` from this realm, returning the request-side if it had not already been taken.
+    /// Clients should bind an implementation to the `LogConnectionListener` protocol in order to receive LogSinks.
+    ///
+    /// This method returns a `request<LogConnectionListener>` instead of accepting a `LogConnectionListener` directly
+    /// in order to allow appmgr to construct and buffer `LogConnectionListener` with `LogConnection`s.
+    TakeLogConnectionListener() -> (request<LogConnectionListener>? consumer);
+};
+
+/// `LogConnectorListener` receives attributed log connections from a consumer such as the Archivist.
+/// This protocol is meant to be used with a `LogConnector`.
+protocol LogConnectionListener {
+    /// Adds a new connection.
+    OnNewConnection(LogConnection connection);
+};

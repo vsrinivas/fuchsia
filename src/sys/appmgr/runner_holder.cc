@@ -89,10 +89,12 @@ void RunnerHolder::StartComponent(
   fxl::RefPtr<Namespace> ns_copy(ns);
 
   // TODO(anmittal): Create better unique instance id, instead of 1,2,3,4,...
+  auto id = std::to_string(++component_id_counter_);
+  ns->set_component_id(id);
   auto component = std::make_shared<ComponentBridge>(
       std::move(controller), std::move(remote_controller), this, url, std::move(args),
-      Util::GetLabelFromURL(url), std::to_string(++component_id_counter_), std::move(ns),
-      std::move(channels.exported_dir), std::move(channels.client_request));
+      Util::GetLabelFromURL(url), id, std::move(ns), std::move(channels.exported_dir),
+      std::move(channels.client_request));
 
   // update hub
   if (auto impl = impl_object_.lock()) {

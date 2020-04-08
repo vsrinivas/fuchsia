@@ -13,10 +13,9 @@ use {
         logs,
     },
     argh::FromArgs,
-    fidl_fuchsia_sys_internal::ComponentEventProviderMarker,
+    fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker, SourceIdentity},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_inspect::{component, health::Reporter},
     futures::{future, stream, FutureExt, StreamExt},
     io_util,
@@ -42,13 +41,14 @@ pub struct Args {
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new()?;
 
-    let provider = connect_to_service::<ComponentEventProviderMarker>()
+    let event_provider = connect_to_service::<ComponentEventProviderMarker>()
         .context("failed to connect to entity resolver")?;
+    let log_connector = connect_to_service::<LogConnectorMarker>()?;
 
     diagnostics::init();
 
     let events_stream_fut =
-        component_events::listen(provider, diagnostics::root().create_child("event_stats"));
+        component_events::listen(event_provider, diagnostics::root().create_child("event_stats"));
 
     let opt: Args = argh::from_env();
     let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
@@ -117,9 +117,15 @@ fn main() -> Result<(), Error> {
     let log_manager2 = log_manager.clone();
     let log_manager3 = log_manager.clone();
 
+    log_manager.spawn_log_consumer(log_connector);
     fs.dir("svc")
-        .add_fidl_service(move |stream| log_manager2.spawn_log_handler(stream))
-        .add_fidl_service(move |stream| log_manager3.spawn_log_sink_handler(stream))
+        .add_fidl_service(move |stream| {
+            log_manager2.spawn_log_handler(stream);
+        })
+        .add_fidl_service(move |stream| {
+            eprintln!("WARNING: processing unattributed LogSink");
+            log_manager3.spawn_log_sink_handler(stream, SourceIdentity::empty());
+        })
         .add_fidl_service(move |stream| {
             let all_archive_accessor =
                 archive_accessor::ArchiveAccessor::new(all_inspect_repository.clone());

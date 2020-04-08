@@ -122,7 +122,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
 };
 
 TEST_F(ServiceProviderTest, SimpleService) {
-  ServiceProviderDirImpl service_provider;
+  ServiceProviderDirImpl service_provider(fbl::AdoptRef(new LogConnectorImpl("test")));
   AddService(&service_provider, "my", 1);
   TestService(&service_provider, "my_service1", 1);
   TestMissingService(&service_provider, "nonexistent_service");
@@ -134,9 +134,10 @@ TEST_F(ServiceProviderTest, Parent) {
 
   // 'fake_service1' overlaps in parent and child; the child's service should
   // take priority.
-  ServiceProviderDirImpl service_provider;
+  ServiceProviderDirImpl service_provider(fbl::AdoptRef(new LogConnectorImpl("test")));
   AddService(&service_provider, "fake", 1);
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
+  auto parent_service_provider =
+      fbl::AdoptRef(new ServiceProviderDirImpl(fbl::AdoptRef(new LogConnectorImpl("parent"))));
   AddService(parent_service_provider.get(), "fake", 1, service3);
   AddService(parent_service_provider.get(), "fake", 2);
   service_provider.set_parent(parent_service_provider);
@@ -158,10 +159,11 @@ TEST_F(ServiceProviderTest, Parent) {
 
 TEST_F(ServiceProviderTest, RestrictedServices) {
   static const std::vector<std::string> kWhitelist{"parent_service1", "my_service1"};
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl);
+  auto parent_service_provider =
+      fbl::AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("parent"))));
   AddService(parent_service_provider.get(), "parent", 1);
   AddService(parent_service_provider.get(), "parent", 2);
-  ServiceProviderDirImpl service_provider(&kWhitelist);
+  ServiceProviderDirImpl service_provider(AdoptRef(new LogConnectorImpl("main")), &kWhitelist);
   AddService(&service_provider, "my", 1);
   AddService(&service_provider, "my", 2);
   service_provider.set_parent(parent_service_provider);
@@ -202,7 +204,7 @@ class DirentChecker {
 constexpr size_t kBufSz = 4096;
 
 TEST_F(ServiceProviderTest, Readdir_Simple) {
-  ServiceProviderDirImpl service_provider;
+  ServiceProviderDirImpl service_provider(AdoptRef(new LogConnectorImpl("test")));
   AddService(&service_provider, "my", 1);
   AddService(&service_provider, "my", 2);
   AddService(&service_provider, "my", 3);
@@ -226,10 +228,11 @@ TEST_F(ServiceProviderTest, Readdir_Simple) {
 }
 
 TEST_F(ServiceProviderTest, Readdir_WithParent) {
-  ServiceProviderDirImpl service_provider;
+  ServiceProviderDirImpl service_provider(AdoptRef(new LogConnectorImpl("root")));
   AddService(&service_provider, "my", 1);
   AddService(&service_provider, "my", 2);
-  auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl());
+  auto parent_service_provider =
+      fbl::AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("parent"))));
   AddService(parent_service_provider.get(), "parent", 1);
   AddService(parent_service_provider.get(), "parent", 2);
   service_provider.set_parent(parent_service_provider);
@@ -250,6 +253,43 @@ TEST_F(ServiceProviderTest, Readdir_WithParent) {
   {
     EXPECT_EQ(ZX_OK, service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
     EXPECT_EQ(len, 0u);
+  }
+}
+
+// Test that a parent's custom LogSink is inherited by child, and not provided by appmgr.
+TEST_F(ServiceProviderTest, CustomLogSinkInheritedFromParent) {
+  static const std::vector<std::string> kWhitelist{fuchsia::logger::LogSink::Name_};
+  // parent has a custom LogSink.
+  auto parent =
+      AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("root")), &kWhitelist));
+  int parent_logger_requests = 0;
+  parent->AddService(fuchsia::logger::LogSink::Name_,
+                     fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
+                       parent_logger_requests++;
+                       return ZX_OK;
+                     })));
+  parent->InitLogging();
+
+  // child requests a LogSink.
+  auto child =
+      AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("child")), &kWhitelist));
+  child->set_parent(parent);
+  child->InitLogging();
+
+  {
+    zx::channel client;
+    zx::channel server;
+    ZX_ASSERT(zx::channel::create(0, &client, &server) == ZX_OK);
+    parent->ConnectToService(fuchsia::logger::LogSink::Name_, std::move(server));
+    RunLoopUntil([&] { return parent_logger_requests == 1; });
+  }
+  // test that child connects to parent's custom logsink.
+  {
+    zx::channel client;
+    zx::channel server;
+    ZX_ASSERT(zx::channel::create(0, &client, &server) == ZX_OK);
+    child->ConnectToService(fuchsia::logger::LogSink::Name_, std::move(server));
+    RunLoopUntil([&] { return parent_logger_requests == 2; });
   }
 }
 

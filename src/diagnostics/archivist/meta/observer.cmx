@@ -12,7 +12,8 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.sys.internal.ComponentEventProvider"
+            "fuchsia.sys.internal.ComponentEventProvider",
+            "fuchsia.sys.internal.LogConnector"
         ]
     }
 }

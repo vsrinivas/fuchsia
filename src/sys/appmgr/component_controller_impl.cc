@@ -122,6 +122,7 @@ ComponentControllerBase::ComponentControllerBase(
     fdio_service_connect_at(exported_dir_.channel().get(), "svc", client_request.release());
   }
 
+  ns_->set_component_id(hub_instance_id_);
   hub_.SetName(label_);
   hub_.AddEntry("url", url_);
   hub_.AddEntry("args", std::move(args));

@@ -9,7 +9,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.internal.ComponentEventProvider"
+            "fuchsia.sys.internal.ComponentEventProvider",
+            "fuchsia.sys.internal.LogConnector"
         ]
     }
 }

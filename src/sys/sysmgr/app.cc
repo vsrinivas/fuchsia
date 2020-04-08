@@ -127,7 +127,8 @@ App::App(Config config, async::Loop* loop)
                                        kDefaultLabel, std::move(service_list), std::move(options));
 
   // before we start any configured services, make sure we start the Archivist. its sandbox includes
-  // fuchsia.sys.LogConnector, so appmgr will create the correct LogConsumer buffer before this ends
+  // fuchsia.sys.LogConnector, so appmgr will create the correct LogConnectionListener buffer before
+  // this ends
   if (!launch_diagnostics.url.empty()) {
     StartDiagnostics(std::move(launch_diagnostics), loop);
   }

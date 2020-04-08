@@ -67,9 +67,11 @@ std::vector<std::string> GetDefaultNamespaceServiceEntries() {
   return std::vector<std::string>{
       ".",
       Namespace::Launcher::Name_,
+      fuchsia::logger::LogSink::Name_,
       fuchsia::process::Launcher::Name_,
       fuchsia::process::Resolver::Name_,
       fuchsia::sys::Environment::Name_,
+      fuchsia::sys::internal::LogConnector::Name_,
   };
 }
 

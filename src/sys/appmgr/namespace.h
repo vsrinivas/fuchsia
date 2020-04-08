@@ -64,6 +64,7 @@ class Namespace : public fuchsia::sys::Environment,
   }
 
   void set_component_url(const std::string& url) { services_->set_component_url(url); }
+  void set_component_id(const std::string& id) { services_->set_component_id(id); }
 
   //
   // fuchsia::sys::Launcher implementation:

@@ -15,6 +15,7 @@
 
 #include <trace/event.h>
 
+#include "fbl/ref_ptr.h"
 #include "src/sys/appmgr/job_provider_impl.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/util.h"
@@ -24,10 +25,14 @@ namespace component {
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
                      fuchsia::sys::ServiceListPtr additional_services,
                      const std::vector<std::string>* service_whitelist)
-    : vfs_(async_get_default_dispatcher()),
-      services_(fbl::AdoptRef(new ServiceProviderDirImpl(service_whitelist))),
-      job_provider_(fbl::AdoptRef(new JobProviderImpl(realm.get()))),
-      realm_(std::move(realm)) {
+    : vfs_(async_get_default_dispatcher()) {
+  fbl::RefPtr<LogConnectorImpl> connector;
+  if (realm) {
+    connector = realm->log_connector();
+  }
+  services_ = fbl::AdoptRef(new ServiceProviderDirImpl(connector, service_whitelist));
+  job_provider_ = fbl::AdoptRef(new JobProviderImpl(realm.get()));
+  realm_ = std::move(realm);
   // WARNING! Do not add new services here! This makes services available in all
   // component namespaces ambiently without requiring proper routing between
   // realms, and this list should not be expanded.
@@ -86,6 +91,8 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
   if (parent) {
     services_->set_parent(parent->services());
   }
+
+  services_->InitLogging();
 }
 
 Namespace::~Namespace() {}

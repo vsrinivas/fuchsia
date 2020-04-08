@@ -9,8 +9,12 @@ fidl("fuchsia.sys.internal") {
 
   sources = [
     "component_event_provider.fidl",
+    "log_connector.fidl",
     "source_identity.fidl",
   ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-logger",
+  ]
 }

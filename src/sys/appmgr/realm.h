@@ -34,6 +34,7 @@
 #include "src/sys/appmgr/environment_controller_impl.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
+#include "src/sys/appmgr/log_connector_impl.h"
 #include "src/sys/appmgr/namespace.h"
 #include "src/sys/appmgr/namespace_builder.h"
 #include "src/sys/appmgr/runner_holder.h"
@@ -95,6 +96,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const std::string& cache_path() const { return cache_path_; }
   const std::string& temp_path() const { return temp_path_; }
   const std::string& koid() const { return koid_; }
+  const fbl::RefPtr<LogConnectorImpl>& log_connector() const { return log_connector_; }
 
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
 
@@ -239,6 +241,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const bool run_virtual_console_;
   std::unique_ptr<component::PackageLoader> package_loader_;
   std::unique_ptr<component::CacheControl> cache_control_;
+  fbl::RefPtr<LogConnectorImpl> log_connector_;
 
   zx::job job_;
 

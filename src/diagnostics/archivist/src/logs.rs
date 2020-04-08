@@ -8,6 +8,9 @@ use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogMessage, LogRequest, LogRequestStream,
     LogSinkRequest, LogSinkRequestStream,
 };
+use fidl_fuchsia_sys_internal::{
+    LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
+};
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
 use futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt};
@@ -86,28 +89,74 @@ impl LogManager {
     }
 
     /// Spawn a task to handle requests from components with logs.
-    pub fn spawn_log_sink_handler(&self, stream: LogSinkRequestStream) {
+    pub fn spawn_log_sink_handler(&self, stream: LogSinkRequestStream, source: SourceIdentity) {
         let handler = self.clone();
         fasync::spawn(async move {
-            if let Err(e) = handler.handle_log_sink_requests(stream).await {
+            if let Err(e) = handler.handle_log_sink_requests(stream, source).await {
                 eprintln!("logsink stream errored: {:?}", e);
             }
         })
     }
 
+    /// Spawn a task which attempts to act as `LogConnectionListener` for its parent realm, eventually
+    /// passing `LogSink` connections into the manager.
+    pub fn spawn_log_consumer(&self, connector: LogConnectorProxy) {
+        let handler = self.clone();
+        fasync::spawn(async move {
+            match connector.take_log_connection_listener().await {
+                Ok(Some(listener)) => {
+                    let mut connections =
+                        listener.into_stream().expect("getting requeststream from serverend");
+                    while let Ok(Some(connection)) = connections.try_next().await {
+                        match connection {
+                            LogConnectionListenerRequest::OnNewConnection {
+                                connection: LogConnection { log_request, source_identity },
+                                control_handle: _,
+                            } => {
+                                handler.spawn_log_sink_handler(
+                                    log_request
+                                        .into_stream()
+                                        .expect("getting LogSinkRequestStream from serverend"),
+                                    source_identity,
+                                );
+                            }
+                        };
+                    }
+                }
+                Ok(None) => {
+                    eprintln!("local realm already gave out LogConnectionListener, skipping logs")
+                }
+                Err(why) => {
+                    eprintln!("error retrieving LogConnectionListener from LogConnector: {:?}", why)
+                }
+            }
+        });
+    }
+
     /// Handle incoming LogSink requests, currently only to receive sockets that will contain logs.
-    async fn handle_log_sink_requests(self, mut stream: LogSinkRequestStream) -> Result<(), Error> {
+    async fn handle_log_sink_requests(
+        self,
+        mut stream: LogSinkRequestStream,
+        source: SourceIdentity,
+    ) -> Result<(), Error> {
         while let Some(LogSinkRequest::Connect { socket, control_handle }) =
             stream.try_next().await?
         {
-            let log_stream =
-                match LogMessageSocket::new(socket).context("creating log stream from socket") {
-                    Ok(s) => s,
-                    Err(e) => {
-                        control_handle.shutdown();
-                        return Err(e);
-                    }
-                };
+            let source = SourceIdentity {
+                component_name: source.component_name.clone(),
+                component_url: source.component_url.clone(),
+                instance_id: source.instance_id.clone(),
+                realm_path: source.realm_path.clone(),
+            };
+            let log_stream = match LogMessageSocket::new(socket, source)
+                .context("creating log stream from socket")
+            {
+                Ok(s) => s,
+                Err(e) => {
+                    control_handle.shutdown();
+                    return Err(e);
+                }
+            };
 
             fasync::spawn(self.clone().drain_messages(log_stream));
         }
@@ -539,7 +588,7 @@ mod tests {
 
             let (log_sink_proxy, log_sink_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-            lm.spawn_log_sink_handler(log_sink_stream);
+            lm.spawn_log_sink_handler(log_sink_stream, SourceIdentity::empty());
 
             log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
 

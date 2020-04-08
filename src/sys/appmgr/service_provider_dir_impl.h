@@ -21,6 +21,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/sys/appmgr/log_connector_impl.h"
 
 namespace component {
 
@@ -30,13 +31,17 @@ namespace component {
 // It supports enumeration for only first level of services.
 class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::Vnode {
  public:
-  explicit ServiceProviderDirImpl(const std::vector<std::string>* services = nullptr);
+  explicit ServiceProviderDirImpl(fbl::RefPtr<LogConnectorImpl> log_connector,
+                                  const std::vector<std::string>* services = nullptr);
   ~ServiceProviderDirImpl() override;
 
   // Sets the parent of this. Parent should be fully initialized.
   void set_parent(fbl::RefPtr<ServiceProviderDirImpl> parent);
 
+  const std::string& component_url() const { return component_url_; }
+
   void set_component_url(const std::string& url) { component_url_ = url; }
+  void set_component_id(const std::string& id) { component_id_ = id; }
 
   void AddService(const std::string& service_name, fbl::RefPtr<fs::Service> service);
 
@@ -64,6 +69,11 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   void ConnectToService(std::string service_name, zx::channel channel) override;
 
+  // Initialize LogConnector and LogSink services if needed. Should be called *after*
+  // other namespace setup steps so that parent-provided versions of those services will
+  // take precedence.
+  void InitLogging();
+
   bool IsServiceWhitelisted(const std::string& service_name) {
     return (!has_services_whitelist_ || services_whitelist_.count(service_name) > 0);
   }
@@ -75,7 +85,10 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   // inherited from the parent, if any).
   fbl::RefPtr<fs::PseudoDir> root_;
   fbl::RefPtr<ServiceProviderDirImpl> parent_;
+  fbl::RefPtr<LogConnectorImpl> log_connector_;
   fxl::WeakPtrFactory<ServiceProviderDirImpl> weak_factory_;
+
+  bool has_builtin_logsink_ = false;
 
   // TODO(CP-25): Remove has_services_whitelist_ when empty services is
   // equivalent to no services.
@@ -88,6 +101,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   std::unordered_set<std::string> all_service_names_;
 
   std::string component_url_ = "NO_COMPONENT";
+  std::string component_id_ = "-1";
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderDirImpl);
 };

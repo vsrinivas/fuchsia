@@ -6,6 +6,7 @@ use {
     super::error::StreamError,
     byteorder::{ByteOrder, LittleEndian},
     fidl_fuchsia_logger::LogMessage,
+    fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         io::{self, AsyncRead},
@@ -58,14 +59,17 @@ impl Default for fx_log_packet_t {
 
 #[must_use = "futures/streams"]
 pub struct LogMessageSocket {
+    #[allow(unused)]
+    source: SourceIdentity,
     socket: fasync::Socket,
     buffer: [u8; FX_LOG_MAX_DATAGRAM_LEN],
 }
 
 impl LogMessageSocket {
     /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket) -> Result<Self, io::Error> {
+    pub fn new(socket: zx::Socket, source: SourceIdentity) -> Result<Self, io::Error> {
         Ok(Self {
+            source,
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; FX_LOG_MAX_DATAGRAM_LEN],
         })
@@ -79,7 +83,7 @@ impl Stream for LogMessageSocket {
     type Item = Result<(LogMessage, usize), StreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let &mut Self { ref mut socket, ref mut buffer } = &mut *self;
+        let &mut Self { source: _, ref mut socket, ref mut buffer } = &mut *self;
         let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
 
         let parsed = if len > 0 { Some(parse_log_message(&buffer[..len])) } else { None };
@@ -208,13 +212,14 @@ mod tests {
     fn logger_stream_test() {
         let mut executor = fasync::Executor::new().unwrap();
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+
         let mut packet: fx_log_packet_t = Default::default();
         packet.metadata.pid = 1;
         packet.data[0] = 5;
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let ls = LogMessageSocket::new(sout).unwrap();
+        let ls = LogMessageSocket::new(sout, SourceIdentity::empty()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let mut expected_p = LogMessage {
             pid: packet.metadata.pid,

@@ -13,7 +13,8 @@
         ],
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.internal.ComponentEventProvider"
+            "fuchsia.sys.internal.ComponentEventProvider",
+            "fuchsia.sys.internal.LogConnector"
         ]
     }
 }

@@ -285,6 +285,12 @@ Realm::Realm(RealmArgs args, zx::job job)
 
   label_ = args.label.substr(0, fuchsia::sys::kLabelMaxLength);
 
+  if (parent_) {
+    log_connector_ = parent_->log_connector_->NewChild(label_);
+  } else {
+    log_connector_ = AdoptRef(new LogConnectorImpl(label_));
+  }
+
   if (args.options.kill_on_oom) {
     size_t property_value = 1;
     job_.set_property(ZX_PROP_JOB_KILL_ON_OOM, &property_value, sizeof(property_value));
