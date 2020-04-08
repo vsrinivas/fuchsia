@@ -1037,7 +1037,7 @@ mod tests {
 
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
-        let body = vec![0u8; crate::ip::IPV6_MIN_MTU as usize];
+        let body = vec![0u8; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize];
         assert_eq!(
             BufferIpSocketContext::<Ipv4, _>::send_ip_packet(
                 &mut ctx,
@@ -1107,7 +1107,7 @@ mod tests {
 
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
-        let body = vec![0u8; crate::ip::IPV6_MIN_MTU as usize];
+        let body = vec![0u8; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize];
         assert_eq!(
             BufferIpSocketContext::<Ipv6, _>::send_ip_packet(
                 &mut ctx,

@@ -1293,7 +1293,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         //               be exposed to the device hardware?
 
         // `mtu` must not be less than the minimum IPv6 MTU.
-        assert!(mtu >= crate::ip::path_mtu::IPV6_MIN_MTU);
+        assert!(mtu >= Ipv6::MINIMUM_LINK_MTU.into());
 
         let dev_state = self.get_state_mut_with(device_id).link_mut();
 
@@ -1512,7 +1512,7 @@ mod tests {
     };
     use crate::ip::{
         dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
-        IpExt, IpPacketBuilder, IpProto, IPV6_MIN_MTU,
+        IpExt, IpPacketBuilder, IpProto,
     };
     use crate::testutil::{
         add_arp_or_ndp_table_entry, get_counter_val, new_rng,
@@ -1594,7 +1594,7 @@ mod tests {
         fn test(size: usize, expect_frames_sent: usize) {
             let mut ctx = DummyContext::with_state(DummyEthernetContext::new(
                 DUMMY_CONFIG_V4.local_mac,
-                IPV6_MIN_MTU,
+                Ipv6::MINIMUM_LINK_MTU.into(),
             ));
             <DummyContext as ArpHandler<_, _>>::insert_static_neighbor(
                 &mut ctx,
@@ -1611,14 +1611,17 @@ mod tests {
             assert_eq!(ctx.frames().len(), expect_frames_sent);
         }
 
-        test(IPV6_MIN_MTU as usize, 1);
-        test(IPV6_MIN_MTU as usize + 1, 0);
+        test(Ipv6::MINIMUM_LINK_MTU.into(), 1);
+        test(usize::from(Ipv6::MINIMUM_LINK_MTU) + 1, 0);
     }
 
     #[test]
     fn test_pending_frames() {
-        let mut state = EthernetDeviceStateBuilder::new(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU)
-            .build::<DummyInstant>();
+        let mut state = EthernetDeviceStateBuilder::new(
+            DUMMY_CONFIG_V4.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        )
+        .build::<DummyInstant>();
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.into_addr());
         state.add_pending_frame(ip, Buf::new(vec![1], ..));
         state.add_pending_frame(ip, Buf::new(vec![2], ..));
@@ -1647,7 +1650,8 @@ mod tests {
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
         #[ipv4]
         let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
@@ -1692,7 +1696,8 @@ mod tests {
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
         #[ipv4]
         let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
@@ -1726,7 +1731,9 @@ mod tests {
     #[test]
     fn initialize_once() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU);
+        let device = ctx
+            .state_mut()
+            .add_ethernet_device(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
     }
 
@@ -1734,7 +1741,9 @@ mod tests {
     #[should_panic(expected = "assertion failed: state.is_uninitialized()")]
     fn initialize_multiple() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU);
+        let device = ctx
+            .state_mut()
+            .add_ethernet_device(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         // Should panic since we are already initialized.
@@ -1950,7 +1959,8 @@ mod tests {
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let ip1 = I::get_other_ip_address(1);
@@ -2043,7 +2053,8 @@ mod tests {
     fn test_multiple_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let ip1 = I::get_other_ip_address(1);
@@ -2114,7 +2125,8 @@ mod tests {
     fn test_ip_join_leave_multicast_addr_ref_count<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let multicast_addr = get_multicast_addr::<I>();
@@ -2158,7 +2170,8 @@ mod tests {
     fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let multicast_addr = get_multicast_addr::<I>();
@@ -2180,7 +2193,8 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let ip1 =
@@ -2234,7 +2248,8 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         assert_eq!(device.id, 0);
         let device = EthernetDeviceId(0);
 
@@ -2260,7 +2275,8 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         assert_eq!(device.id, 0);
         let device = EthernetDeviceId(0);
 

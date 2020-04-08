@@ -27,7 +27,7 @@ use crate::ip::{
         BufferIpSocketContext, IpSock, IpSocket, IpSocketContext, SendError, UnroutableBehavior,
     },
     BufferIpTransportContext, IpDeviceIdContext, IpExt, IpProto, IpTransportContext,
-    IpVersionMarker, TransportReceiveError, IPV6_MIN_MTU,
+    IpVersionMarker, TransportReceiveError,
 };
 use crate::socket::Socket;
 use crate::transport::ConnAddrMap;
@@ -1528,7 +1528,7 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: BufferIcmpv6Context<B>>(
                     TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                         .encapsulate(icmp_builder)
                 },
-                Some(IPV6_MIN_MTU),
+                Some(Ipv6::MINIMUM_LINK_MTU.into()),
                 false,
             )
         );
@@ -1588,7 +1588,7 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: BufferIcmpv6Context<B>
                     TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                         .encapsulate(icmp_builder)
                 },
-                Some(IPV6_MIN_MTU),
+                Some(Ipv6::MINIMUM_LINK_MTU.into()),
                 // Note, here we explicitly let `should_send_icmpv6_error` allow
                 // a multicast destination (link-layer or destination IP) as RFC
                 // 4443 Section 2.4.e explicitly allows sending an ICMP response
@@ -1695,7 +1695,7 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: BufferIcmpv6Context
                     TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                         .encapsulate(icmp_builder)
                 },
-                Some(IPV6_MIN_MTU),
+                Some(Ipv6::MINIMUM_LINK_MTU.into()),
                 allow_multicast_dst,
             )
         );
@@ -1774,7 +1774,7 @@ fn send_icmpv6_dest_unreachable<B: BufferMut, C: BufferIcmpv6Context<B>>(
                     TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
                         .encapsulate(icmp_builder)
                 },
-                Some(IPV6_MIN_MTU),
+                Some(Ipv6::MINIMUM_LINK_MTU.into()),
                 false,
             )
         );

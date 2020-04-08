@@ -209,6 +209,14 @@ pub trait Ip:
     /// "IPv4" or "IPv6".
     const NAME: &'static str;
 
+    /// The minimum link MTU for this version.
+    ///
+    /// Every internet link supporting this IP version must have a maximum
+    /// transmission unit (MTU) of at least this many bytes. This MTU applies to
+    /// the size of an IP packet, and does not include any extra bytes used by
+    /// encapsulating packets (Ethernet frames, GRE packets, etc).
+    const MINIMUM_LINK_MTU: u16;
+
     /// The address type for this IP version.
     ///
     /// [`Ipv4Addr`] for IPv4 and [`Ipv6Addr`] for IPv6.
@@ -249,6 +257,13 @@ impl Ip for Ipv4 {
     const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
     const NAME: &'static str = "IPv4";
+    /// The IPv4 minimum link MTU.
+    ///
+    /// Per [RFC 791 Section 3.2], "[\e\]very internet module must be able to
+    /// forward a datagram of 68 octets without further fragmentation."
+    ///
+    /// [RFC 791 Section 3.2]: https://tools.ietf.org/html/rfc791#section-3.2
+    const MINIMUM_LINK_MTU: u16 = 68;
     type Addr = Ipv4Addr;
 }
 
@@ -331,6 +346,18 @@ impl Ip for Ipv6 {
         prefix: 10,
     };
     const NAME: &'static str = "IPv6";
+    /// The IPv6 minimum link MTU.
+    ///
+    /// Per [RFC 8200 Section 5]:
+    ///
+    /// > IPv6 requires that every link in the Internet have an MTU of 1280
+    /// > octets or greater. This is known as the IPv6 minimum link MTU. On any
+    /// > link that cannot convey a 1280-octet packet in one piece, link-
+    /// > specific fragmentation and reassembly must be provided at a layer
+    /// > below IPv6.
+    ///
+    /// [RFC 8200 Section 5]: https://tools.ietf.org/html/rfc8200#section-5
+    const MINIMUM_LINK_MTU: u16 = 1280;
     type Addr = Ipv6Addr;
 }
 

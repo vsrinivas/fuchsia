@@ -10,27 +10,10 @@ use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::trace;
-use net_types::ip::{Ip, IpAddress, IpVersion};
+use net_types::ip::{Ip, IpAddress};
 
 use crate::context::{InstantContext, StateContext, TimerContext, TimerHandler};
 use crate::Instant;
-
-/// [RFC 791 section 3.2] requires that an IPv4 node be able to forward
-/// datagrams of up to 68 octets without further fragmentation. That is,
-/// the minimum MTU of an IPv4 path must be 68 bytes. This is because
-/// an IPv4 header may be up to 60 octets, and the minimum fragment is
-/// 8 octets.
-///
-/// [RFC 791 section 3.2]: https://tools.ietf.org/html/rfc791#section-3.2
-pub(crate) const IPV4_MIN_MTU: u32 = 68;
-
-/// [RFC 8200 section 5] requires that every link in the Internet have an
-/// MTU of 1280 octets or greater. Any link that cannot convey a 1280-
-/// octet packet in one piece must provide link-specific fragmentation
-/// and reassembly at a layer below IPv6.
-///
-/// [RFC 8200 section 5]: https://tools.ietf.org/html/rfc8200#section-5
-pub(crate) const IPV6_MIN_MTU: u32 = 1280;
 
 /// Time between PMTU maintenance operations.
 ///
@@ -85,14 +68,6 @@ impl<
             + StateContext<IpLayerPathMtuCache<I, <C as InstantContext>::Instant>>,
     > PmtuContext<I> for C
 {
-}
-
-/// Get the minimum MTU size for a specific IP version, identified by `I`.
-pub(crate) fn min_mtu<I: Ip>() -> u32 {
-    match I::VERSION {
-        IpVersion::V4 => IPV4_MIN_MTU,
-        IpVersion::V6 => IPV6_MIN_MTU,
-    }
 }
 
 /// Get the PMTU between `src_ip` and `dst_ip`.
@@ -300,7 +275,7 @@ fn update_pmtu_inner<I: Ip, C: PmtuContext<I>>(
     new_mtu: u32,
 ) -> Result<Option<u32>, Option<u32>> {
     // New MTU must not be smaller than the minimum MTU for an IP.
-    if new_mtu < min_mtu::<I>() {
+    if new_mtu < I::MINIMUM_LINK_MTU.into() {
         return Err(ctx.get_state_mut().get_pmtu(src_ip, dst_ip));
     }
 
@@ -549,7 +524,7 @@ mod tests {
             None
         );
 
-        let new_mtu1 = min_mtu::<I>() + 50;
+        let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
         let start_time = ctx.now();
         let duration = Duration::from_secs(1);
 
@@ -588,7 +563,7 @@ mod tests {
             start_time + duration
         );
 
-        let new_mtu2 = min_mtu::<I>() + 100;
+        let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 100;
 
         // Advance time to 3s.
         assert_eq!(ctx.trigger_timers_for(duration), 0);
@@ -699,7 +674,7 @@ mod tests {
             last_updated
         );
 
-        let low_mtu = min_mtu::<I>() - 1;
+        let low_mtu = u32::from(I::MINIMUM_LINK_MTU) - 1;
 
         // Advance time to 9s.
         assert_eq!(ctx.trigger_timers_for(duration), 0);
@@ -742,7 +717,7 @@ mod tests {
         // Make sure there are no timers.
         assert_eq!(ctx.timers().len(), 0);
 
-        let new_mtu1 = min_mtu::<I>() + 50;
+        let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
         let start_time = ctx.now();
         let duration = Duration::from_secs(1);
 
@@ -791,7 +766,7 @@ mod tests {
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s.
         let other_ip = get_other_ip_address::<I>();
-        let new_mtu2 = min_mtu::<I>() + 100;
+        let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 100;
         assert_eq!(
             update_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get(), new_mtu2).unwrap(),
             None

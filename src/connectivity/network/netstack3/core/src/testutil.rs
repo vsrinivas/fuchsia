@@ -27,7 +27,7 @@ use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, NoRouteError, ParseError, ParseResult};
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
-use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
+use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto};
 use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
@@ -758,7 +758,7 @@ impl DummyEventDispatcherBuilder {
         let mut idx_to_device_id =
             HashMap::<_, _, std::collections::hash_map::RandomState>::default();
         for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
-            let id = ctx.state.add_ethernet_device(mac, IPV6_MIN_MTU);
+            let id = ctx.state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into());
             idx_to_device_id.insert(idx, id);
             crate::device::initialize_device(&mut ctx, id);
             match ip_subnet {

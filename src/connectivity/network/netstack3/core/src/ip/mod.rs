@@ -58,9 +58,6 @@ use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, Tim
 // TODO(joshlf): Use `new` instead of `new_unchecked` once `new` is a const fn.
 const DEFAULT_TTL: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
 
-/// Minimum MTU required by all IPv6 devices.
-pub(crate) const IPV6_MIN_MTU: u32 = 1280;
-
 /// The metadata for sending an IP packet from a particular source address.
 ///
 /// `IpPacketFromArgs` is used as the metadata for the [`FrameContext`] bound
@@ -2119,7 +2116,7 @@ mod tests {
 
     use crate::device::ethernet::EthernetIpExt;
     use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
-    use crate::ip::path_mtu::{get_pmtu, min_mtu};
+    use crate::ip::path_mtu::get_pmtu;
     use crate::testutil::*;
     use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
     use crate::wire::icmp::{
@@ -2873,7 +2870,7 @@ mod tests {
         // Update PMTU from None
         //
 
-        let new_mtu1 = min_mtu::<I>() + 100;
+        let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 100;
 
         // Create ICMP IP buf
         let packet_buf = create_packet_too_big_buf(
@@ -2898,7 +2895,7 @@ mod tests {
         // Don't update PMTU when current PMTU is less than reported MTU
         //
 
-        let new_mtu2 = min_mtu::<I>() + 200;
+        let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 200;
 
         // Create IPv6 ICMPv6 packet too big packet with MTU larger than current PMTU.
         let packet_buf = create_packet_too_big_buf(
@@ -2924,7 +2921,7 @@ mod tests {
         // Update PMTU when current PMTU is greater than the reported MTU
         //
 
-        let new_mtu3 = min_mtu::<I>() + 50;
+        let new_mtu3 = u32::from(I::MINIMUM_LINK_MTU) + 50;
 
         // Create IPv6 ICMPv6 packet too big packet with MTU smaller than current PMTU.
         let packet_buf = create_packet_too_big_buf(
@@ -2964,7 +2961,7 @@ mod tests {
         // Update PMTU from None but with a mtu too low.
         //
 
-        let new_mtu1 = min_mtu::<I>() - 1;
+        let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) - 1;
 
         // Create ICMP IP buf
         let packet_buf = create_packet_too_big_buf(
@@ -3272,7 +3269,8 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
-        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        let device =
+            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let frame_dst = FrameDestination::Unicast;
