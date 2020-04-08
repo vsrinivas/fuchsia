@@ -145,10 +145,19 @@ class UsbAx88179Test : public zxtest::Test {
     return status_result.Unwrap()->device_status;
   }
 
-  void WaitForStatusSignal() {
-    zx_signals_t pending;
-    ASSERT_OK(rx_fifo_.wait_one(ethernet::SIGNAL_STATUS, zx::time::infinite(), &pending));
-    ASSERT_EQ((pending & ethernet::SIGNAL_STATUS), ethernet::SIGNAL_STATUS);
+  void ExpectStatusOnline() {
+    // Two attempts, as SIGNAL_STATUS is triggered by both ethernet.cc starting
+    // up and also by our fake function driver. As we can't control the delivery
+    // order, confirm that we get to online eventually.
+    for (int tries = 0; tries < 2; ++tries) {
+      zx_signals_t pending;
+      ASSERT_OK(rx_fifo_.wait_one(ethernet::SIGNAL_STATUS, zx::time::infinite(), &pending));
+      ASSERT_EQ((pending & ethernet::SIGNAL_STATUS), ethernet::SIGNAL_STATUS);
+      if (GetDeviceStatus() == 1u) {
+        return;
+      }
+    }
+    ADD_FATAL_FAILURE();
   }
 
  protected:
@@ -179,23 +188,18 @@ TEST_F(UsbAx88179Test, SetOnlineAfterStart) {
 
   ASSERT_NO_FATAL_FAILURES(SetDeviceOnline());
 
-  ASSERT_NO_FATAL_FAILURES(WaitForStatusSignal());
-
-  ASSERT_EQ(GetDeviceStatus(), 1u);
+  ASSERT_NO_FATAL_FAILURES(ExpectStatusOnline());
 }
 
-// TODO(fxbug.dev/49373): Flaking.
 // This is for https://fxbug.dev/40786#c41.
-TEST_F(UsbAx88179Test, DISABLED_SetOnlineBeforeStart) {
+TEST_F(UsbAx88179Test, SetOnlineBeforeStart) {
   ASSERT_NO_FATAL_FAILURES(ConnectEthernetClient());
 
   ASSERT_NO_FATAL_FAILURES(SetDeviceOnline());
 
   ASSERT_NO_FATAL_FAILURES(StartDevice());
 
-  ASSERT_NO_FATAL_FAILURES(WaitForStatusSignal());
-
-  ASSERT_EQ(GetDeviceStatus(), 1u);
+  ASSERT_NO_FATAL_FAILURES(ExpectStatusOnline());
 }
 
 }  // namespace
