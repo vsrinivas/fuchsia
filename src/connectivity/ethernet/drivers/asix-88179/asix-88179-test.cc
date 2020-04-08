@@ -184,8 +184,9 @@ TEST_F(UsbAx88179Test, SetOnlineAfterStart) {
   ASSERT_EQ(GetDeviceStatus(), 1u);
 }
 
-// This is for http://fxbug.dev/40786#c41.
-TEST_F(UsbAx88179Test, SetOnlineBeforeStart) {
+// TODO(fxbug.dev/49373): Flaking.
+// This is for https://fxbug.dev/40786#c41.
+TEST_F(UsbAx88179Test, DISABLED_SetOnlineBeforeStart) {
   ASSERT_NO_FATAL_FAILURES(ConnectEthernetClient());
 
   ASSERT_NO_FATAL_FAILURES(SetDeviceOnline());
