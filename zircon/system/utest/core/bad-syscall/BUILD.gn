@@ -2,19 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/kernel/params.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+if (current_cpu == "x64") {
+  zircon_cpu = "x86"
+} else if (current_cpu != "") {
+  zircon_cpu = current_cpu
+}
 
 source_set("bad-syscall") {
-  testonly = true
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
   sources = [
     "bad-syscall.cc",
     "syscall.S",
   ]
-  include_dirs = [ "$zx/kernel/arch/$zircon_cpu/include" ]
+  include_dirs = [ "//zircon/kernel/arch/$zircon_cpu/include" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/syscalls-headers",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/syscalls-headers",
+    "//zircon/public/lib/zxtest",
   ]
 }

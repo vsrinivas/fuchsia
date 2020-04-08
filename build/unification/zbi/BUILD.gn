@@ -3,40 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon_images.gni")
-import("//build/unification/zbi/migrated_zbi_test.gni")
-
-# Dopplegangers of zbi tests declared in the ZN build.
-
-migrated_zbi_test("core-tests") {
-  args = [
-    "userboot=test/core/standalone-test",
-    "kernel.enable-debugging-syscalls=true",
-  ]
-
-  deps = [
-    ":kernel",
-    ":test.core.standalone-test-zbi",
-  ]
-
-  reference = "core-tests"
-}
-
-if (current_cpu == "x64") {
-  migrated_zbi_test("core-tests-hpet") {
-    args = [
-      "userboot=test/core/standalone-test",
-      "kernel.wallclock=hpet",
-      "kernel.enable-debugging-syscalls=true",
-    ]
-
-    deps = [
-      ":kernel",
-      ":test.core.standalone-test-zbi",
-    ]
-
-    reference = "core-tests-hpet"
-  }
-}
 
 # Used to include a kernel in zbi's.
 group("kernel") {
@@ -54,9 +20,14 @@ group("tests") {
   deps = [
     "//zircon/system/core/bootsvc/test:bootsvc-integration-tests",
     "//zircon/system/core/bootsvc/test:bootsvc-root-job-test",
+    "//zircon/system/utest/core:core-tests",
     "//zircon/system/utest/mexec:zbi-child-image",
     "//zircon/system/utest/mexec:zbi-parent-image",
   ]
+
+  if (current_cpu == "x64") {
+    deps += [ "//zircon/system/utest/core:core-tests-hpet" ]
+  }
 }
 
 # Targets in this group are always built.
@@ -65,33 +36,5 @@ group("tests") {
 group("zbi") {
   testonly = true
 
-  deps = [
-    ":core-tests",
-    ":tests",
-  ]
-
-  if (current_cpu == "x64") {
-    deps += [ ":core-tests-hpet" ]
-  }
-}
-
-# Artifacts imported from the ZN build which may be added to ZBI tests.
-
-zbiables = [ "test.core.standalone-test" ]
-
-foreach(target, zbiables) {
-  label = "//build/unification/images:$target"
-  out_dir = get_label_info(label, "target_out_dir")
-
-  group("$target-zbi") {
-    deps = [ label ]
-
-    metadata = {
-      migrated_zbi_input_args = [
-        "--prefix=",
-        "--files",
-        rebase_path("$out_dir/$target.unification.manifest", root_build_dir),
-      ]
-    }
-  }
+  deps = [ ":tests" ]
 }

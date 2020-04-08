@@ -2,7 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/test/zbi_test.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+import("//build/unification//zbi/migrated_zbi_test.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
@@ -61,29 +73,30 @@ unified_only = [
   "system-event",
 ]
 
-group("core") {
-  testonly = true
-
-  # The zbi_test() doesn't go into any other zbi() image.  This just brings
-  # it into the dependency graph for building and test-running metadata.
-  deps = [ ":core-tests" ]  # Together.
-
-  foreach(test, core_tests) {
-    deps += [ ":$test" ]  # And alone.
-  }
-
-  # If we are building for x64, make sure to run a version of the core tests
-  # which forces use of the HPET in addition to using the default TSC
-  if (current_cpu == "x64") {
-    deps += [ ":core-tests-hpet" ]
-  }
-}
-
 # Build each test as a standalone binary meant to be run by runtests.
 foreach(test_name, core_tests) {
-  zx_test(test_name) {
+  test(test_name) {
+    output_dir = "$root_out_dir/zircon-migrated/core"
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): Remove when converting this file to proper GN build idioms.
+    if (is_fuchsia) {
+      testonly = false
+    }
+    if (is_fuchsia) {
+      configs += [ "//build/unification/config:zircon-migrated" ]
+    }
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
     test_group = "core"
     deps = [ test_name ]
+  }
+
+  migrated_manifest("$test_name-manifest") {
+    deps = [ ":$test_name" ]
   }
 }
 
@@ -91,18 +104,33 @@ foreach(test_name, core_tests) {
 # binary.  This can and must be run directly from userboot because
 # some of the tests require the root resource handle or no system
 # services whatsoever.
-zx_test("standalone") {
+test("standalone") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   test_group = "core"
   deps = core_tests + unified_only
   sources = [ "libc-and-io-stubs.c" ]
-  deps += [
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
-  ]
+  deps += [ "//zircon/public/lib/zxtest" ]
+}
+
+migrated_manifest("standalone-manifest") {
+  deps = [ ":standalone" ]
 }
 
 # Make that into a bootable ZBI with just the kernel.
-zbi_test("core-tests") {
+migrated_zbi_test("core-tests") {
   assert(current_cpu != "")
 
   args = [
@@ -112,11 +140,11 @@ zbi_test("core-tests") {
 
   deps = [
     ":standalone",
-    "$zx/kernel",
+    "//build/unification/zbi:kernel",
   ]
   assert_no_deps = [
-    "$zx/system/core/*",
-    "$zx/system/dev/*",
+    "//zircon/system/core/*",
+    "//zircon/system/dev/*",
   ]
 
   device_types = [
@@ -132,7 +160,7 @@ zbi_test("core-tests") {
 # of choosing TSC if possible.
 if (current_cpu == "x64") {
   # Make that into a bootable ZBI with just the kernel.
-  zbi_test("core-tests-hpet") {
+  migrated_zbi_test("core-tests-hpet") {
     args = [
       "userboot=test/core/standalone-test",
       "kernel.wallclock=hpet",
@@ -140,11 +168,11 @@ if (current_cpu == "x64") {
     ]
     deps = [
       ":standalone",
-      "$zx/kernel",
+      "//build/unification/zbi:kernel",
     ]
     assert_no_deps = [
-      "$zx/system/core/*",
-      "$zx/system/dev/*",
+      "//zircon/system/core/*",
+      "//zircon/system/dev/*",
     ]
     device_types = [ "Intel NUC Kit NUC7i5DNHE" ]
   }

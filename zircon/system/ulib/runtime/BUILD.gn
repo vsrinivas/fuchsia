@@ -4,7 +4,7 @@
 
 zx_library("runtime") {
   sources = [ "thread.c" ]
-  sdk = "static"
+  sdk = "source"
   sdk_headers = [
     "runtime/thread.h",
     "runtime/tls.h",

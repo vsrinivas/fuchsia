@@ -465,3 +465,15 @@ config("werror") {
 config("temporarily_disable_ubsan_do_not_use") {
   cflags = [ "-fno-sanitize=undefined" ]
 }
+
+config("no_stack_protector") {
+  cflags = [ "-fno-stack-protector" ]
+}
+
+config("no_sanitizers") {
+  cflags = [
+    "-fno-sanitize=all",
+    "-fsanitize-coverage=0",
+  ]
+  configs = [ ":no_stack_protector" ]
+}

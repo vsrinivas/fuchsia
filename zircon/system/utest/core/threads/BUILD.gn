@@ -2,31 +2,46 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
 source_set("threads") {
-  testonly = true
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
   sources = [
     "register-set.cc",
     "threads.cc",
   ]
   deps = [
     ":thread-functions",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/mini-process",
-    "$zx/system/ulib/runtime",
-    "$zx/system/ulib/test-exceptions",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zxtest",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/mini-process",
+    "//zircon/public/lib/runtime",
+    "//zircon/public/lib/test-exceptions",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
 source_set("thread-functions") {
-  testonly = true
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
   visibility = [ ":*" ]
   sources = [ "thread-functions/thread-functions.cc" ]
-  configs += [ "$zx/public/gn/config:no_sanitizers" ]
-  deps = [
-    "$zx/system/ulib/runtime",
-    "$zx/system/ulib/zircon",
-  ]
+  configs += [ "//build/config:no_sanitizers" ]
+  deps = [ "//zircon/public/lib/runtime" ]
 }

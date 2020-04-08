@@ -171,121 +171,82 @@ aggregate_manifest("legacy-aux") {
     ":test.c.posix-clocks-test",
 #------------------
 #------------------
-    ":test.core.c11-condvar-test",
 #------------------
 #------------------
-    ":test.core.c11-mutex-test",
 #------------------
 #------------------
-    ":test.core.c11-thread-test",
 #------------------
 #------------------
-    ":test.core.channel-test",
 #------------------
 #------------------
-    ":test.core.channel-write-etc-test",
 #------------------
 #------------------
-    ":test.core.clock-test",
 #------------------
 #------------------
-    ":test.core.debug-test",
 #------------------
 #------------------
-    ":test.core.elf-tls-test",
 #------------------
 #------------------
-    ":test.core.event-pair-test",
 #------------------
 #------------------
-    ":test.core.fifo-test",
 #------------------
 #------------------
-    ":test.core.fpu-test",
 #------------------
 #------------------
-    ":test.core.futex-test",
 #------------------
 #------------------
-    ":test.core.handle-close-test",
 #------------------
 #------------------
-    ":test.core.handle-dup-test",
 #------------------
 #------------------
-    ":test.core.handle-info-test",
 #------------------
 #------------------
-    ":test.core.handle-transfer-test",
 #------------------
 #------------------
-    ":test.core.handle-wait-test",
 #------------------
 #------------------
-    ":test.core.job-test",
 #------------------
 #------------------
-    ":test.core.memory-mapping-test",
 #------------------
 #------------------
-    ":test.core.object-child-test",
 #------------------
 #------------------
-    ":test.core.object-info-test",
 #------------------
 #------------------
-    ":test.core.object-wait-test",
 #------------------
 #------------------
-    ":test.core.pager-test",
 #------------------
 #------------------
-    ":test.core.port-test",
 #------------------
 #------------------
-    ":test.core.process-test",
 #------------------
 #------------------
-    ":test.core.pthread-barrier-test",
 #------------------
 #------------------
-    ":test.core.pthread-test",
 #------------------
 #------------------
-    ":test.core.pthread-tls-test",
 #------------------
 #------------------
-    ":test.core.socket-test",
 #------------------
 #------------------
-    ":test.core.stack-test",
 #------------------
 #------------------
-    ":test.core.stream-test",
 #------------------
 #------------------
-    ":test.core.sync-completion-test",
 #------------------
 #------------------
-    ":test.core.sync-condition-test",
 #------------------
 #------------------
-    ":test.core.sync-mutex-test",
 #------------------
 #------------------
-    ":test.core.threads-test",
 #------------------
 #------------------
-    ":test.core.time-test",
 #------------------
 #------------------
-    ":test.core.version-test",
 #------------------
 #------------------
-    ":test.core.vmar-test",
 #------------------
 #------------------
-    ":test.core.vmo-test",
 #------------------
 #------------------
 #------------------
@@ -690,121 +651,82 @@ aggregate_manifest("legacy-tests") {
     ":test.c.posix-clocks-test",
 #------------------
 #------------------
-    ":test.core.c11-condvar-test",
 #------------------
 #------------------
-    ":test.core.c11-mutex-test",
 #------------------
 #------------------
-    ":test.core.c11-thread-test",
 #------------------
 #------------------
-    ":test.core.channel-test",
 #------------------
 #------------------
-    ":test.core.channel-write-etc-test",
 #------------------
 #------------------
-    ":test.core.clock-test",
 #------------------
 #------------------
-    ":test.core.debug-test",
 #------------------
 #------------------
-    ":test.core.elf-tls-test",
 #------------------
 #------------------
-    ":test.core.event-pair-test",
 #------------------
 #------------------
-    ":test.core.fifo-test",
 #------------------
 #------------------
-    ":test.core.fpu-test",
 #------------------
 #------------------
-    ":test.core.futex-test",
 #------------------
 #------------------
-    ":test.core.handle-close-test",
 #------------------
 #------------------
-    ":test.core.handle-dup-test",
 #------------------
 #------------------
-    ":test.core.handle-info-test",
 #------------------
 #------------------
-    ":test.core.handle-transfer-test",
 #------------------
 #------------------
-    ":test.core.handle-wait-test",
 #------------------
 #------------------
-    ":test.core.job-test",
 #------------------
 #------------------
-    ":test.core.memory-mapping-test",
 #------------------
 #------------------
-    ":test.core.object-child-test",
 #------------------
 #------------------
-    ":test.core.object-info-test",
 #------------------
 #------------------
-    ":test.core.object-wait-test",
 #------------------
 #------------------
-    ":test.core.pager-test",
 #------------------
 #------------------
-    ":test.core.port-test",
 #------------------
 #------------------
-    ":test.core.process-test",
 #------------------
 #------------------
-    ":test.core.pthread-barrier-test",
 #------------------
 #------------------
-    ":test.core.pthread-test",
 #------------------
 #------------------
-    ":test.core.pthread-tls-test",
 #------------------
 #------------------
-    ":test.core.socket-test",
 #------------------
 #------------------
-    ":test.core.stack-test",
 #------------------
 #------------------
-    ":test.core.stream-test",
 #------------------
 #------------------
-    ":test.core.sync-completion-test",
 #------------------
 #------------------
-    ":test.core.sync-condition-test",
 #------------------
 #------------------
-    ":test.core.sync-mutex-test",
 #------------------
 #------------------
-    ":test.core.threads-test",
 #------------------
 #------------------
-    ":test.core.time-test",
 #------------------
 #------------------
-    ":test.core.version-test",
 #------------------
 #------------------
-    ":test.core.vmar-test",
 #------------------
 #------------------
-    ":test.core.vmo-test",
 #------------------
 #------------------
 #------------------
@@ -2389,118 +2311,121 @@ aggregate_manifest("migrated-aux") {
     #":test.c.posix-clocks-test",
 #------------------
 #------------------
-    #":test.core.c11-condvar-test",
+    "//zircon/system/utest/core:c11-condvar-manifest",
 #------------------
 #------------------
-    #":test.core.c11-mutex-test",
+    "//zircon/system/utest/core:c11-mutex-manifest",
 #------------------
 #------------------
-    #":test.core.c11-thread-test",
+    "//zircon/system/utest/core:c11-thread-manifest",
 #------------------
 #------------------
-    #":test.core.channel-test",
+    "//zircon/system/utest/core:channel-manifest",
 #------------------
 #------------------
-    #":test.core.channel-write-etc-test",
+    "//zircon/system/utest/core:channel-write-etc-manifest",
 #------------------
 #------------------
-    #":test.core.clock-test",
+    "//zircon/system/utest/core:clock-manifest",
 #------------------
 #------------------
-    #":test.core.debug-test",
+    "//zircon/system/utest/core:debug-manifest",
 #------------------
 #------------------
-    #":test.core.elf-tls-test",
+    "//zircon/system/utest/core:elf-tls-manifest",
 #------------------
 #------------------
-    #":test.core.event-pair-test",
+    "//zircon/system/utest/core:event-pair-manifest",
 #------------------
 #------------------
-    #":test.core.fifo-test",
+    "//zircon/system/utest/core:fifo-manifest",
 #------------------
 #------------------
-    #":test.core.fpu-test",
+    "//zircon/system/utest/core:fpu-manifest",
 #------------------
 #------------------
-    #":test.core.futex-test",
+    "//zircon/system/utest/core:futex-manifest",
 #------------------
 #------------------
-    #":test.core.handle-close-test",
+    "//zircon/system/utest/core:handle-close-manifest",
 #------------------
 #------------------
-    #":test.core.handle-dup-test",
+    "//zircon/system/utest/core:handle-dup-manifest",
 #------------------
 #------------------
-    #":test.core.handle-info-test",
+    "//zircon/system/utest/core:handle-info-manifest",
 #------------------
 #------------------
-    #":test.core.handle-transfer-test",
+    "//zircon/system/utest/core:handle-transfer-manifest",
 #------------------
 #------------------
-    #":test.core.handle-wait-test",
+    "//zircon/system/utest/core:handle-wait-manifest",
 #------------------
 #------------------
-    #":test.core.job-test",
+    "//zircon/system/utest/core:job-manifest",
 #------------------
 #------------------
-    #":test.core.memory-mapping-test",
+    "//zircon/system/utest/core:memory-mapping-manifest",
 #------------------
 #------------------
-    #":test.core.object-child-test",
+    "//zircon/system/utest/core:object-child-manifest",
 #------------------
 #------------------
-    #":test.core.object-info-test",
+    "//zircon/system/utest/core:object-info-manifest",
 #------------------
 #------------------
-    #":test.core.pager-test",
+    "//zircon/system/utest/core:object-wait-manifest",
 #------------------
 #------------------
-    #":test.core.port-test",
+    "//zircon/system/utest/core:pager-manifest",
 #------------------
 #------------------
-    #":test.core.process-test",
+    "//zircon/system/utest/core:port-manifest",
 #------------------
 #------------------
-    #":test.core.pthread-barrier-test",
+    "//zircon/system/utest/core:process-manifest",
 #------------------
 #------------------
-    #":test.core.pthread-test",
+    "//zircon/system/utest/core:pthread-barrier-manifest",
 #------------------
 #------------------
-    #":test.core.pthread-tls-test",
+    "//zircon/system/utest/core:pthread-manifest",
 #------------------
 #------------------
-    #":test.core.socket-test",
+    "//zircon/system/utest/core:pthread-tls-manifest",
 #------------------
 #------------------
-    #":test.core.stack-test",
+    "//zircon/system/utest/core:socket-manifest",
 #------------------
 #------------------
-    #":test.core.stream,-test",
+    "//zircon/system/utest/core:stack-manifest",
 #------------------
 #------------------
-    #":test.core.sync-completion-test",
+    "//zircon/system/utest/core:stream-manifest",
 #------------------
 #------------------
-    #":test.core.sync-condition-test",
+    "//zircon/system/utest/core:sync-completion-manifest",
 #------------------
 #------------------
-    #":test.core.sync-mutex-test",
+    "//zircon/system/utest/core:sync-condition-manifest",
 #------------------
 #------------------
-    #":test.core.threads-test",
+    "//zircon/system/utest/core:sync-mutex-manifest",
 #------------------
 #------------------
-    #":test.core.time-test",
+    "//zircon/system/utest/core:threads-manifest",
 #------------------
 #------------------
-    #":test.core.version-test",
+    "//zircon/system/utest/core:time-manifest",
 #------------------
 #------------------
-    #":test.core.vmar-test",
+    "//zircon/system/utest/core:version-manifest",
 #------------------
 #------------------
-    #":test.core.vmo-test",
+    "//zircon/system/utest/core:vmar-manifest",
+#------------------
+#------------------
+    "//zircon/system/utest/core:vmo-manifest",
 #------------------
 #------------------
     "//zircon/system/core/devmgr/fshost:block-watcher-test-manifest",
@@ -2895,118 +2820,121 @@ aggregate_manifest("migrated-tests") {
     #":test.c.posix-clocks-test",
 #------------------
 #------------------
-    #":test.core.c11-condvar-test",
+    "//zircon/system/utest/core:c11-condvar-manifest",
 #------------------
 #------------------
-    #":test.core.c11-mutex-test",
+    "//zircon/system/utest/core:c11-mutex-manifest",
 #------------------
 #------------------
-    #":test.core.c11-thread-test",
+    "//zircon/system/utest/core:c11-thread-manifest",
 #------------------
 #------------------
-    #":test.core.channel-test",
+    "//zircon/system/utest/core:channel-manifest",
 #------------------
 #------------------
-    #":test.core.channel-write-etc-test",
+    "//zircon/system/utest/core:channel-write-etc-manifest",
 #------------------
 #------------------
-    #":test.core.clock-test",
+    "//zircon/system/utest/core:clock-manifest",
 #------------------
 #------------------
-    #":test.core.debug-test",
+    "//zircon/system/utest/core:debug-manifest",
 #------------------
 #------------------
-    #":test.core.elf-tls-test",
+    "//zircon/system/utest/core:elf-tls-manifest",
 #------------------
 #------------------
-    #":test.core.event-pair-test",
+    "//zircon/system/utest/core:event-pair-manifest",
 #------------------
 #------------------
-    #":test.core.fifo-test",
+    "//zircon/system/utest/core:fifo-manifest",
 #------------------
 #------------------
-    #":test.core.fpu-test",
+    "//zircon/system/utest/core:fpu-manifest",
 #------------------
 #------------------
-    #":test.core.futex-test",
+    "//zircon/system/utest/core:futex-manifest",
 #------------------
 #------------------
-    #":test.core.handle-close-test",
+    "//zircon/system/utest/core:handle-close-manifest",
 #------------------
 #------------------
-    #":test.core.handle-dup-test",
+    "//zircon/system/utest/core:handle-dup-manifest",
 #------------------
 #------------------
-    #":test.core.handle-info-test",
+    "//zircon/system/utest/core:handle-info-manifest",
 #------------------
 #------------------
-    #":test.core.handle-transfer-test",
+    "//zircon/system/utest/core:handle-transfer-manifest",
 #------------------
 #------------------
-    #":test.core.handle-wait-test",
+    "//zircon/system/utest/core:handle-wait-manifest",
 #------------------
 #------------------
-    #":test.core.job-test",
+    "//zircon/system/utest/core:job-manifest",
 #------------------
 #------------------
-    #":test.core.memory-mapping-test",
+    "//zircon/system/utest/core:memory-mapping-manifest",
 #------------------
 #------------------
-    #":test.core.object-child-test",
+    "//zircon/system/utest/core:object-child-manifest",
 #------------------
 #------------------
-    #":test.core.object-info-test",
+    "//zircon/system/utest/core:object-info-manifest",
 #------------------
 #------------------
-    #":test.core.pager-test",
+    "//zircon/system/utest/core:object-wait-manifest",
 #------------------
 #------------------
-    #":test.core.port-test",
+    "//zircon/system/utest/core:pager-manifest",
 #------------------
 #------------------
-    #":test.core.process-test",
+    "//zircon/system/utest/core:port-manifest",
 #------------------
 #------------------
-    #":test.core.pthread-barrier-test",
+    "//zircon/system/utest/core:process-manifest",
 #------------------
 #------------------
-    #":test.core.pthread-test",
+    "//zircon/system/utest/core:pthread-barrier-manifest",
 #------------------
 #------------------
-    #":test.core.pthread-tls-test",
+    "//zircon/system/utest/core:pthread-manifest",
 #------------------
 #------------------
-    #":test.core.socket-test",
+    "//zircon/system/utest/core:pthread-tls-manifest",
 #------------------
 #------------------
-    #":test.core.stack-test",
+    "//zircon/system/utest/core:socket-manifest",
 #------------------
 #------------------
-    #":test.core.stream,-test",
+    "//zircon/system/utest/core:stack-manifest",
 #------------------
 #------------------
-    #":test.core.sync-completion-test",
+    "//zircon/system/utest/core:stream-manifest",
 #------------------
 #------------------
-    #":test.core.sync-condition-test",
+    "//zircon/system/utest/core:sync-completion-manifest",
 #------------------
 #------------------
-    #":test.core.sync-mutex-test",
+    "//zircon/system/utest/core:sync-condition-manifest",
 #------------------
 #------------------
-    #":test.core.threads-test",
+    "//zircon/system/utest/core:sync-mutex-manifest",
 #------------------
 #------------------
-    #":test.core.time-test",
+    "//zircon/system/utest/core:threads-manifest",
 #------------------
 #------------------
-    #":test.core.version-test",
+    "//zircon/system/utest/core:time-manifest",
 #------------------
 #------------------
-    #":test.core.vmar-test",
+    "//zircon/system/utest/core:version-manifest",
 #------------------
 #------------------
-    #":test.core.vmo-test",
+    "//zircon/system/utest/core:vmar-manifest",
+#------------------
+#------------------
+    "//zircon/system/utest/core:vmo-manifest",
 #------------------
 #------------------
     "//zircon/system/core/devmgr/fshost:block-watcher-test-manifest",

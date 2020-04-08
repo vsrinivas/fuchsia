@@ -500,6 +500,7 @@ template("library") {
     ubsan_disabled =
         defined(invoker.configs) &&
         invoker.configs + [ ubsan_config ] - [ ubsan_config ] != invoker.configs
+
     unused_function_config = "$zx_build/public/gn/config:Wno-unused-function"
     has_unused_config = (defined(invoker.configs) &&
                          invoker.configs + [ unused_function_config ] -
@@ -507,6 +508,11 @@ template("library") {
                         (defined(invoker.public_configs) &&
                          invoker.public_configs + [ unused_function_config ] -
                          [ unused_function_config ] != invoker.public_configs)
+
+    sanitizer_config = "$zx_build/public/gn/config:no_sanitizers"
+    sanitizers_disabled =
+        defined(invoker.configs) &&
+        invoker.configs + [ sanitizer_config ] - [ sanitizer_config ] != invoker.configs
 
     legacy_metadata = {
       legacy_barrier = []
@@ -525,6 +531,7 @@ template("library") {
           compilation_defines = local_defines
           disable_ubsan = ubsan_disabled
           disable_unused_function = has_unused_config
+          disable_sanitizers = sanitizers_disabled
           headers = sdk_headers
           publishable = sdk_publishable
           if (sdk == "source") {
