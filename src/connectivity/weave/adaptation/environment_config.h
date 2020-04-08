@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_FUCHSIA_CONFIG_H_
-#define SRC_CONNECTIVITY_WEAVE_ADAPTATION_FUCHSIA_CONFIG_H_
+#ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_ENVIRONMENT_CONFIG_H_
+#define SRC_CONNECTIVITY_WEAVE_ADAPTATION_ENVIRONMENT_CONFIG_H_
 
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 
@@ -20,7 +20,7 @@ namespace Internal {
  * naturally provides implementations for the delegated members referenced by
  * the template class (e.g. the ReadConfigValue() method).
  */
-class FuchsiaConfig {
+class EnvironmentConfig {
  public:
   using Key = const char*;
   static const Key kConfigKey_SerialNum;
@@ -69,4 +69,4 @@ class FuchsiaConfig {
 }  // namespace Weave
 }  // namespace nl
 
-#endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_FUCHSIA_CONFIG_H_
+#endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_ENVIRONMENT_CONFIG_H_

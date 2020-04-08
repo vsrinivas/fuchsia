@@ -17,7 +17,7 @@ namespace DeviceLayer {
 namespace Internal {
 
 namespace {
-constexpr char kWeaveConfigStorePath[] = "/data/config.json";
+constexpr char kEnvironmentStorePath[] = "/data/environment.json";
 }  // namespace
 
 WeaveConfigManager& WeaveConfigManager::GetInstance() {
@@ -25,7 +25,7 @@ WeaveConfigManager& WeaveConfigManager::GetInstance() {
   return manager;
 }
 
-WeaveConfigManager::WeaveConfigManager() : WeaveConfigManager(kWeaveConfigStorePath) {}
+WeaveConfigManager::WeaveConfigManager() : WeaveConfigManager(kEnvironmentStorePath) {}
 
 WeaveConfigManager::WeaveConfigManager(const std::string& path) : config_store_path_(path) {
   json::JSONParser json_parser_;

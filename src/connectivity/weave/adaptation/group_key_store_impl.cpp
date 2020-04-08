@@ -20,7 +20,7 @@ namespace {
 constexpr char kGroupKeyNamePrefix[] = "gk-";
 constexpr size_t kGroupKeyNamePrefixSize = sizeof(kGroupKeyNamePrefix);
 constexpr size_t kGroupKeyNameSuffixSize = 8;  // length of uint32_t hex.
-constexpr size_t kGroupKeyNameFabricSize = sizeof(FuchsiaConfig::kConfigKey_FabricSecret);
+constexpr size_t kGroupKeyNameFabricSize = sizeof(EnvironmentConfig::kConfigKey_FabricSecret);
 constexpr size_t kGroupKeyNameMaxSize =
     kGroupKeyNamePrefixSize + kGroupKeyNameSuffixSize + kGroupKeyNameFabricSize;
 }  // namespace
@@ -31,9 +31,9 @@ WEAVE_ERROR GroupKeyStoreImpl::Init() {
   size_t index_size;
 
   key_index_.clear();
-  error =
-      FuchsiaConfig::ReadConfigValueBin(FuchsiaConfig::kConfigKey_GroupKeyIndex,
-                                        (uint8_t*)key_index_raw, sizeof(key_index_raw), index_size);
+  error = EnvironmentConfig::ReadConfigValueBin(EnvironmentConfig::kConfigKey_GroupKeyIndex,
+                                                (uint8_t*)key_index_raw, sizeof(key_index_raw),
+                                                index_size);
   if (error == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     index_size = 0;
     return WEAVE_NO_ERROR;
@@ -51,7 +51,7 @@ WEAVE_ERROR GroupKeyStoreImpl::Init() {
   for (auto& key_id : key_index_) {
     char formed_key_name[kGroupKeyNameMaxSize + 1];
     FormKeyName(key_id, formed_key_name, sizeof(formed_key_name));
-    if (!FuchsiaConfig::ConfigValueExists(formed_key_name)) {
+    if (!EnvironmentConfig::ConfigValueExists(formed_key_name)) {
       error = RemoveKeyFromIndex(key_id);
       if (error != WEAVE_NO_ERROR) {
         return error;
@@ -68,7 +68,7 @@ WEAVE_ERROR GroupKeyStoreImpl::RetrieveGroupKey(uint32_t key_id, WeaveGroupKey& 
 
   size_t key_len = 0;
   memset(key.Key, 0, sizeof(key.Key));
-  error = FuchsiaConfig::ReadConfigValueBin(formed_key_name, key.Key, sizeof(key.Key), key_len);
+  error = EnvironmentConfig::ReadConfigValueBin(formed_key_name, key.Key, sizeof(key.Key), key_len);
   if (error != WEAVE_NO_ERROR) {
     return error;
   }
@@ -105,7 +105,7 @@ WEAVE_ERROR GroupKeyStoreImpl::StoreGroupKey(const WeaveGroupKey& key) {
     return error;
   }
 
-  error = FuchsiaConfig::WriteConfigValueBin(formed_key_name, key_data, key_data_len);
+  error = EnvironmentConfig::WriteConfigValueBin(formed_key_name, key_data, key_data_len);
   // Regardless of any errors, zero-out the copied key material.
   memset(key_data, 0, sizeof(key_data));
   if (error != WEAVE_NO_ERROR) {
@@ -128,7 +128,7 @@ WEAVE_ERROR GroupKeyStoreImpl::DeleteGroupKey(uint32_t key_id, bool update_index
   char formed_key_name[kGroupKeyNameMaxSize + 1];
   FormKeyName(key_id, formed_key_name, sizeof(formed_key_name));
 
-  if ((error = FuchsiaConfig::ClearConfigValue(formed_key_name)) != WEAVE_NO_ERROR) {
+  if ((error = EnvironmentConfig::ClearConfigValue(formed_key_name)) != WEAVE_NO_ERROR) {
     return error;
   }
   if (update_index) {
@@ -175,8 +175,8 @@ WEAVE_ERROR GroupKeyStoreImpl::EnumerateGroupKeys(uint32_t key_type, uint32_t* k
 WEAVE_ERROR GroupKeyStoreImpl::Clear(void) { return DeleteGroupKeysOfAType(WeaveKeyId::kNone); }
 
 WEAVE_ERROR GroupKeyStoreImpl::RetrieveLastUsedEpochKeyId(void) {
-  WEAVE_ERROR error = FuchsiaConfig::ReadConfigValue(FuchsiaConfig::kConfigKey_LastUsedEpochKeyId,
-                                                     LastUsedEpochKeyId);
+  WEAVE_ERROR error = EnvironmentConfig::ReadConfigValue(
+      EnvironmentConfig::kConfigKey_LastUsedEpochKeyId, LastUsedEpochKeyId);
   if (error == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     LastUsedEpochKeyId = WeaveKeyId::kNone;
     return WEAVE_NO_ERROR;
@@ -185,8 +185,8 @@ WEAVE_ERROR GroupKeyStoreImpl::RetrieveLastUsedEpochKeyId(void) {
 }
 
 WEAVE_ERROR GroupKeyStoreImpl::StoreLastUsedEpochKeyId(void) {
-  return FuchsiaConfig::WriteConfigValue(FuchsiaConfig::kConfigKey_LastUsedEpochKeyId,
-                                         LastUsedEpochKeyId);
+  return EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_LastUsedEpochKeyId,
+                                             LastUsedEpochKeyId);
 }
 
 WEAVE_ERROR GroupKeyStoreImpl::FormKeyName(uint32_t key_id, char* key_name, size_t key_name_size) {
@@ -194,7 +194,7 @@ WEAVE_ERROR GroupKeyStoreImpl::FormKeyName(uint32_t key_id, char* key_name, size
     return WEAVE_ERROR_BUFFER_TOO_SMALL;
   }
   if (key_id == WeaveKeyId::kFabricSecret) {
-    strcpy(key_name, FuchsiaConfig::kConfigKey_FabricSecret);
+    strcpy(key_name, EnvironmentConfig::kConfigKey_FabricSecret);
   } else {
     snprintf(key_name, key_name_size, "%s%08" PRIX32, kGroupKeyNamePrefix, key_id);
   }
@@ -219,9 +219,9 @@ WEAVE_ERROR GroupKeyStoreImpl::RemoveKeyFromIndex(uint32_t key_id) {
 }
 
 WEAVE_ERROR GroupKeyStoreImpl::StoreKeyIndex(void) {
-  return FuchsiaConfig::WriteConfigValueBin(FuchsiaConfig::kConfigKey_GroupKeyIndex,
-                                            (uint8_t*)(key_index_.data()),
-                                            sizeof(uint32_t) * key_index_.size());
+  return EnvironmentConfig::WriteConfigValueBin(EnvironmentConfig::kConfigKey_GroupKeyIndex,
+                                                (uint8_t*)(key_index_.data()),
+                                                sizeof(uint32_t) * key_index_.size());
 }
 
 }  // namespace Internal

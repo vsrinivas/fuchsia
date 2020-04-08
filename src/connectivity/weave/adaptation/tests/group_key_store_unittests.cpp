@@ -10,14 +10,14 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include "src/lib/files/file.h"
 #include "gtest/gtest.h"
-#include "fuchsia_config.h"
+#include "environment_config.h"
 
 namespace adaptation {
 namespace testing {
 namespace {
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationMgr;
-using nl::Weave::DeviceLayer::Internal::FuchsiaConfig;
+using nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
 using nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl;
 using nl::Weave::Profiles::Security::AppKeys::WeaveGroupKey;
 constexpr uint32_t kTestKeyId = WeaveKeyId::kFabricSecret + 1u;
@@ -25,7 +25,7 @@ constexpr uint8_t kWeaveAppGroupKeySize =
     nl::Weave::Profiles::Security::AppKeys::kWeaveAppGroupKeySize;
 constexpr uint8_t kMaxGroupKeys =
     nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl::kMaxGroupKeys;
-constexpr char kWeaveConfigStoreTestPath[] = "/data/config.json";
+constexpr char kWeaveConfigStoreTestPath[] = "/data/environment.json";
 }  // namespace
 
 class GroupKeyStoreTest : public ::gtest::TestLoopFixture {
@@ -38,13 +38,13 @@ class GroupKeyStoreTest : public ::gtest::TestLoopFixture {
   }
 
   void TearDown() override {
-    EXPECT_EQ(FuchsiaConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+    EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
     TestLoopFixture::TearDown();
   }
 
  protected:
   void WriteConfigStore(const char* config_data) {
-    EXPECT_EQ(FuchsiaConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+    EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
     EXPECT_TRUE(files::WriteFile(kWeaveConfigStoreTestPath, config_data, strlen(config_data)));
   }
 
@@ -85,11 +85,12 @@ TEST_F(GroupKeyStoreTest, InitializeWithExistingStore) {
   // Sample valid key set.
   uint32_t test_key_ids[1] = {kTestKeyId};
   uint8_t test_key_data[kWeaveAppGroupKeySize];
-  EXPECT_EQ(FuchsiaConfig::WriteConfigValueBin(FuchsiaConfig::kConfigKey_GroupKeyIndex,
-                                               (uint8_t*)test_key_ids, sizeof(test_key_ids)),
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValueBin(EnvironmentConfig::kConfigKey_GroupKeyIndex,
+                                                   (uint8_t*)test_key_ids, sizeof(test_key_ids)),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(FuchsiaConfig::WriteConfigValueBin("gk-00001002", test_key_data, sizeof(test_key_data)),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      EnvironmentConfig::WriteConfigValueBin("gk-00001002", test_key_data, sizeof(test_key_data)),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store_.Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(
       group_key_store_.EnumerateGroupKeys(WeaveKeyId::kNone, key_ids, kMaxGroupKeys, key_count),
@@ -237,21 +238,23 @@ TEST_F(GroupKeyStoreTest, ClearKeys) {
 
 TEST_F(GroupKeyStoreTest, RetrieveLastUsedEpochKeyId) {
   // Verify that retrieval succeeds even when the config value isn't stored.
-  EXPECT_EQ(FuchsiaConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store_.RetrieveLastUsedEpochKeyId(), WEAVE_NO_ERROR);
 
   // Verify that the key id is readable if already stored.
-  EXPECT_EQ(FuchsiaConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
-  EXPECT_EQ(FuchsiaConfig::WriteConfigValue(FuchsiaConfig::kConfigKey_LastUsedEpochKeyId, 100u),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_LastUsedEpochKeyId, 100u),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store_.RetrieveLastUsedEpochKeyId(), WEAVE_NO_ERROR);
 }
 
 TEST_F(GroupKeyStoreTest, StoreLastUsedEpochKeyId) {
-  EXPECT_EQ(FuchsiaConfig::WriteConfigValue(FuchsiaConfig::kConfigKey_LastUsedEpochKeyId, 100u),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_LastUsedEpochKeyId, 100u),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store_.RetrieveLastUsedEpochKeyId(), WEAVE_NO_ERROR);
-  EXPECT_EQ(FuchsiaConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store_.StoreLastUsedEpochKeyId(), WEAVE_NO_ERROR);
   EXPECT_EQ(ReadConfigStore(), "{\"last-used-epoch-key-id\":100}");
 }

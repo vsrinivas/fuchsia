@@ -13,7 +13,7 @@
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "fuchsia_config.h"
+#include "src/connectivity/weave/adaptation/environment_config.h"
 #include "src/connectivity/weave/adaptation/weave_config_manager.h"
 
 namespace nl {
@@ -31,7 +31,7 @@ class WeaveConfigReader;
 class ConfigurationManagerImpl final
     : public ConfigurationManager,
       public Internal::GenericConfigurationManagerImpl<ConfigurationManagerImpl>,
-      private Internal::FuchsiaConfig {
+      private Internal::EnvironmentConfig {
   // Allow the ConfigurationManager interface class to delegate method calls to
   // the implementation methods provided by this class.
   friend class ConfigurationManager;
@@ -46,19 +46,20 @@ class ConfigurationManagerImpl final
   // ===== Members that implement the ConfigurationManager public interface.
 
   WEAVE_ERROR _Init(void);
-  WEAVE_ERROR _GetVendorId(uint16_t& vendorId);
-  WEAVE_ERROR _GetProductId(uint16_t& productId);
-  WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t bufSize, size_t& outLen);
+  WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
+  WEAVE_ERROR _GetProductId(uint16_t& product_id);
+  WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
+
   ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase* _GetGroupKeyStore(void);
+
   bool _CanFactoryReset(void);
   void _InitiateFactoryReset(void);
+
   WEAVE_ERROR _ReadPersistedStorageValue(::nl::Weave::Platform::PersistedStorage::Key key,
                                          uint32_t& value);
   WEAVE_ERROR _WritePersistedStorageValue(::nl::Weave::Platform::PersistedStorage::Key key,
                                           uint32_t value);
-
-  // NOTE: Other public interface methods are implemented by GenericConfigurationManagerImpl<>.
 
   // ===== Members for internal use by the following friends.
 
@@ -69,9 +70,9 @@ class ConfigurationManagerImpl final
   static ConfigurationManagerImpl sInstance;
 
   std::unique_ptr<sys::ComponentContext> context_;
-  fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_ptr_;
+  fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
-  std::unique_ptr<Internal::WeaveConfigReader> config_data_reader_;
+  std::unique_ptr<Internal::WeaveConfigReader> device_info_;
 
   WEAVE_ERROR GetAndStoreHWInfo();
 

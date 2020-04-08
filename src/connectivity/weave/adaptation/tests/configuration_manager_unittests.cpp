@@ -6,9 +6,7 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
 #include <Weave/Core/WeaveKeyIds.h>
-#include "configuration_manager_impl.h"
-#include "fuchsia_config.h"
-#include "group_key_store_impl.h"
+#include "src/connectivity/weave/adaptation/configuration_manager_impl.h"
 #include <Weave/Profiles/security/WeaveApplicationKeys.h>
 
 #include <Weave/Core/WeaveVendorIdentifiers.hpp>

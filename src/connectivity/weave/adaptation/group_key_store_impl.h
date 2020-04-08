@@ -11,7 +11,7 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/Profiles/security/WeaveApplicationKeys.h>
 
-#include "fuchsia_config.h"
+#include "src/connectivity/weave/adaptation/environment_config.h"
 
 namespace nl {
 namespace Weave {

@@ -6,20 +6,14 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
 #include <Weave/Core/WeaveKeyIds.h>
-#include "configuration_manager_impl.h"
-#include "fuchsia_config.h"
-#include "group_key_store_impl.h"
+#include "src/connectivity/weave/adaptation/configuration_manager_impl.h"
+#include "src/connectivity/weave/adaptation/group_key_store_impl.h"
 #include <Weave/Profiles/security/WeaveApplicationKeys.h>
 
 #include <Weave/Core/WeaveVendorIdentifiers.hpp>
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
-#if WEAVE_DEVICE_CONFIG_ENABLE_FACTORY_PROVISIONING
-#include <Weave/DeviceLayer/internal/FactoryProvisioning.ipp>
-#endif  // WEAVE_DEVICE_CONFIG_ENABLE_FACTORY_PROVISIONING
 // clang-format on
 
-#include <fuchsia/wlan/device/service/cpp/fidl.h>
-#include <lib/sys/cpp/component_context.h>
 #include <net/ethernet.h>
 #include <src/lib/fxl/logging.h>
 
@@ -27,11 +21,10 @@ namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
-using namespace ::nl::Weave::Profiles::Security::AppKeys;
-using namespace ::nl::Weave::Profiles::DeviceDescription;
-using namespace ::nl::Weave::DeviceLayer::Internal;
-
 namespace {
+
+using Internal::GroupKeyStoreImpl;
+using Internal::WeaveConfigManager;
 
 // Singleton instance of Weave Group Key Store for the Fuchsia.
 //
@@ -41,10 +34,10 @@ namespace {
 //
 GroupKeyStoreImpl gGroupKeyStore;
 
-constexpr char kDeviceConfigKey_VendorId[] = "vendor-id";
-constexpr char kDeviceConfigKey_ProductId[] = "product-id";
-constexpr char kDeviceConfigKey_FirmwareRevision[] = "firmware-revision";
-constexpr char kWeaveDeviceConfigPath[] = "/config/data/device_info.json";
+constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
+constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
+constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
+constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
 
 }  // unnamed namespace
 
@@ -52,11 +45,11 @@ constexpr char kWeaveDeviceConfigPath[] = "/config/data/device_info.json";
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
 ConfigurationManagerImpl::ConfigurationManagerImpl()
-    : config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {}
+    : device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
 
 ConfigurationManagerImpl::ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)),
-      config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {
+      device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {
   FXL_CHECK(_Init() == WEAVE_NO_ERROR) << "Failed to init configuration manager.";
 }
 
@@ -68,7 +61,7 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
 
   FXL_CHECK(context_->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
       << "Failed to connect to wlan service.";
-  FXL_CHECK(context_->svc()->Connect(hwinfo_device_ptr_.NewRequest()) == ZX_OK)
+  FXL_CHECK(context_->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
 
   err = ConfigurationManagerImpl::GetAndStoreHWInfo();
@@ -81,8 +74,7 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
 
 WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreHWInfo() {
   fuchsia::hwinfo::DeviceInfo device_info;
-  FXL_CHECK(ZX_OK == hwinfo_device_ptr_->GetInfo(&device_info))
-      << "Failed to get device information";
+  FXL_CHECK(ZX_OK == hwinfo_device_->GetInfo(&device_info)) << "Failed to get device information";
   if (device_info.has_serial_number()) {
     return StoreSerialNumber(device_info.serial_number().c_str(),
                              device_info.serial_number().length());
@@ -90,18 +82,18 @@ WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreHWInfo() {
   return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
 }
 
-WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendorId) {
-  return config_data_reader_->ReadConfigValue(kDeviceConfigKey_VendorId, &vendorId);
+WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
+  return device_info_->ReadConfigValue(kDeviceInfoConfigKey_VendorId, &vendor_id);
 }
 
-WEAVE_ERROR ConfigurationManagerImpl::_GetProductId(uint16_t& productId) {
-  return config_data_reader_->ReadConfigValue(kDeviceConfigKey_ProductId, &productId);
+WEAVE_ERROR ConfigurationManagerImpl::_GetProductId(uint16_t& product_id) {
+  return device_info_->ReadConfigValue(kDeviceInfoConfigKey_ProductId, &product_id);
 }
 
-WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t bufSize,
-                                                           size_t& outLen) {
-  return config_data_reader_->ReadConfigValueStr(kDeviceConfigKey_FirmwareRevision, buf, bufSize,
-                                                 &outLen);
+WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t buf_size,
+                                                           size_t& out_len) {
+  return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_FirmwareRevision, buf, buf_size,
+                                          &out_len);
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetPrimaryWiFiMACAddress(uint8_t* buf) {
@@ -137,20 +129,20 @@ ConfigurationManagerImpl::_GetGroupKeyStore() {
 
 bool ConfigurationManagerImpl::_CanFactoryReset() { return true; }
 
-void ConfigurationManagerImpl::_InitiateFactoryReset() { FuchsiaConfig::FactoryResetConfig(); }
+void ConfigurationManagerImpl::_InitiateFactoryReset() { EnvironmentConfig::FactoryResetConfig(); }
 
 WEAVE_ERROR ConfigurationManagerImpl::_ReadPersistedStorageValue(
     ::nl::Weave::Platform::PersistedStorage::Key key, uint32_t& value) {
   WEAVE_ERROR err = ReadConfigValue(key, value);
-  if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
-    err = WEAVE_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
-  }
-  return err;
+  return (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND)
+             ? WEAVE_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND
+             : err;
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_WritePersistedStorageValue(
     ::nl::Weave::Platform::PersistedStorage::Key key, uint32_t value) {
-  return WriteConfigValue(key, value);
+  WEAVE_ERROR err = WriteConfigValue(key, value);
+  return (err != WEAVE_NO_ERROR) ? WEAVE_ERROR_PERSISTED_STORAGE_FAIL : err;
 }
 
 }  // namespace DeviceLayer
