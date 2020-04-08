@@ -64,7 +64,8 @@ using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
-constexpr CompressionAlgorithm kBlobfsDefaultCompressionAlgorithm = CompressionAlgorithm::ZSTD;
+constexpr CompressionAlgorithm kBlobfsDefaultCompressionAlgorithm =
+    CompressionAlgorithm::ZSTD_SEEKABLE;
 
 class Blobfs : public TransactionManager, public UserPager, public BlockIteratorProvider {
  public:

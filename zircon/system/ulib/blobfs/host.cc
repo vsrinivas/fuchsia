@@ -33,7 +33,7 @@
 
 #include "compression/compressor.h"
 #include "compression/decompressor.h"
-#include "compression/zstd-plain.h"
+#include "compression/zstd-seekable.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
@@ -47,8 +47,8 @@ namespace {
 // TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
 // choosing from multiple strategies. This has already been done in non-host code but host tools do
 // not use |BlobCompressor| the same way.
-using HostCompressor = ZSTDCompressor;
-using HostDecompressor = ZSTDDecompressor;
+using HostCompressor = ZSTDSeekableCompressor;
+using HostDecompressor = ZSTDSeekableDecompressor;
 
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
   off_t off = offset + bno * kBlobfsBlockSize;
