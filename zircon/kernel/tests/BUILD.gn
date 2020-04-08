@@ -32,6 +32,7 @@ source_set("tests") {
     "resource_tests.cc",
     "sleep_tests.cc",
     "string_tests.cc",
+    "string_view_tests.cc",
     "sync_ipi_tests.cc",
     "tests.cc",
     "thread_dispatcher_tests.cc",

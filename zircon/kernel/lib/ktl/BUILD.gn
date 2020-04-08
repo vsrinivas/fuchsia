@@ -34,5 +34,8 @@ config("ktl.config") {
     # of expecting either POSIX or C11 threading APIs.
     "_LIBCPP_HAS_THREAD_API_EXTERNAL",
     "_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL",
+
+    # Enable C++20 library APIs even in C++17.
+    "_LIBCPP_STD_VER=20",
   ]
 }
