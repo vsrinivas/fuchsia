@@ -26,6 +26,10 @@ StreamProvider::~StreamProvider() {}
 std::string StreamProvider::GetName() { return "fuchsia.camera3"; }
 
 zx_status_t StreamProvider::Initialize() {
+  uint32_t kDeviceId = 1;  // TODO(48506) - Hard code device
+  uint32_t kConfigId = 1;  // TODO(48506) - Hard code config
+  uint32_t kStreamId = 2;  // TODO(48506) - Hard code stream
+
   context_ = sys::ComponentContext::Create();
 
   // Create an event to track async events
@@ -57,7 +61,6 @@ zx_status_t StreamProvider::Initialize() {
   }
 
   // Connect to device
-  uint64_t kDeviceId = 1;  // TODO(48506) - Hard code device ID
   status = watcher_ptr_->ConnectToDevice(kDeviceId, device_ptr_.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "ConnectToDevice()";
@@ -91,13 +94,19 @@ zx_status_t StreamProvider::Initialize() {
     }
   }
 
-  // Assuming there is at least one configuration with one stream.
-  ZX_ASSERT(configurations_.size() >= 1);
-  ZX_ASSERT(configurations_[0].streams.size() >= 1);
-  format_ = configurations_[0].streams[0].image_format;
+  // Remember which format was requested
+  ZX_ASSERT(configurations_.size() > kConfigId);
+  ZX_ASSERT(configurations_[kConfigId].streams.size() > kStreamId);
+  format_ = configurations_[kConfigId].streams[kStreamId].image_format;
 
-  // Connect to specific stream
-  uint32_t kStreamId = 0;  // TODO(48506) - Hard code stream ID
+  // Select the specified stream configuration
+  status = device_ptr_->SetCurrentConfiguration(kConfigId);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "SetCurrentConfiguration(" << kConfigId << ")";
+    return status;
+  }
+
+  // Connect to the specified stream
   status = device_ptr_->ConnectToStream(kStreamId, stream_ptr_.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "ConnectToStream(" << kStreamId << ")";
