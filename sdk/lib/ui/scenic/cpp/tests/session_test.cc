@@ -61,8 +61,12 @@ TEST_F(ScenicSessionFlushTest, AddOneInputCommand) {
 
   EXPECT_EQ(session_->num_flushed_, 1);
   EXPECT_EQ(session_->num_commands(), 0u);
-  EXPECT_EQ(session_->num_bytes(), 32 + ZX_CHANNEL_MAX_MSG_BYTES);
-  EXPECT_EQ(session_->num_handles(), ZX_CHANNEL_MAX_MSG_HANDLES);
+  EXPECT_EQ(session_->num_bytes(),
+            // See commands_sizing_test.cc for details.
+            scenic::kEnqueueRequestBaseNumBytes + 104u);
+  EXPECT_EQ(session_->num_handles(),
+            // See commands_sizing_test.cc for details.
+            0u);
 }
 
 TEST_F(ScenicSessionFlushTest, AddTwoInputCommands) {
@@ -83,11 +87,15 @@ TEST_F(ScenicSessionFlushTest, AddTwoInputCommands) {
 
   // The overriden Flush does not reset byte and handle counts, so we accumulate each
   // command's size.
-  EXPECT_EQ(session_->num_bytes(), 32 + 2 * ZX_CHANNEL_MAX_MSG_BYTES);
-  EXPECT_EQ(session_->num_handles(), 2 * ZX_CHANNEL_MAX_MSG_HANDLES);
+  EXPECT_EQ(session_->num_bytes(),
+            // See commands_sizing_test.cc for details.
+            scenic::kEnqueueRequestBaseNumBytes + 2 * 104u);
+  EXPECT_EQ(session_->num_handles(),
+            // See commands_sizing_test.cc for details.
+            0u);
 }
 
-TEST_F(ScenicSessionFlushTest, AddTenNonInputCommands) {
+TEST_F(ScenicSessionFlushTest, AddTenNonInputCommandsThenOneInputCommand) {
   for (int64_t i = 0; i < 10; ++i) {
     fuchsia::ui::gfx::MemoryArgs memory_args;
 
@@ -104,18 +112,40 @@ TEST_F(ScenicSessionFlushTest, AddTenNonInputCommands) {
     cmd.set_gfx(std::move(gfx_cmd));
 
     session_->Enqueue(std::move(cmd));
-
-    // We flush each command, one by one. The first one is batched, so num_flushed_
-    // will initially be 0. As we add the second one, we flush the first one, so
-    // num_flushed_ will be 1, etc.
-    EXPECT_EQ(session_->num_flushed_, i);
-    EXPECT_EQ(session_->num_commands(), 1u);
   }
 
-  // The overriden Flush does not reset byte and handle counts, so we accumulate each
-  // command's size.
-  EXPECT_EQ(session_->num_bytes(), 32 + 10 * ZX_CHANNEL_MAX_MSG_BYTES);
-  EXPECT_EQ(session_->num_handles(), 10 * ZX_CHANNEL_MAX_MSG_HANDLES);
+  // We accumulate all commands (without ever flushing).
+  EXPECT_EQ(session_->num_flushed_, 0u);
+  EXPECT_EQ(session_->num_commands(), 10u);
+  EXPECT_EQ(session_->num_bytes(),
+            // See commands_sizing_test.cc for details.
+            scenic::kEnqueueRequestBaseNumBytes + 10 * 104u);
+  EXPECT_EQ(session_->num_handles(),
+            // See commands_sizing_test.cc for details.
+            10 * 1u);
+
+  {
+    fuchsia::ui::input::SendPointerInputCmd send_pointer_input_cmd;
+
+    fuchsia::ui::input::Command input_cmd;
+    input_cmd.set_send_pointer_input(send_pointer_input_cmd);
+
+    fuchsia::ui::scenic::Command cmd;
+    cmd.set_input(std::move(input_cmd));
+
+    session_->Enqueue(std::move(cmd));
+  }
+
+  // Since input commands are eagerly flushed, we send all eleven commands at
+  // once.
+  EXPECT_EQ(session_->num_flushed_, 1u);
+  EXPECT_EQ(session_->num_commands(), 0u);
+  EXPECT_EQ(session_->num_bytes(),
+            // See commands_sizing_test.cc for details.
+            scenic::kEnqueueRequestBaseNumBytes + 11 * 104u);
+  EXPECT_EQ(session_->num_handles(),
+            // See commands_sizing_test.cc for details.
+            10 * 1u);
 }
 
 TEST_F(ScenicSessionFlushTest, AddNonInputCommandThenPresent) {

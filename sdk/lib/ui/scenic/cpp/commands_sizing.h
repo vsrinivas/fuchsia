@@ -17,7 +17,12 @@ struct CommandSize {
     const int64_t num_handles;
 };
 
-// Helper function to measure a Scenic command.
+// Helper function to measure a Scenic command. The size returned is a safe
+// upper-bound, rather than a precise size.
+//
+// For commands containaining arrays or vectors, the code falls back to maxing
+// out both the number of bytes and number of handles thus safely
+// over-evaluating their size.
 CommandSize MeasureCommand(const fuchsia::ui::scenic::Command& command);
 
 }  // namespace scenic

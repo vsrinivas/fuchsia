@@ -40,4 +40,49 @@ sdk_source_set("cpp") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
   ]
+
+  deps = [ ":gen_command_sizing" ]
+}
+
+compiled_action("gen_command_sizing") {
+  tool = "//tools/fidl/hlcpp-measure-tape:hlcpp-measure-tape"
+
+  check_file = "$target_out_dir/scenic-measure-tape.checked"
+  outputs = [ "$check_file" ]
+
+  args = [
+    "--json",
+    rebase_path(
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.images/fuchsia.images.fidl.json",
+        root_build_dir),
+    "--json",
+    rebase_path(
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.ui.gfx/fuchsia.ui.gfx.fidl.json",
+        root_build_dir),
+    "--json",
+    rebase_path(
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json",
+        root_build_dir),
+    "--json",
+    rebase_path(
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.ui.scenic/fuchsia.ui.scenic.fidl.json",
+        root_build_dir),
+    "--json",
+    rebase_path(
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json",
+        root_build_dir),
+    "--measure",
+    "fuchsia.ui.scenic/Command",
+    "--out-cc",
+    rebase_path("commands_sizing.cc"),
+    "--only-check-to-file",
+    rebase_path("$check_file"),
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+  ]
 }

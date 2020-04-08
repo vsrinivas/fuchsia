@@ -156,7 +156,7 @@ Now that you have sized all the pieces of a command, you add the total size:
     * Struct `SendPointerInputCmd`: 52 bytes
     * Padding to align to 8 bytes: 4 bytes
 
-This results in a total size of 84 bytes.
+This results in a total size of 104 bytes.
 
 <!-- xrefs -->
 [lostart]: http://www.catb.org/esr/structure-packing/
