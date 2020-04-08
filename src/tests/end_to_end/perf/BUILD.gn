@@ -73,6 +73,7 @@ group("package_deps") {
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl/go:go_fidl_benchmarks",
+    "//src/tests/benchmarks/fidl/rust:rust-fidl-benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
 
     # These are used by garnet_input_latency_benchmarks.
