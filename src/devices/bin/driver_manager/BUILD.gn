@@ -69,7 +69,6 @@ source_set("lib") {
     "//zircon/public/lib/inspector",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/memfs",
-    "//zircon/public/lib/svc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:c",
@@ -87,6 +86,7 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-mem:c",
     "//zircon/system/ulib/driver-info",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/svc",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]

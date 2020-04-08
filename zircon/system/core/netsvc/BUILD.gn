@@ -66,9 +66,9 @@ executable("device-name-provider") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/svc",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/inet6:netifc-discover",
+    "//zircon/system/ulib/svc",
   ]
 }
 

@@ -30,8 +30,8 @@ zx_library("kcounter") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/inspect",
-    "//zircon/public/lib/svc",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-kernel:c",
+    "//zircon/system/ulib/svc",
   ]
 }

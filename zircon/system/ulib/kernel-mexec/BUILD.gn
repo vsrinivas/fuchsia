@@ -31,5 +31,5 @@ zx_library("kernel-mexec") {
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-kernel:c",
   ]
-  public_deps = [ "//zircon/public/lib/svc" ]
+  public_deps = [ "//zircon/system/ulib/svc" ]
 }

@@ -45,7 +45,6 @@ zx_library("paver") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/ramdevice-client-static",
-    "//zircon/public/lib/svc",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxcrypt-fdio",
@@ -60,7 +59,8 @@ zx_library("paver") {
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/ulib/chromeos-disk-setup",
     "//zircon/system/ulib/libabr",
+    "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
-  public_deps = [ "//zircon/public/lib/svc" ]
+  public_deps = [ "//zircon/system/ulib/svc" ]
 }

@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("svc") {
   sdk = "source"
   sdk_headers = [
@@ -10,13 +22,12 @@ zx_library("svc") {
   ]
   sources = [ "outgoing.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-io:c",
   ]
   public_deps = [
-    "$zx/system/ulib/async:headers",
-    "$zx/system/ulib/fs:headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
   ]
 }

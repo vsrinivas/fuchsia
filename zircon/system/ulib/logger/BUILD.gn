@@ -35,7 +35,7 @@ zx_library("logger") {
     "//zircon/public/lib/fidl",
 
     # <lib/logger/provider.h> has #include <lib/svc/service.h>.
-    "//zircon/public/lib/svc",
+    "//zircon/system/ulib/svc",
 
     # <lib/logger/logger.h> has #include <lib/async/cpp/wait.h>.
     "//zircon/public/lib/async-cpp",
