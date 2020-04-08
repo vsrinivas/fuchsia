@@ -636,7 +636,7 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
 
     // Update any image layers. This needs to be done before migrating layers, as
     // that needs to know if there are any waiting images.
-    for (auto layer_node : display_config.pending_layers_) {
+    for (auto& layer_node : display_config.pending_layers_) {
       if (!layer_node.layer->ResolvePendingImage(&fences_)) {
         TearDown();
         return;
@@ -646,7 +646,7 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
     // If there was a layer change, update the current layers list.
     if (display_config.pending_layer_change_) {
       fbl::SinglyLinkedList<layer_node_t*> new_current;
-      for (auto layer_node : display_config.pending_layers_) {
+      for (auto& layer_node : display_config.pending_layers_) {
         new_current.push_front(&layer_node.layer->current_node_);
       }
 
@@ -677,7 +677,7 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
     }
 
     // Apply any pending configuration changes to active layers.
-    for (auto layer_node : display_config.current_layers_) {
+    for (auto& layer_node : display_config.current_layers_) {
       layer_node.layer->ApplyChanges(display_config.current_.mode);
     }
   }
@@ -1013,7 +1013,7 @@ void Client::ApplyConfig() {
     // Displays with no current layers are filtered out in Controller::ApplyConfig,
     // after it updates its own image tracking logic.
 
-    for (auto layer_node : display_config.current_layers_) {
+    for (auto& layer_node : display_config.current_layers_) {
       Layer* layer = layer_node.layer;
       const bool activated = layer->ActivateLatestReadyImage();
       if (activated && layer->current_image()) {
