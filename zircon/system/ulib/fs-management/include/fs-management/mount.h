@@ -25,6 +25,8 @@ typedef struct mount_options {
   bool enable_pager;
   // Write files uncompressed. Disables compression (if supported).
   bool write_uncompressed;
+  // If true will register with /svc/fuchsia.fshost.Registry.
+  bool register_fs;
 } mount_options_t;
 
 __EXPORT
@@ -44,6 +46,7 @@ extern const mount_options_t default_mount_options;
 // is transferred via handles to the callback arguments.
 zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
                   const mount_options_t* options, LaunchCallback cb);
+
 // 'mount_fd' is used in lieu of the mount_path. It is not consumed (i.e.,
 // it will still be open after this function completes, regardless of
 // success or failure).

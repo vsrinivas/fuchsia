@@ -116,7 +116,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
   }
 
   // register the export root with the fshost registry
-  if ((status = fs_register(export_root.get())) != ZX_OK) {
+  if (options->register_fs && ((status = fs_register(export_root.get())) != ZX_OK)) {
     return status;
   }
 
@@ -134,6 +134,7 @@ const mount_options_t default_mount_options = {
     .enable_journal = true,
     .enable_pager = false,
     .write_uncompressed = false,
+    .register_fs = true,
 };
 
 const mkfs_options_t default_mkfs_options = {
