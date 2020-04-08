@@ -41,8 +41,8 @@ TEST(ViewRefPairTest, ViewRefPairRights) {
                                             &c_info, sizeof(c_info), nullptr, nullptr);
   EXPECT_EQ(c_status, ZX_OK);
 
-  // Control ref has full rights.
-  EXPECT_EQ(c_info.rights, ZX_DEFAULT_EVENTPAIR_RIGHTS);
+  // Control ref has most eventpair rights, except for duplication.
+  EXPECT_EQ(c_info.rights, ZX_DEFAULT_EVENTPAIR_RIGHTS & (~ZX_RIGHT_DUPLICATE));
 
   // Get info about the |view_ref|.
   zx_info_handle_basic_t v_info;

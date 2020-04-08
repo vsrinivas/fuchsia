@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 
+#include "src/lib/fxl/logging.h"
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -44,8 +46,23 @@ bool validate_eventpair(const zx::eventpair& a_object, zx_rights_t a_rights,
 
 bool validate_viewref(const fuchsia::ui::views::ViewRefControl& control_ref,
                       const fuchsia::ui::views::ViewRef& view_ref) {
-  return validate_eventpair(control_ref.reference, ZX_DEFAULT_EVENTPAIR_RIGHTS, view_ref.reference,
-                            ZX_RIGHTS_BASIC);
+  const zx_rights_t tight_rights = ZX_DEFAULT_EVENTPAIR_RIGHTS & (~ZX_RIGHT_DUPLICATE);
+  bool tight =
+      validate_eventpair(control_ref.reference, tight_rights, view_ref.reference, ZX_RIGHTS_BASIC);
+  if (tight) {
+    FXL_LOG(INFO) << "ViewRefControl is TIGHT.";
+    return true;
+  }
+
+  bool loose = validate_eventpair(control_ref.reference, ZX_DEFAULT_EVENTPAIR_RIGHTS,
+                                  view_ref.reference, ZX_RIGHTS_BASIC);
+  if (loose) {
+    FXL_LOG(INFO) << "ViewRefControl is LOOSE.";
+    return true;
+  }
+
+  FXL_LOG(INFO) << "ViewRefControl is invalid.";
+  return false;
 }
 
 }  // namespace gfx

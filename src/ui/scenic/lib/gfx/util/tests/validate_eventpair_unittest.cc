@@ -74,11 +74,28 @@ TEST(ValidateEventpair, ExcessCapability) {
   EXPECT_FALSE(validate_eventpair(a, ZX_RIGHTS_BASIC, b, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
-TEST(ValidateViewRefs, CorrectViewRef) {
+TEST(ValidateViewRefs, CorrectViewRefLoose) {
   ViewRefControl control_ref;
   ViewRef view_ref;
   zx_status_t status = zx::eventpair::create(
       /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
+  ASSERT_EQ(status, ZX_OK);
+
+  status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
+  ASSERT_EQ(status, ZX_OK);
+
+  EXPECT_TRUE(validate_viewref(control_ref, view_ref));
+}
+
+TEST(ValidateViewRefs, CorrectViewRefTight) {
+  ViewRefControl control_ref;
+  ViewRef view_ref;
+  zx_status_t status = zx::eventpair::create(
+      /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
+  ASSERT_EQ(status, ZX_OK);
+
+  status = control_ref.reference.replace(ZX_DEFAULT_EVENTPAIR_RIGHTS & (~ZX_RIGHT_DUPLICATE),
+                                         &control_ref.reference);
   ASSERT_EQ(status, ZX_OK);
 
   status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
@@ -139,4 +156,5 @@ TEST(ValidateViewRefs, ViewRefExcessCapability) {
 
   EXPECT_FALSE(validate_viewref(control_ref, view_ref));
 }
+
 }  // namespace lib_ui_gfx_util_tests

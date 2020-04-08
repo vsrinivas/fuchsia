@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/zx/eventpair.h>
 
 #include <cmath>
@@ -1383,17 +1384,7 @@ ResourcePtr GfxCommandApplier::CreatePointLight(Session* session, ResourceId id)
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::ViewArgs args) {
   // TODO(SCN-1410): Deprecate in favor of ViewArgs3.
-  fuchsia::ui::views::ViewRefControl control_ref;
-  fuchsia::ui::views::ViewRef view_ref;
-  {
-    // Safe and valid eventpair, by construction.
-    zx_status_t status = zx::eventpair::create(
-        /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
-    FXL_DCHECK(status == ZX_OK);
-    // Remove signaling.
-    status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
-    FXL_DCHECK(status == ZX_OK);
-  }
+  auto [control_ref, view_ref] = scenic::ViewRefPair::New();
 
   // Create a View and Link, then connect and return if the Link is valid.
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
