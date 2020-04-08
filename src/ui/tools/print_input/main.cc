@@ -14,7 +14,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
-#include "src/ui/lib/input_reader/input_reader.h"
+#include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace print_input {
 

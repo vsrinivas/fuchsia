@@ -30,7 +30,7 @@ There are two packages, each containing an independent binary.
 Some high-level functionality provided by DirectInput:
 
 * Receive low-level input reports from Zircon, via an
-[InputReader](https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/input_reader/input_reader.h).
+[InputReader](https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/input_report_reader/input_reader.h).
 * Manage input devices and associated state, via
 [InputDeviceImpl](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/input/input_device_impl.h)
 and

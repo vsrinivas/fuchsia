@@ -21,7 +21,7 @@ executable("direct_input") {
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
     "//src/lib/ui/input",
-    "//src/ui/lib/input_reader",
+    "//src/ui/lib/input_report_reader",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",

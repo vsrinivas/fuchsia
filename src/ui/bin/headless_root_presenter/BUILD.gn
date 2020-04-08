@@ -79,7 +79,7 @@ source_set("lib") {
     "//src/ui/bin/root_presenter:activity_notifier",
     "//src/ui/bin/root_presenter:factory_reset_manager",
     "//src/ui/bin/root_presenter:media_buttons_handler",
-    "//src/ui/lib/input_reader",
+    "//src/ui/lib/input_report_reader",
     "//zircon/public/lib/trace",
     "//zircon/system/ulib/hid",
   ]

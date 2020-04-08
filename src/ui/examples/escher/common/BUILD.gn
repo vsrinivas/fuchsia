@@ -58,11 +58,12 @@ source_set("demo_harness_fuchsia") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/hid",
   ]
   public_deps = [
     ":demo_base",
     ":headers",
-    "//src/ui/lib/input_reader",
+    "//src/ui/lib/input_report_reader",
   ]
 }
 

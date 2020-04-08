@@ -9,7 +9,7 @@ executable("print_input") {
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/ui/input",
-    "//src/ui/lib/input_reader",
+    "//src/ui/lib/input_report_reader",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

@@ -15,7 +15,7 @@
 #include <trace-provider/provider.h>
 
 #include "src/ui/examples/escher/common/demo_harness.h"
-#include "src/ui/lib/input_reader/input_reader.h"
+#include "src/ui/lib/input_report_reader/input_reader.h"
 
 class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRegistry {
  public:

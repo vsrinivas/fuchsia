@@ -9,9 +9,9 @@ document.
 
 ## Major Entities and Their High-Level Role
 
-Zircon - gives us inputs as HID reports.
+Drivers - gives us inputs as InputReport FIDL tables
 
-RootPresenter - routes input from Zircon to Scenic
+RootPresenter - routes input from Drivers to Scenic
 
 Scenic - routes input from RootPresenter to UI Clients (touch and mouse inputs),
 and from RootPresenter to TextService (text inputs only).
@@ -22,20 +22,18 @@ IME - routes and transforms text input from TextService to UI Clients
 
 UI Client - consumes inputs from Scenic and IMEs to drive UI
 
-## Zircon Sends Raw Inputs
+## Drivers Send Structured Input
 
-Zircon provides access to input peripherals through the file system under
-`/dev/class/input`. These are presented as HID devices, with associated controls
-to retrieve the description report. Simple reads from these HID devices will
-return HID reports, which generally are expected to follow the
-[HID Usage Tables](https://www.usb.org/document-library/hid-usage-tables-112).
+Input Drivers provide access to input peripherals through the file system under
+`/dev/class/input-report`. These are presented as structured FIDL tables that
+describe the device and the reports that will be sent.
 
 ## RootPresenter Transforms and Routes Inputs
 
 Generally, the RootPresenter is the singleton process that has detailed and
 specific knowledge about the entire device, such as details about the display,
 peripherals, sensors, etc. It takes care of device management details, such as
-reading out HID reports from Zircon, and packages them into FIDL structs for
+reading out InputReports reports from Drivers, and packages them into FIDL structs for
 consumption by Scenic or other entities.
 
 It also instructs Scenic to create the top-level (or "root") elements of the
@@ -43,8 +41,8 @@ scene graph, and vends the
 [Presenter API](/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
 that UI clients use to attach their visual content to the scene graph.
 
-The general transformation for an input event through RootPresenter is from HID
-report, to
+The general transformation for an input event through RootPresenter is from the
+Driver, to
 [`InputReport`](/sdk/fidl/fuchsia.ui.input/input_reports.fidl),
 to
 [`InputEvent`](/sdk/fidl/fuchsia.ui.input/input_events.fidl).
@@ -53,15 +51,15 @@ The `InputEvent` is sent to Scenic.
 ### Implementation
 
 The
-[`InputReader` library](/src/ui/lib/input_reader/)
-is the code responsible for actually monitoring `/dev/class/input` for new
+[`InputReader` library](/src/ui/lib/input_report_reader/)
+is the code responsible for actually monitoring `/dev/class/input-report` for new
 peripherals, and reacting to new reports from existing peripherals. It forwards
 new events for processing to other parts of RootPresenter.
 More information on `InputReader` can be found
-[here](/src/ui/lib/input_reader/README.md).
+[here](/src/ui/lib/input_report_reader/README.md).
 
 For each new peripheral (an input device), `InputReader` assigns a new
-`InputInterpreter` object that reads the HID descriptor report for a single
+`InputInterpreter` object that reads the InputReport descriptor report for a single
 input device, and performs bookkeeping by pushing a
 [`DeviceDescriptor`](/sdk/fidl/fuchsia.ui.input/input_reports.fidl)
 and its designated event forwarding channel, an
@@ -73,8 +71,8 @@ input injection from outside RootPresenter.) The `InputDeviceRegistry` protocol
 is vended by RootPresenter, and in addition to bookkeeping (details below),
 informs each `Presentation` about the new peripheral.
 
-For each new event, `InputInterpreter` reads and decodes a HID report,
-transforms it into an `InputReport`, and forwards it on
+For each new event, `InputInterpreter` reads a `fuchsia.input.report:InputReport`,
+transforms it into a `fuchsia.ui.input:InputReport`, and forwards it on
 `InputDevice::DispatchReport`.
 
 The
