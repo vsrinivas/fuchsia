@@ -105,7 +105,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/third_party/ulib/backtrace/test",
 #------------------
 #------------------
       "$zx/third_party/ulib/linenoise/test",

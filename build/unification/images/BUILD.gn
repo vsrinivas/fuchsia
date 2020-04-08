@@ -93,7 +93,6 @@ aggregate_manifest("legacy-aux") {
     ":test.c.posix-clocks-test",
 #------------------
 #------------------
-    ":test.sys.backtrace-test-test",
 #------------------
 #------------------
     ":test.sys.default-stack-size-default-test",
@@ -266,7 +265,6 @@ aggregate_manifest("legacy-tests") {
     ":test.c.posix-clocks-test",
 #------------------
 #------------------
-    ":test.sys.backtrace-test-test",
 #------------------
 #------------------
     ":test.sys.default-stack-size-default-test",
@@ -1889,7 +1887,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/dev/lib/as370/test:audio-dsp-test-manifest",
     "//src/ui/backlight/tests:backlight-test-manifest",
 #------------------
-    #":test.sys.backtrace-test-test",
+    "//zircon/third_party/ulib/backtrace/test:backtrace-test-manifest",
 #------------------
     "//zircon/system/utest/biotime:biotime-test-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
@@ -2399,7 +2397,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/dev/lib/as370/test:audio-dsp-test-manifest",
     "//src/ui/backlight/tests:backlight-test-manifest",
 #------------------
-    #":test.sys.backtrace-test-test",
+    "//zircon/third_party/ulib/backtrace/test:backtrace-test-manifest",
 #------------------
     "//zircon/system/utest/biotime:biotime-test-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
