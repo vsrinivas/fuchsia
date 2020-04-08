@@ -260,6 +260,7 @@ template("fidl_library") {
     # Metadata to allow us to query all FIDL IR files.
     metadata = {
       fidl_json = [ rebase_path(json_representation, root_build_dir) ]
+      generated_sources = fidl_json
     }
 
     public_deps = [
@@ -359,6 +360,7 @@ template("fidl_library") {
       # Metadata to allow us to query all FIDL IR and source files.
       metadata = {
         fidl_json = [ rebase_path(json_representation, root_build_dir) ]
+        generated_sources = fidl_json
       }
 
       non_sdk_deps = [

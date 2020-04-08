@@ -194,6 +194,7 @@ build_api_module("api") {
     ":binaries",
     ":build_info",
     ":fuzzers",
+    ":generated_sources",
     ":images",
     ":platforms",
     ":prebuilt_binaries",
@@ -264,6 +265,31 @@ build_api_module("build_info") {
         product = build_info_product
       },
     ]
+  }
+}
+
+# See //zircon:generated_sources for a description and schema definition.
+#
+build_api_module("generated_sources") {
+  testonly = true
+  data_keys = [ "generated_sources" ]
+  deps = [
+    ":generated_sources.zircon",
+    "//build/images:packages",
+    "//sdk",
+  ]
+}
+
+group("generated_sources.zircon") {
+  visibility = [ ":generated_sources" ]
+  zircon_entries =
+      read_file("$zircon_root_build_dir/generated_sources.json", "json")
+  metadata = {
+    generated_sources = []
+    foreach(entry, zircon_entries) {
+      generated_sources +=
+          [ rebase_path(entry, root_build_dir, zircon_root_build_dir) ]
+    }
   }
 }
 
