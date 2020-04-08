@@ -4,9 +4,9 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
 
+#include <inttypes.h>
 #include <zircon/syscalls/log.h>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -16,13 +16,12 @@ namespace feedback {
 
 ::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                 zx::duration timeout, Cobalt* cobalt) {
+                                                 fit::Timeout timeout) {
   std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto logs = boot_log->GetLog(
-      fit::Timeout(timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kKernelLog); }));
+  auto logs = boot_log->GetLog(std::move(timeout));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(logs),
                                               /*args=*/std::move(boot_log));
 }

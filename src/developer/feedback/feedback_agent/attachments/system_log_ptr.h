@@ -10,13 +10,11 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <zircon/time.h>
 
 #include <cinttypes>
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
@@ -27,7 +25,7 @@ namespace feedback {
 // fuchsia.logger.Log is expected to be in |services|.
 ::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                 zx::duration timeout, Cobalt* cobalt);
+                                                 fit::Timeout timeout);
 
 // Wraps around fuchsia::logger::LogListenerSafePtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.

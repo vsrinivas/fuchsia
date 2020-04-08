@@ -18,6 +18,7 @@
 #include "src/developer/feedback/feedback_agent/attachments/static_attachments.h"
 #include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -151,11 +152,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 
 ::fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key) {
   if (key == kAttachmentLogKernel) {
-    return CollectKernelLog(dispatcher_, services_, kTimeout, cobalt_);
+    return CollectKernelLog(dispatcher_, services_, MakeCobaltTimeout(TimedOutData::kKernelLog));
   } else if (key == kAttachmentLogSystem) {
-    return CollectSystemLog(dispatcher_, services_, kTimeout, cobalt_);
+    return CollectSystemLog(dispatcher_, services_, MakeCobaltTimeout(TimedOutData::kSystemLog));
   } else if (key == kAttachmentInspect) {
-    return CollectInspectData(dispatcher_, services_, kTimeout, cobalt_);
+    return CollectInspectData(dispatcher_, services_, MakeCobaltTimeout(TimedOutData::kInspect));
   }
   // There are static attachments in the allowlist that we just skip here.
   return ::fit::make_result_promise<AnnotationValue>(::fit::error());
@@ -171,6 +172,11 @@ bool Datastore::TrySetExtraAnnotations(const Annotations& extra_annotations) {
         extra_annotations.size(), kMaxNumExtraAnnotations);
     return false;
   }
+}
+
+fit::Timeout Datastore::MakeCobaltTimeout(TimedOutData data) {
+  return fit::Timeout(kTimeout,
+                      /*action=*/[cobalt = cobalt_, data] { cobalt->LogOccurrence(data); });
 }
 
 }  // namespace feedback

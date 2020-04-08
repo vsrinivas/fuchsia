@@ -13,6 +13,8 @@
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 
 namespace feedback {
 
@@ -50,6 +52,8 @@ class Datastore {
   const Annotations& GetExtraAnnotations() const { return extra_annotations_; }
 
  private:
+  fit::Timeout MakeCobaltTimeout(TimedOutData data);
+
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   Cobalt* cobalt_;

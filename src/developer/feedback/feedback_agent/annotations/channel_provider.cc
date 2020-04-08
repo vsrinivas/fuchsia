@@ -23,8 +23,10 @@ AnnotationKeys ChannelProvider::GetSupportedAnnotations() {
 
 ::fit::promise<Annotations> ChannelProvider::GetAnnotations() {
   return fidl::GetCurrentChannel(
-             dispatcher_, services_, timeout_,
-             /*if_timeout=*/[cobalt = cobalt_] { cobalt->LogOccurrence(TimedOutData::kChannel); })
+             dispatcher_, services_,
+             fit::Timeout(
+                 timeout_,
+                 /*action=*/[cobalt = cobalt_] { cobalt->LogOccurrence(TimedOutData::kChannel); }))
       .and_then([](const AnnotationValue& channel) -> ::fit::result<Annotations> {
         return ::fit::ok(Annotations({{kAnnotationChannel, channel}}));
       })

@@ -10,12 +10,13 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <iostream>  // REMOVE
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/fit/promise.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -25,14 +26,12 @@ namespace feedback {
 
 ::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                   zx::duration timeout, Cobalt* cobalt) {
+                                                   fit::Timeout timeout) {
   std::unique_ptr<Inspect> inspect = std::make_unique<Inspect>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto inspect_data = inspect->Collect(
-      fit::Timeout(timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kInspect); }));
-
+  auto inspect_data = inspect->Collect(std::move(timeout));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),
                                               /*args=*/std::move(inspect));
 }
@@ -50,6 +49,7 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return archive_.WaitForDone(std::move(timeout))
       .then([this](::fit::result<>& result) -> ::fit::result<AttachmentValue> {
+        std::cout << "DOME" << std::endl;  // REMOVE
         if (!result.is_ok()) {
           FX_LOGS(WARNING)
               << "Inspect data collection was interrupted - Inspect data may be partial or missing";

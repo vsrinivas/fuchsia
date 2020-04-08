@@ -16,12 +16,12 @@ namespace fidl {
 
 ::fit::promise<std::string> GetCurrentChannel(async_dispatcher_t* dispatcher,
                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                              zx::duration timeout, ::fit::closure if_timeout) {
+                                              fit::Timeout timeout) {
   auto ptr = std::make_unique<fidl::ChannelProviderPtr>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto channel = ptr->GetCurrentChannel(fit::Timeout(timeout, /*action=*/std::move(if_timeout)));
+  auto channel = ptr->GetCurrentChannel(std::move(timeout));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
                                               /*args=*/std::move(ptr));
 }

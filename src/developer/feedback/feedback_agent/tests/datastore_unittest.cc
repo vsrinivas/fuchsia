@@ -47,6 +47,7 @@ using testing::Eq;
 using testing::IsEmpty;
 using testing::Not;
 using testing::Pair;
+using testing::UnorderedElementsAreArray;
 
 // Keep in sync with the internal Datastore value.
 constexpr zx::duration kTimeout = zx::sec(30);
@@ -105,10 +106,25 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     InjectServiceProvider(inspect_server_.get());
   }
 
+  void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
+    inspect_server_ = std::move(server);
+    if (inspect_server_) {
+      InjectServiceProvider(inspect_server_.get());
+    }
+  }
+
   void SetUpLoggerServer(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    logger_server_.reset(new stubs::Logger());
-    logger_server_->set_messages(messages);
+    auto new_logger = std::make_unique<stubs::Logger>();
+    new_logger->set_messages(messages);
+    logger_server_ = std::move(new_logger);
     InjectServiceProvider(logger_server_.get());
+  }
+
+  void SetUpLoggerServer(std::unique_ptr<stubs::LoggerBase> server) {
+    logger_server_ = std::move(server);
+    if (logger_server_) {
+      InjectServiceProvider(logger_server_.get());
+    }
   }
 
   void SetUpProductProviderServer(std::unique_ptr<stubs::ProductInfoProviderBase> server) {
@@ -172,7 +188,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
   std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
-  std::unique_ptr<stubs::Logger> logger_server_;
+  std::unique_ptr<stubs::LoggerBase> logger_server_;
   std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
 
@@ -459,6 +475,28 @@ TEST_F(DatastoreTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
   ASSERT_TRUE(attachments.is_error());
 
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
+}
+
+TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
+  // The timeout of the kernel log collection cannot be tested due to the fact that
+  // fuchsia::boot::ReadOnlyLog cannot be stubbed and we have no mechanism to set the timeout of the
+  // kernel log collection to 0 seconds.
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {
+                                                             kAttachmentInspect,
+                                                             kAttachmentLogSystem,
+                                                         });
+
+  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
+      std::make_unique<stubs::InspectBatchIteratorNeverResponds>()));
+  SetUpLoggerServer(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
+
+  ::fit::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_error());
+
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(TimedOutData::kInspect),
+                                          CobaltEvent(TimedOutData::kSystemLog),
+                                      }));
 }
 
 }  // namespace

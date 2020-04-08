@@ -11,10 +11,8 @@
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/debuglog.h>
-#include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
@@ -25,7 +23,7 @@ namespace feedback {
 // |services|.
 ::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                 zx::duration timeout, Cobalt* cobalt);
+                                                 fit::Timeout timeout);
 
 // Wraps around fuchsia::boot::ReadOnlyLogPtr to handle establishing the
 // connection, losing the connection, waiting for the callback, enforcing a

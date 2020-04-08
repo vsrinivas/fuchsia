@@ -14,13 +14,9 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -31,9 +27,9 @@ namespace {
 
 using testing::UnorderedElementsAreArray;
 
-class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
+class CollectSystemLogTest : public UnitTestFixture {
  public:
-  CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  CollectSystemLogTest() : executor_(dispatcher()) {}
 
  protected:
   void SetUpLoggerServer(std::unique_ptr<stubs::LoggerBase> server) {
@@ -44,16 +40,17 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   ::fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    Cobalt cobalt(dispatcher(), services());
-
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
-        feedback::CollectSystemLog(dispatcher(), services(), timeout, &cobalt)
+        feedback::CollectSystemLog(
+            dispatcher(), services(),
+            fit::Timeout(timeout, /*action=*/[this] { did_timeout_ = true; }))
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
+
+  bool did_timeout_ = false;
 
  private:
   async::Executor executor_;
@@ -132,13 +129,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   AttachmentValue logs = result.take_value();
   EXPECT_STREQ(logs.c_str(),
                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n");
-
-  // Then, we check that nothing crashes when the server tries to send the rest of the messages
-  // after the connection has been lost.
-  ASSERT_TRUE(RunLoopFor(logger_delay));
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(TimedOutData::kSystemLog),
-                                      }));
+  EXPECT_TRUE(did_timeout_);
 }
 
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
@@ -189,9 +180,9 @@ TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
   ASSERT_TRUE(result.is_error());
 }
 
-class LogListenerTest : public UnitTestFixture, public CobaltTestFixture {
+class LogListenerTest : public UnitTestFixture {
  public:
-  LogListenerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  LogListenerTest() : executor_(dispatcher()) {}
 
  protected:
   async::Executor executor_;
@@ -204,9 +195,6 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
       stubs::BuildLogMessage(FX_LOG_INFO, "msg"),
   });
   InjectServiceProvider(logger.get());
-
-  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-  Cobalt cobalt(dispatcher(), services());
 
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
   // set it arbitrary long.

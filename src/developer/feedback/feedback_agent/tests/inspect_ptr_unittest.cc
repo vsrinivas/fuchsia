@@ -15,12 +15,9 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/inspect_archive.h"
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -30,10 +27,9 @@ namespace {
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
-class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture {
+class CollectInspectDataTest : public UnitTestFixture {
  public:
-  CollectInspectDataTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  CollectInspectDataTest() : executor_(dispatcher()) {}
 
  protected:
   void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
@@ -44,26 +40,17 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
   }
 
   ::fit::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    Cobalt cobalt(dispatcher(), services());
-
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
-        feedback::CollectInspectData(dispatcher(), services(), timeout, &cobalt)
+        feedback::CollectInspectData(dispatcher(), services(),
+                                     fit::Timeout(timeout, /*action=*/[&] { did_timeout_ = true; }))
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
 
-  void CheckNoTimeout() { EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty()); }
-
-  void CheckTimeout() {
-    EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                            CobaltEvent(TimedOutData::kInspect),
-                                        }));
-  }
-
   async::Executor executor_;
+  bool did_timeout_ = false;
 
  private:
   std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
@@ -87,7 +74,7 @@ foo2,
 bar1
 ])");
 
-  CheckNoTimeout();
+  EXPECT_FALSE(did_timeout_);
 }
 
 TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
@@ -104,7 +91,7 @@ foo1,
 foo2
 ])");
 
-  CheckTimeout();
+  EXPECT_TRUE(did_timeout_);
 }
 
 TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
@@ -114,7 +101,7 @@ TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
-  CheckNoTimeout();
+  EXPECT_FALSE(did_timeout_);
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
@@ -123,7 +110,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
-  CheckNoTimeout();
+  EXPECT_FALSE(did_timeout_);
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
@@ -133,7 +120,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
-  CheckTimeout();
+  EXPECT_TRUE(did_timeout_);
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
@@ -142,7 +129,7 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
-  CheckNoTimeout();
+  EXPECT_FALSE(did_timeout_);
 }
 
 }  // namespace

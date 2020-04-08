@@ -7,10 +7,8 @@
 
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/function.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/time.h>
 
 #include <memory>
 #include <string>
@@ -25,9 +23,9 @@ namespace fidl {
 // Fetches the current update channel.
 //
 // fuchsia.update.channel.Provider is expected to be in |services|.
-::fit::promise<std::string> GetCurrentChannel(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout, ::fit::closure if_timeout = [] {});
+::fit::promise<std::string> GetCurrentChannel(async_dispatcher_t* dispatcher,
+                                              std::shared_ptr<sys::ServiceDirectory> services,
+                                              fit::Timeout timeout);
 
 // Wraps around fuchsia::update::channel::ProviderPtr to handle establishing the connection,
 // losing the connection, waiting for the callback, enforcing a timeout, etc.

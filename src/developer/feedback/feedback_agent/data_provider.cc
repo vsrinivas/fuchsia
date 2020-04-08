@@ -135,31 +135,34 @@ void DataProvider::GetData(GetDataCallback callback) {
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
-  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, cobalt_)
-                     .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
-                                   -> ::fit::result<Screenshot> {
-                       Screenshot screenshot;
-                       screenshot.dimensions_in_px.height = raw_screenshot.info.height;
-                       screenshot.dimensions_in_px.width = raw_screenshot.info.width;
-                       switch (encoding) {
-                         case ImageEncoding::PNG:
-                           if (!RawToPng(raw_screenshot.data, raw_screenshot.info.height,
-                                         raw_screenshot.info.width, raw_screenshot.info.stride,
-                                         raw_screenshot.info.pixel_format, &screenshot.image)) {
-                             FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
-                             return ::fit::error();
-                           }
-                           break;
-                       }
-                       return ::fit::ok(std::move(screenshot));
-                     })
-                     .then([callback = std::move(callback)](::fit::result<Screenshot>& result) {
-                       if (!result.is_ok()) {
-                         callback(/*screenshot=*/nullptr);
-                       } else {
-                         callback(std::make_unique<Screenshot>(result.take_value()));
-                       }
-                     });
+  auto promise =
+      TakeScreenshot(dispatcher_, services_,
+                     fit::Timeout(kScreenshotTimeout,
+                                  [this] { cobalt_->LogOccurrence(TimedOutData::kScreenshot); }))
+          .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
+                        -> ::fit::result<Screenshot> {
+            Screenshot screenshot;
+            screenshot.dimensions_in_px.height = raw_screenshot.info.height;
+            screenshot.dimensions_in_px.width = raw_screenshot.info.width;
+            switch (encoding) {
+              case ImageEncoding::PNG:
+                if (!RawToPng(raw_screenshot.data, raw_screenshot.info.height,
+                              raw_screenshot.info.width, raw_screenshot.info.stride,
+                              raw_screenshot.info.pixel_format, &screenshot.image)) {
+                  FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
+                  return ::fit::error();
+                }
+                break;
+            }
+            return ::fit::ok(std::move(screenshot));
+          })
+          .then([callback = std::move(callback)](::fit::result<Screenshot>& result) {
+            if (!result.is_ok()) {
+              callback(/*screenshot=*/nullptr);
+            } else {
+              callback(std::make_unique<Screenshot>(result.take_value()));
+            }
+          });
 
   executor_.schedule_task(std::move(promise));
 }

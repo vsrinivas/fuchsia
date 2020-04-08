@@ -17,8 +17,6 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -36,12 +34,11 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   ::fit::result<AttachmentValue> GetKernelLog() {
-    cobalt_ = std::make_unique<Cobalt>(dispatcher(), environment_services_);
     ::fit::result<AttachmentValue> result;
     const zx::duration timeout(zx::sec(10));
     bool done = false;
     executor_.schedule_task(
-        CollectKernelLog(dispatcher(), environment_services_, timeout, cobalt_.get())
+        CollectKernelLog(dispatcher(), environment_services_, fit::Timeout(timeout))
             .then([&result, &done](::fit::result<AttachmentValue>& res) {
               result = std::move(res);
               done = true;
@@ -52,7 +49,6 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
 
  protected:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
-  std::unique_ptr<Cobalt> cobalt_;
   async::Executor executor_;
 };
 
@@ -97,27 +93,16 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
   EXPECT_THAT(second_logs, testing::HasSubstr(output));
 }
 
-TEST_F(CollectKernelLogTest, Check_CobaltLogsTimeout) {
-  auto services = CreateServices();
-  stubs::CobaltLoggerFactory logger_factory;
-  services->AddService(logger_factory.GetHandler());
-
-  auto enclosing_environment = CreateNewEnclosingEnvironment(
-      "kernel_log_ptr_integration_test_environment", std::move(services));
-
-  Cobalt cobalt(dispatcher(), enclosing_environment->service_directory());
+TEST_F(CollectKernelLogTest, Check_RecordsTimeout) {
+  bool did_timeout = false;
 
   // Set the timeout to 0 so kernel log collection always times out.
   const zx::duration timeout = zx::sec(0);
   executor_.schedule_task(
-      CollectKernelLog(dispatcher(), enclosing_environment->service_directory(), timeout, &cobalt));
+      CollectKernelLog(dispatcher(), environment_services_,
+                       fit::Timeout(timeout, /*action=*/[&] { did_timeout = true; })));
 
-  // We don't control the loop so we need to make sure the Cobalt event is logged before checking
-  // its value.
-  RunLoopUntil([&logger_factory] { return logger_factory.Events().size() > 0u; });
-  EXPECT_THAT(logger_factory.Events(), UnorderedElementsAreArray({
-                                           CobaltEvent(TimedOutData::kKernelLog),
-                                       }));
+  RunLoopUntil([&] { return did_timeout; });
 }
 
 }  // namespace

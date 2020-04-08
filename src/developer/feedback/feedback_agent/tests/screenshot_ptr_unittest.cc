@@ -12,12 +12,8 @@
 #include <memory>
 #include <vector>
 
-#include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/scenic.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils//cobalt_metrics.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -30,9 +26,9 @@ using testing::UnorderedElementsAreArray;
 
 constexpr bool kSuccess = true;
 
-class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
+class TakeScreenshotTest : public UnitTestFixture {
  public:
-  TakeScreenshotTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  TakeScreenshotTest() : executor_(dispatcher()) {}
 
  protected:
   void SetUpScenicServer(std::unique_ptr<stubs::Scenic> server) {
@@ -43,18 +39,17 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   ::fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    Cobalt cobalt(dispatcher(), services());
-
     ::fit::result<ScreenshotData> result;
     executor_.schedule_task(
-        feedback::TakeScreenshot(dispatcher(), services(), timeout, &cobalt)
+        feedback::TakeScreenshot(dispatcher(), services(),
+                                 fit::Timeout(timeout, /*actions=*/[this] { did_timeout_ = true; }))
             .then([&result](::fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
 
   async::Executor executor_;
+  bool did_timeout_ = false;
 
  private:
   std::unique_ptr<stubs::Scenic> scenic_server_;
@@ -86,6 +81,12 @@ TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
   ::fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
+}
+
+TEST_F(TakeScreenshotTest, Check_Timeout) {
+  SetUpScenicServer(std::make_unique<stubs::ScenicNeverReturns>());
+  ASSERT_TRUE(TakeScreenshot().is_error());
+  EXPECT_TRUE(did_timeout_);
 }
 
 }  // namespace

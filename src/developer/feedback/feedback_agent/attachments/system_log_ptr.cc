@@ -16,7 +16,6 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/log_format.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -25,12 +24,10 @@ namespace feedback {
 
 ::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                 zx::duration timeout, Cobalt* cobalt) {
+                                                 fit::Timeout timeout) {
   std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(dispatcher, services);
 
-  return log_listener
-      ->CollectLogs(fit::Timeout(
-          timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kSystemLog); }))
+  return log_listener->CollectLogs(std::move(timeout))
       .then([log_listener = std::move(log_listener)](
                 const ::fit::result<void>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {

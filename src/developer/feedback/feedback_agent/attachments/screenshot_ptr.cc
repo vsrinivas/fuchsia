@@ -5,10 +5,7 @@
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
 
 #include <lib/async/cpp/task.h>
-#include <zircon/errors.h>
-#include <zircon/status.h>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -22,13 +19,12 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 ::fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                              zx::duration timeout, Cobalt* cobalt) {
+                                              fit::Timeout timeout) {
   std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto screenshot = scenic->TakeScreenshot(
-      fit::Timeout(timeout, /*action=*/[=] { cobalt->LogOccurrence(TimedOutData::kScreenshot); }));
+  auto screenshot = scenic->TakeScreenshot(std::move(timeout));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(screenshot),
                                               /*args=*/std::move(scenic));
 }
